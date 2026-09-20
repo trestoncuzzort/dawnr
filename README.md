@@ -273,7 +273,11 @@ what it was asked to teach, and that skill did not reach unaided synthesis.
 - **The specifications are checked against the problems.** All 36 graded answer sets, 650 clean answers, 200
   random draws each against the problem's own solution: 13 disagree: answers whose tests passed, whose seven
   proofs held and whose twin was refuted, and whose specification still does not say what the problem asked.
-  None is in the training pool ([`t/SPEC-CHECK-2026-09-18.md`](t/SPEC-CHECK-2026-09-18.md)).
+  None is in the training pool ([`t/SPEC-CHECK-2026-09-18.md`](t/SPEC-CHECK-2026-09-18.md)). Re-run across
+  every training answer set on 2026-09-19, because the training gate had been refusing answers nobody had
+  checked: 321 tasks, **288 agree, 5 disagree, 28 could not be checked**
+  ([`t/SPEC-CHECK-2026-09-19.md`](t/SPEC-CHECK-2026-09-19.md)). That check is what unblocked the pool, taking
+  it from 87 preference pairs to 733.
 - **Preflight.** [`t/preflight.py`](t/preflight.py) refuses to let a round start on a checker whose version cannot be read, a held-out problem in a training set, a clean answer resting on a flake or a timeout, or a specification that disagrees with its problem.
 
 ## Corrections this project made against itself

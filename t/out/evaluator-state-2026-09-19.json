@@ -1,0 +1,126 @@
+{
+  "after": {
+    "desktop": {
+      "dirty": [
+        " M t/SPEC-CHECK-2026-09-18.md",
+        " M t/out/spec-disagree.json",
+        "?? t/RECHECK-lean-2026-09-19.md"
+      ],
+      "hashes": {
+        "t/cache.py": "5d272be3c200ab55591ebadaed6d1525a377c240995d32846fe12bf830fd93e5",
+        "t/check_wf.py": "cb4f20e5713792bce2a42dac45e92d2d23a8a60d27e9c1fb13aeb30c21e44027",
+        "t/interp.py": "1093f9664d93299003ccc9628ecd854c163d71f3e3180de02a0afa3e97f2560b",
+        "t/run_par.py": "4de49a91b1c21770963c99cd7084b126baf450e77d71e8a330af881e1f3f7a62",
+        "t/score_heldout.py": "4e5c22e406b99be2a4147e16c8355d70b3a30e0b4997edd983ba899778f93c52",
+        "t/spec_check.py": "0c2c7a2a4bb1f2c53a52c30bc8fee13f64fc41c2982dc4641fa7ab226f207097",
+        "t/spec_experiment.py": "12ffab0261c98d01fddbee7082c6328f443b6149e9f8ee57391f258ae0498ff2",
+        "t/surface.py": "d27af0fbaff5fae55e5f7c9ebbdbcfcdf73d16f146e0e5a1f98379d856036989"
+      },
+      "head": "11d7ec02bc753f6d6d078dab30ddcc18a17eff59"
+    },
+    "lab": {
+      "dirty_count": 0,
+      "hashes": {
+        "t/cache.py": "0ad22fe14de62e3a9a5d118ae8c6cb5d33103fea29013110b2aa5dd746f370e8",
+        "t/interp.py": "1093f9664d93299003ccc9628ecd854c163d71f3e3180de02a0afa3e97f2560b",
+        "t/lower_dafny.py": "d5804da402fb3cdc52d40705c5fcf82cf81e645790a034fea86a5e75d5d868bd",
+        "t/lower_framac.py": "f57fc6d09b2643cb3b627cb370040d29899ba43be4a6fb96fe30c9db71474335",
+        "t/lower_fstar.py": "5a3adbf903ffbe7c6e2e1f878eb7056a57b3e487e49bf752270f4e8d458f1c78",
+        "t/lower_lean.py": "a2f066ab61eb8daa6b6d6427e5e609604519401231f0964ddfa3b9e85b65f4a5",
+        "t/lower_rocq.py": "511105c7e497a6d20541162740ef2dde438164b2b717bd9b5b7c5dd089c7aa53",
+        "t/lower_spark.py": "3214763210d7c4bf5ee3cf790c63501b92840e2a0278cf697cafd9700a01e866",
+        "t/lower_verus.py": "933433faaa6aab2d457ee11f0ef8d3956dd5b8c937ca592bfc483eac28444317",
+        "t/run_par.py": "8c40b4a98378af50a900c06c1fb2f19713f2d6a411b1df85ab897a1a1d1bb614",
+        "t/verifiers/__init__.py": "5a853e607e445cd7ec9e05d964b3c8ccf14b10a01ae960e5bbb37fd6f56ecab5",
+        "t/verifiers/agda.py": "a6968d1f4c82f789652c0720eb3f7853d47fa63414b3e2d93271c0597a01d5bc",
+        "t/verifiers/dafny.py": "3e58b9fe845873bcbeb12144a2f2aa60ec3a46a2bd1fc98e25a6b8aee3be5e81",
+        "t/verifiers/discover.py": "3603c2715330659aaacf8e3ebffd7562b6ab851513d3bb7e0ec43528d1c072f0",
+        "t/verifiers/framac.py": "65549c0a7b91f3fb0a13710071d0f7e1d72e597b1bfda6f8ed78a483005ed30b",
+        "t/verifiers/fstar.py": "641d26afef40e7554365b79dd002de39a28e50649f331aaa81220f7ce90cb077",
+        "t/verifiers/lean.py": "9694f60bbc76b81dbf7997fcebcd6dc85ed89b4a4ff52d37f314f9f2b6b15d22",
+        "t/verifiers/rocq.py": "bc053452cc9c92df497991b449468ac0b03ee0302b3f2e500dee54c76ac2dfc1",
+        "t/verifiers/spark.py": "4e058ecfe41807f8e33e26d0cedfc38efcd0ec3f44a4f6627802b5ba5a5555ef",
+        "t/verifiers/verus.py": "35bb1b99b540924afd053cd29bacd0fcfa106ba7dae77e489d961b877b2aa540"
+      },
+      "head": "597107527d82b4ab998c01c491a48888fe34be4f",
+      "raw": "HEAD=597107527d82b4ab998c01c491a48888fe34be4f\n--- status ---\n M README.md\n M locallm/checkpoint.py\n M locallm/data.py\n M locallm/generate.py\n M locallm/model.py\n M locallm/runlog.py\n M locallm/studio.py\n M locallm/train.py\n M t/SPEC-CHECK-2026-09-18.md\n M t/SPEC.md\n M t/SYNTAX.md\n M t/check_wf.py\n M t/interp.py\n M t/lab.py\n M t/lab_gpu.sh\n M t/loop_dataset.py\n M t/loop_locallm.py\n M t/out/recheck.json\n M t/out/spec-disagree.json\n M t/score_heldout.py\n M t/spec_check.py\n M t/steps.json\n M t/surface.py\n M t/t.gbnf\n?? internal/OVERNIGHT-2026-09-19.md\n?? internal/RESEARCH-ANGLES-2026-09-19.md\n?? locallm/DESIGN-latent-execution-2026-09-19.md\n?? locallm/DISTRIBUTED-2026-09-19.md\n?? locallm/FINDINGS-capacity-2026-09-19.md\n?? locallm/FINDINGS-factorial-2026-09-19.md\n?? locallm/FINDINGS-kv-cache-2026-09-19.md\n?? locallm/FINDINGS-learnability-2026-09-19.md\n?? locallm/FINDINGS-round7-2026-09-19.md\n?? locallm/FINDINGS-round7b-2026-09-19.md\n?? locallm/FINDINGS-source-corpus-2026-09-19.md\n?? locallm/FINDINGS-source-longer-2026-09-19.md\n?? locallm/NEXT-semantic-eval-2026-09-19.md\n?? locallm/PREREG-factorial-2026-09-19.md\n?? locallm/PREREG-kv-cache-2026-09-19.md\n?? locallm/PREREG-learnability-2026-09-19.md\n?? locallm/PREREG-source-corpus-2026-09-19.md\n?? locallm/PREREG-source-longer-2026-09-19.md\n?? locallm/audit_example_masks.py\n?? locallm/audit_source_corpus.py\n?? locallm/bench_decode.py\n?? locallm/build_source_corpus.py\n?? locallm/completion_batch.py\n?? locallm/continue_from_checkpoint.py\n?? locallm/distributed-diagnostics-2026-09-19.json\n?? locallm/latent_objective.py\n?? locallm/measure_capacity.py\n?? locallm/next_latent.py\n?? locallm/probe_pretraining_study.py\n?? locallm/research_model.py\n?? locallm/run_factorial_study.py\n?? locallm/run_pretraining_study.py\n?? locallm/sample_candidates.py\n?? locallm/sample_source_study.py\n?? locallm/score-r7.md\n?? locallm/score_execution.py\n?? locallm/source-corpus-results-2026-09-19.json\n?? locallm/summarize_factorial.py\n?? locallm/summarize_pretraining.py\n?? locallm/test_audit_example_masks.py\n?? locallm/test_bpe.py\n?? locallm/test_completion_batch.py\n?? locallm/test_kv_cache.py\n?? locallm/test_latent_objective.py\n?? locallm/test_model_core.py\n?? locallm/test_next_latent.py\n?? locallm/test_probe_pretraining_study.py\n?? locallm/test_research_model.py\n?? locallm/test_run_pretraining_study.py\n?? locallm/test_sample_candidates.py\n?? locallm/test_score_execution.py\n?? locallm/test_source_corpus.py\n?? locallm/test_summarize_factorial.py\n?? locallm/test_summarize_pretraining.py\n?? locallm/test_tokenizer_integrity.py\n?? locallm/test_train_distributed.py\n?? locallm/test_train_factorial.py\n?? locallm/train_distributed.py\n?? locallm/train_factorial.py\n?? t/BUDGETS-2026-09-19.md\n?? t/FINDINGS-inline-helpers-2026-09-19.md\n?? t/INLINE-HELPERS-2026-09-19.md\n?? t/PREREG-inline-helpers-2026-09-19.md\n?? t/RECHECK-2026-09-19.md\n?? t/audit_collapsible.py\n?? t/build_composition_dataset.py\n?? t/build_trace_pilot.py\n?? t/composition_reference.py\n?? t/execution_trace.py\n?? t/expand_helpers.py\n?? t/head_align_corpus.py\n?? t/inline-probes/\n?? t/lab_status.py\n?? t/pilot_trace_reference.py\n?? t/score_synthesis.py\n?? t/t.simpleid.gbnf\n?? t/test_audit_collapsible.py\n?? t/test_composition_dataset.py\n?? t/test_execution_trace.py\n?? t/test_head_align_corpus.py\n?? t/test_inline_helpers.py\n?? t/test_lab_gpu.py\n?? t/test_lab_gui.py\n?? t/test_lab_status.py\n?? t/test_loop_dataset.py\n?? t/test_loop_locallm_core.py\n?? t/test_score_heldout.py\n?? t/test_score_synthesis.py\n?? t/test_spec_check.py\n?? t/test_trace_export.py\n--- hashes ---\n8c40b4a98378af50a900c06c1fb2f19713f2d6a411b1df85ab897a1a1d1bb614  t/run_par.py\n0ad22fe14de62e3a9a5d118ae8c6cb5d33103fea29013110b2aa5dd746f370e8  t/cache.py\n1093f9664d93299003ccc9628ecd854c163d71f3e3180de02a0afa3e97f2560b  t/interp.py\nd5804da402fb3cdc52d40705c5fcf82cf81e645790a034fea86a5e75d5d868bd  t/lower_dafny.py\nf57fc6d09b2643cb3b627cb370040d29899ba43be4a6fb96fe30c9db71474335  t/lower_framac.py\n5a3adbf903ffbe7c6e2e1f878eb7056a57b3e487e49bf752270f4e8d458f1c78  t/lower_fstar.py\na2f066ab61eb8daa6b6d6427e5e609604519401231f0964ddfa3b9e85b65f4a5  t/lower_lean.py\n511105c7e497a6d20541162740ef2dde438164b2b717bd9b5b7c5dd089c7aa53  t/lower_rocq.py\n3214763210d7c4bf5ee3cf790c63501b92840e2a0278cf697cafd9700a01e866  t/lower_spark.py\n933433faaa6aab2d457ee11f0ef8d3956dd5b8c937ca592bfc483eac28444317  t/lower_verus.py\na6968d1f4c82f789652c0720eb3f7853d47fa63414b3e2d93271c0597a01d5bc  t/verifiers/agda.py\n3e58b9fe845873bcbeb12144a2f2aa60ec3a46a2bd1fc98e25a6b8aee3be5e81  t/verifiers/dafny.py\n3603c2715330659aaacf8e3ebffd7562b6ab851513d3bb7e0ec43528d1c072f0  t/verifiers/discover.py\n65549c0a7b91f3fb0a13710071d0f7e1d72e597b1bfda6f8ed78a483005ed30b  t/verifiers/framac.py\n641d26afef40e7554365b79dd002de39a28e50649f331aaa81220f7ce90cb077  t/verifiers/fstar.py\n5a853e607e445cd7ec9e05d964b3c8ccf14b10a01ae960e5bbb37fd6f56ecab5  t/verifiers/__init__.py\n9694f60bbc76b81dbf7997fcebcd6dc85ed89b4a4ff52d37f314f9f2b6b15d22  t/verifiers/lean.py\nbc053452cc9c92df497991b449468ac0b03ee0302b3f2e500dee54c76ac2dfc1  t/verifiers/rocq.py\n4e058ecfe41807f8e33e26d0cedfc38efcd0ec3f44a4f6627802b5ba5a5555ef  t/verifiers/spark.py\n35bb1b99b540924afd053cd29bacd0fcfa106ba7dae77e489d961b877b2aa540  t/verifiers/verus.py\n"
+    },
+    "recorded": "2026-09-20T02:30:27.827479+00:00"
+  },
+  "before": {
+    "desktop": {
+      "dirty": [
+        "?? t/RECHECK-lean-2026-09-19.md"
+      ],
+      "hashes": {
+        "t/cache.py": "5d272be3c200ab55591ebadaed6d1525a377c240995d32846fe12bf830fd93e5",
+        "t/check_wf.py": "cb4f20e5713792bce2a42dac45e92d2d23a8a60d27e9c1fb13aeb30c21e44027",
+        "t/interp.py": "1093f9664d93299003ccc9628ecd854c163d71f3e3180de02a0afa3e97f2560b",
+        "t/run_par.py": "4de49a91b1c21770963c99cd7084b126baf450e77d71e8a330af881e1f3f7a62",
+        "t/score_heldout.py": "4e5c22e406b99be2a4147e16c8355d70b3a30e0b4997edd983ba899778f93c52",
+        "t/spec_check.py": "0c2c7a2a4bb1f2c53a52c30bc8fee13f64fc41c2982dc4641fa7ab226f207097",
+        "t/spec_experiment.py": "12ffab0261c98d01fddbee7082c6328f443b6149e9f8ee57391f258ae0498ff2",
+        "t/surface.py": "d27af0fbaff5fae55e5f7c9ebbdbcfcdf73d16f146e0e5a1f98379d856036989"
+      },
+      "head": "e1ded695d52b8520360c4e9f386fca398e9a93c0"
+    },
+    "lab": {
+      "dirty_count": 0,
+      "hashes": {
+        "t/cache.py": "0ad22fe14de62e3a9a5d118ae8c6cb5d33103fea29013110b2aa5dd746f370e8",
+        "t/interp.py": "1093f9664d93299003ccc9628ecd854c163d71f3e3180de02a0afa3e97f2560b",
+        "t/lower_dafny.py": "d5804da402fb3cdc52d40705c5fcf82cf81e645790a034fea86a5e75d5d868bd",
+        "t/lower_framac.py": "f57fc6d09b2643cb3b627cb370040d29899ba43be4a6fb96fe30c9db71474335",
+        "t/lower_fstar.py": "5a3adbf903ffbe7c6e2e1f878eb7056a57b3e487e49bf752270f4e8d458f1c78",
+        "t/lower_lean.py": "a2f066ab61eb8daa6b6d6427e5e609604519401231f0964ddfa3b9e85b65f4a5",
+        "t/lower_rocq.py": "511105c7e497a6d20541162740ef2dde438164b2b717bd9b5b7c5dd089c7aa53",
+        "t/lower_spark.py": "3214763210d7c4bf5ee3cf790c63501b92840e2a0278cf697cafd9700a01e866",
+        "t/lower_verus.py": "933433faaa6aab2d457ee11f0ef8d3956dd5b8c937ca592bfc483eac28444317",
+        "t/run_par.py": "8c40b4a98378af50a900c06c1fb2f19713f2d6a411b1df85ab897a1a1d1bb614",
+        "t/verifiers/__init__.py": "5a853e607e445cd7ec9e05d964b3c8ccf14b10a01ae960e5bbb37fd6f56ecab5",
+        "t/verifiers/agda.py": "a6968d1f4c82f789652c0720eb3f7853d47fa63414b3e2d93271c0597a01d5bc",
+        "t/verifiers/dafny.py": "3e58b9fe845873bcbeb12144a2f2aa60ec3a46a2bd1fc98e25a6b8aee3be5e81",
+        "t/verifiers/discover.py": "3603c2715330659aaacf8e3ebffd7562b6ab851513d3bb7e0ec43528d1c072f0",
+        "t/verifiers/framac.py": "65549c0a7b91f3fb0a13710071d0f7e1d72e597b1bfda6f8ed78a483005ed30b",
+        "t/verifiers/fstar.py": "641d26afef40e7554365b79dd002de39a28e50649f331aaa81220f7ce90cb077",
+        "t/verifiers/lean.py": "9694f60bbc76b81dbf7997fcebcd6dc85ed89b4a4ff52d37f314f9f2b6b15d22",
+        "t/verifiers/rocq.py": "bc053452cc9c92df497991b449468ac0b03ee0302b3f2e500dee54c76ac2dfc1",
+        "t/verifiers/spark.py": "4e058ecfe41807f8e33e26d0cedfc38efcd0ec3f44a4f6627802b5ba5a5555ef",
+        "t/verifiers/verus.py": "35bb1b99b540924afd053cd29bacd0fcfa106ba7dae77e489d961b877b2aa540"
+      },
+      "head": "597107527d82b4ab998c01c491a48888fe34be4f",
+      "raw": "HEAD=597107527d82b4ab998c01c491a48888fe34be4f\n--- status ---\n M README.md\n M locallm/checkpoint.py\n M locallm/data.py\n M locallm/generate.py\n M locallm/model.py\n M locallm/runlog.py\n M locallm/studio.py\n M locallm/train.py\n M t/SPEC-CHECK-2026-09-18.md\n M t/SPEC.md\n M t/SYNTAX.md\n M t/check_wf.py\n M t/interp.py\n M t/lab.py\n M t/lab_gpu.sh\n M t/loop_dataset.py\n M t/loop_locallm.py\n M t/out/recheck.json\n M t/out/spec-disagree.json\n M t/score_heldout.py\n M t/spec_check.py\n M t/steps.json\n M t/surface.py\n M t/t.gbnf\n?? internal/OVERNIGHT-2026-09-19.md\n?? internal/RESEARCH-ANGLES-2026-09-19.md\n?? locallm/DESIGN-latent-execution-2026-09-19.md\n?? locallm/DISTRIBUTED-2026-09-19.md\n?? locallm/FINDINGS-capacity-2026-09-19.md\n?? locallm/FINDINGS-factorial-2026-09-19.md\n?? locallm/FINDINGS-kv-cache-2026-09-19.md\n?? locallm/FINDINGS-learnability-2026-09-19.md\n?? locallm/FINDINGS-source-corpus-2026-09-19.md\n?? locallm/FINDINGS-source-longer-2026-09-19.md\n?? locallm/NEXT-semantic-eval-2026-09-19.md\n?? locallm/PREREG-factorial-2026-09-19.md\n?? locallm/PREREG-kv-cache-2026-09-19.md\n?? locallm/PREREG-learnability-2026-09-19.md\n?? locallm/PREREG-source-corpus-2026-09-19.md\n?? locallm/PREREG-source-longer-2026-09-19.md\n?? locallm/audit_example_masks.py\n?? locallm/audit_source_corpus.py\n?? locallm/bench_decode.py\n?? locallm/build_source_corpus.py\n?? locallm/completion_batch.py\n?? locallm/continue_from_checkpoint.py\n?? locallm/distributed-diagnostics-2026-09-19.json\n?? locallm/latent_objective.py\n?? locallm/measure_capacity.py\n?? locallm/next_latent.py\n?? locallm/probe_pretraining_study.py\n?? locallm/research_model.py\n?? locallm/run_factorial_study.py\n?? locallm/run_pretraining_study.py\n?? locallm/sample_candidates.py\n?? locallm/sample_source_study.py\n?? locallm/score_execution.py\n?? locallm/source-corpus-results-2026-09-19.json\n?? locallm/summarize_factorial.py\n?? locallm/summarize_pretraining.py\n?? locallm/test_audit_example_masks.py\n?? locallm/test_bpe.py\n?? locallm/test_completion_batch.py\n?? locallm/test_kv_cache.py\n?? locallm/test_latent_objective.py\n?? locallm/test_model_core.py\n?? locallm/test_next_latent.py\n?? locallm/test_probe_pretraining_study.py\n?? locallm/test_research_model.py\n?? locallm/test_run_pretraining_study.py\n?? locallm/test_sample_candidates.py\n?? locallm/test_score_execution.py\n?? locallm/test_source_corpus.py\n?? locallm/test_summarize_factorial.py\n?? locallm/test_summarize_pretraining.py\n?? locallm/test_tokenizer_integrity.py\n?? locallm/test_train_distributed.py\n?? locallm/test_train_factorial.py\n?? locallm/train_distributed.py\n?? locallm/train_factorial.py\n?? t/BUDGETS-2026-09-19.md\n?? t/FINDINGS-inline-helpers-2026-09-19.md\n?? t/INLINE-HELPERS-2026-09-19.md\n?? t/PREREG-inline-helpers-2026-09-19.md\n?? t/RECHECK-2026-09-19.md\n?? t/audit_collapsible.py\n?? t/build_composition_dataset.py\n?? t/build_trace_pilot.py\n?? t/composition_reference.py\n?? t/execution_trace.py\n?? t/expand_helpers.py\n?? t/inline-probes/\n?? t/lab_status.py\n?? t/pilot_trace_reference.py\n?? t/score_synthesis.py\n?? t/t.simpleid.gbnf\n?? t/test_audit_collapsible.py\n?? t/test_composition_dataset.py\n?? t/test_execution_trace.py\n?? t/test_inline_helpers.py\n?? t/test_lab_gpu.py\n?? t/test_lab_gui.py\n?? t/test_lab_status.py\n?? t/test_loop_dataset.py\n?? t/test_loop_locallm_core.py\n?? t/test_score_heldout.py\n?? t/test_score_synthesis.py\n?? t/test_spec_check.py\n?? t/test_trace_export.py\n--- hashes ---\n8c40b4a98378af50a900c06c1fb2f19713f2d6a411b1df85ab897a1a1d1bb614  t/run_par.py\n0ad22fe14de62e3a9a5d118ae8c6cb5d33103fea29013110b2aa5dd746f370e8  t/cache.py\n1093f9664d93299003ccc9628ecd854c163d71f3e3180de02a0afa3e97f2560b  t/interp.py\nd5804da402fb3cdc52d40705c5fcf82cf81e645790a034fea86a5e75d5d868bd  t/lower_dafny.py\nf57fc6d09b2643cb3b627cb370040d29899ba43be4a6fb96fe30c9db71474335  t/lower_framac.py\n5a3adbf903ffbe7c6e2e1f878eb7056a57b3e487e49bf752270f4e8d458f1c78  t/lower_fstar.py\na2f066ab61eb8daa6b6d6427e5e609604519401231f0964ddfa3b9e85b65f4a5  t/lower_lean.py\n511105c7e497a6d20541162740ef2dde438164b2b717bd9b5b7c5dd089c7aa53  t/lower_rocq.py\n3214763210d7c4bf5ee3cf790c63501b92840e2a0278cf697cafd9700a01e866  t/lower_spark.py\n933433faaa6aab2d457ee11f0ef8d3956dd5b8c937ca592bfc483eac28444317  t/lower_verus.py\na6968d1f4c82f789652c0720eb3f7853d47fa63414b3e2d93271c0597a01d5bc  t/verifiers/agda.py\n3e58b9fe845873bcbeb12144a2f2aa60ec3a46a2bd1fc98e25a6b8aee3be5e81  t/verifiers/dafny.py\n3603c2715330659aaacf8e3ebffd7562b6ab851513d3bb7e0ec43528d1c072f0  t/verifiers/discover.py\n65549c0a7b91f3fb0a13710071d0f7e1d72e597b1bfda6f8ed78a483005ed30b  t/verifiers/framac.py\n641d26afef40e7554365b79dd002de39a28e50649f331aaa81220f7ce90cb077  t/verifiers/fstar.py\n5a853e607e445cd7ec9e05d964b3c8ccf14b10a01ae960e5bbb37fd6f56ecab5  t/verifiers/__init__.py\n9694f60bbc76b81dbf7997fcebcd6dc85ed89b4a4ff52d37f314f9f2b6b15d22  t/verifiers/lean.py\nbc053452cc9c92df497991b449468ac0b03ee0302b3f2e500dee54c76ac2dfc1  t/verifiers/rocq.py\n4e058ecfe41807f8e33e26d0cedfc38efcd0ec3f44a4f6627802b5ba5a5555ef  t/verifiers/spark.py\n35bb1b99b540924afd053cd29bacd0fcfa106ba7dae77e489d961b877b2aa540  t/verifiers/verus.py\n"
+    },
+    "recorded": "2026-09-19T20:24:51.244182+00:00"
+  },
+  "cache": {
+    "flag_passed": null,
+    "grader_supports_no_cache_flag": false,
+    "note": "the grading machine's run_par.py is at 17d7aaf and does not import t/cache.py; the verdict cache is uncommitted work on the desktop and is not present on the evaluator, so no cell could be answered from a cached verdict"
+  },
+  "changed_during_grading": {
+    "desktop": [],
+    "lab": [],
+    "lab_head_moved": false
+  },
+  "desktop_dirty": [
+    " M internal/OVERNIGHT-2026-09-19.md",
+    " M t/cache.py",
+    " M t/interp.py",
+    " M t/lift_check.py",
+    " M t/lower_framac.py",
+    " M t/out/recheck.json",
+    " M t/preflight.py",
+    " M t/run_par.py",
+    " M t/test_framac_nested.py",
+    " M t/test_framac_seq4.py",
+    " M t/verifiers/spark.py",
+    "?? t/RECHECK-lean-2026-09-19.md"
+  ],
+  "desktop_head": "4370ecf8f3a19324cbd310b87021c63abf422abe",
+  "evaluator_stable": true,
+  "lab_raw": "HEAD=597107527d82b4ab998c01c491a48888fe34be4f\n--- status ---\n M README.md\n M locallm/checkpoint.py\n M locallm/data.py\n M locallm/generate.py\n M locallm/model.py\n M locallm/runlog.py\n M locallm/studio.py\n M locallm/train.py\n M t/SPEC-CHECK-2026-09-18.md\n M t/SPEC.md\n M t/SYNTAX.md\n M t/check_wf.py\n M t/interp.py\n M t/lab.py\n M t/lab_gpu.sh\n M t/loop_dataset.py\n M t/loop_locallm.py\n M t/out/recheck.json\n M t/out/spec-disagree.json\n M t/score_heldout.py\n M t/spec_check.py\n M t/steps.json\n M t/surface.py\n M t/t.gbnf\n?? internal/OVERNIGHT-2026-09-19.md\n?? internal/RESEARCH-ANGLES-2026-09-19.md\n?? locallm/DESIGN-latent-execution-2026-09-19.md\n?? locallm/DISTRIBUTED-2026-09-19.md\n?? locallm/FINDINGS-capacity-2026-09-19.md\n?? locallm/FINDINGS-factorial-2026-09-19.md\n?? locallm/FINDINGS-kv-cache-2026-09-19.md\n?? locallm/FINDINGS-learnability-2026-09-19.md\n?? locallm/FINDINGS-source-corpus-2026-09-19.md\n?? locallm/FINDINGS-source-longer-2026-09-19.md\n?? locallm/NEXT-semantic-eval-2026-09-19.md\n?? locallm/PREREG-factorial-2026-09-19.md\n?? locallm/PREREG-kv-cache-2026-09-19.md\n?? locallm/PREREG-learnability-2026-09-19.md\n?? locallm/PREREG-source-corpus-2026-09-19.md\n?? locallm/PREREG-source-longer-2026-09-19.md\n?? locallm/audit_example_masks.py\n?? locallm/audit_source_corpus.py\n?? locallm/bench_decode.py\n?? locallm/build_source_corpus.py\n?? locallm/completion_batch.py\n?? locallm/continue_from_checkpoint.py\n?? locallm/distributed-diagnostics-2026-09-19.json\n?? locallm/latent_objective.py\n?? locallm/measure_capacity.py\n?? locallm/next_latent.py\n?? locallm/probe_pretraining_study.py\n?? locallm/research_model.py\n?? locallm/run_factorial_study.py\n?? locallm/run_pretraining_study.py\n?? locallm/sample_candidates.py\n?? locallm/sample_source_study.py\n?? locallm/score_execution.py\n?? locallm/source-corpus-results-2026-09-19.json\n?? locallm/summarize_factorial.py\n?? locallm/summarize_pretraining.py\n?? locallm/test_audit_example_masks.py\n?? locallm/test_bpe.py\n?? locallm/test_completion_batch.py\n?? locallm/test_kv_cache.py\n?? locallm/test_latent_objective.py\n?? locallm/test_model_core.py\n?? locallm/test_next_latent.py\n?? locallm/test_probe_pretraining_study.py\n?? locallm/test_research_model.py\n?? locallm/test_run_pretraining_study.py\n?? locallm/test_sample_candidates.py\n?? locallm/test_score_execution.py\n?? locallm/test_source_corpus.py\n?? locallm/test_summarize_factorial.py\n?? locallm/test_summarize_pretraining.py\n?? locallm/test_tokenizer_integrity.py\n?? locallm/test_train_distributed.py\n?? locallm/test_train_factorial.py\n?? locallm/train_distributed.py\n?? locallm/train_factorial.py\n?? t/BUDGETS-2026-09-19.md\n?? t/FINDINGS-inline-helpers-2026-09-19.md\n?? t/INLINE-HELPERS-2026-09-19.md\n?? t/PREREG-inline-helpers-2026-09-19.md\n?? t/RECHECK-2026-09-19.md\n?? t/audit_collapsible.py\n?? t/build_composition_dataset.py\n?? t/build_trace_pilot.py\n?? t/composition_reference.py\n?? t/execution_trace.py\n?? t/expand_helpers.py\n?? t/inline-probes/\n?? t/lab_status.py\n?? t/pilot_trace_reference.py\n?? t/score_synthesis.py\n?? t/t.simpleid.gbnf\n?? t/test_audit_collapsible.py\n?? t/test_composition_dataset.py\n?? t/test_execution_trace.py\n?? t/test_inline_helpers.py\n?? t/test_lab_gpu.py\n?? t/test_lab_gui.py\n?? t/test_lab_status.py\n?? t/test_loop_dataset.py\n?? t/test_loop_locallm_core.py\n?? t/test_score_heldout.py\n?? t/test_score_synthesis.py\n?? t/test_spec_check.py\n?? t/test_trace_export.py\n--- hashes ---\n8c40b4a98378af50a900c06c1fb2f19713f2d6a411b1df85ab897a1a1d1bb614  t/run_par.py\n0ad22fe14de62e3a9a5d118ae8c6cb5d33103fea29013110b2aa5dd746f370e8  t/cache.py\n1093f9664d93299003ccc9628ecd854c163d71f3e3180de02a0afa3e97f2560b  t/interp.py\nd5804da402fb3cdc52d40705c5fcf82cf81e645790a034fea86a5e75d5d868bd  t/lower_dafny.py\nf57fc6d09b2643cb3b627cb370040d29899ba43be4a6fb96fe30c9db71474335  t/lower_framac.py\n5a3adbf903ffbe7c6e2e1f878eb7056a57b3e487e49bf752270f4e8d458f1c78  t/lower_fstar.py\na2f066ab61eb8daa6b6d6427e5e609604519401231f0964ddfa3b9e85b65f4a5  t/lower_lean.py\n511105c7e497a6d20541162740ef2dde438164b2b717bd9b5b7c5dd089c7aa53  t/lower_rocq.py\n3214763210d7c4bf5ee3cf790c63501b92840e2a0278cf697cafd9700a01e866  t/lower_spark.py\n933433faaa6aab2d457ee11f0ef8d3956dd5b8c937ca592bfc483eac28444317  t/lower_verus.py\na6968d1f4c82f789652c0720eb3f7853d47fa63414b3e2d93271c0597a01d5bc  t/verifiers/agda.py\n3e58b9fe845873bcbeb12144a2f2aa60ec3a46a2bd1fc98e25a6b8aee3be5e81  t/verifiers/dafny.py\n3603c2715330659aaacf8e3ebffd7562b6ab851513d3bb7e0ec43528d1c072f0  t/verifiers/discover.py\n65549c0a7b91f3fb0a13710071d0f7e1d72e597b1bfda6f8ed78a483005ed30b  t/verifiers/framac.py\n641d26afef40e7554365b79dd002de39a28e50649f331aaa81220f7ce90cb077  t/verifiers/fstar.py\n5a853e607e445cd7ec9e05d964b3c8ccf14b10a01ae960e5bbb37fd6f56ecab5  t/verifiers/__init__.py\n9694f60bbc76b81dbf7997fcebcd6dc85ed89b4a4ff52d37f314f9f2b6b15d22  t/verifiers/lean.py\nbc053452cc9c92df497991b449468ac0b03ee0302b3f2e500dee54c76ac2dfc1  t/verifiers/rocq.py\n4e058ecfe41807f8e33e26d0cedfc38efcd0ec3f44a4f6627802b5ba5a5555ef  t/verifiers/spark.py\n35bb1b99b540924afd053cd29bacd0fcfa106ba7dae77e489d961b877b2aa540  t/verifiers/verus.py\n",
+  "lab_returncode": 0,
+  "note": "extraction, tests and the specification check ran on the desktop; the seven kernels ran on the lab. Neither tree was the committed one and neither was reset. Grading passed --no-cache, so every cell in this session ran its kernel rather than reading a verdict cached by an earlier evaluator.",
+  "recorded": "2026-09-19T20:03:54.350302+00:00"
+}

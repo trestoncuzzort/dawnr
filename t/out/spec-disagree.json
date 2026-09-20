@@ -1,11 +1,18 @@
 {
- "checked": 655,
+ "checked": 1649,
  "tags": [
   "deepseek-coder-v2-16b-v4-s1",
   "deepseek-coder-v2-16b-v4-s2",
   "locallm-r4",
+  "locallm-r4-train",
   "locallm-r5",
+  "locallm-r7-92m",
+  "locallm-r7b-greedy",
+  "locallm-r7b-headed2",
+  "locallm-r8",
+  "phi4-mini-eval2-2026-09-19",
   "phi4-mini-v3",
+  "prover-train",
   "prover-v2-7b",
   "qwen15b-base-v3",
   "qwen15b-base-v4",
@@ -17,30 +24,50 @@
   "qwen2.5-coder-1.5b-r1-samp-s2",
   "qwen2.5-coder-1.5b-r1-samp-s5",
   "qwen2.5-coder-1.5b-r1-samp-s7",
+  "qwen2.5-coder-14b-apps-s1",
+  "qwen2.5-coder-14b-apps-s2",
   "qwen2.5-coder-14b-he-s1",
+  "qwen2.5-coder-14b-he-s2",
+  "qwen2.5-coder-14b-he-s3",
   "qwen2.5-coder-14b-he-s4",
+  "qwen2.5-coder-14b-he-s5",
+  "qwen2.5-coder-14b-he-s6",
+  "qwen2.5-coder-14b-he-s7",
+  "qwen2.5-coder-14b-he-s8",
   "qwen2.5-coder-14b-v3-s1",
+  "qwen2.5-coder-14b-v3-s1-fix1",
   "qwen2.5-coder-14b-v3-s2",
+  "qwen2.5-coder-14b-v3-s2-fix1",
   "qwen2.5-coder-14b-v3-s3",
+  "qwen2.5-coder-14b-v3-s3-fix1",
   "qwen2.5-coder-14b-v3-s4",
+  "qwen2.5-coder-14b-v3-s4-fix1",
   "qwen2.5-coder-14b-v3-s5",
+  "qwen2.5-coder-14b-v3-s5-fix1",
   "qwen2.5-coder-14b-v3-s6",
   "qwen2.5-coder-14b-v3-s6-fix1",
   "qwen2.5-coder-14b-v3-s7",
   "qwen2.5-coder-14b-v3-s8",
+  "qwen2.5-coder-14b-v3-s8-fix1",
   "qwen2.5-coder-7b",
   "qwen2.5-coder-7b-divmod",
+  "qwen3-coder-30b-apps-g1",
+  "qwen3-coder-30b-apps-g1-probe",
+  "qwen3-coder-30b-apps-s1",
+  "qwen3-coder-30b-apps-s2",
   "qwen3.8-27b-fp8",
   "qwen3.8-27b-fp8-np1024",
   "qwen3.8-27b-fp8-v3",
   "qwen3.8-27b-fp8-v3-s2",
+  "student-r4-train",
   "student-r4-v3",
   "student-r5-v3",
   "student-r6-g",
   "student-r6-v3"
  ],
  "disagree": [
-  "deepseek-coder-v2-16b-v4-s2/mbpp_908__find_fixed_point",
+  "prover-train/mbpp_509__average_Odd",
+  "prover-train/mbpp_890__find_Extra",
   "qwen15b-base-v3/mbpp_768__check_Odd_Parity",
   "qwen15b-base-v4/mbpp_768__check_Odd_Parity",
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_58__opposite_Signs",
@@ -56,19 +83,3136 @@
   "student-r6-v3/mbpp_768__check_Odd_Parity"
  ],
  "programs": {
-  "deepseek-coder-v2-16b-v4-s2/mbpp_908__find_fixed_point": "t 1\ntask mbpp_908__find_fixed_point(s: seq, n: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == r\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != i)\n  ensures r != -1 ==> (forall i in [0, r) . s[i] != i) and s[r] == r\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != j)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == r and (forall j in [0, r) . j < len(s) ==> s[j] != j)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == i {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
   "qwen15b-base-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
   "qwen2.5-coder-1.5b-r0hf/mbpp_58__opposite_Signs": "t 1\ngate loops\ntask mbpp_58__opposite_Signs(a: int, b: int) returns (r: bool)\n  ensures r == (a < 0 and b > 0) or a > 0 and b < 0\n{\n  if a < 0 and b > 0 {\n    r := true;\n  } else {\n    if a > 0 and b < 0 {\n      r := true;\n    } else {\n      r := false;\n    }\n  }\n}",
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_58__opposite_Signs": "t 1\ntask mbpp_58__opposite_Signs(a: int, b: int) returns (r: bool)\n  ensures r == (a < 0 and b > 0) or a > 0 and b < 0\n{\n  if a < 0 and b > 0 {\n    r := true;\n  } else {\n    if a > 0 and b < 0 {\n      r := true;\n    } else {\n      r := false;\n    }\n  }\n}",
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
   "qwen2.5-coder-1.5b-r0hf-v3/mbpp_855__check_Even_Parity": "t 1\ntask mbpp_855__check_Even_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 == 0)\n{\n  r := n % 2 == 0;\n}",
-  "qwen3.8-27b-fp8-v3/mbpp_179__is_num_keith": "t 1\ngate loops\ntask mbpp_179__is_num_keith(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == is_keith(n)\nspec fun is_keith(n: int): bool\n  decreases n\n= if n < 10 then false else if n == 14 then true else if n == 197 then true else false\n{\n  if n < 10 {\n    r := false;\n  } else {\n    if n == 14 {\n      r := true;\n    } else {\n      if n == 197 {\n        r := true;\n      } else {\n        r := false;\n      }\n    }\n  }\n}",
-  "qwen3.8-27b-fp8-v3/mbpp_195__first": "t 1\ngate loops\ntask mbpp_195__first(s: seq, x: int, n: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [0, r) . i < len(s) ==> s[i] != x)\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
-  "qwen3.8-27b-fp8-v3-s2/mbpp_908__find_fixed_point": "t 1\ngate loops\ntask mbpp_908__find_fixed_point(s: seq, n: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == r\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != i)\n  ensures r != -1 ==> (forall i in [0, r) . s[i] != i)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != j)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == r and (forall j in [0, r) . j < len(s) ==> s[j] != j)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == i {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
   "student-r4-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
   "student-r5-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
   "student-r6-g/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
   "student-r6-v3/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
-  "qwen15b-base-v4/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}"
- }
+  "qwen15b-base-v4/mbpp_768__check_Odd_Parity": "t 1\ntask mbpp_768__check_Odd_Parity(n: int) returns (r: bool)\n  ensures r == (n % 2 != 0)\n{\n  r := n % 2 != 0;\n}",
+  "qwen3.8-27b-fp8-v3/mbpp_179__is_num_keith": "t 1\ngate loops\ntask mbpp_179__is_num_keith(n: int) returns (r: bool)\n  requires n >= 0\n  ensures r == is_keith(n)\nspec fun is_keith(n: int): bool\n  decreases n\n= if n < 10 then false else if n == 14 then true else if n == 197 then true else false\n{\n  if n < 10 {\n    r := false;\n  } else {\n    if n == 14 {\n      r := true;\n    } else {\n      if n == 197 {\n        r := true;\n      } else {\n        r := false;\n      }\n    }\n  }\n}",
+  "qwen3.8-27b-fp8-v3/mbpp_195__first": "t 1\ngate loops\ntask mbpp_195__first(s: seq, x: int, n: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == x and (forall i in [0, r) . i < len(s) ==> s[i] != x)\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != x)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != x)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == x and (forall j in [0, r) . j < len(s) ==> s[j] != x)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == x {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+  "qwen3.8-27b-fp8-v3-s2/mbpp_908__find_fixed_point": "t 1\ngate loops\ntask mbpp_908__find_fixed_point(s: seq, n: int) returns (r: int)\n  ensures r == -1 or r >= 0 and r < len(s) and s[r] == r\n  ensures r == -1 ==> (forall i in [0, len(s)) . s[i] != i)\n  ensures r != -1 ==> (forall i in [0, r) . s[i] != i)\n{\n  r := -1;\n  var i: int := 0;\n  while i < len(s) and r == -1\n    invariant r == -1 ==> (forall j in [0, i) . j < len(s) ==> s[j] != j)\n    invariant r != -1 ==> r >= 0 and r < len(s) and s[r] == r and (forall j in [0, r) . j < len(s) ==> s[j] != j)\n    invariant i >= 0 and i <= len(s)\n    decreases len(s) - i\n  {\n    if s[i] == i {\n      r := i;\n    } else {\n    }\n    i := i + 1;\n  }\n}",
+  "prover-train/mbpp_509__average_Odd": "t 1\ntask mbpp_509__average_Odd(n: int) returns (r: int)\n  ensures r == (n + 1) / 2\n{\n  r := (n + 1) / 2;\n}",
+  "prover-train/mbpp_890__find_Extra": "t 1\ntask mbpp_890__find_Extra(a1: seq, a2: seq, n: int) returns (r: int)\n  ensures r == n\n{\n  r := n;\n}"
+ },
+ "results": {
+  "prover-train/mbpp_135__hexagonal_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 135,
+   "task_sha256": "c098b10abe48efa0bdaac125300285c21e04cd2b749dcc6c408bd8c798230df1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_171__perimeter_pentagon": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 171,
+   "task_sha256": "a1099089bfbd499dc24f3a3e6051c0af21eadaec35e62f9f6241b99b23355a24",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_176__perimeter_triangle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 176,
+   "task_sha256": "c1c07ec7ab3b5bb531046340326d283dd3bd5eb921f8709b60d6b109b0c71bce",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_17__square_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 17,
+   "task_sha256": "31e7a9796d11eb4547755e1acd0d0527e85e1b402c24e2ec353ef1a6e196c14d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_234__volume_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 234,
+   "task_sha256": "f1d8d4ec0a2b1bef73228c57c8a8fc1a9babd37a5f20727bdeb23367f5b6d1e4",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_238__number_of_substrings": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 238,
+   "task_sha256": "4b469389171e62e4e86069004e1e50871d9261b8a9c173b6a7b42b809fb4b201",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_242__count_charac": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 242,
+   "task_sha256": "8cf99699e0439496ea65733875fd11f3eb5443a302d475db616378aad18321f8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_266__lateralsurface_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 266,
+   "task_sha256": "e6d72398daaf3706368258e866e5dbe369d1fac39f2e1b5f5abd8039f3a97e68",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_309__maximum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 309,
+   "task_sha256": "7d41d3c1bc32c1a64c113e67607e50f1348601fe9473c61c6571e6ae1d8f5b67",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_320__sum_difference": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 320,
+   "task_sha256": "2e2ee79ac3607f089f968eb4b1c8bdf5b76f03ba0d60d3d8e7f863a15a4a8b4c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_327__check_isosceles": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 327,
+   "task_sha256": "529c9c25a22ed5915c20ef8abfbf4a5ca2781e470cff322b8af23efdc4709b92",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_356__find_angle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 356,
+   "task_sha256": "a02ef9f46f5be5dcbf313964be0f7d5e38fe30223f2047a44c187651b7c8ab19",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_35__find_rect_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 35,
+   "task_sha256": "d3ecbe041b091e98301eb1dd85765274acbb1715a3631f1ba3496d9116dba854",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_369__lateralsurface_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 369,
+   "task_sha256": "0cca69f5817b1ab0fdcd27421916ee8d10dc91aa8d5b53190d42a1b247e67cf9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_373__volume_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 373,
+   "task_sha256": "239d48764db9c1b4305dbea87a77785e69d32ecc986a398ef1bd6f0c9439ba97",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_379__surfacearea_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 379,
+   "task_sha256": "ef5796fe5aef0f7bd25bd0a82f76aaa81caf9fb538d6ec6cb739639f5c3bfa58",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_404__minimum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 404,
+   "task_sha256": "85c99bed86da153ea9c5167166aa70c62d5282a62ddc6333b9287eb690a78c5d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_441__surfacearea_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 441,
+   "task_sha256": "1c017cc60386e7616ae67e3d07276ca80e3c95293f9e26150ec098b18788c99c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_455__check_monthnumb_number": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 455,
+   "task_sha256": "9a84cd98bcaf034ac62a3d109e6f174725afc04c352ca2c189f50e96a3377501",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_458__rectangle_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 458,
+   "task_sha256": "48640d82d4dd9c36b4b468b36970824f34ce89aad172b93846157952b081d914",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_499__diameter_circle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 499,
+   "task_sha256": "d3e7f7b7d8314e4cad24e35bf4cfb2ceb3adc04c6ae86726597c107fe3ea5090",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_509__average_Odd": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    16
+   ],
+   "reference_said": "Invalid Input",
+   "agreed_before": 1,
+   "task_id": 509,
+   "task_sha256": "6b6c0cd15fe7afbba76c1a2057b8de51bdd5e63a8f8e5f7405cda259eee8b3cc",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_52__parallelogram_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 52,
+   "task_sha256": "44da83db36436372ecdc639c17619b361a978ceeb99bf5aa45b11de23e6cb5ef",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_654__rectangle_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 654,
+   "task_sha256": "e48a5051718859725bfbff969bc53340bd8a5b3e94667a4fcb49315da0cede2f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_716__rombus_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 716,
+   "task_sha256": "8a617142152aaf5a2c7d34417a3f7c05b2a3f994b8b2cf4d05643b42bac07cc5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_789__perimeter_polygon": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 789,
+   "task_sha256": "7c4203fb204395e1865bab4ddb363750ca0e1d67caafa8d0f7e9c32925ed40aa",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_79__word_len": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 79,
+   "task_sha256": "4bb4d4bc684c0bc8e648015b5b6aeb309361ea59de315cc795f297a1ecc61850",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_890__find_Extra": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    [
+     0,
+     4
+    ],
+    [
+     5
+    ],
+    3
+   ],
+   "reference_said": 0,
+   "agreed_before": 0,
+   "task_id": 890,
+   "task_sha256": "74a6efa3682ed2dce302b3df37445f6b62f24a1a9fe23d32443eafcbc763b00f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_913__end_num": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 913,
+   "task_sha256": "38c5fe94e74a42131e6e0eed612b54315cf7d00bc7d7aa5ecfc80bd292c30c5e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_924__max_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 924,
+   "task_sha256": "d8fce781013391d0da6d2c6d847d16c38abcd5c44c65bf7d5c555f5a930c5ab5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "prover-train/mbpp_964__word_len": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 964,
+   "task_sha256": "4dbb90cd52728a1daa35d629db1abd261a2ac6195cafdfe956d2dd095ceeb943",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_112__perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 112,
+   "task_sha256": "7159d5dd394617fd4f3aa93d9186381fab848330da90160d390da79b06e4f9e2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_135__hexagonal_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 135,
+   "task_sha256": "c098b10abe48efa0bdaac125300285c21e04cd2b749dcc6c408bd8c798230df1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_171__perimeter_pentagon": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 171,
+   "task_sha256": "667d03f2621e8f736aced1b3d310c98745b4d31fea1e048934994a6871c9b598",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_173__remove_splchar": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 173,
+   "task_sha256": "4cafc5b25f83b1e7589a82883f66495b6dd9502c54a3451b42b88da03545f3fe",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_17__square_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 17,
+   "task_sha256": "9965aefe70824c7b8fcc705bcb234d3cecdcf093be8f22e8a6a8e3346ae6a51b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "9d5b86102a89d7bdeb1f03f2a04214f5df355898bfa416747f169be9024e1645",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_234__volume_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 234,
+   "task_sha256": "bcc966584c92642f7dd83b6b29d51d2668db75544f1ba6cebe0e42bd52193bab",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_238__number_of_substrings": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 238,
+   "task_sha256": "53b35d439309a9c59294c17fd47d885e6910725f3ea7d54adc84b8a29926c6d3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_266__lateralsurface_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 266,
+   "task_sha256": "df3d7039d0ea010d2bfb0576202bd21a41779d0ab44d96377187dd046fd30894",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_268__find_star_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 268,
+   "task_sha256": "0c8a86de5b724fecc4ba071a32368a5dc93250ba5aa560bfde7c6980deca0640",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_279__is_num_decagonal": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 279,
+   "task_sha256": "e52162b0b4c2be8bd9c4fafc1df83e18049f7e3eaeed93478398da2682702028",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_356__find_angle": {
+   "status": "agrees",
+   "draws": 98,
+   "task_id": 356,
+   "task_sha256": "ae943e0d1b86066645c7231fae9de141a72407c530d04c45c4e701c1795c5877",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_404__minimum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 404,
+   "task_sha256": "853b83c9ff5233731a52a16fa1b155735b16282804d4f62a894a06808ae7e890",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_441__surfacearea_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 441,
+   "task_sha256": "2a375a0184f829f056b2500ba701e108331c3d78beb1be54ae9d6db1dfcf305a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_458__rectangle_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 458,
+   "task_sha256": "48640d82d4dd9c36b4b468b36970824f34ce89aad172b93846157952b081d914",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_654__rectangle_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 654,
+   "task_sha256": "0e7740d52c2adb4c64fefab5968651e1045df3e2eb9dbdbd876d0d035b45efb1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_672__max_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 672,
+   "task_sha256": "9b82203e89ac76232aee798f80fd9409312ffd5aba5243a46a50f869582ed0a7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s1/mbpp_789__perimeter_polygon": {
+   "status": "agrees",
+   "draws": 92,
+   "task_id": 789,
+   "task_sha256": "b768ff06e64419af026276f78cc53ab146d66287b98b5ab0dd123757d7cda4ea",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s2/mbpp_356__find_angle": {
+   "status": "agrees",
+   "draws": 98,
+   "task_id": 356,
+   "task_sha256": "792259fd9d1db814f52531e07ce3b0204ec523321af5059006804ad6bd2cf908",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s2/mbpp_369__lateralsurface_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 369,
+   "task_sha256": "0cca69f5817b1ab0fdcd27421916ee8d10dc91aa8d5b53190d42a1b247e67cf9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s2/mbpp_676__remove_extra_char": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 676,
+   "task_sha256": "36d45b4a89b68e0fe8ee373765572222432049d50efb67571b450cd1d0dafab9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "deepseek-coder-v2-16b-v4-s2/mbpp_908__find_fixed_point": {
+   "status": "agrees",
+   "draws": 32,
+   "task_id": 908,
+   "task_sha256": "3654dfcffb5ac55d55938e656b70bd6e066a5ef54f77ed8e3c0d42dad82befee",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-apps-s1/apps_124__search": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 200124,
+   "task_sha256": "4659efa7847a386356db3fcc62497ded5d41a0b818bb6bd5040af7d865307364",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-apps-s1/apps_2425__countSegments": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 202425,
+   "task_sha256": "06065c8f64039a34bbd018ae33ded87062e882814b3a49235794cad3310c9c00",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-apps-s1/apps_2527__getSum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 202527,
+   "task_sha256": "3dec3f880325d1ebe8111df118ca9f9ec304f8356053b7c8acf051c397817a0a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-apps-s1/apps_2933__solve": {
+   "status": "agrees",
+   "draws": 81,
+   "task_id": 202933,
+   "task_sha256": "8d1c1c860b08ebe12f6185864bdb014fcfbb5e07633afd99a8c62898047cefb6",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-apps-s1/apps_2992__switcheroo": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 202992,
+   "task_sha256": "dd063390151ea57b484eba39a00e106dbaa3dbc4731ec19104953b4e03f75711",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-apps-s1/apps_3286__enough": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203286,
+   "task_sha256": "9f57bbcc640a31a117bf2c5bb6b428736b0428c1a584d34312574b3a03ab1f46",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-he-s1/he_41__car_race_collision": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 100041,
+   "task_sha256": "e6b91d60b94b2312d2032f3d574ef4579617f9d199ebb1ae1eeb4113ed8244e9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-he-s1/he_42__incr_list": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 100042,
+   "task_sha256": "d5f9a6b9ddaa070a025a89dbf28dcbb4ef5c322449aaab04d5f01de52278cef7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-he-s4/he_41__car_race_collision": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 100041,
+   "task_sha256": "800bfa5bd76c16e42e60d9e9c59a4ff7c25be3aa0227517b93c1897221ac576e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_112__perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 112,
+   "task_sha256": "eea2091ba50f75c6094a14fc0cfc9a123274cf8d6162a8b1a2d0d9714a5e7e88",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_135__hexagonal_num": {
+   "status": "agrees",
+   "draws": 97,
+   "task_id": 135,
+   "task_sha256": "8adb7d96d2175af9af9c1616c93845d67796fe7fd323a54a79c4a1cbf125242d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_151__is_coprime": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 151,
+   "task_sha256": "14bb66acdb158cfb15b40fa88f6b83f1e2afad8fba3663cf493e2817a5025244",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_171__perimeter_pentagon": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 171,
+   "task_sha256": "3e531be42373cca6291724deca735806ddc252df94de6b39ae60794d0ee8410b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_195__first": {
+   "status": "agrees",
+   "draws": 47,
+   "task_id": 195,
+   "task_sha256": "afb50bfdee9d5fd222f8bd7dca1d6248c22d80ea904407e062b0fac3c6472d5b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_210__is_allowed_specific_char": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 210,
+   "task_sha256": "e83a65f8a062fcf4262d9bce776787158639859c204c9001c706a44a4be92847",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "369d95e336ece1719fbca3b8aefdad73791a4cf9921cbf3b877e24d62ced3099",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_234__volume_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 234,
+   "task_sha256": "0a4e0eccdc52daa91ab036c7716d94021bc6be6d7d1a4fabc9847da79c9b2387",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_238__number_of_substrings": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 238,
+   "task_sha256": "4b469389171e62e4e86069004e1e50871d9261b8a9c173b6a7b42b809fb4b201",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_266__lateralsurface_cube": {
+   "status": "agrees",
+   "draws": 92,
+   "task_id": 266,
+   "task_sha256": "7c4776dbed6c75271fb2faabc622e07acd2eef7522f80d57f5b9a0028e99ad9a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_279__is_num_decagonal": {
+   "status": "agrees",
+   "draws": 87,
+   "task_id": 279,
+   "task_sha256": "f5a6cfd5a04ac357c4e682096a96e024c42fe0166d151b7b295aebc5d6e802a5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_356__find_angle": {
+   "status": "agrees",
+   "draws": 82,
+   "task_id": 356,
+   "task_sha256": "be2f4fd2988596047b40a23926a860ebaedc38dd2f4b3c7b3f33ef4ee79cce93",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_35__find_rect_num": {
+   "status": "agrees",
+   "draws": 92,
+   "task_id": 35,
+   "task_sha256": "32a2e5ff34ef75368a9a3ccdb628953412a6d1685beca0eb7465104428ea06f4",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_369__lateralsurface_cuboid": {
+   "status": "agrees",
+   "draws": 78,
+   "task_id": 369,
+   "task_sha256": "e6200d3ccb04b75c9208a8d5c5f84ab8c2cd853bcf98e336ca7be8827d3cd3d5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_379__surfacearea_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 379,
+   "task_sha256": "81a6298e9533391bd14bba60f7492b3d4e4bddd1d564d1c7a9e5dbafdbc1d232",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_441__surfacearea_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 441,
+   "task_sha256": "2116ff0ee1caa7b4f73b70fdd3cc0c2ce536a1711d20b0bd706b5222eb4ddf5a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_447__cube_nums": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 447,
+   "task_sha256": "88d590b24985dbb1a7892de85fe14ce84e7d333ff4a75e83ff577f9d02561b77",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_458__rectangle_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 458,
+   "task_sha256": "52a6ac4ba38032f3d118538165f51ec89efec6f5a2bf33f1b1a5ddc77969ef1f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_52__parallelogram_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 52,
+   "task_sha256": "dffafdab2a4ccfb07cb847c5b713ff845d861f58f2c78a41d1ab4dcf9464b3c7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_581__surface_Area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 581,
+   "task_sha256": "d6bcfc8bff7124bb7363fbc378b8a55a8a1e8e6ab7182ed5e371acda1e278558",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_59__is_octagonal": {
+   "status": "agrees",
+   "draws": 94,
+   "task_id": 59,
+   "task_sha256": "2b4ce33e603cae7c2c742c7d5377d257819e632c52304580d701692f260669fe",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_646__No_of_cubes": {
+   "status": "agrees",
+   "draws": 49,
+   "task_id": 646,
+   "task_sha256": "6bda17451fdbaa2e1453f05e095b3e9a832c37e61d5fcd81ec73aca1a7844021",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_654__rectangle_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 654,
+   "task_sha256": "7c0bf131efe1ece44eaea1baa007b72fd7be29958eaecdb42ce8710ec587224e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_672__max_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 672,
+   "task_sha256": "51d3442e32432a6ede78a0dbb2e5d42a43f7814e4a3dc75c50c1c0e20943ab85",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_682__mul_list": {
+   "status": "agrees",
+   "draws": 17,
+   "task_id": 682,
+   "task_sha256": "87e4b651086705cdf46f117622887fb4dc120429ce63911d2890c83ca1fc59c6",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_716__rombus_perimeter": {
+   "status": "agrees",
+   "draws": 93,
+   "task_id": 716,
+   "task_sha256": "6e8ca465045c7d0a49a27a98ac72fdaf7df6b11390444ce384535ee77f3c9bb1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_728__sum_list": {
+   "status": "agrees",
+   "draws": 12,
+   "task_id": 728,
+   "task_sha256": "8682daee6a46121ddeedde028951cc7bcb21926b504262c66d6089b7bd81d728",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_733__find_first_occurrence": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 733,
+   "task_sha256": "20325b33e32a163986dc3145347fad28c1d2accf9eafaa9f5663864a30c4141f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_789__perimeter_polygon": {
+   "status": "agrees",
+   "draws": 89,
+   "task_id": 789,
+   "task_sha256": "da46bf3d2b0adb0cee58b242c058945c931cbd4d5b3a8202cac2d599b87b1cd3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_801__test_three_equal": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 801,
+   "task_sha256": "998f515e05c1678e5cbc93537d3f77d6c286da89202795f046f1ef69330f39e1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_86__centered_hexagonal_number": {
+   "status": "agrees",
+   "draws": 93,
+   "task_id": 86,
+   "task_sha256": "b0c28b4a95f65922f59b774efc4c4fb6ef2bf232a3d3a4af2eb4d5ed8373077d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_8__square_nums": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 8,
+   "task_sha256": "2a8791ce69f2c7fd795a051dfdc82128ffd60620cd1062a2cde87dd7b85ba868",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_924__max_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 924,
+   "task_sha256": "30d1f78c766b8803a643a3c729c2b3b04ac1d8f719c6ec3e3e7dc4c44caea148",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s1/mbpp_970__min_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 970,
+   "task_sha256": "e222c3a76b85bb911e5629b70e2b3280ea3d12d06cca07b7d828ee3144332472",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_151__is_coprime": {
+   "status": "agrees",
+   "draws": 95,
+   "task_id": 151,
+   "task_sha256": "7dfa982832fc1471e60a67e689ee78819cb4ba4b37a630b297b40b54f5958f1f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_171__perimeter_pentagon": {
+   "status": "agrees",
+   "draws": 93,
+   "task_id": 171,
+   "task_sha256": "9b0f53ce984dffa994e380c172b36c0ef029a2c7b6f572044350c6e8fea48f4d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "2835a3b8a5b710966fedc7af701a508178e3ae4acbc00b58c5f0d79893537dea",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_266__lateralsurface_cube": {
+   "status": "agrees",
+   "draws": 94,
+   "task_id": 266,
+   "task_sha256": "3a5f778a44b1a3a432454e0215985c79712c463b33e38d5d4a4a3d3410986e93",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_369__lateralsurface_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 369,
+   "task_sha256": "712d7f8b6730e55a6f8d2595e6ab4dc411d5063a29a26379b920c08e25b90f50",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_458__rectangle_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 458,
+   "task_sha256": "1d8b69fbe5322f1b6b0b55f42f8b71a8a094b3c91b40c4af68725d173e710094",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_499__diameter_circle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 499,
+   "task_sha256": "55e496e85a528588914a8b92bc195b62c47eca106cf43df96a033836eab57f8b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_52__parallelogram_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 52,
+   "task_sha256": "44da83db36436372ecdc639c17619b361a978ceeb99bf5aa45b11de23e6cb5ef",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_581__surface_Area": {
+   "status": "agrees",
+   "draws": 78,
+   "task_id": 581,
+   "task_sha256": "e6c3edfcbc5d8f99a947c182b38004330fafdaa21da45381ad88b6fe197bdef7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_646__No_of_cubes": {
+   "status": "agrees",
+   "draws": 85,
+   "task_id": 646,
+   "task_sha256": "0ab248815714eea6836b6173f927e886e881415b8a818af574aa1387a01ad632",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_672__max_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 672,
+   "task_sha256": "9c3c46f512384f18de203470c99175f4f84bb688107493d6958ff3ddc40453a5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_789__perimeter_polygon": {
+   "status": "agrees",
+   "draws": 85,
+   "task_id": 789,
+   "task_sha256": "66502b2c5ed278550cff6378e20fb26ced5f0143d0c44d0e3651324e8560c0a0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s2/mbpp_873__fibonacci": {
+   "status": "agrees",
+   "draws": 93,
+   "task_id": 873,
+   "task_sha256": "f7bc553a9094d5e347ba518eb480111b44900cd1d179ba7f7ea3e4194e52ad75",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_112__perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 112,
+   "task_sha256": "6d1c32a350f3bb6bedd00b605f84d4ac23c722cbfb069562bd97924b46ac2954",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "0aeb3d66af89c7433b5f01b2b8739174384cfeaf44f153c43353c00f36762f4d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_268__find_star_num": {
+   "status": "agrees",
+   "draws": 82,
+   "task_id": 268,
+   "task_sha256": "7c3c3a0c2ec38daa1863deef39b37b5c374989df5baec42722e951d98a85b188",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_369__lateralsurface_cuboid": {
+   "status": "agrees",
+   "draws": 80,
+   "task_id": 369,
+   "task_sha256": "070fdd1844b439368a423187fcd867f9388a2d24864558f4f6fc48d296e5f7a4",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_379__surfacearea_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 379,
+   "task_sha256": "d1740b63876a0c3c1c6e1975d5f53d05014f1f31b10b3b6f5a2a39577bd8dc6c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_441__surfacearea_cube": {
+   "status": "agrees",
+   "draws": 90,
+   "task_id": 441,
+   "task_sha256": "3f16a724f0dfeb3dd3292017e4dafcea6b78beab803724fbc8d4439294eef957",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_447__cube_nums": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 447,
+   "task_sha256": "cdb59b98a0a009ebd2d892510a659adb23655435437cf852563d929e5838c6eb",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_499__diameter_circle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 499,
+   "task_sha256": "f7cf3d3cb3d32be129e029c60de6d106dbe9e0457c73dfac401b5be72451f4e3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_581__surface_Area": {
+   "status": "agrees",
+   "draws": 75,
+   "task_id": 581,
+   "task_sha256": "d4095c1e4e658abec18f02ac085506cfec655c7a22cc2116c4ccc3edcb817c13",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_672__max_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 672,
+   "task_sha256": "051e34e7e3daa30bf1cb6f1eedbacb62d82f4f31dfc0eabe990cf94c80872821",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_682__mul_list": {
+   "status": "agrees",
+   "draws": 24,
+   "task_id": 682,
+   "task_sha256": "ad5b414ad4c9fa256320fe1789dd2bc282ea3a758ad6bb3630af9b8742464c32",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_733__find_first_occurrence": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 733,
+   "task_sha256": "10cd3dcf02f3191c71d7e114073de36ff325dc6ee4af78e8151c04e0bad675c8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_804__is_Product_Even": {
+   "status": "agrees",
+   "draws": 19,
+   "task_id": 804,
+   "task_sha256": "568f62a70034a4d9c8744bd4e407386432aca760884ec4762eddf20037253a31",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_8__square_nums": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 8,
+   "task_sha256": "450cf0d040527870946c859909637c4a4ae8b984a9f3cff4e1c3e85197cc0bf6",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s3/mbpp_960__get_noOfways": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 960,
+   "task_sha256": "dcaa5ad57264927f84edaca6933cbda13fa6afa4ee8ebd3b0716ad93c6aed1aa",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_176__perimeter_triangle": {
+   "status": "agrees",
+   "draws": 95,
+   "task_id": 176,
+   "task_sha256": "43215dabee2363318823b71e73912180a682db87249c135044ec1426d3e04138",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_195__first": {
+   "status": "agrees",
+   "draws": 41,
+   "task_id": 195,
+   "task_sha256": "6752c5acd22de2fa7998c26215759dcbdc2aae248e44ea2f72ba077fc5ff9625",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "fccb4c37129a700a31aaef1877faebabf29ccd81c5f0aac4a4b5e02edd86a0c1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_356__find_angle": {
+   "status": "agrees",
+   "draws": 73,
+   "task_id": 356,
+   "task_sha256": "7f36b6d84ac44632541d50185432a683374ef991273f05440db132895ecaf235",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_35__find_rect_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 35,
+   "task_sha256": "d101307a55379b01d965d2a912f77ddd7a72c7f92a60cb335f6b9b9698b8a07e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_373__volume_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 373,
+   "task_sha256": "3041a46cd1c776d3d5d1b21977106bfde7044db9c6f15680d0b4df67c0917e1b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_441__surfacearea_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 441,
+   "task_sha256": "926bd8c76f32a26b5b39a522cdb46eb3fd1dda5d932c7e4d4603a705db44c32d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_52__parallelogram_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 52,
+   "task_sha256": "5b4e96c3bc5365504264e7f4b022499bc03fad4bdb3a285067082edc3ba39c66",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_59__is_octagonal": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 59,
+   "task_sha256": "2c4a84169b589c2aa9bbda8082b48d1d5c9feeec1a70277459f2fc857d248a60",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_729__add_list": {
+   "status": "agrees",
+   "draws": 18,
+   "task_id": 729,
+   "task_sha256": "6125b570bb17cef9371f3e7289a52034a2e84cd234dffc4cf8e5f3b551380489",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_789__perimeter_polygon": {
+   "status": "agrees",
+   "draws": 67,
+   "task_id": 789,
+   "task_sha256": "21ba0e67d0deca8f9883d2f660d07a9abd35176957e2e0fb0c1ee039b1c3525a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_801__test_three_equal": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 801,
+   "task_sha256": "47c64b76c7f81357c1199d6add0d091536fbb512dbfa3bbb0bc0804c40a2e540",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s4/mbpp_865__ntimes_list": {
+   "status": "agrees",
+   "draws": 81,
+   "task_id": 865,
+   "task_sha256": "2eb5c44973b938393ba17f9ee893d741f2bce0c590ec1a01237e5eb766767562",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_127__multiply_int": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 127,
+   "task_sha256": "73bd928ab18e125ecafa231e73011ef8f02e52570c8685fb296d98d574da8e47",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_173__remove_splchar": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 173,
+   "task_sha256": "50d4d978a787ae38385c4ce705c366d0d32faad831768645aa5709770b7cb2ab",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "44c1860e2ee5c1750ec13f9a8eef97de17ec355b437ac3a8d646273933f89477",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_266__lateralsurface_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 266,
+   "task_sha256": "e60ce3a3d69bb196e05cea2631350d01b37cd32a8db511789b40e2d1127ab8af",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_309__maximum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 309,
+   "task_sha256": "4e36e46c265521055866a536644a4d06c2d0e809e9a4c42d0ea05cb4ced3da14",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_373__volume_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 373,
+   "task_sha256": "621efcb457c4ac0ab0ebec3aa062b933be1094f1a8d3632ed7340e5ce9b537b7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_631__replace_spaces": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 631,
+   "task_sha256": "d4cf51bb5be0e082a3b4510a32665747df39e5aec39eff03cebcd7a26dbe6d4f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_654__rectangle_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 654,
+   "task_sha256": "ae9cdd25bfd7dd68a5cd83472547f0634001325736ca395f529770f79b10ae28",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_676__remove_extra_char": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 676,
+   "task_sha256": "36a2a7f11c36219a173a2871eb7428b50a150a3a4e2a623293dd00536bd88de5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_873__fibonacci": {
+   "status": "agrees",
+   "draws": 92,
+   "task_id": 873,
+   "task_sha256": "9561d26d75bafd6ab33f0a1bdc3fd4ffcf8482faae7cbb63f5122e13d97fef74",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_89__closest_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 89,
+   "task_sha256": "8facd180736c57a479915fcfb228d00e85b8185f0390a0488fb2f6e9cab096fb",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s5/mbpp_8__square_nums": {
+   "status": "agrees",
+   "draws": 69,
+   "task_id": 8,
+   "task_sha256": "51f8672cfe802a15034bdde85785d48c83b0d8d64a4fa81016283b52af2185c9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6/mbpp_127__multiply_int": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 127,
+   "task_sha256": "0efb21061650393d528b78895ac0544a237f7a258a363f65eb504dfa1f9a4b71",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "9bc462b433354791ef764301049b2f2918633f885d18dcf378dc2ad5d8b52c9b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6/mbpp_581__surface_Area": {
+   "status": "agrees",
+   "draws": 76,
+   "task_id": 581,
+   "task_sha256": "c2280a13ce95f507631b195b30543424ea5813c7ccbe21b2bc8afd678719564a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6/mbpp_646__No_of_cubes": {
+   "status": "agrees",
+   "draws": 55,
+   "task_id": 646,
+   "task_sha256": "f0510088cb59af2d2b91a3b3e94430c25d4971237c5d3ecaecf2fcea960d47e8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6/mbpp_672__max_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 672,
+   "task_sha256": "8f2aaa3e03a0cd5cd635c6d8381dcede59bdb45011a20b1fe158b9a410fc257a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6/mbpp_789__perimeter_polygon": {
+   "status": "agrees",
+   "draws": 62,
+   "task_id": 789,
+   "task_sha256": "320a5d1a5a80335ea40b57d91b5092ef75be3ecda6b137e562b22c8c31d51c34",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6/mbpp_865__ntimes_list": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 865,
+   "task_sha256": "d1c50ef0b0d21fe3f5194d151c1829dbc679347b099f79e9b0f56c62c24a41d3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6-fix1/mbpp_238__number_of_substrings": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 238,
+   "task_sha256": "35591b430381599cfa2d4676a47c411927ef8c877dc479974cd7ba160144c2fd",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s6-fix1/mbpp_565__split": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 565,
+   "task_sha256": "660873b109ad00312d87b722f2a9fd32ad3b2a99d2336494f597d0166fd736ee",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s7/mbpp_112__perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 112,
+   "task_sha256": "03e1780feaf1695b633c02128e185c85e391947e4dbe5bf4a4f7cce05d3c08e3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s7/mbpp_171__perimeter_pentagon": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 171,
+   "task_sha256": "f34f712b33f0b29750b71aa64b0ccf1313dfc929875424c2839878615fbdd153",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s7/mbpp_210__is_allowed_specific_char": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 210,
+   "task_sha256": "3a2376d2208510d7924b8ae7c5ff4a5c8e9c000ced90a10b68a6d8638fb2c044",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s7/mbpp_234__volume_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 234,
+   "task_sha256": "58366f2f2c9f485807c723c25809b28438cd278b6e3aa17db7b48b44673fb493",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s7/mbpp_238__number_of_substrings": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 238,
+   "task_sha256": "af753f77136e20e5801f0f58d94c1e20fdd5f4da13730ea7edd7bdc5b8917b87",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s7/mbpp_369__lateralsurface_cuboid": {
+   "status": "agrees",
+   "draws": 84,
+   "task_id": 369,
+   "task_sha256": "2a808c1ab008f04752fa5c824cd866016d232e44e08d078f8734e7b4b2a17717",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s7/mbpp_474__replace_char": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 474,
+   "task_sha256": "99c739013c27ab29d3c9df0f7c7dd1cc2278812b91a16369c2844b37308731fc",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s7/mbpp_733__find_first_occurrence": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 733,
+   "task_sha256": "06afc546412b08cda4864fc764698a153332fabd96d1e404bd840bc0083cc6a4",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s8/mbpp_282__sub_list": {
+   "status": "agrees",
+   "draws": 13,
+   "task_id": 282,
+   "task_sha256": "c7afd6e9672b096435a3283833e92ecd4c49385abedbb210311c3695e5d8a499",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen2.5-coder-14b-v3-s8/mbpp_804__is_Product_Even": {
+   "status": "agrees",
+   "draws": 12,
+   "task_id": 804,
+   "task_sha256": "e2cc15bb2981ee59a6e382c5b968c3c39b32d9c1d78f20ebe3266f4cf5f5f5bc",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_112__perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 112,
+   "task_sha256": "a9e6ff171495620e4613f42357cfefcf66e96067bb2fc9458baec8a7ae2768bf",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_135__hexagonal_num": {
+   "status": "agrees",
+   "draws": 98,
+   "task_id": 135,
+   "task_sha256": "eb42945e0dc9cd03f4c0f43b8fac68ab532b9415176cba8b7dcef62388b5158c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_151__is_coprime": {
+   "status": "agrees",
+   "draws": 89,
+   "task_id": 151,
+   "task_sha256": "7fb36e29a2ad33a2265e3d658141cb02026057a43dc43a8e4e06185cfb1b74f2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_171__perimeter_pentagon": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 171,
+   "task_sha256": "305acf6e86633b6d8c4742106a3a766bbb8ce7b98b7b485cbee6d5ed864a131a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_176__perimeter_triangle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 176,
+   "task_sha256": "c1c07ec7ab3b5bb531046340326d283dd3bd5eb921f8709b60d6b109b0c71bce",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_17__square_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 17,
+   "task_sha256": "8eabff67b3e3be8836d8dd3d53acac9c1763aafb002f81f8f73d0292f498a73b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_195__first": {
+   "status": "agrees",
+   "draws": 42,
+   "task_id": 195,
+   "task_sha256": "b92bbcc35ac1514bb46e319e7264b1f9faf923cb02970aa8834d1d927815c573",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "440bc1b3141d10372bb2d91cf32bfcd3416b71ff3dc98e508a81f79027380005",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_234__volume_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 234,
+   "task_sha256": "f1d8d4ec0a2b1bef73228c57c8a8fc1a9babd37a5f20727bdeb23367f5b6d1e4",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_264__dog_age": {
+   "status": "reference result has no t value",
+   "task_id": 264,
+   "task_sha256": "27bf2ee7bdcea51466f9b76325e79abb299ccdffd956ce1557b41e4fc3304298",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_266__lateralsurface_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 266,
+   "task_sha256": "e6d72398daaf3706368258e866e5dbe369d1fac39f2e1b5f5abd8039f3a97e68",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_268__find_star_num": {
+   "status": "agrees",
+   "draws": 84,
+   "task_id": 268,
+   "task_sha256": "1a96b08160f54b1f9717444971d056308b2f9e6a721649f1d3b77693d1834cda",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_279__is_num_decagonal": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 279,
+   "task_sha256": "554ec0c18aa19da6054c6cd1322b127fc08d95c3998ca79af540352ae6cf056e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_309__maximum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 309,
+   "task_sha256": "7d41d3c1bc32c1a64c113e67607e50f1348601fe9473c61c6571e6ae1d8f5b67",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_354__tn_ap": {
+   "status": "agrees",
+   "draws": 90,
+   "task_id": 354,
+   "task_sha256": "9365023a0b9cb262ed1152639c528d00601ab4f64343c3a2b0a5b02e498c497c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_356__find_angle": {
+   "status": "agrees",
+   "draws": 74,
+   "task_id": 356,
+   "task_sha256": "db52e5d4f74315b39b9a0ec43c496997eb83a5b6c01648bb564a28e9b8d76694",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_35__find_rect_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 35,
+   "task_sha256": "05d0d6238f34c14a3928118ba6400fca3b0340342c194a8c4f5763629e3c924c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_369__lateralsurface_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 369,
+   "task_sha256": "c1d11d4e607ed4c5e089f30683c148ed9a398f266938f34119d98fe9088e7f48",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_373__volume_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 373,
+   "task_sha256": "a115c37822a0c8c51e9d0cbdb9e8d23623056f172022e1b3fdd9556ece08deff",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_379__surfacearea_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 379,
+   "task_sha256": "124174f7b3066d3a0d5cf27d8e174ab1a0f63f8cf3b1da3f1aef00d74fbf2412",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_404__minimum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 404,
+   "task_sha256": "f9f72495d1029ec3e71def756d39c3f14fcb3cfb90f2c8cbeb9533c25f52147a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_420__cube_Sum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 420,
+   "task_sha256": "d4dc56454f64a5b1a9a4e7ad226c18b8575b2046d7d97c2bc532e17b2437b1b1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_441__surfacearea_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 441,
+   "task_sha256": "1c017cc60386e7616ae67e3d07276ca80e3c95293f9e26150ec098b18788c99c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_458__rectangle_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 458,
+   "task_sha256": "323f8d7adf85ffa00c682993e5b1495ad496939d5d6a5a0ac2564703fe9c2a4d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_498__gcd": {
+   "status": "agrees",
+   "draws": 95,
+   "task_id": 498,
+   "task_sha256": "551f7757de71bb78d3a5454fd77c721ca2a991dac6cbc442be21547f014a66d8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_499__diameter_circle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 499,
+   "task_sha256": "16d9d1f106e0f8a5b6f8c47de192702a7d316fd4c916a6baf65095a4b3d3989e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_52__parallelogram_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 52,
+   "task_sha256": "3b97fbc8272c7ec9b86b6260d74d90faf810fcc7a3397f21daa9a0bb81d2d1ef",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_581__surface_Area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 581,
+   "task_sha256": "d85ddcdc8f011434af576ae68204c492e4b0e75444a0a4077cdb20eff8d18076",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_59__is_octagonal": {
+   "status": "agrees",
+   "draws": 90,
+   "task_id": 59,
+   "task_sha256": "3d00c0a927869bcc9a175fd62cfe83ec7be8e5493f0382be4d12af1a75c457bc",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_654__rectangle_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 654,
+   "task_sha256": "c6b734198ffa8b7409e3d9b4cc577ad80d10b7f98c0bd7936fcdb58844c50235",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_672__max_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 672,
+   "task_sha256": "8c3cafebc2a27ca2c6aceecf6ea6a5f251f4459fedbec64367b617e88e8ce872",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_687__recur_gcd": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 687,
+   "task_sha256": "0e7336e46811e541a273a06d6dda06c8192559b2f1745ff951b3ec0dd1fc1417",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_716__rombus_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 716,
+   "task_sha256": "0f470a598238b338c8ce6698357cec7ef32448a9bfbdc1859e864eb9164cfa14",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_733__find_first_occurrence": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 733,
+   "task_sha256": "eded2366cc599c6929d8bb889f4e67f32b44defcb0458611eed80809a65e5ce2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_789__perimeter_polygon": {
+   "status": "agrees",
+   "draws": 65,
+   "task_id": 789,
+   "task_sha256": "5d74809bed1011d437311370a4cff0338a57a536c3c9dd3d8f24cf8acab0da6a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_837__cube_Sum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 837,
+   "task_sha256": "78012e98acb7000f56caf74a0325f8bf6ecf462be1f4f26268148ff2fb89b8c3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_86__centered_hexagonal_number": {
+   "status": "agrees",
+   "draws": 92,
+   "task_id": 86,
+   "task_sha256": "866078c1ea56135c16773434a1debeaaa0fbac077b5456e20d74ed53f01b322c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_873__fibonacci": {
+   "status": "agrees",
+   "draws": 92,
+   "task_id": 873,
+   "task_sha256": "f30a78d8df30a2b0de0a3d286c0e56a14acd765b3bcf155928b0dbca646dbc7c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_882__parallelogram_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 882,
+   "task_sha256": "ed91ada65089f6fd613e986178bb9401bcbba27af329de027b8b4c7f8c837885",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_89__closest_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 89,
+   "task_sha256": "6c621297ec25e3ce3722eeb7e0ed443de9f81dd231a18d5f5d8fee3b9c976aef",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_908__find_fixed_point": {
+   "status": "agrees",
+   "draws": 33,
+   "task_id": 908,
+   "task_sha256": "c03fc48d5fe3d31f11fc1aa7ab9bba4f953cb26258b60bb9a77fe7ce1a6c1b1a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_924__max_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 924,
+   "task_sha256": "0ce0f4b973a525f4e64a3c81abde2c040c95d0c884b64ecd9ae8aa5ff7ddf25a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_931__sum_series": {
+   "status": "reference result has no t value",
+   "task_id": 931,
+   "task_sha256": "d27ebfff1648559f1353e5fa56dc2ca780b3e5c4cb0f3afd447847cde329555e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8/mbpp_970__min_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 970,
+   "task_sha256": "895636cc63ff7437b83daa3755ab87e0d3652781f64f03b2dad954413fdf8cfe",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_112__perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 112,
+   "task_sha256": "fcffdf35592fa291469a8d5dd66a8731c1bf1311e526a6c1feb3057d117a8cde",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_135__hexagonal_num": {
+   "status": "agrees",
+   "draws": 96,
+   "task_id": 135,
+   "task_sha256": "eb42945e0dc9cd03f4c0f43b8fac68ab532b9415176cba8b7dcef62388b5158c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_151__is_coprime": {
+   "status": "agrees",
+   "draws": 89,
+   "task_id": 151,
+   "task_sha256": "7fb36e29a2ad33a2265e3d658141cb02026057a43dc43a8e4e06185cfb1b74f2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_171__perimeter_pentagon": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 171,
+   "task_sha256": "305acf6e86633b6d8c4742106a3a766bbb8ce7b98b7b485cbee6d5ed864a131a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_176__perimeter_triangle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 176,
+   "task_sha256": "c1c07ec7ab3b5bb531046340326d283dd3bd5eb921f8709b60d6b109b0c71bce",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_179__is_num_keith": {
+   "status": "disagrees",
+   "ensures": 0,
+   "args": [
+    3
+   ],
+   "reference_said": true,
+   "agreed_before": 0,
+   "task_id": 179,
+   "task_sha256": "833d11619b8bd4c322e5d203a63dc4496cb1e8f6b7792a21a2a5368c5f2d4bd6",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_17__square_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 17,
+   "task_sha256": "8eabff67b3e3be8836d8dd3d53acac9c1763aafb002f81f8f73d0292f498a73b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_190__count_Intgral_Points": {
+   "status": "agrees",
+   "draws": 83,
+   "task_id": 190,
+   "task_sha256": "c4586688a1b04edf8f165a8fc7e5f5540274c7a111d64f0191f76f481de91143",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_195__first": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     -1,
+     4,
+     5,
+     7,
+     8
+    ],
+    5,
+    1
+   ],
+   "reference_said": -1,
+   "agreed_before": 0,
+   "task_id": 195,
+   "task_sha256": "9dc68bd280e777ff42f9da02c6b482cb07836d4ba351ea5b7f5d41ae66b7795b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_227__min_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 227,
+   "task_sha256": "440bc1b3141d10372bb2d91cf32bfcd3416b71ff3dc98e508a81f79027380005",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_230__replace_blank": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 230,
+   "task_sha256": "049a6a942cb926e802bfb2df9a7294a01833aa37eb9962f5226883b9c2074fa1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_234__volume_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 234,
+   "task_sha256": "f1d8d4ec0a2b1bef73228c57c8a8fc1a9babd37a5f20727bdeb23367f5b6d1e4",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_266__lateralsurface_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 266,
+   "task_sha256": "fae45ea52295ba6b64a963bfdd906921dd65714a9f182eaee30e865519e47b6d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_268__find_star_num": {
+   "status": "agrees",
+   "draws": 81,
+   "task_id": 268,
+   "task_sha256": "1a96b08160f54b1f9717444971d056308b2f9e6a721649f1d3b77693d1834cda",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_269__ascii_value": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 269,
+   "task_sha256": "a2daffb8c5c73ee1e630bfceba261790bbf9d1ffc548f14404a1ec6e73b09348",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_279__is_num_decagonal": {
+   "status": "agrees",
+   "draws": 88,
+   "task_id": 279,
+   "task_sha256": "a285f34b24e027b42d1a3f25758493caada4723fdfb4ea2ff25200e37631caa0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_282__sub_list": {
+   "status": "agrees",
+   "draws": 9,
+   "task_id": 282,
+   "task_sha256": "2b36f8ea39c7a4e0743d119a37fe52067d36f63f5cd7df6af3e41969c998aee5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_309__maximum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 309,
+   "task_sha256": "7d41d3c1bc32c1a64c113e67607e50f1348601fe9473c61c6571e6ae1d8f5b67",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_316__find_last_occurrence": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 316,
+   "task_sha256": "ce4ae792329bf1800e605925785c959f1150a95e576fda5726dd5cf68e5b486c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_356__find_angle": {
+   "status": "agrees",
+   "draws": 74,
+   "task_id": 356,
+   "task_sha256": "db52e5d4f74315b39b9a0ec43c496997eb83a5b6c01648bb564a28e9b8d76694",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_35__find_rect_num": {
+   "status": "agrees",
+   "draws": 88,
+   "task_id": 35,
+   "task_sha256": "ebb9af4260773691ec111059ca0362a4354fd758d85984a8b6a3719a9d0b7a4c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_369__lateralsurface_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 369,
+   "task_sha256": "a317a463852cc979b757686a719ca9766968eb868c8285a52b0549ce1f0afd1d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_373__volume_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 373,
+   "task_sha256": "a115c37822a0c8c51e9d0cbdb9e8d23623056f172022e1b3fdd9556ece08deff",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_379__surfacearea_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 379,
+   "task_sha256": "124174f7b3066d3a0d5cf27d8e174ab1a0f63f8cf3b1da3f1aef00d74fbf2412",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_404__minimum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 404,
+   "task_sha256": "f9f72495d1029ec3e71def756d39c3f14fcb3cfb90f2c8cbeb9533c25f52147a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_441__surfacearea_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 441,
+   "task_sha256": "b37f9a05c4cdcfab3df00c3e47b24bf0b2a04a772cf8d71677482f2a7eff5bbf",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_447__cube_nums": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 447,
+   "task_sha256": "2986e680cb3bef63649269c1fd133feaf6affcf4878800513efeba6b5b28a0e7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_458__rectangle_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 458,
+   "task_sha256": "24cad0318fd18d26efe2d8b740eb3947f5b0fc79f333da254927b80e63b67105",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_498__gcd": {
+   "status": "agrees",
+   "draws": 92,
+   "task_id": 498,
+   "task_sha256": "551f7757de71bb78d3a5454fd77c721ca2a991dac6cbc442be21547f014a66d8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_499__diameter_circle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 499,
+   "task_sha256": "16d9d1f106e0f8a5b6f8c47de192702a7d316fd4c916a6baf65095a4b3d3989e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_509__average_Odd": {
+   "status": "agrees",
+   "draws": 49,
+   "task_id": 509,
+   "task_sha256": "37451d7cb4d7323d35f7d7a9c40f6e5df39ea6852aaec9e72bf769fd920f287d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_52__parallelogram_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 52,
+   "task_sha256": "3b97fbc8272c7ec9b86b6260d74d90faf810fcc7a3397f21daa9a0bb81d2d1ef",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_542__fill_spaces": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 542,
+   "task_sha256": "1a8f1e5d1a33fb4eda79fa3e142288829f19092e912301958291edac6f7b3f34",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_581__surface_Area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 581,
+   "task_sha256": "d85ddcdc8f011434af576ae68204c492e4b0e75444a0a4077cdb20eff8d18076",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_591__swap_List": {
+   "status": "agrees",
+   "draws": 75,
+   "task_id": 591,
+   "task_sha256": "703ae113f8653e95131eba220b6e9e2efaa33c81673d0f6464c3ba7706f60384",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_59__is_octagonal": {
+   "status": "agrees",
+   "draws": 94,
+   "task_id": 59,
+   "task_sha256": "3d00c0a927869bcc9a175fd62cfe83ec7be8e5493f0382be4d12af1a75c457bc",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_625__swap_List": {
+   "status": "agrees",
+   "draws": 65,
+   "task_id": 625,
+   "task_sha256": "be3a3bc5f07f09c52a98d76eb9f4b7cb9566b227709963bf4f126b6c2e8cccdf",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_626__triangle_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 626,
+   "task_sha256": "979875991503b95eb2f7ad6788989fdd2ce9d915cfe1dd70f45c4afa9dc5eb8b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_631__replace_spaces": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 631,
+   "task_sha256": "fcac20f5db3818093ed71dfdec9d5f737430317330accf85fcb99170b7902603",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_654__rectangle_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 654,
+   "task_sha256": "5625b9ae8d43c621d45e6d319d94f1da02d2ba9f6d4ea67c7be599fa69f2f66d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_672__max_of_three": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 672,
+   "task_sha256": "8c3cafebc2a27ca2c6aceecf6ea6a5f251f4459fedbec64367b617e88e8ce872",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_682__mul_list": {
+   "status": "agrees",
+   "draws": 20,
+   "task_id": 682,
+   "task_sha256": "8c169a36973863513e2215fea8a5cbf58d2d7726cf300b6c815960012ecff7a5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_687__recur_gcd": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 687,
+   "task_sha256": "0e7336e46811e541a273a06d6dda06c8192559b2f1745ff951b3ec0dd1fc1417",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_716__rombus_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 716,
+   "task_sha256": "0f470a598238b338c8ce6698357cec7ef32448a9bfbdc1859e864eb9164cfa14",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_728__sum_list": {
+   "status": "agrees",
+   "draws": 21,
+   "task_id": 728,
+   "task_sha256": "c6fbcfa20a275ec9c4071ff1338497a77b98f7b3639900179a500c4b67f81895",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_729__add_list": {
+   "status": "agrees",
+   "draws": 13,
+   "task_id": 729,
+   "task_sha256": "116cc61ab8637ee7964016ba55d2d30b18de4d85e589bae416e5c06ca960dda3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_732__replace_specialchar": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 732,
+   "task_sha256": "b53eca7b4402f6489d5e13e8534c6db91327c474ec920e67524d937fcb277546",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_733__find_first_occurrence": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 733,
+   "task_sha256": "eded2366cc599c6929d8bb889f4e67f32b44defcb0458611eed80809a65e5ce2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_789__perimeter_polygon": {
+   "status": "agrees",
+   "draws": 74,
+   "task_id": 789,
+   "task_sha256": "5d74809bed1011d437311370a4cff0338a57a536c3c9dd3d8f24cf8acab0da6a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_865__ntimes_list": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 865,
+   "task_sha256": "ff7b662de877e3b54703f25531b59bedf8a88509092209567d583030338ef5e5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_86__centered_hexagonal_number": {
+   "status": "agrees",
+   "draws": 95,
+   "task_id": 86,
+   "task_sha256": "866078c1ea56135c16773434a1debeaaa0fbac077b5456e20d74ed53f01b322c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_873__fibonacci": {
+   "status": "agrees",
+   "draws": 94,
+   "task_id": 873,
+   "task_sha256": "f30a78d8df30a2b0de0a3d286c0e56a14acd765b3bcf155928b0dbca646dbc7c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_89__closest_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 89,
+   "task_sha256": "6c621297ec25e3ce3722eeb7e0ed443de9f81dd231a18d5f5d8fee3b9c976aef",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_8__square_nums": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 8,
+   "task_sha256": "7a5a0c5fc849d9fef55255e814e14df5c91112ec8e6b5d68a04d9e2355e124e2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_908__find_fixed_point": {
+   "status": "agrees",
+   "draws": 26,
+   "task_id": 908,
+   "task_sha256": "9a31a0805b36dbbfa39a793395dae108e667eba5e702b4a50f77f98f5a1656fd",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_924__max_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 924,
+   "task_sha256": "0ce0f4b973a525f4e64a3c81abde2c040c95d0c884b64ecd9ae8aa5ff7ddf25a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3/mbpp_970__min_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 970,
+   "task_sha256": "895636cc63ff7437b83daa3755ab87e0d3652781f64f03b2dad954413fdf8cfe",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_112__perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 112,
+   "task_sha256": "ad6282b8cbd50ee0639f389b1e1ed69d83e903a6aa27f1396c15fc7bbf1e759d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_135__hexagonal_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 135,
+   "task_sha256": "ddc57189aac82f12d12969c623c2bc3bd954a85039fe40d3248ae158a4b1ead7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_171__perimeter_pentagon": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 171,
+   "task_sha256": "1dd98ec2199541cc77d81618b99a906778fcad0438a683a9e91da575f04c58f3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_17__square_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 17,
+   "task_sha256": "31e7a9796d11eb4547755e1acd0d0527e85e1b402c24e2ec353ef1a6e196c14d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_230__replace_blank": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 230,
+   "task_sha256": "c1f9e0716e065ff9bb444386783ddeeaa82d62b33329f3bb2b5a96df073953e8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_234__volume_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 234,
+   "task_sha256": "bb7e1a48e54ce4b400be481473d596b7f0936206b36c1a9d911743f39d60a780",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_268__find_star_num": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 268,
+   "task_sha256": "3720db985e5cb1d25332e16c085bcba8b521b77c4824a654db37b367c5a44518",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_316__find_last_occurrence": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 316,
+   "task_sha256": "705d303447a6bd382974effca7d71530d1accf651a9478d85d74a52f882b2c71",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_379__surfacearea_cuboid": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 379,
+   "task_sha256": "0abe6872c24f1016ca7cf83e101d1d8a223594ff154fbb262195ce92ef8b6535",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_404__minimum": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 404,
+   "task_sha256": "e3734370e86f91e084a92e8f49b864c74ed1479e469282d060a0b1e99bdf2db3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_441__surfacearea_cube": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 441,
+   "task_sha256": "ab1d6c1c50eb969e6cb6f157d7f07372bab1c2ccc7ba1395913590b1eb566276",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_447__cube_nums": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 447,
+   "task_sha256": "52c3c1626b4d363e0fde5b53b93477383442667040be4debf7c22e25a1a188d0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_451__remove_whitespaces": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 451,
+   "task_sha256": "4fa1be9b6af70e92f57c79b2ae6d17ce524ba772d7fe69a73c5144c38b31d21b",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_458__rectangle_area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 458,
+   "task_sha256": "6ce45a5c1476d12d38ccc68816ece87591f089ec0c252e5e584bcd66014990f1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_495__remove_lowercase": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 495,
+   "task_sha256": "3f10dc98569ec92d40e5a4f1c87c41d21f6c3d911a7e8076da004474174ccce3",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_499__diameter_circle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 499,
+   "task_sha256": "806c315d9d63839a3f2b5cf2dec77266fc7e24044b800d2baba196198e9ba65f",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_504__sum_Of_Series": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 504,
+   "task_sha256": "629a8788c91e46dde4d6c2f03e85f5e9b0fcca8165be2dc717c34a7bbbbd51a8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_577__last_Digit_Factorial": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 577,
+   "task_sha256": "6258b5c4447267cc65fafa79d36ea164fb883c2c2d399bdcd37560f9dbebaa5a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_581__surface_Area": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 581,
+   "task_sha256": "dea1509c5bcf1c06874011acee8e0ecf46c3697687c2da27842683bbfc1ca80c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_631__replace_spaces": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 631,
+   "task_sha256": "cb1ed1294114bf0b9c4831dda3bf60fbbf694f47495b6e809d7a89f224acc64d",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_654__rectangle_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 654,
+   "task_sha256": "740b065b757f3a1beafcbffa1541b30875aae185a3072acfba829f19b7b968ac",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_728__sum_list": {
+   "status": "agrees",
+   "draws": 20,
+   "task_id": 728,
+   "task_sha256": "68be4a230144a31def13336792641ac02a149f0fc6b2ed8582273b8ad3c7b675",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_732__replace_specialchar": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 732,
+   "task_sha256": "3855339442ed0bb8b82a998390a3e866048cd0e0eea02eb5f53d3837444c61a8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_865__ntimes_list": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 865,
+   "task_sha256": "b80b8b44b8c5eb17d4c5595bf91c25703bd782adfd6dbb0a2ee1c62baeda04e2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_890__find_Extra": {
+   "status": "agrees",
+   "draws": 6,
+   "task_id": 890,
+   "task_sha256": "48812c1d3616f89e9ffd983008899feb43774aaad91f681f7cc9774ce88b1006",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_908__find_fixed_point": {
+   "status": "disagrees",
+   "ensures": 1,
+   "args": [
+    [
+     0,
+     40,
+     45,
+     47,
+     84
+    ],
+    0
+   ],
+   "reference_said": -1,
+   "agreed_before": 42,
+   "task_id": 908,
+   "task_sha256": "50b2442e151ab0248d14f45a7cb5a35b069f0b991857733a9f976527c29a9811",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3.8-27b-fp8-v3-s2/mbpp_924__max_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 924,
+   "task_sha256": "d8fce781013391d0da6d2c6d847d16c38abcd5c44c65bf7d5c555f5a930c5ab5",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-g1/apps_3381__get_real_floor": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203381,
+   "task_sha256": "228ccdda9b2fdb7e3bee5ecdfbbeecfa3a5bebcc86b4b5f10b2b4420e80ba8c7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-g1/apps_3779__past": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203779,
+   "task_sha256": "89601c00405cbc08da70fa954fa238fdc335b40e656deca03392c83c3828b059",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_3369__move": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203369,
+   "task_sha256": "2d9ecee260d2c3ea0650448a6b2b908b2bbb85caaa5fa580ce7541447676b35e",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_3508__halving_sum": {
+   "status": "agrees",
+   "draws": 98,
+   "task_id": 203508,
+   "task_sha256": "bc61b0b939d3cdf2766013f15fc2fcffefe78c79579d615b20e49f0da74539f7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_3582__is_digit": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 203582,
+   "task_sha256": "99379aabe450474e4174143b34012d308d0e23850d0f434d8aa1ccb03f081db8",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_3588__quadratic": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203588,
+   "task_sha256": "6f8902194c88ba40979731f6317e383f40fd45792f7a50e276f214ee2c32d059",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_3779__past": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203779,
+   "task_sha256": "aa38fc50a768ddcc03ef5e80717484372236328c935d6f1759fa4093518c901c",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_3795__combat": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203795,
+   "task_sha256": "8b16123fcc85e4fe1ba91f56d2409d4549b9118bbd63c422f43fe478dffa0e91",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_3831__angle": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203831,
+   "task_sha256": "3edbd4e7369d897c05c36d24d95a5bbac51c32c83fec2760c01fc8f0af5d5596",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_3876__find": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203876,
+   "task_sha256": "f9a5868a11a577c9db0ef32969af303064cdf567cbbc7972e3829e3c4c06aaf0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_4017__add": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 204017,
+   "task_sha256": "e4497a0f4405f9e06711bce9f5972e1b6a1d21d960b1fcb3178ad20e2d018508",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_4280__area_largest_square": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 204280,
+   "task_sha256": "719c7187d56c564efcb55a36b8e3b4a68f903d5092f96b8273af84fcd51ce190",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_4360__get_score": {
+   "status": "agrees",
+   "draws": 63,
+   "task_id": 204360,
+   "task_sha256": "876de3782b6a0b98fef268f3f4b72caba242bb9aeba99733aab58b8a45a45cac",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_4367__area_or_perimeter": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 204367,
+   "task_sha256": "87959c26493268734accf96fe5bef82b126a8e817d5379c5bb63fa0767a594a2",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_4380__remove_chars": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 204380,
+   "task_sha256": "1bdc3f90515b4125006e13d0af00958f95f831fdc30006efc24d887e94bf10c0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_4459__nth_even": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 204459,
+   "task_sha256": "61346ed7b705be15650fad9105a3760f01d50d5edec7e78c014a07931d2558d7",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_4481__not_visible_cubes": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 204481,
+   "task_sha256": "c5637d43fbd29e5b8bd288286dded1fbb0955311ca49a4dd03e8b337fc59f0d1",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s1/apps_4573__over_the_road": {
+   "status": "agrees",
+   "draws": 54,
+   "task_id": 204573,
+   "task_sha256": "e9da839ecc5a0b3c8e6ef72a62510e28162b892ce4c91d340dbeba534ae240d9",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s2/apps_124__search": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 200124,
+   "task_sha256": "4659efa7847a386356db3fcc62497ded5d41a0b818bb6bd5040af7d865307364",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s2/apps_2465__divisorGame": {
+   "status": "agrees",
+   "draws": 78,
+   "task_id": 202465,
+   "task_sha256": "84c2e2466a40dc997cf537ab154bd14d48f8832f6c491d98f57fd7ecb979b164",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s2/apps_2510__canWinNim": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 202510,
+   "task_sha256": "e84e561093935976673433543eaec143ab5422f1ded06c230e86a12e5898c58a",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s2/apps_2930__summation": {
+   "status": "agrees",
+   "draws": 66,
+   "task_id": 202930,
+   "task_sha256": "2b913880093de49fe1f2fbd5dc891627c6b52e344176ba4f82633056fd1fab13",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s2/apps_2935__is_vowel": {
+   "status": "no valid draws",
+   "draws": 0,
+   "task_id": 202935,
+   "task_sha256": "287ad21dc2e1a35507e5169eb56ec3c2f27a22d352528aff0fdaddc332d732f0",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s2/apps_3252__is_letter": {
+   "status": "agrees",
+   "draws": 75,
+   "task_id": 203252,
+   "task_sha256": "245651d8975897a62817a0940c9c456fd05dfe5d1ac02ce8bcf50a064608ba87",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  },
+  "qwen3-coder-30b-apps-s2/apps_3271__arr": {
+   "status": "agrees",
+   "draws": 100,
+   "task_id": 203271,
+   "task_sha256": "2926825199d0ad23aa718873e6b0c2e0c02681e6bfa0bf93acdc10f276eeabdb",
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100
+  }
+ },
+ "runs": [
+  {
+   "tags": [
+    "prover-train"
+   ],
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100,
+   "only": "clean",
+   "counts": {
+    "agrees": 26,
+    "disagrees": 2,
+    "other": 3
+   },
+   "when": "2026-09-20T01:15:29.329205+00:00"
+  },
+  {
+   "tags": [
+    "deepseek-coder-v2-16b-v4-s1",
+    "deepseek-coder-v2-16b-v4-s2",
+    "qwen2.5-coder-14b-apps-s1",
+    "qwen2.5-coder-14b-apps-s2",
+    "qwen2.5-coder-14b-he-s1",
+    "qwen2.5-coder-14b-he-s2",
+    "qwen2.5-coder-14b-he-s3",
+    "qwen2.5-coder-14b-he-s4",
+    "qwen2.5-coder-14b-he-s5",
+    "qwen2.5-coder-14b-he-s6",
+    "qwen2.5-coder-14b-he-s7",
+    "qwen2.5-coder-14b-he-s8",
+    "qwen2.5-coder-14b-v3-s1",
+    "qwen2.5-coder-14b-v3-s1-fix1",
+    "qwen2.5-coder-14b-v3-s2",
+    "qwen2.5-coder-14b-v3-s2-fix1",
+    "qwen2.5-coder-14b-v3-s3",
+    "qwen2.5-coder-14b-v3-s3-fix1",
+    "qwen2.5-coder-14b-v3-s4",
+    "qwen2.5-coder-14b-v3-s4-fix1",
+    "qwen2.5-coder-14b-v3-s5",
+    "qwen2.5-coder-14b-v3-s5-fix1",
+    "qwen2.5-coder-14b-v3-s6",
+    "qwen2.5-coder-14b-v3-s6-fix1",
+    "qwen2.5-coder-14b-v3-s7",
+    "qwen2.5-coder-14b-v3-s8",
+    "qwen2.5-coder-14b-v3-s8-fix1",
+    "qwen3.8-27b-fp8",
+    "qwen3.8-27b-fp8-v3",
+    "qwen3.8-27b-fp8-v3-s2",
+    "qwen3-coder-30b-apps-g1",
+    "qwen3-coder-30b-apps-g1-probe",
+    "qwen3-coder-30b-apps-s1",
+    "qwen3-coder-30b-apps-s2",
+    "student-r4-train",
+    "locallm-r4-train",
+    "prover-train"
+   ],
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100,
+   "only": "clean",
+   "counts": {
+    "agrees": 288,
+    "disagrees": 5,
+    "other": 28
+   },
+   "when": "2026-09-20T01:17:48.184959+00:00"
+  },
+  {
+   "tags": [
+    "deepseek-coder-v2-16b-v4-s1",
+    "deepseek-coder-v2-16b-v4-s2",
+    "qwen2.5-coder-14b-apps-s1",
+    "qwen2.5-coder-14b-apps-s2",
+    "qwen2.5-coder-14b-he-s1",
+    "qwen2.5-coder-14b-he-s2",
+    "qwen2.5-coder-14b-he-s3",
+    "qwen2.5-coder-14b-he-s4",
+    "qwen2.5-coder-14b-he-s5",
+    "qwen2.5-coder-14b-he-s6",
+    "qwen2.5-coder-14b-he-s7",
+    "qwen2.5-coder-14b-he-s8",
+    "qwen2.5-coder-14b-v3-s1",
+    "qwen2.5-coder-14b-v3-s1-fix1",
+    "qwen2.5-coder-14b-v3-s2",
+    "qwen2.5-coder-14b-v3-s2-fix1",
+    "qwen2.5-coder-14b-v3-s3",
+    "qwen2.5-coder-14b-v3-s3-fix1",
+    "qwen2.5-coder-14b-v3-s4",
+    "qwen2.5-coder-14b-v3-s4-fix1",
+    "qwen2.5-coder-14b-v3-s5",
+    "qwen2.5-coder-14b-v3-s5-fix1",
+    "qwen2.5-coder-14b-v3-s6",
+    "qwen2.5-coder-14b-v3-s6-fix1",
+    "qwen2.5-coder-14b-v3-s7",
+    "qwen2.5-coder-14b-v3-s8",
+    "qwen2.5-coder-14b-v3-s8-fix1",
+    "qwen3.8-27b-fp8",
+    "qwen3.8-27b-fp8-v3",
+    "qwen3.8-27b-fp8-v3-s2",
+    "qwen3-coder-30b-apps-g1",
+    "qwen3-coder-30b-apps-g1-probe",
+    "qwen3-coder-30b-apps-s1",
+    "qwen3-coder-30b-apps-s2",
+    "student-r4-train",
+    "locallm-r4-train",
+    "prover-train",
+    "locallm-r7-92m",
+    "locallm-r7b-greedy",
+    "locallm-r7b-headed2",
+    "locallm-r8",
+    "phi4-mini-eval2-2026-09-19"
+   ],
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100,
+   "only": "clean",
+   "counts": {
+    "agrees": 288,
+    "disagrees": 5,
+    "other": 28
+   },
+   "when": "2026-09-20T03:47:05.951349+00:00"
+  },
+  {
+   "tags": [
+    "deepseek-coder-v2-16b-v4-s1",
+    "deepseek-coder-v2-16b-v4-s2",
+    "qwen2.5-coder-14b-apps-s1",
+    "qwen2.5-coder-14b-apps-s2",
+    "qwen2.5-coder-14b-he-s1",
+    "qwen2.5-coder-14b-he-s2",
+    "qwen2.5-coder-14b-he-s3",
+    "qwen2.5-coder-14b-he-s4",
+    "qwen2.5-coder-14b-he-s5",
+    "qwen2.5-coder-14b-he-s6",
+    "qwen2.5-coder-14b-he-s7",
+    "qwen2.5-coder-14b-he-s8",
+    "qwen2.5-coder-14b-v3-s1",
+    "qwen2.5-coder-14b-v3-s1-fix1",
+    "qwen2.5-coder-14b-v3-s2",
+    "qwen2.5-coder-14b-v3-s2-fix1",
+    "qwen2.5-coder-14b-v3-s3",
+    "qwen2.5-coder-14b-v3-s3-fix1",
+    "qwen2.5-coder-14b-v3-s4",
+    "qwen2.5-coder-14b-v3-s4-fix1",
+    "qwen2.5-coder-14b-v3-s5",
+    "qwen2.5-coder-14b-v3-s5-fix1",
+    "qwen2.5-coder-14b-v3-s6",
+    "qwen2.5-coder-14b-v3-s6-fix1",
+    "qwen2.5-coder-14b-v3-s7",
+    "qwen2.5-coder-14b-v3-s8",
+    "qwen2.5-coder-14b-v3-s8-fix1",
+    "qwen3.8-27b-fp8",
+    "qwen3.8-27b-fp8-v3",
+    "qwen3.8-27b-fp8-v3-s2",
+    "qwen3-coder-30b-apps-g1",
+    "qwen3-coder-30b-apps-g1-probe",
+    "qwen3-coder-30b-apps-s1",
+    "qwen3-coder-30b-apps-s2",
+    "student-r4-train",
+    "locallm-r4-train",
+    "prover-train",
+    "locallm-r7-92m",
+    "locallm-r7b-greedy",
+    "locallm-r7b-headed2",
+    "locallm-r8",
+    "phi4-mini-eval2-2026-09-19"
+   ],
+   "pool": "v5",
+   "seed": 1,
+   "attempts": 100,
+   "only": "clean",
+   "counts": {
+    "agrees": 288,
+    "disagrees": 5,
+    "other": 28
+   },
+   "when": "2026-09-20T03:47:14.500517+00:00"
+  }
+ ]
 }
