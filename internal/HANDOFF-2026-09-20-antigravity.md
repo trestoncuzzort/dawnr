@@ -290,9 +290,29 @@ they do not hold at the problem's own examples. Wrong, not weak. Over-constraint
 is essentially absent. The one clean answer at 0.500 post-completeness is the
 whitespace specification that returning nothing satisfies.
 
-**pre-completeness is not measured** and says so in the output: it needs inputs
-the problem should reject, which this corpus does not ship. That is a real gap,
-left visible rather than omitted.
+**pre-completeness is measured as of 2026-09-20**, and the reason it was not
+turned out to be wrong. It does not need shipped negatives: the problem's own
+reference solution is the oracle for the problem's DOMAIN exactly as it already
+is for its outputs, so an input the reference refuses to compute is one the
+problem does not define, and a `requires` that still admits it is claiming
+ground the problem never gave it. The signal was already being drawn in
+`check_task` and thrown away by a line reading "the reference refuses this
+input; not a finding".
+
+**Read the findings before quoting the column**
+(`locallm/FINDINGS-pre-completeness-2026-09-20.md`). The first version of it
+reported Phi's clean answers at 0.000 against a 27B's 0.455, which is a
+differentiator and an artifact: t represents a string as a sequence of ints, the
+corpus's Python solutions want a `str`, and 54 of 97 measurements came from a
+reference that never ran at all. Probes now count only where the reference is
+known to run.
+
+Honest result: **nine answers of 180 have a measurable domain boundary**, so
+this corpus has almost no signal in this quadrant. Every rate prints with the
+count under it (`0.000/1` is one answer). The instrument is ready and the corpus
+is the limit; APPS and CodeContests carry explicit input constraints, are
+already on disk in `nl/data/`, and the spec pipeline does not use them yet.
+That is the obvious next move if this quadrant matters.
 
 ### Work stopped mid-flight, and how to resume each
 
