@@ -18,6 +18,6 @@ done, install by copy instead:
 ## commit-msg
 
 Refuses a commit that changes Python and cites neither a source nor `INVENTED:`.
-AGENTS.md rule 5 is the rule; this is the enforcement. A source is an http(s) URL,
-an arXiv id, or a `github.com/owner/repo` reference. A rename, a typo fix or a
+AGENTS.md rule 5 is the rule; this is the enforcement. A source is a URL with or
+without its scheme, such as `stackoverflow.com/q/39417091`, or an arXiv id. A rename, a typo fix or a
 revert is not an implementation: `git commit --no-verify`.

@@ -5,8 +5,8 @@
 # to prevent that, because both depend on being remembered. This does not.
 #
 # A commit that adds or changes Python must carry, in its message, either:
-#   * a source -- an http(s) URL, or an arXiv id such as arXiv:2604.21570, or
-#     a github.com/owner/repo reference; or
+#   * a source -- a URL with or without its scheme, such as
+#     stackoverflow.com/q/39417091, or an arXiv id such as arXiv:2604.21570; or
 #   * the literal token INVENTED: followed by what was searched for and why
 #     nothing was usable.
 #
@@ -30,7 +30,13 @@ case "$msg" in
   Merge*|Revert*) exit 0 ;;
 esac
 
-if printf '%s' "$msg" | grep -Eqi 'https?://|arxiv[:. ]?[0-9]{4}\.[0-9]{4,5}|github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+'; then
+# A bare host and path counts, because that is how this repository actually cites:
+# stackoverflow.com/q/39417091 and unicode.org/Public/UCD/... are the committed
+# spelling, and the scheme is left off in prose throughout. The first version of
+# this line demanded https:// and refused a message citing four sources for that
+# reason alone, which teaches writing https:// rather than looking anything up.
+if printf '%s' "$msg" | grep -Eqi \
+  'https?://|arxiv[:. ]?[0-9]{4}\.[0-9]{4,5}|[A-Za-z0-9-]+\.(com|org|net|io|dev|edu|gov|ai)/[^ ]'; then
   exit 0
 fi
 if printf '%s' "$msg" | grep -q 'INVENTED:'; then
@@ -39,7 +45,7 @@ fi
 
 cat >&2 <<'MSG'
 
-  pre-commit: this commit changes Python and cites nothing.
+  commit-msg: this commit changes Python and cites nothing.
 
   Python touched:
 MSG
