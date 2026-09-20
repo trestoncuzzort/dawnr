@@ -1,18 +1,20 @@
 # t twins: verified programs paired with the near-miss that breaks them
 
-426 pairs. Written by `t/twins_artifact.py`; regenerate with `python3 t/twins_artifact.py`
-and check an unchanged tree with `--check`.
+426 pairs: **213 verified programs answering 90 problems**, each paired with a near-miss.
+Several models answered the same problem, so a problem contributes more than one program and a
+program contributes more than one pair. Written by `t/twins_artifact.py`; regenerate with
+`python3 t/twins_artifact.py` and check an unchanged tree with `--check`.
 
 Each file under `pairs/` holds one pair:
 
-- `program`: a task in t -- a program with its own specification -- that passed the problem's own
+- `program`: a task in t, a program with its own specification, that passed the problem's own
   tests and was **verified by all seven** proof systems (Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq,
   F\*).
 - `twin`: the same program with one deliberate edit, named in `operator`.
 - `witness`: the concrete input at which the twin breaks the specification the program keeps, with
   what each one answers there. `witness_reads` says it in a sentence.
 - `twin_refuted_by`: the seven systems that refuted the twin. A pair is written only when both halves
-  are on the record -- verified in all seven and refuted in all seven -- so there is no pair here
+  are on the record, verified in all seven and refuted in all seven, so there is no pair here
   resting on a partial column.
 
 ## Why this and not a corpus of verified programs

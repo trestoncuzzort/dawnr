@@ -51,11 +51,11 @@ witness, not a bare failing exit code. That distinction was learned: until
 countermodel and is no longer read as one
 ([`WITNESS-2026-09-02-dafny-door.md`](WITNESS-2026-09-02-dafny-door.md)).
 
-[`twins/`](twins/) ships 426 pairs over 90 programs as a standalone artifact:
-each a verified program, a near-miss one deliberate edit away, the concrete
-input at which the near-miss breaks the specification the program keeps, and
-seven independent refutations at that input. A pair is written only when both
-halves are on the record.
+[`twins/`](twins/) ships 426 pairs as a standalone artifact: 213 verified
+programs answering 90 problems, each paired with a near-miss one deliberate
+edit away, the concrete input at which the near-miss breaks the specification
+the program keeps, and seven independent refutations at that input. A pair is
+written only when both halves are on the record.
 
 ## Where the verdicts come from
 
@@ -112,7 +112,7 @@ here; `editors/WALKTHROUGH.md` measures everything reachable without one.
 | `lower_*.py` | one lowering per kernel, plus twin generation |
 | `verifiers/` | one driver per kernel, each collecting its own verdict and version |
 | `tasks/` | the 35 committed tasks, as `.t` |
-| `twins/` | 426 verified/near-miss pairs with separating inputs |
+| `twins/` | 426 verified/near-miss pairs over 90 problems, with separating inputs |
 | `run_par.py`, `cli.py` | the grading driver and the single-task entry point |
 | `spec_check.py`, `preflight.py` | the checks that decide what counts |
 | `out/` | lowered sources and verdicts, regenerated; witnesses are committed |

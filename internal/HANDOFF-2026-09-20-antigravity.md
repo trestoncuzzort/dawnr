@@ -504,12 +504,20 @@ you grade from here.
 6. **A sentinel file that a wrapper touches after `wait` means "the process
    exited", not "the work finished".** Killing a generator let its wrapper
    touch the sentinel and two chains scored partial answer sets.
-7. **Adding a head to a training document breaks a reader that does not know
+7. **`run_par.py` needs a LOGIN shell on the grading machine, or Verus silently
+   reads `malformed`.** `grade_lab.sh` invokes it as `bash -lc '...'` for this
+   reason: Verus needs rustup on `PATH` and a plain `ssh host 'python3
+   t/run_par.py ...'` does not source the profile that provides it. The cell
+   then reads `malformed`, which looks exactly like a lowering that really is
+   malformed. Measured both ways on 2026-09-20 against `t/nested`: without the
+   login shell, `verus malformed/malformed` and DISAGREEMENT; with it, all
+   seven agree. `t/preflight.py` catches the same condition before a round.
+8. **Adding a head to a training document breaks a reader that does not know
    it.** This has now happened three times and cost 216, then an unknown
    number, then 24 answers. Put the head in `loop_filter.HEAD_LINE` and nowhere
    else, and make every reader call `loop_filter.strip_head`.
    `t/test_head_handling.py` enforces it.
-8. **`set --` in a shell script replaces the positional parameters**, and it
+9. **`set --` in a shell script replaces the positional parameters**, and it
    bit twice on 2026-09-20. `t/gen_fleet.sh` threw away the caller's extra
    flags until `75a43fa`, so any fleet set older than that was decoded with
    defaults whatever its log says. `t/grade_lab.sh` overwrote its own mode

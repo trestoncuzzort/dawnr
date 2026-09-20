@@ -80,10 +80,10 @@ Eight results, in plain terms, each linked to the script that produced it:
   program, and a training example survives only if **all seven** verify it.
   Projects that verify their training data usually use one prover.
 - **Every program ships with a sabotaged twin.** [`t/twins/`](t/twins/) is 426
-  pairs over 90 programs, each with the concrete input where the two disagree
-  and seven independent refutations. That is what stops a prover waving through
-  something it never really checked. We have not found another published set of
-  that shape.
+  pairs: 213 verified programs answering 90 problems, each paired with a
+  near-miss, the concrete input where the two disagree, and seven independent
+  refutations. That is what stops a prover waving through something it never
+  really checked. We have not found another published set of that shape.
 - **Predictions are written down before runs, including the wrong ones.**
   Several of this project's own beliefs died that way and the files that killed
   them are in the repo.
@@ -102,7 +102,7 @@ Eight results, in plain terms, each linked to the script that produced it:
 | understand the model builder | [`locallm/README.md`](locallm/README.md) |
 | understand the specification language and its seven kernels | [`t/README.md`](t/README.md) |
 | see the full scoreboard against Phi and every baseline | [`SCOREBOARD.md`](SCOREBOARD.md) |
-| see what was tried and ruled out | [`SCOREBOARD.md`](SCOREBOARD.md#what-has-been-ruled-out) |
+| see what was tried and ruled out | [`SCOREBOARD.md`](SCOREBOARD.md#what-has-been-ruled-out-and-what-it-cost-to-find-out) |
 | read the problem corpora | [`nl/README.md`](nl/README.md) |
 | run it myself | [`t/RUN-ON-LINUX.md`](t/RUN-ON-LINUX.md) |
 | read the day-by-day record, failures included | [`t/runs/`](t/runs/), [`internal/ROADMAP-LOG.md`](internal/ROADMAP-LOG.md) |
@@ -132,7 +132,7 @@ this repository is comparable to every earlier one.
 |---|---|
 | [`locallm/`](locallm/) | the model builder: a transformer trained from random weights on your own hardware |
 | [`t/`](t/) | the filter: a small specification language translated into seven proof systems, and every pipeline script above |
-| [`t/twins/`](t/twins/) | 426 verified programs each paired with a near-miss and the input that separates them |
+| [`t/twins/`](t/twins/) | 426 pairs: a verified program, a near-miss, and the input that separates them |
 | [`nl/`](nl/) | natural-language programming problems with tests, from four public sources |
 | [`tup/`](tup/) | a Linux distribution built from source with a receipt per step |
 | [`internal/`](internal/) | handoffs, the machine plan, the dated engineering log that is the roadmap of record |
