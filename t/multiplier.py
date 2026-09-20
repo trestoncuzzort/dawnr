@@ -45,6 +45,7 @@ the body is the class 12.6 names, and the tests are what separate them.
     python3 t/multiplier.py --model <name> --samples 4 --out t/out/multiplier
 """
 import argparse
+import concurrent.futures
 import copy
 import hashlib
 import json
@@ -201,6 +202,10 @@ def main() -> int:
     ap.add_argument("--timeout", type=float, default=900)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--variants", default=",".join(VARIANTS))
+    ap.add_argument("--jobs", type=int, default=8,
+                    help="tasks in flight. The server is shared: this is request "
+                         "slots, not VRAM, which is fixed at the server's own "
+                         "--gpu-memory-utilization and owned by nobody here.")
     a = ap.parse_args()
 
     want = [v for v in a.variants.split(",") if v in VARIANTS]
@@ -211,16 +216,18 @@ def main() -> int:
           f"= {len(corpus) * len(want) * a.samples} replies to ask for", flush=True)
 
     banked = 0
-    for name, path in corpus:
+
+    def one(name: str, path: pathlib.Path) -> int:
+        """Bank one task's replies. Returns how many came back non-empty."""
         dest = out / (name.replace("/", "_") + ".json")
         if dest.exists():
-            continue
+            return 0
         try:
             task = tasks_io.load_task(path)
             text = surface.print_task(task).rstrip()
         except Exception as e:                 # noqa: BLE001 one unreadable task is not the run
             print(f"SKIP {name}: {type(e).__name__}: {e}", flush=True)
-            continue
+            return 0
         stripped_task, n_loops = strip_invariants(task)
         try:
             stripped = surface.print_task(stripped_task).rstrip()
@@ -250,11 +257,21 @@ def main() -> int:
                 except Exception as e:         # noqa: BLE001
                     got.append({"sample": i, "error": f"{type(e).__name__}: {e}"})
             rec["replies"][variant] = got
-            banked += sum(1 for g in got if g.get("reply"))
-        dest.write_text(json.dumps(rec, indent=1) + "\n", encoding="utf-8")
+        # One temp file per task then a rename, so a task interrupted mid-flight
+        # leaves nothing behind: its own resume check is dest.exists(), and a
+        # half-written file would be skipped forever rather than retried.
+        tmp = dest.with_suffix(".tmp")
+        tmp.write_text(json.dumps(rec, indent=1) + "\n", encoding="utf-8")
+        tmp.replace(dest)
+        got_n = sum(sum(1 for g in v if g.get("reply")) for v in rec["replies"].values())
         print(f"bank {name}: " + ", ".join(
             f"{v} {sum(1 for g in rec['replies'].get(v, []) if g.get('reply'))}"
             for v in rec["replies"]), flush=True)
+        return got_n
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, a.jobs)) as ex:
+        for n in ex.map(lambda nb: one(*nb), corpus):
+            banked += n
 
     print(f"\n{banked} replies banked in {out}")
     print("Filter on CPU: parse, check_wf, the problem's own tests, then all seven "
