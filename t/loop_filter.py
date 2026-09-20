@@ -21,6 +21,25 @@ import spec_experiment as se, surface, fuzz_lower
 PATH = ("{h}/.cargo/bin:{h}/.opam/default/bin:{h}/.elan/bin:{h}/.local/fstar/fstar/bin:"
         "{h}/.local/gnatprove/gnatprove-x86_64-linux-16.1.0-1/bin:{h}/.local/verus/verus-x86-linux:").format(h=Path.home())
 
+
+HEAD_LINE = re.compile(r"^(?:Problem|Signature|Example): .*\n", re.M)
+
+
+def strip_head(doc: str) -> str:
+    """Remove every head line this project writes, not just the two it wrote first.
+
+    The corpus grew a `Signature:` line on 2026-09-19 and an `Example:` line the
+    same evening. A stripper that knows only `Problem:` and `Signature:` leaves
+    the rest in front of the program, `surface.parse` fails, and the document
+    vanishes from the copy check without a word.
+    """
+    out = doc
+    while True:
+        stripped = HEAD_LINE.sub("", out, count=1)
+        if stripped == out:
+            return out
+        out = stripped
+
 def key(task):
     # The program with its name, format version and gate erased: none of the
     # three changes what the kernels check. Until 2026-09-17 the version
@@ -79,14 +98,22 @@ def main():
                 src.append(b.strip() + "\n")
     if a.corpus_file:
         text = Path(a.corpus_file).read_text()
-        src = [d.strip() + "\n" for d in re.split(r"\n\s*\n(?=Problem: |t \d)", text) if d.strip()]
+        src = [d.strip() + "\n"
+               for d in re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", text) if d.strip()]
     corpus = src
-    seen = set()
+    seen, unparsed = set(), 0
     for doc in src:
-        try: seen.add(key(surface.parse(re.sub(r"^Problem: .*\nSignature: .*\n", "", doc))))
-        except Exception: pass
+        try:
+            seen.add(key(surface.parse(strip_head(doc))))
+        except Exception:
+            # Counted, not swallowed: a document that does not parse is a
+            # document missing from the copy check, and a silent miss lets a
+            # duplicate through the filter this file exists to be.
+            unparsed += 1
     clean = []
-    print(f"source: {len(src)} blocks, {sum(map(len, src))} chars, {len(seen)} parse", flush=True)
+    print(f"source: {len(src)} blocks, {sum(map(len, src))} chars, {len(seen)} parse"
+          + (f", {unparsed} DID NOT PARSE and are absent from the copy check" if unparsed else ""),
+          flush=True)
     seed_docs = list(corpus)
     for r in range(a.rounds):
         R = W / f"r{r}"; R.mkdir(exist_ok=True)
@@ -94,8 +121,10 @@ def main():
             # a round whose grading finished: reuse its samples and verdicts
             names = {f.stem: f.read_text() for f in (R / "tasks").glob("*.t")}
             for body in names.values():
-                try: seen.add(key(surface.parse(body)))
-                except Exception: pass
+                try:
+                    seen.add(key(surface.parse(body)))
+                except Exception:
+                    unparsed += 1
             print(f"round {r}: resumed from {R} ({len(names)} novel samples graded)", flush=True)
         else:
             (R / "corpus.txt").write_text("\n".join(corpus))
