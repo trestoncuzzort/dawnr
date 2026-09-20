@@ -1,8 +1,13 @@
-# Handoff, written 2026-09-19 23:50 for whoever picks this up next
+# Handoff, written 2026-09-19 23:50, last updated 2026-09-20
 
 Claude access ends at midnight. This is the live state, what is running, what is
 half-finished, and the traps. Everything below was measured today unless it says
 otherwise. Read `AGENTS.md` first, then this.
+
+Since the first version, the whole lab was run end to end on 24 problems to find
+what a day of changes had broken. It found two real bugs, both now fixed; the
+section "The regression run, 2026-09-20" has the results and the one rule worth
+carrying forward.
 
 ## The headline, and exactly how far it is supported
 
@@ -311,10 +316,75 @@ model's `ensures` at the problem's own assertions. It catches **62%, 27% and 88%
 of the proven-but-wrong population in three arms and **fired on none of the
 eleven clean answers across four sets**.
 
-And the hypothesis it replaced was falsified first: across 388 proved answers
-there is **not one weak specification**. The failure is specs that are flatly
-false at the problem's own solution — a predicate problem specified as
-`r == x + 1`. `locallm/FINDINGS-completeness-2026-09-20.md` has it.
+And the hypothesis it replaced was falsified first. Weakness is rare and
+wrongness dominates: across 1,295 wrong answers tested against 14 scored
+specifications, **1 was weak**. The other failure mode is specs that are flatly
+false at the problem's own solution, such as a predicate problem specified as
+`r == x + 1`.
+
+Be careful with this one, because I got it wrong first. The original claim here
+was "not one weak specification", and widening the search found one: a
+maximum-of-three problem missing `r >= c`, which still rejected 345 of 350 wrong
+answers. Nearly tight, and the miss is in the one direction that matters. The
+lesson is that a zero found by a search is a property of the search.
+`locallm/FINDINGS-completeness-2026-09-20.md` carries the correction at its
+head and the case at its end.
+
+## The regression run, 2026-09-20: what it proved and the two bugs it found
+
+Everything above was written and changed in one day, so before handing it over I
+ran the whole lab end to end on 24 problems, GPU generation and CPU grading, to
+find what the day had broken. **Run this again after any change to the
+readers.** It is cheap and it has now caught two real bugs.
+
+What passed, and these are the claims you may rely on:
+
+| check | result |
+|---|---|
+| syntax, 17 Python files + 4 shell scripts | all parse |
+| `t/` unit tests | **75 OK** |
+| `locallm/` unit tests | **31 OK** |
+| `spec_check.py` against the previous round's verdicts | **26 agree / 2 disagree / 3 uncheckable, an exact match**, no drift |
+| token cache on / off | **bit-identical**: 50,142 tokens, losses equal to 16 digits |
+
+**Bug 1, fixed (`75a43fa`).** `t/gen_fleet.sh` did `set -- $CARDS` to iterate the
+cards, which replaces the positional parameters, so `"$@"`, holding every extra
+flag the caller passed (`--temperature 0`, `--examples`), was silently gone by the
+time the workers were launched. Every fleet generation since the script was
+written ran with **default decoding regardless of what was asked for**. Fixed by
+saving `EXTRA=("$@")` before the card loop. If you have fleet-generated answer
+sets whose flags mattered, they were not generated with those flags.
+
+**Bug 2, fixed (`f191fab`).** The examples-trained model learned what its own
+training documents look like: they *start* with `Example:` lines. All 24 replies
+opened with `Example: ...` before `t 1`, and all 24 failed to extract:
+`extract: 24 replies; parse 24`, every answer lost. The answer splitter cuts at
+the *next* document and so never looked at a head in front of *this* one.
+
+This is the **third** time the same family has bitten, and it is worth naming
+because a fourth is likely. *A corpus format grew and one reader did not know.*
+First the answer splitter (216 of 232 unparseable), then the copy check's
+stripper (documents dropped in silence), now the extractor's input. The fix was
+not a third copy of the pattern. `cmd_generate` now calls
+`loop_filter.strip_head`, the one stripper that knows every head this project
+writes. `t/test_head_handling.py` asserts that call is present, so a new reader
+cannot be written without one.
+
+**The rule this leaves you:** if you add a head to a training document, add it to
+`loop_filter.HEAD_LINE` and nowhere else, and make every reader call
+`strip_head`. The test file exists to enforce exactly that.
+
+**Not a repo bug, but it will catch you too:** `t/grade_lab.sh` is written to run
+**from the desktop and ssh into the lab**. Running it *on* the lab gives
+`T_LAB: set T_LAB=user@host` and looks like a missing config. It is not; you are
+on the wrong machine.
+
+**Known-failing before any of today's work**, so do not go hunting for it:
+`t/test_lower_spark_loop_cert.py::test_two_loops_falls_back_to_plain_f_call`
+fails identically with today's changes stashed. On the desktop's `python3`,
+`t/test_loop_train.py` errors on a missing `datasets` and all of `locallm/`
+errors on a missing `torch`. Use `~/.venv-vllm/bin/python` on the lab for
+those, which is where the 75 / 31 above come from.
 
 ## Traps that cost time today
 
@@ -338,6 +408,14 @@ false at the problem's own solution — a predicate problem specified as
 6. **A sentinel file that a wrapper touches after `wait` means "the process
    exited", not "the work finished".** Killing a generator let its wrapper
    touch the sentinel and two chains scored partial answer sets.
+7. **Adding a head to a training document breaks a reader that does not know
+   it.** This has now happened three times and cost 216, then an unknown
+   number, then 24 answers. Put the head in `loop_filter.HEAD_LINE` and nowhere
+   else, and make every reader call `loop_filter.strip_head`.
+   `t/test_head_handling.py` enforces it.
+8. **`t/gen_fleet.sh` took the caller's extra flags and threw them away** until
+   `75a43fa` on 2026-09-20. Any fleet-generated set older than that commit was
+   decoded with defaults, whatever its log line says.
 
 ## Two commands that do the first two steps for you
 

@@ -29,13 +29,20 @@ solution (soundness), and does it reject a mutated output (completeness)?
 **Not one weak specification anywhere.** Not in the clean answers, not in the
 proven-but-wrong ones, across three arms and 388 proved answers.
 
+> **This paragraph is the claim that was corrected**, and it is left standing
+> because the reasoning that follows it was built on it. A wider search found
+> one weak specification; see "Correction: the search was too narrow, and it
+> hid one" at the end before quoting anything above it.
+
 ## The predictions
 
 1. **Proven-but-wrong answers are weak at least three times as often as clean
    ones: falsified.** Both populations are at zero.
 2. **Mean completeness is lower for proven-but-wrong in every set:
    unscoreable.** There is no variation to compare.
-3. **At least 20% of proven-but-wrong answers are weak: falsified**, at 0%.
+3. **At least 20% of proven-but-wrong answers are weak: falsified**, at 0% by
+   this search and at 1 of 14 specifications once the search was widened.
+   Falsified either way, and by a wide margin.
 
 ## What is actually happening
 
