@@ -134,7 +134,14 @@ def mutations(value):
     if isinstance(value, bool):
         out.append(not value)
     elif isinstance(value, int):
-        out += [value + 1, value - 1, 0, -value]
+        # A neighbourhood, not four guesses. CLEVER (arXiv:2505.13938) and
+        # VeriEquivBench (arXiv:2510.06296) both state the strong form of this
+        # as a proof obligation -- no output other than the right one may
+        # satisfy the specification -- and score a spec zero when it is merely
+        # sound. We cannot prove that against a Python reference, so we search:
+        # the wider the search that finds nothing, the stronger the negative.
+        out += [value + d for d in range(-4, 5) if d]
+        out += [0, 1, -1, -value, value * 2, value // 2 if value else 7]
     elif isinstance(value, tuple):
         rows = all(isinstance(x, tuple) for x in value) and bool(value)
         if value:
@@ -146,6 +153,11 @@ def mutations(value):
                 out.append((head + 1,) + value[1:])
             if len(value) > 1:
                 out.append(tuple(reversed(value)))
+                out.append(value[1:])                       # dropped the first
+                out.append((value[1], value[0]) + value[2:])  # swapped the first two
+            if isinstance(head, int) and not isinstance(head, bool):
+                out.append((head - 1,) + value[1:])
+                out.append((0,) + value[1:])
         out.append(value + ((),) if rows else value + (0,))          # one element too many
     seen, unique = set(), []
     for candidate in out:

@@ -1,4 +1,9 @@
-# The specifications are not weak. They are wrong.
+# The specifications are almost never weak. They are wrong.
+
+> **Corrected the same day.** The first version of this document said "not one
+> weak specification" across 388 answers. Widening the search found one, and
+> the correction is at the end. The substance holds and the headline number
+> did not: weakness is rare and wrongness dominates, but it is not zero.
 
 Predictions registered in
 [`t/PREDICT-2026-09-20-completeness.md`](../t/PREDICT-2026-09-20-completeness.md)
@@ -159,3 +164,58 @@ proven-but-wrong answers, depending on the arm.
 It stays a measurement until someone runs a round with it as a gate and reports
 what the pool lost, because adding a gate changes what the pool contains and the
 pool's contents are cited evidence.
+
+
+---
+
+# Correction: the search was too narrow, and it hid one
+
+The completeness check tested four wrong answers per draw: `o+1`, `o-1`, `0`,
+`-o`. **CLEVER** ([arXiv:2505.13938](https://arxiv.org/abs/2505.13938)) and
+**VeriEquivBench** ([arXiv:2510.06296](https://arxiv.org/abs/2510.06296)) both
+state the strong form of this as a proof obligation: *no* output other than the
+right one may satisfy the specification, and a spec that is merely sound scores
+zero. We cannot discharge that against a Python reference, so the honest
+substitute is to search harder and report how hard the search was.
+
+The neighbourhood is now twelve candidates for an integer and seven for a
+sequence, including dropping the first element and swapping the first two.
+Re-measured over the same three arms, **1,295 wrong answers tested instead of
+about 300**:
+
+| arm | specifications scored | weak | wrong answers tested |
+|---|---:|---:|---:|
+| r7b greedy | 5 | 0 | 333 |
+| r4 (3.2M) | 3 | 0 | 249 |
+| r8 headed2 | 6 | **1** | 713 |
+
+**One weak specification exists**, and it is the textbook case:
+
+> *"Write a function to find maximum of three numbers."*
+> ```
+> ensures r >= a
+> ensures r >= b
+> ensures r == a or r == b or r == c
+> ```
+
+It forgot `r >= c`. At `a=15, b=28, c=30` the right answer is 30, and the
+specification also accepts **28**: 28 ≥ 15, 28 ≥ 28, and 28 is one of the three.
+All seven proof systems proved a program meeting it, and the twin was refuted.
+It rejected **345 of 350** wrong answers, which is why four mutations missed it:
+it is nearly tight, and the miss is in the one direction that matters.
+
+## What changes and what does not
+
+- The headline claim becomes **1 of 14 scored specifications**, not 0 of 14. The
+  dominant failure is still `disagrees` — a specification false at the problem's
+  own solution — by two orders of magnitude.
+- **The decision not to build a completeness gate stands.** A gate that fires on
+  1 of 14 answers, none of which was clean, removes nothing worth removing.
+- The instrument is better and the claim is smaller. That is the right direction
+  for both. The next strengthening is the one the two papers actually specify:
+  prove `∀y. spec(x,y) → y = ref(x)` with the seven provers rather than
+  searching for a counterexample by hand.
+
+The lesson is about the first version of this document rather than about the
+model: **a negative result is only as strong as the search that failed to find
+anything**, and reporting the size of that search is not optional.
