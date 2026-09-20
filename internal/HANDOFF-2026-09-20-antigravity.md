@@ -265,6 +265,29 @@ it upgrades a check that already earns its keep. Then KBSpec, because it is the
 only item that addresses t being out-of-distribution without a training run.
 Everything else waits on a GPU.
 
+### One command that summarises specification quality
+
+    python3 t/spec_scorecard.py --tag <answer-set> [--tag ...]
+
+Prints Spec-Harness / vACT's four quadrants
+([arXiv:2604.00280](https://arxiv.org/abs/2604.00280)) from instruments built
+2026-09-20. Measured on four graded arms:
+
+| population | post-correctness | post-completeness | pre-correctness |
+|---|---:|---:|---:|
+| clean | **1.000** everywhere | 1.000, except r4 at **0.500** | 1.000 |
+| proven but wrong | **0.000-0.034** | **0.712-0.932** | 0.980-1.000 |
+
+Read it as: the specifications behind proven-but-wrong answers are mostly
+*complete* — they reject wrong answers — and almost never *correct*, because
+they do not hold at the problem's own examples. Wrong, not weak. Over-constraint
+is essentially absent. The one clean answer at 0.500 post-completeness is the
+whitespace specification that returning nothing satisfies.
+
+**pre-completeness is not measured** and says so in the output: it needs inputs
+the problem should reject, which this corpus does not ship. That is a real gap,
+left visible rather than omitted.
+
 ### Work stopped mid-flight, and how to resume each
 
 | what | where it stopped | how to pick it up |
