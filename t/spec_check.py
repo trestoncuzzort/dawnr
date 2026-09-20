@@ -362,6 +362,34 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     agreed = 0
     rejected = accepted = 0            # the completeness half: wrong outputs the ensures catches
     weak_witness = None
+    # The fourth quadrant. vACT's four-way split (arXiv:2604.00280) wants inputs
+    # the problem REJECTS, and this corpus ships none, which is why
+    # spec_scorecard.py has printed "pre-completeness NOT MEASURED" since it was
+    # written. It does not need shipped negatives: the problem's own reference
+    # solution is the oracle for the problem's DOMAIN exactly as it is already
+    # the oracle for its outputs. An input the reference refuses to compute is
+    # an input the problem does not define, and a requires that still admits it
+    # is claiming ground the problem never gave it.
+    #
+    # This is the admissibility half of the admissibility / soundness /
+    # uniqueness triad that property-based spec validation uses (VERINA
+    # arXiv:2505.23135, CLEVER arXiv:2505.13938), where the same three cheap
+    # random checks found underspecification in about 10% of specifications.
+    # The signal was already being computed in the loop below and thrown away.
+    #
+    # AUDITED BEFORE IT WAS BELIEVED, and the first version was wrong. On the
+    # 27B set, 97 answers produced domain probes and **54 of them came from a
+    # reference that never succeeded on any draw at all**: t represents a string
+    # as a sequence of ints, the corpus's Python solution wants a `str`, and
+    # every call raises TypeError. Those refusals say nothing about the
+    # specification, only that the harness cannot hand this problem a value it
+    # accepts. Counting them scored a confident 0.000 on exactly the answers the
+    # instrument cannot evaluate at all, which is the false precision this
+    # project refuses everywhere else. The probes are therefore only reported
+    # when the reference is known to RUN on this problem.
+    domain_probes = domain_admitted = 0
+    reference_ran = 0                  # draws where the reference returned a value
+    domain_witness = None
     for _ in range(n):
         args = [draw(k, rnd, ex) for k, ex in zip(kinds, examples)]
         if any(a is None for a in args):
@@ -373,9 +401,33 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
         except Timeout:
             return {"status": "reference did not finish"}
         except Exception:                                       # noqa: BLE001
-            continue                                            # the reference refuses this input; not a finding
+            # The reference refuses this input, so the problem does not define
+            # it. Does the specification exclude it too? A requires that admits
+            # it is incomplete on the input side. Timeouts are handled above and
+            # deliberately do not reach here: not finishing is a different
+            # failure from not being defined.
+            signal.alarm(0)
+            try:
+                env_in = {p["name"]: to_t(a) for p, a in zip(task["params"], args)}
+            except TypeError:
+                continue                     # no t value for the input: cannot ask
+            st_in = interp.St()
+            try:
+                admits = all(interp.ev(c, env_in, funs, st_in) is True
+                             for c in task.get("requires", []))
+            except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
+                continue                     # undefined on this input is a rejection by refusal
+            except Exception:                # noqa: BLE001
+                continue
+            domain_probes += 1
+            if admits:
+                domain_admitted += 1
+                if domain_witness is None:
+                    domain_witness = {"args": args, "reference_raised": True}
+            continue
         finally:
             signal.alarm(0)
+        reference_ran += 1
         try:
             env = {p["name"]: to_t(a) for p, a in zip(task["params"], args)}
             env[task["returns"][0]["name"]] = to_t(out)
@@ -425,6 +477,22 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
                       weak=accepted > 0)
         if weak_witness is not None:
             result["weak_witness"] = weak_witness
+    if domain_probes and not reference_ran:
+        # The reference refused every draw, so this problem has no measurable
+        # domain boundary here and the refusals are the harness's, not the
+        # specification's. Said out loud rather than dropped.
+        result["pre_completeness_unmeasurable"] = "reference never ran"
+    if domain_probes and reference_ran:
+        # Evidence with a witness, never an automatic failure, for the same
+        # reason the output half is: a problem can legitimately be total, and a
+        # reference that raises can be a bug in the reference rather than a
+        # boundary of the problem. A human or a later gate decides.
+        result.update(domain_probes=domain_probes, domain_admitted=domain_admitted,
+                      reference_ran=reference_ran,
+                      pre_completeness=round(1 - domain_admitted / domain_probes, 3),
+                      pre_incomplete=domain_admitted > 0)
+        if domain_witness is not None:
+            result["domain_witness"] = domain_witness
     return result
 
 

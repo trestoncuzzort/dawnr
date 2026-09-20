@@ -17,9 +17,18 @@ already exist here:
                      `mutations` (arXiv:2608.13077) and `exploit` (arXiv:2412.06176)
   pre-correctness    the requires admits the problem's own examples rather than
                      narrowing the problem          `check_points.points_excluded`
-  pre-completeness   NOT MEASURED. It needs inputs the problem should reject,
-                     which this corpus does not ship. Reported as a gap rather
-                     than quietly omitted.
+  pre-completeness   the requires REJECTS inputs the problem does not define
+                     `check_task.pre_completeness`
+                     The corpus ships no negative inputs, which is why this read
+                     NOT MEASURED until 2026-09-20. It does not need them: the
+                     problem's own reference solution is the oracle for the
+                     problem's domain exactly as it is already the oracle for
+                     its outputs, so an input the reference refuses to compute
+                     is an input the problem does not define. The signal was
+                     already being drawn in check_task and discarded. This is
+                     the admissibility leg of the admissibility / soundness /
+                     uniqueness triad that property-based spec validation uses
+                     (VERINA arXiv:2505.23135, CLEVER arXiv:2505.13938).
 
     python3 t/spec_scorecard.py --tag locallm-r8 --tag phi4-mini-eval2-2026-09-19
 """
@@ -67,6 +76,11 @@ def score(tag: str, pool, draws: int, root: Path) -> dict:
             "post_correct": points["points_failed"] == 0 and points["points_held"] > 0,
             "post_complete": not tight.get("weak", False) and lazy["exploited_by"] is None,
             "pre_correct": points["points_excluded"] == 0,
+            # None when the reference never refused a draw, which is not the
+            # same as scoring zero: a total problem has no domain boundary to
+            # find, and averaging it in as a pass or a fail would both lie.
+            "pre_complete": (None if "pre_completeness" not in tight
+                             else tight["pre_completeness"]),
             "exploited_by": lazy["exploited_by"]})
     out = {"tag": tag, "populations": {}}
     for population, items in rows.items():
@@ -78,7 +92,10 @@ def score(tag: str, pool, draws: int, root: Path) -> dict:
             "post_correctness": round(sum(i["post_correct"] for i in items) / n, 3),
             "post_completeness": round(sum(i["post_complete"] for i in items) / n, 3),
             "pre_correctness": round(sum(i["pre_correct"] for i in items) / n, 3),
-            "pre_completeness": None,
+            "pre_completeness": (round(sum(scored) / len(scored), 3) if (
+                scored := [i["pre_complete"] for i in items
+                           if i["pre_complete"] is not None]) else None),
+            "pre_completeness_n": len([i for i in items if i["pre_complete"] is not None]),
             "exploited": sum(i["exploited_by"] is not None for i in items)}
     return out
 
@@ -94,17 +111,26 @@ def main():
     root = HERE / "out" / "spec-experiment"
     results = [score(tag, pool, args.draws, root) for tag in args.tag]
     print(f"{'tag':28} {'population':18} {'n':>4} {'post-corr':>10} {'post-comp':>10} "
-          f"{'pre-corr':>9} {'exploited':>10}")
+          f"{'pre-corr':>9} {'pre-comp/n':>9} {'exploited':>10}")
     for r in results:
         if "error" in r:
             print(f"{r['tag']:28} {r['error']}")
             continue
         for population, q in sorted(r["populations"].items()):
+            # The rate is printed with the count it rests on, because these
+            # counts are tiny: a bare 0.000 over one answer reads like a
+            # population result and is not one.
+            pc = ("      n/a" if q["pre_completeness"] is None
+                  else f"{q['pre_completeness']:.3f}/{q['pre_completeness_n']}")
             print(f"{r['tag']:28} {population:18} {q['answers']:4} "
                   f"{q['post_correctness']:10.3f} {q['post_completeness']:10.3f} "
-                  f"{q['pre_correctness']:9.3f} {q['exploited']:10}")
-    print("\npre-completeness is not measured: it needs inputs the problem should "
-          "reject, which this corpus does not ship.")
+                  f"{q['pre_correctness']:9.3f} {pc:>9} {q['exploited']:10}")
+    print("\npre-completeness: of the inputs the problem's own solution refuses to "
+          "compute, the fraction\nthe specification's requires also refuses. n/a means "
+          "the reference never refused a draw,\nso the problem showed no domain boundary "
+          "to find. Counted over "
+          f"{sum(q.get('pre_completeness_n', 0) for r in results if 'populations' in r for q in r['populations'].values())}"
+          " answer(s) that had one.")
     if args.out:
         args.out.write_text(json.dumps(results, indent=2, sort_keys=True) + "\n")
 

@@ -1,0 +1,71 @@
+[
+  {
+    "populations": {
+      "clean": {
+        "answers": 2,
+        "exploited": 0,
+        "post_completeness": 1.0,
+        "post_correctness": 1.0,
+        "pre_completeness": null,
+        "pre_completeness_n": 0,
+        "pre_correctness": 1.0
+      },
+      "proven_but_wrong": {
+        "answers": 105,
+        "exploited": 8,
+        "post_completeness": 0.924,
+        "post_correctness": 0.0,
+        "pre_completeness": 0.0,
+        "pre_completeness_n": 1,
+        "pre_correctness": 1.0
+      }
+    },
+    "tag": "locallm-r8"
+  },
+  {
+    "populations": {
+      "clean": {
+        "answers": 3,
+        "exploited": 0,
+        "post_completeness": 1.0,
+        "post_correctness": 1.0,
+        "pre_completeness": null,
+        "pre_completeness_n": 0,
+        "pre_correctness": 1.0
+      },
+      "proven_but_wrong": {
+        "answers": 1,
+        "exploited": 0,
+        "post_completeness": 1.0,
+        "post_correctness": 0.0,
+        "pre_completeness": null,
+        "pre_completeness_n": 0,
+        "pre_correctness": 1.0
+      }
+    },
+    "tag": "phi4-mini-eval2-2026-09-19"
+  },
+  {
+    "populations": {
+      "clean": {
+        "answers": 57,
+        "exploited": 0,
+        "post_completeness": 1.0,
+        "post_correctness": 1.0,
+        "pre_completeness": 0.833,
+        "pre_completeness_n": 6,
+        "pre_correctness": 1.0
+      },
+      "proven_but_wrong": {
+        "answers": 12,
+        "exploited": 2,
+        "post_completeness": 0.833,
+        "post_correctness": 0.083,
+        "pre_completeness": 1.0,
+        "pre_completeness_n": 2,
+        "pre_correctness": 0.917
+      }
+    },
+    "tag": "qwen3.8-27b-fp8-v3"
+  }
+]
