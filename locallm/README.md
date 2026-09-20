@@ -431,9 +431,9 @@ files. Point it at a folder of your own data and press train. See the
 
 ### Free for everyone
 
-This is free. Not free-tier, not free-for-now, not free-until-we-raise-a-round. There is
-no account, no telemetry, no usage limit, no paid version holding the good features, and
-nothing about it that stops working if this project goes quiet. It runs on hardware
+There is no account, no telemetry, no usage limit, no paid version holding the good
+features, and nothing about it that stops working if this project goes quiet. ("Free"
+here is about those things, not about the licence: see License below.) It runs on hardware
 people already have, including without a GPU.
 
 ## Why from scratch
@@ -448,4 +448,8 @@ It is small. It is yours. It is honest about what it is.
 
 Research use only, see [LICENSE](LICENSE) and the repository root [LICENSE](../LICENSE). locallm was MIT until 2026-09-15; a copy obtained under MIT before then keeps it. Copyright (c) 2026 Treston Malachi Cuzzort.
 
-Use it, change it, ship it, sell it. Keep the copyright notice.
+This section said "use it, change it, ship it, sell it" until 2026-09-20, two
+sentences after saying research use only. That line was true under MIT and was
+left behind when the licence changed on 2026-09-15. Research and education are
+covered; anything else needs written permission, which is what the root
+[`LICENSE`](../LICENSE) says.
