@@ -50,8 +50,15 @@ $SSH "$LAB" "mkdir -p ~/.cache/t-watch $WORK && touch ~/$REMOTE_EV"
 # timed out mid-grade: the kernels survived as orphans and the table was never
 # written. Read the machine first and take what is actually free.
 BUSY=$($SSH "$LAB" "cut -d' ' -f1 /proc/loadavg; nproc; ps -eo cmd | grep -cE '[l]oop_locallm.py generate|[l]oop_generate.py'" 2>/dev/null | tr '\n' ' ')
-set -- $BUSY
-LOAD=${1:-0}; CORES=${2:-120}; OURS=${3:-0}
+# read, not `set --`: `set --` replaces the POSITIONAL PARAMETERS, and this
+# script's mode is $1. From a6acacb until this was found on 2026-09-20,
+# `set -- $BUSY` overwrote "heldout" with the load average, the case below
+# matched no branch, and the script exited 0 having graded nothing. A grading
+# command that reports success without grading is the worst failure available
+# to this project: every caller believed it had a table. Same root cause as the
+# gen_fleet.sh flag loss fixed in 75a43fa the same day.
+read -r LOAD CORES OURS <<<"$BUSY"
+LOAD=${LOAD:-0}; CORES=${CORES:-120}; OURS=${OURS:-0}
 HEADROOM=$(awk -v c="$CORES" -v l="$LOAD" 'BEGIN{h=int(c-l); print (h>0)?h:0}')
 if [ "${OURS:-0}" -gt 0 ]; then
   echo "NOTE: $OURS of our generation workers are still running on the grading machine."
