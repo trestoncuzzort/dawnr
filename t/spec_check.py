@@ -117,6 +117,47 @@ def to_t(value):
     raise TypeError(f"unsupported reference result: {type(value).__name__}")
 
 
+def mutations(value):
+    """Wrong outputs derived from a right one, deterministically.
+
+    The completeness half of the check, after arXiv 2603.17150: a specification
+    that is true of the right answer and also true of a wrong one does not say
+    what the problem asked. arXiv 2608.13077 makes the same measurement its
+    primary metric and finds it separates models where acceptance metrics do
+    not (28.05% against 4.27%).
+
+    Deterministic on purpose. This file threads one seeded generator through
+    every task in order, so consuming a draw here would change every downstream
+    verdict and every report already cited. Mutations come from the value.
+    """
+    out = []
+    if isinstance(value, bool):
+        out.append(not value)
+    elif isinstance(value, int):
+        out += [value + 1, value - 1, 0, -value]
+    elif isinstance(value, tuple):
+        rows = all(isinstance(x, tuple) for x in value) and bool(value)
+        if value:
+            out.append(value[:-1])                                  # dropped the last element
+            head = value[0]
+            if isinstance(head, bool):
+                out.append((not head,) + value[1:])
+            elif isinstance(head, int):
+                out.append((head + 1,) + value[1:])
+            if len(value) > 1:
+                out.append(tuple(reversed(value)))
+        out.append(value + ((),) if rows else value + (0,))          # one element too many
+    seen, unique = set(), []
+    for candidate in out:
+        if candidate == value:
+            continue                       # not a wrong answer; says nothing either way
+        key = repr(candidate)
+        if key not in seen:
+            seen.add(key)
+            unique.append(candidate)
+    return unique
+
+
 def reference(rec: dict, fn: str):
     """The problem's own solution as a callable, or None when it will not run."""
     code = rec.get("code") or ""
@@ -149,6 +190,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
         return {"status": "arity differs from the problem"}
     funs = interp.funs_of(task, task["body"])
     agreed = 0
+    rejected = accepted = 0            # the completeness half: wrong outputs the ensures catches
+    weak_witness = None
     for _ in range(n):
         args = [draw(k, rnd, ex) for k, ex in zip(kinds, examples)]
         if any(a is None for a in args):
@@ -182,7 +225,37 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
             return {"status": "disagrees", "ensures": bad[0], "args": args,
                     "reference_said": out, "agreed_before": agreed}
         agreed += 1
-    return {"status": "agrees" if agreed else "no valid draws", "draws": agreed}
+        # The ensures is true of the right answer. Is it also true of a wrong
+        # one? Nothing else in this project asks, and a specification that
+        # cannot tell them apart is what the proven-but-wrong column is made of.
+        for wrong in mutations(env[task["returns"][0]["name"]]):
+            probe = dict(env)
+            probe[task["returns"][0]["name"]] = wrong
+            st2 = interp.St()
+            try:
+                holds = all(interp.ev(e, probe, funs, st2) is True
+                            for e in task.get("ensures", []))
+            except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
+                continue                 # undefined on a wrong answer is a rejection by refusal
+            except Exception:            # noqa: BLE001
+                continue
+            if holds:
+                accepted += 1
+                if weak_witness is None:
+                    weak_witness = {"args": args, "reference_said": out, "also_accepts": wrong}
+            else:
+                rejected += 1
+    result = {"status": "agrees" if agreed else "no valid draws", "draws": agreed}
+    if rejected or accepted:
+        # Reported, never silently turned into a failure: a problem with more
+        # than one right answer can accept a mutated output legitimately, so
+        # this is evidence with a witness attached, for a human or a later gate.
+        result.update(mutants_rejected=rejected, mutants_accepted=accepted,
+                      completeness=round(rejected / (rejected + accepted), 3),
+                      weak=accepted > 0)
+        if weak_witness is not None:
+            result["weak_witness"] = weak_witness
+    return result
 
 
 def main() -> int:
