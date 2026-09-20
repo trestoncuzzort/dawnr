@@ -422,7 +422,7 @@ ints and a yes/no answer as bool.
 Reply with exactly one t task inside a ```t fenced block and nothing else.
 """
 
-PROMPT_VERSIONS = ("v1", "v2", "v3", "v4")
+PROMPT_VERSIONS = ("v1", "v2", "v3", "v4", "v5")
 
 # GRAMMAR_V2 is GRAMMAR plus the sequence trio (literal, concatenation,
 # slice) and the string sugar (SPEC.md "Sequences: literals, concatenation,
@@ -721,6 +721,58 @@ thrown away, measured over 14,130 replies):
 """
 
 
+# Prompt v5: v4 plus a grammar-guidance block. WS-21 move 2 is "prompt fixes that
+# need no grammar", and this is the one intervention with a published effect size on
+# exactly this failure. PostcondBench (arXiv:2605.03356) attributes 54 percent of
+# incorrect postconditions to specification-language misuse and measures a block of
+# "grammar guidance ... summarized from the official documentation, including an
+# explanation of the specification language / API in use, with brief examples"
+# moving Claude-4.5 from Corr@1 0.629 to 0.814 and Comp@1 0.207 to 0.283.
+# FormalBench (aclanthology.org/2025.acl-long.1068) measures invalid responses at 25
+# percent zero-shot, 5 percent few-shot and 1 percent least-to-most.
+#
+# Scoped deliberately to FORMAL SYNTAX and not to prose about the problem, because
+# the same literature has the negative result: Vericoding (arXiv:2509.22908) tested
+# adding a natural-language description and found "no statistically significant
+# performance improvement (indeed, the results seem to be slightly worse on
+# average)", and nl2postcond (arXiv:2310.01831) found including the reference
+# solution did not significantly change correctness. The gain is from showing the
+# model what well-formed t looks like.
+#
+# It does NOT put the problem's own assertions in the prompt. That is the tempting
+# next step and it is where CLEVER (arXiv:2505.13938) warns of leakage, models
+# copying an executable specification into the implementation and proving it
+# trivially; Vericoding lists implementation leakage from the spec as its third
+# cheating pattern. If tried, it is a separate registered arm.
+GRAMMAR_V5 = GRAMMAR_V4 + """
+THE SHAPE OF A TASK, ONCE, IN FULL (this is the whole grammar you need):
+
+  t <version>
+  [gate loops]
+  task <name>(<param>: <type>, ...) returns (<r>: <type>)
+    [requires <BoolExpr>]        zero or more, each on its own line
+    [ensures  <BoolExpr>]        one or more: this is the specification
+  [spec fun <f>(<x>: <type>): <type>     a helper, BEFORE the body's `{`
+     [decreases <IntExpr>]
+   = <Expr>]
+  {
+    <statements>
+  }
+
+TYPES: int, bool, seq, seq<seq>, (int, int). No float, no map, no set, no class.
+OPERATORS: + - * / % on int; == != < <= > >= ; and or not ==> ; forall/exists over
+  a bounded range `forall i in [0, n) . P(i)`; len(s), s[i], s[a..b], s[i := v],
+  seq(n, v), [a, b]; p.0 and p.1 on a pair.
+STATEMENTS: `x := e;`  `var x: T := e;`  `if c { } else { }`  `return e;`
+  `while c invariant I decreases D { }`
+
+THREE SHAPES THAT ARE REFUSED AND ARE THE COMMONEST WAY A REPLY IS LOST:
+  * `let x := e in ...` is not t. Write `var x: int := e;` as a statement.
+  * A list comprehension is not t. Write the loop, with its invariant.
+  * A method call with a dot, `s.foo()`, is not t except for the string members.
+"""
+
+
 def fewshot_text(version: str = "v1") -> str:
     if version not in PROMPT_VERSIONS:
         raise ValueError("prompt version must be one of %s, got %r" % (", ".join(PROMPT_VERSIONS), version))
@@ -728,10 +780,10 @@ def fewshot_text(version: str = "v1") -> str:
     for name in FEWSHOT:
         task = harness.load(tasks_io.find(HERE / "tasks", name))
         parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
-    if version in ("v2", "v3", "v4"):
+    if version in ("v2", "v3", "v4", "v5"):
         for _, text in FEWSHOT_V2_EXTRA:
             parts.append("```t\n" + text.rstrip() + "\n```")
-    if version in ("v3", "v4"):
+    if version in ("v3", "v4", "v5"):
         for name in FEWSHOT_V3_EXTRA:
             task = harness.load(tasks_io.find(HERE / "tasks", name))
             parts.append("```t\n" + surface.print_task(task).rstrip() + "\n```")
@@ -751,7 +803,8 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
             f"of type(s) {kinds}, in the order the tests pass them, returning "
             f"{ret}. The tests must pass and the ensures must specify the "
             f"result.")
-    grammar = (GRAMMAR_V4 if version == "v4" else GRAMMAR_V3 if version == "v3"
+    grammar = (GRAMMAR_V5 if version == "v5" else GRAMMAR_V4 if version == "v4"
+               else GRAMMAR_V3 if version == "v3"
                else GRAMMAR_V2 if version == "v2" else GRAMMAR)
     return [{"role": "system", "content": grammar + "\nExamples of complete t tasks:\n\n" + fewshot_text(version)},
             {"role": "user", "content": user}]
