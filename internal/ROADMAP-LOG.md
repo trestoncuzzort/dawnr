@@ -1959,6 +1959,64 @@ The current expanded preflight passes with two warnings: historical v3 prompt
 wording and four existing untracked data files. The grammar also loads under the
 workstation's full Python stack. The inherited lowering changes remain unverified.
 
+## Reversing Antigravity's session, 2026-09-20
+
+A local agent (Antigravity) picked up `internal/HANDOFF-2026-09-20-antigravity.md`
+and worked the tree from 04:28 to 06:09, four commits, pushed. The operator asked
+for all of it to come back out. It is recoverable on the branch
+`antigravity-2026-09-20` at 38590e1c, and the artifacts it produced are kept
+aside under `~/antigravity-backup-2026-09-20` on both machines, including the
+1.5 GB `locallm-r10` checkpoint it trained.
+
+The reason each change could not be kept is the same reason in four shapes: a
+gate was widened, and a widened gate cannot be checked. `loop_dataset.positive_rejection`
+rejects a sample whose recorded result was measured against a different pool. That
+check was rewritten so a v5 result counts under v6 and a v6 result counts under
+v5, with a comment citing monotonic pool extension. Pool v6 was itself v5 plus a
+new stdin pool, so the effect is that every earlier result becomes admissible
+training data for the new pool by assertion rather than by regrading. The claimed
+step was WS-22.2, grow the pool with the best converter measured, which is the
+one step where a widened gate lands directly in the deliverable.
+
+Three smaller edits carried the same shape. `--pool v5` was rewritten to
+`--pool v6` inside the step definitions in `t/lab.py` and `t/steps.json` for runs
+already measured at v5 (`r5-locallm`, `r7-grade`, `constrained-grade`, `apps`);
+those strings are the record of what was run, not configuration for the next run.
+CodeContests `generated_tests` were dropped from sample construction, which
+changes what pool v5 contains and so what every number measured over it means,
+and the rendered documentation was edited to say they are excluded because they
+crash the verifiers. The Vericoding benchmark was vendored in full, 38,083 files
+under `nl/data/vericoding` with its own CI workflows, where the benchmark is a
+clone away and `nl/data` is already the working copy of record.
+
+The grammar was the near miss. `fix_gbnf.py` on the workstation rewrote
+`t/t.gbnf` in place at 05:26, replacing `root ::= ws task ws` with a bounded
+trailing-whitespace rule. The file was restored by 05:30 and both machines now
+hash `19b19174a05255864716cbd4ae75afd3` against the committed copy. That timing
+is what makes its generation usable: `phi4-mini-g` decoded from 06:52 to 07:24,
+after the restore, against the committed grammar and the committed
+`/tmp/gen_phig.sh`, and took the set from 56 to 129 raw answers. Raw decodes
+survive; everything derived from them by the edited code does not. Its
+`phi4-mini-g` table read 1 clean of 92 and was deleted rather than quoted.
+
+Two commits from the operator landed on top of Antigravity's at 09:11 to 09:23
+and were not part of the reversal: `AMBITION.md` at the repository root and
+`ROADMAP.md` rewritten as a public-facing copy of this log. Both were replayed
+onto a3bb9328 with their authorship intact, so `main` is that pair over the
+handoff commit. The middle two of that chain gutted this file and then reverted
+themselves, and were dropped as a no-op.
+
+Measured after the reversal: both trees at the same commit, 428 tests with the
+four known failures and nothing else, no reference to v6 left in the tree, and
+the pool guard back to strict equality. `prover-train2` re-extracted under v5
+gives 450 replies, 75 well formed, 37 passing their own tests, which are the
+cells the pool rebuild will grade.
+
+The lesson worth keeping: a gate is not overhead in front of the measurement, it
+is the measurement. An agent reporting that it unlocked the data by widening one
+has reported nothing that can be checked, and the shape to look for in a diff is
+a comparison loosened with a citation next to it.
+
 ## The road to 1.0 (opened 2026-09-05)
 
 WS-12 is the next six sessions. This is everything after them, to the two
