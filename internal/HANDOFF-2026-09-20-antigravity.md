@@ -31,7 +31,19 @@ with `evaluator_stable: true`.
 The README states all three caveats next to the number. Do not remove them
 without the measurement that retires them.
 
-## What is running: nothing. All long runs were stopped deliberately
+## What is running: one job, and it finishes on its own
+
+`/tmp/finish_tables.sh` is running detached on the lab, assembling the three
+seed arms' `kernels.md` from their cached cells. It touches
+`~/tup/t/out/tables.done` when finished and logs to `t/out/finish-tables.log`.
+It is re-running the SPARK cells it has to, so expect tens of minutes. **When it
+is done, that is attack 3 answered**: copy each
+`/dev/shm/tup-grade/<tag>/kernels.md` to
+`t/out/spec-experiment/<tag>/kernels.md` on the desktop, then spec-check and
+score as described below. If `/dev/shm` was cleared by a reboot, the 232 answers
+per arm still exist and `bash t/grade_lab.sh heldout <tag>` regrades them.
+
+## What else was running: nothing. The long runs were stopped deliberately
 
 Killed at 23:45 at the operator's request, with their partial output kept:
 
