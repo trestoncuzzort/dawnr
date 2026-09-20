@@ -377,7 +377,36 @@ def load_steps() -> list:
 SPEC_EXP = HERE / "out" / "spec-experiment"
 GEOMETRY = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "t-lab" / "geometry"
 # the files a fix lands in; when one moves, the window reloads itself (Lab.watch_own_code)
-WATCHED = (Path(__file__).resolve(), HERE / "steps.json", HERE / "lab_status.py")
+ROOT = HERE.parent
+
+
+def watched_files() -> set[Path]:
+    """Every source file the window is actually running, recomputed at each poll.
+
+    A hand-written tuple of three names lived here until 2026-09-20 and was wrong
+    the moment the window grew a fourth source file: merging the trainer in put
+    locallm/studio.py on the Train page while the list still named lab.py,
+    steps.json and lab_status.py, so a fix to the training surface would not have
+    reloaded anything. Werkzeug's reloader takes the same lesson and derives its
+    set from sys.modules instead of naming files, precisely so that adding a
+    module cannot silently stop it watching (github.com/pallets/werkzeug,
+    src/werkzeug/_reloader.py, _iter_module_paths, read 2026-09-20).
+
+    This is the narrow version of that: modules whose file sits inside the
+    repository, because the standard library and the virtualenv are not what gets
+    fixed while the window is open. It is recomputed rather than cached because
+    studio.py is imported lazily, so it joins the set only once Train has been
+    opened, and a file that appears mid-run must not read as a file that changed.
+    """
+    files = {HERE / "steps.json"}
+    for mod in list(sys.modules.values()):
+        name = getattr(mod, "__file__", None)
+        if not name:
+            continue
+        f = Path(name)
+        if f.suffix == ".py" and f.is_relative_to(ROOT):
+            files.add(f)
+    return files
 
 
 def lab_target() -> str:
@@ -716,7 +745,7 @@ class Lab:
             root.after(300, self.poll_events)
         root.after(1000, self.tick)
         root.after(200, self.drain)
-        self.watched = {p: mtime(p) for p in WATCHED}
+        self.watched = {p: mtime(p) for p in watched_files()}
         root.after(2000, self.watch_own_code)
 
     # -- look ------------------------------------------------------------------
@@ -1374,8 +1403,10 @@ class Lab:
         2026-09-18 the window kept showing the state it was built with until someone pressed Refresh -- which
         reads as a second bug. A changed file is taken twice, two seconds apart, so a half-written file is not
         read as a new version, and nothing reloads while a step is being started or a log is open in a dialog."""
-        now = {p: mtime(p) for p in WATCHED}
-        moved = [p for p in WATCHED if now[p] != self.watched[p]]
+        now = {p: mtime(p) for p in watched_files()}
+        # .get(p, now[p]) so a file that only just joined the set -- studio.py the
+        # first time Train is opened -- does not read as a file that changed.
+        moved = [p for p in now if now[p] != self.watched.get(p, now[p])]
         if moved and all(now[p] == mtime(p) for p in moved) and not self.root.grab_current():
             self.restart_app()
             return
