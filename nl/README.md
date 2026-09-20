@@ -171,10 +171,21 @@ Licences are as declared on HuggingFace and have **not** been independently revi
 separately that problem *statements* from Codeforces, AtCoder, CodeChef and Aizu carry the
 original judges' copyright, which is not the dataset authors' to relicense.
 
-**This directory is not tup's to relicense, and tup's research-use licence does not reach it.** tup
-is private today; `nl/` was imported on that basis. It is excluded from the publish
-whitelist in `forge/sync_public.py`, which is allow-only, so it cannot reach a public
-mirror by omission, only by someone adding it on purpose. On 2026-09-15 it was cleared on its own terms: HumanEval (MIT) and MBPP (CC-BY-4.0), whose statements are the dataset authors' own, stay in the tree with the table above as their attribution; APPS and CodeContests, whose statements are the judges' copyright, are untracked and ignored (`.gitignore` at the repository root) and live only in local checkouts, rebuilt from upstream (`scripts/rebuild_codecontests_full.py` for CodeContests; APPS from `codeparrot/apps`, normalised the same way). `manifest.json` still lists all ten files, so `scripts/verify_manifest.py` reports those five as missing on a fresh clone until they are rebuilt. Check the terms before
+**This directory is not tup's to relicense, and tup's research-use licence does not reach it.**
+`nl/` was imported on that basis. The five files whose statements are not the dataset
+authors' to relicense are excluded by `.gitignore` at the repository root, so they cannot
+reach a public mirror by omission, only by someone adding them on purpose. (Until
+2026-09-20 this sentence also named an allow-only publish whitelist in
+`forge/sync_public.py`; forge was retired that day and `.gitignore` is now the only
+mechanism, which is why it is the one to check before publishing.) On 2026-09-15 it was
+cleared on its own terms: HumanEval (MIT) and MBPP (CC-BY-4.0), whose statements are the dataset authors' own, stay in the tree with the table above as their attribution; APPS and CodeContests, whose statements are the judges' copyright, are untracked and ignored (`.gitignore` at the repository root) and live only in local checkouts, rebuilt from upstream (`scripts/rebuild_codecontests_full.py` for CodeContests; APPS from `codeparrot/apps`, normalised the same way, for which there is no script). `manifest.json` still lists all ten files, so `scripts/verify_manifest.py` reports those five as missing on a fresh clone until they are rebuilt.
+
+**On 2026-09-20 the five were materialised into `nl/data/` as real files.** They had been
+symlinks into a sibling `nl-problems` checkout, so this tree only worked while that
+directory happened to exist beside it. They remain gitignored; nothing about what may be
+published changed. All ten now verify against `manifest.json` here: 50 checks, 0 failed.
+Since APPS has no rebuild script, these bytes are the working copy of record, and a machine
+that loses them has to re-normalise from `codeparrot/apps` by hand to match the manifest. Check the terms before
 republishing, redistributing outside the lab, or shipping any of it in a public model
 release.
 

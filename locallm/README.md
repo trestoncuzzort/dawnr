@@ -24,6 +24,15 @@ tokenizer from the training text. You watch it learn.
 python studio.py
 ```
 
+**What it has done so far:** a 92M model trained this way drew level with
+Microsoft's Phi-4-mini, 41 times larger, on 232 held-out program-synthesis
+problems where every answer had to be proved by seven independent proof
+systems. The eight results with their settings and hashes are in
+[`ACHIEVEMENTS.md`](ACHIEVEMENTS.md); the scoreboard is
+[`../SCOREBOARD.md`](../SCOREBOARD.md) and what is not claimed is
+[`../LIMITS.md`](../LIMITS.md). That is one application of this trainer, not
+what it is for; the rest of this page is the tool.
+
 ## Core training presets
 
 The CLI now supports rotary positions, RMSNorm, SwiGLU, activation checkpointing, and
@@ -277,8 +286,12 @@ Read this part before you expect too much.
 - **A small model trained on one person's data produces mediocre output.** This is not
   ChatGPT and it is not close. That is compute and data scale, not a bug to engineer
   around. What it learns is the *structure* of your data; what it cannot do is converse.
-- **Character-level tokenizer.** Simple and dependency-free, but less efficient per token
-  than BPE.
+- **The character tokenizer is still the default in `train.py`**, and it is less
+  efficient per token than BPE. A BPE tokenizer trained on your own corpus is
+  available with `--tokenizer bpe` and is the default in `train_distributed.py`;
+  measured on this project's corpus it cuts the same text into about 60% as many
+  chunks. Whichever you pick is fingerprinted into the checkpoint, so a resume
+  cannot silently change it.
 - **A tiny corpus, or one dominated by a single huge document, cannot be split cleanly.**
   Whole-document splitting cannot hit a 10% target when there are only three documents.
   The scanner reports the validation fraction it actually achieved and warns you when the
@@ -290,7 +303,11 @@ Read this part before you expect too much.
   the string literals is what destroys detection. So a CLEAN verdict means nobody
   copied and pasted. It does not mean your validation set is independent. The tool
   says this in its own output rather than leaving you to find out.
-- No resume-from-checkpoint yet, no gradient accumulation, no multi-GPU.
+- No gradient accumulation. Resume and multi-GPU now exist:
+  `train_distributed.py` runs one process per GPU under torchrun with exact
+  step-boundary resume, and a checkpoint carries the optimizer, the
+  learning-rate horizon, the tokenizer identity and every rank's RNG state, so
+  changing any of those on resume is refused rather than absorbed.
 - Large architectures will run out of VRAM rather than warning you first.
 - **You currently need Python and a terminal to install and start it.** The GUI itself
   needs neither once it is running, but getting there does. That is the single biggest

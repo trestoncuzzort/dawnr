@@ -1,91 +1,121 @@
 # t
 
-**t is a specification interlingua, not (yet) a programming language.** A task is
-written once in t, with a typed signature, preconditions, postconditions and for
-now a small body, then lowered mechanically to established verifiers, whose kernels
-supply every verdict. t itself proves nothing and is trusted for nothing; that is
-the design, not a temporary weakness. The trust always bottoms out in a kernel
-with decades of adversarial history (today: Dafny 4.11.0 / Z3; next: Verus,
-SPARK, the WS-7 tier-A list).
+**t is a specification interlingua, not a programming language.** A task is
+written once in t, with a typed signature, preconditions, postconditions and a
+small body, then lowered mechanically to established verifiers, whose kernels
+supply every verdict. t itself proves nothing and is trusted for nothing; that
+is the design, not a temporary weakness. The trust always bottoms out in a
+kernel with decades of adversarial history.
+
+**Seven kernels are live**, and a task counts only when all seven agree:
+
+| kernel | backend as measured |
+|---|---|
+| Dafny | 4.11.0 / Z3 |
+| Verus | 0.2026.08.30 |
+| SPARK | gnatprove FSF 16.1.0 / Why3 1.8.2 |
+| Frama-C | 33.0 (Arsenic) / alt-ergo 2.4.3 |
+| Lean 4 | 4.33.1 |
+| Rocq | 9.2 |
+| F\* | 2026.08.30 |
 
 Prior art this stands on rather than beside: Why3 (one spec language, many
 provers) and Viper (one intermediate verification language, many frontends).
 If t ever grows its own checker, that checker gets verified inside Rocq or Lean
-(the CakeML path) before anything trusts it, since a homemade language certifying a
+(the CakeML path) before anything trusts it: a homemade language certifying a
 homemade system is two unaudited instruments signing each other's receipts, and
-it is refused here in advance (ROADMAP.md, "The far field").
+that is refused here in advance ([`../ROADMAP.md`](../ROADMAP.md), "The far
+field").
 
-## v0, honestly scoped
+## What t covers
 
-- Types: `int`. No arrays, no quantifiers, no heap, no loops. v0 exists to prove
-  the pipeline, task to lowering to kernel verdict to witness, not expressiveness.
-- A task is committed as JSON (`tasks/*.json`); that was the whole rationale
-  while it held: no parser to write means no parser to trust. Since
-  2026-09-04 a surface notation exists on top of it (`surface.py`,
-  `SYNTAX.md`), so the reasoning now runs the other way: the parser is
-  trusted because its round trip against the committed JSON is measured,
-  not because it doesn't exist.
-- `lower_dafny.py` emits Dafny; `dafny verify` decides. Exit codes as measured
-  on 4.11.0: 0 verified, 2 malformed, 4 could-not-prove, which reads UNPROVED
-  (TIMEOUT on "out of resource"). Until 2026-09-02 exit 4 was read as refuted;
-  it is not a countermodel and is no longer read as one
-  (WITNESS-2026-09-02-dafny-door.md).
-- Every lowering also emits a BROKEN TWIN (the body's first `if` collapsed to
-  its then-branch). A task only counts when the real lowering VERIFIES **and**
-  the twin is REFUTED: one witness for "the spec is provable," one for "the
-  spec has teeth." Since 2026-09-02 the twin's REFUTED means the kernel accepted
-  a certificate lemma restating the measured witness, not a bare failing exit.
-  A twin that still verifies is a vacuous spec and the task is
-  refused. This is dafny_pairs.py's measured-flip rule, applied to t from birth.
+Integers, booleans, sequences, pairs, and strings as character sequences.
+Loops with invariants, `decreases` clauses, quantifiers (`forall`, `exists`),
+and recursive specification functions. **No heap, no floats, no concurrency.**
+
+A task is written as a `.t` file in the surface notation
+([`SYNTAX.md`](SYNTAX.md)), parsed and printed by `surface.py`. The JSON that
+older documents call "the format" is the AST that notation parses to; it is
+derived from the `.t` text and never edited by hand.
+
+## The twin rule
+
+Every lowering also emits a **broken twin**, and a task counts only when the
+real lowering VERIFIES **and** the twin is REFUTED: one witness that the
+specification is provable, one that it has teeth. A twin that still verifies is
+a vacuous specification and the task is refused.
+
+REFUTED means the kernel accepted a certificate lemma restating a measured
+witness, not a bare failing exit code. That distinction was learned: until
+2026-09-02, Dafny's exit 4 (could-not-prove) was read as refuted. It is not a
+countermodel and is no longer read as one
+([`WITNESS-2026-09-02-dafny-door.md`](WITNESS-2026-09-02-dafny-door.md)).
+
+[`twins/`](twins/) ships 426 pairs over 90 programs as a standalone artifact:
+each a verified program, a near-miss one deliberate edit away, the concrete
+input at which the near-miss breaks the specification the program keeps, and
+seven independent refutations at that input. A pair is written only when both
+halves are on the record.
+
+## Where the verdicts come from
+
+- **One matrix.** 35 committed tasks, 31 verified with the twin refuted in all
+  seven ([`AGREEMENT.md`](AGREEMENT.md)), regenerated on a second machine from
+  a clean clone with no cell moved.
+- **Nested loops, closed 2026-09-18.** A `while` inside a `while` was an
+  abstain in Lean, Rocq and F\* and a timeout in Frama-C; all seven now verify
+  it with its twin refuted. Two of those fixes were honesty defects rather than
+  gaps: Lean could leave a goal unsolved that `sorryAx` then discharged, so a
+  lowering that proved nothing could read as verified, and Frama-C was not slow
+  at all, the lowering was emitting an invariant of its own that is false.
+- **A grammar that is the notation.** [`t.gbnf`](t.gbnf) is t's syntax as a
+  grammar a generator can decode against, with identifier rules generated from
+  the lexer's keyword set. [`grammar_check.py`](grammar_check.py) proves it
+  accepts all 4,208 programs the parser accepts and refuses 590 of 590 replies
+  the parser refuses.
+- **Specifications are checked against the problems.** [`spec_check.py`](spec_check.py)
+  evaluates an accepted specification at the problem's own solution and at the
+  problem's own assertions. Across 36 graded answer sets and 650 clean answers,
+  13 disagree: tests passed, seven proofs held, twin refuted, and the
+  specification still does not say what the problem asked
+  ([`SPEC-CHECK-2026-09-18.md`](SPEC-CHECK-2026-09-18.md)).
+- **Preflight.** [`preflight.py`](preflight.py) refuses to let a round start on
+  a checker whose version cannot be read, a held-out problem in a training set,
+  a clean answer resting on a flake or a timeout, or a specification that
+  disagrees with its problem.
+
+## Using it
+
+`python3 t/cli.py <subcommand>` is the entry point for working on a single
+task: `parse`, `check`, `format`, `lower`, `verify`, `twin`, `explain`. Text
+output by default, `--json` for JSON Lines, one record per diagnostic.
+Documented with a real example per subcommand in [`COMMAND.md`](COMMAND.md).
+`cli.py verify t/tasks` writes a byte-identical `AGREEMENT.md` modulo the
+timestamp.
+
+Running a whole grading pass is [`run_par.py`](run_par.py); setup is
+[`RUN-ON-LINUX.md`](RUN-ON-LINUX.md).
+
+An editor integration lives in `editors/vscode/`: a plain JavaScript extension
+with a TextMate grammar covering every `surface.KEYWORDS` and
+`surface.STR_METHODS` entry (checked by `test_vscode.py`), a client that starts
+`lsp.py` over stdio, and a "t verdicts" TreeView fed by the `t/verdicts`
+notification. This machine has no display, so the window itself is unverified
+here; `editors/WALKTHROUGH.md` measures everything reachable without one.
 
 ## Files
 
-| File | What it is |
+| Path | What it is |
 |---|---|
-| `SPEC.md` | The v0 task format and expression grammar, complete. |
-| `lower_dafny.py` | t → Dafny lowering + twin generation + verdict collection. |
-| `tasks/` | Tasks in t. |
-| `out/` | Lowered .dfy files and verdicts (regenerated; witnesses are committed). |
+| `SPEC.md`, `SYNTAX.md` | the task format and the surface grammar |
+| `surface.py`, `check_wf.py` | parser, printer, well-formedness |
+| `lower_*.py` | one lowering per kernel, plus twin generation |
+| `verifiers/` | one driver per kernel, each collecting its own verdict and version |
+| `tasks/` | the 35 committed tasks, as `.t` |
+| `twins/` | 426 verified/near-miss pairs with separating inputs |
+| `run_par.py`, `cli.py` | the grading driver and the single-task entry point |
+| `spec_check.py`, `preflight.py` | the checks that decide what counts |
+| `out/` | lowered sources and verdicts, regenerated; witnesses are committed |
 
-2026-09-11 (ROADMAP 14.1): the line above calling a task JSON is the v0
-description; it is no longer how a task is written or stored. `t/tasks/`
-now holds `.t` files, the surface notation SYNTAX.md documents and
-`surface.py` parses and prints; the JSON this file still calls the format
-is the AST that notation parses to, derived from the `.t` text and never
-edited by hand. `run_all.py`, `run_par.py` and `grade.py --tasks DIR` read
-the `.t` files through `tasks_io.py`; a directory with none (a
-spec-experiment run's own generated `tasks/`) is still read as `*.json`.
-
-2026-09-11 (ROADMAP 14.4, "One command"): `python3 t/cli.py <subcommand>`
-is now the one entry point for a person or an editor working on a single
-task, with `parse`, `check`, `format`, `lower`, `verify`, `twin` and
-`explain` subcommands over `surface.py`, `check_wf.py`, `tlib.py` and (for
-`verify` on a whole directory) `run_par.py`'s own `probe_backends`,
-`lower_and_dispatch` and `format_table`, so `verify t/tasks` writes
-byte-identical `AGREEMENT.md` (modulo the timestamp line). Text output by
-default, `--json` for JSON Lines (one record per diagnostic: file, line,
-col, rule, severity, kernel, message), documented with a real example per
-subcommand in `t/COMMAND.md`. `cli.py` is new; it edits none of
-`surface.py`, `check_wf.py`, `tlib.py`, `harness.py`, `names.py` or
-`run_par.py`.
-
-2026-09-11 (ROADMAP 15.3/15.5, VS Code): `t/editors/vscode/` is a plain
-JavaScript extension (no TypeScript build) with a TextMate grammar
-(`syntaxes/t.tmLanguage.json`, covering every `surface.KEYWORDS` and
-`surface.STR_METHODS` entry, checked by `t/test_vscode.py`), a client
-that starts `t/lsp.py` over stdio via `vscode-languageclient`, settings
-`t.pythonPath`/`t.serverPath`/`t.kernels`, and a "t verdicts" TreeView
-plus status bar item fed by the `t/verdicts` notification (15.5: real
-and twin per kernel with the witness rendered as text, `absent` for a
-missing kernel, `(provisional)` marked). `npm install && npx @vscode/vsce
-package` produced `t-notation-0.1.0.vsix` (473556 bytes) on this box,
-user-local Node 22 (`~/.local/opt/node`), no changes to `t/lsp.py`,
-`t/cli.py`, `t/harness.py`, `t/run_par.py` or any lowering. This box has
-no display, so the VS Code window itself (diagnostics rendering, hover
-popups, the TreeView painting) is unverified here; `t/editors/
-WALKTHROUGH.md` measures everything reachable without one, including the
-finding that `tlib.verify`'s REAL side is certificate-gated the same way
-`t/verifiers/dafny.py` and `t/verifiers/fstar.py` document (REFUTED only
-via a refutation-certificate lemma, which only the TWIN lowering carries)
-and so cannot itself read `refuted` for any task, a gap in ROADMAP 15.5's
-DONE WHEN as currently reachable through `cli.py verify`/`t/lsp.py`.
+Results and caveats for the whole project are in
+[`../SCOREBOARD.md`](../SCOREBOARD.md) and [`../LIMITS.md`](../LIMITS.md).
