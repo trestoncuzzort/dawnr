@@ -150,30 +150,42 @@ del _name, _p
 
 
 # When nothing can be read, open LIGHT. Reversed 2026-09-21, the same day it was
-# set to dark, because the evidence went the other way on every ground looked at
-# and this module already said so eighty lines up.
+# set to dark, because the evidence went against it and this module already said
+# so eighty lines up.
 #
-# Two of the three platform owners publish a default and both say light. GNOME:
-# "Most apps should use the standard light UI style by default", with the stated
-# exception being apps that display rich visual content like images or video,
-# which this is not (developer.gnome.org/hig/guidelines/ui-styling.html).
-# Microsoft: "Windows uses Light mode by default, but users can choose Dark mode"
+# WHAT CARRIES THIS DECISION is the platform text, which was re-fetched and
+# checked verbatim. GNOME: "Most apps should use the standard light UI style by
+# default", the stated exception being apps that display rich visual content like
+# images or video, which this is not
+# (developer.gnome.org/hig/guidelines/ui-styling.html). Microsoft: "Windows uses
+# Light mode by default, but users can choose Dark mode", on a page that also
+# notes Windows gives Win32 apps a light title bar by default -- so a dark
+# fallback there produces a dark body under a light bar
 # (learn.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes).
 # Apple publishes no default. The usability review adds: "we don't recommend
 # switching to dark mode by default if your target audience includes the general
 # population" (nngroup.com/articles/dark-mode).
 #
-# The measurement is about this exact fallback. It fires when no desktop service
-# answers, which is most likely on a bare or minimal Linux install, which is also
-# the machine most likely to be in a dim room at night. Dobres, Chahine and
-# Reimer, Applied Ergonomics 60 (2017), 34 participants, lexical decision with an
-# adaptive staircase: at 0 lux, 3 mm text needed 122.3 ms (SD 50.0) in dark
-# against 84.1 ms (SD 43.7) in light, F(1,33) = 49.60, p < 0.001; at 4750 lux the
-# difference was not significant. So opening dark here picked the one combination
-# with a measured legibility penalty, in the one situation where it applies.
+# WHAT DOES NOT CARRY IT, corrected here because the first version of this comment
+# leaned on it and the commit message that landed it quotes a wrong number.
+# Dobres, Chahine and Reimer, Applied Ergonomics 60 (2017) 68-73, 50 recruited and
+# 34 analysed, ages 20 to 65: at 0 lux the dark condition needed 122.3 ms
+# (SD 56.8) against 84.1 ms (SD 43.7) light, F(1,33) = 49.60, p < 0.001, and at
+# 4750 lux polarity was not significant, F(1,33) = 0.19, p = 0.665. THE SD IS
+# 56.8; the earlier comment and commit said 50.0, which is the standard deviation
+# of a different cell of Table 2 (Simulated Day-Time / Negative, 88.7 (50.0)).
+# And the study is narrower than it was made to sound: it is a glance-legibility
+# lexical decision task at 0.7 m with stimuli capped at 1000 ms, at text sizes of
+# about 14.7 and 19.6 arcminutes chosen per ISO guidance for IN-VEHICLE displays,
+# with participants recruited at a car maker's Italian headquarters and required
+# to drive weekly. locallm's body text is 25.5 to 31.5 arcminutes, LARGER than
+# that paper's larger condition, and the paper itself reports the polarity effect
+# shrinking as size grows. So it points the same way and cannot carry the
+# decision; the platform defaults above can and do.
 #
-# Dark itself is untouched: it still follows the system wherever the system says.
-# What is gone is guessing dark when nobody asked. See locallm/DESIGN-BRIEF.md C1.
+# Dark is untouched: it still follows the system wherever the system says. What is
+# gone is guessing dark when nobody asked. See locallm/DESIGN-BRIEF.md C1, and its
+# critic, which caught both errors above by re-fetching the paper.
 _DARK_WHEN_UNKNOWN = False
 
 
