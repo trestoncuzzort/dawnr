@@ -662,9 +662,21 @@ class LearningPlot(tk.Canvas):
                              font=SANS(8),
                              text=f"{hi - (hi - lo) * i / 4:.0f}")
 
-        self.create_text(14, (y0 + y1) / 2, anchor="center", angle=90,
-                         fill=self.AXIS, font=SANS(8),
-                         text="characters it's choosing between  (lower = smarter)")
+        # -angle is a Tk 8.6 canvas option and Apple's system Python ships Tk 8.5,
+        # where create_text answers `unknown option "-angle"`
+        # (tcl.tk/man/tcl8.6/TkCmd/canvas.htm lists angle under the text item,
+        # added in 8.6). The plot drew without its y-axis label there, silently,
+        # because the exception landed inside the redraw. Measured on macOS
+        # 26.5.1, Tk 8.5, 2026-09-21. Rotated first, flat as a fallback: the label
+        # says what the axis means and is worth more sideways than absent.
+        try:
+            self.create_text(14, (y0 + y1) / 2, anchor="center", angle=90,
+                             fill=self.AXIS, font=SANS(8),
+                             text="characters it's choosing between  (lower = smarter)")
+        except tk.TclError:
+            self.create_text(x0, y0 - 14, anchor="w", fill=self.AXIS,
+                             font=SANS(8),
+                             text="characters it's choosing between (lower = smarter)")
         self.create_text((x0 + x1) / 2, h - 9, fill=self.AXIS,
                          font=SANS(8), text="training progress →")
 
