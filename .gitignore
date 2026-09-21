@@ -173,3 +173,7 @@ RESPONSE_TO_CLAUDE.md
 generate_pitch.py
 send_pitch.py
 email_founders.py
+
+# Build output. locallm/release.py assembles it from the tree; it is reproducible
+# by construction, so committing it would only be a large duplicate.
+/dist/

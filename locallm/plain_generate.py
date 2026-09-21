@@ -226,7 +226,28 @@ class CharTokens:
         return len(self.chars)
 
     def encode(self, text: str):
+        # Drops what this model never saw, exactly as data.CharTokenizer.encode
+        # does, and for the same reason: the two must agree token for token or a
+        # checkpoint reads differently depending on which path opened it.
+        # unknown_characters() below is how a caller learns what went missing.
         return [self._index[c] for c in text if c in self._index]
+
+    def unknown_characters(self, text: str) -> dict[str, int]:
+        """The characters encode() drops, first appearance first, with counts.
+
+        Character for character what data.CharTokenizer.unknown_characters
+        returns; that file carries the reasoning for why this is a separate
+        query rather than an errors= flag on encode
+        (docs.python.org/3/library/codecs.html). Duplicated rather than imported
+        because data.py imports torch at module scope and this module's whole
+        claim is that it needs none, which is also why test_tokenizer_drops.py
+        pins the two implementations to each other instead of trusting them.
+        """
+        unknown: dict[str, int] = {}
+        for c in text:
+            if c not in self._index:
+                unknown[c] = unknown.get(c, 0) + 1
+        return unknown
 
     def decode(self, ids) -> str:
         return "".join(self.chars[int(i)] for i in ids)
@@ -483,9 +504,14 @@ def sample(model, tok, prompt: str, tokens: int = 400, temperature: float = 0.8,
 
     An empty prompt, or one made only of characters this model never saw, encodes
     to nothing; falling back to token 0 keeps that producing text rather than an
-    error, which is what checkpoint.py does too. The default `tokens=400` is past
-    the window of every ctx-128 checkpoint in this repository, which is why
-    generate() clamps rather than grinding; read `model.stopped_at_context` after.
+    error, which is what checkpoint.py does too, and it is what
+    test_checkpoint.test_prompt_of_unknown_characters_does_not_crash pins down on
+    that side. The fallback is silent by construction, so a caller that wants to
+    name what was lost asks tok.unknown_characters(prompt) first; main() does.
+
+    The default `tokens=400` is past the window of every ctx-128 checkpoint in
+    this repository, which is why generate() clamps rather than grinding; read
+    `model.stopped_at_context` after.
     """
     ids = tok.encode(prompt) or [0]
     model.reset()
@@ -521,6 +547,27 @@ def main() -> int:
         return 1
     print(f"{model.total_params():,} numbers, {tok.vocab_size} vocabulary entries, "
           f"context {config['block_size']} — no torch, no numpy", file=sys.stderr)
+    unknown = tok.unknown_characters(args.prompt)
+    if unknown:
+        # A STRANGER'S PROMPT IS THE LIKELIEST PLACE THIS MODEL'S VOCABULARY RUNS
+        # OUT. Train on English, then type a line in your own script or with your
+        # word processor's curly quotes, and every one of those characters is
+        # missing from the 82 this checkpoint knows. encode() drops them without
+        # a word, so the text that comes back answers a prompt nobody typed and
+        # nothing on the screen says so. Said before generating, not after: at
+        # 292 ms/token a 200-token answer is a minute of waiting first.
+        lost, total = sum(unknown.values()), len(args.prompt)
+        shown = list(unknown)[:12]
+        names = ", ".join(repr(c) for c in shown)
+        if len(unknown) > len(shown):
+            names += f", and {len(unknown) - len(shown)} more"
+        tail = ("" if lost < total else
+                " Nothing was left of it, so generation starts from the first "
+                "token of the vocabulary instead.")
+        print(f"plain_generate: this model never saw {len(unknown)} of the "
+              f"characters in your prompt ({names}), {lost} of its {total} "
+              f"characters in all. They are dropped before generating, so the "
+              f"text below continues what was left.{tail}", file=sys.stderr)
     print(sample(model, tok, args.prompt, args.tokens, temperature=args.temperature,
                  top_k=args.top_k, seed=args.seed, past_context=args.past_context))
     if model.stopped_at_context:

@@ -39,12 +39,48 @@ RED WITNESS, each mutation applied to a copy of home.py and the output quoted:
     measure_text: `except Exception: say = look.say_corpus("CLEAN")`
       FAIL test_a_check_that_raises_is_not_a_pass: ('✔', 'Clean') — a green tick
         for a check that did not run
+
+    _read_text: read the file here with read_text(errors="ignore") instead of
+    asking ingest — the defect this round removed
+      FAIL, six of them, among them
+        test_a_refused_file_comes_back_refused_and_in_ingests_own_words: a PDF
+          was accepted as training text
+        test_this_file_never_decodes_anything_itself: a decode error handler in
+          home.py
+        test_no_user_file_is_opened_here_at_all: home.py reads a file itself
+
+    _read_text: send a folder to read_any
+      FAIL test_a_folder_goes_through_read_corpus: a folder went somewhere other
+        than read_corpus
+
+    say_not_ready: `if state in ("text", "refused"): return None`
+      ERROR test_a_refused_file_cannot_start_training: AttributeError on None —
+        a refused file was cleared to start training
+
+    as_say: `return got` — trust whatever ingest handed over
+      FAIL test_a_tone_that_is_not_a_palette_key_is_replaced: 'green' is not a
+        palette key, and _show would have raised it inside the message pump
+
+    picker: filetypes=[("Text", "*.txt")]
+      FAIL test_the_picker_still_opens_every_door: the picker no longer offers
+        every file. Worth recording how this test got here: written as an
+        assertIn on the source text it PASSED against this mutation, because the
+        docstring beside the call quotes the pair it defends. It reads the call.
+
+    VOCAB_PLAIN = 100_000
+      FAIL test_a_chinese_alphabet_is_flagged_before_training_not_after, and
+        test_the_verdict_never_improves_as_the_alphabet_grows
+
+    encoding_note: return "" for an encoding with no prose written for it
+      FAIL test_an_encoding_with_no_prose_is_still_named, and
+        test_a_utf8_bom_is_not_silently_lumped_in_with_plain_utf8
 """
 from __future__ import annotations
 
 import ast
 import os
 import pathlib
+import queue
 import re
 import sys
 import tempfile
@@ -241,6 +277,15 @@ class WhatItSays(unittest.TestCase):
             home.say_model(None),
             home.say_model(pathlib.Path("out_gui"), 3_194_368),
             home.say_model(pathlib.Path("out_gui"), why_not="boom"),
+            home.say_vocab(0),
+            home.say_vocab(84),
+            home.say_vocab(600),
+            home.say_vocab(5_183),
+            home.as_say(object()),
+            home.say_not_ready("none", "corpus.txt"),
+            home.say_not_ready("reading", "corpus.txt"),
+            home.say_not_ready("refused", "report.pdf"),
+            home.say_not_ready("folder", "letters"),
         ]
         for say in says:
             self.assertIn(say.mark, look.MARKS, f"{say.mark!r} is not one of look's four")
@@ -364,6 +409,277 @@ class LookingAtText(unittest.TestCase):
         self.assertIn("2 documents.", home.text_facts(10, 3, 2, None))
 
 
+# --------------------------------------------------------------------------
+# A STAND-IN FOR ingest.py, because the real one is another file's job and this
+# test has to run whether or not it is finished. What is under test here is
+# home.py's ROUTING — that it asks, that it believes the answer, and that it
+# shows the answer rather than a guess — so the stand-in only has to be honest
+# about its own shape. It decodes for real, which is the whole point: the UTF-16
+# case below is a real UTF-16 file really decoded, next to what the line this
+# replaced would have made of the same bytes.
+# --------------------------------------------------------------------------
+class FakeRead:
+    def __init__(self, text, kind, encoding, dropped, say):
+        self.text, self.kind = text, kind
+        self.encoding, self.dropped, self.say = encoding, dropped, say
+
+
+class FakeIngest:
+    """read_any/can_train_on/read_corpus, recording what it was asked."""
+
+    def __init__(self, raises=False):
+        self.raises = raises
+        self.asked: list = []
+
+    def can_train_on(self, path):
+        self.asked.append(("can_train_on", path))
+        return pathlib.Path(path).suffix.lower() not in (".pdf", ".zip", ".exe")
+
+    def read_any(self, path):
+        self.asked.append(("read_any", path))
+        if self.raises:
+            raise OSError("the disk went away")
+        p = pathlib.Path(path)
+        raw = p.read_bytes()
+        if p.suffix.lower() == ".pdf":
+            return FakeRead(None, "refused", "", 0, look.Say(
+                look.REFUTED, "Not text",
+                f"“{p.name}” is a PDF, which is not text this can learn from. "
+                f"Save it out as a plain text file first.", "refuted"))
+        for enc, label in (("utf-8", "utf-8"), ("utf-16", "utf-16 (BOM)")):
+            try:
+                return FakeRead(raw.decode(enc), "text", label, 0, look.Say(
+                    look.PROVED, "Read",
+                    f"Read every byte of “{p.name}” as {label}.", "proved"))
+            except UnicodeDecodeError:
+                continue
+        return FakeRead(None, "refused", "", 0, look.Say(
+            look.REFUTED, "Not text",
+            f"“{p.name}” did not decode as text in any encoding this knows.",
+            "refuted"))
+
+    def read_corpus(self, paths):
+        self.asked.append(("read_corpus", list(paths)))
+        parts = []
+        for one in paths:
+            p = pathlib.Path(one)
+            files = sorted(q for q in p.rglob("*") if q.is_file()) if p.is_dir() else [p]
+            for f in files:
+                got = self.read_any(f)
+                if got.text is not None:
+                    parts.append(got.text)
+        if not parts:
+            return FakeRead(None, "refused", "", 0, look.Say(
+                look.REFUTED, "Nothing readable",
+                "No file in that folder could be read as text.", "refuted"))
+        return FakeRead("\n".join(parts), "text", "utf-8", 0, look.Say(
+            look.PROVED, "Read", f"Read {len(parts)} files out of that folder.",
+            "proved"))
+
+
+class OffThread:
+    """The three attributes home.Home._read_text is allowed to touch.
+
+    The worker is called as an unbound method against this stand-in, which is
+    what lets it be tested with no display: it takes no widget, reads only these
+    three fields and puts its answer on a queue. If it ever grows a widget call
+    this class stops being enough and these tests fail — which is the point,
+    since a widget call from that thread is precisely what
+    docs.python.org/3/library/tkinter.html#threading-model warns will fail when
+    the event loop is not running.
+    """
+
+    def __init__(self, tools=None, studio=None):
+        self.q: queue.Queue = queue.Queue()
+        self.tools = tools
+        self.studio = studio
+
+    def read(self, ingest, path, folder=False, seq=1, quiet=True):
+        home.Home._read_text(self, ingest, pathlib.Path(path), folder, seq, quiet)
+        return self.q.get_nowait()
+
+
+class ReadingIsIngestsJob(unittest.TestCase):
+    """Every read of somebody's own file goes through ingest, off the Tk thread.
+
+    THE DEFECT THESE PIN. home.py read the user's file itself with
+    `read_text(encoding="utf-8", errors="ignore")`, so a PDF was not refused but
+    silently decoded into whatever fragments happened to be valid UTF-8, and a
+    UTF-16 file from a Windows Save as box came back nearly empty — both with a
+    judgement printed beside them as though they had been read.
+    """
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+
+    def test_a_refused_file_comes_back_refused_and_in_ingests_own_words(self):
+        pdf = self.tmp / "report.pdf"
+        pdf.write_bytes(b"%PDF-1.7\n" + bytes(range(256)) * 8)
+        kind, m = OffThread().read(FakeIngest(), pdf)
+        self.assertEqual(kind, "text")
+        self.assertFalse(m["accepted"], "a PDF was accepted as training text")
+        say = home.as_say(m["say"])
+        self.assertEqual(say.mark, look.REFUTED)
+        self.assertIn("PDF", say.why, "the reason is ingest's, not invented here")
+        self.assertEqual(m["facts"], "", "a refused file has no facts to show")
+
+    def test_a_utf16_file_is_read_whole_and_says_which_encoding_worked(self):
+        """The file Windows Notepad writes when you pick UTF-16 in Save as."""
+        original = "ある日、森の中で。The quick brown fox. " * 40
+        win = self.tmp / "notes.txt"
+        win.write_bytes(original.encode("utf-16"))
+
+        kind, m = OffThread().read(FakeIngest(), win)
+        self.assertEqual(kind, "text")
+        self.assertTrue(m["accepted"])
+        self.assertEqual(m["distinct"], len(set(original)),
+                         "the alphabet was counted from the real text")
+        self.assertIn("UTF-16", m["facts"])
+        self.assertIn("Windows", m["facts"],
+                      "naming the encoding is only useful if it is named in words")
+
+        # RED WITNESS, on these same bytes: the line this replaced.
+        mangled = win.read_text(encoding="utf-8", errors="ignore")
+        self.assertNotEqual(mangled, original)
+        self.assertIn("\x00", mangled,
+                      "errors='ignore' kept the padding bytes as NUL characters")
+        self.assertNotIn("\x00", home.text_facts(1, 1, None, None),
+                         "and nothing on the card would have said so")
+
+    def test_a_folder_goes_through_read_corpus(self):
+        folder = self.tmp / "letters"
+        folder.mkdir()
+        (folder / "a.txt").write_text("one two three ", encoding="utf-8")
+        (folder / "b.txt").write_text("four five six ", encoding="utf-8")
+        ing = FakeIngest()
+        kind, m = OffThread().read(ing, folder, folder=True)
+        self.assertEqual(kind, "text")
+        self.assertTrue(m["accepted"], "a folder of text files was not read")
+        self.assertTrue(m["folder"])
+        self.assertIn("29 characters", m["facts"],
+                      "both files were joined (14 + 14, plus the newline between)")
+        call = [a for a in ing.asked if a[0] == "read_corpus"]
+        self.assertEqual(len(call), 1, "a folder went somewhere other than read_corpus")
+        self.assertEqual(call[0][1], [folder],
+                         "read_corpus takes `paths`, so a folder is passed as one")
+
+    def test_a_read_that_raises_is_reported_and_not_swallowed(self):
+        f = self.tmp / "notes.txt"
+        f.write_text("hello ", encoding="utf-8")
+        kind, m = OffThread().read(FakeIngest(raises=True), f)
+        self.assertEqual(kind, "read-failed")
+        self.assertIn("the disk went away", m["why"])
+
+    def test_the_worker_only_ever_touches_the_queue(self):
+        """Stated as a test because the tkinter docs make it a correctness rule,
+        not a style one: a call from a thread other than the interpreter's fails
+        outright when the event loop is not running."""
+        f = self.tmp / "notes.txt"
+        f.write_text("hello ", encoding="utf-8")
+        worker = OffThread()
+        worker.read(FakeIngest(), f)            # no AttributeError == no widget
+        self.assertEqual(sorted(vars(worker)), ["q", "studio", "tools"])
+
+
+class WhatStepThreeAllows(unittest.TestCase):
+    """The gate that actually stops a bad file, as opposed to a greyed button."""
+
+    def test_only_a_read_file_may_start_training(self):
+        self.assertIsNone(home.say_not_ready("text", "notes.txt"))
+
+    def test_a_refused_file_cannot_start_training(self):
+        say = home.say_not_ready("refused", "report.pdf")
+        self.assertEqual(say.mark, look.REFUTED)
+
+    def test_nothing_chosen_cannot_start_training(self):
+        self.assertIsNotNone(home.say_not_ready("none", ""))
+
+    def test_a_read_still_running_is_not_a_failure(self):
+        say = home.say_not_ready("reading", "big.txt")
+        self.assertEqual(say.mark, look.TIMED_OUT,
+                         "a claim that has not come back yet is not a refusal")
+        self.assertEqual(say.tone, "muted")
+
+    def test_a_folder_is_read_but_not_trained_on(self):
+        """Honest rather than convenient: studio.TrainWorker opens one path, so
+        a folder is reported on in full and refused here by name."""
+        say = home.say_not_ready("folder", "letters")
+        self.assertEqual(say.mark, look.REFUTED)
+        self.assertIn("folder", say.why)
+
+
+class WhichEncodingWorked(unittest.TestCase):
+    def test_plain_utf8_is_not_worth_saying(self):
+        self.assertEqual(home.encoding_note("utf-8"), "")
+        self.assertEqual(home.encoding_note(""), "")
+
+    def test_utf16_is_named_in_words_a_person_can_use(self):
+        note = home.encoding_note("utf-16 (BOM)")
+        self.assertIn("UTF-16", note)
+        self.assertIn("Windows", note)
+
+    def test_a_utf8_bom_is_not_silently_lumped_in_with_plain_utf8(self):
+        self.assertNotEqual(home.encoding_note("utf-8 (BOM)"), "")
+
+    def test_an_encoding_with_no_prose_is_still_named(self):
+        """Not having a sentence ready is no reason to go quiet about which
+        encoding was used."""
+        self.assertIn("koi8-r", home.encoding_note("koi8-r"))
+
+    def test_the_note_lands_beside_the_counts(self):
+        facts = home.text_facts(10, 3, None, None, "utf-16 (BOM)")
+        self.assertIn("10 characters", facts)
+        self.assertIn("UTF-16", facts)
+
+
+class AMalformedJudgement(unittest.TestCase):
+    """as_say, which exists because _drain's only `except` is queue.Empty."""
+
+    def test_a_real_say_passes_through_unchanged(self):
+        say = look.Say(look.PROVED, "Read", "Read the lot.", "proved")
+        self.assertEqual(home.as_say(say), say)
+
+    def test_something_that_is_not_a_say_becomes_one(self):
+        self.assertIn(home.as_say(object()).mark, look.MARKS)
+
+    def test_a_tone_that_is_not_a_palette_key_is_replaced(self):
+        """The failure this catches: _show turns tone into a colour, so a bad
+        tone raises inside the pump and every later message is lost silently."""
+        say = home.as_say(look.Say(look.PROVED, "Read", "Read the lot.", "green"))
+        self.assertIn(say.tone, look.PALETTES["light"])
+
+
+class TheAlphabet(unittest.TestCase):
+    """say_vocab, said while step 2 can still be changed."""
+
+    def test_an_english_alphabet_costs_nothing_worth_saying(self):
+        say = home.say_vocab(84)
+        self.assertEqual(say.mark, look.PROVED)
+        self.assertEqual(say.tone, "proved")
+
+    def test_a_chinese_alphabet_is_flagged_before_training_not_after(self):
+        say = home.say_vocab(5_183)
+        self.assertEqual(say.tone, "unsettled")
+        self.assertNotEqual(say.mark, look.PROVED)
+        self.assertIn("5,183", say.why, "a count with no thousands separator")
+        self.assertIn("step 2", say.why, "the sentence names what can still be done")
+
+    def test_the_cost_is_stated_as_numbers_and_not_as_a_feeling(self):
+        self.assertIn(f"{600 * home.VOCAB_ROW:,}", home.say_vocab(600).why)
+
+    def test_nothing_read_yet_is_not_a_complaint(self):
+        self.assertEqual(home.say_vocab(0).tone, "muted")
+
+    def test_the_verdict_never_improves_as_the_alphabet_grows(self):
+        rank = {"proved": 0, "unsettled": 1}
+        worst = 0
+        for n in (1, 50, home.VOCAB_PLAIN, home.VOCAB_PLAIN + 1, 600,
+                  home.VOCAB_WIDE, home.VOCAB_WIDE + 1, 20_000):
+            here = rank[home.say_vocab(n).tone]
+            self.assertGreaterEqual(here, worst, f"{n} reads better than {n - 1}")
+            worst = here
+
+
 class TheDiscipline(unittest.TestCase):
     """The operator's four rules for this page, checked against the source.
 
@@ -459,6 +775,66 @@ class TheDiscipline(unittest.TestCase):
         studio, why = home.engine()
         if studio is None:
             self.assertIn("torch", why, f"studio failed for another reason: {why}")
+
+    def test_this_file_never_decodes_anything_itself(self):
+        """errors="ignore" is banned in every path a user's own file travels, and
+        the ban is on the whole file rather than on the one line that had it:
+        `errors='strict'` is the default and raises
+        (docs.python.org/3/library/codecs.html), so passing `errors` at all is a
+        deliberate opt-in to a lossy read. Checked as a call keyword rather than
+        as text, so the comments that explain the old bug can keep quoting it."""
+        bad = [f"line {node.lineno}" for node in ast.walk(TREE)
+               if isinstance(node, ast.Call)
+               for kw in node.keywords if kw.arg == "errors"]
+        self.assertEqual(bad, [], f"a decode error handler in home.py: {bad}")
+
+    def test_no_user_file_is_opened_here_at_all(self):
+        """ingest owns the read; this page renders the answer."""
+        bad = [f"line {n.lineno}: {n.func.attr}" for n in ast.walk(TREE)
+               if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+               and n.func.attr in ("read_text", "read_bytes")]
+        self.assertEqual(bad, [], f"home.py reads a file itself: {bad}")
+
+    def test_the_picker_still_opens_every_door(self):
+        """A text file called .log or .jsonl, or with no extension, is a file
+        people really have — test_ingest.py's red witness is four of them
+        refused by a set literal. The filter stays wide and the check happens
+        after, which is the opposite trade to the one that caused that.
+
+        Read out of the CALL and not out of the source text: written as an
+        `assertIn` on the file, this passed with the filter narrowed to *.txt,
+        because the docstring beside that call quotes the pair it is defending."""
+        wide = []
+        for node in ast.walk(TREE):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "askopenfilename"):
+                continue
+            for kw in node.keywords:
+                if kw.arg != "filetypes":
+                    continue
+                wide += [pair for pair in ast.literal_eval(kw.value)
+                         if pair[1] in ("*.*", "*")]
+        self.assertTrue(wide, "the picker no longer offers every file")
+
+    def test_ingest_is_reached_the_way_studio_is(self):
+        """Lazily, so a missing ingest is a sentence on a card rather than a
+        traceback before the window exists."""
+        for node in TREE.body:
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                names = [a.name for a in node.names]
+                module = getattr(node, "module", "") or ""
+                self.assertNotIn("ingest", module + " " + " ".join(names))
+        self.assertIn("import ingest", SOURCE, "nothing reaches ingest at all")
+
+    def test_a_missing_ingest_is_a_sentence_and_not_a_fallback(self):
+        """And never a fallback: with no ingest this page reads nothing, because
+        reading it the other way is the bug being fixed."""
+        mod, why = home.reader()
+        if mod is None:
+            self.assertTrue(why.strip(), "a missing ingest said nothing")
+            self.assertIsNotNone(home.say_not_ready("refused", "notes.txt"))
+        else:
+            self.assertEqual(why, "")
 
     def test_no_home_directory_ever_reaches_the_source(self):
         """AGENTS.md rule 7: this repository is public."""

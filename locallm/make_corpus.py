@@ -16,6 +16,25 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+
+def _ingest():
+    """ingest.py, imported on use. It is the ONE thing allowed to read a file.
+
+    Imported on use rather than at module scope because start_studio.py imports
+    `is_trainable_file` from this module at ITS module scope, so a module-level
+    `import ingest` would stop the double-click path from LOADING rather than
+    from reading. Deferred, importing this module still works and the failure
+    lands on the call that actually needed a file read.
+
+    There is deliberately NO fallback: reading a user's file the other way is
+    the bug this indirection exists to remove, so a second reader here would
+    re-create the drift it is removing. Same choice, for the same reason, as
+    home.py's reader().
+    """
+    import ingest  # noqa: PLC0415
+    return ingest
+
+
 # Kept only as the default for `--ext`, which is now a FILTER you can opt into.
 # It is no longer the gate: by default any file whose CONTENT is text gets in.
 DEFAULT_EXTS = [".txt", ".md", ".py"]
@@ -25,6 +44,13 @@ SKIP_DIRS = {".git", "__pycache__", ".venv", "node_modules", ".idea", ".vscode"}
 # Extensions that are always binary. Checked only to avoid reading large media
 # files off disk; the real decision is made on bytes, so an unknown extension is
 # never rejected for being unknown.
+#
+# THIS SET IS THE ONE REAL DUPLICATE LEFT, and it is named rather than hidden.
+# ingest.can_train_on makes the decision now, but the contract is
+# `can_train_on(path) -> bool` with no channel for a REASON, and this file's
+# whole report is a tally of reasons ("3 file(s): binary file type (.png)").
+# So ingest owns the verdict and this owns the wording, which costs one shared
+# list of extensions. If ingest ever returns a reason, delete this and use it.
 BINARY_EXTS = {
     ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp", ".tif", ".tiff",
     ".mp3", ".mp4", ".wav", ".avi", ".mov", ".mkv", ".flac", ".ogg",
@@ -35,6 +61,15 @@ BINARY_EXTS = {
 }
 
 
+# The next two rules no longer decide anything here: ingest.py owns the gate
+# (can_train_on) and the read (read_any), which is the point — one
+# implementation instead of two that can drift. They survive because
+# test_ingest.py imports them from this module by name and that file is not ours
+# to edit, so moving them outright would have broken eleven passing tests to no
+# purpose. `text_is_readable` below is the exception and is still live: main()
+# applies it to the whole decoded file, because "did this decode" and "can a
+# character model read this" are different questions and the contract answers
+# only the first. A NUL decodes perfectly well as U+0000 and is still not text.
 def trim_to_char_boundary(data: bytes) -> bytes:
     """Drop a trailing UTF-8 sequence that a fixed-size read cut in half.
 
@@ -133,6 +168,15 @@ def is_trainable_file(path: Path, exts: set[str] | None = None,
     silently ignored every CSV and log file dropped into the folder and then
     reported "no files". A second copy of a rule is a second place for it to be
     wrong, and this repo has paid that bill before.
+
+    WHAT IS STILL DECIDED HERE, and what is not. The three checks above the
+    content test are about THIS COMMAND LINE — an ignored directory, the --ext
+    filter, a name that says "media" — and ingest knows nothing about any of
+    them. The content question is the one that could drift, so it is asked of
+    ingest.can_train_on and answered in exactly one place. `probe_bytes` is kept
+    in the signature because callers pass it, but ingest owns the probe now, so
+    a caller that narrows it is telling this function something it can no longer
+    act on; it is accepted and ignored rather than silently reinterpreted.
     """
     if not path.is_file():
         return False, "not a file"
@@ -140,17 +184,23 @@ def is_trainable_file(path: Path, exts: set[str] | None = None,
         return False, "in an ignored directory"
     if exts is not None and path.suffix.lower() not in exts:
         return False, f"filtered out by --ext ({path.suffix or 'no extension'})"
-    if path.suffix.lower() in BINARY_EXTS:
+    # BINARY_EXTS still refuses by name, EXCEPT for the container formats ingest
+    # learned to open. .docx and .epub are zip archives, so they sit in
+    # BINARY_EXTS and were refused here before can_train_on was ever consulted --
+    # which meant the window read a Word document and this path skipped it
+    # silently. The name check now defers to the one module that knows what can
+    # actually be opened.
+    if path.suffix.lower() in BINARY_EXTS and path.suffix.lower() not in _ingest().HANDLED_EXTS:
         return False, f"binary file type ({path.suffix})"
     try:
-        head = path.open("rb").read(probe_bytes)
+        # The cheap gate, and it must stay cheap: this answers a LISTING
+        # question for a file picker, so it must not read whole media files off
+        # disk. ingest.can_train_on is that probe. The reason string is
+        # unchanged because the report is a tally of these exact words.
+        if not _ingest().can_train_on(path):
+            return False, "content is not text (binary or undecodable)"
     except OSError as e:
         return False, f"unreadable ({e.__class__.__name__})"
-    # The probe is a fixed-size read, so its last character is probably cut in
-    # half. Cut back to a boundary before decoding or the file is refused for
-    # being long rather than for being binary. See trim_to_char_boundary.
-    if not looks_like_text(trim_to_char_boundary(head)):
-        return False, "content is not text (binary or undecodable)"
     return True, "text"
 
 
@@ -192,10 +242,28 @@ def main() -> None:
         try:
             # No errors="ignore": a file that does not decode cleanly was already
             # rejected above, so silently mangling one here would only hide it.
-            text = p.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            #
+            # THAT SENTENCE IS NOW ingest.py's JOB, and it is the argument the
+            # whole module exists to enforce: read_any either decodes a file
+            # properly and names the encoding that worked, or it refuses and
+            # says why — it never returns half-decoded text. This file used to
+            # make that guarantee for itself with a strict read, which was
+            # right but was only right HERE; train.py was reading the same kind
+            # of file with errors="ignore" at the same time. One reader is the
+            # fix. The refusal is tallied rather than printed per file because
+            # this report is a count per reason, and read_any's sentence names
+            # a single file.
+            got = _ingest().read_any(p)
+        except OSError:
             rejected["unreadable"] = rejected.get("unreadable", 0) + 1
             continue
+        if got.text is None:
+            # is_trainable_file already accepted the first 8 kB, so a refusal
+            # here is by definition about what came after the probe window.
+            why = "content is not text past the first 8 kB"
+            rejected[why] = rejected.get(why, 0) + 1
+            continue
+        text = got.text
         # THE PROBE WAS A SAMPLE. is_trainable_file judged the first 8 kB and
         # nothing else; the whole file is in hand here, so the same rule gets
         # applied to all of it. A NUL past byte 8192 used to pass the gate and

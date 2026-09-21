@@ -16,6 +16,7 @@ from pathlib import Path
 import torch
 
 import baselines
+import ingest  # the ONLY way this file reads a user's text
 import runlog
 from model import GPT, GPTConfig
 from data import Corpus, build_tokenizer, tokenizer_fingerprint
@@ -234,10 +235,53 @@ def main():
         print(f"lr: {args.lr:.2e} (auto, width-scaled from n_embd={args.n_embd}; "
               f"pass --lr to override)")
 
-    text = Path(args.data).read_text(encoding="utf-8", errors="ignore")
+    # THE CORPUS IS READ ONCE, HERE, AND ONLY BY ingest.read_any.
+    #
+    # This line was `read_text(encoding="utf-8", errors="ignore")`. The codecs
+    # specification defines that handler as "Ignore the malformed data and
+    # continue without further notice" (docs.python.org/3/library/codecs.html),
+    # and "without further notice" is the entire defect: nothing raises, nothing
+    # is returned, and a damaged corpus is indistinguishable from a clean one.
+    #
+    # MEASURED, on a 36,400-character machine log carrying degree signs, an em
+    # dash, CJK and Cyrillic, saved three ways and read the old way:
+    #     UTF-16 (a Windows Save as entry)  68,800 chars from 36,400 -- it does
+    #                                       not truncate, it INFLATES: 29,200
+    #                                       NUL characters survive as U+0000,
+    #                                       and vocabulary still falls 54 -> 47
+    #     cp1252                            34,400 of 36,400 chars, vocab 40 -> 36
+    #     UTF-8                             unaffected, as it must be
+    # The vocabulary numbers are the ones that bite, because in a character
+    # model the vocabulary IS the set of characters in the corpus: every NUL is
+    # a permanent embedding row, and each of those four missing cp1252
+    # characters is one the model can never emit. This is the command-line
+    # training entry point, so all of that went into saved weights.
+    #
+    # THE TWO TRAINERS DISAGREED, and this was the one that was wrong.
+    # train_distributed.py:251 already decodes strictly —
+    # `read_bytes().decode("utf-8")`, relying on the documented 'strict'
+    # default that raises UnicodeDecodeError — so the same corpus could train
+    # under one entry point and be refused by the other. Routing this one
+    # through ingest settles that without editing the other file.
+    #
+    # Refusing is the only honest option, not a preference: 'replace' (U+FFFD)
+    # and 'backslashreplace' both keep training while inventing characters, and
+    # 'surrogateescape' yields lone surrogates a tokenizer cannot round-trip.
+    got = ingest.read_any(args.data)
+    if got.text is None:
+        # read_any's `say` is one plain sentence a person can act on, which is
+        # what a CLI should exit with. There is deliberately no fallback read:
+        # reading the file the other way is the bug being fixed.
+        raise SystemExit(got.say.why)
+    text = got.text
     tok = build_tokenizer(text, kind=args.tokenizer, vocab_size=args.vocab_size)
     corpus = Corpus(text, tok, device)
-    print(f"corpus: {len(text):,} chars | vocab {tok.vocab_size} | device {device}")
+    # Name the encoding that actually worked. Reading a cp1252 or UTF-16 file
+    # successfully is not the same event as reading a UTF-8 one, and a run log
+    # that cannot tell them apart cannot explain a surprising vocabulary later.
+    read_as = f" | read as {got.encoding}" if got.encoding not in ("", "utf-8") else ""
+    print(f"corpus: {len(text):,} chars | vocab {tok.vocab_size} | "
+          f"device {device}{read_as}")
 
     cfg = GPTConfig(vocab_size=tok.vocab_size, block_size=args.block_size,
                     n_layer=args.n_layer, n_head=args.n_head, n_embd=args.n_embd,

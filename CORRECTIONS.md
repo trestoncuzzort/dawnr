@@ -173,3 +173,106 @@ that file; the predictions themselves are left exactly as registered.
   Phi's historical `phi4-mini-v3` arm, measured for the first time in the same
   run, has a real disagreement: `mbpp_20__is_woodall` is false at `n = 63` where
   the problem's solution answers `True`.
+
+## A content check the window never ran, found 2026-09-21
+
+`locallm/README.md:104` said of `make_corpus.py`: "Accepts any file whose
+**content** is text, refuses binaries by their bytes, and warns when your
+vocabulary gets expensive." That is true of `make_corpus.py`. It was false of the
+path that same README recommends to someone who has never opened a terminal,
+because the two graphical programs never called any of that logic.
+
+Three call sites read the user's own file with
+`read_text(encoding="utf-8", errors="ignore")`: `studio.py:513`, which is the
+real training path inside `TrainWorker._run`; `studio.py:1328`, the corpus scan
+behind the window's own verdict; and `home.py:1204`, the front page's file card.
+Both pickers offer `[("Text", "*.txt"), ("All", "*.*")]` (`studio.py:1225`,
+`home.py:1185`), and the drop target hands `paths[0]` to `on_file` with nothing in
+between (`home.py:695`). So a PDF or a `.docx` picked in the window was not
+refused. It was decoded into whatever fragments survived, and nothing said so.
+
+What that costs, measured by writing files of known text and then asking the
+repository's own gate and the window's reader about the same bytes:
+
+    python3 - <<'EOF'
+    import pathlib, sys, tempfile, zipfile
+    sys.path.insert(0, "locallm")
+    from make_corpus import is_trainable_file, text_is_readable
+    d = pathlib.Path(tempfile.mkdtemp())
+    prose = "The quick brown fox jumps over the lazy dog. " * 100     # 4,500 characters
+    files = {}
+    files["notepad.txt"] = (d / "notepad.txt", prose, "utf-16")       # Notepad's "Unicode"
+    files["western.txt"] = (d / "western.txt", "naïve café résumé. " * 300, "cp1252")
+    for name, (p, text, enc) in files.items():
+        p.write_text(text, encoding=enc)
+    p = d / "report.docx"
+    with zipfile.ZipFile(p, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("word/document.xml", "<w:t>" + prose + "</w:t>")
+    files["report.docx"] = (p, prose, "zip")
+    for name, (p, text, enc) in files.items():
+        got = p.read_text(encoding="utf-8", errors="ignore")          # what the window did
+        print("%-12s held %5d  gate %-46s  window %5d chars, %4d NUL, vocab %2d, readable %s"
+              % (name, len(text), is_trainable_file(p)[1], len(got),
+                 got.count("\x00"), len(set(got)), text_is_readable(got)))
+    EOF
+
+A Windows Notepad file saved as "Unicode" is UTF-16 with a byte order mark.
+`make_corpus.py` refuses it, "content is not text (binary or undecodable)". The
+window returned 9,000 characters for a file holding 4,500, 4,500 of them NUL,
+because the zero byte between every letter is itself valid UTF-8 and only the two
+mark bytes were dropped. The vocabulary a character model then builds is 30
+characters, one of which occurs nowhere in the file. Worth being exact about,
+because the audit that raised this expected a near empty corpus and the
+measurement says otherwise: what you get is the same text at double length with a
+NUL wedged between every letter, which is harder to notice and worse to train on.
+
+The `cp1252` file, ordinary Western European prose, is the quiet one.
+`make_corpus.py` refuses it too. The window returned 4,500 characters of 5,700 and
+all 1,200 accented letters were gone, and `text_is_readable` calls what is left
+readable, so no check anywhere in the window had anything to report. The `.docx`
+held 4,500 characters of prose and came back as 163 characters of zip container
+and none of the prose, because the document inside is deflated; the 163 moves with
+the container's own timestamp, the count of prose characters recovered is 0 every
+time.
+
+**The check was not new, and one of the lossy reads was newer than the check.**
+`git log --format='%h %ad %s' --date=short --all -- '*make_corpus.py'` dates the
+content gate to 2026-07-30, commits `07bb9ef6` and `127e5e59`, "Train on anything:
+accept files by content, not by the three extensions we guessed", with the
+probe-window fix `3904666a` the same day. The same query for `errors="ignore"`
+puts `studio.py`'s read at `569934d9`, 2026-07-25, five days before the gate,
+which is how it came to be missed, and `home.py`'s at `415cd36d`, 2026-09-20,
+fifty-two days after the gate and in the same directory, which is not. An audit note
+dated the gate 2026-09-20; the history says 2026-07-30 and the history is what is
+recorded here.
+
+**The argument against it was already written in this repository.**
+`make_corpus.py:193` carries the comment: "No `errors="ignore"`: a file that does
+not decode cleanly was already rejected above, so silently mangling one here would
+only hide it." That is the correct reasoning, sitting beside one of four call
+sites, while the other three did the thing it warns against. Python's own
+documentation says the same in fewer words: the `ignore` handler is specified to
+"ignore the malformed data and continue without further notice"
+(docs.python.org/3/library/codecs.html). A program whose job is to tell a beginner
+what is wrong with their file cannot be built on the handler whose defining
+property is not telling them.
+
+**Who it hit.** Anyone who used the window rather than the terminal, with anything
+other than a plain UTF-8 text file. That is the audience the window exists for.
+The picker's second entry is "All", and the beginner most likely to reach for it is
+on Windows, where Notepad's "Unicode" is UTF-16 and the default single byte
+encoding is cp1252. They got a model trained on mangled text, a vocabulary holding
+characters their file never contained, and no message anywhere saying so.
+
+**What changed.** Every path a user's own file travels now goes through one
+reader, `locallm/ingest.py`, to a shape fixed before its code was written: it
+returns the text together with the encoding that actually decoded it, or it
+refuses and says why in a sentence a person can act on, and it never returns
+partly decoded text. `errors="ignore"` is not allowed on those paths.
+`locallm/README.md:104` no longer credits the window with a check only
+`make_corpus.py` performed.
+
+**Left unclaimed, deliberately.** `ingest.py` also takes on pulling text out of
+container formats, and neither this entry nor the README describes that, because
+it was still being written when this was. What is described above is the reader's
+contract, which was fixed first.

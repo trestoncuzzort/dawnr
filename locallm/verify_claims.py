@@ -150,9 +150,33 @@ def check_nothing_phones_home():
     # the string "socket" appearing inside a regex flagged THIS VERY FILE on its
     # first run — and the fix is a more precise pattern, not an exemption for the
     # scanner.
+    #
+    # AND THE SAME MISTAKE CAME BACK IN THE OTHER DIRECTION. `urllib` and `http`
+    # are PACKAGES whose submodules do unrelated jobs, so the bare name cannot
+    # tell an opened socket from string work. urllib.request is the "Extensible
+    # library for opening URLs" (docs.python.org/3/library/urllib.request.html);
+    # urllib.parse only "break[s] Uniform Resource Locator (URL) strings up in
+    # components ... and combine[s] the components back into a URL string"
+    # (docs.python.org/3/library/urllib.parse.html) and opens nothing. Matching
+    # the bare name reported `from urllib.parse import quote` at
+    # build_source_corpus.py:19 as a network call, for a `quote` used once to
+    # percent-encode an attribution path that is written into provenance.jsonl
+    # and never requested (OFFLINE.md section 4). So this check sat red on a
+    # false positive, and a red safety check everyone knows to ignore is worth
+    # less than no check at all.
+    #
+    # The fix is a narrower pattern, NOT a build_source_corpus exemption — which
+    # is exactly what the DOWNLOADER comment above was written to prevent. Only
+    # the two string-only submodules are excluded and nothing is widened: bare
+    # `import urllib` and `import http` still match, because a bare import
+    # reaches urlopen from there. urllib.robotparser is deliberately NOT
+    # excluded — RobotFileParser.read() fetches robots.txt over the network.
+    # `from urllib import parse` still matches, which is conservative rather
+    # than exact; no file here writes it, and over-reporting an import that
+    # names the package is the safe direction for a safety scan.
     net = re.compile(
-        r"^\s*(?:import|from)\s+(?:requests|urllib|socket|httpx|aiohttp"
-        r"|smtplib|ftplib|http)\b"
+        r"^\s*(?:import|from)\s+(?:requests|socket|httpx|aiohttp|smtplib|ftplib"
+        r"|urllib(?!\.parse\b)|http(?!\.(?:cookiejar|cookies)\b))\b"
         r"|\b(?:urlopen|urlretrieve|socket\.socket|requests\.(?:get|post))\s*\(")
     # Anything that could carry bytes OFF this machine.
     upload = re.compile(

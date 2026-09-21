@@ -24,6 +24,9 @@ from __future__ import annotations
 
 import math
 import os
+import sys
+import subprocess
+import re
 from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:                       # tkinter is imported lazily, see _family
@@ -79,9 +82,22 @@ ROLES = ("paper", "card", "line", "ink", "muted", "proved", "refuted",
 PALETTES: dict[str, dict[str, str]] = {}
 
 for _name, _p in (
-    ("light", dict(paper="#F2EDE1", card="#FBF8F1", line="#DCD3C2",
-                   ink="#23201C", muted="#6A6357", proved="#2C6E49",
-                   refuted="#A63328", unsettled="#8A6410")),
+    # Cream in coffee rather than paper white. The first light ground was
+    # #F2EDE1 at 84.9% relative luminance, which is bright enough to glare in a
+    # dim room, and the operator asked for something warmer and softer that does
+    # not hurt to look at. This one is 72.5%, twelve points dimmer and browner.
+    #
+    # The accents had to come down with it, and that is the part worth knowing:
+    # they were tuned against the bright ground, so simply darkening the paper
+    # dropped proved, unsettled and muted BELOW WCAG AA — measured 4.51, 3.96 and
+    # 4.71 against the new ground. Each was deepened until the whole set cleared
+    # AA again. The result is better than what it replaced on both counts at once:
+    # dimmer to look at, and a weakest pair of 5.51 where the old palette's was
+    # 4.60. locallm/test_look.py computes every ratio rather than asserting a
+    # remembered number, so this cannot quietly rot.
+    ("light", dict(paper="#E8DCC8", card="#F3EADA", line="#CBB795",
+                   ink="#241E16", muted="#5E5140", proved="#24603C",
+                   refuted="#8F2B20", unsettled="#6F4E0C")),
     ("dark", dict(paper="#1B1917", card="#26221A", line="#3A352C",
                   ink="#EDE7D9", muted="#A49B8A", proved="#6BBF8A",
                   refuted="#F08070", unsettled="#D9A93F")),
@@ -133,40 +149,96 @@ for _name, _p in (
 del _name, _p
 
 
+# When nothing can be read, open dark. The operator's decision, 2026-09-21.
+_DARK_WHEN_UNKNOWN = True
+
+
 def system_wants_dark() -> bool:
-    """Follow the operating system's own light/dark setting.
+    """Follow the operating system's own light/dark setting, on all three.
 
-    Windows records it in the registry as AppsUseLightTheme (0 = dark). There is
-    no Tk API for this, so it is read directly and every failure falls back to
-    light - a wrong guess about a colour scheme should never stop the app
-    opening. LOCALLLM_THEME=dark|light overrides, which is also how the check
-    is tested without touching anyone's settings.
+    Each platform keeps this somewhere different and none of them is exposed
+    through Tk, so each is read directly and every failure falls back to the
+    default below rather than stopping the window opening. A wrong guess about a
+    colour scheme is not worth a traceback.
 
-    Moved here unchanged from studio, so both halves of the window ask the same
-    way. It has one known gap, stated rather than papered over: on Linux it
-    always answers light, because nothing here reads the desktop's own setting
-    yet. MEASURED on the operator's desk 2026-09-20, where the window opens light
-    while the desktop is set dark: `gsettings get org.gnome.desktop.interface
-    color-scheme` is 'prefer-dark'. That is the key, not the
-    org.freedesktop.appearance this comment claimed until it was run - that name
-    is the XDG portal's, read over D-Bus (org.freedesktop.portal.Settings.Read),
-    and gsettings answers `No such schema` for it. Either is a reasonable thing to
-    read; neither is read, and the default is light anyway, so the gap costs a
-    dark-desktop operator the dark theme and costs nobody a working window.
+      * Linux and the BSDs: the XDG desktop portal first, because it is
+        desktop-agnostic and works under KDE and GNOME alike --
+        org.freedesktop.portal.Settings.Read on org.freedesktop.appearance
+        color-scheme, where the specification defines 1 as prefer-dark, 2 as
+        prefer-light and 0 as no preference
+        (flatpak.github.io/xdg-desktop-portal, Settings interface). Measured here
+        2026-09-21: it answers `(<<uint32 1>>,)`. If the portal is absent, GNOME's
+        own key, `gsettings get org.gnome.desktop.interface color-scheme`,
+        measured the same day as 'prefer-dark'.
+      * Windows: AppsUseLightTheme in the registry, 0 meaning dark.
+      * macOS: `defaults read -g AppleInterfaceStyle`, which prints Dark when dark
+        and EXITS NON-ZERO when light rather than printing Light, so the absence
+        of the key is the light answer.
+
+    THIS USED TO READ THE WINDOWS REGISTRY AND NOTHING ELSE, so on Linux and
+    macOS it always answered light however the desktop was set, and the operator's
+    own dark desktop opened a light window. That gap was documented here and in
+    t/lab.py rather than fixed, and LOCALLLM_THEME=dark was the workaround.
+
+    The unknown case now answers DARK, which is a decision rather than a
+    discovery: the operator asked for a darker window, and when nothing can be
+    read the warm graphite ground is the one to land on.
+
+    Both spellings of the override are accepted. The variable was introduced as
+    LOCALLLM_THEME, with three Ls, which is a typo nobody would guess; LOCALLM_THEME
+    is the spelling to use and the old one keeps working so no one's setup breaks.
     """
-    forced = os.environ.get("LOCALLLM_THEME", "").strip().lower()
-    if forced in ("dark", "light"):
-        return forced == "dark"
-    try:
-        import winreg
-        key = winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize")
-        with key:
-            return winreg.QueryValueEx(key, "AppsUseLightTheme")[0] == 0
-    except Exception:                                    # noqa: BLE001
-        return False
+    for name in ("LOCALLM_THEME", "LOCALLLM_THEME"):
+        forced = os.environ.get(name, "").strip().lower()
+        if forced in ("dark", "light"):
+            return forced == "dark"
 
+    if sys.platform.startswith("win"):
+        try:
+            import winreg                                      # noqa: PLC0415
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+            with key:
+                return winreg.QueryValueEx(key, "AppsUseLightTheme")[0] == 0
+        except Exception:                                      # noqa: BLE001
+            return _DARK_WHEN_UNKNOWN
+
+    if sys.platform == "darwin":
+        try:
+            done = subprocess.run(["defaults", "read", "-g", "AppleInterfaceStyle"],
+                                  capture_output=True, text=True, timeout=1.0)
+        except (OSError, subprocess.SubprocessError):
+            return _DARK_WHEN_UNKNOWN
+        if done.returncode != 0:
+            return False                  # the key is absent, which is how macOS says light
+        return "dark" in done.stdout.strip().lower()
+
+    # Every timeout here is short on purpose: this runs while the window is being
+    # built, so a desktop service that has wandered off must cost a moment, not
+    # the startup.
+    try:
+        done = subprocess.run(
+            ["gdbus", "call", "--session", "--dest", "org.freedesktop.portal.Desktop",
+             "--object-path", "/org/freedesktop/portal/desktop",
+             "--method", "org.freedesktop.portal.Settings.Read",
+             "org.freedesktop.appearance", "color-scheme"],
+            capture_output=True, text=True, timeout=1.0)
+        if done.returncode == 0:
+            found = re.search(r"uint32\s+(\d+)", done.stdout)
+            if found:
+                return found.group(1) == "1"          # 1 dark, 2 light, 0 no preference
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        done = subprocess.run(
+            ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+            capture_output=True, text=True, timeout=1.0)
+        if done.returncode == 0:
+            return "dark" in done.stdout.strip().lower()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return _DARK_WHEN_UNKNOWN
 
 def palette(dark: bool | None = None) -> dict[str, str]:
     """The active palette. `dark=None` asks the operating system."""
@@ -241,9 +313,46 @@ RADIUS = _Radius(control=6, card=12)
 # Cantarell (GNOME), Ubuntu, then the Noto/DejaVu faces that are what a bare
 # Linux box actually has. Mono the same way: SF Mono, Consolas, then JetBrains
 # Mono for whoever installed it, then DejaVu Sans Mono.
+#
+# AFTER THE LATIN FALLBACKS COMES A SCRIPT TAIL, and it changes nothing for
+# anybody whose machine has one of the faces above. _family takes the FIRST
+# installed name, so a face added here can only win on a machine where every
+# name before it is missing — which is exactly the machine the tail is for: an
+# install whose only real UI face covers Chinese or Arabic rather than Latin. The
+# alternative on that machine is TkDefaultFont, an unspecified default nobody
+# chose. Within the tail the CJK faces lead because they are the only ones
+# measured to carry Latin as well: fc-list ':family=Noto Sans CJK SC:charset=0041'
+# matches and so does Noto Sans Mono, while ':family=Noto Sans Arabic:charset=0041'
+# and the Hebrew, Devanagari and Thai faces do not (measured 2026-09-21), so a
+# machine that lands on one of those draws this window's own English labels
+# through Tk's per-character fallback.
+#
+# THE NAMES ARE LOOKED UP, NOT GUESSED, because a family name that is one letter
+# off does nothing at all and says nothing about it. "Noto Sans Arabic", "Noto
+# Sans Hebrew", "Noto Sans Devanagari", "Noto Sans Thai", "Noto Sans SC" and
+# "Noto Sans Mono" are family names in Google's own catalogue
+# (fonts.google.com/metadata/fonts, 1946 families, read 2026-09-21); the
+# operating-system packages of the CJK collection are named "Noto Sans CJK SC"
+# and "Noto Sans Mono CJK SC" with the two-letter region code
+# (github.com/googlefonts/noto-cjk), which is also how fontconfig's own
+# preference list spells them
+# (gitlab.freedesktop.org/fontconfig/fontconfig/-/raw/main/conf.d/65-nonlatin.conf).
+# All fourteen names below were then checked against tkfont.families() on this
+# machine, which sees every one of them under exactly this spelling.
 _SANS = ["SF Pro Text", "Segoe UI", "Cantarell", "Ubuntu", "Noto Sans",
-         "DejaVu Sans"]
-_MONO = ["SF Mono", "Consolas", "JetBrains Mono", "DejaVu Sans Mono"]
+         "DejaVu Sans",
+         # the script tail — see above; Latin-carrying faces first
+         "Noto Sans CJK SC", "Noto Sans CJK JP", "Noto Sans SC",
+         "Noto Sans Arabic", "Noto Sans Hebrew", "Noto Sans Devanagari",
+         "Noto Sans Thai"]
+# The mono tail takes only faces that are actually fixed-width: a proportional
+# face in the reply box loses the alignment the box is mono for. FreeMono earns
+# its place by measurement rather than reputation — fc-list says it carries
+# Arabic, Hebrew and Devanagari as well as Latin, and it is the face Tk fell
+# back to for Hebrew and Devanagari here when the base was DejaVu Sans Mono.
+_MONO = ["SF Mono", "Consolas", "JetBrains Mono", "DejaVu Sans Mono",
+         "Noto Sans Mono CJK SC", "Noto Sans Mono CJK JP", "Noto Sans Mono",
+         "FreeMono"]
 _resolved: dict[str, str] = {}
 
 
@@ -437,6 +546,515 @@ def say_progress(train_loss: float, vocab: int) -> Say:
                f"{choices:.1f} of {vocab} possibilities "
                f"— {pct:.0f}% of the way from guessing to certainty.",
                "proved")
+
+
+# --------------------------------------------------------------------------
+# CAN THE FONT WE RESOLVED DRAW THIS PERSON'S OWN WRITING?
+#
+# Every face at the front of both lists is a Latin UI face, and home.py's prompt
+# box and reply box are where somebody watches their own language come back to
+# them. On a machine with no face for their script that is a row of empty boxes
+# and no explanation — the one failure in this window a person cannot even
+# describe well enough to ask about. So the window asks first and says what to
+# install.
+#
+# TK ALREADY ANSWERS HALF OF IT, and the answer was looked up rather than
+# invented: `font actual FONT ?-displayof W? ?option? ?--? char` returns the
+# attributes "of the specific font used to render that character, which will be
+# different from the base font if the base font does not contain the given
+# character" (github.com/tcltk/tk/blob/core-8-6-branch/doc/font.n). A family name
+# that comes back DIFFERENT from the one asked about is therefore proof the glyph
+# draws: some installed face has it and Tk has already found it.
+#
+# THE OTHER HALF IT WILL NOT TELL YOU. tkUnixRFont.c's GetFont() walks the
+# fontconfig match list for the first face whose charset holds the codepoint and,
+# when none does, falls to `i = 0` — the base face, silently
+# (github.com/tcltk/tk/blob/core-8-6-branch/unix/tkUnixRFont.c). Windows does the
+# same thing in the same place: win/tkWinFont.c's FindSubFontForChar ends at
+# `return &fontPtr->subFontArray[0]`, the base subfont. And the non-Xft unix build
+# says it outright in a comment, unix/tkUnixFont.c lines 2164-2165: "No font can
+# display this character, so it will be displayed as a control character
+# expansion" — it draws the expansion and tells the caller nothing. So the SAME
+# family coming back means either the base font covers the character or nothing on
+# the machine does, and those two have to be separated some other way.
+#
+# MEASURING THE BOX DOES NOT SEPARATE THEM. The obvious idea — a box is a
+# different width from a letter you know is present — is false here, and was
+# measured before it was trusted. At size 12 DejaVu Sans draws a missing
+# codepoint at an advance of 10px and sixteen present Latin letters
+# (abdeghnopquEPSTY) measure exactly 10px too; DejaVu Sans Mono reports `font
+# metrics -fixed 1` and measures every character, present or missing, at 10px.
+# Width can never prove a glyph ABSENT. It does prove one PRESENT, which is the
+# direction kept: an advance that differs from the missing-glyph advance is a
+# glyph that exists, and that is how DejaVu Sans's own Arabic alef (4px against
+# 10px) is recognised.
+#
+# SO THREE SIGNALS, and boxes are only predicted when none of them fires: Tk's
+# per-character family, the advance against the missing-glyph advance, and last
+# whether the machine has any family for that script at all. The order matters
+# because only the first two are about the actual text; the third is a table and
+# a table can be out of date.
+#
+# INVENTED: the three-signal ladder, the plane-15 ruler and the script table are
+# this project's own, and they are here because the published answer covers only
+# half the question. Searched for a library or a documented method that reports a
+# MISSING glyph from Tk or Tcl: Tk's own manual and source (doc/font.n,
+# unix/tkUnixRFont.c, win/tkWinFont.c), the tcl-lang wiki, Stack Exchange for
+# per-character font fallback, and GitHub for a Tkinter glyph-coverage helper.
+# What exists answers presence only — `font actual ... char` naming a different
+# family is proof a glyph draws — and nothing exposes the case tkUnixRFont.c's
+# `i = 0` creates, where no face has the codepoint and the base face is returned
+# anyway. Toolkits that DO answer it do not go through Tk: fontconfig's
+# FcCharSetHasChar (which is what Tk itself calls) and HarfBuzz's
+# hb_font_get_nominal_glyph both take a codepoint and answer honestly, and either
+# would settle this in one call. Neither is reachable here — fontconfig is absent
+# on Windows and macOS, and shelling out to fc-list while somebody types is not a
+# cost this path can pay — so the absence half is a fallback of our own, built to
+# abstain rather than guess: a width can only ever prove presence, and the family
+# table is the one thing allowed to turn "no evidence" into "no font".
+#
+# TWO THINGS THIS PROJECT HAD WRONG, both found by measuring instead of
+# assuming. DejaVu Sans is NOT Latin-only: fc-list ':family=DejaVu Sans:charset=0627'
+# matches, and so does 05d0 — it carries Arabic and Hebrew, and DejaVu Sans Mono
+# carries Arabic. What DejaVu has no glyph for is Han, Devanagari and Thai. And
+# Cantarell, the face this desktop resolves to, has no ✔ U+2714 and no ◷ U+25F7 —
+# the marks above are drawn by Tk's fallback, not by the window's own face.
+#
+# WHAT THIS DOES NOT CLAIM: that the text will look right, only that it will not
+# be boxes. Tk draws Arabic unjoined — measured, `font measure` of the three-letter
+# word ابت equals the sum of the three isolated advances in both DejaVu Sans (34px)
+# and Noto Sans Arabic (36px), so no shaping happened — and it has no bidirectional
+# reordering either. Those are separate defects and this function must not be read
+# as covering them.
+# --------------------------------------------------------------------------
+
+
+class _Script(NamedTuple):
+    """A writing system, the codepoints that identify it, and who can draw it.
+
+    name      what to call it in a sentence somebody reads
+    ranges    inclusive codepoint ranges, first match wins, so they do not
+              overlap. Taken from unicode.org/Public/UCD/latest/ucd/Blocks.txt
+              (Blocks-18.0.0, dated 2026-07-08)
+    families  families known to cover it, best first. This is the third signal
+              and the source of the "install this" sentence, so the names are
+              spellings from a published catalogue —
+              fonts.google.com/metadata/fonts for the "Noto Sans <script>" and
+              "Noto Sans <script> UI" faces, github.com/googlefonts/noto-cjk for
+              the CJK collection's region codes — plus any face measured on this
+              machine with fc-list to carry the script
+    """
+    name: str
+    ranges: tuple[tuple[int, int], ...]
+    families: tuple[str, ...]
+
+
+# ASCII IS THE ONLY THING NOT CHECKED. Not because every face is assumed to have
+# it, but because a face without it would have turned every label in this window
+# into boxes already, which the person can see without being told. Everything
+# above U+007F is asked about, including Greek and Cyrillic: Cantarell covers α
+# but not U+0180, Ubuntu covers U+0180 but not Vietnamese ạ (measured), so "the
+# UI faces obviously have European text" is not a claim this file can make.
+_SCRIPTS: tuple[_Script, ...] = (
+    # STARTS AT U+00A0, not at U+0180. It started at Latin Extended-B until
+    # say_can_draw("Grüße") came back "U+00FC and U+00DF": ü and ß live in the
+    # Latin-1 Supplement, so half of Europe's own writing was falling through to
+    # the unnamed branch and being reported by codepoint.
+    _Script("accented Latin",
+            ((0x00A0, 0x036F), (0x1E00, 0x1EFF), (0x2C60, 0x2C7F),
+             (0xA720, 0xA7FF)),
+            ("Noto Sans", "DejaVu Sans", "Noto Sans Mono", "FreeMono")),
+    _Script("Greek", ((0x0370, 0x03FF), (0x1F00, 0x1FFF)),
+            ("Noto Sans", "DejaVu Sans", "Noto Sans Mono")),
+    _Script("Cyrillic", ((0x0400, 0x052F), (0x2DE0, 0x2DFF), (0xA640, 0xA69F)),
+            ("Noto Sans", "DejaVu Sans", "Noto Sans Mono")),
+    _Script("Armenian", ((0x0530, 0x058F),),
+            ("Noto Sans Armenian", "Noto Serif Armenian")),
+    _Script("Hebrew", ((0x0590, 0x05FF), (0xFB1D, 0xFB4F)),
+            ("Noto Sans Hebrew", "Noto Rashi Hebrew", "DejaVu Sans",
+             "FreeMono")),
+    _Script("Arabic",
+            ((0x0600, 0x06FF), (0x0750, 0x077F), (0x0870, 0x089F),
+             (0x08A0, 0x08FF), (0xFB50, 0xFDFF), (0xFE70, 0xFEFF)),
+            ("Noto Sans Arabic", "Noto Naskh Arabic", "Noto Kufi Arabic",
+             "Noto Sans Arabic UI", "DejaVu Sans", "FreeMono")),
+    _Script("Devanagari", ((0x0900, 0x097F), (0xA8E0, 0xA8FF),
+                           (0x11B00, 0x11B5F)),
+            ("Noto Sans Devanagari", "Noto Sans Devanagari UI", "FreeMono")),
+    _Script("Bengali", ((0x0980, 0x09FF), (0x11DF0, 0x11DFF)),
+            ("Noto Sans Bengali", "Noto Sans Bengali UI")),
+    _Script("Gurmukhi", ((0x0A00, 0x0A7F),),
+            ("Noto Sans Gurmukhi", "Noto Sans Gurmukhi UI")),
+    _Script("Gujarati", ((0x0A80, 0x0AFF),),
+            ("Noto Sans Gujarati", "Noto Sans Gujarati UI")),
+    _Script("Odia", ((0x0B00, 0x0B7F),),
+            ("Noto Sans Oriya", "Noto Sans Oriya UI")),
+    _Script("Tamil", ((0x0B80, 0x0BFF), (0x11FC0, 0x11FFF)),
+            ("Noto Sans Tamil", "Noto Sans Tamil UI")),
+    _Script("Telugu", ((0x0C00, 0x0C7F),),
+            ("Noto Sans Telugu", "Noto Sans Telugu UI")),
+    _Script("Kannada", ((0x0C80, 0x0CFF),),
+            ("Noto Sans Kannada", "Noto Sans Kannada UI")),
+    _Script("Malayalam", ((0x0D00, 0x0D7F),),
+            ("Noto Sans Malayalam", "Noto Sans Malayalam UI")),
+    _Script("Sinhala", ((0x0D80, 0x0DFF),),
+            ("Noto Sans Sinhala", "Noto Sans Sinhala UI")),
+    _Script("Thai", ((0x0E00, 0x0E7F),),
+            ("Noto Sans Thai", "Noto Sans Thai UI", "Noto Serif Thai",
+             "Noto Looped Thai")),
+    _Script("Lao", ((0x0E80, 0x0EFF),),
+            ("Noto Sans Lao", "Noto Sans Lao UI", "Noto Looped Lao")),
+    # Google's catalogue has no "Noto Sans Tibetan" — checked, not assumed; the
+    # serif is the family, and it is what Tk picked for U+0F40 on this machine.
+    _Script("Tibetan", ((0x0F00, 0x0FFF),), ("Noto Serif Tibetan",)),
+    _Script("Myanmar", ((0x1000, 0x109F),),
+            ("Noto Sans Myanmar", "Noto Sans Myanmar UI")),
+    _Script("Georgian", ((0x10A0, 0x10FF),),
+            ("Noto Sans Georgian", "Noto Serif Georgian")),
+    _Script("Ethiopic", ((0x1200, 0x137F),),
+            ("Noto Sans Ethiopic", "Noto Serif Ethiopic")),
+    _Script("Khmer", ((0x1780, 0x17FF),),
+            ("Noto Sans Khmer", "Noto Sans Khmer UI")),
+    # One entry for the whole CJK collection because one font file covers it:
+    # kana, Hangul and Han share Noto Sans CJK, and naming "Japanese" at somebody
+    # typing Chinese would be worse than naming all three.
+    _Script("Chinese, Japanese or Korean",
+            ((0x2E80, 0x2EFF), (0x3000, 0x303F), (0x3040, 0x30FF),
+             (0x3100, 0x312F), (0x3130, 0x318F), (0x31C0, 0x31EF),
+             (0x3200, 0x33FF), (0x4E00, 0x9FFF), (0xA960, 0xA97F),
+             (0xAC00, 0xD7AF), (0xD7B0, 0xD7FF), (0xF900, 0xFAFF),
+             (0xFE30, 0xFE4F), (0xFF00, 0xFFEF), (0x1B000, 0x1B0FF),
+             (0x20000, 0x2A6DF), (0x2A700, 0x2B73F)),
+            ("Noto Sans CJK SC", "Noto Sans CJK JP", "Noto Sans CJK TC",
+             "Noto Sans CJK KR", "Noto Sans CJK HK", "Noto Sans Mono CJK SC",
+             "Noto Sans SC", "Noto Sans JP", "Noto Sans TC", "Noto Sans KR")),
+    # PUNCTUATION IS IN THE TABLE because a person who pastes a quotation gets
+    # curly quotes and an em dash whether they asked for them or not, and those
+    # are U+2019 and U+2014 — above ASCII, so checked, and worth a name rather
+    # than a codepoint. This range also holds the four marks above, which is how
+    # Cantarell's missing ✔ came to light. "Noto Sans Symbols 2" is Google's
+    # spelling and "Noto Sans Symbols2" is the spelling installed here; both are
+    # listed because a family name that is one character off finds nothing.
+    _Script("punctuation and symbols", ((0x2000, 0x2BFF),),
+            ("DejaVu Sans", "Noto Sans", "Noto Sans Symbols",
+             "Noto Sans Symbols 2", "Noto Sans Symbols2", "FreeSerif")),
+    # Emoji, and the honest part is that a font being present is all this claims:
+    # Tk 8.6 has no colour bitmap path, so an emoji it can draw at all it draws
+    # flat. Family names from fontconfig's own generic list
+    # (gitlab.freedesktop.org/fontconfig/fontconfig/-/raw/main/conf.d/45-generic.conf).
+    # The older symbol-block emoji (☺ U+263A and friends) are deliberately NOT
+    # here: they are inside the punctuation range above, DejaVu Sans draws them,
+    # and two entries claiming one codepoint would make the table's first-match
+    # rule a coin toss.
+    _Script("emoji", ((0x1F000, 0x1FAFF),),
+            ("Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji",
+             "Noto Emoji")),
+)
+
+_BY_NAME = {s.name: s for s in _SCRIPTS}
+
+# The reference size for every question below. `font actual`'s family answer does
+# not depend on it, and the two `font measure` calls are only ever compared with
+# each other, so one size keeps the memo small.
+_ASK_SIZE = 12
+
+# THE MISSING-GLYPH RULER. A codepoint in plane 15's private use area has no
+# standard glyph, so measuring it measures whatever the font draws for "I do not
+# have this" — and comparing a real character against it is the one width test
+# that survived measurement. It is verified before use rather than trusted: some
+# fonts (icon patches, for one) DO map this area, and if Tk reports a different
+# family for it then this font's answer is not a missing glyph and the test is
+# skipped instead of quietly lying.
+_NO_GLYPH_CP = 0xF0000
+
+_glyph_memo: dict[tuple[str, str, int], str] = {}
+_families_memo: dict[str, frozenset[str]] = {}
+
+
+#: How many distinct codepoints of one script get asked about. Four rather than
+#: one because of what one costs: U+0870 is an Arabic letter no font on this
+#: machine has, and with a single sample a message beginning with it made the
+#: check announce "nothing on this computer can draw Arabic" while every ordinary
+#: Arabic letter drew perfectly. Four rather than all of them because these are
+#: Tk round trips on a path that runs while somebody types, and because a script
+#: is one font file in the Noto design — a family that has the first four letters
+#: of a person's writing is not going to be missing the fifth.
+_SAMPLE = 4
+
+
+def _needed(text: str) -> dict[str, tuple[int, ...]]:
+    """Writing system -> up to _SAMPLE distinct codepoints of it in `text`.
+
+    A name from _SCRIPTS where one matches, and "U+XXXX" for a codepoint no entry
+    covers — an unlisted script, a symbol, an emoji. The unnamed case is
+    deliberate: the check still runs on it and still reports boxes, it just
+    cannot name a font to install, and saying "this character has no font here"
+    beats saying nothing because the table is short.
+
+    A FEW CODEPOINTS PER SCRIPT, not all of them, is what makes the check cheap
+    enough to run while somebody types: the questions below are Tk round trips,
+    and a paragraph of Arabic asks no more of them than four letters of it does.
+    """
+    found: dict[str, list[int]] = {}
+    for ch in dict.fromkeys(text):          # distinct, first appearance kept
+        cp = ord(ch)
+        if cp < 0x80:
+            continue
+        name = next((s.name for s in _SCRIPTS
+                     if any(lo <= cp <= hi for lo, hi in s.ranges)), None)
+        seen = found.setdefault(name or f"U+{cp:04X}", [])
+        if len(seen) < _SAMPLE:
+            seen.append(cp)
+    return {name: tuple(cps) for name, cps in found.items()}
+
+
+def scripts_in(text: str) -> tuple[str, ...]:
+    """The writing systems `text` needs beyond ASCII, in order of appearance."""
+    return tuple(_needed(text))
+
+
+def _ask(w: tk.Misc, *args) -> str | None:
+    """One `font` subcommand on w's interpreter, or None if it would not answer.
+
+    Every caller treats None as "no signal" rather than as bad news, for the
+    reason _family already has a bare except: the widget may belong to a window
+    this page did not create, and a question that cannot be asked must not become
+    a verdict.
+    """
+    try:
+        return str(w.tk.call("font", *args))
+    except Exception:                                           # noqa: BLE001
+        return None
+
+
+def _drawn_by(w: tk.Misc, family: str, cp: int) -> str | None:
+    """The family Tk will really use for this codepoint in this font.
+
+    The same name back is not an answer either way — see the section comment.
+    """
+    return _ask(w, "actual", (family, _ASK_SIZE), "-displayof", str(w),
+                "-family", "--", chr(cp))
+
+
+def _measures_as_missing(w: tk.Misc, family: str, cp: int) -> bool | None:
+    """Does this codepoint measure exactly what this font's missing glyph does?
+
+    None means the question has no answer in this font: a fixed-width font gives
+    every character the same advance (measured: DejaVu Sans Mono, 10px for all of
+    them including the missing one), and a font that maps the plane-15 ruler has
+    no missing-glyph advance to compare against. True is weak evidence of absence
+    and False is strong evidence of presence, which is why only False is acted on
+    alone.
+    """
+    if _ask(w, "metrics", (family, _ASK_SIZE), "-displayof", str(w),
+            "-fixed") == "1":
+        return None
+    ruler = _drawn_by(w, family, _NO_GLYPH_CP)
+    if ruler is None or ruler.lower() != family.lower():
+        return None
+    here = _ask(w, "measure", (family, _ASK_SIZE), "-displayof", str(w), chr(cp))
+    gone = _ask(w, "measure", (family, _ASK_SIZE), "-displayof", str(w),
+                chr(_NO_GLYPH_CP))
+    if here is None or gone is None:
+        return None
+    return here == gone
+
+
+def _installed(w: tk.Misc) -> frozenset[str]:
+    """Every family name on this display, lowercased; empty if Tk would not say.
+
+    `font families` returns "the case-insensitive names of all font families"
+    (github.com/tcltk/tk/blob/core-8-6-branch/doc/font.n), hence the fold. Held
+    per window path because it is 316 names on this machine and the answer cannot
+    change while the window is open; an empty answer is not cached, for the reason
+    _family does not cache its fallback. Tk's 316 and fc-list's 361 are not the
+    same count and neither is wrong — fontconfig lists a family per style file,
+    so the tests that measure this machine ask fc-list and the window asks Tk.
+
+    IT MUST NOT GO THROUGH _ask, and that is the whole reason this asks Tk
+    directly. _ask ends in str(), which is right for the three questions that
+    answer with one value and silently wrong for this one: tkinter hands a Tcl
+    list back as a PYTHON TUPLE, so str() renders it as Python source —
+    measured 2026-09-21, the first 60 characters came back as
+    `('Noto Sans Gurmukhi', 'Inter Display', 'Noto Sans Display',` — and
+    splitlist then cut that repr on its spaces into 314 fragments like `('Noto`
+    and `Sans`. Not one real family name survived, so `"noto sans arabic" in
+    have` was False on a machine with Noto Sans Arabic installed, and the whole
+    family-table signal below had never once fired. What it cost is in
+    _can_draw's docstring: this desktop told a Greek speaker their own ε would
+    come out as an empty box. splitlist takes the tuple unchanged, which is why
+    the call is made here rather than borrowed.
+    """
+    key = str(w)
+    if key in _families_memo:
+        return _families_memo[key]
+    try:
+        have = frozenset(
+            str(n).lower()
+            for n in w.tk.splitlist(w.tk.call("font", "families",
+                                              "-displayof", key)))
+    except Exception:                                           # noqa: BLE001
+        return frozenset()
+    if not have:
+        return frozenset()
+    _families_memo[key] = have
+    return have
+
+
+def _can_draw(w: tk.Misc, cp: int, families: tuple[str, ...]) -> str:
+    """"drawn", "absent" or "unsure" for one codepoint in both resolved fonts.
+
+    BOTH FONTS, because home.py's prompt box and reply box are mono while its
+    labels are sans, and a person who can read their own prompt but not their own
+    reply has still lost.
+
+    A WIDTH NEVER CONCLUDES ABSENCE, and the first version of this function had
+    it doing exactly that. Run against this desktop it announced "nothing on this
+    computer can draw accented Latin" for "Grüße aus Köln", and the same for
+    Greek, for Cyrillic and for curly quotes: the resolved sans is Cantarell, ü
+    measures the same 8px as Cantarell's missing glyph, and one coincidence of
+    advance was being read as proof. The same was already in the measurement above
+    — sixteen present DejaVu letters share its missing-glyph advance — so the rule
+    is now the one the measurement supports. An advance that DIFFERS proves
+    presence; an advance that matches proves nothing and leaves the codepoint
+    unsure, and only the family table can turn unsure into absent.
+
+    Which makes the order of the three signals an order of strength: what Tk says
+    it will use, then what the advance says, then a list of family names that is a
+    belief about other machines rather than a measurement of this one.
+
+    THE TABLE'S CLAIM IS ABOUT A SCRIPT, NOT A CODEPOINT, and the measurement that
+    fixes its limit is worth stating because it cannot be improved from inside Tk.
+    Measured here 2026-09-21, Greek ε U+03B5 and Arabic U+0870 produce the SAME
+    four answers: base family back unchanged from both fonts, an advance equal to
+    the missing-glyph advance in the sans, and no advance answer at all from the
+    fixed-width mono. Cantarell draws ε perfectly and nothing on this machine
+    draws U+0870. Tk cannot tell those apart — tkUnixRFont.c returns the base face
+    for both — so the table breaks the tie for both, and it is right about the
+    first and generous about the second. That trade is deliberate: reading it the
+    other way told this desktop's own Greek, Cyrillic and accented-Latin text
+    "some of this will be empty boxes", which is a false alarm on the most common
+    text there is, against one unassigned-looking Arabic codepoint being called
+    readable. The headline sentence is therefore a claim about the SCRIPT having a
+    home on this computer, not a promise about every character in the string.
+    """
+    signals = []
+    for kind in ("sans", "mono"):
+        base = _family(kind, w)
+        if base.startswith("Tk"):
+            # Tk's own named font: there is no family name to compare an answer
+            # against, so this font can only be reported on by the table.
+            continue
+        got = _drawn_by(w, base, cp)
+        if got is None:
+            continue
+        if got.lower() != base.lower() or _measures_as_missing(w, base,
+                                                               cp) is False:
+            signals.append("drawn")
+        else:
+            signals.append("unsure")
+    have = _installed(w)
+    capable = bool(have) and any(f.lower() in have for f in families)
+    if signals and all(v == "drawn" for v in signals):
+        return "drawn"
+    if capable:
+        return "drawn"
+    if "drawn" in signals:
+        # One box will draw it and the other gave no signal — that is not enough
+        # to promise boxes, and this project would rather abstain than be wrong.
+        return "unsure"
+    return "absent" if signals else "unsure"
+
+
+def _and(names: list[str], cap: int = 3) -> str:
+    """"a", "a and b", "a, b and c", then "a, b, c and 2 more"."""
+    if len(names) > cap:
+        names = names[:cap] + [f"{len(names) - cap} more"]
+    if len(names) == 1:
+        return names[0]
+    return ", ".join(names[:-1]) + f" and {names[-1]}"
+
+
+def say_can_draw(text: str, w: tk.Misc | None = None) -> Say:
+    """Whether this computer can draw `text`, and what to install if it cannot.
+
+    IT TAKES THE WIDGET TO ASK, for the same reason _family does: the question is
+    about one Tk interpreter's display and there need not be a default root. With
+    no widget it answers for ASCII (where the window's own labels are the
+    evidence) and otherwise says plainly that nothing was checked, because a
+    green tick for a check that did not run is the failure this project keeps
+    finding elsewhere.
+
+    The Say a caller gets:
+      proved / "Readable"      every script in the text has a font here
+      refuted / "No font"      at least one has none, and the sentence names the
+                               family to install
+      unsettled / "Not sure"   Tk gave no usable answer for some script
+      unsettled / "Some boxes" part of one script is missing — the sentence says
+                               which character, and that the rest is fine
+      muted / "Not checked"    nothing was asked: no widget, or no text yet
+    """
+    if not text or not text.strip():
+        return Say(NOT_APPLICABLE, "Not checked", "There is no text to check.",
+                   "muted")
+    need = _needed(text)
+    if not need:
+        return Say(PROVED, "Readable",
+                   "Every character here is in the face this window already "
+                   "draws its own labels in.", "proved")
+    if w is None:
+        return Say(NOT_APPLICABLE, "Not checked",
+                   f"The window has not opened yet, so nothing is claimed about "
+                   f"whether this computer can draw {_and(list(need))}.",
+                   "muted")
+    sans, mono = _family("sans", w), _family("mono", w)
+    gone, partial, unsure = [], [], []
+    for name, cps in need.items():
+        script = _BY_NAME.get(name)
+        marks = []
+        for cp in cps:
+            memo = (sans, mono, cp)
+            verdict = _glyph_memo.get(memo)
+            if verdict is None:
+                verdict = _can_draw(w, cp, script.families if script else ())
+                _glyph_memo[memo] = verdict
+            marks.append(verdict)
+        missing = [cp for cp, v in zip(cps, marks) if v == "absent"]
+        fams = script.families if script else ()
+        here = _installed(w)
+        if missing and len(missing) == len(marks) and not (
+                here and any(f.lower() in here for f in fams)):
+            gone.append(name)
+        elif missing:
+            # Some sampled letters of this script draw and some do not, on a
+            # machine with no family listed for it. "No font for <script>" would
+            # be false — it would send somebody to install a font that would not
+            # help — so the codepoint is named instead of the script.
+            partial.append((name, missing[0]))
+        elif "unsure" in marks:
+            unsure.append(name)
+    if gone:
+        fixes = [s.families[0] for s in (_BY_NAME.get(n) for n in gone)
+                 if s is not None]
+        fix = (f" — installing {_and(fixes, 2)} fixes it" if fixes else
+               " — a font that covers it has to be installed")
+        return Say(REFUTED, "No font",
+                   f"Nothing on this computer can draw {_and(gone)}, so that "
+                   f"text will come out as empty boxes{fix}.", "refuted")
+    if partial:
+        shown = [f"U+{cp:04X}" for _, cp in partial]
+        return Say(NOT_APPLICABLE, "Some boxes",
+                   f"A few characters here have no font on this computer "
+                   f"({_and(shown)}), so those will come out as empty boxes.",
+                   "unsettled")
+    if unsure:
+        return Say(NOT_APPLICABLE, "Not sure",
+                   f"This computer could not say whether it has a font for "
+                   f"{_and(unsure)}, so nothing is claimed either way.",
+                   "unsettled")
+    return Say(PROVED, "Readable",
+               f"This computer has a font for {_and(list(need))}, so the text "
+               f"will draw as itself.", "proved")
 
 # MOVED HERE FROM studio.py, 2026-09-21, because it could not do its job there.
 # studio.py imports torch at module scope, so t/lab.py could only reach this

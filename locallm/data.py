@@ -256,7 +256,52 @@ class CharTokenizer:
         return cls(sorted(set(text)))
 
     def encode(self, s: str):
+        # A CHARACTER THIS TOKENIZER NEVER SAW IS DROPPED, NOT SUBSTITUTED, AND
+        # NOT REPORTED. The comprehension is unchanged on purpose: it runs over
+        # the whole corpus — 46M characters on the frozen source corpus, which is
+        # the cost cached_encode exists to stop paying twice — and the trainer
+        # and both samplers index the list it returns, so neither its speed nor
+        # its return type is free to change. unknown_characters() below is how a
+        # caller learns what this line threw away.
         return [self.stoi[c] for c in s if c in self.stoi]
+
+    def unknown_characters(self, s: str) -> dict[str, int]:
+        """The characters encode() drops, first appearance first, with counts.
+
+        WHY A COMPANION QUERY AND NOT `encode(..., errors="strict")`. A mode flag
+        is the shape docs.python.org/3/library/codecs.html gives a codec —
+        'strict' raises and names the offending slice, 'ignore' drops silently —
+        and it is the right shape there because every codec call is one string.
+        Ours is not. encode() runs over the corpus, and raising needs the same
+        full scan, so a flag either slows that path or scans it twice. Asking the
+        question separately leaves the comprehension above untouched and costs a
+        second pass only when somebody asks, which is on a prompt of tens of
+        characters, never on 46M of them.
+
+        Also rejected: an <unk> token, which is what the tokenizer world does.
+        It changes vocab_size, so it would invalidate the embedding table of
+        every checkpoint already shipped and every tokenizer_fingerprint with it.
+
+        A dict, not the set train_distributed.require_validation_coverage builds
+        by hand out of .chars. A set cannot say "5 of your 20 characters" and
+        cannot show them in the order they were typed, and those are the two
+        things a sentence addressed to a person needs. sum(...values()) is the
+        same quantity ingest.Read reports as `dropped`.
+
+        Not on BPETokenizer: byte-level BPE starts from the complete 256-byte
+        alphabet and from_text() refuses a tokenizer that cannot reproduce its
+        own training text, so it has nothing to drop. Callers holding either kind
+        already branch on isinstance(tokenizer, CharTokenizer).
+
+        plain_generate.CharTokens.unknown_characters is the same function over
+        the same vocabulary for callers with no torch; test_tokenizer_drops.py
+        asserts the two agree character for character.
+        """
+        unknown: dict[str, int] = {}
+        for c in s:
+            if c not in self.stoi:
+                unknown[c] = unknown.get(c, 0) + 1
+        return unknown
 
     def decode(self, ids) -> str:
         return "".join(self.itos[int(i)] for i in ids)

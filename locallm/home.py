@@ -39,8 +39,19 @@ opens and still explains itself: the cards say plainly which parts cannot work a
 why, rather than the window refusing to appear. That is the same reason t/lab.py
 imports studio inside build_train.
 
-Dependencies: tkinter (stdlib) and locallm/look.py. torch, studio, data, leakage,
-checkpoint and get_corpus are all reached lazily, and each absence has a sentence.
+NOTHING HERE READS A USER'S FILE. ingest.read_any does, and it is the only thing
+allowed to: it either decodes a file properly and says which encoding worked, or
+it refuses and says why in a sentence. This page renders that answer and gates
+the Train button on it. What stood here before was
+`read_text(encoding="utf-8", errors="ignore")`, which is the failure that rule
+exists to stop — a PDF came back as the fragments that happen to be valid UTF-8
+and a UTF-16 file from a Windows Save as box came back nearly empty, both with a
+green tick beside them.
+
+Dependencies: tkinter (stdlib) and locallm/look.py. ingest is reached lazily and
+its absence is a REFUSAL, not a fallback. torch, studio, data, leakage,
+checkpoint and get_corpus are all reached lazily too, and each absence has a
+sentence.
 """
 from __future__ import annotations
 
@@ -97,6 +108,37 @@ def engine() -> tuple[object | None, str]:
         except Exception as e:                                   # noqa: BLE001
             _ENGINE.append((None, f"{type(e).__name__}: {e}"))
     return _ENGINE[0]
+
+
+# --------------------------------------------------------------------------
+# THE SECOND LAZY IMPORT: THE ONLY THING ALLOWED TO READ A USER'S FILE.
+#
+# ingest.py owns every read: read_any(path) for one file, read_corpus(paths) for
+# several or a folder, can_train_on(path) as the cheap yes/no a picker or a drop
+# target can afford to ask before either. All three come back with a look.Say,
+# which is the shape this page already renders, so none of the judgement is
+# repeated here — the same reason measure_text leaves the corpus verdict to
+# look.say_corpus.
+#
+# WHY LAZY, when ingest needs no torch and would import at module scope fine. The
+# same reason as engine(): a module that is missing has to arrive as a sentence on
+# a card, not as a traceback before the window exists. The difference is what
+# happens next — with no studio this page still explains itself, and with no
+# ingest it reads NOTHING AT ALL. There is deliberately no fallback read here,
+# because reading the file the other way is the bug being fixed.
+# --------------------------------------------------------------------------
+_READER: list[tuple[object | None, str]] = []
+
+
+def reader() -> tuple[object | None, str]:
+    """(ingest module, "") or (None, why not). Imported at most once per process."""
+    if not _READER:
+        try:
+            import ingest                                        # noqa: PLC0415
+            _READER.append((ingest, ""))
+        except Exception as e:                                    # noqa: BLE001
+            _READER.append((None, f"{type(e).__name__}: {e}"))
+    return _READER[0]
 
 
 # --------------------------------------------------------------------------
@@ -442,21 +484,199 @@ def load_tools() -> Tools | None:
     return Tools(group_split, scan, split_health, split_verdict, documents)
 
 
+# WHICH ENCODING WORKED, in words rather than in codec names.
+#
+# Silence is right for UTF-8 and only for UTF-8: that is what a person means by a
+# text file, so saying it back to them is noise. Anything else changed the answer,
+# and being told which one worked is what separates "this file is fine, it just
+# came off a different machine" from "this file is not what I thought it was".
+#
+# UTF-16 EARNS THE LONGEST PHRASE because it is the most ordinary way to end up
+# here. Notepad's own Save as list is ANSI, UTF-8, UTF-8 with BOM, UTF-16 LE and
+# UTF-16 BE (learn.microsoft.com/en-us/answers/questions/2152989/windows-10-notepad-encoding-options,
+# read 2026-09-21), so a UTF-16 text file is not exotic — it is what somebody gets
+# by picking the entry next to the one they meant. Decoded as UTF-8 with
+# errors="ignore" almost none of it survives, which is the near-empty corpus this
+# page used to show a tick beside.
+#
+# Keys are ingest.Read.encoding with any parenthetical dropped and lowered. An
+# encoding nobody wrote a phrase for is still NAMED rather than skipped: not
+# having prose ready is no reason to go quiet about which encoding was used.
+_ENCODING_WORDS = {
+    "utf-16": "UTF-16, one of the five choices in a Windows Save as box",
+    "utf-16le": "UTF-16, one of the five choices in a Windows Save as box",
+    "utf-16be": "UTF-16, one of the five choices in a Windows Save as box",
+    # utf-8-sig is PYTHON'S name for a BOM in front of UTF-8, and it reaches this
+    # dictionary as often as utf-16 does, because "UTF-8 with BOM" is a line in
+    # the same Notepad Save as list. Without an entry the card said "Read as
+    # utf-8-sig (BOM), not plain UTF-8" — measured on the fixture, 2026-09-21 —
+    # which breaks the one rule this dictionary exists to keep, from
+    # developer.gnome.org/hig/guidelines/writing-style.html (read 2026-09-21):
+    # "use words, phrases, and concepts that are familiar to the people who will
+    # be using your app, rather than terms from the underlying system".
+    "utf-8-sig": "UTF-8 with a byte order mark, the “UTF-8 with BOM” choice in a "
+                 "Windows Save as box",
+    "utf-32": "UTF-32",
+    "cp1252": "cp1252, the single-byte Windows encoding for western Europe",
+    "latin-1": "Latin-1, a single-byte encoding older than Unicode",
+    "iso-8859-1": "Latin-1, a single-byte encoding older than Unicode",
+    "ascii": "plain ASCII",
+}
+
+
+def encoding_note(encoding: str) -> str:
+    """One sentence naming the encoding that worked, or "" for plain UTF-8."""
+    name = encoding.strip()
+    if not name or name.lower() in ("utf-8", "utf8"):
+        return ""
+    bare = name.split("(")[0].strip().lower()
+    return f" Read as {_ENCODING_WORDS.get(bare, name)}, not plain UTF-8."
+
+
 def text_facts(chars: int, distinct: int, docs: int | None,
-               sampled_mb: int | None) -> str:
+               sampled_mb: int | None, read_as: str = "") -> str:
     """The plain facts about a file, in a sentence rather than as a row of numbers."""
-    parts = [f"{chars:,} characters", f"{distinct} different characters"]
+    # Both counts take the separator. `distinct` did not, which nobody noticed
+    # while the only corpora on this page were Latin ones: a Chinese corpus read
+    # "5183 different characters" beside "12,345,678 characters" on the same line.
+    parts = [f"{chars:,} characters", f"{distinct:,} different characters"]
     if docs is not None:
         parts.append(f"{docs:,} document{'' if docs == 1 else 's'}")
     facts = ", ".join(parts[:-1]) + f" and {parts[-1]}."
+    facts += encoding_note(read_as)
     if sampled_mb is not None:
         facts += (f" Checked the first {sampled_mb} MB of it; the whole thing is "
                   f"checked when training starts.")
     return facts
 
 
-def measure_text(text: str, sample_bytes: int,
-                 tools: Tools | None) -> tuple[str, look.Say]:
+# --------------------------------------------------------------------------
+# HOW MANY DIFFERENT CHARACTERS, AND WHAT THAT COSTS.
+#
+# NOT IN THE SHARED CONTRACT. ingest.py's contract is read_any, can_train_on,
+# read_corpus and Read, and none of them judges an alphabet, so the judgement sits
+# here beside the counts it is about. If ingest grows one, delete this and show
+# that instead — one judgement in one place is the rule the rest of this file
+# follows.
+#
+# THE COST IS ARITHMETIC AND NOT A FEELING. studio.param_count spends
+# vocab * n_embd on the character table, tied to the output head and counted once,
+# and the Medium preset (n_embd 256, 4 layers) is 3,159,552 parameters before that
+# table. So the table is 25,600 of a 3.19M model at 100 different characters —
+# 0.8%, a rounding error — and 1,280,000 of a 4.44M model at 5,000, which is 29%:
+# nearly a third of everything it learns spent on knowing the alphabet rather than
+# on how the writing goes. The same count is where step 3's chart starts, since
+# look.say_progress measures progress against "all vocab characters look equally
+# likely", so a wider alphabet is also further to fall before anything reads as
+# language.
+#
+# WHERE THE TWO BOUNDS COME FROM. 200 covers any Latin, Greek or Cyrillic text
+# with punctuation and both cases, and is the range the measured presets were
+# chosen against. 1,000 is where the table passes 7% of a Medium model and the
+# sentence has to change from "worth knowing" to "choose a bigger size" — which
+# step 2 can still do, and that timing is the whole reason this is said on the
+# card instead of in the training log where studio said it.
+#
+# INVENTED: searched for a published rule of thumb for character-level vocabulary
+# size against model width and found none — the tokenizer literature is about
+# subword merges, and this repository's own study is a 1,382-entry byte-level BPE
+# (tokenizer-results-2026-09-19.json), a different question. The two bounds are
+# ours, and the arithmetic above is what they are answerable to.
+# --------------------------------------------------------------------------
+
+#: studio.SIZES["Medium"]["n_embd"] — one row of this many numbers per character.
+VOCAB_ROW = 256
+#: An alphabet at or under this many characters costs the model nothing worth saying.
+VOCAB_PLAIN = 200
+#: Above this the alphabet is a real share of the model and the size should change.
+VOCAB_WIDE = 1_000
+
+
+def say_vocab(distinct: int) -> look.Say:
+    """What an alphabet costs, while step 2 can still be changed."""
+    if distinct <= 0:
+        return look.Say(look.NOT_APPLICABLE, "No alphabet",
+                        "Nothing has been read yet, so there is no alphabet to "
+                        "count.", "muted")
+    table = distinct * VOCAB_ROW
+    if distinct <= VOCAB_PLAIN:
+        return look.Say(
+            look.PROVED, "Ordinary alphabet",
+            f"{distinct:,} different characters. The model keeps a row of numbers "
+            f"for each one — {table:,} of its numbers at the usual size, a "
+            f"rounding error — and this is the range the sizes in step 2 were "
+            f"measured on.", "proved")
+    if distinct <= VOCAB_WIDE:
+        return look.Say(
+            look.NOT_APPLICABLE, "Wide alphabet",
+            f"{distinct:,} different characters, so {table:,} of the model's "
+            f"numbers go on the alphabet before it learns anything about how "
+            f"your writing goes. It will still train; it has more to get "
+            f"through.", "unsettled")
+    return look.Say(
+        look.NOT_APPLICABLE, "Big alphabet",
+        f"{distinct:,} different characters, which is normal for Chinese, Japanese "
+        f"or Korean. That is {table:,} numbers spent on the alphabet alone at the "
+        f"usual size, against about 3.2 million in the rest of a medium model, "
+        f"and that many possibilities to choose between at every step. Pick a "
+        f"bigger size in step 2 before training, or expect a long climb.",
+        "unsettled")
+
+
+def say_not_ready(state: str, path: str) -> look.Say | None:
+    """Why step 3 cannot start on step 1's text, or None when it can.
+
+    A FUNCTION AND NOT FOUR IFS INSIDE THE BUTTON because this is the guard that
+    matters most on the page and it has to be checkable without a window: the
+    button being disabled is a courtesy, and this is the thing that actually stops
+    a refused file, a half-read one or a folder from reaching the training loop.
+    "text" — one file, read properly by ingest — is the only state that proceeds.
+    """
+    if state == "text":
+        return None
+    if state == "reading":
+        return look.Say(
+            _WORKING, "Still reading",
+            "Step 1 is still reading that text. The button comes back on by "
+            "itself the moment it is ready.", "muted")
+    if state == "folder":
+        return look.Say(
+            look.REFUTED, "One file",
+            "Step 1 read that whole folder and can say what is in it, but "
+            "training reads one file at a time, so point step 1 at a single file "
+            "— or at one that holds the lot.", "refuted")
+    return look.Say(
+        look.REFUTED, "No text",
+        f"Step 1 has not accepted anything to learn from: “{path}” is either not "
+        f"there or was refused, and step 1 says which. Choose something there "
+        f"first.", "refuted")
+
+
+def as_say(got: object) -> look.Say:
+    """ingest's Say, or a Say saying it did not come back as one.
+
+    _show reads all four fields and turns `tone` into a colour, so a tone that is
+    not a palette key raises KeyError — and it would raise it inside the message
+    pump, whose only `except` is queue.Empty. One malformed Say would therefore
+    stop every later message on this page without printing a word, including the
+    ones that report training finishing. The contract says ingest returns a
+    look.Say; this is what happens if it ever does not, and it is cheaper than
+    trusting it.
+    """
+    try:
+        mark, word, why, tone = got.mark, got.word, got.why, got.tone
+        if mark in look.MARKS and tone in look.PALETTES["light"] and str(why).strip():
+            return look.Say(mark, str(word), str(why), tone)
+    except AttributeError:
+        pass
+    return look.Say(look.NOT_APPLICABLE, "Not checked",
+                    "The part that reads your files came back with something this "
+                    "page cannot show, so nothing is claimed about that text "
+                    "either way.", "muted")
+
+
+def measure_text(text: str, sample_bytes: int, tools: Tools | None,
+                 read_as: str = "") -> tuple[str, look.Say]:
     """(the facts, the judgement) for one file's contents.
 
     Precedence is studio's and look.say_corpus's, untouched: the leakage verdict
@@ -470,7 +690,7 @@ def measure_text(text: str, sample_bytes: int,
     sample = text[:sample_bytes] if sampled else text
     sampled_mb = sample_bytes // 1_000_000 if sampled else None
     if tools is None:
-        return (text_facts(len(text), distinct, None, None),
+        return (text_facts(len(text), distinct, None, None, read_as),
                 look.say_corpus(None))
     docs = None
     say = look.say_corpus(None)
@@ -484,7 +704,7 @@ def measure_text(text: str, sample_bytes: int,
         docs = len(tools.documents(sample))
     except Exception:                       # never let the scan block training
         pass
-    return text_facts(len(text), distinct, docs, sampled_mb), say
+    return text_facts(len(text), distinct, docs, sampled_mb, read_as), say
 
 
 # --------------------------------------------------------------------------
@@ -667,6 +887,11 @@ class _DropTarget(tk.Canvas):
     well and the same callback runs; event.data goes through tk.splitlist,
     because several files and a filename with a space in it both come back as a
     Tcl list and str() on that is a filename nobody has.
+
+    NOTHING IS ACCEPTED HERE. A dropped path goes to the same on_file the click
+    goes to, which is Home._choose_file, so ingest.can_train_on and then
+    ingest.read_any decide in one place whether it is text at all. This widget
+    only draws; what it says about a file is set from there through set_lines.
     """
 
     def __init__(self, parent, palette: dict, on_file, height: int):
@@ -987,6 +1212,23 @@ class Home(ttk.Frame):
         self.q: queue.Queue = queue.Queue()
         self.stop_evt = threading.Event()
         self.worker = None
+        # WHAT STEP 1 CURRENTLY CLAIMS, in one word, because three other places
+        # have to branch on it: the Train button, _start's own guard, and what the
+        # drop target says. "none" nothing chosen, "reading" a read in flight,
+        # "text" one file accepted, "folder" a folder accepted, "refused" ingest
+        # said no. Only "text" lets training start, and that is the whole point of
+        # the field: before this, a refusal left the button live.
+        self.text_state = "none"
+        #: The path step 1 actually accepted, so a path typed into More settings
+        #: cannot reach the training loop without going through ingest first.
+        self.text_path = ""
+        # Read requests are numbered so a stale answer can be dropped. There is no
+        # way to interrupt a thread that is already inside a read — nothing in
+        # docs.python.org/3/library/threading.html offers one (read 2026-09-21) —
+        # so a second choice does not cancel the first, it supersedes it: the
+        # window stays live throughout and the earlier answer is discarded when it
+        # arrives. That is weaker than a cancel and is not called one.
+        self._read_seq = 0
         self.model = None
         self.tok = None
         self.vocab = 0
@@ -1177,8 +1419,31 @@ class Home(ttk.Frame):
                                 justify="left", wraplength=640, text="")
         self.l_facts.grid(row=4, column=0, sticky="ew", pady=(look.SPACE.item, 0))
         self._wrapped.append(self.l_facts)
+        # The alphabet's judgement goes UNDER THE COUNTS and not in the card's one
+        # Say, because it is about the numbers on the line above it and because
+        # that Say is already spoken for by the fairness verdict. It is the one
+        # label on this page whose colour changes with what it says, which is why
+        # it is a judgement and not another grey fact: an amber line here at the
+        # moment step 2 is still open is the difference between a person choosing a
+        # bigger model and a person wondering later why the output is noise.
+        self.l_vocab = tk.Label(body, bg=self.C["card"], fg=self.C["muted"],
+                                font=SANS(TYPE.caption), anchor="w",
+                                justify="left", wraplength=640, text="")
+        self.l_vocab.grid(row=5, column=0, sticky="ew", pady=(look.SPACE.tight, 0))
+        self._wrapped.append(self.l_vocab)
 
     def _choose_file(self, path: str | None):
+        """The picker and the drop both land here, and both get the same check.
+
+        ("All", "*.*") STAYS IN THE PICKER. A text file called .log or .jsonl, or
+        with no extension at all, is a file people really have — test_ingest.py's
+        red witness is four of them wrongly refused by a set literal, "the whole
+        industrial and commercial case silently excluded". What was missing was
+        never a narrower filter, it was a check on the way out, so every door stays
+        open and _look_at_text decides what came through it. A dropped path arrives
+        here too, by the same call, which is what makes "the same check" true by
+        construction rather than by two lists staying in step.
+        """
         if path is None:
             path = filedialog.askopenfilename(
                 title="Pick a text file to learn from",
@@ -1187,40 +1452,215 @@ class Home(ttk.Frame):
             self.v_data.set(path)
             self._look_at_text()
 
+    def _text_not_ready(self, state: str):
+        """Step 1 holds nothing training can use, so step 3 cannot be started."""
+        self.text_state = state
+        self.text_path = ""
+        b = getattr(self, "b_train", None)
+        if b is not None:
+            b.set_enabled(False)
+
+    def _blank_text_card(self):
+        for label in (self.l_facts, self.l_vocab):
+            label.configure(text="")
+        self.vocab = 0
+
     def _look_at_text(self, quiet: bool = False):
-        p = Path(self.v_data.get())
-        if not p.is_file():
+        """Start reading whatever v_data points at, and return immediately.
+
+        NOTHING IS READ ON THIS THREAD ANY MORE. Tcl/Tk is single-threaded, so
+        "event handlers must respond quickly, otherwise they will block other
+        events from being processed ... any long-running computations should not
+        run in an event handler, but are either broken into smaller pieces using
+        timers, or run in another thread"
+        (docs.python.org/3/library/tkinter.html#threading-model, read 2026-09-21).
+        What stood here was a read_text() call in the handler, so a large file
+        froze the whole window: no redraw, no progress, and no way to tell a slow
+        read from a hung program. The read now goes on a daemon thread and comes
+        back through self.q, exactly as this file's download already does.
+
+        MEASURED BOTH WAYS on this machine, 2026-09-21. Old: reading an 88 MB
+        mixed Japanese/Latin/Cyrillic file and counting its distinct characters
+        held the Tk thread 0.67 s with nothing on screen to say so — and that is
+        the cheap half, since measure_text's scan then runs over
+        studio.SCAN_SAMPLE_BYTES (2 MB) at the 0.9 s/MB measure_text's own comment
+        records, about 1.8 s more, on the same thread. New, against a stand-in
+        ingest that takes 2 s to answer: this method hands control back in 3.6 ms,
+        and a 50 ms repeating timer kept firing throughout with a longest gap of
+        54 ms. A read that takes a minute costs the window 3.6 ms either way.
+
+        THE WORKER TOUCHES THE QUEUE AND NEVER A WIDGET, from the same section:
+        "if the Tcl interpreter is not running the event loop ... any tkinter
+        calls made from threads other than the one running the Tcl interpreter
+        will fail". Every widget call below happens on this thread or in _drain.
+        """
+        raw = self.v_data.get().strip()
+        p = Path(raw) if raw else None
+        folder = bool(p and p.is_dir())
+        if p is None or not (folder or p.is_file()):
             self.drop.set_lines("Drop a text file here", "or click to choose one")
             self._show(1, look.Say(
                 look.NOT_APPLICABLE, "No text yet",
                 "Nothing has been chosen to learn from. Any plain text file "
                 "will do — the longer the better, and at least a few hundred "
                 "thousand characters if you want sentences back.", "muted"))
-            self.l_facts.configure(text="")
-            self.vocab = 0
+            self._blank_text_card()
+            self._text_not_ready("none")
             self._apply_stop()
             return
-        try:
-            text = p.read_text(encoding="utf-8", errors="ignore")
-        except OSError as e:
-            self._show(1, look.Say(look.REFUTED, "Unreadable",
-                                   f"That file cannot be read: {e}", "refuted"))
+        mod, why = reader()
+        if mod is None:
+            self.drop.set_lines("Cannot read files",
+                                "the part that reads them safely is missing")
+            self._show(1, look.Say(
+                look.REFUTED, "Cannot read",
+                f"The part of locallm that reads your files is missing, so that "
+                f"text was not read at all rather than read wrongly. What Python "
+                f"said: {why}.", "refuted"))
+            self._blank_text_card()
+            self._text_not_ready("refused")
+            self._apply_stop()
             return
-        self.vocab = len(set(text))
-        sample_bytes = self.studio.SCAN_SAMPLE_BYTES if self.studio else len(text) + 1
-        facts, say = measure_text(text, sample_bytes, self.tools)
-        self.drop.set_lines(p.name, "click to choose a different file")
+        # can_train_on is the cheap half of the contract and this is the place it
+        # was written for: an answer fast enough to put on the drop target the
+        # instant something lands on it. It decides nothing — read_any decides, and
+        # read_any is the only thing allowed to say WHY, so a no here still goes
+        # through the same read and comes back with ingest's own sentence instead
+        # of one invented on this side. A folder skips it, because the cheap check
+        # is about one file and read_corpus is what a folder goes through.
+        try:
+            welcome = folder or bool(mod.can_train_on(p))
+        except Exception:                                        # noqa: BLE001
+            welcome = True          # the cheap check is not the authority here
+        if folder:
+            first = f"Reading the files in “{p.name}”…"
+        elif welcome:
+            first = f"Reading “{p.name}”…"
+        else:
+            first = f"“{p.name}” does not look like text…"
+        self.drop.set_lines(first, "the window stays usable — click to choose another")
+        self._show(1, look.Say(
+            _WORKING, "Reading",
+            f"Working through “{p.name}” now. Nothing is claimed about it yet, and "
+            f"training cannot start until this comes back.", "muted"))
+        self._blank_text_card()
+        self._text_not_ready("reading")
+        self._set_status(f"Reading “{p.name}” — this window is still yours.")
+        self._read_seq += 1
+        threading.Thread(target=self._read_text,
+                         args=(mod, p, folder, self._read_seq, quiet),
+                         daemon=True).start()
+
+    def _read_text(self, ingest, p: Path, folder: bool, seq: int, quiet: bool):
+        """ingest plus the corpus scan, off the Tk thread. Touches only self.q.
+
+        read_corpus is handed a LIST even for a single folder, because the contract
+        names that parameter `paths`. If it also takes a bare path the list costs
+        nothing, and if it does not, a one-element list is the reading that cannot
+        be wrong.
+
+        The scan runs here too rather than back on the Tk thread. It is the
+        expensive half — leakage.scan costs about 0.9 seconds per megabyte, which
+        is the measurement behind measure_text's sample in the first place — so
+        leaving it behind would have moved the freeze rather than removed it.
+        """
+        try:
+            got = (ingest.read_corpus([p]) if folder else ingest.read_any(p))
+            m = {"seq": seq, "path": str(p), "folder": folder, "quiet": quiet,
+                 "say": got.say, "accepted": got.text is not None,
+                 "facts": "", "distinct": 0}
+            if got.text is not None:
+                sample = (self.studio.SCAN_SAMPLE_BYTES if self.studio
+                          else len(got.text) + 1)
+                m["distinct"] = len(set(got.text))
+                m["facts"], corpus_say = measure_text(got.text, sample,
+                                                      self.tools, got.encoding)
+                m["read_say"] = got.say
+                # THE CORPUS VERDICT ONLY OUTRANKS THE READ WHEN IT RAN. With no
+                # tools measure_text returns look.say_corpus(None) — "Not
+                # checked" — and load_tools returns None whenever data.py and
+                # leakage.py cannot be imported, which on this machine is always:
+                # both of them `import torch` at module scope. MEASURED on the
+                # Arabic fixture, 2026-09-21: card 1 showed a grey dash and "The
+                # repetition check did not finish, so nothing is claimed about
+                # this text either way" over a file ingest had read perfectly,
+                # while ingest's own "Read 4,026 characters out of “arabic.txt”"
+                # went nowhere — the log it would have gone to is built inside
+                # the training card, which needs torch too. A check that could
+                # not run is not a stronger claim than a read that did; it is no
+                # claim. _text_arrived's precedence rule is unchanged — the
+                # stronger claim wins — this only stops a check that never
+                # happened from counting as one.
+                m["say"] = corpus_say if self.tools is not None else got.say
+            self.q.put(("text", m))
+        except Exception:
+            self.q.put(("read-failed", {"seq": seq, "path": str(p),
+                                        "why": traceback.format_exc()}))
+
+    def _text_arrived(self, m: dict):
+        """One read's answer, back on the Tk thread.
+
+        PRECEDENCE, which is the only decision in here worth arguing about. On a
+        REFUSAL the card shows ingest's Say, because ingest is the only thing that
+        knows why a file was refused and the sentence has to be one a person can
+        act on. On an ACCEPT the card shows look.say_corpus's verdict, because that
+        is the stronger claim about whether training on this text will measure
+        anything — and what ingest found out is not thrown away: the encoding goes
+        into the facts line beside the counts, and its sentence goes in the log.
+        """
+        if m["seq"] != self._read_seq:
+            return              # superseded by a later choice; this one is stale
+        p = Path(m["path"])
+        say = as_say(m["say"])
         self._show(1, say)
-        self.l_facts.configure(text=facts)
+        if not m["accepted"]:
+            self.drop.set_lines(f"“{p.name}” was not taken",
+                                "drop another, or click to choose")
+            self._blank_text_card()
+            self._text_not_ready("refused")
+            self._apply_stop()
+            self._set_status(f"“{p.name}” was not taken — step 1 says why.")
+            self._log(f"Refused {p.name}: {say.why}")
+            return
+        self.vocab = m["distinct"]
+        self.text_state = "folder" if m["folder"] else "text"
+        self.text_path = m["path"]
+        self.drop.set_lines(p.name, "click to choose a different "
+                                    + ("one" if m["folder"] else "file"))
+        self.l_facts.configure(text=m["facts"])
+        v = say_vocab(m["distinct"])
+        self.l_vocab.configure(text=f"{v.mark}  {v.word} — {v.why}",
+                               fg=self._tone(v.tone))
+        b = getattr(self, "b_train", None)
+        if b is not None and not (self.worker is not None and self.worker.is_alive()):
+            b.set_enabled(self.text_state == "text")
         self._apply_stop()
         if self.plot is not None:
-            # Show the pure-guessing baseline as soon as a file is chosen, not
-            # only once training starts: before this the chart opened as an empty
-            # box with nothing to compare anything against, which is the exact
+            # Show the pure-guessing baseline as soon as a file is read, not only
+            # once training starts: before this the chart opened as an empty box
+            # with nothing to compare anything against, which is the exact
             # problem the baseline exists to solve.
             self.plot.reset(self.plot.total_steps, self.vocab)
-        if not quiet:
-            self._log(f"Loaded {p.name}: {facts}")
+        self._set_status(f"“{p.name}” is ready.")
+        if not m["quiet"]:
+            self._log(f"Loaded {p.name}: {m['facts']}")
+            if m.get("read_say") is not None:
+                self._log(as_say(m["read_say"]).why)
+
+    def _read_failed(self, m: dict):
+        """The read itself raised, which is not the same as ingest refusing."""
+        name = Path(m["path"]).name
+        if m["seq"] == self._read_seq:
+            self._show(1, look.Say(
+                look.REFUTED, "Unreadable",
+                f"“{name}” could not be read at all, so nothing is claimed about "
+                f"it either way. The panel in step 3 has what Python said, which "
+                f"is worth keeping if you ask anyone about it.", "refuted"))
+            self._blank_text_card()
+            self._text_not_ready("refused")
+            self._apply_stop()
+            self._set_status(f"“{name}” could not be read.")
+        self._log("\nReading that text failed:\n" + m["why"])
 
     def _download(self):
         """Fetch ready-made text, in the words get_corpus.py already uses.
@@ -1521,11 +1961,33 @@ class Home(ttk.Frame):
                 f"{cfg['n_head']} heads. Move the slider to get back to a "
                 f"combination that works.", "refuted"))
             return
-        if not Path(cfg["data"]).is_file():
-            self._show(3, look.Say(look.REFUTED, "No text",
-                                   f"There is no file at {cfg['data']}. Choose "
-                                   f"one in step 1.", "refuted"))
+        # STEP 1 IS THE GATE, not a path check. `is_file()` was the whole of the
+        # old guard and it says nothing about whether the file is text: the file
+        # that started this work was a real file on disk and a PDF. What is
+        # checked here is what step 1 ACCEPTED, which is also why the button is
+        # disabled in every other state — this is the half that a path typed into
+        # More settings goes past, since nothing reads that field on the way here.
+        #
+        # BOTH SIDES GO THROUGH Path() FIRST, because text_path is str(Path(...))
+        # and this field is whatever was typed into it. Compared raw, " corpus.txt "
+        # never equals "corpus.txt", so pressing the button would have read the
+        # file, accepted it, and asked to be pressed again — for ever.
+        want = cfg["data"].strip()
+        if (str(Path(want)) if want else "") != self.text_path:
+            self.v_data.set(want)
+            self._look_at_text()
+            self._show(3, look.Say(
+                _WORKING, "Checking first",
+                "That text has not been read yet. Step 1 is looking at it now — "
+                "press Start training again once it says it is ready.", "muted"))
             return
+        stop = say_not_ready(self.text_state, cfg["data"])
+        if stop is not None:
+            self._show(3, stop)
+            return
+        # The training loop is handed the path step 1 READ, not the text of the
+        # field, so the two cannot be different strings for the same file.
+        cfg["data"] = self.text_path
         self.logbox.delete("1.0", "end")
         self.plot.reset(cfg["steps"], self.vocab)
         self.stop_evt.clear()
@@ -1725,7 +2187,16 @@ class Home(ttk.Frame):
                 pady=look.SPACE.tight)
             field = self._hairline(grid)
             field.grid(row=i, column=1, sticky="ew", pady=look.SPACE.tight)
-            self._entry(field, var)
+            entry = self._entry(field, var)
+            if var is self.v_data:
+                # A typed path has not been through ingest, and this is the one
+                # field on the page that can name a file without the picker. It is
+                # checked when the field is LEFT or Enter is pressed, not on every
+                # keystroke: a trace_add here would start a read per character
+                # typed, and the whole point of the rewrite is that a read is
+                # expensive enough to keep off this thread.
+                for seq in ("<Return>", "<FocusOut>"):
+                    entry.bind(seq, lambda _e: self._look_at_text())
         tk.Checkbutton(grid, text="force the processor (ignore the graphics card)",
                        variable=self.v_cpu, command=self._apply_stop,
                        bg=self.C["card"], fg=self.C["ink"],
@@ -1834,6 +2305,10 @@ class Home(ttk.Frame):
                         f"Finished in "
                         f"{self.studio.human_time(payload['elapsed'])}. Step 4 "
                         f"can talk to it now.")
+                elif kind == "text":
+                    self._text_arrived(payload)
+                elif kind == "read-failed":
+                    self._read_failed(payload)
                 elif kind == "corpus":
                     for line in payload.splitlines():
                         if line.strip():

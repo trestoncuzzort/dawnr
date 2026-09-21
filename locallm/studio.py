@@ -30,7 +30,20 @@ well as in t/lab.py, which hosts this page as its Train tab; the two copies
 drifted, and a rule saying "keep these lists identical" has no enforcement. One
 list has enforcement for free, and look.py is that list.
 
-Dependencies: torch + tkinter (stdlib), and locallm/look.py. Nothing else.
+NOTHING HERE READS ANYONE'S FILE. Every byte of a user's own text arrives through
+ingest.py, which either decodes a file properly and names the encoding that
+worked, or refuses and says why in a sentence a person can act on. This file used
+to call read_text(encoding="utf-8", errors="ignore") in two places - once for the
+on-screen preview, and once inside TrainWorker, which is the path that actually
+trains - and 'ignore' is documented as "Ignore the malformed data and continue
+without further notice" (docs.python.org/3/library/codecs.html#error-handlers).
+"Without further notice" is the whole defect: a cp1252 or UTF-16 file lost
+characters with no sign on screen, and in a character-level tokenizer the
+survivors become permanent vocabulary entries of a model nobody can tell is
+wrong. A file that does not decode is now refused instead of trained on.
+
+Dependencies: torch + tkinter (stdlib), locallm/look.py and locallm/ingest.py.
+Nothing else.
 """
 from __future__ import annotations
 
@@ -55,6 +68,7 @@ import torch  # noqa: E402
 
 import baselines  # noqa: E402
 import checkpoint  # noqa: E402
+import ingest  # noqa: E402  (the ONLY way this file reads a user's text)
 import look  # noqa: E402
 import runlog  # noqa: E402
 
@@ -237,12 +251,218 @@ def load_speeds() -> dict:
         return {}
 
 
+def load_bench() -> dict:
+    """The whole benchmark row per (device, size), or {} if never benchmarked.
+
+    load_speeds() above is left exactly as it is, because home.py reads it and
+    expects a bare ms/step per key. This reads the same file for the one other
+    field the time estimate needs: `params`, which is the only record of how big
+    an ALPHABET that timing was taken on.
+    """
+    try:
+        d = json.loads(BENCH.read_text(encoding="utf-8"))
+        return {k: dict(v) for k, v in d["results"].items()}
+    except Exception:                              # noqa: BLE001
+        return {}
+
+
 def human_time(seconds: float) -> str:
     if seconds < 90:
         return f"{seconds:.0f} seconds"
     if seconds < 5400:
         return f"{seconds / 60:.0f} minutes"
     return f"{seconds / 3600:.1f} hours"
+
+
+# WHAT A STEP COSTS, AND WHY THE ALPHABET IS IN IT.
+#
+# bench_device_result.json is keyed by (device, size) and by nothing else, so the
+# time beside each size was the same number whether your text used 29 different
+# characters or 10,000. param_count above already takes `vocab` and is right: at
+# the Small preset a model grows from 400,512 numbers on a 29-character alphabet
+# to 1,676,800 on a 10,000-character one - 4.19 times, from the alphabet alone -
+# while "About four minutes on this machine" did not move. Someone training on
+# Chinese or Japanese was quietly under-promised, and the promise is not
+# cosmetic: `steps` is DERIVED from ms/step to fill a wall-clock target, so an
+# ms/step that is four times too small picks four times too many steps and the
+# run overruns by that much.
+#
+# THE SCALING IS NOT THE PARAMETER RATIO. Kaplan et al., "Scaling Laws for Neural
+# Language Models" (arxiv.org/abs/2001.08361), Table 1 splits a transformer's
+# forward FLOPs per token by operation, and two of its rows settle this. The
+# token Embed row costs 4*d_model per token REGARDLESS of n_vocab, because it is
+# a row lookup - so the vocab*n_embd numbers in the table cost nothing per step -
+# while the De-embed row, the tied output projection, does multiply by the whole
+# table and costs 2*d_model*n_vocab. The alphabet therefore enters the CLOCK
+# through the output projection only, and everything else in Table 1's
+# non-embedding total, C_forward = 2N + 2*n_layer*n_ctx*d_attn with
+# N = 2*d_model*n_layer*(2*d_attn + d_ff), is vocabulary-independent. Backward is
+# about twice forward and divides out of a ratio, as does the batch.
+#
+# THE ARITHMETIC for this model's shape, where d_attn = d_model = n_embd,
+# d_ff = 4*n_embd and n_ctx = block_size:
+#     core       = 24*n_layer*n_embd**2 + 2*n_layer*block*n_embd
+#     alphabet   = 2*n_embd per different character
+# Small (n_layer 2, n_embd 128, block 128) is core = 786,432 + 65,536 = 851,968,
+# and 256 per character. The shipped benchmark was taken at vocab 136 - recovered
+# from the file by bench_vocab() below, exactly, on all six of its rows - so the
+# alphabet is 34,816 / 886,784 = 3.9% of a step there, and scaling that 3.9% is
+# the entire correction:
+#     10,000 characters on Small    time x3.85   (parameters x4.05)
+#     10,000 characters on Medium   time x1.76   (parameters x1.79)
+#     10,000 characters on Large    time x1.26   (parameters x1.27)
+#
+# IT IS A FLOOR, NOT A PROMISE, and the label says so on screen. Table 1 states
+# it omits "nonlinearities, biases, and layer normalization", and it counts
+# arithmetic only: not the memory traffic of materialising a batch*block*n_vocab
+# logits tensor, nor the softmax and cross-entropy over it. At batch 32, block
+# 128 and vocab 10,000 that tensor is 41 million floats per step, which on a
+# bandwidth-bound machine can cost more than the matmul. Both of those are also
+# LINEAR in n_vocab, so the shape core + 2*n_embd*vocab is right and only the
+# ratio between the two terms is understated - the derived factor can come out
+# too small and cannot come out too large. NOT MEASURED HERE: this machine has no
+# torch, so no step was timed at two alphabets to put a number on that gap.
+def step_flops(vocab: int, block: int, n_layer: int, n_embd: int) -> int:
+    """Forward-pass FLOPs for one token, by the rows of Table 1 named above.
+
+    A cost in arbitrary units, only ever used as a ratio against itself at a
+    different `vocab`, which is why the backward pass and the batch are missing:
+    both multiply the two sides of that ratio equally.
+    """
+    n_non_embd = 2 * n_embd * n_layer * (2 * n_embd + 4 * n_embd)   # Table 1's N
+    return (2 * n_non_embd                       # every weight, once per token
+            + 2 * n_layer * block * n_embd       # Table 1's "Attention: Mask"
+            + 2 * n_embd * vocab)                # Table 1's "De-embed"
+
+
+def bench_vocab(row: dict, s: dict) -> int | None:
+    """How many different characters `row` was timed on; None if it cannot say.
+
+    Not a guess and not a constant. bench_device.py and check_my_computer.py both
+    record `params` beside `ms_per_step`, and param_count is linear in vocab with
+    slope n_embd, so the alphabet a timing was taken on is recovered exactly by
+    subtracting the vocab-free part and dividing. It has to be recovered rather
+    than assumed, because the two writers disagree: bench_device.py times against
+    whatever corpus.txt happens to hold (136 different characters in the file
+    that ships) and check_my_computer.py against its own pangram (32). None,
+    rather than a fallback, when the division does not come out even - an assumed
+    benchmark alphabet is precisely the confident wrong number this removes, and
+    the caller has an honest sentence for None.
+    """
+    got = row.get("params")
+    if not isinstance(got, int):
+        return None
+    floor = param_count(0, s["block_size"], s["n_layer"], s["n_head"], s["n_embd"])
+    if got <= floor:
+        return None
+    v, remainder = divmod(got - floor, s["n_embd"])
+    return v if remainder == 0 else None
+
+
+# WHEN AN ALPHABET IS WORTH A WORD, measured as the share of the model that goes
+# on naming characters rather than on how they follow each other. Kaplan et al.
+# (above) fit loss against NON-embedding parameters - the embedding table buys no
+# modelling capacity in their fit - so that share is the fraction of a model the
+# user is paying for and not learning from, and it is exact: param_count knows
+# both halves.
+#
+# INVENTED: the two cut points, a half and a tenth. Searched for a published rule
+# for when a character vocabulary is too large for a given model width - arXiv,
+# and the embedding-dimensionality literature (baeldung.com/cs/dimensionality-
+# word-embeddings collects the usual ones) - and found rules for choosing a
+# dimension from a vocabulary, none for judging a vocabulary against a dimension.
+# A half is the point where more of the model names characters than does anything
+# else with them; a tenth is where the sentence stops being worth the space,
+# since below it the alphabet moves neither the size nor the clock by an amount
+# anyone would notice. On the three presets a half falls at 3,101 characters
+# (Small), 12,343 (Medium) and 36,945 (Large), so which band a text lands in
+# depends on the size chosen, which is the point - a bigger size is one of the
+# two things that help.
+#
+# The same tenth gates the time estimate's own sentence in _apply_preset, there
+# measured on a step's cost rather than on the parameter count - the two are
+# different quantities (a step pays for the output projection, not for the table)
+# and each is judged in its own units, but one line is drawn once and used twice
+# rather than two lines nobody can compare.
+def say_alphabet(vocab: int, s: dict) -> look.Say | None:
+    """What to say about an alphabet this size on this preset, or None.
+
+    None means an ordinary alphabet: English, or any European or Cyrillic text,
+    is a fraction of a percent of any of the three sizes, and a sentence about it
+    there would be noise rather than judgement.
+    """
+    if vocab < 1:
+        return None
+    table = vocab * s["n_embd"]
+    total = param_count(vocab, s["block_size"], s["n_layer"], s["n_head"],
+                        s["n_embd"])
+    share = table / total
+    if share > 0.5:
+        return look.Say(
+            look.NOT_APPLICABLE, "Alphabet-bound",
+            f"{share:.0%} of this model would go on naming your {vocab:,} "
+            f"different characters rather than on how they follow each other. "
+            f"A larger size spends less of itself that way, and more text helps "
+            f"every character get seen often enough to learn.", "unsettled")
+    if share > 0.1:
+        return look.Say(
+            look.NOT_APPLICABLE, "Big alphabet",
+            f"{share:.0%} of this model goes on naming your {vocab:,} different "
+            f"characters, and each practice step costs more because of them.",
+            "muted")
+    return None
+
+
+def inspect_corpus(path) -> dict:
+    """Read a corpus through ingest and measure everything the sidebar reports.
+
+    PURE, AND MEANT TO RUN OFF THE TK THREAD: it touches no widget and no Studio,
+    so the read, the decode and leakage.scan over the sample all happen on a
+    worker and only numbers come back. `say` is a look.Say whichever way it goes,
+    so a refused file and a clean one are rendered by the same three lines.
+
+    A refusal carries ingest's own sentence and no measurements, because there is
+    no text to measure - which is the point of the contract: read_any either
+    decodes a file properly and names the encoding, or returns text=None. There
+    is no third answer where a partly-decoded string reaches a tokenizer.
+    """
+    got = ingest.read_any(path)
+    out = {"ok": got.text is not None, "say": got.say, "encoding": got.encoding,
+           "kind": got.kind, "chars": 0, "vocab": 0, "docs": 0,
+           "sampled": False, "report": None}
+    if got.text is None:
+        return out
+    text = got.text
+    out["chars"] = len(text)
+    out["vocab"] = len(set(text))
+    out["sampled"] = len(text) > SCAN_SAMPLE_BYTES
+    sample = text[:SCAN_SAMPLE_BYTES] if out["sampled"] else text
+    # MEASURING HERE, JUDGING IN look.say_corpus. Which sentence and which colour
+    # go with which verdict was an if/elif ladder in _scan_corpus, over the three
+    # leakage verdicts, the three split problems and the precedence between them;
+    # TrainWorker decides the same thing from the same two reports, in its own
+    # longer words, for the log. The measurements stay here. Calling say_corpus
+    # with no verdict is what "the scan has not produced one" looks like, so the
+    # except arm needs no second copy of that sentence either.
+    rep = None
+    say = look.say_corpus(None)
+    try:
+        tr_txt, va_txt = group_split(sample)
+        rep = leakage_scan(tr_txt, va_txt, doc_aligned=True)  # group_split: it is
+        health = split_health(sample)
+        say = look.say_corpus(rep.verdict, rep.trustworthy,
+                              split_verdict(health),
+                              health["achievable_val_frac"])
+    except Exception:                       # never let the scan block training
+        # rep too, so the report below stays quiet about a scan that did not
+        # finish. THIS ARM USED TO CLAIM A PASS: it fell back to the ok colour
+        # and an empty note, so a check that crashed was indistinguishable from
+        # one that passed. It reads "Not checked", in muted, instead.
+        rep = None
+    out["say"] = say
+    out["docs"] = len(documents(sample))
+    out["report"] = rep.report() if rep is not None else None
+    return out
 
 
 # HOW WIDE THE SETTINGS COLUMN IS, in characters of the body font rather than in
@@ -510,12 +730,34 @@ class TrainWorker(threading.Thread):
         device = c["device"]
         torch.manual_seed(c["seed"])
 
-        text = Path(c["data"]).read_text(encoding="utf-8", errors="ignore")
+        # THE PATH THAT ACTUALLY TRAINS, so this is the read that mattered most.
+        # It was read_text(encoding="utf-8", errors="ignore"), which meant a file
+        # in cp1252 or UTF-16 was silently stripped of whatever would not decode
+        # and the leftovers were trained on: a wrong model, produced without one
+        # word on screen. ingest.read_any either decodes it and says which
+        # encoding worked, or returns text=None with a sentence saying why, and
+        # None is refused here rather than turned into a smaller corpus. Raised,
+        # not logged and continued: TrainWorker.run catches it onto the queue and
+        # the panel shows it, which is the same route every other refusal takes.
+        got = ingest.read_any(c["data"])
+        if got.text is None:
+            raise ValueError(f"{got.say.word}: {got.say.why}")
+        text = got.text
         tok = CharTokenizer.from_text(text)
         corpus = Corpus(text, tok, device)
         self.q.put(("vocab", tok.vocab_size))
         self.log(f"Your text: {len(text):,} characters, {tok.vocab_size} different "
                  f"characters. Training on {'the CPU' if device == 'cpu' else 'the graphics card'}.")
+        # Only when it was not plain UTF-8. Saying "read as utf-8" on every run
+        # is noise; saying it about the one file in fifty that was cp1252 is the
+        # difference between a person spotting a wrong guess and not. `kind`
+        # comes with it because "read as cp1252" and "read the text out of a
+        # .docx" are different facts about where the characters came from.
+        if got.encoding and got.encoding != "utf-8":
+            self.log(f"  That file is not plain UTF-8: it was read as "
+                     f"{got.encoding} ({got.kind}). Nothing was dropped — "
+                     f"anything that would not decode is refused rather than "
+                     f"skipped.")
 
         # Before reporting a single val number, find out whether it means
         # anything. Validation text that also appears in training measures
@@ -733,8 +975,20 @@ class Studio(ttk.Frame):
         self.dark = self.C["bg"] == look.PALETTES["dark"]["bg"]
         self._apply_theme()
         self.speeds = load_speeds()
+        # The same file as self.speeds, read once more for `params`, which is
+        # what says which alphabet each timing was taken on. See step_flops.
+        self.bench = load_bench()
         self.advanced_open = False
         self.val_ok = True
+        # What the last finished scan concluded about the chosen file. None means
+        # no scan has landed yet - the read is on a worker thread now, so "not
+        # answered yet" is a real third state and _start must not read it as
+        # "fine". `corpus_say` is ingest's own sentence when the file was
+        # refused, so the refusal a person sees when they press Start is word for
+        # word the one already under the filename.
+        self.corpus_ok: bool | None = None
+        self.corpus_say = None
+        self._scan_token = 0
 
         # Chosen presets. The advanced fields are derived FROM these, so there is
         # exactly one source of truth and the two can never disagree.
@@ -1185,14 +1439,60 @@ class Studio(ttk.Frame):
         self.v_lr.set(f"{auto_lr(s['n_embd']):.2g}")
 
         dev = "cpu" if getattr(self, "v_cpu", None) and self.v_cpu.get() else self.device
-        ms = self.speeds.get(f"{dev}/{s['key']}")
-        target = LENGTHS[self.length_name.get()]["seconds"]
-        if ms:
-            steps = max(200, int(round(target / (ms / 1000) / 100) * 100))
+        key = f"{dev}/{s['key']}"
+        ms = self.speeds.get(key)
+        length = LENGTHS[self.length_name.get()]
+        target, blurb = length["seconds"], length["blurb"]
+
+        def steps_for(per_step_ms: float) -> int:
+            """Steps that fill the wall-clock target at this speed, rounded to a
+            hundred so the number reads as a choice and not as a measurement."""
+            return max(200, int(round(target / (per_step_ms / 1000) / 100) * 100))
+
+        # FOUR ARMS, AND EACH ONE KNOWS SOMETHING DIFFERENT. The estimate used to
+        # be two: timed, or not timed. That collapsed "timed on an alphabet we
+        # can compare with yours" together with "timed, but on an alphabet nobody
+        # recorded" and printed the same confident minutes for both.
+        benched_on = bench_vocab(self.bench.get(key, {}), s) if ms else None
+        if ms and self.vocab and benched_on:
+            shape = (s["block_size"], s["n_layer"], s["n_embd"])
+            core = step_flops(0, *shape)                 # the vocab-free part
+            here = step_flops(self.vocab, *shape)
+            scale = here / step_flops(benched_on, *shape)
+            steps = steps_for(ms * scale)
+            text = (f"About {human_time(steps * ms * scale / 1000)} on this "
+                    f"machine ({steps:,} practice steps).  {blurb}")
+            # SAID ONLY WHEN THE ALPHABET IS MORE THAN A TENTH OF A STEP, the
+            # same tenth say_alphabet uses and drawn for the same reason: the
+            # correction is always applied, but below a tenth it is a percent or
+            # two and a sentence about alphabets beside it is noise rather than
+            # honesty. 96 characters of English against this benchmark's 136 is
+            # 2.8% of a step and says nothing; 3,000 is 47% and says so.
+            if here * 0.9 > core:
+                text += (f"\nYour text uses {self.vocab:,} different characters "
+                         f"and this machine was timed on {benched_on:,}, which "
+                         f"costs {scale:.2f} times as much per step. Expect a "
+                         f"little longer rather than shorter.")
+            self.l_time.config(text=text)
+        elif ms and self.vocab:
+            # Timed, but the timing does not record its own alphabet, so it
+            # cannot be carried onto this one. The untimed arm below is the
+            # precedent this follows: say there is no honest estimate, rather
+            # than print the unscaled minutes as though the alphabet were free.
+            steps = steps_for(ms)
+            self.l_time.config(
+                text=f"{steps:,} practice steps. This machine was timed, but the "
+                     f"timing does not record how many different characters it "
+                     f"was timed on, and your text has {self.vocab:,} — so there "
+                     f"is no honest estimate in minutes. Run “Check My Computer” "
+                     f"again and this will show real minutes.  {blurb}")
+        elif ms:
+            # No text chosen yet, so there is no alphabet to correct for and none
+            # is claimed. This is the sentence as it always read.
+            steps = steps_for(ms)
             self.l_time.config(
                 text=f"About {human_time(steps * ms / 1000)} on this machine "
-                     f"({steps:,} practice steps).  "
-                     f"{LENGTHS[self.length_name.get()]['blurb']}")
+                     f"({steps:,} practice steps).  {blurb}")
         else:
             ref = LENGTHS["Normal"]["seconds"]
             steps = max(200, int(round(UNTIMED_NORMAL_STEPS * target / ref / 100) * 100))
@@ -1221,11 +1521,46 @@ class Studio(ttk.Frame):
         self.log.see("end")
 
     def _browse(self):
-        p = filedialog.askopenfilename(title="Pick a text file to learn from",
-                                       filetypes=[("Text", "*.txt"), ("All", "*.*")])
-        if p:
-            self.v_data.set(p)
-            self._scan_corpus()
+        """Pick a file, and say straight away if it is one that cannot be read.
+
+        THE FILTER LIST NAMES WHAT ingest CAN ACTUALLY OPEN, which was one entry
+        - "*.txt" - beside an "All" that let anything at all through to a UTF-8
+        read. Both halves were wrong in opposite directions: a .csv, .jsonl or
+        .log of plain text was hidden behind the wrong filter, and a .png picked
+        through "All" reached the corpus as mojibake.
+
+        "All files" STAYS, because refusing an unknown extension is the failure
+        test_ingest.py was written against - a file of plain text with no
+        extension, or one called .dat, is trainable and must be reachable - and
+        because a filter is a convenience while ingest.can_train_on is the
+        decision. What changed is that the decision now happens: a file the
+        picker allowed but ingest will not read is refused here, in ingest's own
+        words, instead of at the far end of a training run.
+        """
+        p = filedialog.askopenfilename(
+            title="Pick a text file to learn from",
+            filetypes=[("Text", "*.txt *.md *.csv *.tsv *.jsonl *.log"),
+                       ("Word document", "*.docx"),
+                       ("EPUB book", "*.epub"),
+                       ("Web page", "*.html *.htm"),
+                       ("All files", "*.*")])
+        if not p:
+            return
+        # can_train_on, not read_any: the contract offers it as the cheap check
+        # for exactly this, so picking a 4 GB video does not read a 4 GB video.
+        # The full sentence still comes from the scan below, which reads it
+        # properly on a worker; this only stops an obviously unusable pick from
+        # replacing a working corpus path.
+        if not ingest.can_train_on(p):
+            messagebox.showerror(
+                "That file cannot be used as text",
+                f"{Path(p).name} could not be read as text.\n\n"
+                f"Plain text in any encoding works, and so do .docx, .epub and "
+                f"saved web pages. A picture, a video, a zip or a program is "
+                f"not text, whatever it is called.")
+            return
+        self.v_data.set(p)
+        self._scan_corpus()
 
     def _get_corpus(self):
         """Pick ready-made training text, as presets rather than a URL box.
@@ -1318,60 +1653,131 @@ class Studio(ttk.Frame):
         win.grab_set()
 
     def _scan_corpus(self, quiet=False):
+        """Start reading the chosen file. The answer arrives through the queue.
+
+        OFF THE TK THREAD, because this reads a whole corpus and then runs
+        leakage.scan over up to SCAN_SAMPLE_BYTES of it. "Because it is
+        single-threaded, event handlers must respond quickly, otherwise they will
+        block other events from being processed. To avoid this, any long-running
+        computations should not run in an event handler, but are either broken
+        into smaller pieces using timers, or run in another thread"
+        (docs.python.org/3/library/tkinter.html, Threading model). This ran
+        synchronously from three places — startup, the file picker, and a
+        finished download — so a large corpus froze the window with no repaint
+        and no cursor, which on Windows is the state where the shell offers to
+        kill the program. The download in _get_corpus was already a daemon thread
+        reporting through self.q, and this follows it exactly. No widget is
+        touched from the worker, because "if the Tcl interpreter is not running
+        the event loop and processing events, any tkinter calls made from threads
+        other than the one running the Tcl interpreter will fail" (same page),
+        and during startup the loop is not running yet.
+        """
         p = Path(self.v_data.get())
         self.l_file.config(text=p.name)
+        # A TOKEN, NOT A FLAG. Two picks in quick succession leave two workers
+        # running, and the slower one must not paint its answer over the newer
+        # one's. Only the scan whose token is still the latest is rendered.
+        self._scan_token += 1
+        token = self._scan_token
+        self.corpus_ok = None
+        self.corpus_say = None
+        # STILL ANSWERED HERE, and still the original sentence. A path that is
+        # not a file is one stat, not a read, and it is the state a fresh install
+        # opens in - corpus.txt does not exist until the download button has been
+        # pressed. Handing that to a worker would trade an instant answer for a
+        # round trip, and would make ingest's behaviour on a missing path decide
+        # what a first-run window says.
         if not p.is_file():
             self.l_corpus.config(text="That file is not there any more.",
                                  foreground=self.C["bad"])
             self.vocab = 0
             return
-        text = p.read_text(encoding="utf-8", errors="ignore")
-        self.vocab = len(set(text))
-        sampled = len(text) > SCAN_SAMPLE_BYTES
-        sample = text[:SCAN_SAMPLE_BYTES] if sampled else text
-        # MEASURING HERE, JUDGING IN look.say_corpus. Which sentence and which
-        # colour go with which verdict was an if/elif ladder in this method, over
-        # the three leakage verdicts, the three split problems and the precedence
-        # between them; TrainWorker decides the same thing from the same two
-        # reports, in its own longer words, for the log. The measurements stay
-        # here. Calling say_corpus with no verdict is what "the scan has not
-        # produced one" looks like, so the except arm needs no second copy of that
-        # sentence either.
-        rep = None
-        say = look.say_corpus(None)
-        try:
-            tr_txt, va_txt = group_split(sample)
-            rep = leakage_scan(tr_txt, va_txt, doc_aligned=True)  # group_split: it is
-            health = split_health(sample)
-            say = look.say_corpus(rep.verdict, rep.trustworthy,
-                                  split_verdict(health),
-                                  health["achievable_val_frac"])
-        except Exception:                       # never let the scan block training
-            # rep too, so the report below stays quiet about a scan that did not
-            # finish. THIS ARM USED TO CLAIM A PASS: it fell back to the ok colour
-            # and an empty note, so a check that crashed was indistinguishable
-            # from one that passed. It now reads "Not checked", in muted, which is
-            # the one behaviour change in this method.
-            rep = None
-        docs = len(documents(sample))
+        self.l_corpus.config(text="Reading…", foreground=self.C["muted"])
+
+        def work():
+            try:
+                found = inspect_corpus(p)
+            except Exception:
+                # ingest refuses by RETURNING a Read, so nothing here is expected
+                # to raise; if something does, the panel gets the traceback and
+                # the label still gets a sentence. Leaving "Reading…" on screen
+                # for ever would be the one outcome worse than either.
+                self.q.put(("error", traceback.format_exc()))
+                found = {"ok": False, "chars": 0, "vocab": 0, "docs": 0,
+                         "sampled": False, "encoding": "", "kind": "refused",
+                         "report": None,
+                         "say": look.Say(look.REFUTED, "Unreadable",
+                                         "This file could not be read at all — "
+                                         "the panel below says what went "
+                                         "wrong.", "refuted")}
+            found.update(token=token, quiet=quiet, name=p.name)
+            self.q.put(("scan", found))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _show_scan(self, found: dict) -> None:
+        """Render a finished scan. Tk thread only — called from the drain loop.
+
+        THE VOCABULARY NOW WINS OVER A LOADED CHECKPOINT'S, where before the
+        ordering in __init__ gave the opposite. The scan used to finish before
+        _load_saved ran and be overwritten by it; it finishes after, now that it
+        is on a worker. That is the better of the two: self.vocab feeds the
+        parameter count, the time estimate and the plot's guessing line, and all
+        three describe the run about to start, not the model that was loaded to
+        write with. TrainWorker sends its own ("vocab", …) the moment training
+        begins either way.
+        """
+        if found.get("token") != self._scan_token:
+            return                       # a newer pick has already superseded it
+        say = found["say"]
+        self.corpus_ok = found["ok"]
+        self.corpus_say = say
+        self.vocab = found["vocab"]
         note = f"{say.mark} {say.word} — {say.why}"
-        self.l_corpus.config(
-            text=f"{len(text):,} characters · {self.vocab} different characters"
-                 + (f" · {docs:,} document(s)\n{note}" if not sampled else
-                    f"\n{note}  (checked the first "
-                    f"{SCAN_SAMPLE_BYTES // 1_000_000} MB; the full check runs "
-                    f"when training starts)"),
-            foreground=self.C[TONE_KEY.get(say.tone, say.tone)])
+        if not found["ok"]:
+            # No counts, because there are no characters to count. ingest's
+            # sentence stands on its own, which is what the contract is for.
+            self.l_corpus.config(
+                text=note, foreground=self.C[TONE_KEY.get(say.tone, say.tone)])
+        else:
+            # THE ALPHABET IS JUDGED, NOT JUST COUNTED. "%d different characters"
+            # said the same thing at 29 and at 10,000, and those are different
+            # situations — see say_alphabet, which knows what fraction of the
+            # size you picked goes on naming them.
+            alpha = say_alphabet(found["vocab"], SIZES[self.size_name.get()])
+            counts = [f"{found['chars']:,} characters",
+                      f"{found['vocab']:,} different characters"]
+            if not found["sampled"]:
+                counts.append(f"{found['docs']:,} document(s)")
+            if found["encoding"] and found["encoding"] != "utf-8":
+                # Which encoding worked, said only when it was not the obvious
+                # one. Last, because it is the answer to a question nobody asked
+                # unless the file turned out to be unusual.
+                counts.append(f"read as {found['encoding']}")
+            lines = [" · ".join(counts), note]
+            if found["sampled"]:
+                lines[-1] += (f"  (checked the first "
+                              f"{SCAN_SAMPLE_BYTES // 1_000_000} MB; the full "
+                              f"check runs when training starts)")
+            if alpha is not None:
+                lines.append(f"{alpha.mark} {alpha.word} — {alpha.why}")
+            self.l_corpus.config(
+                text="\n".join(lines),
+                foreground=self.C[TONE_KEY.get(say.tone, say.tone)])
         # Show the "pure guessing" baseline as soon as a file is chosen, not only
         # once training starts. Before this the chart opened as an empty 1-10 box
         # with nothing to compare anything against, which is the exact problem the
         # baseline exists to solve.
         self.plot.reset(self.plot.total_steps, self.vocab)
         self._apply_preset()
-        if not quiet:
-            self._write(f"Loaded {p.name}: {len(text):,} characters.")
-            if rep is not None:
-                self._write(rep.report())
+        if not found.get("quiet"):
+            if found["ok"]:
+                self._write(f"Loaded {found['name']}: {found['chars']:,} "
+                            f"characters, read as {found['encoding']}.")
+                if found["report"]:
+                    self._write(found["report"])
+            else:
+                self._write(f"Cannot use {found['name']}: {say.why}")
 
     # ---------------------------------------------------------------- run
     def _start(self):
@@ -1404,6 +1810,18 @@ class Studio(ttk.Frame):
         if not Path(cfg["data"]).is_file():
             messagebox.showerror("No text to learn from",
                                  f"This file is not there:\n{cfg['data']}")
+            return
+        # REFUSE RATHER THAN TRAIN ON WHAT DID NOT DECODE. TrainWorker refuses
+        # this file too, from its own read, and that is the guard that actually
+        # protects the model; this one exists so the answer arrives when the
+        # button is pressed rather than after a progress bar has started, and so
+        # it arrives in ingest's own words - the same sentence already sitting
+        # under the filename. `is False` deliberately, not `not`: None means no
+        # scan has landed yet, and that is not a refusal.
+        if self.corpus_ok is False and self.corpus_say is not None:
+            messagebox.showerror(
+                "That text cannot be read",
+                f"{self.corpus_say.word}\n\n{self.corpus_say.why}")
             return
 
         self.log.delete("1.0", "end")
@@ -1559,6 +1977,8 @@ class Studio(ttk.Frame):
                 kind, payload = self.q.get_nowait()
                 if kind == "log":
                     self._write(payload)
+                elif kind == "scan":
+                    self._show_scan(payload)
                 elif kind == "vocab":
                     self.vocab = payload
                     self.plot.vocab = payload
