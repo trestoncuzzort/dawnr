@@ -2862,10 +2862,23 @@ def size_window(root: tk.Tk) -> None:
     else:
         fit_to_screen(root, want=(1400, 900))
     if saved:
+        # RECONCILED, not just recalled. This used to apply the remembered string
+        # straight after fit_to_screen had clamped the window to the work area,
+        # which meant a geometry written while a projector or a second monitor was
+        # attached silently defeated the function written to prevent exactly that:
+        # the window opened where that monitor used to be, which is nowhere.
+        # clamp_geometry reconciles it against the screen that exists now.
+        safe = None
         try:
-            root.geometry(saved)
-        except tk.TclError:
-            pass
+            from look import clamp_geometry                 # noqa: PLC0415
+            safe = clamp_geometry(root, saved)
+        except Exception:                                   # noqa: BLE001
+            safe = None
+        if safe:
+            try:
+                root.geometry(safe)
+            except tk.TclError:
+                pass
 
 
 def main() -> int:

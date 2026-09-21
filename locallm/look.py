@@ -1101,6 +1101,66 @@ def say_can_draw(text: str, w: tk.Misc | None = None) -> Say:
 # build is a stranger's laptop that has never installed anything. So the geometry
 # helper lives with the other things that decide how the window looks, where
 # nothing needs torch to ask a question about the screen.
+_GEOMETRY = re.compile(r"^(\d+)x(\d+)([+-]\d+)([+-]\d+)$")
+
+
+def clamp_geometry(widget, spec: str) -> str | None:
+    """Reconcile a remembered "WxH+X+Y" against the screen that exists NOW.
+
+    Restoring a window position is two operations, recall and reconcile, and the
+    second one is the one that gets forgotten. A saved geometry is data about a
+    machine's displays at the moment it was written; by the next launch the
+    projector is unplugged, the laptop is off the dock, or the external monitor is
+    on the other side. t/lab.py read the saved string, called fit_to_screen() to
+    clamp the window to the work area, and then applied the saved string
+    afterwards and unclamped, so a geometry from a monitor that is no longer there
+    defeated the function written to prevent exactly that.
+
+    Chromium solves the same problem in
+    chrome/browser/ui/window_sizer/window_sizer.cc, whose
+    AdjustBoundsToBeVisibleOnDisplay() reconciles saved bounds against the current
+    work area, and whose rule when the area is smaller than the bounds is to stop
+    preserving position and make the window fully visible instead: fitting beats
+    remembering (read 2026-09-21).
+
+    What is NOT copied from it is kMinVisibleWidth/kMinVisibleHeight, both 30.
+    Chromium lets a window sit almost entirely offscreen so long as 30x30 pixels
+    stay grabbable, which is right for a browser the user dragged there
+    deliberately. This is one window that a stranger may be opening for the first
+    time, and a sliver they have to know to drag is indistinguishable from a
+    program that did not start. So the whole rectangle is brought back on.
+
+    Returns a corrected spec, or None if the string is not a geometry, in which
+    case the caller should ignore it rather than pass it to Tk.
+    """
+    import tkinter as tk                                    # runtime, not typing
+
+    found = _GEOMETRY.match((spec or "").strip())
+    if not found:
+        return None
+    w, h, sx, sy = found.groups()
+    w, h = int(w), int(h)
+    root = widget.winfo_toplevel()
+    try:
+        avail_w, avail_h = root.winfo_screenwidth(), root.winfo_screenheight()
+    except tk.TclError:
+        return None
+    if avail_w <= 0 or avail_h <= 0:
+        return None
+
+    # Tk reads a negative offset as a distance from the right or bottom edge, so
+    # it has to be resolved before anything can be clamped.
+    w, h = max(200, min(w, avail_w)), max(150, min(h, avail_h))
+    x, y = int(sx), int(sy)
+    if sx.startswith("-"):
+        x = avail_w - w + x
+    if sy.startswith("-"):
+        y = avail_h - h + y
+    x = max(0, min(x, avail_w - w))
+    y = max(0, min(y, avail_h - h))
+    return f"{w}x{h}+{x}+{y}"
+
+
 def fit_to_screen(widget: tk.Misc, want: tuple[int, int] | None = None) -> None:
     """Size and place the window so it cannot open off-screen or clipped.
 

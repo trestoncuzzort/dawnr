@@ -81,7 +81,13 @@ import math
 import pathlib
 import subprocess
 import sys
+import re
 import unittest
+
+# Importing tkinter needs no display; only tk.Tk() does, and the one class
+# below that calls it skips itself when there is none. This file stays
+# runnable on a headless machine, which is where CI and macOS both live.
+import tkinter as tk
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -896,6 +902,60 @@ class ThisMachine(unittest.TestCase):
                     if match is not None:
                         self.assertEqual(match, family)
 
+
+
+class RememberedGeometry(unittest.TestCase):
+    """A window position is data about a machine's displays at one moment.
+
+    By the next launch the projector is unplugged or the laptop is off the dock,
+    and a geometry applied without reconciling opens the window where a monitor
+    used to be. These are the cases that matter, and the third is the one that was
+    actually broken: t/lab.py clamped with fit_to_screen and then applied the saved
+    string afterwards, unclamped.
+    """
+
+    def setUp(self):
+        try:
+            self.root = tk.Tk()
+        except tk.TclError as exc:
+            self.skipTest(str(exc))
+        self.root.withdraw()
+        self.W = self.root.winfo_screenwidth()
+        self.H = self.root.winfo_screenheight()
+
+    def tearDown(self):
+        self.root.destroy()
+
+    def _parts(self, spec):
+        found = re.match(r"^(\d+)x(\d+)\+(\d+)\+(\d+)$", spec)
+        self.assertIsNotNone(found, spec)
+        return [int(g) for g in found.groups()]
+
+    def test_a_geometry_that_already_fits_is_left_alone(self):
+        self.assertEqual("900x600+10+30",
+                         look.clamp_geometry(self.root, "900x600+10+30"))
+
+    def test_a_position_from_a_monitor_that_is_gone_comes_back_on_screen(self):
+        spec = look.clamp_geometry(self.root, f"800x600+{self.W + 900}+{self.H + 700}")
+        w, h, x, y = self._parts(spec)
+        self.assertTrue(0 <= x and x + w <= self.W, spec)
+        self.assertTrue(0 <= y and y + h <= self.H, spec)
+
+    def test_a_window_larger_than_this_screen_is_shrunk_to_fit(self):
+        w, h, x, y = self._parts(
+            look.clamp_geometry(self.root, f"{self.W * 3}x{self.H * 3}+0+0"))
+        self.assertLessEqual(w, self.W)
+        self.assertLessEqual(h, self.H)
+
+    def test_a_negative_offset_means_from_the_far_edge_and_is_resolved(self):
+        # Tk reads -20 as twenty pixels in from the right, not as minus twenty.
+        w, h, x, y = self._parts(look.clamp_geometry(self.root, "800x600-20-40"))
+        self.assertEqual(self.W - 800 - 20, x)
+        self.assertEqual(self.H - 600 - 40, y)
+
+    def test_a_string_that_is_not_a_geometry_is_refused_rather_than_guessed(self):
+        for junk in ("", "not a geometry", "1400x900", "x+1+1", "1400*900+0+0"):
+            self.assertIsNone(look.clamp_geometry(self.root, junk), junk)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
