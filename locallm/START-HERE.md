@@ -7,9 +7,15 @@ key, no network. A model that was already trained comes with this copy, in the
 anything of your own.
 
 One warning first, because it is the thing people get wrong. The model that
-comes with this copy learned formal program specifications, not English. Ask it
-anything and it answers in that notation. Train your own on your own text and it
-writes like your text instead.
+comes with this copy is not a chatbot and will not answer a question. It read a
+few hundred small verification tasks, each one a line of English describing a
+function followed by that function's formal specification, and it replays them:
+it is 10.9M parameters trained on 109,191 bytes of text, small enough that it
+reproduces what it read rather than composing anything new. Measured here at
+temperature 0, `function to ` gives back "function to find the lateral surface
+area of cuboid" and `task ` gives back "task mbpp_316__find_first_occurrence(arr:
+seq, x: int) returns (r" — both of them training text, word for word. Train your
+own on your own text and it replays your text instead.
 
 You need Python already installed, version 3.10 or newer. If you have none, get
 it from python.org.
