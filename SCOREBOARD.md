@@ -83,8 +83,9 @@ Phi rows in this table were all cut off at their cap.
 
 It solves far more of the problems: 53 of its answers compute the right values
 against locallm's 3. It converts far fewer of them: 21 percent reach all seven
-kernels with the twin refuted, against locallm's 100 percent, and 8 of its 11
-clean answers survive the specification check against 3 of 3. And it does not
+kernels with the twin refuted, against locallm's 23 of 25 across every round (3
+of 3 in the headline arm), and 8 of its 11 clean answers survive the
+specification check against 3 of 3. And it does not
 beat the 27B already in this table, which scored 12 on 81 test-passing answers.
 Between 27B and 235B the clean count did not move, so on this benchmark the
 limit is not parameters.

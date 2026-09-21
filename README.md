@@ -6,22 +6,20 @@ machine that made its training data: a specification language lowered into seven
 independent proof systems, where an example is kept only if all seven prove it
 and all seven catch a deliberately broken copy of it.**
 
-![The locallm window, showing the Home page: your text, how big and how long, train, try it](docs/img/home.png)
-
 The industry bet is scale: more parameters, more tokens, more scraped code. This
 one bets the other way. Keep only what can be proved, then see how far a small
 model gets on it.
 
 ## The result
 
-**locallm has 92 million parameters. Phi-4-mini has 3.8 billion, 41 times more.
-On 232 held-out programming problems, both produced exactly 3 answers that were
-correct and formally proved.**
+**locallm's headline model has 92 million parameters. Phi-4-mini has 3.8
+billion, 41 times more. On 232 held-out programming problems, both produced
+exactly 3 answers that were correct and formally proved.**
 
 | | locallm | Phi-4-mini |
 |---|---:|---:|
 | parameters | **92M** | 3.8B |
-| trained | from random numbers, on one shared GPU | by Microsoft, on a cluster |
+| trained | from random numbers: pretrained on four shared GPUs, then specialized on one | by Microsoft, on a cluster |
 | **clean answers of 232** | **3** | **3** |
 | of those, confirmed to specify the right problem | **3** | 2 |
 | of those, written rather than recalled from its training set | **2** | 3 |
@@ -33,12 +31,13 @@ sabotaged copy of it at a concrete input. That is a far harder bar than passing
 unit tests. Phi was regraded the same day, by the same evaluator, beside locallm,
 so the two numbers are comparable rather than quoted from different weeks.
 
-**"locallm" is several models, not one**, and this page quotes two of them. The
-92M above is the specialized core that draws level with Phi, round 8 with
-signature-headed training. The smaller rounds trained from random weights are
-separate checkpoints and are quoted separately below, so a size ratio here and a
-size ratio there will not agree. Every round is listed with its own parameter
-count, decoding and score in [`SCOREBOARD.md`](SCOREBOARD.md).
+**"locallm" is several models, not one.** The 92M above is the arm
+`locallm-r7b-headed2`: a core pretrained from random weights on source code, then
+specialized on the proved corpus with every document headed by its problem and
+signature. It was sampled at temperature 0.5, where the later rounds decode
+greedily. The smaller rounds, trained from random weights on the corpus alone,
+are separate checkpoints with their own sizes. Every arm is listed with its
+parameter count, decoding and score in [`SCOREBOARD.md`](SCOREBOARD.md).
 
 **It is a tie, not a win, and it is three answers wide.** 3 of 232 is 1.3%: both
 models fail the overwhelming majority of the time. Phi has never seen t, so most
@@ -46,17 +45,20 @@ of its answers do not parse, which makes this a weaker claim than beating it at
 Python. The full caveats are in [`LIMITS.md`](LIMITS.md), and they are not buried
 there to be hidden: they are the reason this section is short.
 
-**One of locallm's three was recalled, not written.** Its answer to "minimum of two
-numbers" is, with names erased, the training document for another MBPP problem
-that asks the same thing. Checked on 2026-09-21 across every round: 10 of
+**One of locallm's three was recalled, not written.** Its answer to "minimum of
+two numbers" is, with names erased, the training document for another MBPP
+problem that asks the same thing. Checked on 2026-09-21 across every round: 10 of
 locallm's 23 clean answers are a training document, against 1 of 23 for models
 that never saw its corpus. Counting only answers it wrote, locallm has 2 to Phi's
 3. [`t/FINDINGS-r10-and-recitation-2026-09-21.md`](t/FINDINGS-r10-and-recitation-2026-09-21.md)
-has the table. A later checkpoint, r10, regraded strictly the same day, has **5
-clean, 4 of them written**, all four confirmed against their problems. It is not
-the headline: its training set came out of a session that was reversed, and the
-same recipe on a 99%-identical corpus wrote 1. Whether that gap is the data or
-the draw is being measured.
+has the table.
+
+**A later checkpoint scored higher, and is not the headline.** Round 10, regraded
+from its raw answers on 2026-09-21 with nothing cached, has **5 clean, 4 of them
+written**, all five confirmed against their problems. Its training set came out
+of a session that was reversed, and the same recipe on a corpus 99% identical
+wrote 1. Whether that gap is the data or the draw is being measured across ten
+training seeds ([`t/PREDICT-2026-09-21-recipe-variance.md`](t/PREDICT-2026-09-21-recipe-variance.md)).
 
 ## Running it
 
@@ -69,12 +71,12 @@ Debian and Ubuntu means `sudo apt install python3-tk`, because tkinter ships as 
 separate package there. Training additionally needs PyTorch; the window opens,
 explains itself, and can still write text without it.
 
-**It does something before you install anything else**, and it is worth being
-exact about which copy. `locallm/plain_generate.py` runs a trained model in the
-standard library alone, no PyTorch and no numpy: measured, a 43.5 MB checkpoint
-loads instantly and generates at 292 ms per character. Slow, and enough to see
-what the thing does on a machine that has never installed a machine learning
-library.
+**It does something before you install anything else.**
+`locallm/plain_generate.py` runs a trained model in the standard library alone,
+no PyTorch and no numpy. Measured on the 43.5 MB round 4 checkpoint: it loads in
+seconds and writes about a quarter of a second per character (249 ms including
+the load on one machine, 292 ms on another). Slow, and enough to see what the
+thing does on a machine that has never installed a machine learning library.
 
 **The download carries a model. A clone does not.** The release zip built by
 `locallm/release.py` includes one as `included-model/`, so unzipping and running
@@ -106,10 +108,10 @@ a sentence you can act on. It never returns half a file.
 - **PDF and RTF are refused by name**, with what to do instead. A PDF used to be
   accepted as prose and contributed 576 characters of printer instructions to the
   vocabulary.
-- **Any script.** The tokenizer works on characters, so Arabic, Chinese and
-  Devanagari need nothing special from it. What they need is a font that can draw
-  them, and the window says so when one is missing rather than showing empty
-  boxes.
+- **Any script.** The window's tokenizer works on characters, so Arabic, Chinese
+  and Devanagari need nothing special from it. What they need is a font that can
+  draw them, and the window says so when one is missing rather than showing
+  empty boxes.
 
 ## What locallm has done
 
@@ -117,21 +119,21 @@ Eight results, each linked to the script that produced it:
 [`locallm/ACHIEVEMENTS.md`](locallm/ACHIEVEMENTS.md). The short version:
 
 1. **It learned a formal language almost perfectly, from nothing.** Round 4,
-   10.9M parameters trained from random weights, wrote a syntactically valid
-   program for **209 of 232** unseen problems. Phi-4-mini, about 350 times
-   larger, managed **12**. Everyone assumes notation is the hard part for a tiny
-   model. It isn't. It's nearly free.
-2. **It matches a model 41 times its size**, at 3 clean answers each. All three
-   of locallm's survived a check that the specification describes the problem
+   10.9M parameters trained from random weights, wrote a well-formed program for
+   **209 of 232** unseen problems. Phi-4-mini, about 350 times larger, managed
+   **12**. Everyone assumes notation is the hard part for a tiny model. It isn't.
+   It's nearly free.
+2. **It ties a model 41 times its size on clean answers**, 3 each. All three of
+   locallm's survived a check that the specification describes the problem
    actually asked; one of Phi's three could not be checked. One of locallm's
-   three is a recalled training program, so on answers it wrote the count is 2
-   to 3.
-3. **When it is right, it is provably right.** Every locallm answer that computed
-   the right values cleared all seven provers with the sabotaged copy caught:
-   **2 of 2** in rounds 4 and 5, **1 of 1** in round 7, and **3 of 3** in the
-   round that ties Phi. Phi's comparable rate is 3 of 6. Rounds 4 and 5 do not
-   support this: all four of their answers were training programs, verified
-   before the model ever saw them.
+   three is a recalled training program, so on answers it wrote it trails, 2 to
+   3.
+3. **When it is right, it is almost always provably right.** Across every round,
+   **23 of the 25** locallm answers that passed their problem's tests also cleared
+   all seven provers with the sabotaged copy caught. Phi's rate is 3 of 6. The
+   two exceptions are one answer each in round 9 seed 7 and round 10. Rounds 4
+   and 5 add nothing to this: all four of their answers were training programs,
+   verified before the model ever saw them.
 4. **Stop it and restart it and you get the identical model**, bit for bit, with
    a test that fails the moment that stops being true. That is resuming on a CPU.
    Retraining the same recipe from scratch on a GPU does not reproduce: every
@@ -139,13 +141,15 @@ Eight results, each linked to the script that produced it:
 5. **It is nowhere near the size this hardware can train.** Measured by training
    until it ran out of memory: **875 million parameters** fits on one shared
    card. Nobody had ever checked.
-6. **It builds its own vocabulary** instead of borrowing one, cutting the same
-   text into about **60% as many chunks**.
-7. **It generates faster, and only because that was checked first.** The
-   prediction failed, so the feature ships **off by default**.
+6. **It builds its own vocabulary** instead of borrowing one: a byte-level
+   vocabulary learned from the project's corpus cuts the same text into about
+   **40% as many pieces** as one per character (0.39 tokens per character).
+7. **It has a faster generation path that ships off, because it was measured
+   first.** Cached decoding is exact, and at this model size it was not faster,
+   so it is **off by default**.
 8. **We tested our own architectural belief and it was wrong.** A "modern" design
-   led by 25% early and lost at **every one of three seeds** when run four times
-   longer.
+   led by about a quarter early and lost at **every one of three seeds** when run
+   four times longer.
 
 **And none of it is a win yet.** The gap is problem-solving, not formality.
 
@@ -171,8 +175,6 @@ Eight results, each linked to the script that produced it:
   fetched source and an evidence grade. A second pass re-fetched every one of
   those sources hunting for claims the document could not support, and found
   eleven, including one in its own strongest citation.
-
-![The Proof page, where seven checkers judge each program and every verdict is explained in words](docs/img/proof.png)
 
 ## Start here
 
@@ -205,8 +207,10 @@ problems in English, with tests (nl/; pool v6 is 4,035, 232 held out and never t
 ```
 
 An answer all seven prove but whose tests fail is counted separately as **proven
-but wrong**. The held-out split has never changed, so every number in this
-repository is comparable to every earlier one.
+but wrong**. A clean answer whose program, names erased, is a document of the
+model's own training corpus is counted separately as **recited**
+(`score_heldout.py --corpus`). The 232 held-out problems have never changed, so
+every number in this repository is comparable to every earlier one.
 
 ## What is in the repository
 
@@ -224,8 +228,6 @@ repository is comparable to every earlier one.
 Light by default, dark when your desktop is set dark, on all three platforms.
 Which way round that should be was not a taste decision: two of the three
 platform owners publish a default and both of them say light.
-
-![The same page with the system set dark](docs/img/home-dark.png)
 
 ## License
 

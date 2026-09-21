@@ -292,8 +292,8 @@ Read this part before you expect too much.
 - **The character tokenizer is still the default in `train.py`**, and it is less
   efficient per token than BPE. A BPE tokenizer trained on your own corpus is
   available with `--tokenizer bpe` and is the default in `train_distributed.py`;
-  measured on this project's corpus it cuts the same text into about 60% as many
-  chunks. Whichever you pick is fingerprinted into the checkpoint, so a resume
+  measured on this project's corpus it cuts the same text into about 40% as many
+  chunks (0.39 tokens per character, `tokenizer-results-2026-09-19.json`). Whichever you pick is fingerprinted into the checkpoint, so a resume
   cannot silently change it.
 - **A tiny corpus, or one dominated by a single huge document, cannot be split cleanly.**
   Whole-document splitting cannot hit a 10% target when there are only three documents.

@@ -29,12 +29,15 @@ failed.
 
 ## 2. Conversion from correct to proved
 
-Every locallm answer that passed its problem's tests also verified in all seven
-systems with its twin refuted: **2 of 2** (r4, r5), **1 of 1** (r7), **2 of 2**
-(r7b greedy, r8) and **3 of 3** (r7b headed2, the arm that ties Phi). The
-comparable rates are Phi 3 of 6, the untrained 1.5B 3 of 13, the prompted 27B
-12 of 81, DeepSeek-Prover-V2-7B 6 of 10. Every rate here is a column of
-[`../t/out/score-r8.md`](../t/out/score-r8.md).
+Across every locallm arm, **23 of the 25** answers that passed their problem's
+tests also verified in all seven systems with the twin refuted: **2 of 2** (r4,
+r5), **1 of 1** (r7), **2 of 2** (r7b greedy, r8, r9), **3 of 3** (r7b headed2,
+the arm that ties Phi, and r9 seed 42), **1 of 2** (r9 seed 7) and **5 of 6**
+(r10, regraded 2026-09-21). The comparable rates are Phi 3 of 6, the untrained
+1.5B 3 of 13, the prompted 27B 12 of 81, DeepSeek-Prover-V2-7B 6 of 10. The
+earlier rates are columns of [`../t/out/score-r8.md`](../t/out/score-r8.md); r9
+and r10 are in [`../SCOREBOARD.md`](../SCOREBOARD.md). Until round 9 this
+section read "every locallm answer", which r9 seed 7 and r10 ended.
 
 **Caveats.** The denominators are 1 and 2. This is not evidence of a high
 conversion rate; it is the absence of any observed failure to convert, on a
