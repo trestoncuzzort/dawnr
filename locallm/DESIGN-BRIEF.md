@@ -29,6 +29,133 @@ re-verify it. A number with no instrument beside it is a bug in this document.
 
 ---
 
+## 0. Corrections to this document
+
+**Read this before section 1.** After this brief was written, a second pass re-fetched
+every source it cites with the single instruction to find claims the document could not
+support. It found eleven. They are listed here, at the top, because a reader who reaches
+the arguments first has already been misled by the ones that are wrong.
+
+The pattern is worth naming: the guideline quotations are exact, the arithmetic
+reproduces, and **the study claims are where this document breaks**. Every GNOME,
+Microsoft, WCAG and Flathub sentence checked came back verbatim. What went wrong went
+wrong in the papers, in the direction of making the evidence sound stronger and more
+aimed at our question than it is.
+
+### 0.1 Sengsoon and Intaruk 2025 is quoted against its own conclusion (C2)
+
+The worst of the eleven. C2 uses this paper as one of three legs showing that "easier on
+the eyes" is unsupported, quoting visual fatigue at 18.37 (SD 6.96) light against 18.87
+(SD 7.01) dark, p = 0.305. **Those numbers are right and they are not the paper's
+result.** It reports two further outcomes, both significant and both favouring dark:
+critical flicker frequency p = 0.001, and dry eye symptoms p = 0.048. The authors
+conclude "the dark mode may help reduce the risk of eye fatigue compared to the light
+mode" (pmc.ncbi.nlm.nih.gov/articles/PMC12027292, n = 30, crossover).
+
+So C2 cites a paper as refuting a claim that paper supports. The flicker direction is
+genuinely arguable, since both modes rose, but that is an argument this document owed
+the reader on the page rather than an omission.
+
+**What survives:** the Piepenbrock null result and the Cochrane blue-light review still
+stand behind C2's narrower claim, which is that *vendors assert "easier on the eyes"
+while citing nothing*. The broad claim that the evidence is absent does not survive.
+
+### 0.2 A finding attributed to Xie 2024 is not in Xie 2024 (C3, D6)
+
+C3 states, marked `[read here, abstract]`, that the paper "reports a significant negative
+correlation between text-background luminance contrast and visual fatigue, with
+participants preferring higher contrast". The abstract contains no correlation, no
+luminance-contrast variable and no preference finding. The publisher returns 403, so
+nobody in either pass read the body.
+
+What the abstract does say is quoted correctly elsewhere: 2x2x3, 36 participants, three
+screen colour temperatures, and "Whether at daytime or night, the 2800 K color
+temperature resulted in the highest visual fatigue."
+
+**This matters because C3 is the warmth ceiling**, and the ceiling was argued partly from
+a sentence that does not exist. The ceiling's *other* leg holds: 2800 K is far warmer
+than our #E8DCC8 at about 5389 K, and that paper manipulated whole-display colour
+temperature rather than one application's background. The ceiling stands on weaker
+evidence than the document claimed.
+
+### 0.3 Dobres 2017: one wrong number and a scope it cannot carry (C1)
+
+The standard deviation is 56.8, not 50.0; 50.0 belongs to a different cell of Table 2.
+And the paper is a glance-legibility lexical-decision task at 0.7 m, stimuli capped at
+1000 ms, at about 14.7 and 19.6 arcminutes, sizes chosen per ISO guidance for
+**in-vehicle displays**, with participants recruited at a car maker's Italian
+headquarters and required to drive weekly. This document's own D11 puts our body text at
+25.5 to 31.5 arcminutes, larger than that paper's larger condition, and the paper reports
+the polarity effect shrinking as size grows.
+
+**C1's decision stands** and never needed the study: it rests on GNOME's and Microsoft's
+published defaults and NN/g's recommendation, all three verbatim exact. Already corrected
+in `look.py`'s comment.
+
+### 0.4 Hou 2022 is about phones and people over 65, not desktops and people over 57 (D11)
+
+The sole evidence for the type-size decision. This document reports "42 to 66 arcminutes
+at 40 cm for readers over 57, from individual samples of 12 to 40 people". The paper
+attributes 42 and 66 arcmin to adults **aged 65 and over**, at 40 cm, on a 9.7-inch
+tablet. "57" appears once, as the low end of one included study's age range, not as a
+threshold. Sample sizes run **12 to 190**. It is a systematic review of twelve papers on
+**mobile** font size for older adults, applied here to desktop floors for everyone, and
+ranked STUDY when this document's own table reserves that for controlled measurement with
+a stated method and sample (ncbi.nlm.nih.gov/pmc/articles/PMC9376262).
+
+### 0.5 The headline argues against a value that no longer exists (C1, D1, section 5)
+
+C1, D1 and the top row of the diff all assert `_DARK_WHEN_UNKNOWN = True` and recommend
+setting it False. It was set False before this document was committed. The reversal the
+opening paragraph promises was already made; this document records the argument for it,
+not the act.
+
+### 0.6 Every Apple citation is unverifiable by this document's own method
+
+All six. `developer.apple.com/design/human-interface-guidelines/*` serves a JavaScript
+shell; curl returns the meta description and a fetch returns no body. The quotes are
+marked `[research pass]` honestly, but the document never says they **cannot be
+re-fetched by anyone**, while its own rule is that a number needs an instrument beside
+it. Load-bearing among them: "Avoid offering an app-specific appearance setting", which
+D2 uses to justify not building a theme control on macOS. Treat all six as unverified.
+GNOME and Microsoft fetch cleanly and every quote checked was exact.
+
+### 0.7 Four smaller ones
+
+- **WCAG target size (D14).** The Understanding page is non-normative supporting
+  material, currently "Updated 11 May 2026"; 12 December 2024 is the Recommendation date
+  of WCAG 2.2 itself, not of that page. The criterion text, level and exceptions quoted
+  are verbatim correct.
+- **Flathub summary length (D27).** The page says a summary "should ideally be between 10
+  and 25 characters, and no longer than 35"; this document reports "must be 10 to 35" and
+  then presents a 33-character summary as satisfying the rule, when it sits outside the
+  ideal band and one character inside the hard limit. Separately, the open question about
+  all-lowercase names is closeable: Flathub does list them as a formatting violation.
+- **Piepenbrock's outcomes.** "Eyestrain, headache, muscle strain and back pain" are not
+  on the page cited, which says only that no fatigue metric differed by polarity. Not
+  necessarily wrong; unsourced as written.
+- **The Nepal survey.** n = 107, one institution, and the 79.7% is a **phone** preference,
+  not a desktop one. The paper's own Likert mean for "dark mode reduces eye strain" is
+  3.26 (SD 1.233) on a 5-point scale and it states "This does not imply the universal
+  preference for dark mode". Thinner than this document's framing of it as one of two
+  non-Western data points, and the sample size was one fetch away.
+
+### 0.8 What this says about the method
+
+The document was written by one pass and challenged by another, and the challenge was
+worth more than any single finding in it. Three of the eleven passed a citation gate, a
+human review and a commit, because **every one of those checks whether a source is
+present, not whether it says what the claim says.** The only thing that worked was
+re-fetching the paper and reading the table.
+
+Section 6's self-criticism is also wrong in its own direction: it says "everything else
+is German, American or British laboratory work" while its best source recruited in
+Torino, and the corpus overall runs Italy, Thailand, Nepal, China, Taiwan and a
+six-country review. The evidence is less Anglophone than the document feared and weaker
+in a way it did not check.
+
+---
+
 ## 1. What the evidence says we got wrong
 
 ### C1. Opening dark when the system setting cannot be read is wrong on every ground we could find
@@ -70,6 +197,12 @@ same file (MEASURED HERE, `locallm/look.py`).
 
 ### C2. The reason usually given for dark mode is not supported, including by the page that gives it
 
+> **CORRECTED, see 0.1.** One of the three studies cited below, Sengsoon and
+> Intaruk 2025, concludes the opposite of what this section uses it for. Its two
+> significant outcomes both favour dark mode and its authors write that dark mode
+> "may help reduce the risk of eye fatigue". The narrow claim survives, which is
+> that vendors assert this while citing nothing. The broad one does not.
+
 The Microsoft page above says users "might prefer this setting because it's easier on
 the eyes in lower-light environments", and cites nothing. Measured work does not find
 it. Piepenbrock and colleagues collected pre and post eyestrain, headache, muscle
@@ -88,6 +221,11 @@ clearest case in the whole brief of a GUIDELINE being used for something a guide
 cannot settle.
 
 ### C3. The warming direction that produced the cream ground is the direction one study measured as worst, but the cream is nowhere near the tested worst point
+
+> **CORRECTED, see 0.2.** The luminance-contrast correlation attributed to Xie
+> 2024 below is not in that paper's abstract, and its body is behind a 403 that
+> neither pass got through. The 2800 K sentence and the colour-temperature
+> arithmetic are sound; the ceiling stands on less than this section claims.
 
 Xie, Yu and Chen, International Journal of Human-Computer Interaction 41(2), 2024,
 2x2x3 design, 36 participants, eye tracking for blink rate and pupil diameter plus the
@@ -316,6 +454,10 @@ Muted on the `#CBB795` band measures 3.94:1 here, below the body bar, and ink me
 8.45:1 (MEASURED HERE). `look.py` already states this; it is now measured twice.
 
 ### Type
+
+> **CORRECTED, see 0.4.** Hou 2022, the sole evidence behind the type-size
+> decision, is a review of MOBILE font size for adults aged 65 and over, not
+> desktop floors for readers over 57, and its samples run to 190 rather than 40.
 
 **D9. Five semantic roles, bound to per-platform values at startup, derived from Tk's own standard named fonts.**
 Microsoft's own cross-platform system solved exactly our problem by keeping role names
