@@ -1083,7 +1083,7 @@ class _Scroller(tk.Frame):
     would silently stop scrolling.
     """
 
-    def __init__(self, parent, palette: dict):
+    def __init__(self, parent, palette: dict, style: str = ""):
         self.C = palette
         super().__init__(parent, bg=palette["paper"])
         self.rowconfigure(0, weight=1)
@@ -1091,8 +1091,16 @@ class _Scroller(tk.Frame):
         self.canvas = tk.Canvas(self, bg=palette["paper"], highlightthickness=0,
                                 borderwidth=0)
         self.canvas.grid(row=0, column=0, sticky="nsew")
+        # The style is set HERE, at construction, not with a later configure().
+        # Tk 8.5 on macOS Aqua answers `unknown option "-style"` to
+        # bar.configure(style=...) on a ttk.Scrollbar, and Apple's system Python
+        # ships exactly that Tk, so the window died on launch there while working
+        # on Linux. Measured on macOS 26.5.1, Python 3.9.6, Tk 8.5, 2026-09-21.
+        # Every ttk widget accepts -style as a construction option on every
+        # platform, so this is the portable spelling rather than a macOS branch.
         self.bar = ttk.Scrollbar(self, orient="vertical",
-                                 command=self.canvas.yview)
+                                 command=self.canvas.yview,
+                                 style=style or "Vertical.TScrollbar")
         self.canvas.configure(yscrollcommand=self.bar.set)
         self.inner = tk.Frame(self.canvas, bg=palette["paper"])
         self._win = self.canvas.create_window((0, 0), window=self.inner,
@@ -1323,9 +1331,8 @@ class Home(ttk.Frame):
 
     def _build_body(self):
         self._wrapped: list[tk.Label] = []
-        self.scroll = _Scroller(self, self.C)
+        self.scroll = _Scroller(self, self.C, style="Home.Vertical.TScrollbar")
         self.scroll.grid(row=1, column=0, sticky="nsew")
-        self.scroll.bar.configure(style="Home.Vertical.TScrollbar")
         col = self.scroll.inner
         col.columnconfigure(0, weight=1)
         self.cards: dict[int, _Card] = {}

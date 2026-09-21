@@ -35,8 +35,11 @@ esac
 # spelling, and the scheme is left off in prose throughout. The first version of
 # this line demanded https:// and refused a message citing four sources for that
 # reason alone, which teaches writing https:// rather than looking anything up.
+# The TLD list grew on 2026-09-21 for the same reason in miniature: it refused a
+# citation of tcl.tk, Tk's own manual, because .tk was not on it. A gate that
+# rejects the canonical source for the thing being fixed is worse than none.
 if printf '%s' "$msg" | grep -Eqi \
-  'https?://|arxiv[:. ]?[0-9]{4}\.[0-9]{4,5}|[A-Za-z0-9-]+\.(com|org|net|io|dev|edu|gov|ai)/[^ ]'; then
+  'https?://|arxiv[:. ]?[0-9]{4}\.[0-9]{4,5}|[A-Za-z0-9-]+\.(com|org|net|io|dev|edu|gov|ai|tk|uk|de|ch|nl|fr|jp|se|it|info|sh|to)/[^ ]'; then
   exit 0
 fi
 if printf '%s' "$msg" | grep -q 'INVENTED:'; then
