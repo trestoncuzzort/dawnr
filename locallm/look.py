@@ -149,8 +149,32 @@ for _name, _p in (
 del _name, _p
 
 
-# When nothing can be read, open dark. The operator's decision, 2026-09-21.
-_DARK_WHEN_UNKNOWN = True
+# When nothing can be read, open LIGHT. Reversed 2026-09-21, the same day it was
+# set to dark, because the evidence went the other way on every ground looked at
+# and this module already said so eighty lines up.
+#
+# Two of the three platform owners publish a default and both say light. GNOME:
+# "Most apps should use the standard light UI style by default", with the stated
+# exception being apps that display rich visual content like images or video,
+# which this is not (developer.gnome.org/hig/guidelines/ui-styling.html).
+# Microsoft: "Windows uses Light mode by default, but users can choose Dark mode"
+# (learn.microsoft.com/en-us/windows/apps/desktop/modernize/apply-windows-themes).
+# Apple publishes no default. The usability review adds: "we don't recommend
+# switching to dark mode by default if your target audience includes the general
+# population" (nngroup.com/articles/dark-mode).
+#
+# The measurement is about this exact fallback. It fires when no desktop service
+# answers, which is most likely on a bare or minimal Linux install, which is also
+# the machine most likely to be in a dim room at night. Dobres, Chahine and
+# Reimer, Applied Ergonomics 60 (2017), 34 participants, lexical decision with an
+# adaptive staircase: at 0 lux, 3 mm text needed 122.3 ms (SD 50.0) in dark
+# against 84.1 ms (SD 43.7) in light, F(1,33) = 49.60, p < 0.001; at 4750 lux the
+# difference was not significant. So opening dark here picked the one combination
+# with a measured legibility penalty, in the one situation where it applies.
+#
+# Dark itself is untouched: it still follows the system wherever the system says.
+# What is gone is guessing dark when nobody asked. See locallm/DESIGN-BRIEF.md C1.
+_DARK_WHEN_UNKNOWN = False
 
 
 def system_wants_dark() -> bool:
