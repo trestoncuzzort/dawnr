@@ -491,10 +491,10 @@ _NOT_CHECKED = Say(
 _LEAKAGE = {
     "CLEAN": Say(PROVED, "Clean", "Looks fine to train on.", "proved"),
     "SUSPECT": Say(NOT_APPLICABLE, "Repetitive",
-                   "Some passages repeat — the fairness test may be weak.",
+                   "Some passages repeat, so the fairness test may be weak.",
                    "unsettled"),
     "CONTAMINATED": Say(REFUTED, "Leaking",
-                        "Heavy repetition — the fairness test will not mean "
+                        "Heavy repetition, so the fairness test will not mean "
                         "much.", "refuted"),
 }
 
@@ -541,7 +541,7 @@ def say_corpus(leakage_verdict: str | None,
         elif split == "splitter":
             say = Say(NOT_APPLICABLE, "Mis-split",
                       "Only a sliver was held back for testing, though this "
-                      "text could support more — another seed would split it "
+                      "text could support more. Another seed would split it "
                       "better.", "unsettled")
         else:
             say = Say(NOT_APPLICABLE, "No holdout",
@@ -1072,8 +1072,8 @@ def say_can_draw(text: str, w: tk.Misc | None = None) -> Say:
     if gone:
         fixes = [s.families[0] for s in (_BY_NAME.get(n) for n in gone)
                  if s is not None]
-        fix = (f" — installing {_and(fixes, 2)} fixes it" if fixes else
-               " — a font that covers it has to be installed")
+        fix = (f". Installing {_and(fixes, 2)} fixes it" if fixes else
+               ". A font that covers it has to be installed")
         return Say(REFUTED, "No font",
                    f"Nothing on this computer can draw {_and(gone)}, so that "
                    f"text will come out as empty boxes{fix}.", "refuted")

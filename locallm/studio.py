@@ -1181,7 +1181,7 @@ class Studio(ttk.Frame):
         self.b_adv = ttk.Button(left, text="▸  Show advanced settings",
                                 command=self._toggle_advanced)
         self.b_adv.grid(row=4, column=0, sticky="w", pady=(SPACE.item, 0))
-        self.adv = ttk.LabelFrame(left, text=" Advanced — every knob, as before ")
+        self.adv = ttk.LabelFrame(left, text=" Advanced: every knob, as before ")
         self.adv.columnconfigure(1, weight=1)
         self._build_advanced()
         self._bind_wheel(outer)
@@ -1321,7 +1321,7 @@ class Studio(ttk.Frame):
         self.l_explain = ttk.Label(
             right, foreground=self.C["muted"], wraplength=640, justify="left",
             text="The blue line is how well it predicts the text you gave it. "
-                 "The orange line is text it was never shown — if orange stops "
+                 "The orange line is text it was never shown. If orange stops "
                  "falling while blue keeps going, it has started memorising "
                  "instead of learning.")
         self.l_explain.grid(row=2, column=0, sticky="ew", pady=SPACE.inner)
@@ -1436,7 +1436,7 @@ class Studio(ttk.Frame):
             # the theme, which a literal cannot -- the line it is reset to two
             # methods down already reads `ok` from the palette.
             self.l_params.config(
-                text=self.l_params.cget("text").split("  —")[0] + "  — edited by hand",
+                text=self.l_params.cget("text").split("  (")[0] + "  (edited by hand)",
                 foreground=self.C["warn"])
 
     def _apply_preset(self):
@@ -1623,7 +1623,7 @@ class Studio(ttk.Frame):
 
         ttk.Label(win, wraplength=430, justify="left", foreground=self.C["faint"],
                   text="Downloaded once and kept, so this is a one-time wait. "
-                       "Only plain text is fetched — the model itself is always "
+                       "Only plain text is fetched. The model itself is always "
                        "built from scratch on this computer.").grid(
             row=10, column=0, sticky="w", padx=SPACE.card, pady=SPACE.inner)
 
@@ -1719,7 +1719,7 @@ class Studio(ttk.Frame):
                          "sampled": False, "encoding": "", "kind": "refused",
                          "report": None,
                          "say": look.Say(look.REFUTED, "Unreadable",
-                                         "This file could not be read at all — "
+                                         "This file could not be read at all, and "
                                          "the panel below says what went "
                                          "wrong.", "refuted")}
             found.update(token=token, quiet=quiet, name=p.name)
@@ -1901,7 +1901,7 @@ class Studio(ttk.Frame):
         self._write(f"Found a model you trained earlier in '{out}/' "
                     f"({model.num_params():,} numbers, {self.vocab} vocabulary entries). "
                     f"You can press “Write something” straight away.")
-        self._set_status("Earlier model loaded — ready to write.")
+        self._set_status("Earlier model loaded. Ready to write.")
         return True
 
     def _generate(self):
@@ -2028,7 +2028,7 @@ class Studio(ttk.Frame):
                             self._write(line.rstrip())
                     self.v_data.set(str(HERE / "corpus.txt"))
                     self._scan_corpus(quiet=True)
-                    self._set_status("New text ready — press “Start training”.")
+                    self._set_status("New text ready. Press “Start training”.")
                 elif kind == "sample":
                     self._write("\n─── what YOUR model wrote ───\n" + payload + "\n")
                     self.b_gen.config(state="normal")
@@ -2039,7 +2039,7 @@ class Studio(ttk.Frame):
                     self.b_stop.config(state="disabled")
                     if self.model is not None:
                         self.b_gen.config(state="normal")
-                    self._set_status("Something went wrong — see the panel above.")
+                    self._set_status("Something went wrong. See the panel above.")
         except queue.Empty:
             pass
         self._keep_draining()
@@ -2049,7 +2049,7 @@ def main():
     claim_dpi_awareness()
     root = tk.Tk()
     apply_tk_scaling(root)
-    root.title("Train My AI — built from scratch on this computer")
+    root.title("Train My AI: built from scratch on this computer")
     try:
         ttk.Style().theme_use("vista")
     except tk.TclError:

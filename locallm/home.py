@@ -434,8 +434,8 @@ def say_model(where: Path | None, params: int | None = None,
         return look.Say(
             look.NOT_APPLICABLE, "Nothing yet",
             "No model has been trained on this computer yet, and none came with "
-            "this copy. Train one in step 3 — even the quickest setting is "
-            "enough to see this work.", "muted")
+            "this copy. Train one in step 3, where even the quickest "
+            "setting is enough to see this work.", "muted")
     count = f"{params:,} numbers it learned" if params else "a model it learned"
     return look.Say(look.PROVED, "Ready",
                     f"Loaded from the “{where.name}” folder, with {count}. Type "
@@ -643,8 +643,8 @@ def say_not_ready(state: str, path: str) -> look.Say | None:
         return look.Say(
             look.REFUTED, "One file",
             "Step 1 read that whole folder and can say what is in it, but "
-            "training reads one file at a time, so point step 1 at a single file "
-            "— or at one that holds the lot.", "refuted")
+            "training reads one file at a time, so point step 1 at one file, "
+            "or at one that holds the lot.", "refuted")
     return look.Say(
         look.REFUTED, "No text",
         f"Step 1 has not accepted anything to learn from: “{path}” is either not "
@@ -1303,8 +1303,8 @@ class Home(ttk.Frame):
         tk.Label(head, bg=self.C["paper"], fg=self.C["muted"],
                  font=SANS(TYPE.body), anchor="w", justify="left",
                  wraplength=760,
-                 text="Point this at any text you have — your notes, your "
-                      "letters, a book you like — and it builds a model from "
+                 text="Point this at any text you have, whether notes, "
+                      "letters or a book you like, and it builds a model from "
                       "scratch on this computer. Nothing is uploaded, nothing "
                       "is downloaded, and nothing was trained before you "
                       "pressed the button.").grid(
@@ -1509,7 +1509,7 @@ class Home(ttk.Frame):
             self._show(1, look.Say(
                 look.NOT_APPLICABLE, "No text yet",
                 "Nothing has been chosen to learn from. Any plain text file "
-                "will do — the longer the better, and at least a few hundred "
+                "will do. The longer the better, and at least a few hundred "
                 "thousand characters if you want sentences back.", "muted"))
             self._blank_text_card()
             self._text_not_ready("none")
@@ -1545,7 +1545,7 @@ class Home(ttk.Frame):
             first = f"Reading “{p.name}”…"
         else:
             first = f"“{p.name}” does not look like text…"
-        self.drop.set_lines(first, "the window stays usable — click to choose another")
+        self.drop.set_lines(first, "the window stays usable, so click to choose another")
         self._show(1, look.Say(
             _WORKING, "Reading",
             f"Working through “{p.name}” now. Nothing is claimed about it yet, and "
@@ -1731,7 +1731,7 @@ class Home(ttk.Frame):
         tk.Label(win, bg=self.C["paper"], fg=self.C["muted"], anchor="w",
                  justify="left", wraplength=420, font=SANS(TYPE.caption),
                  text="Downloaded once and kept, so this is a one-time wait. "
-                      "Only plain text is fetched — the model itself is always "
+                      "Only plain text is fetched. The model itself is always "
                       "built from scratch on this computer.").grid(
             row=r, column=0, sticky="w", padx=look.SPACE.card,
             pady=look.SPACE.item)
@@ -1926,7 +1926,7 @@ class Home(ttk.Frame):
         self._show(3, look.Say(
             look.NOT_APPLICABLE, "Not started",
             "Nothing has been trained yet. Press Start training and this will "
-            "fill in — the chart shows how many characters it is still choosing "
+            "fill in. The chart shows how many characters it is still choosing "
             "between for each next one, which starts at the size of your "
             "alphabet and falls as it learns.", "muted"))
 
@@ -1985,7 +1985,7 @@ class Home(ttk.Frame):
             self._look_at_text()
             self._show(3, look.Say(
                 _WORKING, "Checking first",
-                "That text has not been read yet. Step 1 is looking at it now — "
+                "That text has not been read yet. Step 1 is looking at it now, so "
                 "press Start training again once it says it is ready.", "muted"))
             return
         stop = say_not_ready(self.text_state, cfg["data"])
@@ -2011,7 +2011,7 @@ class Home(ttk.Frame):
     def _stop_training(self):
         self.stop_evt.set()
         self.b_stop.set_enabled(False)
-        self._set_status("Stopping after this step — what it has learned is kept.")
+        self._set_status("Stopping after this step. What it has learned is kept.")
 
     # ------------------------------------------------------------- 4  try
     def _build_try_card(self, card: _Card):
@@ -2322,7 +2322,7 @@ class Home(ttk.Frame):
                             self._log(line.rstrip())
                     self.v_data.set(str(HERE / "corpus.txt"))
                     self._look_at_text(quiet=True)
-                    self._set_status("New text ready — step 3 can train on it.")
+                    self._set_status("New text ready. Step 3 can train on it.")
                 elif kind == "sample":
                     self.reply.delete("1.0", "end")
                     self.reply.insert("end", payload)
@@ -2353,7 +2353,7 @@ def main():
     root = tk.Tk()
     if studio is not None:
         studio.apply_tk_scaling(root)
-    root.title("locallm — make a model out of your own words")
+    root.title("locallm: make a model out of your own words")
     root.configure(bg=look.palette()["paper"])
     Home(root)
     if studio is not None:
