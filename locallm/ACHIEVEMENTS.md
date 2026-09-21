@@ -41,6 +41,16 @@ conversion rate; it is the absence of any observed failure to convert, on a
 sample far too small to distinguish 100% from 60%. It is reported because the
 failures, when they come, will be informative.
 
+**Corrected 2026-09-21: r4's and r5's rows are recall, not conversion.** All four
+of their clean answers are, with names erased, documents of the corpus each was
+trained on, answering a held-out MBPP problem that repeats a training one under
+another id (`recur_gcd` is `gcd`; `remove_all_spaces` is `remove_splchar`). Those
+programs were verified before the model saw them, so they say nothing about
+whether the model proves what it writes. Across every round, 10 of locallm's 23
+clean answers are recalled this way, against 1 of 23 for models that never saw
+its corpus. `t/score_heldout.py --corpus` now reports the split, and
+`t/FINDINGS-r10-and-recitation-2026-09-21.md` has it per arm.
+
 ## 3. Deterministic resume
 
 `locallm/train_factorial.py` saves wrapper weights, optimizer state, step and

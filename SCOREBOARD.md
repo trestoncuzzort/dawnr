@@ -22,6 +22,7 @@ every number here is comparable to every earlier one.
 | **locallm, round 9, core seed 1337 (greedy)** | **ours** | 114 | 2 | **2** | 2/2 | 2 |
 | **locallm, round 9, core seed 7 (greedy)** | **ours** | 106 | 2 | **1** | 1/2 | 1 |
 | **locallm, round 9, core seed 42 (greedy)** | **ours** | 101 | 3 | **3** | 3/3 | **2** |
+| locallm, round 10 (r9's recipe, a reversed session's corpus; regraded 2026-09-21) | ours, provisional | 112 | 6 | **5** | 5/6 | **5** |
 | Phi-4-mini, 3.8B | baseline | 12 | 6 | **3** | 50% | 2 |
 | Qwen2.5-Coder-1.5B, untrained | baseline | 39 | 13 | **3** | 23% | 2 |
 | Qwen3.8-27B-FP8, prompted | reference, far larger | 116 | 81 | **12** | 15% | 11 |
@@ -30,6 +31,31 @@ every number here is comparable to every earlier one.
 
 Phi's row was regraded on 2026-09-19 beside round 7 and reproduced exactly,
 cell for cell, so the comparison is one evaluator and not two.
+
+**Recited or written, added 2026-09-21.** `t/score_heldout.py --corpus TAG=PATH`
+splits a clean count by whether the answer, names erased, is a document of the
+corpus that model trained on (answer overlap, after Lewis, Stenetorp and Riedel,
+arXiv:2008.02637). MBPP holds the same function under different ids on both sides
+of the split, and a closed-book model can score by recalling one:
+
+| locallm arm | clean | recited | **written** |
+|---|---:|---:|---:|
+| round 4 / round 5 | 2 / 2 | 2 / 2 | **0 / 0** |
+| round 7, 7b greedy, 8, 9, 9 seed 7 | 1-2 | 0-1 | **1 each** |
+| round 8 headed (the headline), 9 seed 42 | 3 / 3 | 1 / 1 | **2 / 2** |
+| round 10, regraded | 5 | 1 | **4** |
+
+Models that never saw these corpora match them on 1 of 23 clean answers, so a
+match here is recall rather than convergence. Phi's 3 are all its own. Table,
+hashes and method: `t/FINDINGS-r10-and-recitation-2026-09-21.md`.
+
+**Round 10 is provisional.** Regraded from its raw decodes with no cache, it
+reproduced its unscored 2026-09-20 table exactly: 5 clean, all 5 agreeing with
+their problems. Its recipe is round 9's, seed and core included; only the corpus
+differs, by about 1%, and that corpus was built by the pool check the operator
+reversed on 2026-09-20. Round 9 wrote 1. Five seeds of round 9's recipe are
+being trained to measure whether 1 and 4 are the same distribution
+(`t/PREDICT-2026-09-21-recipe-variance.md`).
 
 **Three seeds of one recipe, added 2026-09-20.** The r9 rows answer the
 "one lucky draw" objection and were graded against five predictions registered

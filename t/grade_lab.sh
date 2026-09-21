@@ -173,7 +173,16 @@ grade() {  # tag, folder name inside the tag
   # run_par.py caches by default for a table written outside the committed path,
   # and a comparison that claims one evaluator graded two answer sets in one
   # session has to have run the kernels for both of them (2026-09-19).
-  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md ${T_LAB_RUN_PAR:-}'"
+  # T_SPARK_JOBS=1: the cell budget above is ~4 cores a cell, measured 2026-09-18 with gnatprove
+  # serial. On 2026-09-19 verifiers/spark.py began running gnatprove -j8 inside every cell, so a
+  # SPARK cell became up to 8 provers inside a 4-core budget, and on 2026-09-21 24 cells put the
+  # load average at 351 on 120 cores; the table graded that way the day before carried 4 SPARK
+  # cells "timeout (FLAKED)" that verify when regraded. BenchExec's rule (Beyer, Loewe, Wendler,
+  # "Reliable Benchmarking: Requirements and Solutions", STTT 2019; github.com/sosy-lab/benchexec)
+  # is that a run's budget has to cover its subprocesses, and spark.py's own comment names -j1 as
+  # what a lab sweep should set. It leaves every verdict byte-identical (spark.py, MEASURED); only
+  # wall clock changes. An explicit T_SPARK_JOBS in the environment still wins.
+  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md ${T_LAB_RUN_PAR:-}'"
   rsync -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" || return 1
   echo "== $T: kernels.md back"
   rmdir "$D/.grading" 2>/dev/null

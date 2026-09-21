@@ -78,6 +78,37 @@ class ScoreEvidenceTests(unittest.TestCase):
             self.table(cols, flaky)
             self.assertEqual(score.score("demo", {1})["clean"], 0)
 
+    def corpus(self, *docs):
+        path = self.root / "corpus.txt"
+        path.write_text("\n\n\n".join(docs) + "\n")
+        return score.corpus_keys(path)
+
+    def test_a_clean_answer_that_is_a_training_document_is_recited(self):
+        # the same program under another problem's name, behind a head: the shape of
+        # mbpp_729 add_list answered with the corpus's mbpp_728 sum_list
+        source = (Path(__file__).parent / "tasks" / "abs.t").read_text()
+        doc = "Problem: absolute value\nSignature: other(int) -> int\n" + source.replace("task abs", "task other")
+        row = score.score("demo", {1}, self.corpus(doc))
+        self.assertEqual((row["clean"], row["clean, recited"], row["clean, novel"]), (1, 1, 0))
+
+    def test_a_clean_answer_nothing_in_the_corpus_matches_is_novel(self):
+        other = (Path(__file__).parent / "tasks" / "all_nonneg.t").read_text()
+        row = score.score("demo", {1}, self.corpus(other))
+        self.assertEqual((row["clean, recited"], row["clean, novel"]), (0, 1))
+
+    def test_without_a_corpus_the_split_is_not_measured_rather_than_zero(self):
+        row = score.score("demo", {1})
+        self.assertEqual((row["clean, recited"], row["clean, novel"]), ("-", "-"))
+
+    def test_an_unreadable_corpus_is_refused_not_skipped(self):
+        source = (Path(__file__).parent / "tasks" / "abs.t").read_text()
+        with self.assertRaises(SystemExit):
+            self.corpus(source, "t 0\ntask broken(x: int) returns (r: int)\n{")
+        # two documents with one blank line between them read as one: refused, because
+        # the second one's answers would otherwise count as novel
+        with self.assertRaises(SystemExit):
+            self.corpus(source + "\n" + source.replace("task abs", "task twice"))
+
     def test_missing_tests_are_not_wrong(self):
         self.write_tests(None)
         self.assertEqual(score.score("demo", {1})["wrong but proven"], 0)

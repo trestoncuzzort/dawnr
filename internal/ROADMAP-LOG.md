@@ -2095,6 +2095,38 @@ when they should be v3 (30 of 57 pass, 66 would), Tier 1 the
 `_build_checker_parts` bound-local bug (27 of 29 lift-check failures, MBPP-DFY
 57 to 76), Tier 2 Vericoding.
 
+## locallm's score is part recall and part draw, 2026-09-21
+
+**Hurdle.** No locallm recipe change can be judged until two things are separated
+from the clean count: answers the model recalled from its training set, and the
+spread of one recipe across training runs.
+
+**Recall, measured.** `t/score_heldout.py --corpus TAG=PATH` now splits clean into
+recited (the answer, names erased, is a document of that model's training corpus;
+answer overlap after arXiv:2008.02637) and written. 10 of locallm's 23 clean
+answers across all rounds are recited, against 1 of 23 for four models that never
+saw the corpora. r4 and r5 wrote none of theirs. The headline arm wrote 2 of its 3.
+`t/FINDINGS-r10-and-recitation-2026-09-21.md`.
+
+**r10, measured.** The unscored `locallm-r10` set from the reversed session was
+regraded from raw with no cache: 5 clean, 6 passing, 112 well formed, all five
+agreeing under `spec_check.py`, 4 written. Its recipe is r9's exactly; its corpus
+shares 297 of ~300 documents with r9's, which wrote 1.
+
+**The draw, being measured.** `t/PREDICT-2026-09-21-recipe-variance.md`: r9's recipe
+at five training seeds (`locallm-r11-rerun`, `-s1` to `-s4`). Already known: a same-
+seed GPU rerun differs from r9 in all 149 weight tensors, max 0.0016.
+
+**Instrument fixes on the way.** `grade_lab.sh` passes `T_SPARK_JOBS=1` (SPARK's
+`-j8` inside a 4-core cell budget took the load to 351 on 120 cores and flaked
+four cells in the r10 table). Twelve 23-hour orphan z3s killed; the stopped
+`qwen235-train` grader resumed.
+
+**DONE WHEN** the five r11 arms are graded and `SCOREBOARD.md` reports locallm's
+written-clean count as a mean and range over seeds, with r10 either inside that
+range (and dropped as a draw) or outside it (and its ten differing documents
+tested one group at a time).
+
 ## The road to 1.0 (opened 2026-09-05)
 
 WS-12 is the next six sessions. This is everything after them, to the two

@@ -24,6 +24,7 @@ correct and formally proved.**
 | trained | from random numbers, on one shared GPU | by Microsoft, on a cluster |
 | **clean answers of 232** | **3** | **3** |
 | of those, confirmed to specify the right problem | **3** | 2 |
+| of those, written rather than recalled from its training set | **2** | 3 |
 
 An answer counts as **clean** only when it passes the problem's own tests, is
 verified against its specification by **seven independent proof systems** (Dafny,
@@ -44,6 +45,18 @@ models fail the overwhelming majority of the time. Phi has never seen t, so most
 of its answers do not parse, which makes this a weaker claim than beating it at
 Python. The full caveats are in [`LIMITS.md`](LIMITS.md), and they are not buried
 there to be hidden: they are the reason this section is short.
+
+**One of locallm's three was recalled, not written.** Its answer to "minimum of two
+numbers" is, with names erased, the training document for another MBPP problem
+that asks the same thing. Checked on 2026-09-21 across every round: 10 of
+locallm's 23 clean answers are a training document, against 1 of 23 for models
+that never saw its corpus. Counting only answers it wrote, locallm has 2 to Phi's
+3. [`t/FINDINGS-r10-and-recitation-2026-09-21.md`](t/FINDINGS-r10-and-recitation-2026-09-21.md)
+has the table. A later checkpoint, r10, regraded strictly the same day, has **5
+clean, 4 of them written**, all four confirmed against their problems. It is not
+the headline: its training set came out of a session that was reversed, and the
+same recipe on a 99%-identical corpus wrote 1. Whether that gap is the data or
+the draw is being measured.
 
 ## Running it
 
@@ -110,13 +123,19 @@ Eight results, each linked to the script that produced it:
    model. It isn't. It's nearly free.
 2. **It matches a model 41 times its size**, at 3 clean answers each. All three
    of locallm's survived a check that the specification describes the problem
-   actually asked; one of Phi's three could not be checked.
+   actually asked; one of Phi's three could not be checked. One of locallm's
+   three is a recalled training program, so on answers it wrote the count is 2
+   to 3.
 3. **When it is right, it is provably right.** Every locallm answer that computed
    the right values cleared all seven provers with the sabotaged copy caught:
    **2 of 2** in rounds 4 and 5, **1 of 1** in round 7, and **3 of 3** in the
-   round that ties Phi. Phi's comparable rate is 3 of 6.
+   round that ties Phi. Phi's comparable rate is 3 of 6. Rounds 4 and 5 do not
+   support this: all four of their answers were training programs, verified
+   before the model ever saw them.
 4. **Stop it and restart it and you get the identical model**, bit for bit, with
-   a test that fails the moment that stops being true.
+   a test that fails the moment that stops being true. That is resuming on a CPU.
+   Retraining the same recipe from scratch on a GPU does not reproduce: every
+   weight tensor differs, by up to 0.0016.
 5. **It is nowhere near the size this hardware can train.** Measured by training
    until it ran out of memory: **875 million parameters** fits on one shared
    card. Nobody had ever checked.

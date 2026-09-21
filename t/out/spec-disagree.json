@@ -1,8 +1,9 @@
 {
- "checked": 2130,
+ "checked": 2135,
  "tags": [
   "deepseek-coder-v2-16b-v4-s1",
   "deepseek-coder-v2-16b-v4-s2",
+  "locallm-r10-regrade",
   "locallm-r4",
   "locallm-r4-train",
   "locallm-r5",
@@ -7944,6 +7945,94 @@
    "pool": "v3",
    "seed": 1,
    "attempts": 100
+  },
+  "locallm-r10-regrade/mbpp_138__is_Sum_Of_Powers_Of_Two": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 100,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 138,
+   "task_sha256": "f7c795746822b34fc779eb690302d60f7c13c48bf3ae8cdc633da7ac9bd75a88",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r10-regrade/mbpp_682__mul_list": {
+   "status": "agrees",
+   "draws": 14,
+   "mutants_rejected": 86,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 682,
+   "task_sha256": "87e4b651086705cdf46f117622887fb4dc120429ce63911d2890c83ca1fc59c6",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r10-regrade/mbpp_729__add_list": {
+   "status": "agrees",
+   "draws": 16,
+   "mutants_rejected": 100,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 729,
+   "task_sha256": "cf13413a7192d3bff37dce9270cabe2844a9410ea329ffb8f983db8002407832",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r10-regrade/mbpp_813__string_length": {
+   "status": "agrees",
+   "draws": 89,
+   "mutants_rejected": 962,
+   "mutants_accepted": 0,
+   "completeness": 1.0,
+   "weak": false,
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 813,
+   "task_sha256": "1f01898ca3143cf3445d603ca82aed842e313c3023acf3cdf6f1bb46a9c79e44",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
+  },
+  "locallm-r10-regrade/mbpp_970__min_of_two": {
+   "status": "agrees",
+   "draws": 100,
+   "mutants_rejected": 473,
+   "mutants_accepted": 725,
+   "completeness": 0.395,
+   "weak": true,
+   "weak_witness": {
+    "args": [
+     14,
+     25
+    ],
+    "reference_said": 14,
+    "also_accepts": 10
+   },
+   "points_held": 3,
+   "points_failed": 0,
+   "points_excluded": 0,
+   "task_id": 970,
+   "task_sha256": "55eb600a6d9ba8fa8969cd004aadf621a3cdb5f0d1922bf87aa5bdb4f9cf6b7a",
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100
   }
  },
  "runs": [
@@ -8288,6 +8377,22 @@
     "locallm-r4-train"
    ],
    "when": "2026-09-20T20:28:25.949210+00:00"
+  },
+  {
+   "tags": [
+    "locallm-r10-regrade"
+   ],
+   "pool": "v3",
+   "seed": 1,
+   "attempts": 100,
+   "only": "clean",
+   "counts": {
+    "agrees": 5,
+    "disagrees": 0,
+    "other": 0
+   },
+   "checked_nothing": [],
+   "when": "2026-09-21T22:34:17.715807+00:00"
   }
  ]
 }
