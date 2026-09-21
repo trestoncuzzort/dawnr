@@ -159,6 +159,14 @@ t/runs/*/logs/*.sh
 # the machine that grades, which is nobody else's business
 t/lab-workstation.conf
 
+# Run state, when locallm is running from the folder it lives in. t/paths.py
+# prefers a locallm-data/ beside the program over the platform's own cache, so a
+# stick carries its own state and leaves nothing on a borrowed machine -- which
+# means on a normal checkout it lands here, inside a public repository. It holds
+# the event stream, scratch files and the window geometry: machine-shaped, not
+# ours to publish.
+/locallm-data/
+
 # personal drafts that live beside the work, never in it
 MARKET_REALITY.md
 RESPONSE_TO_CLAUDE.md

@@ -1,24 +1,47 @@
 #!/usr/bin/env python3
-"""t/lab.py -- one dark window to watch the checks and the models
-locallm builds, with every word explained (2026-09-16).
+"""t/lab.py -- one window to watch the checks and the models locallm
+builds, with every word explained (2026-09-16).
+
+It was "one dark window" until 2026-09-20. The colours, the fonts, the
+spacing and the marks now come from locallm/look.py, which both halves of
+the window import, so it is light by default and follows the operating
+system where it can read it (Windows today; LOCALLLM_THEME=dark|light
+everywhere, and that is the only way to dark on Linux so far).
 
 locallm builds small AI models from scratch. The models write programs in
 t. Seven independent checkers each try to prove a program does what it
 promises, and try to catch a deliberately broken copy of it. A program is
 clean only when all seven prove it and catch the broken copy.
 
-Live checks: every check as it runs (run_par.py writes a start and an end
-line to the file named by T_WATCH, ~/.cache/t-watch/events.jsonl by
-default), each result in plain words, and a loop's rounds when a loop log
+FIVE TABS, AND WHAT LEADS CHANGED ON 2026-09-20. Home, Train, Proof,
+Collect data, AI. Home is locallm/home.py -- point it at your own text and
+get a model, in four numbered steps -- and it is what the window opens on,
+because that is the thing locallm claims to do; Train is the full training
+surface (locallm/studio.py) with every setting on it. The three pages about
+the seven checkers are behind Proof, which has a strip of its own: they were
+three of six top-level tabs and the paragraph explaining proof kernels sat
+above every page, so the machinery was the first thing a stranger met. Proof
+is where it is now explained.
+
+Proof -> Live checks: every check as it runs (run_par.py writes a start and
+an end line to the file named by T_WATCH, and t/paths.py names the file when
+that is unset), each result in plain words, and a loop's rounds when a loop log
 is chosen.
 
-Test a model: pick a model folder locallm wrote, say how many programs it
-should write, pick the checks, press Run. Each row is one program; click it
-to read the program.
+Proof -> Test a model: pick a model folder locallm wrote, say how many
+programs it should write, pick the checks, press Run. Each row is one
+program; click it to read the program.
+
+Proof -> Results: what every answer set counted out to.
+
+--page takes any page name, the three behind Proof included, and the View
+menu lists every one of them.
 
 Runs on macOS, Windows and Linux with Python 3.10 or newer and Tk (on macOS
 the python.org installer includes Tk; with Homebrew, brew install
-python-tk). Model tests also need torch, the one locallm uses:
+python-tk). Model tests also need torch, the one locallm uses. Collect data
+presses shell recipes rather than reading files, so that one page needs a
+POSIX shell and says so when there is none; everything else here is files:
 
     python3 t/lab.py
 """
@@ -31,13 +54,14 @@ import os
 import queue
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
 import time
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, font as tkfont, ttk
+from tkinter import filedialog, ttk
 
 HERE = Path(__file__).resolve().parent
 TUP = HERE.parent
@@ -46,18 +70,39 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(1, str(LOCALLM))
 
 import fuzz_lower                                               # noqa: E402
+# The design system, from locallm/, at module scope -- unlike studio.py, which is
+# imported inside build_train because it pulls in torch. look.py imports math, os
+# and typing and asks tkinter a question only when a font has to be resolved, so
+# it costs this window nothing on a machine with no training stack.
+import look                                                     # noqa: E402
+import paths                                                    # noqa: E402
+import proc                                                     # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 import surface                                                  # noqa: E402
 from lab_status import count_set as count_answer_set             # noqa: E402
 
-EVENTS = Path(os.environ.get("T_WATCH", Path.home() / ".cache" / "t-watch" / "events.jsonl"))
-SCRATCH = Path(os.environ.get("T_LAB_SCRATCH", Path.home() / ".cache" / "t-lab"))
+# Both of these fell back to ~/.cache, which is a folder only Linux has agreed to: on Windows it
+# made C:\Users\<name>\.cache\t-lab, which nothing there cleans up, and on a USB stick it wrote
+# to the borrowed machine instead of the stick. t/paths.py picks the place per platform and prefers
+# locallm-data/ beside the program when that can be written to; T_WATCH and T_LAB_SCRATCH still win,
+# and T_WATCH has to, because the lab workstation sets it and run_par.py is told the same value below.
+EVENTS = paths.state_path("T_WATCH", "watch", "events.jsonl")
+SCRATCH = paths.state_path("T_LAB_SCRATCH", "scratch")
 KERNELS = ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"]
 CHECKER = {"dafny": "Dafny", "verus": "Verus", "spark": "SPARK", "framac": "Frama-C",
            "lean": "Lean", "rocq": "Rocq", "fstar": "F*"}
 KERNEL_PATH = os.pathsep.join(str(Path.home() / p) for p in (
     ".cargo/bin", ".opam/default/bin", ".elan/bin", ".local/fstar/fstar/bin",
     ".local/gnatprove/gnatprove-x86_64-linux-16.1.0-1/bin", ".local/verus/verus-x86-linux"))
+# Can this machine run the Collect data steps at all? Every step is a shell recipe -- bash -lc, ssh, rsync,
+# nvidia-smi, systemctl, sudo -- and a missing program is not a non-zero exit, it is an exception: "The most
+# common exception raised is OSError. This occurs, for example, when trying to execute a non-existent file"
+# (docs.python.org/3/library/subprocess.html). Off Linux that turned a two-second poll into a traceback twice a
+# second with nothing on screen, so the capability is asked once, here, instead of guessed at each call site.
+# shutil.which is what that same page points at for an unqualified name on PATH. macOS passes this test and
+# should: bash, ssh, rsync and python3 are all there, and the parts that are Linux's alone (systemctl,
+# nvidia-smi) now say so where they are used rather than raising.
+HOST_CAN_RUN_STEPS = os.name == "posix" and shutil.which("bash") is not None
 
 # the data run of internal/HANDOFF-2026-09-17-rtx4080.md, one button per step; commands run from the repo root
 # The python that has torch, transformers, xgrammar, peft and bitsandbytes. Every step now runs on the lab
@@ -375,7 +420,11 @@ def load_steps() -> list:
 
 
 SPEC_EXP = HERE / "out" / "spec-experiment"
-GEOMETRY = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "t-lab" / "geometry"
+# Where the window was left. XDG_CACHE_HOME keeps its old meaning and its old layout under it,
+# because t/shots.py points that variable at a throwaway folder so a documentation run cannot
+# move the operator's real window; unset, this is state and not cache (basedir-spec calls a
+# cache "non-essential"), so it goes where t/paths.py puts the rest.
+GEOMETRY = paths.state_path("XDG_CACHE_HOME", "geometry", env_join=("t-lab", "geometry"))
 # the files a fix lands in; when one moves, the window reloads itself (Lab.watch_own_code)
 ROOT = HERE.parent
 
@@ -433,20 +482,89 @@ def mtime(p: Path) -> float:
 STEPS = load_steps()
 STEPS_TITLE = [(s[0], s[1]) for s in STEPS]
 
-# dark palette: three accents, everything else greys
-BG, SURFACE, CARD, LINE = "#0b0e14", "#121620", "#181d29", "#262d3d"
-TEXT, MUTED, FAINT = "#e7eaf0", "#98a2b3", "#5d6678"
-GREEN, RED, BLUE = "#22c55e", "#ef4444", "#3b82f6"
-BLUE_DIM, GREEN_DIM, RED_DIM = "#1d3a6b", "#123d25", "#4a1a1d"
-YES, NO, DASH = "✔", "✘", "–"
-# SLOW was ⏱ U+23F1 until fc-match showed DejaVu Sans carries no glyph for it, so
-# it fell through to FreeSerif and drew serif beside seven sans marks. ◷ U+25F7 is
-# in DejaVu Sans and in Geometric Shapes, the block ● ▾ ▶ ■ already come from. The
-# obvious hourglass ⌛ U+231B is wrong twice over: also absent from DejaVu Sans, and
-# Emoji_Presentation=Yes, so it is the one candidate that really would come out as a
-# colour emoji (unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt v18.0.0,
-# read 2026-09-20; the ⏱️ shown there with U+FE0F means its own default is text).
-SLOW = "◷"
+# ------------------------------------------------------------------------------
+# THE LOOK IS locallm/look.py's, NOT THIS FILE'S.
+#
+# What stood here was a second design system: thirteen colour literals in four
+# lines, six more #ffffff spread through the widgets, a copy of studio.py's two font
+# lists carrying a comment that said the two copies must stay IDENTICAL, and its own
+# four marks. Two of those three had already drifted -- the shell resolved to Inter
+# and the Train page embedded in it to Cantarell, in one frame, measured 2026-09-20,
+# and the two palettes were different sets of literals. A rule that says "keep these
+# the same" has no enforcement; one copy has enforcement for free, and look.py is
+# that copy.
+#
+# THE WINDOW IS LIGHT BY DEFAULT AND FOLLOWS THE OPERATING SYSTEM. That is the
+# operator's decision, and it is what the platform asks for: "Most apps should use
+# the standard light UI style by default", and apps that do "are encouraged to
+# follow the system style setting" (developer.gnome.org/hig/guidelines/
+# ui-styling.html, read 2026-09-20). The same page asks for three choices where
+# there is a preference -- light, dark, follow the system -- which is
+# LOCALLLM_THEME=light|dark and unset. This shell was dark-only and the studio was
+# light-only for one reason: both had their colours written out as literals.
+#
+# "FOLLOWS THE SYSTEM" IS NOT YET TRUE ON LINUX, which is the desk this runs on.
+# look.system_wants_dark reads the Windows registry and nothing else, so an unset
+# LOCALLLM_THEME resolves to light here however the desktop is set. Measured
+# 2026-09-20 on this machine: `gsettings get org.gnome.desktop.interface
+# color-scheme` answers 'prefer-dark' and this window still opens light.
+# LOCALLLM_THEME=dark is the way to dark meanwhile. Written down rather than left
+# for someone to find by opening the window on a dark desktop.
+#
+# The names below are the ones the widget code already uses, each bound to one of
+# look's eight roles, so the two thousand lines under them read as they did and no
+# line here can invent a ninth colour. Where a name no longer describes its value
+# the reason is beside it; where it named a colour that no longer exists, the name
+# is gone.
+# ------------------------------------------------------------------------------
+C = look.palette()
+BG, CARD, LINE = C["bg"], C["panel"], C["line"]
+# SURFACE was a fourth grey between BG and CARD, under everything sunken: the
+# entries, the log panes, the plot, a heading row. look calls that `field` and
+# makes it the paper showing THROUGH a card rather than a shade of its own, so
+# SURFACE and BG are one value now and the hairline does the separating.
+SURFACE = C["field"]
+TEXT, MUTED, FAINT = C["fg"], C["muted"], C["faint"]
+# The third marking colour had no name in this file and it is the one this window
+# needs most: look's amber says "not settled yet", which is exactly what a check
+# still running, a bar part way along and a stop just sent to the lab workstation
+# are. All three were blue, for no reason beyond blue being there.
+GREEN, RED, UNSETTLED = C["ok"], C["bad"], C["warn"]
+# THERE IS NO BLUE. look carries three marking colours and refuses a fourth accent,
+# on the grounds that a fourth colour on a screen that says three things is a
+# colour with nothing attached to it. Every blue in this file was interactive rather
+# than a verdict -- a button, the open tab, the selected step, a bar that is moving
+# -- so the interactive colour is now the pencil itself, the same ink the words are
+# written in (look lends ink to the training curve for the same reason, and keeps
+# green and red for the two things that are claims). ON_ACCENT is what goes on top
+# of it: paper, so a filled button is the window inverted and measures what ink on
+# paper measures.
+ACCENT, ON_ACCENT = C["ink"], C["paper"]
+# A SELECTED THING IS A SHADED BAND, not an inverted one. Measured in look: ink on
+# this band is 10.92:1 light and 9.87:1 dark, and nothing quieter than ink clears
+# the body bar on it, which is why the toggles and the selected row keep TEXT. This
+# one value replaces BLUE_DIM (the toggle, the selected row, the active menu item)
+# and GREEN_DIM (the tint behind a running step). RED_DIM had no call site left.
+SELECT = C["select"]
+
+# SPACING: every padx, pady and ipady in this file is one of look.SPACE's six
+# steps. Fifteen distinct values lived here, among them the run 1, 2, 3, 5, 6, 7 --
+# the signature of nudging a number until one panel looked right, which is how two
+# boxes end up 6 and 7 pixels apart for no reason anyone can name. (look.py's note
+# says fourteen; the fifteenth is the tooltip's 1, which was a border drawn with
+# padding, and it is dealt with below rather than rounded.) Each value was rounded
+# to the nearest step with ties going up (6 -> 8, 10 -> 12, 14 -> 16,
+# 20 -> 24), and a two-value pair was rounded one side at a time, because -padx
+# "may be a list of two values to specify padding for left and right separately"
+# and -pady the same for top and bottom (tcl-lang.org/man/tcl8.6/TkCmd/pack.htm).
+# Zero stays zero: it is the absence of a gap, not the smallest one. Two results
+# worth knowing before anyone "corrects" them: the window's outer margin measured
+# 22 and rounds to SPACE.group, one step in from the step look names `page`,
+# because what was rounded is the measurement and not the layout; and the
+# one-pixel hairline the tooltip got by packing its label one pixel in from a
+# coloured toplevel is now drawn the way every card here draws one, since a border
+# is not spacing.
+SPACE = look.SPACE
 LOOP_RE = re.compile(r"round (\d+): corpus (\d+) docs; samples (\d+), parsed (\d+), "
                      r"well-formed (\d+), novel (\d+)")
 CLEAN_RE = re.compile(r"round (\d+): clean in all seven (\d+)")
@@ -454,47 +572,84 @@ CLEAN_RE = re.compile(r"round (\d+): clean in all seven (\d+)")
 
 # ------------------------------------------------------------ plain words --
 
-def verdict(real: str, twin: str, agree: bool = True) -> tuple[str, str, str, str]:
-    """(symbol, short word, one plain sentence, color) for one check."""
+def verdict(real: str, twin: str, agree: bool = True) -> look.Say:
+    """One checker's result on one program: mark, short word, one plain sentence, tone.
+
+    The words are unchanged. They are what a person reads in the Result and What it
+    means columns, and they were written for someone who has never run a prover.
+    What changed is the fourth field: it was a literal out of the old dark palette,
+    which is the whole reason this function could only ever be used in the dark half
+    of the window, and it is now a look palette KEY the caller resolves in whichever
+    theme is live.
+
+    NO VERDICT CHANGES TIER: grey -> "muted", green -> "proved", red -> "refuted",
+    one for one. look's amber `unsettled` would fit several of the unresolved cases
+    and is deliberately not spent on them, because moving a verdict from grey to
+    amber is a different claim about a proof, not a different colour, and this
+    change is about colour.
+
+    THE SIX SYMBOLS ARE NOT look.MARKS' FOUR. ✔ ✘ – ◷ come from look; "?" and "!"
+    are this table's own and stay. The Programs grid gives each checker a cell one
+    character wide, so folding malformed and checker-error onto the dash would draw
+    "the checker could not read this" exactly like "this checker abstains", which is
+    the distinction that grid exists to make.
+    """
     real, twin = (real or "").strip(), (twin or "").strip()
     if not agree:
-        return ("!", "Inconsistent", "Repeated checks disagreed; this is not a stable proof.", MUTED)
+        return look.Say("!", "Inconsistent", "Repeated checks disagreed; this is not a stable proof.", "muted")
     if real == "verified" and twin == "refuted":
-        return (YES, "Proven", "Proved the program keeps its promise, and caught the broken copy.", GREEN)
+        return look.Say(look.PROVED, "Proven",
+                        "Proved the program keeps its promise, and caught the broken copy.", "proved")
     if real == "verified" and twin == "verified":
-        return (NO, "Promise too weak", "It passed, but so did a broken copy, so the promise says too little.", RED)
+        return look.Say(look.REFUTED, "Promise too weak",
+                        "It passed, but so did a broken copy, so the promise says too little.", "refuted")
     if real == "verified":
-        return ("?", "Twin unresolved", "The program was proved, but catching the broken copy is unresolved.", MUTED)
+        return look.Say("?", "Twin unresolved",
+                        "The program was proved, but catching the broken copy is unresolved.", "muted")
     if real == "vacuous":
-        return (NO, "Empty promise", "It passed only because its promise can never be tested.", RED)
+        return look.Say(look.REFUTED, "Empty promise",
+                        "It passed only because its promise can never be tested.", "refuted")
     if real == "refuted":
-        return (NO, "Bug found", "The checker found an input where the program breaks its promise.", RED)
+        return look.Say(look.REFUTED, "Bug found",
+                        "The checker found an input where the program breaks its promise.", "refuted")
     if real == "unproved":
-        return (NO, "Not proven", "The checker could not prove it, and found no bug either.", RED)
+        return look.Say(look.REFUTED, "Not proven",
+                        "The checker could not prove it, and found no bug either.", "refuted")
     if real == "timeout":
-        return (SLOW, "Too slow", "The checker ran out of time. That does not mean the program is wrong.", MUTED)
+        return look.Say(look.TIMED_OUT, "Too slow",
+                        "The checker ran out of time. That does not mean the program is wrong.", "muted")
     if real == "malformed":
-        return ("?", "Unreadable", "The checker could not read the program.", RED)
+        return look.Say("?", "Unreadable", "The checker could not read the program.", "refuted")
     if real == "abstain":
-        return (DASH, "Not supported yet", "This checker cannot handle this kind of program yet.", MUTED)
+        return look.Say(look.NOT_APPLICABLE, "Not supported yet",
+                        "This checker cannot handle this kind of program yet.", "muted")
     if real == "no-twin":
-        return (DASH, "No broken copy", "No broken copy could be made, so the promise could not be tested.", MUTED)
-    return ("!", "Checker error", "The checker itself failed. This says nothing about the program.", MUTED)
+        return look.Say(look.NOT_APPLICABLE, "No broken copy",
+                        "No broken copy could be made, so the promise could not be tested.", "muted")
+    return look.Say("!", "Checker error", "The checker itself failed. This says nothing about the program.", "muted")
 
 
 def mark(v) -> str:
-    return DASH if v is None else (YES if v else NO)
-
-
-def pick_font(root, names, fallback):
-    have = set(tkfont.families(root))
-    return next((n for n in names if n in have), fallback)
+    return look.NOT_APPLICABLE if v is None else (look.PROVED if v else look.REFUTED)
 
 
 # --------------------------------------------------------------- widgets --
 
 class Tip:
-    """A short explanation shown while the mouse rests on a widget."""
+    """A short explanation shown while the mouse rests on a widget.
+
+    On Aqua the override-redirect toplevel below is not a tooltip, it is three
+    bugs. It takes the input focus when raised, filed against this exact
+    balloon-help use (sourceforge.net/p/tktoolkit/bugs/1395). On Tk 8.6.11
+    wm_overrideredirect(1) itself raises TclError, `expected boolean value but
+    got "None"` (github.com/thonny/thonny/issues/1659). On Tk Aqua 8.7 the
+    window draws blank (github.com/python/cpython/issues/104499, where IDLE's
+    own fix is to branch on `_windowingsystem != "aqua"` -- the test used here,
+    because X11 Tk on a Mac has none of this). So on Aqua the same sentence goes
+    to the window's status line. The class and its three-argument call are
+    unchanged: there are six call sites and none of them should have to know
+    which windowing system it is on.
+    """
 
     def __init__(self, widget, text: str, app):
         self.widget, self.text, self.app, self.win = widget, text, app, None
@@ -502,17 +657,27 @@ class Tip:
         widget.bind("<Leave>", self.hide, add="+")
 
     def show(self, _e=None):
+        if self.app.aqua:
+            self.app.say(self.text)
+            return
         if self.win:
             return
-        x = self.widget.winfo_rootx() + 8
-        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 6
-        self.win = tk.Toplevel(self.widget, bg=LINE)
+        x = self.widget.winfo_rootx() + SPACE.inner
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + SPACE.inner
+        self.win = tk.Toplevel(self.widget, bg=CARD)
         self.win.wm_overrideredirect(True)
         self.win.geometry(f"+{x}+{y}")
-        tk.Label(self.win, text=self.text, justify="left", bg=SURFACE, fg=TEXT, wraplength=380,
-                 font=self.app.f_small, padx=10, pady=8).pack(padx=1, pady=1)
+        # A tooltip is a small card, and its hairline is drawn the way every card
+        # here draws one. It used to be a coloured toplevel with the label packed one
+        # pixel in from it, which made a border out of padding.
+        tk.Label(self.win, text=self.text, justify="left", bg=CARD, fg=TEXT, wraplength=380,
+                 font=self.app.f_small, padx=SPACE.item, pady=SPACE.inner,
+                 highlightthickness=1, highlightbackground=LINE).pack()
 
     def hide(self, _e=None):
+        if self.app.aqua:
+            self.app.say("", only_if=self.text)      # only if nothing else has written there since
+            return
         if self.win:
             self.win.destroy()
             self.win = None
@@ -521,10 +686,10 @@ class Tip:
 class Button(tk.Label):
     """A flat button: filled with its color, a lighter shade on hover."""
 
-    def __init__(self, parent, text, command, color=BLUE, app=None, filled=True):
+    def __init__(self, parent, text, command, color=ACCENT, app=None, filled=True):
         self.color, self.filled, self.command, self.enabled = color, filled, command, True
-        super().__init__(parent, text=text, cursor="hand2", padx=16, pady=7, font=app.f_bold,
-                         bg=color if filled else CARD, fg="#ffffff" if filled else color)
+        super().__init__(parent, text=text, cursor="hand2", padx=SPACE.card, pady=SPACE.inner, font=app.f_bold,
+                         bg=color if filled else CARD, fg=ON_ACCENT if filled else color)
         self.bind("<Button-1>", lambda _e: self.enabled and self.command())
         self.bind("<Enter>", lambda _e: self.enabled and self.configure(bg=self.shade(color) if filled else LINE))
         self.bind("<Leave>", lambda _e: self.configure(bg=color if filled else CARD))
@@ -536,15 +701,15 @@ class Button(tk.Label):
 
     def set_enabled(self, on: bool):
         self.enabled = on
-        self.configure(fg=("#ffffff" if self.filled else self.color) if on else FAINT)
+        self.configure(fg=(ON_ACCENT if self.filled else self.color) if on else FAINT)
 
 
 class Chip(tk.Label):
-    """A toggle: blue with a check mark when on, grey when off."""
+    """A toggle: a shaded band with a check mark when on, quiet when off."""
 
     def __init__(self, parent, text, var: tk.BooleanVar, app, command=None):
         self.var, self.label, self.command = var, text, command
-        super().__init__(parent, cursor="hand2", padx=12, pady=5, font=app.f_body)
+        super().__init__(parent, cursor="hand2", padx=SPACE.item, pady=SPACE.tight, font=app.f_body)
         self.bind("<Button-1>", self.toggle)
         self.paint()
 
@@ -556,13 +721,27 @@ class Chip(tk.Label):
 
     def paint(self):
         on = self.var.get()
-        self.configure(text=(f"{YES}  " if on else "    ") + self.label,
-                       bg=BLUE_DIM if on else CARD, fg="#ffffff" if on else MUTED)
+        self.configure(text=(f"{look.PROVED}  " if on else "    ") + self.label,
+                       bg=SELECT if on else CARD, fg=TEXT if on else MUTED)
+
+
+def log_pane(parent, app, height: int, wrap: str = "none") -> tk.Text:
+    """A pane that is read back rather than typed in: a step's log, the GPU status,
+    the score tables, the alerts. One constructor, the way entry() below is one."""
+    # Eight of these were written out option by option, and all eight took two colours
+    # from Tk rather than from look, because neither was named: the caret stayed black,
+    # invisible on the old dark ground, and the one-pixel ring Tk gives every Text by
+    # default stayed its own light grey, d9d9d9. The ring is kept and given the
+    # hairline colour, because a pane on a card differs from it by look's measured
+    # 1.101:1 and needs the seam.
+    return tk.Text(parent, bg=SURFACE, fg=TEXT, insertbackground=TEXT, font=app.f_mono,
+                   relief="flat", height=height, wrap=wrap,
+                   highlightthickness=1, highlightbackground=LINE)
 
 
 def entry(parent, var, app, width=None):
     e = tk.Entry(parent, textvariable=var, bg=SURFACE, fg=TEXT, insertbackground=TEXT, relief="flat",
-                 highlightthickness=1, highlightbackground=LINE, highlightcolor=BLUE, font=app.f_body)
+                 highlightthickness=1, highlightbackground=LINE, highlightcolor=ACCENT, font=app.f_body)
     if width:
         e.configure(width=width)
     return e
@@ -658,22 +837,36 @@ def memory_mb(root_pid: int) -> float | None:
 class Lab:
     def __init__(self, root: tk.Tk, start_page: str = "Live checks"):
         self.root = root
+        # `tk windowingsystem`, not sys.platform: Tk built against X11 on a Mac has none of
+        # Aqua's tooltip and menu-bar problems, and Aqua is what those two have to bend to.
+        # IDLE branches on the same test for the same class of bug (github.com/python/cpython
+        # /issues/104499).
+        try:
+            self.aqua = root.tk.call("tk", "windowingsystem") == "aqua"
+        except tk.TclError:
+            self.aqua = False
         self.start_page = start_page
         self.remote = lab_target()
         self.lab_snapshot = None
         self.lab_error = "Connecting to lab workstation"
         self.lab_received = 0.0
-        sans = pick_font(root, ["Inter", "SF Pro Text", "Helvetica Neue", "Segoe UI", "Cantarell", "Ubuntu",
-                                "Noto Sans", "DejaVu Sans"], "TkDefaultFont")
-        mono = pick_font(root, ["JetBrains Mono", "SF Mono", "Menlo", "Consolas", "DejaVu Sans Mono"], "TkFixedFont")
-        self.f_title, self.f_h2 = (sans, 20, "bold"), (sans, 13, "bold")
-        self.f_body, self.f_bold, self.f_small = (sans, 11), (sans, 11, "bold"), (sans, 10)
-        self.f_num, self.f_mono = (sans, 26, "bold"), (mono, 10)
+        # Both families are resolved once, here, against this root, and both halves of
+        # the window then read the same memo: look.py holds the one copy of the two
+        # lists, so the shell and the Train page embedded in it cannot come out in two
+        # faces in one frame. They had -- Inter here, Cantarell there, measured
+        # 2026-09-20 -- while a comment in this file said the two copies must stay
+        # identical. Resolving before any widget is built is what look.resolve_fonts is
+        # for: a bare SANS() call with no widget has no Tk to ask and falls back.
+        # The sizes and the weights are decisions and stay here; the family is looked up.
+        look.resolve_fonts(root)
+        self.f_title, self.f_h2 = look.SANS(20, "bold"), look.SANS(13, "bold")
+        self.f_body, self.f_bold, self.f_small = look.SANS(11), look.SANS(11, "bold"), look.SANS(10)
+        self.f_num, self.f_mono = look.SANS(26, "bold"), look.MONO(10)
         root.configure(bg=BG)
         root.option_add("*Menu.background", SURFACE)
         root.option_add("*Menu.foreground", TEXT)
-        root.option_add("*Menu.activeBackground", BLUE_DIM)
-        root.option_add("*Menu.activeForeground", "#ffffff")
+        root.option_add("*Menu.activeBackground", SELECT)
+        root.option_add("*Menu.activeForeground", TEXT)
         self.style_tables()
 
         self.q: queue.Queue = queue.Queue()
@@ -694,51 +887,86 @@ class Lab:
         except (OSError, ValueError):
             pass
 
+        # One line for a sentence that had nowhere to go before: a failed xdg-open was a
+        # traceback in the terminal nobody is watching, and on Aqua this is where the
+        # tooltips are written (see Tip, which cannot use a toplevel there).
+        self.status_line = tk.Label(root, text="", bg=BG, fg=FAINT, font=self.f_small, anchor="w",
+                                    justify="left", wraplength=900)
+        self.status_line.pack(side="bottom", fill="x", padx=SPACE.group, pady=(0, SPACE.item))
+        # a tooltip is two sentences: wrap it, do not cut it
+        self.rewrap(self.status_line, pad=2 * SPACE.group + SPACE.item)
+
         head = tk.Frame(root, bg=BG)
-        head.pack(fill="x", padx=22, pady=(18, 6))
+        head.pack(fill="x", padx=SPACE.group, pady=(SPACE.card, SPACE.inner))
         tk.Label(head, text="locallm", bg=BG, fg=TEXT, font=self.f_title).pack(side="left")
         self.pulse = tk.Label(head, text="●  waiting for checks", bg=BG, fg=FAINT, font=self.f_small)
         self.pulse.pack(side="right")
         self.follow_btn_parent = head
-        tk.Label(root, bg=BG, fg=MUTED, font=self.f_body, justify="left", anchor="w", wraplength=1300, text=(
-            "Models write programs on the lab workstation. Seven independent checkers "
-            "try to prove each program keeps its promise, and try to catch a deliberately broken copy of it. "
-            "A program is clean only when all seven prove it and catch the broken copy.")).pack(fill="x", padx=22)
 
         tabs = tk.Frame(root, bg=BG)
-        tabs.pack(fill="x", padx=22, pady=(14, 8))
+        tabs.pack(fill="x", padx=SPACE.group, pady=(SPACE.card, SPACE.inner))
         self.pages, self.tab_buttons = {}, {}
         body = tk.Frame(root, bg=BG)
-        body.pack(fill="both", expand=True, padx=22, pady=(0, 18))
-        # Train leads because it is the first thing a person does: build a model,
-        # watch it be checked, read the result.
+        body.pack(fill="both", expand=True, padx=SPACE.group, pady=(0, SPACE.card))
+        # HOME LEADS, AND THE SEVEN CHECKERS ARE ONE TAB, NOT THREE.
         #
-        # It is present in remote mode too, and that is a correction. The first
-        # version dropped it there, reasoning that training needs torch on THIS
-        # machine exactly as "Test a model" does. Running it showed what that costs:
-        # this desktop has a lab-workstation.conf, so remote is true, so the tab
-        # simply was not there and nothing said why. A window whose own docstring
+        # Train led here until 2026-09-20 and the paragraph about seven proof kernels
+        # sat above every page, so the first thing a stranger met was the machinery
+        # rather than the thing locallm claims to do -- point it at your own text and
+        # get a model. Home is that claim (locallm/home.py), it is first, and it is
+        # what the window opens on; the paragraph moved into Proof, where it explains
+        # the checkers to someone who chose to look at them.
+        #
+        # THE COUNT IS THE REASON FOR GROUPING. Six tabs locally was over the
+        # platform's own bar: "As a rule of thumb, a view switcher should contain
+        # between three and five views. If you have more views, a sidebar might be a
+        # more appropriate choice", and views are labelled with nouns rather than
+        # verbs (developer.gnome.org/hig/patterns/nav/view-switchers.html, read
+        # 2026-09-20). Live checks, Test a model and Results are the same subject --
+        # the seven provers judging work -- so they became one noun-labelled view
+        # with a strip of its own (build_proof), and the list is five. NN/g puts the
+        # same rule plainly, "the fewer tabs, the better", and adds the one that
+        # decided the order: "Arrange tab content so high-use content is first in the
+        # list and selected by default" (nngroup.com/articles/tabs-used-right/,
+        # reviewed 2026-09-02).
+        #
+        # Home and Train are both present in remote mode, and that is a correction.
+        # The first version dropped Train there, reasoning that training needs torch
+        # on THIS machine exactly as "Test a model" does. Running it showed what that
+        # costs: this desktop has a lab-workstation.conf, so remote is true, so the
+        # tab simply was not there and nothing said why. A window whose own docstring
         # promises "every word explained" should not answer a missing capability by
         # hiding the word. So the tab always exists and build_train says what is
-        # missing -- torch, or the fact that the work is happening elsewhere.
-        names = ("Train", "Live checks", "Collect data", "Results", "AI") if self.remote else (
-            "Train", "Live checks", "Test a model", "Collect data", "Results", "AI")
-        for name in names:
-            b = tk.Label(tabs, text=name, cursor="hand2", padx=18, pady=7, font=self.f_bold)
-            b.pack(side="left", padx=(0, 8))
+        # missing -- torch, or the fact that the work is happening elsewhere. Home
+        # goes further and needs no note at all: home.py reaches studio through its
+        # own lazy engine() and its cards say in words which of them cannot work, so
+        # it is the real page on a machine with neither torch nor local compute.
+        # "Test a model" is the one page still dropped in remote mode, in build_proof,
+        # because it runs a model on this machine and there is nothing to run it with.
+        for name in ("Home", "Train", "Proof", "Collect data", "AI"):
+            b = tk.Label(tabs, text=name, cursor="hand2", padx=SPACE.card, pady=SPACE.inner, font=self.f_bold)
+            b.pack(side="left", padx=(0, SPACE.inner))
             b.bind("<Button-1>", lambda _e, n=name: self.show_page(n))
             self.tab_buttons[name] = b
             self.pages[name] = tk.Frame(body, bg=BG)
+            if name == "Proof":
+                # Inside the loop, so the three pages behind Proof land in self.pages
+                # between Proof and Collect data: the View menu is built by walking
+                # that dict, and building them afterwards would leave the menu listing
+                # Live checks after AI, in an order the window itself does not have.
+                self.build_proof(self.pages[name])
+        self.build_home(self.pages["Home"])
         self.build_train(self.pages["Train"])
         self.build_live(self.pages["Live checks"])
         if not self.remote:
-            Button(self.follow_btn_parent, "Follow a loop run", self.follow_loop, BLUE, self,
-                   filled=False).pack(side="right", padx=(0, 16))
+            Button(self.follow_btn_parent, "Follow a loop run", self.follow_loop, ACCENT, self,
+                   filled=False).pack(side="right", padx=(0, SPACE.card))
             self.build_test(self.pages["Test a model"])
         self.build_collect(self.pages["Collect data"])
         self.build_results(self.pages["Results"])
         self.build_ai(self.pages["AI"])
-        self.show_page(self.start_page if self.start_page in self.pages else "Live checks")
+        self.build_menu()
+        self.show_page(self.start_page if self.start_page in self.pages else "Home")
         if self.remote:
             threading.Thread(target=self.watch_lab, daemon=True).start()
         else:
@@ -754,24 +982,66 @@ class Lab:
         s.theme_use("clam")
         s.configure("Treeview", background=CARD, fieldbackground=CARD, foreground=TEXT, rowheight=30,
                     borderwidth=0, font=self.f_body)
-        s.map("Treeview", background=[("selected", BLUE_DIM)], foreground=[("selected", "#ffffff")])
+        s.map("Treeview", background=[("selected", SELECT)], foreground=[("selected", TEXT)])
         s.configure("Treeview.Heading", background=SURFACE, foreground=MUTED, relief="flat", font=self.f_small,
-                    borderwidth=0, padding=(8, 6))
+                    borderwidth=0, padding=(SPACE.inner, SPACE.inner))
         s.map("Treeview.Heading", background=[("active", SURFACE)], foreground=[("active", TEXT)])
         s.layout("Treeview", [("Treeview.treearea", {"sticky": "nswe"})])
         s.configure("Sash", background=BG, sashthickness=8)
 
+    def say(self, text: str, only_if: str | None = None):
+        """Put one sentence on the status line. only_if leaves it alone unless it still
+        says that, so a tooltip clearing itself cannot wipe a message written since."""
+        if only_if is not None and self.status_line.cget("text") != only_if:
+            return
+        self.status_line.configure(text=text, fg=MUTED if text else FAINT)
+
+    def rewrap(self, label: tk.Label, pad: int = 16, floor: int = 280) -> tk.Label:
+        """Wrap a paragraph to the width it actually has, not to a number written here.
+
+        The wraplengths in this file were 1300, 1200 and 1100 while the window's own
+        minimum width was 1000, so those paragraphs ran off the right edge at the size the
+        window can be dragged to, before any display-scaling question. The training surface
+        already fixed the same mistake the same way and says why (locallm/studio.py,
+        _rewrap: "A hard-coded wraplength is a guess about the window width, and it was
+        wrong").
+
+        width=1 is not cosmetic and this does not work without it. A label asks for the
+        width it wraps at, so a paragraph whose wrap is read back off its container makes
+        the container follow the paragraph: measured here, the opening sentence went 1300,
+        1144, 1100, then straight to the floor and oscillated there, and update() never
+        returned. Asking for one character instead leaves the width to the tables and the
+        window, which is what should be deciding it, and leaves the wrap free to follow.
+        Every caller must therefore pack the label with fill="x".
+
+        The guard in track is the other half of that lesson. A container's own <Configure>
+        is not the only event a binding on it sees: a toplevel is one of the binding tags of
+        every widget beneath it, so a label whose master is the root window was being handed
+        its siblings' and children's widths -- 76, 13, 1 -- and rewrapped to each of them in
+        turn, forever.
+        """
+        label.configure(width=1)
+
+        def track(event):
+            if event.widget is not label.master:
+                return                             # a toplevel is in all its children's bindtags
+            width = max(floor, event.width - pad)
+            if label.cget("wraplength") != width:
+                label.configure(wraplength=width)
+        label.master.bind("<Configure>", track, add="+")
+        return label
+
     def card(self, parent, title=None, hint=None, **pack):
         outer = tk.Frame(parent, bg=CARD, highlightthickness=1, highlightbackground=LINE)
-        outer.pack(**({"fill": "x", "pady": (0, 12)} | pack))
+        outer.pack(**({"fill": "x", "pady": (0, SPACE.item)} | pack))
         inner = tk.Frame(outer, bg=CARD)
-        inner.pack(fill="both", expand=True, padx=16, pady=12)
+        inner.pack(fill="both", expand=True, padx=SPACE.card, pady=SPACE.item)
         if title:
             row = tk.Frame(inner, bg=CARD)
-            row.pack(fill="x", pady=(0, 8))
+            row.pack(fill="x", pady=(0, SPACE.inner))
             tk.Label(row, text=title, bg=CARD, fg=TEXT, font=self.f_h2).pack(side="left")
             if hint:
-                tk.Label(row, text=hint, bg=CARD, fg=FAINT, font=self.f_small).pack(side="left", padx=10)
+                tk.Label(row, text=hint, bg=CARD, fg=FAINT, font=self.f_small).pack(side="left", padx=SPACE.item)
         return inner
 
     def table(self, parent, cols, height):
@@ -781,43 +1051,312 @@ class Lab:
         for c, label, w in cols:
             t.heading(c, text=label.upper(), anchor="w")
             t.column(c, width=w, anchor="w", stretch=True)
-        for tag, color in (("green", GREEN), ("red", RED), ("muted", MUTED), ("blue", BLUE)):
-            t.tag_configure(tag, foreground=color)
+        # A row's tag IS its look palette key, so a verdict's tone can be handed
+        # straight to the table with nothing translating between the two names. The
+        # tags are all four tones verdict() returns plus `ink` for a total line.
+        for key in ("proved", "refuted", "unsettled", "muted", "ink"):
+            t.tag_configure(key, foreground=C[key])
         t.pack(side="left", fill="both", expand=True)
         scrollbar = ttk.Scrollbar(frame, orient="vertical", command=t.yview)
         scrollbar.pack(side="right", fill="y")
         t.configure(yscrollcommand=scrollbar.set)
         return t
 
-    @staticmethod
-    def tag(color: str) -> str:
-        return {GREEN: "green", RED: "red", BLUE: "blue"}.get(color, "muted")
-
     def follow_loop(self):
         p = filedialog.askopenfilename(title="Choose a loop log (written by t/loop_filter.py)",
                                        initialdir=str(HERE / "runs"))
         if p:
             self.log_var.set(p)
-            self.rounds_outer.pack(fill="x", pady=(0, 12), before=self.done_outer)
+            self.rounds_outer.pack(fill="x", pady=(0, SPACE.item), before=self.done_outer)
+
+    #: The pages behind the Proof tab, in order. The first is what Proof opens on,
+    #: because it is the one watched while a run is going: "Arrange tab content so
+    #: high-use content is first in the list and selected by default"
+    #: (nngroup.com/articles/tabs-used-right/). "Test a model" needs torch on this
+    #: machine, so remote mode drops it here exactly as the tab list used to.
+    PROOF_PAGES = ("Live checks", "Test a model", "Results")
+
+    def build_proof(self, page):
+        """The Proof tab: the sentence that explains the checkers, then a strip of three.
+
+        THE STRIP IS NOT A SECOND COPY OF THE TAB STRIP, and that is the one thing
+        the sources changed rather than confirmed. Two tab controls that look alike
+        but work at different levels disorient a reader: "When using in-page tabs
+        and navigation tabs in the same experience, visually differentiate between
+        these tab types to convey to users that they behave differently"
+        (nngroup.com/articles/tabs-used-right/, reviewed 2026-09-02). So the tabs
+        above are a filled pill and these are an underline, with two selection
+        indicators each as that page asks -- the rule and the text colour. The
+        weight does NOT change with selection: f_bold and f_body are different
+        widths, so switching would shift every label to its right by a pixel or
+        two, and a strip that moves when you use it reads as a fault.
+
+        The same page's "Use Only One Row of Tabs" is about stacking rows inside
+        ONE control, which this is not: these are two controls at two levels, each
+        directly above its own panel, which is the arrangement its own worked
+        examples sanction. Its keyboard and ARIA advice is not taken here, and the
+        reason is worth writing down: every tab in this window is a tk.Label with a
+        <Button-1> binding and no focus ring, so giving these three keyboard
+        traversal and not the five above them would be the inconsistency that page
+        warns about. The View menu already reaches every page in the window from the
+        keyboard.
+
+        Built from the widgets this file already has -- tk.Frame, tk.Label and the
+        one-pixel rule every card here draws -- rather than a ttk.Notebook, whose
+        tab borders are drawn by the platform theme and ignore look.py's palette
+        (the same reason the training surface gave for keeping plain Tk: a natively
+        drawn ttk theme returned light grey boxes under a dark palette).
+        """
+        intro = tk.Label(page, bg=BG, fg=MUTED, font=self.f_body, justify="left", anchor="w", wraplength=1300, text=(
+            "Models write programs on the lab workstation. Seven independent checkers "
+            "try to prove each program keeps its promise, and try to catch a deliberately broken copy of it. "
+            "A program is clean only when all seven prove it and catch the broken copy."))
+        intro.pack(fill="x", pady=(0, SPACE.item))
+        # the margin either side, plus room for the frame
+        self.rewrap(intro, pad=2 * SPACE.group + SPACE.item)
+        strip = tk.Frame(page, bg=BG)
+        strip.pack(fill="x", pady=(0, SPACE.item))
+        self.proof_buttons, self.proof_rules = {}, {}
+        proof_body = tk.Frame(page, bg=BG)
+        proof_body.pack(fill="both", expand=True)
+        for name in self.PROOF_PAGES:
+            if self.remote and name == "Test a model":
+                continue
+            holder = tk.Frame(strip, bg=BG)
+            holder.pack(side="left", padx=(0, SPACE.card))
+            b = tk.Label(holder, text=name, cursor="hand2", bg=BG, fg=MUTED, font=self.f_body,
+                         padx=SPACE.tight, pady=SPACE.tight)
+            b.pack(fill="x")
+            # The underline, the ground's colour until it is selected. Two pixels
+            # rather than one on the source's own instruction -- "Do not use thin,
+            # single-pixel strokes or poor-contrast colors" for a line indicator --
+            # and because one pixel is what every card in this file strokes its edge
+            # with, so a one-pixel mark would read as a border rather than a state.
+            rule = tk.Frame(holder, bg=BG, height=2)
+            rule.pack(fill="x")
+            b.bind("<Button-1>", lambda _e, n=name: self.show_page(n))
+            self.proof_buttons[name] = b
+            self.proof_rules[name] = rule
+            self.pages[name] = tk.Frame(proof_body, bg=BG)
+        # Which of the three Proof shows before anyone has chosen one. It is a name
+        # rather than a packed frame because the window may open on another tab
+        # entirely, and Proof must still have an answer the first time it is clicked.
+        self.proof_page = self.PROOF_PAGES[0]
 
     def show_page(self, name):
-        for n, page in self.pages.items():
-            page.pack_forget()
-            self.tab_buttons[n].configure(bg=BLUE if n == name else CARD, fg="#ffffff" if n == name else MUTED)
+        """Show one page by name, whether it is a tab or one of the three behind Proof.
+
+        Both strips are driven from here so that every key of self.pages is a name
+        that can be shown: the View menu walks that dict, and "Open Collect data",
+        run_step's jump to Live checks and --page all hand it one name with no idea
+        which level it sits at. Naming Proof itself shows whichever of its three was
+        looked at last, which is why the outer loop below forgets only the tabs --
+        forgetting every page, as this method used to, would unpack the nested
+        selection inside a Proof frame that is about to be shown again.
+        """
+        if name == "Proof":
+            name = self.proof_page
+        if name in self.proof_buttons:
+            self.proof_page = name
+            for n, b in self.proof_buttons.items():
+                self.pages[n].pack_forget()
+                b.configure(fg=TEXT if n == name else MUTED)
+                self.proof_rules[n].configure(bg=ACCENT if n == name else BG)
+            self.pages[name].pack(fill="both", expand=True)
+            name = "Proof"
+        for n, b in self.tab_buttons.items():
+            self.pages[n].pack_forget()
+            b.configure(bg=ACCENT if n == name else CARD, fg=ON_ACCENT if n == name else MUTED)
         self.pages[name].pack(fill="both", expand=True)
 
-    # -- Live checks -------------------------------------------------------------
-    # The colours the training surface borrows from this shell. Every key the
-    # shell has an opinion about is named here; the ones it does not (the plot
-    # series, the log surface, the amber warning) stay as locallm/studio.py set
-    # them, because this file has no equivalent and those carry meaning.
-    TRAIN_PALETTE = {
-        "bg": BG, "panel": CARD, "field": SURFACE,
-        "fg": TEXT, "muted": MUTED, "faint": FAINT,
-        "ok": GREEN, "bad": RED,
-        "plot_bg": SURFACE, "plot_grid": LINE, "plot_axis": FAINT,
-        "learn": BLUE,
-    }
+    def open_path(self, path):
+        """Hand a file to whatever the desktop opens it with. One xdg-open call lived here
+        and raised FileNotFoundError on both other systems: xdg-open is freedesktop's, so
+        it is not on macOS and not on Windows. The three-way branch is click's launcher
+        (github.com/pallets/click, src/click/_termui_impl.py, open_url), which also reads an
+        OSError as "the helper is not installed" rather than a crash. click then falls back
+        to the webbrowser module for http URLs; there is nothing to fall back to for a local
+        notes file, so the failure is said on the status line instead."""
+        try:
+            if os.name == "nt":
+                os.startfile(str(path))                       # noqa: S606 -- Windows only, and Windows only has it
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(path)])
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except (OSError, subprocess.SubprocessError, AttributeError) as e:
+            self.say(f"Could not open {path}: {e}")
+            return
+        self.say(f"Opened {path}")
+
+    def build_menu(self):
+        """The menu bar, which on macOS exists whether the application asks for one or not.
+
+        Nothing here ever called root.config(menu=...), so beside the Apple logo the window
+        offered a bare "Python" with no About and no Preferences: root.title() names the
+        window, not the application. What can be fixed from here is the contents. Tk puts a
+        menubar child whose last path element is `apple` first in the Application menu --
+        "that menu's contents make up the first items of the Application menu"
+        (tcl-lang.org/man/tcl8.6/TkCmd/menu.htm) -- and macOS enables the Preferences item
+        only when a Tcl proc of that name exists: "The application menu Preferences menu
+        item is only enabled when this proc is defined" (tcl-lang.org/man/tcl8.6/TkCmd/
+        tk_mac.htm, ::tk::mac::ShowPreferences).
+
+        What cannot be fixed from here is the NAME. It comes from the bundle's CFBundleName,
+        so it reads "Python" until this ships as an application bundle, and no Tk call
+        changes that. ::tk::mac::standardAboutPanel is not used for the About item for the
+        same reason -- it fills itself from that bundle, so it would show Wish's version
+        rather than locallm's.
+        """
+        bar = tk.Menu(self.root, tearoff=0)      # a menubar with a tearoff entry has one before the apple menu
+        if self.aqua:
+            apple = tk.Menu(bar, name="apple", tearoff=0)
+            apple.add_command(label="About locallm", command=self.show_about)
+            bar.add_cascade(menu=apple)
+            for proc_name, command in (("tk::mac::ShowPreferences", self.show_preferences),
+                                       ("tk::mac::ShowHelp", self.show_about)):
+                try:
+                    self.root.createcommand(proc_name, command)
+                except tk.TclError:
+                    pass
+        m = tk.Menu(bar, tearoff=0)
+        m.add_command(label="Open the run notes", command=lambda: self.open_path(RUNS / "NOTES-home.md"))
+        m.add_command(label="Reload locallm's code", command=self.restart_app)
+        if not self.aqua:                     # on Aqua both of these are the Application menu's own
+            m.add_separator()
+            m.add_command(label="Settings…", command=self.show_preferences)
+            m.add_separator()
+            m.add_command(label="Quit", command=self.root.destroy)
+        bar.add_cascade(label="File", menu=m)
+        m = tk.Menu(bar, tearoff=0)
+        for name in self.pages:
+            m.add_command(label=name, command=lambda n=name: self.show_page(n))
+        bar.add_cascade(label="View", menu=m)
+        m = tk.Menu(bar, tearoff=0)
+        m.add_command(label="What this window shows", command=self.show_about)
+        bar.add_cascade(label="Help", menu=m)
+        self.root.config(menu=bar)
+        self.menubar = bar
+
+    def show_note(self, title: str, text: str):
+        """A plain toplevel for About and for Settings. Plain on purpose: it is
+        wm_overrideredirect, not Toplevel, that Aqua handles badly (see Tip)."""
+        old = getattr(self, "note_win", None)
+        if old is not None and old.winfo_exists():
+            old.destroy()
+        win = self.note_win = tk.Toplevel(self.root, bg=BG)
+        win.title(title)
+        win.transient(self.root)
+        body = tk.Label(win, text=text, bg=BG, fg=TEXT, font=self.f_body, justify="left", anchor="w",
+                        wraplength=520, padx=SPACE.group, pady=SPACE.card)
+        body.pack(fill="both", expand=True)     # no rewrap: this toplevel takes its width from the text
+        Button(win, "Close", win.destroy, ACCENT, self, filled=False).pack(pady=(0, SPACE.card))
+
+    def show_about(self):
+        """What this is, and the three facts that decide whether it behaves here."""
+        self.show_note("About locallm", (
+            "locallm\n\n"
+            "locallm builds small AI models from scratch. The models write programs, and seven independent "
+            "proof systems each try to prove a program keeps its promise and to catch a deliberately broken "
+            "copy of it. This window watches that happen and reads what it produced.\n\n"
+            f"Python {sys.version.split()[0]}\n"
+            f"Tk {self.root.tk.call('info', 'patchlevel')}, windowing system "
+            f"{self.root.tk.call('tk', 'windowingsystem')}\n"
+            + ("Pipeline steps can run on this machine.\n" if HOST_CAN_RUN_STEPS else
+               "Pipeline steps cannot run on this machine: they need a POSIX shell.\n")
+            + ("Watching the lab workstation.\n" if self.remote else "Reading this machine's own files.\n")))
+
+    def show_preferences(self):
+        """macOS enables Preferences only when ::tk::mac::ShowPreferences is defined, so it
+        has to lead somewhere real. Every setting this window has is a file or an environment
+        variable read once at start -- there is nothing here to click -- so it says where
+        they are, which is what someone opening Preferences wants to know."""
+        rows = [("Lab workstation", "T_LAB, or t/lab-workstation.conf",
+                 self.remote or "not set: this machine's own files"),
+                ("Pipeline steps", "t/steps.json", f"{len(STEPS)} steps, reread by Reload steps"),
+                ("Python that has torch", "T_PY", PY),
+                ("Check events", "T_WATCH, or t/paths.py", str(EVENTS)),
+                ("Scratch for model tests", "T_LAB_SCRATCH, or t/paths.py", str(SCRATCH)),
+                ("Where the window was left", "XDG_CACHE_HOME, or t/paths.py", str(GEOMETRY))]
+        self.show_note("Settings", "Read once at start, from these files and variables. Change them there, then "
+                                   "Reload steps or Refresh locallm.\n\n"
+                       + "\n\n".join(f"{what}\n    {where}\n    {value}" for what, where, value in rows))
+
+    # -- Home, Train and Live checks ---------------------------------------------
+    # What an embedded page is handed. This was a hand-written list of the eleven
+    # keys the shell had an opinion about, with the rest -- the plot series, the log
+    # surface, the amber warning -- left to studio.py's own literals, so one window
+    # drew from two palettes. It is now look.py's whole palette, every key, so there
+    # is nothing left to keep in step. A copy rather than the module's dict: an
+    # embedded page must not be able to edit the shell's colours. Home takes the same
+    # one; the name stays TRAIN_PALETTE because locallm/look.py and
+    # locallm/studio.py both name it in comments and this file cannot edit those.
+    TRAIN_PALETTE = dict(C)
+
+    def build_home(self, page):
+        """Host locallm/home.py's front page as the first page of this window.
+
+        The same shape as build_train below, for the same two reasons. Home is a
+        ttk.Frame that takes a parent and, embedded, the host's palette, so it needs
+        no second Tk root -- two tk.Tk() roots in a process is undefined behaviour
+        rather than untidy, since the first mainloop() opens both windows and blocks
+        until both close (stackoverflow.com/q/39417091). And the import is lazy, so
+        a front page that cannot be built costs this page and not the window.
+
+        THE LAZINESS BUYS SOMETHING DIFFERENT HERE, and the difference is worth
+        keeping straight. studio.py cannot be imported at all without torch;
+        home.py deliberately can -- it reaches studio through its own engine() and
+        its cards say in words which of them cannot work without it, which is why
+        this page is built in remote mode and on a machine with no torch rather
+        than replaced by a note. So the failure below is for home.py itself being
+        absent or broken, and it names the file rather than torch.
+
+        MEASURED here 2026-09-20 with no torch installed: home.Home(page,
+        embedded=True) builds and update() returns, and engine() reports the missing
+        torch to the cards.
+
+        THE SELF-RELOAD WATCHER NEEDS NOTHING ADDED. watched_files() derives its set
+        from sys.modules filtered to this repository, so the import below is what puts
+        locallm/home.py in it, and because this runs inside __init__ -- before the
+        first mtime snapshot is taken at the end of it -- an edit to that file reloads
+        the window instead of reading as a file that only just appeared. Checked
+        rather than assumed 2026-09-20: with Home built, watched_files() returns
+        home.py, lab.py, look.py and steps.json.
+
+        ONE TRAP THIS PAGE BRINGS, written down because it cost an hour and it is
+        tkinter's, not ours. Home schedules its own queue drain with self.after, so
+        the shell now has a descendant widget owning an after command -- nothing in
+        this window did before, because studio.py cannot be imported here. Cancelling
+        every pending after THROUGH THE ROOT and then destroying the root now raises
+        TclError("can't delete Tcl command"): Misc.after_cancel deletes the script
+        through whichever widget it was called on and drops the name from that
+        widget's _tclCommands only, and Misc.destroy then walks the owning widget's
+        list and calls tk.deletecommand on a name that is already gone, unguarded
+        (github.com/python/cpython, Lib/tkinter/__init__.py, Misc.after_cancel,
+        Misc.deletecommand, Misc.destroy -- read 2026-09-20 against 3.14). No path in
+        this window does that; restart_app replaces the process with os.execv. A test
+        teardown that cancels afters from the root and then destroys does, and the fix
+        belongs there: cancel through the widget that scheduled it, or destroy first.
+        """
+        try:
+            import home                                         # noqa: PLC0415
+        except Exception as e:                                    # noqa: BLE001
+            tk.Label(page, bg=BG, fg=RED, font=self.f_body, justify="left", anchor="w",
+                     wraplength=760, padx=SPACE.tight, pady=SPACE.item,
+                     text=("locallm's front page could not be loaded, so this window opened "
+                           "on the page behind it.\n\n"
+                           "It lives in locallm/home.py beside this file's own folder, and it "
+                           "needs nothing but tkinter and locallm/look.py to open.\n\n"
+                           f"What python said: {type(e).__name__}: {e}")
+                     ).pack(anchor="w", padx=SPACE.inner, pady=SPACE.inner)
+            return
+        try:
+            self.home = home.Home(page, embedded=True, palette=self.TRAIN_PALETTE)
+        except Exception as e:                                    # noqa: BLE001
+            tk.Label(page, bg=BG, fg=RED, font=self.f_body, justify="left", anchor="w",
+                     wraplength=760, text=f"locallm's front page failed to start.\n\n"
+                                          f"{type(e).__name__}: {e}"
+                     ).pack(anchor="w", padx=SPACE.inner, pady=SPACE.inner)
 
     def build_train(self, page):
         """Host locallm/studio.py's training surface as a page of this window.
@@ -837,21 +1376,21 @@ class Lab:
         """
         if self.remote:
             tk.Label(page, bg=BG, fg=MUTED, font=self.f_body, justify="left", anchor="w",
-                     wraplength=760, padx=4, pady=10,
+                     wraplength=760, padx=SPACE.tight, pady=SPACE.item,
                      text=("This window is pointed at the lab workstation, so the steps "
                            "run there and this machine only reads what they produce.\n\n"
                            "Training builds a model from text on the machine you are "
                            "sitting at. To do that here, unset the lab target "
                            "(t/lab-workstation.conf) and install torch for this python; "
                            "to train on the workstation, run locallm there.")
-                     ).pack(anchor="w", padx=6, pady=6)
+                     ).pack(anchor="w", padx=SPACE.inner, pady=SPACE.inner)
             return
         try:
             import studio                                       # noqa: PLC0415
         except Exception as e:                                   # noqa: BLE001
             missing = "torch" in str(e)
             tk.Label(page, bg=BG, fg=MUTED, font=self.f_body, justify="left",
-                     anchor="w", wraplength=760, padx=4, pady=10,
+                     anchor="w", wraplength=760, padx=SPACE.tight, pady=SPACE.item,
                      text=("Training needs torch, the one locallm trains with, and it is "
                            "not installed for this python.\n\n"
                            "Everything else in this window works without it: the live "
@@ -860,7 +1399,7 @@ class Lab:
                            f"What python said: {e}"
                            if missing else
                            f"The training surface could not be loaded.\n\n{type(e).__name__}: {e}")
-                     ).pack(anchor="w", padx=6, pady=6)
+                     ).pack(anchor="w", padx=SPACE.inner, pady=SPACE.inner)
             return
         try:
             self.studio = studio.Studio(page, embedded=True, palette=self.TRAIN_PALETTE)
@@ -868,31 +1407,32 @@ class Lab:
             tk.Label(page, bg=BG, fg=RED, font=self.f_body, justify="left", anchor="w",
                      wraplength=760, text=f"The training surface failed to start.\n\n"
                                           f"{type(e).__name__}: {e}"
-                     ).pack(anchor="w", padx=6, pady=6)
+                     ).pack(anchor="w", padx=SPACE.inner, pady=SPACE.inner)
 
     def build_live(self, page):
         tiles = tk.Frame(page, bg=BG)
-        tiles.pack(fill="x", pady=(0, 12))
+        tiles.pack(fill="x", pady=(0, SPACE.item))
         self.tile = {}
         for i, (key, label, color, hint) in enumerate((
-                ("now", "Checking now", BLUE, "Programs a checker is working on"),
+                ("now", "Checking now", UNSETTLED, "Programs a checker is working on"),
                 ("proven", "Proven", GREEN, "Promise proved, broken copy caught"),
                 ("not", "Not proven", RED, "Bug found, not proven, or promise too weak"),
                 ("done", "Finished", TEXT, "Every check that has ended"))):
             t = tk.Frame(tiles, bg=CARD, highlightthickness=1, highlightbackground=LINE)
-            t.grid(row=0, column=i, sticky="nsew", padx=(0 if i == 0 else 12, 0))
+            t.grid(row=0, column=i, sticky="nsew", padx=(0 if i == 0 else SPACE.item, 0))
             tiles.columnconfigure(i, weight=1)
             tk.Frame(t, bg=color, height=3).pack(fill="x")
             n = tk.Label(t, text="0", bg=CARD, fg=color, font=self.f_num)
-            n.pack(anchor="w", padx=16, pady=(10, 0))
-            tk.Label(t, text=label, bg=CARD, fg=TEXT, font=self.f_bold).pack(anchor="w", padx=16)
-            tk.Label(t, text=hint, bg=CARD, fg=FAINT, font=self.f_small).pack(anchor="w", padx=16, pady=(0, 12))
+            n.pack(anchor="w", padx=SPACE.card, pady=(SPACE.item, 0))
+            tk.Label(t, text=label, bg=CARD, fg=TEXT, font=self.f_bold).pack(anchor="w", padx=SPACE.card)
+            tk.Label(t, text=hint, bg=CARD, fg=FAINT, font=self.f_small).pack(
+                anchor="w", padx=SPACE.card, pady=(0, SPACE.item))
             self.tile[key] = n
 
         cols = tk.Frame(page, bg=BG)
         cols.pack(fill="both", expand=True)
         right = tk.Frame(cols, bg=BG, width=370)
-        right.pack(side="right", fill="y", padx=(12, 0))
+        right.pack(side="right", fill="y", padx=(SPACE.item, 0))
         right.pack_propagate(False)
         left = tk.Frame(cols, bg=BG)
         left.pack(side="left", fill="both", expand=True)
@@ -908,32 +1448,38 @@ class Lab:
         c = self.card(right, "What the results mean")
         for real, twin in (("verified", "refuted"), ("refuted", ""), ("unproved", ""), ("verified", "verified"),
                            ("timeout", ""), ("abstain", "")):
-            sym, word, sentence, color = verdict(real, twin)
+            say = verdict(real, twin)
             row = tk.Frame(c, bg=CARD)
-            row.pack(fill="x", pady=4)
-            tk.Label(row, text=sym, bg=CARD, fg=color, font=self.f_h2, width=2, anchor="n").pack(side="left", anchor="n")
+            row.pack(fill="x", pady=SPACE.tight)
+            tk.Label(row, text=say.mark, bg=CARD, fg=C[say.tone], font=self.f_h2, width=2,
+                     anchor="n").pack(side="left", anchor="n")
             txt = tk.Frame(row, bg=CARD)
             txt.pack(side="left", fill="x")
-            tk.Label(txt, text=word, bg=CARD, fg=color, font=self.f_bold, anchor="w").pack(anchor="w")
-            tk.Label(txt, text=sentence, bg=CARD, fg=MUTED, font=self.f_small, anchor="w", justify="left",
+            tk.Label(txt, text=say.word, bg=CARD, fg=C[say.tone], font=self.f_bold, anchor="w").pack(anchor="w")
+            tk.Label(txt, text=say.why, bg=CARD, fg=MUTED, font=self.f_small, anchor="w", justify="left",
                      wraplength=290).pack(anchor="w")
 
         c = self.card(self.rounds_parent, "Model rounds", "from the loop log you chose", before=self.done_outer)
         self.rounds_outer = c.master
         self.rounds_outer.pack_forget()
-        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=900, anchor="w", text=(
+        note = tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=900, anchor="w", text=(
             "Each round, locallm builds a new model from every clean program found so far, "
-            "and that model writes new programs.")).pack(fill="x")
+            "and that model writes new programs."))
+        note.pack(fill="x")
+        self.rewrap(note)
         row = tk.Frame(c, bg=CARD)
-        row.pack(fill="x", pady=8)
+        row.pack(fill="x", pady=SPACE.inner)
         self.log_var = tk.StringVar()
-        entry(row, self.log_var, self).pack(side="left", fill="x", expand=True, ipady=4)
-        Button(row, "Choose another", self.follow_loop, BLUE, self, filled=False).pack(side="left", padx=(8, 0))
+        entry(row, self.log_var, self).pack(side="left", fill="x", expand=True, ipady=SPACE.tight)
+        Button(row, "Choose another", self.follow_loop, ACCENT, self,
+               filled=False).pack(side="left", padx=(SPACE.inner, 0))
         self.rounds = self.table(c, [("round", "Round", 55), ("written", "Written", 70), ("new", "New", 55),
                                      ("clean", "Clean", 55), ("share", "Clean %", 70)], 3)
-        tk.Label(c, bg=CARD, fg=FAINT, font=self.f_small, justify="left", wraplength=900, anchor="w", text=(
+        note = tk.Label(c, bg=CARD, fg=FAINT, font=self.f_small, justify="left", wraplength=900, anchor="w", text=(
             "Written: programs the model wrote. New: not copied from what it learned from. "
-            "Clean: new and proven by all seven.")).pack(fill="x", pady=(6, 0))
+            "Clean: new and proven by all seven."))
+        note.pack(fill="x", pady=(SPACE.inner, 0))
+        self.rewrap(note)
 
     def poll_events(self):
         try:
@@ -956,15 +1502,15 @@ class Lab:
                         self.running[key] = ev
                     elif ev.get("ev") == "end":
                         self.running.pop(key, None)
-                        sym, word, sentence, color = verdict(ev.get("real"), ev.get("twin"), ev.get("agree", True))
+                        say = verdict(ev.get("real"), ev.get("twin"), ev.get("agree", True))
                         self.counts["done"] += 1
                         self.end_times.append(ev.get("t", time.time()))
                         self.end_pairs.append((ev.get("t", time.time()), ev.get("task", "")))
-                        self.counts["proven"] += word == "Proven"
-                        self.counts["not"] += color == RED
-                        self.done.insert("", 0, tags=(self.tag(color),), values=(
+                        self.counts["proven"] += say.word == "Proven"
+                        self.counts["not"] += say.tone == "refuted"
+                        self.done.insert("", 0, tags=(say.tone,), values=(
                             time.strftime("%H:%M:%S", time.localtime(ev["t"])), key[0],
-                            CHECKER.get(key[1], key[1]), f"{sym}  {word}", sentence))
+                            CHECKER.get(key[1], key[1]), f"{say.mark}  {say.word}", say.why))
                         for extra in self.done.get_children()[300:]:
                             self.done.delete(extra)
         except FileNotFoundError:
@@ -976,7 +1522,7 @@ class Lab:
         now = time.time()
         for (task, kernel), ev in sorted(self.running.items(), key=lambda kv: kv[1]["t"]):
             mem = None if self.remote else memory_mb(ev.get("pid", -1))
-            self.now.insert("", "end", tags=("blue",), values=(
+            self.now.insert("", "end", tags=("unsettled",), values=(
                 task, CHECKER.get(kernel, kernel), f"{now - ev['t']:.0f} s", "" if mem is None else f"{mem:.0f} MB"))
         for key, value in (("now", len(self.running)), ("proven", self.counts["proven"]),
                            ("not", self.counts["not"]), ("done", self.counts["done"])):
@@ -987,7 +1533,7 @@ class Lab:
             status = self.lab_error or f"Lab connected · updated {age}s ago"
             self.pulse.configure(text=f"●  {status}", fg=RED if self.lab_error else GREEN)
         else:
-            self.pulse.configure(text="●  checking" if busy else "●  idle", fg=BLUE if busy else FAINT)
+            self.pulse.configure(text="●  checking" if busy else "●  idle", fg=UNSETTLED if busy else FAINT)
         rows = {}
         if self.log_var.get():
             try:
@@ -1004,7 +1550,7 @@ class Lab:
         for r, v in sorted(rows.items(), key=lambda kv: int(kv[0])):
             share = (f"{100 * int(v['clean']) / int(v['written']):.1f}%"
                      if "clean" in v and int(v.get("written", 0) or 0) else "checking")
-            self.rounds.insert("", "end", tags=("green",) if "clean" in v else (), values=(
+            self.rounds.insert("", "end", tags=("proved",) if "clean" in v else (), values=(
                 r, v.get("written", ""), v.get("new", ""), v.get("clean", ""), share))
         self.root.after(1000, self.tick)
 
@@ -1015,7 +1561,7 @@ class Lab:
         leftcol = tk.Frame(top, bg=BG)
         leftcol.pack(side="left", fill="both", expand=True)
         rightcol = tk.Frame(top, bg=BG)
-        rightcol.pack(side="left", fill="both", expand=True, padx=(12, 0))
+        rightcol.pack(side="left", fill="both", expand=True, padx=(SPACE.item, 0))
         self.models = find_models()
 
         c = self.card(leftcol, "1   Choose a model")
@@ -1027,15 +1573,16 @@ class Lab:
                 ("Learned from", self.corpus_var, "The text the model was built from, used to spot programs it only "
                                                   "copied. Filled in when it can be found.", False)):
             row = tk.Frame(c, bg=CARD)
-            row.pack(fill="x", pady=3)
+            row.pack(fill="x", pady=SPACE.tight)
             lab = tk.Label(row, text=label, bg=CARD, fg=MUTED, font=self.f_body, width=13, anchor="w")
             lab.pack(side="left")
             Tip(lab, tip, self)
-            entry(row, var, self).pack(side="left", fill="x", expand=True, ipady=4)
+            entry(row, var, self).pack(side="left", fill="x", expand=True, ipady=SPACE.tight)
             if is_dir:
-                Button(row, "▾", lambda v=var: self.model_menu(v), BLUE, self, filled=False).pack(side="left", padx=(6, 0))
+                Button(row, "▾", lambda v=var: self.model_menu(v), ACCENT, self,
+                       filled=False).pack(side="left", padx=(SPACE.inner, 0))
             Button(row, "Browse", (lambda v=var: self.browse_dir(v)) if is_dir else (lambda v=var: self.browse_file(v)),
-                   BLUE, self, filled=False).pack(side="left", padx=(6, 0))
+                   ACCENT, self, filled=False).pack(side="left", padx=(SPACE.inner, 0))
         self.model_a.trace_add("write", lambda *_: self.fill_corpus())
         self.fill_corpus()
 
@@ -1047,12 +1594,13 @@ class Lab:
         Tip(lab, "The text the model continues from. \"t 1\" is how a t program begins. "
                  "\"Problem: ...\" asks for a specific program.", self)
         self.prompt_var = tk.StringVar(value="t 1")
-        entry(row, self.prompt_var, self, width=18).pack(side="left", ipady=4)
-        tk.Label(row, text="How many", bg=CARD, fg=MUTED, font=self.f_body).pack(side="left", padx=(18, 8))
+        entry(row, self.prompt_var, self, width=18).pack(side="left", ipady=SPACE.tight)
+        tk.Label(row, text="How many", bg=CARD, fg=MUTED,
+                 font=self.f_body).pack(side="left", padx=(SPACE.card, SPACE.inner))
         self.n_var = tk.StringVar(value="50")
-        entry(row, self.n_var, self, width=6).pack(side="left", ipady=4)
+        entry(row, self.n_var, self, width=6).pack(side="left", ipady=SPACE.tight)
         self.more_on = tk.BooleanVar(value=False)
-        Chip(row, "More settings", self.more_on, self, command=self.toggle_more).pack(side="left", padx=(18, 0))
+        Chip(row, "More settings", self.more_on, self, command=self.toggle_more).pack(side="left", padx=(SPACE.card, 0))
         self.more = tk.Frame(c, bg=CARD)
         self.len_var, self.temp_var = tk.StringVar(value="700"), tk.StringVar(value="0.8")
         self.topk_var, self.jobs_var = tk.StringVar(value="40"), tk.StringVar(value="4")
@@ -1062,9 +1610,9 @@ class Lab:
                 ("Choices", self.topk_var, "How many likely next letters the model picks from."),
                 ("Checks at once", self.jobs_var, "How many programs are checked at the same time. About a quarter of your computer's cores.")):
             lab = tk.Label(self.more, text=label, bg=CARD, fg=MUTED, font=self.f_small)
-            lab.pack(side="left", padx=(0, 6))
+            lab.pack(side="left", padx=(0, SPACE.inner))
             Tip(lab, tip, self)
-            entry(self.more, var, self, width=6).pack(side="left", padx=(0, 14), ipady=2)
+            entry(self.more, var, self, width=6).pack(side="left", padx=(0, SPACE.card), ipady=SPACE.tight)
 
         c = self.card(rightcol, "3   Which checks?")
         self.chk = {k: tk.BooleanVar(value=True) for k in ("parse", "wf", "novel")}
@@ -1074,38 +1622,40 @@ class Lab:
                               ("wf", "Follows the rules", "Passes t's basic rules: names defined, types line up, loops explained."),
                               ("novel", "New", "Not a copy of a program the model learned from.")):
             chip = Chip(row, label, self.chk[k], self)
-            chip.pack(side="left", padx=(0, 8))
+            chip.pack(side="left", padx=(0, SPACE.inner))
             Tip(chip, tip, self)
         lab = tk.Label(c, text="Proven by", bg=CARD, fg=MUTED, font=self.f_body, anchor="w")
-        lab.pack(fill="x", pady=(12, 6))
+        lab.pack(fill="x", pady=(SPACE.item, SPACE.inner))
         Tip(lab, "Each checker tries to prove the program keeps its promise and to catch a broken copy. "
                  "Every checker adds time; Dafny is the fastest.", self)
         self.kchk = {k: tk.BooleanVar(value=(k == "dafny")) for k in KERNELS}
         row = tk.Frame(c, bg=CARD)
         row.pack(fill="x")
         for k in KERNELS:
-            Chip(row, CHECKER[k], self.kchk[k], self).pack(side="left", padx=(0, 6))
+            Chip(row, CHECKER[k], self.kchk[k], self).pack(side="left", padx=(0, SPACE.inner))
         lab = tk.Label(c, text="Your own test (optional)", bg=CARD, fg=MUTED, font=self.f_body, anchor="w")
-        lab.pack(fill="x", pady=(12, 6))
+        lab.pack(fill="x", pady=(SPACE.item, SPACE.inner))
         Tip(lab, "Any command. {file} becomes the program's file. It passes when the command exits with 0. "
                  "Example: grep -q ensures {file}", self)
         self.custom_var = tk.StringVar()
-        entry(c, self.custom_var, self).pack(fill="x", ipady=4)
+        entry(c, self.custom_var, self).pack(fill="x", ipady=SPACE.tight)
 
         bar = tk.Frame(page, bg=BG)
-        bar.pack(fill="x", pady=(0, 10))
-        self.run_btn = Button(bar, "▶   Run test", self.start_test, BLUE, self)
+        bar.pack(fill="x", pady=(0, SPACE.item))
+        self.run_btn = Button(bar, "▶   Run test", self.start_test, ACCENT, self)
         self.run_btn.pack(side="left")
-        Button(bar, "■   Stop", self.stop_flag.set, RED, self, filled=False).pack(side="left", padx=10)
+        Button(bar, "■   Stop", self.stop_flag.set, RED, self, filled=False).pack(side="left", padx=SPACE.item)
         self.status = tk.Label(bar, text="", bg=BG, fg=MUTED, font=self.f_body)
-        self.status.pack(side="left", padx=8)
+        self.status.pack(side="left", padx=SPACE.inner)
         self.summary = tk.Label(page, text="", bg=BG, fg=TEXT, font=self.f_bold, justify="left", anchor="w",
                                 wraplength=1300)
-        self.summary.pack(fill="x", pady=(0, 8))
+        self.summary.pack(fill="x", pady=(0, SPACE.inner))
+        self.rewrap(self.summary)
 
         lower = tk.Frame(page, bg=BG)
         lower.pack(fill="both", expand=True)
-        c = self.card(lower, "Programs", f"{YES} yes   {NO} no   {DASH} not checked   click a row to read it",
+        c = self.card(lower, "Programs", f"{look.PROVED} yes   {look.REFUTED} no   "
+                                        f"{look.NOT_APPLICABLE} not checked   click a row to read it",
                       side="left", fill="both", expand=True)
         cols = [("model", "Model", 60), ("n", "#", 45), ("readable", "Readable", 80), ("rules", "Rules", 60),
                 ("new", "New", 50)] + [(k, CHECKER[k], 62) for k in KERNELS] + [("yours", "Yours", 55), ("clean", "Clean", 60)]
@@ -1113,14 +1663,15 @@ class Lab:
         for col in self.results["columns"]:
             self.results.column(col, anchor="center")
         self.results.bind("<<TreeviewSelect>>", self.show_sample)
-        c = self.card(lower, "The program", side="left", fill="both", expand=True, padx=(12, 0))
+        c = self.card(lower, "The program", side="left", fill="both", expand=True, padx=(SPACE.item, 0))
         self.sample_text = tk.Text(c, width=46, height=12, wrap="none", bg=SURFACE, fg=TEXT, insertbackground=TEXT,
-                                   relief="flat", font=self.f_mono, padx=10, pady=8, highlightthickness=0)
+                                   relief="flat", font=self.f_mono, padx=SPACE.item, pady=SPACE.inner,
+                                   highlightthickness=0)
         self.sample_text.pack(fill="both", expand=True)
 
     def toggle_more(self):
         if self.more_on.get():
-            self.more.pack(fill="x", pady=(10, 0))
+            self.more.pack(fill="x", pady=(SPACE.item, 0))
         else:
             self.more.pack_forget()
 
@@ -1190,6 +1741,8 @@ class Lab:
                     self.remote_hint.configure(text=payload, fg=RED)
                 elif kind == "labgpu":
                     self.show_lab_gpu(payload)
+                elif kind == "steps_error":
+                    self.step_hint.configure(text=payload, fg=RED)
                 elif kind == "results":
                     self.show_results(*payload)
                 elif kind == "status":
@@ -1303,7 +1856,7 @@ class Lab:
         clean = count(lambda r: self.passes(r, s))
         self.q.put(("status", f"Model {label}: done. Files in {run}"))
         return (f"Model {label}  ({params / 1e6:.1f} million parameters) wrote {n} programs:  " + ",  ".join(parts)
-                + f".     {YES} CLEAN: {clean} of {n} ({100 * clean / max(n, 1):.0f}%)")
+                + f".     {look.PROVED} CLEAN: {clean} of {n} ({100 * clean / max(n, 1):.0f}%)")
 
     @staticmethod
     def passes(r, s) -> bool:
@@ -1323,10 +1876,10 @@ class Lab:
         cells = []
         for k in KERNELS:
             if k not in s["kernels"] or k not in r["k"]:
-                cells.append(DASH)
+                cells.append(look.NOT_APPLICABLE)
             else:
                 real, _, twin = r["k"][k].partition("/")
-                cells.append(verdict(real, twin)[0])
+                cells.append(verdict(real, twin).mark)
         values = (label, i + 1, mark(r["parse"]), mark(r["wf"]), mark(r["novel"]), *cells, mark(r["custom"]),
                   mark(self.passes(r, s)))
         self.q.put(("row", (name, values, text, self.passes(r, s))))
@@ -1350,11 +1903,11 @@ class Lab:
         """One box per step: what it is, how far along, and what it has produced. Green while it runs."""
         for i, (key, title, what, _cmd, _check, uses) in enumerate([s[:6] for s in STEPS], 1):
             box = tk.Frame(self.box_area, bg=CARD, highlightthickness=2, highlightbackground=LINE)
-            box.pack(fill="x", pady=(0, 8))
+            box.pack(fill="x", pady=(0, SPACE.inner))
             edge = tk.Frame(box, bg=LINE, width=4)
             edge.pack(side="left", fill="y")
             body = tk.Frame(box, bg=CARD)
-            body.pack(side="left", fill="both", expand=True, padx=12, pady=10)
+            body.pack(side="left", fill="both", expand=True, padx=SPACE.item, pady=SPACE.item)
             head = tk.Frame(body, bg=CARD)
             head.pack(fill="x")
             name = tk.Label(head, text=f"{i}.  {title}", bg=CARD, fg=TEXT, font=self.f_h2)
@@ -1365,15 +1918,21 @@ class Lab:
             # second copy of a step already running is a way to lose a night's work. This tab watches.
             # No machine on the box, 2026-09-18: every step runs on the lab workstation now, so naming a
             # machine said the same thing 39 times and said it wrongly whenever a step moved.
-            bar = tk.Canvas(body, bg=SURFACE, height=8, highlightthickness=0)
-            bar.pack(fill="x", pady=(8, 4))
+            #
+            # The empty track takes a hairline, not just a fill shift. look measures the
+            # sunken ground against a card at 1.101:1 in the light theme, which is a real
+            # difference on this desk and none at all on a dim laptop screen, and a
+            # progress bar nobody can see the end of is not a progress bar.
+            bar = tk.Canvas(body, bg=SURFACE, height=8, highlightthickness=1,
+                            highlightbackground=LINE)
+            bar.pack(fill="x", pady=(SPACE.inner, SPACE.tight))
             prog = tk.Label(body, text="", bg=CARD, fg=MUTED, font=self.f_small, anchor="w")
             prog.pack(fill="x")
             desc = tk.Label(body, text=what, bg=CARD, fg=FAINT, font=self.f_small, justify="left", anchor="w",
                             wraplength=1100)
-            desc.pack(fill="x", pady=(2, 0))
-            self.boxes[key] = {"box": box, "edge": edge, "state": state, "bar": bar, "prog": prog,
-                               "paint": [box, body, head, name, state, prog, desc]}
+            desc.pack(fill="x", pady=(SPACE.tight, 0))
+            self.rewrap(desc)
+            self.boxes[key] = {"box": box, "edge": edge, "state": state, "bar": bar, "prog": prog}
             for w in (box, body, head, name, desc, prog):
                 w.bind("<Button-1>", lambda _e, k=key: self.select_step(k))
 
@@ -1428,7 +1987,7 @@ class Lab:
     def build_remote_collect(self, page):
         self.remote_hint = tk.Label(page, text="Connecting to lab workstation…", bg=BG, fg=MUTED,
                                     font=self.f_body, anchor="w")
-        self.remote_hint.pack(fill="x", pady=(0, 10))
+        self.remote_hint.pack(fill="x", pady=(0, SPACE.item))
         c = self.card(page, "Running on the lab workstation", "select a row to read its output")
         self.remote_runs = self.table(c, [("job", "Job", 320), ("kind", "Stage", 110),
                                           ("progress", "Progress", 240), ("elapsed", "Elapsed", 90)], 6)
@@ -1438,24 +1997,26 @@ class Lab:
                                           ("tasks", "Well formed", 100), ("passed", "Tests pass", 100),
                                           ("graded", "Graded", 90), ("clean", "Clean", 90)], 6)
         c = self.card(page, "Output", "updated with each lab snapshot", fill="both", expand=True)
-        self.log_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=8, wrap="word")
+        self.log_text = log_pane(c, self, 8, "word")
         self.log_text.pack(fill="both", expand=True)
         self.remote_run_rows = {}
 
     def build_remote_ai(self, page):
         c = self.card(page, "Lab workstation", "all generation, training and checks run here")
-        tk.Label(c, text="This window watches the run. Start pipeline steps from a terminal. "
-                        "Stop releases our GPU jobs when the cards are needed.",
-                 bg=CARD, fg=MUTED, font=self.f_body, wraplength=1100, justify="left").pack(anchor="w")
+        note = tk.Label(c, text="This window watches the run. Start pipeline steps from a terminal. "
+                                "Stop releases our GPU jobs when the cards are needed.",
+                        bg=CARD, fg=MUTED, font=self.f_body, wraplength=1100, justify="left")
+        note.pack(fill="x")
+        self.rewrap(note)
         row = tk.Frame(c, bg=CARD)
-        row.pack(fill="x", pady=10)
+        row.pack(fill="x", pady=SPACE.item)
         self.gpu_state = tk.Label(row, text="Waiting for lab status", bg=CARD, fg=MUTED, font=self.f_bold)
         self.gpu_state.pack(side="left")
         Button(row, "Stop our GPU jobs", lambda: self.lab_gpu("stop"), RED, self).pack(side="right")
-        self.gpu_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=12, wrap="word")
+        self.gpu_log = log_pane(c, self, 12, "word")
         self.gpu_log.pack(fill="both", expand=True)
         c = self.card(page, "Status notes", fill="both", expand=True)
-        self.alert_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=8, wrap="word")
+        self.alert_text = log_pane(c, self, 8, "word")
         self.alert_text.pack(fill="both", expand=True)
 
     def watch_lab(self):
@@ -1513,7 +2074,7 @@ class Lab:
             if isinstance(progress, (list, tuple)):
                 progress = progress[0]
             elapsed = max(0, int(time.time() - run.get("started", time.time()))) // 60
-            self.remote_runs.insert("", "end", iid=key, tags=("green",), values=(
+            self.remote_runs.insert("", "end", iid=key, tags=("proved",), values=(
                 run.get("title") or run.get("tag") or run["key"], run.get("kind", ""), progress, f"{elapsed} min"))
         if self.remote_run_rows:
             self.remote_runs.selection_set(selected if selected in self.remote_run_rows else next(iter(self.remote_run_rows)))
@@ -1524,7 +2085,7 @@ class Lab:
         active_tags = {r.get("tag") for r in runs}
         ordered = sorted(sets, key=lambda item: (item[0] in active_tags, item[1].get("updated", 0)), reverse=True)
         for tag, row in ordered:
-            self.remote_sets.insert("", "end", tags=("green" if tag in active_tags else "muted",), values=(
+            self.remote_sets.insert("", "end", tags=("proved" if tag in active_tags else "muted",), values=(
                 tag, row.get("answers", 0), row["tasks"], row["passed"], row["graded"], row["clean"]))
         if results:
             self.show_results(sets, results["totals"], results["n_problems"], results["text"])
@@ -1533,13 +2094,13 @@ class Lab:
         for ev in events.get("items", []):
             if ev.get("ev") != "end":
                 continue
-            sym, word, sentence, color = verdict(ev.get("real"), ev.get("twin"), ev.get("agree", True))
+            say = verdict(ev.get("real"), ev.get("twin"), ev.get("agree", True))
             self.counts["done"] += 1
-            self.counts["proven"] += word == "Proven"
-            self.counts["not"] += color == RED
-            self.done.insert("", 0, tags=(self.tag(color),), values=(
+            self.counts["proven"] += say.word == "Proven"
+            self.counts["not"] += say.tone == "refuted"
+            self.done.insert("", 0, tags=(say.tone,), values=(
                 time.strftime("%H:%M:%S", time.localtime(ev.get("t", time.time()))), ev.get("task", "?"),
-                CHECKER.get(ev.get("kernel"), ev.get("kernel", "?")), f"{sym}  {word}", sentence))
+                CHECKER.get(ev.get("kernel"), ev.get("kernel", "?")), f"{say.mark}  {say.word}", say.why))
         for extra in self.done.get_children()[300:]:
             self.done.delete(extra)
         gpu_runs = [r for r in runs if r.get("kind") in ("generate", "generation", "train", "training", "serve")]
@@ -1562,6 +2123,26 @@ class Lab:
         if self.remote:
             self.build_remote_collect(page)
             return
+        if not HOST_CAN_RUN_STEPS:
+            # Buttons that raise are worse than no buttons, and build_train already settled how
+            # this window answers a capability it does not have: keep the page, say what is
+            # missing (the comment above the tab list, 2026-09-20).
+            said = tk.Label(page, bg=BG, fg=MUTED, font=self.f_body, justify="left", anchor="w",
+                            wraplength=760, padx=SPACE.tight, pady=SPACE.item,
+                            text=("Every step of the data run is a shell recipe: bash to run it, ssh and rsync "
+                                  "to reach the lab workstation, nvidia-smi for the cards, systemctl for the "
+                                  "services it leaves running, sudo for the one install that needs a password. "
+                                  "This system has no POSIX shell, so those steps cannot be started here and "
+                                  "no box on this page could ever leave \"not yet\".\n\n"
+                                  "What it would take: Linux or macOS, with bash on PATH, run from a checkout "
+                                  "of this repository.\n\n"
+                                  "The rest of this window works here. The live checks, the results and the "
+                                  "answer sets are read from files, and pointing T_LAB (or "
+                                  "t/lab-workstation.conf) at the lab workstation shows the run happening "
+                                  "there, which is how the run is watched anyway."))
+            said.pack(fill="x", padx=SPACE.inner, pady=SPACE.inner)
+            self.rewrap(said, pad=2 * SPACE.group)
+            return
         self.jobs: dict[str, subprocess.Popen] = {}
         self.step_state: dict[str, str] = {}
         self.step_prog: dict[str, tuple] = {}
@@ -1572,18 +2153,21 @@ class Lab:
         head.pack(fill="x")
         tk.Label(head, text="Collect data", bg=BG, fg=TEXT, font=self.f_h2).pack(side="left")
         self.step_hint = tk.Label(head, text="", bg=BG, fg=FAINT, font=self.f_small)
-        self.step_hint.pack(side="left", padx=12)
-        Button(head, "Open notes", lambda: subprocess.Popen(["xdg-open", str(RUNS / "NOTES-home.md")]), BLUE, self,
+        self.step_hint.pack(side="left", padx=SPACE.item)
+        Button(head, "Open notes", lambda: self.open_path(RUNS / "NOTES-home.md"), ACCENT, self,
                filled=False).pack(side="right")
-        Button(head, "Reload steps", self.reload_steps, BLUE, self, filled=False).pack(side="right", padx=8)
-        Button(head, "Refresh locallm", self.restart_app, BLUE, self, filled=False).pack(side="right", padx=8)
+        Button(head, "Reload steps", self.reload_steps, ACCENT, self,
+               filled=False).pack(side="right", padx=SPACE.inner)
+        Button(head, "Refresh locallm", self.restart_app, ACCENT, self,
+               filled=False).pack(side="right", padx=SPACE.inner)
         self.show_done = tk.BooleanVar(value=False)
         Chip(head, "Show finished", self.show_done, self, command=lambda: self.refresh_steps(once=True)).pack(
-            side="right", padx=8)
-        Button(head, "Stop", lambda: self.stop_step(self.sel_key), RED, self, filled=False).pack(side="right", padx=8)
+            side="right", padx=SPACE.inner)
+        Button(head, "Stop", lambda: self.stop_step(self.sel_key), RED, self,
+               filled=False).pack(side="right", padx=SPACE.inner)
 
         holder = tk.Frame(page, bg=BG)          # scrollable: there are more steps than fit on a screen
-        holder.pack(fill="both", expand=True, pady=(10, 0))
+        holder.pack(fill="both", expand=True, pady=(SPACE.item, 0))
         canvas = tk.Canvas(holder, bg=BG, highlightthickness=0)
         sbar = ttk.Scrollbar(holder, orient="vertical", command=canvas.yview)
         canvas.configure(yscrollcommand=sbar.set)
@@ -1600,21 +2184,23 @@ class Lab:
         self.root.after(16, self.scroll_ease)
         self.build_boxes()
 
-        c = self.card(page, "Output", "last lines of the chosen step's log", fill="x", pady=(10, 0))
-        self.log_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=9, wrap="none")
+        c = self.card(page, "Output", "last lines of the chosen step's log", fill="x", pady=(SPACE.item, 0))
+        self.log_text = log_pane(c, self, 9, "none")
         self.log_text.pack(fill="both", expand=True)
         live = self.pages["Live checks"]
         strip = tk.Frame(live, bg=CARD, highlightthickness=1, highlightbackground=LINE)
-        strip.pack(fill="x", pady=(0, 12), before=live.winfo_children()[0])
+        strip.pack(fill="x", pady=(0, SPACE.item), before=live.winfo_children()[0])
         tk.Frame(strip, bg=GREEN, width=3).pack(side="left", fill="y")
-        self.run_line = tk.Label(strip, text="", bg=CARD, fg=TEXT, font=self.f_bold, anchor="w", padx=14, pady=8)
+        self.run_line = tk.Label(strip, text="", bg=CARD, fg=TEXT, font=self.f_bold, anchor="w",
+                                 padx=SPACE.card, pady=SPACE.inner)
         self.run_line.pack(side="left")
-        self.run_bar = tk.Canvas(strip, bg=SURFACE, height=10, width=260, highlightthickness=0)
-        self.run_bar.pack(side="left", padx=(0, 12))
+        self.run_bar = tk.Canvas(strip, bg=SURFACE, height=10, width=260, highlightthickness=1,
+                                 highlightbackground=LINE)     # the hairline, as in build_boxes
+        self.run_bar.pack(side="left", padx=(0, SPACE.item))
         self.run_tail = tk.Label(strip, text="", bg=CARD, fg=MUTED, font=self.f_mono, anchor="w")
         self.run_tail.pack(side="left", fill="x", expand=True)
-        Button(strip, "Open Collect data", lambda: self.show_page("Collect data"), BLUE, self,
-               filled=False).pack(side="right", padx=8, pady=6)
+        Button(strip, "Open Collect data", lambda: self.show_page("Collect data"), ACCENT, self,
+               filled=False).pack(side="right", padx=SPACE.inner, pady=SPACE.inner)
         threading.Thread(target=self.check_steps, daemon=True).start()
         self.root.after(1000, self.refresh_steps)
     # -- AI ---------------------------------------------------------------------------
@@ -1625,53 +2211,68 @@ class Lab:
         """The two things that run the run: the orchestrator (a fixed plan) and the autopilot (a local model
         choosing the next legal step every minute). Both live here rather than among the data steps."""
         c = self.card(page, "Orchestrator", "t/run_everything.py: the fixed plan, start to score, unattended")
-        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
+        note = tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
             "Runs the steps of Collect data in order without asking: it waits for each one, retries a failed step "
             "once, writes what it did to NOTES-home.md and raises an alert it cannot fix. Press the steps by hand "
-            "instead whenever you would rather drive.")).pack(fill="x", pady=(0, 6))
+            "instead whenever you would rather drive."))
+        note.pack(fill="x", pady=(0, SPACE.inner))
+        self.rewrap(note)
         row = tk.Frame(c, bg=CARD)
-        row.pack(fill="x", pady=(0, 8))
+        row.pack(fill="x", pady=(0, SPACE.inner))
         self.orch_state = tk.Label(row, text="", bg=CARD, fg=TEXT, font=self.f_bold)
         self.orch_state.pack(side="left")
-        Button(row, "Stop", lambda: self.unit("stop", "t-run-all"), RED, self, filled=False).pack(side="right", padx=8)
-        self.orch_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=6, wrap="none")
+        Button(row, "Stop", lambda: self.unit("stop", "t-run-all"), RED, self,
+               filled=False).pack(side="right", padx=SPACE.inner)
+        self.orch_log = log_pane(c, self, 6, "none")
         self.orch_log.pack(fill="x")
 
         c = self.card(page, "The lab workstation's GPUs", "t/lab_gpu.sh: a second generator on four shared cards")
-        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
+        note = tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
             "A 30B coder model served by vLLM across the four cards, answering its half of the problems while "
             "this desktop answers the other half. The cards belong to other people: Stop kills the server and "
-            "the generation within seconds and loses nothing, because every answer is written as it arrives.")
-                 ).pack(fill="x", pady=(0, 6))
+            "the generation within seconds and loses nothing, because every answer is written as it arrives."))
+        note.pack(fill="x", pady=(0, SPACE.inner))
+        self.rewrap(note)
         row = tk.Frame(c, bg=CARD)
-        row.pack(fill="x", pady=(0, 8))
+        row.pack(fill="x", pady=(0, SPACE.inner))
         self.gpu_state = tk.Label(row, text="", bg=CARD, fg=FAINT, font=self.f_bold)
         self.gpu_state.pack(side="left")
         Button(row, "Stop", lambda: self.lab_gpu("stop"), RED, self).pack(side="right")
-        Button(row, "Start", lambda: self.lab_gpu("start"), GREEN, self, filled=False).pack(side="right", padx=8)
-        Button(row, "Fetch answers", lambda: self.lab_gpu("fetch"), BLUE, self,
-               filled=False).pack(side="right", padx=8)
-        self.gpu_log = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=7, wrap="none")
+        Button(row, "Start", lambda: self.lab_gpu("start"), GREEN, self,
+               filled=False).pack(side="right", padx=SPACE.inner)
+        Button(row, "Fetch answers", lambda: self.lab_gpu("fetch"), ACCENT, self,
+               filled=False).pack(side="right", padx=SPACE.inner)
+        self.gpu_log = log_pane(c, self, 7, "none")
         self.gpu_log.pack(fill="x")
         threading.Thread(target=self.lab_gpu_watch, daemon=True).start()
 
         c = self.card(page, "Alerts", "what the autopilot could not fix: t/runs/<date>/ALERTS.md", fill="both",
                       expand=True)
-        self.alert_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=10, wrap="word")
+        self.alert_text = log_pane(c, self, 10, "word")
         self.alert_text.pack(fill="both", expand=True)
         self.root.after(2000, self.tick_ai)
 
-    @staticmethod
-    def unit(verb: str, name: str):
-        subprocess.Popen(["systemctl", "--user", verb, name])
+    def unit(self, verb: str, name: str):
+        """systemd is Linux's alone, so a button press here raised FileNotFoundError on the other
+        two systems. Same shape as lab_gpu_watch: catch it, say it, carry on."""
+        try:
+            subprocess.Popen(["systemctl", "--user", verb, name])
+        except (OSError, subprocess.SubprocessError) as e:
+            self.say(f"systemctl --user {verb} {name} did not run: {e}")
 
     def start_orchestrator(self):
+        """systemd-run puts the orchestrator in a unit that outlives this window; both it and
+        systemctl are systemd's, so off Linux this says so rather than raising."""
         (RUNS / "logs").mkdir(parents=True, exist_ok=True)
-        subprocess.Popen(["bash", "-lc",
-                          "systemctl --user reset-failed t-run-all 2>/dev/null; systemd-run --user --unit=t-run-all "
-                          f"--working-directory={TUP} -p StandardOutput=append:{RUNS}/logs/run-all.log "
-                          f"-p StandardError=append:{RUNS}/logs/run-all.log --setenv=HOME=$HOME --setenv=DISPLAY=:0 "
-                          "/usr/bin/python3 t/run_everything.py"], cwd=TUP)
+        try:
+            subprocess.Popen(["bash", "-lc",
+                              "systemctl --user reset-failed t-run-all 2>/dev/null; systemd-run --user "
+                              f"--unit=t-run-all --working-directory={TUP} "
+                              f"-p StandardOutput=append:{RUNS}/logs/run-all.log "
+                              f"-p StandardError=append:{RUNS}/logs/run-all.log --setenv=HOME=$HOME "
+                              "--setenv=DISPLAY=:0 /usr/bin/python3 t/run_everything.py"], cwd=TUP)
+        except (OSError, subprocess.SubprocessError) as e:
+            self.say(f"The orchestrator did not start: {e}")
 
     def lab_gpu(self, verb: str):
         """Start, stop or fetch the lab workstation's generation. Stop runs in the foreground of its own thread
@@ -1680,16 +2281,24 @@ class Lab:
         RUNS.joinpath("logs").mkdir(parents=True, exist_ok=True)
 
         def run():
-            with open(log, "a") as out:
-                out.write(f"\n### {time.strftime('%Y-%m-%d %H:%M:%S')} lab_gpu.sh {verb}\n")
-                out.flush()
-                subprocess.run(["bash", "t/lab_gpu.sh", verb], cwd=TUP, stdout=out, stderr=subprocess.STDOUT,
-                               env=self.step_env())
+            try:                        # a thread that dies here would leave the button looking pressed
+                with open(log, "a") as out:
+                    out.write(f"\n### {time.strftime('%Y-%m-%d %H:%M:%S')} lab_gpu.sh {verb}\n")
+                    out.flush()
+                    subprocess.run(["bash", "t/lab_gpu.sh", verb], cwd=TUP, stdout=out, stderr=subprocess.STDOUT,
+                                   env=self.step_env())
+            except (OSError, subprocess.SubprocessError) as e:
+                self.q.put(("labgpu", f"lab_gpu.sh {verb} did not run: {e}"))
+                return
             self.note(f"lab GPUs: {verb}")
         threading.Thread(target=run, daemon=True).start()
-        self.gpu_state.configure(text=f"●  {verb} sent", fg=BLUE)
+        self.gpu_state.configure(text=f"●  {verb} sent", fg=UNSETTLED)
 
     def lab_gpu_watch(self):
+        if not HOST_CAN_RUN_STEPS:      # this polls every 20 seconds: one sentence beats a stream of failures
+            self.q.put(("labgpu", "The lab scripts are shell scripts (t/lab_gpu.sh over ssh) and this system "
+                                  "has no POSIX shell, so the cards cannot be read or released from here."))
+            return
         while True:
             try:
                 p = subprocess.run(["bash", "t/lab_gpu.sh", "status"], cwd=TUP, capture_output=True, text=True,
@@ -1722,8 +2331,19 @@ class Lab:
 
     def tick_ai(self):
         def active(name):
-            return subprocess.run(["systemctl", "--user", "is-active", name],
-                                  capture_output=True, text=True).stdout.strip()
+            """The orchestrator is a systemd user unit, so this is systemctl or nothing. It used
+            to be unguarded while tick_ai reschedules itself every few seconds, which off Linux
+            meant a FileNotFoundError traceback twice a second, forever, and a status line that
+            never changed. The predicate first because a doomed call should not be made at all;
+            the same (OSError, SubprocessError) as lab_gpu_watch for the machine that has a
+            shell but no systemd, which is every Mac."""
+            if not HOST_CAN_RUN_STEPS:
+                return "needs a Linux machine with systemd"
+            try:
+                return subprocess.run(["systemctl", "--user", "is-active", name],
+                                      capture_output=True, text=True).stdout.strip()
+            except (OSError, subprocess.SubprocessError) as e:
+                return f"systemctl could not be asked: {e}"
         st = active("t-run-all")
         self.orch_state.configure(text=f"●  {st}", fg=GREEN if st == "active" else FAINT)
         for widget, path, n in ((self.orch_log, RUNS / "logs" / "run-all.log", 8),
@@ -1741,15 +2361,17 @@ class Lab:
     # -- Results ---------------------------------------------------------------------
     def build_results(self, page):
         c = self.card(page, "Answer sets", "counted from tests.json and kernels.md, refreshed every 30 seconds")
-        tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
+        note = tk.Label(c, bg=CARD, fg=MUTED, font=self.f_small, justify="left", wraplength=1200, anchor="w", text=(
             "Clean: the tests pass and all seven checkers proved it with the broken copy caught. Proven but wrong: "
             "all seven proved it and the tests fail, which is the number that must stay small. Problems: distinct "
-            "problems with a clean answer.")).pack(fill="x", pady=(0, 8))
+            "problems with a clean answer."))
+        note.pack(fill="x", pady=(0, SPACE.inner))
+        self.rewrap(note)
         self.res_table = self.table(c, [("set", "Answer set", 320), ("graded", "Graded", 80), ("clean", "Clean", 70),
                                       ("wrong", "Proven but wrong", 130), ("problems", "Problems", 90),
                                       ("passed", "Tests pass", 100), ("tasks", "Well formed", 100)], 12)
         c = self.card(page, "Pool and score", fill="both", expand=True)
-        self.results_text = tk.Text(c, bg=SURFACE, fg=TEXT, font=self.f_mono, relief="flat", height=12, wrap="word")
+        self.results_text = log_pane(c, self, 12, "word")
         self.results_text.pack(fill="both", expand=True)
         if not self.remote:
             threading.Thread(target=self.results_loop, daemon=True).start()
@@ -1793,11 +2415,11 @@ class Lab:
     def show_results(self, sets, totals, n_problems, text):
         self.res_table.delete(*self.res_table.get_children())
         for name, r in sets:
-            tag = "green" if r["clean"] else ("red" if r["wrong"] else "muted")
+            tag = "proved" if r["clean"] else ("refuted" if r["wrong"] else "muted")
             self.res_table.insert("", "end", tags=(tag,), values=(
                 name, r["graded"] or "", r["clean"] or "", r["wrong"] or "", len(r["problems"]) or "",
                 r["passed"] or "", r["tasks"] or ""))
-        self.res_table.insert("", "end", tags=("blue",), values=(
+        self.res_table.insert("", "end", tags=("ink",), values=(
             f"all {len(sets)} answer sets", totals["graded"], totals["clean"], totals["wrong"], n_problems,
             totals["passed"], totals["tasks"]))
         if self.results_text.get("1.0", "end").strip() != text.strip():
@@ -1842,19 +2464,38 @@ class Lab:
             script.write_text(f"#!/bin/bash\ncd {shlex.quote(str(TUP))}\nsudo -v\n"
                               f"( {cmd} ) 2>&1 | tee -a {shlex.quote(str(log))}\nread -p 'Enter to close'\n")
             script.chmod(0o755)
-            term = "ptyxis" if subprocess.run(["which", "ptyxis"], capture_output=True).returncode == 0 \
-                else "x-terminal-emulator"
-            subprocess.Popen([term, "-x", str(script)] if term == "ptyxis" else [term, "-e", str(script)])
+            # `which` is POSIX's and both of these are Linux desktop programs, so the probe itself
+            # raised before the terminal could. shutil.which is the portable form subprocess's own
+            # documentation points at (docs.python.org/3/library/subprocess.html), and asking for
+            # both names means a machine with neither is told to run the script by hand instead of
+            # being handed a step that cannot ask for a password.
+            term = next((t for t in ("ptyxis", "x-terminal-emulator") if shutil.which(t)), "")
+            if not term:
+                self.step_hint.configure(text=f"{title} needs a password, and no terminal program is here.",
+                                         fg=RED)
+                self.say(f"Run it in a terminal yourself: bash {script}")
+                return
+            try:
+                subprocess.Popen([term, "-x", str(script)] if term == "ptyxis" else [term, "-e", str(script)])
+            except (OSError, subprocess.SubprocessError) as e:
+                self.step_hint.configure(text=f"{title} could not open {term}: {e}", fg=RED)
+                self.say(f"Run it in a terminal yourself: bash {script}")
+                return
             self.step_hint.configure(text=f"{title} opened in a terminal.", fg=MUTED)
             return
         out = open(log, "a")
         out.write(f"\n### {time.strftime('%Y-%m-%d %H:%M:%S')} {cmd}\n")
         out.flush()
         gpu_busy = any(u == "gpu" and k in live for k, _t, _w, _c, _ck, u in [s[:6] for s in STEPS])
-        self.jobs[key] = subprocess.Popen(
-            ["bash", "-lc", cmd], cwd=TUP, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-            start_new_session=True,
-            env=dict(self.step_env(), T_JOBS="6" if uses == "cpu" and gpu_busy else "12"))
+        try:
+            self.jobs[key] = subprocess.Popen(
+                ["bash", "-lc", cmd], cwd=TUP, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                start_new_session=True,
+                env=dict(self.step_env(), T_JOBS="6" if uses == "cpu" and gpu_busy else "12"))
+        except (OSError, subprocess.SubprocessError) as e:
+            out.close()
+            self.step_hint.configure(text=f"{title} could not start: {e}", fg=RED)
+            return
         self.jobs[key].started = time.time()
         (RUNS / "logs" / f"{key}.pid").write_text(f"{self.jobs[key].pid} {self.jobs[key].started}")
         self.sel_key = key
@@ -1877,7 +2518,8 @@ class Lab:
                 continue
             try:                     # the pid file alone lies: a dead step's number may belong to something else
                 pid, started = (RUNS / "logs" / f"{key}.pid").read_text().split()
-                os.kill(int(pid), 0)
+                if not proc.alive(int(pid)):     # os.kill(pid, 0) is POSIX's; t/proc.py owns the difference
+                    continue
                 cmd = Path(f"/proc/{pid}/cmdline").read_bytes().decode(errors="replace").replace("\0", " ")
                 want = next((s[3] for s in STEPS if s[0] == key), "")
                 first = next((w for w in want.split() if "/" in w or w.endswith(".py") or w.endswith(".sh")), "")
@@ -1891,10 +2533,13 @@ class Lab:
         if key not in [k for k, *_r in self.running_steps()]:
             self.step_hint.configure(text=f"{self.title_of(key)} is not running.", fg=FAINT)
             return
-        import signal
         job = self.jobs.get(key)
         pid = job.pid if job else int((RUNS / "logs" / f"{key}.pid").read_text().split()[0])
-        os.killpg(pid, signal.SIGTERM)
+        # A step is started with start_new_session=True, so what has to go is the whole group, not the
+        # bash that leads it -- os.killpg is POSIX's and t/proc.py holds the other systems' version.
+        if not proc.stop_tree(pid):
+            self.step_hint.configure(text=f"{self.title_of(key)} would not stop; see the log.", fg=RED)
+            return
         self.note(f"stopped `{key}` by hand")
         self.step_hint.configure(text=f"{self.title_of(key)} stopped.", fg=RED)
 
@@ -1913,8 +2558,15 @@ class Lab:
                 if self.step_state.get(key) == "done" and pass_n % 20:
                     self.step_prog[key] = self.progress_of(key)
                     continue
-                ok = subprocess.run(["bash", "-lc", check], cwd=TUP, capture_output=True,
-                                    env=self.step_env()).returncode == 0
+                try:
+                    ok = subprocess.run(["bash", "-lc", check], cwd=TUP, capture_output=True,
+                                        env=self.step_env()).returncode == 0
+                except (OSError, subprocess.SubprocessError) as e:
+                    # Unguarded, this killed the thread on its first pass and every box sat at "not
+                    # yet" with nothing saying why. One line on the page, then stop: the answer will
+                    # not change while this process lives.
+                    self.q.put(("steps_error", f"The steps cannot be tested here: {e}"))
+                    return
                 self.step_state[key] = "done" if ok else ""
                 self.step_prog[key] = self.progress_of(key)
             time.sleep(3)
@@ -2076,20 +2728,25 @@ class Lab:
             bar, w = b["bar"], max(1, b["bar"].winfo_width())
             bar.delete("all")
             if frac is not None:
+                # green while it runs and once it is done; amber for a bar stopped part
+                # way along, which is a step neither working nor finished -- look's "not
+                # settled yet". That was a blue saying nothing.
                 bar.create_rectangle(0, 0, int(w * min(1.0, max(0.0, frac))), 8,
-                                     fill=GREEN if key in live or state == "done" else BLUE, width=0)
+                                     fill=GREEN if key in live or state == "done" else UNSETTLED, width=0)
             running = key in live
-            b["edge"].configure(bg=GREEN if running else (LINE if state != "done" else GREEN_DIM))
-            bg = GREEN_DIM if running else CARD
+            # A running step is marked by its edge and its outline and no longer by a
+            # tint behind it. The tint was a dim green this palette does not carry, and
+            # look's own measurement rules out the obvious substitute: on the shaded
+            # band, muted text comes to 4.00:1 against the 4.5 body bar, and two of the
+            # four labels in a box -- the progress line and the description -- are muted.
+            b["edge"].configure(bg=GREEN if running or state == "done" else LINE)
             b["box"].configure(highlightbackground=GREEN if running else
-                               (BLUE if key == self.sel_key else LINE))
-            for w2 in b["paint"]:
-                w2.configure(bg=bg)
+                               (ACCENT if key == self.sel_key else LINE))
             hide = state == "done" and not running and not self.show_done.get()
             if hide:
                 b["box"].pack_forget()
             elif not b["box"].winfo_ismapped():
-                b["box"].pack(fill="x", pady=(0, 8))
+                b["box"].pack(fill="x", pady=(0, SPACE.inner))
         self.step_hint.configure(
             text=(f"{finished} of {len(STEPS)} steps finished and hidden" if finished and not self.show_done.get()
                   else f"{finished} of {len(STEPS)} steps finished"), fg=FAINT)
@@ -2175,6 +2832,42 @@ class Lab:
             self.log_text.see("end")
 
 
+def size_window(root: tk.Tk) -> None:
+    """How big the window opens, asked of the display instead of written down here.
+
+    locallm/studio.py's fit_to_screen already does this properly and lists the three
+    failures it came from -- a fixed size taller than the work area of a 1366x768 laptop,
+    DPI awareness scaling the fonts while the pixel count stayed where it was, and a
+    position remembered from a monitor that is no longer there. Merging the trainer into
+    this window left it unused here, with 1400x900 and a 1000x700 minimum written out by
+    hand instead. It is imported lazily for the reason build_train gives: studio.py imports
+    torch at module scope and this window must still open on a machine without torch, so
+    those hand-written numbers stay as the fallback.
+    """
+    saved = ""
+    try:                                  # where it was left, so Refresh locallm does not move the window
+        saved = GEOMETRY.read_text().strip()
+    except OSError:
+        pass
+    try:
+        # look.py, not studio.py: studio imports torch at module scope, so this
+        # import failed on every machine without torch -- which is the portable
+        # case the sizing exists for -- and the window quietly took the fallback
+        # below instead. The fallback stays, for a checkout with no locallm/.
+        from look import fit_to_screen                     # noqa: PLC0415
+    except Exception:                                      # noqa: BLE001
+        root.geometry(f"{min(1400, root.winfo_screenwidth() - 20)}x"
+                      f"{min(900, root.winfo_screenheight() - 60)}+10+30")
+        root.minsize(1000, 700)
+    else:
+        fit_to_screen(root, want=(1400, 900))
+    if saved:
+        try:
+            root.geometry(saved)
+        except tk.TclError:
+            pass
+
+
 def main() -> int:
     if os.name == "nt":
         try:
@@ -2182,18 +2875,28 @@ def main() -> int:
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
         except (AttributeError, OSError):
             pass
-    page = "Live checks"
+    # Home, not Live checks: the window opens on what locallm is for. An unknown
+    # name falls back to the same page rather than refusing (Lab.__init__), so
+    # --page survives a page being renamed.
+    page = "Home"
     if "--page" in sys.argv[1:]:
         page = sys.argv[sys.argv.index("--page") + 1]
     root = tk.Tk()
     root.title("locallm")
-    w, h = min(1400, root.winfo_screenwidth() - 20), min(900, root.winfo_screenheight() - 60)
-    try:                                  # where it was left, so Refresh locallm does not move the window
-        root.geometry(GEOMETRY.read_text().strip())
-    except (OSError, tk.TclError):
-        root.geometry(f"{w}x{h}+10+30")
-    root.minsize(1000, 700)
+    # The other half of the call above. SetProcessDpiAwareness(1) promises Windows that this
+    # process scales itself; nothing then told Tk the real pixel density, so it laid the window
+    # out at one pixel per point and on a 150%-scaled display every font read a third too
+    # small. `tk scaling` is pixels per point, 1.0 being a 72 dpi monitor, and the manual warns
+    # that "it is undefined whether existing widgets will resize themselves dynamically to
+    # accommodate the new scaling factor" (tcl-lang.org/man/tcl8.6/TkCmd/tk.htm) -- which is why
+    # it is set here, before Lab builds a single widget. On X11 Tk has already derived the same
+    # number from the display, so it changes nothing there; studio.py sets the same pair.
+    try:
+        root.tk.call("tk", "scaling", root.winfo_fpixels("1i") / 72.0)
+    except tk.TclError:
+        pass
     Lab(root, start_page=page)
+    size_window(root)                     # after the widgets exist: fit_to_screen asks them how big they want to be
     root.mainloop()
     return 0
 

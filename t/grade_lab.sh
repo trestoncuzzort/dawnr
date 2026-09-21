@@ -37,7 +37,25 @@ REMOTE_EV='.cache/t-watch/home-grade.jsonl'
 if ! $SSH "$LAB" true 2>/dev/null; then
   # unreachable: run T_VPN_CMD, if one is set, and wait up to 10 minutes for the workstation to answer
   echo "lab workstation not reachable${T_VPN_CMD:+, running T_VPN_CMD}"
-  [ -n "${T_VPN_CMD:-}" ] && setsid sh -c "$T_VPN_CMD" >/dev/null 2>&1 &
+  # setsid is util-linux and macOS has none at all -- github.com/jerrykuch/ersatz-setsid
+  # exists only because of that, and Homebrew's util-linux is keg-only so it never
+  # reaches PATH either. nohup is not the substitute: it only sets SIGHUP to be ignored
+  # and starts no new session (keith.github.io/xcode-man-pages/nohup.1.html), so a ^C in
+  # this terminal would still reach the VPN. python3 has to be present to run anything in
+  # this repository anyway, and os.setsid() is the syscall setsid(1) wraps. The fork is
+  # not optional: setsid(1) "calls fork(2) if already a process group leader"
+  # (man7.org/linux/man-pages/man1/setsid.1.html), and a background job started under job
+  # control is one, where a bare os.setsid() would raise PermissionError instead.
+  if [ -n "${T_VPN_CMD:-}" ]; then
+    if command -v setsid >/dev/null 2>&1; then
+      setsid sh -c "$T_VPN_CMD" >/dev/null 2>&1 &
+    else
+      python3 -c 'import os,sys
+if os.fork(): raise SystemExit
+os.setsid()
+os.execvp("sh", ["sh", "-c", sys.argv[1]])' "$T_VPN_CMD" >/dev/null 2>&1 &
+    fi
+  fi
   for i in $(seq 1 120); do sleep 5; $SSH "$LAB" true 2>/dev/null && break; done
   $SSH "$LAB" true || { echo "still cannot reach $LAB after 10 minutes"; exit 1; }
   echo "connected"
@@ -81,23 +99,63 @@ fi
 if ! $SSH "$LAB" "cd ~/tup && git pull -q --ff-only" 2>/tmp/t-grade-pull.$$; then
   echo "WARNING: the grading machine did not update. It is grading with:"
   $SSH "$LAB" "cd ~/tup && echo '  HEAD '\$(git rev-parse --short HEAD) && echo '  dirty entries '\$(git status --porcelain | wc -l)"
-  echo "  reason: $(head -2 /tmp/t-grade-pull.$$ | tr '\n' ' ')"
+  # -n 2, not -2: BSD head documents only -n count, and this line runs here, not on the lab
+  # (keith.github.io/xcode-man-pages/head.1.html). GNU head prints the same two lines either way.
+  echo "  reason: $(head -n 2 /tmp/t-grade-pull.$$ | tr '\n' ' ')"
   echo "  a comparison across evaluators is not a comparison: regrade a baseline beside the new set."
 fi
 rm -f /tmp/t-grade-pull.$$
 if [ -n "${T_WATCH:-}" ]; then
   mkdir -p "$(dirname "$T_WATCH")"
-  # remote pids mean nothing here, so drop them before locallm reads the line
-  $SSH "$LAB" "tail -n0 -F ~/$REMOTE_EV" | stdbuf -oL -eL sed -u "s/\"pid\": [0-9]*, //" >> "$T_WATCH" &
+  # remote pids mean nothing here, so drop them before locallm reads the line.
+  # This half of the pipeline runs HERE, not through the ssh, so the line buffering has to
+  # exist on whatever machine is showing the window -- and both spellings this used to
+  # hardcode are GNU. stdbuf is coreutils 7.5+ (08/2009) and sed -u is GNU sed 3.02.80+
+  # (www.in-ulm.de/~mascheck/various/buffering/, the survey of this problem class); a BSD
+  # userland has neither, and stdbuf cannot even be ported, since it works by LD_PRELOADing
+  # a setvbuf call. BSD/macOS sed spells the same capability -l, "Make output line buffered"
+  # (keith.github.io/xcode-man-pages/sed.1.html). Rejected that survey's portable option 4,
+  # a shell read loop in place of sed: bash's ${v//pat/rep} is a glob and replaces EVERY
+  # match, where s/// without g replaces only the first, so an event carrying two pid fields
+  # would reach T_WATCH different from Linux. Probed by running it rather than by uname,
+  # because the only question that matters is whether this sed takes the flag (a Mac may
+  # have Homebrew's gsed first on PATH; a Linux box may have busybox sed).
+  if printf '' | sed -u 's/a/a/' >/dev/null 2>&1; then
+    FILTER=(sed -u)
+    command -v stdbuf >/dev/null 2>&1 && FILTER=(stdbuf -oL -eL sed -u)
+  elif printf '' | sed -l 's/a/a/' >/dev/null 2>&1; then
+    FILTER=(sed -l)
+  else
+    # Refuse by name. Without line buffering sed block-buffers into T_WATCH in 4K chunks and
+    # locallm's Live checks stays empty for most of a grade, which reads as a dead grader.
+    echo "T_WATCH is set, but nothing here can stream line by line: need GNU stdbuf with sed -u, or BSD sed -l."
+    echo "  unset T_WATCH to grade without the live stream."
+    exit 1
+  fi
+  $SSH "$LAB" "tail -n0 -F ~/$REMOTE_EV" | "${FILTER[@]}" "s/\"pid\": [0-9]*, //" >> "$T_WATCH" &
   trap 'kill %1 2>/dev/null' EXIT
 fi
+
+# `wait -n` arrived in bash 4.3 ("The `wait' builtin has a new `-n' option to wait for the next
+# child to change status", git.savannah.gnu.org/cgit/bash.git/tree/NEWS?h=bash-4.3), and bash
+# 3.2 rejects it as an invalid option. The bare `|| wait` below already caught that, but it then
+# subtracted one from n after a wait that had already reaped every job, so on a Mac the loop
+# graded one set at a time for the rest of the run. Decide on the version, not on the exit
+# status: on bash 4.3+ a nonzero `wait -n` means that answer set FAILED, which has to go on
+# meaning what it means here. BASH_VERSINFO has been set since bash 2.0.
+WAIT_N=no
+[ "${BASH_VERSINFO[0]}" -gt 4 ] && WAIT_N=yes
+[ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 3 ] && WAIT_N=yes
 
 par() {   # grade several answer sets at once, SETS of them, each with its share of the cells
   local n=0 t
   for t in "$@"; do
     grade "$t" grade-in &
     n=$((n + 1))
-    if [ "$n" -ge "$SETS" ]; then wait -n 2>/dev/null || wait; n=$((n - 1)); fi
+    if [ "$n" -ge "$SETS" ]; then
+      if [ "$WAIT_N" = yes ]; then wait -n 2>/dev/null || wait; n=$((n - 1))
+      else wait; n=0; fi   # bash 3.2 has no wait -n: one batch of SETS at a time, never more
+    fi
   done
   wait
 }
@@ -124,7 +182,19 @@ grade() {  # tag, folder name inside the tag
 case "${1:-seeds}" in
   # 2026-09-18: one mode instead of a step per round. Every answer set that has tasks worth grading and no
   # table yet, in one pass: a new set is picked up without anyone editing a list of tags.
-  pending) mapfile -t pend < <(cd "$SE" && for d in */; do t=${d%/}; \
+  # mapfile is a bash 4.0 builtin and bash 3.2 has no such command, so on a Mac this line used
+  # to die with "mapfile: command not found" and then take the whole script down on the next
+  # ${#pend[@]} under set -u. Its own documentation says not to use it if portability matters at
+  # all, and that it can do nothing a read loop cannot (bash-hackers.gabe565.com/commands/builtin/mapfile/).
+  # The loop is the form from mywiki.wooledge.org/BashFAQ/001: IFS= stops read trimming leading
+  # and trailing whitespace so a tag with spaces stays one element, -r keeps a backslash
+  # literal, and `|| [ -n "$p" ]` takes a last line that has no newline -- which is mapfile -t
+  # exactly. Checked against mapfile -t on empty input, one line, a name with spaces, a missing
+  # final newline and a backslash: same count, same elements, and an empty array either way.
+  # Process substitution rather than a pipe, for the reason mapfile needed it too: a pipe builds
+  # the array in a subshell and leaves pend empty out here.
+  pending) pend=(); p=
+           while IFS= read -r p || [ -n "$p" ]; do pend+=("$p"); done < <(cd "$SE" && for d in */; do t=${d%/}; \
              [ -d "$t/grade-in" ] || continue; [ -s "$t/kernels.md" ] && continue; echo "$t"; done)
            [ ${#pend[@]} -eq 0 ] && { echo "== nothing to grade"; exit 0; }
            echo "== ${#pend[@]} answer sets to grade: ${pend[*]}"; par "${pend[@]}" ;;

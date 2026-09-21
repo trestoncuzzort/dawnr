@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """locallm -- one window: train a model, watch seven checkers judge it, read why.
 
-    python3 locallm/app.py              opens on Train
+    python3 locallm/app.py              opens on Home
     python3 locallm/app.py --page "Live checks"
 
 This is a launcher, not a third application. The window is t/lab.py's shell and the
@@ -36,7 +36,7 @@ def main() -> int:
         print(f"locallm: the window lives in {LAB} and it is not there", file=sys.stderr)
         return 2
     if "--page" not in sys.argv[1:]:
-        sys.argv += ["--page", "Train"]
+        sys.argv += ["--page", "Home"]
     # run_path rather than import: lab.py is a script with its own main() and its
     # own sys.path setup, and running it as __main__ is exactly what it expects.
     runpy.run_path(str(LAB), run_name="__main__")

@@ -34,11 +34,13 @@ HERE = Path(__file__).resolve().parent
 OUT = HERE.parent / "docs" / "img"
 SIZE = (1400, 900)                    # the window's own default, from lab.py main()
 
-# Every page the window builds, in the order the tab strip shows them. Which of
-# these exist depends on the machine: with a lab-workstation.conf present the
-# window builds the remote variants of Collect data and AI, and Test a model is
-# left out, so a missing page here is reported and skipped rather than fatal.
-PAGES = ["Train", "Live checks", "Collect data", "Results", "AI"]
+# The pages are ASKED FOR, not listed here. A hardcoded list was here until
+# 2026-09-21 and was stale within a day: the window gained Home and Proof and
+# moved Live checks and Results behind the latter, and this tool would have
+# happily photographed the five tabs that no longer existed while reporting
+# success. The window knows its own pages, so ask it. Which pages exist depends
+# on the machine anyway -- a lab-workstation.conf gives the remote variants of
+# Collect data and AI, and Test a model needs torch.
 
 
 def free_display() -> int:
@@ -106,8 +108,12 @@ def shoot(pages: list[str], settle: float, out: Path) -> list[tuple[Path, tuple,
     root = tk.Tk()
     root.title("locallm")
     root.geometry(f"{SIZE[0]}x{SIZE[1]}+0+0")       # fills the screen: no crop needed
-    window = lab.Lab(root, start_page=pages[0])
+    window = lab.Lab(root, start_page=pages[0]) if pages else lab.Lab(root)
     out.mkdir(parents=True, exist_ok=True)
+
+    if not pages:                     # default: whatever this window actually has
+        pages = list(window.pages)
+        print(f"shots: this window has {len(pages)} pages -- {', '.join(pages)}")
 
     written = []
     for name in pages:
@@ -127,7 +133,8 @@ def shoot(pages: list[str], settle: float, out: Path) -> list[tuple[Path, tuple,
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="save one PNG per locallm page")
-    ap.add_argument("--pages", nargs="*", default=PAGES)
+    ap.add_argument("--pages", nargs="*", default=[],
+                    help="which pages; default is every page the window has")
     ap.add_argument("--settle", type=float, default=3.0,
                     help="seconds to let a page finish drawing before the grab")
     ap.add_argument("--out", type=Path, default=OUT)

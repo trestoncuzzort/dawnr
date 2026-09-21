@@ -24,14 +24,20 @@ choosing between for each next character - a quantity with units you can say out
 loud. It starts at the size of your alphabet (pure guessing) and falls as the
 model learns. Same numbers, same math, translated once.
 
-Dependencies: torch + tkinter (stdlib). Nothing else.
+EVERY VISUAL DECISION IS look.py's. The palette, the spacing scale, the two font
+lists and the wording of every judgement this page makes used to live here as
+well as in t/lab.py, which hosts this page as its Train tab; the two copies
+drifted, and a rule saying "keep these lists identical" has no enforcement. One
+list has enforcement for free, and look.py is that list.
+
+Dependencies: torch + tkinter (stdlib), and locallm/look.py. Nothing else.
 """
 from __future__ import annotations
 
 import json
 import math
-import os
 import queue
+import re
 import sys
 import threading
 import time
@@ -49,8 +55,15 @@ import torch  # noqa: E402
 
 import baselines  # noqa: E402
 import checkpoint  # noqa: E402
+import look  # noqa: E402
 import runlog  # noqa: E402
 
+# The four names that were defined in this file and now live in look.py, imported
+# bare so the call sites below read exactly as they did. Everything look.py adds
+# (PALETTES, SPACE, say_corpus, say_progress) is reached through `look.` instead,
+# so a reader can tell at a glance which decisions moved out and which are new.
+from look import MONO, SANS, resolve_fonts, system_wants_dark  # noqa: E402
+from look import fit_to_screen  # noqa: E402  (moved there; re-exported so main() and older callers keep working)
 from model import GPT, GPTConfig  # noqa: E402
 from data import (CharTokenizer, Corpus, documents, group_split,  # noqa: E402
                   split_health, split_verdict, tokenizer_fingerprint)
@@ -72,49 +85,44 @@ BENCH = HERE / "bench_device_result.json"
 SCAN_SAMPLE_BYTES = 2_000_000
 
 # --------------------------------------------------------------------------
-# COLOURS, in one place and per theme.
+# COLOURS AND SPACING ARE look.py's.
 #
-# They were scattered as literals through the widgets, which is why the app was
-# light-only: there was no single thing to change. Both palettes are defined
-# here and every widget reads from the active one.
+# Both palettes used to be a THEMES dict of literals here. They were measured
+# against WCAG in one place and this half of the window kept its own copy, so the
+# page and the shell hosting it disagreed about what grey meant. look.PALETTES
+# carries the same alias names THEMES had - bg, panel, field, fg, muted, faint,
+# ok, warn, bad, plot_*, learn, unseen, guess, log_* - so not one widget below
+# needed a different key, and look's own tests now guard every contrast pair.
 # --------------------------------------------------------------------------
-THEMES = {
-    "light": dict(
-        bg="#f0f0f0", panel="#f0f0f0", fg="#1a1c20", muted="#666a70",
-        faint="#7a7f87", ok="#2d7d46", warn="#8a6100", bad="#c0392b",
-        field="#ffffff", plot_bg="#14161a", plot_grid="#2a2f38",
-        plot_axis="#8a91a0", learn="#4da3ff", unseen="#ff9f43",
-        guess="#5a6273", log_bg="#14161a", log_fg="#c8d0dc"),
-    "dark": dict(
-        bg="#1b1d21", panel="#22252a", fg="#e6e8ec", muted="#a2a8b2",
-        faint="#8b919b", ok="#5fd08a", warn="#e0b050", bad="#ff6b5e",
-        field="#2a2e34", plot_bg="#101215", plot_grid="#2a2f38",
-        plot_axis="#8a91a0", learn="#5fb0ff", unseen="#ffb066",
-        guess="#6b7280", log_bg="#101215", log_fg="#c8d0dc"),
-}
 
+# look's tuple, named locally only so a grid call still fits on one line.
+#
+# EVERY padx AND pady BELOW MOVED ONTO IT. They were eleven hand-nudged values -
+# 1, 2, 4, 6, 8, 9, 10, 12, 14, 30, 36 - for six jobs, which is how the advanced
+# rows end up 1 px apart, and one card's contents 10 px from its left edge and 9
+# from its bottom, differences nobody chose. Each side was rounded to the nearest
+# step of look.SCALE, a tie going to the larger step; no side moved by more than
+# 4 px, and 0 stays 0, because "no gap on this edge" is a decision rather than a
+# nudged number.
+SPACE = look.SPACE
 
-def system_wants_dark() -> bool:
-    """Follow the operating system's own light/dark setting.
+# A description that hangs under its radio button clears the indicator instead of
+# starting under it. It was 30 px in the size card and 36 in the download dialog,
+# two numbers for one job; both are `page` on the scale, named here because "page
+# margin" is not what it means at either call site.
+INDENT = SPACE.page
 
-    Windows records it in the registry as AppsUseLightTheme (0 = dark). There is
-    no Tk API for this, so it is read directly and every failure falls back to
-    light - a wrong guess about a colour scheme should never stop the app
-    opening. LOCALLLM_THEME=dark|light overrides, which is also how the check
-    is tested without touching anyone's settings.
-    """
-    forced = os.environ.get("LOCALLLM_THEME", "").strip().lower()
-    if forced in ("dark", "light"):
-        return forced == "dark"
-    try:
-        import winreg
-        key = winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize")
-        with key:
-            return winreg.QueryValueEx(key, "AppsUseLightTheme")[0] == 0
-    except Exception:                                    # noqa: BLE001
-        return False
+# A Say's tone is a ROLE name - proved, refuted, unsettled, muted - while every
+# coloured widget in this file names the ALIAS for the same role: ok, bad, warn.
+# The two are the same colour in look.PALETTES, so this table is not a translation
+# between colours; it is what lets a host hand over a PARTIAL palette. t/lab.py
+# hands over look's whole one today, role keys included, and then the table is a
+# no-op - but the `palette` argument is a dict, not look.PALETTES, and a host that
+# names only the aliases (which is what t/lab.py's TRAIN_PALETTE was before it
+# became dict(C)) would otherwise have its green overridden on the one line that
+# went through a role key. `.get(tone, tone)` is the other half: `muted` is a tone
+# with no alias, and it is a palette key already.
+TONE_KEY = {"proved": "ok", "refuted": "bad", "unsettled": "warn"}
 
 
 # --------------------------------------------------------------------------
@@ -237,41 +245,131 @@ def human_time(seconds: float) -> str:
     return f"{seconds / 3600:.1f} hours"
 
 
-# Fonts are RESOLVED, not asserted. This file named a Windows-only sans in ten
-# places (four of them bold) and a Windows-only mono in one. Measured on this
-# Linux box 2026-09-20: neither family is installed, and Tk resolves them
-# silently to Adwaita Sans and DejaVu Sans Mono without warning. A family name
-# that becomes a different family on every platform is not a design decision, it
-# is an unspecified default wearing one, so
-# the SIZES and WEIGHTS here (which are decisions) are kept and the family is
-# looked up. The two preference lists are t/lab.py's, verbatim, so the merged
-# window uses one typeface rather than two arbitrary ones.
-_SANS = ["Inter", "SF Pro Text", "Helvetica Neue", "Segoe UI", "Cantarell",
-         "Ubuntu", "Noto Sans", "DejaVu Sans"]
-_MONO = ["JetBrains Mono", "SF Mono", "Menlo", "Consolas", "DejaVu Sans Mono"]
-_resolved: dict[str, str] = {}
+# HOW WIDE THE SETTINGS COLUMN IS, in characters of the body font rather than in
+# pixels. It was a flat 340, a number read off this screen at 96 dpi, and a pixel
+# count is exactly what does not survive a scaled display: claim_dpi_awareness
+# plus apply_tk_scaling grow every font by the display factor (1.5 on a 150%
+# laptop) while a literal stays put, which is the second failure fit_to_screen's
+# docstring lists - the content grew and the container did not.
+#
+# Tk sizes its own text widgets this way. An entry's -width is "an integer value
+# indicating the desired width of the entry window, in average-size characters of
+# the widget's font" (tcl-lang.org/man/tcl8.6/TkCmd/entry.htm), and a canvas
+# cannot say that - its -width is screen units - so the same rule is applied by
+# hand: Font.measure returns what a string occupies "as an integer number of
+# pixels" on the display it is asked about
+# (docs.python.org/3/library/tkinter.font.html#tkinter.font.Font.measure).
+#
+# MEASURED 2026-09-20 on this box, Cantarell 10 on a 96 dpi screen: measure("0")
+# is 8 px, and TkDefaultFont (Noto Sans 10), which is what most of the column
+# actually draws in, is also 8. Forty characters plus the padding the cards in
+# this column use on each side is 344 - the 340 it replaces, within half a
+# character.
+#
+# 340 TIMES THE SCALE FACTOR WOULD HAVE BEEN WRONG, which is why the font is
+# asked instead. fit_to_screen scales its preferred window size by
+# winfo_fpixels("1i") / 72 and is right to, but that factor is not what moves a
+# font on every platform: measured here with `tk scaling` forced to 1.0, 1.33 and
+# 2.0, a POSITIVE (point) size measured 8 px at all three, because Tk hands Xft a
+# point size and fontconfig sizes it from the X server's dpi. On Windows the same
+# point size does go through `tk scaling`. So the scale factor predicts the font
+# on one platform and not the other, while measure() reports what the font
+# actually did on both.
+SIDEBAR_CHARS = 40
 
 
-def _family(kind: str) -> str:
-    """The first installed family from the list, memoised. Needs a live root, so
-    it is called from widget construction and never at import time."""
-    if kind not in _resolved:
-        from tkinter import font as tkfont
+def sidebar_width(w: tk.Misc, chars: int = SIDEBAR_CHARS) -> int:
+    """Pixels for `chars` average characters of the body font, plus card padding.
+
+    Only the column's STARTING width: _fit hands the canvas
+    left.winfo_reqwidth() on the first <Configure>, so the content has the final
+    say either way. What this number decides is whether the column opens at the
+    right size or visibly jumps, and on a scaled display the flat 340 opened too
+    narrow for text that had already grown.
+    """
+    from tkinter import font as tkfont
+    try:
+        em = tkfont.Font(root=w, font=SANS(10, w=w)).measure("0")
+    except tk.TclError:              # no interpreter to ask, see look._family
+        em = 0
+    if em < 1:
+        # Nothing answered: fall back to the 8 px measured above, corrected for
+        # how far this display is from the 96 dpi it was measured on.
         try:
-            have = set(tkfont.families())
-        except Exception:                                       # noqa: BLE001
-            have = set()
-        names, fb = (_SANS, "TkDefaultFont") if kind == "sans" else (_MONO, "TkFixedFont")
-        _resolved[kind] = next((n for n in names if n in have), fb)
-    return _resolved[kind]
+            em = max(1, round(8 * w.winfo_fpixels("1i") / 96))
+        except tk.TclError:
+            em = 8
+    return chars * em + 2 * SPACE.item
 
 
-def SANS(size: int, *style) -> tuple:
-    return (_family("sans"), size, *style)
+# THE WHEEL DELTA IS NOT ONE UNIT OF ANYTHING. The settings column scrolled with
+# int(-e.delta / 120), which is the Windows recipe from
+# wiki.tcl-lang.org/page/mousewheel copied without its precondition: 120 is one
+# notch on win32 alone. On aqua a notch is a delta of 1, so that division floors
+# to 0 for every real trackpad or wheel event and the column did not move at all
+# - the wheel was dead on macOS, not stiff. The same page warns that Windows
+# precision touchpads send deltas well under 120 "which may accumulate", which
+# floors to 0 the same way, so the sub-unit remainder is carried to the next
+# event instead of being thrown away.
+#
+# The divisor is not a property of the platform alone. TIP 474
+# (core.tcl-lang.org/tips/doc/trunk/tip/474.md, Final, Tk 8.7) translates x11
+# buttons 4-7 into MouseWheel events AND rescales aqua's delta by 120, warning
+# that 8.6-era code will otherwise scroll "far too much" - so a mac on Tk 8.7 or
+# 9 wants the Windows divisor and a mac on 8.6 wants 1. Hence tk_patchLevel is
+# read as well, and `tk windowingsystem` rather than sys.platform, because a Tk
+# built for x11 can run on macOS and it is Tk's answer that decides which events
+# arrive. wheel_convention and wheel_units are kept pure so the aqua and win32
+# branches can be exercised by calling them on the x11 box this was written on,
+# where neither windowing system exists to test against.
+def wheel_convention(windowing: str, tk_patchlevel: str) -> tuple[int, bool]:
+    """(delta that means one scroll unit, whether the wheel also arrives as
+    buttons 4 and 5) for this windowing system and Tk version."""
+    # Digits only, first two groups: Tk reports pre-releases as "8.7a4", so
+    # int() on the split components raises exactly where the answer changes.
+    ver = tuple(int(n) for n in re.findall(r"\d+", str(tk_patchlevel))[:2])
+    if len(ver) < 2:
+        ver = (8, 6)                      # unreadable version: assume the old one
+    if windowing == "aqua":
+        return (120 if ver >= (8, 7) else 1), False
+    if windowing == "x11":
+        # Before Tk 8.7 the X server's wheel is buttons 4 and 5 and MouseWheel
+        # never fires here at all; from 8.7 Tk translates them, and script-level
+        # buttons 4 and 5 then mean physical thumb buttons, so binding those
+        # would steal clicks rather than scroll.
+        return 120, ver < (8, 7)
+    return 120, False
 
 
-def MONO(size: int, *style) -> tuple:
-    return (_family("mono"), size, *style)
+def wheel_units(delta: float, divisor: int, carry: float = 0.0) -> tuple[int, float]:
+    """Scroll units for one wheel event, plus the remainder to carry to the next.
+
+    Truncating toward zero and keeping the remainder is what lets a device that
+    reports a fifteenth of a notch at a time scroll one line per notch instead of
+    nothing at all. Rounding away from zero - Tk 8.7's own choice for fractional
+    scroll amounts, TIP 474 - is not usable here: 8.6 rejects a fractional amount
+    outright, and on 8.6 aqua a single event is already a whole notch, so it would
+    only make a precision device scroll a line per twitch.
+
+    The carry is in DELTA units, not in fractions of a scroll unit. Carrying the
+    fraction first, and it lost a line: fifteen events of delta 8 sum to
+    0.9999999999999999 in binary floating point, so the notch the user turned
+    produced no scroll at all. Integer deltas over an integer divisor are exact.
+    """
+    div = divisor or 1
+    total = carry + float(delta)
+    units = int(total / div)               # int() truncates toward zero, both signs
+    return units, total - units * div
+
+
+def tk_wheel_setup(w: tk.Misc) -> tuple[int, bool]:
+    """wheel_convention() answered by w's own interpreter."""
+    try:
+        which = str(w.tk.call("tk", "windowingsystem"))
+        level = str(w.tk.call("set", "tk_patchLevel"))
+    except tk.TclError:
+        which, level = "x11", str(tk.TkVersion)
+    return wheel_convention(which, level)
 
 
 class LearningPlot(tk.Canvas):
@@ -578,17 +676,30 @@ class Studio(ttk.Frame):
     the merged app has exactly ONE root, owned by the lab shell, and this class
     takes a parent widget either way -- which it already did, being a ttk.Frame.
 
-    What embedding must NOT do is repaint the host. `_apply_theme` calls
-    ttk.Style() and winfo_toplevel().configure(), both of which are process-wide:
-    left alone it would switch the shell's ttk theme to 'clam', restyle its
-    Treeviews, and repaint the root from the lab's #0b0e14 to this file's #1b1d21.
-    So `embedded=True` skips both, forces dark (the shell is dark-only, and a
-    light Train tab inside a dark window is the incoherence a single palette
-    exists to prevent), and takes the host's colours through `palette`.
+    What embedding must NOT do is repaint the host, so `embedded=True` skips the
+    two calls in `_apply_theme` that would: `theme_use`, and the
+    winfo_toplevel().configure() that would repaint the shell's root from
+    whichever ground this page resolved. It does NOT skip the style database,
+    which is process-wide whatever is passed: "." is "the theme root style on
+    which derived styles are based" (core.tcl-lang.org/tk/doc/trunk/doc/ttk_style.n),
+    so configuring it reaches the shell's ttk widgets too. That is now the point
+    rather than the hazard -- both halves draw from look.py, so the styling the
+    shell never wrote for its own ttk.Scrollbars arrives with the right colours in
+    it. The cost, stated because it is real: the shell's scrollbars look different
+    on a machine with torch (this page loads, and styles them) from one without
+    (the Train tab says so instead, and clam's own grey stands).
+
+    Which theme is live is NOT decided here. It used to be forced dark on the
+    grounds that the shell was dark-only; the shell now follows the operating
+    system, so it is read off the palette the host hands over -- see __init__.
     """
 
     def __init__(self, root, embedded: bool = False, palette: dict | None = None):
-        super().__init__(root, padding=10)
+        super().__init__(root, padding=SPACE.item)
+        # Resolve the families against THIS widget's interpreter before anything
+        # asks for a font, rather than leaving look._family() to find a default
+        # root that, embedded, is the shell's and right only by luck.
+        resolve_fonts(self)
         self.embedded = embedded
         self.grid(sticky="nsew")
         root.columnconfigure(0, weight=1)
@@ -603,13 +714,23 @@ class Studio(ttk.Frame):
         self.tok = None
         self.device = pick_device()
         self.vocab = 0
-        self.dark = True if embedded else system_wants_dark()
-        self.C = dict(THEMES["dark" if self.dark else "light"])
+        self.C = dict(look.PALETTES["dark" if system_wants_dark() else "light"])
         if palette:
             # The host's colours win for every key it names; this file keeps the
             # ones it alone has (the plot series, the log surface), because the
             # lab palette has no equivalent and those carry meaning.
             self.C.update(palette)
+        # WHICH THEME IS LIVE IS READ OFF THE PALETTE, not decided before it
+        # arrives. Embedded, this forced dark, which was right while t/lab.py was
+        # dark-only and is wrong now that the shell asks look.palette() and follows
+        # the operating system: on a light desktop it hands over the light palette
+        # and a flag saying dark, so every decision downstream of the flag is made
+        # about the wrong theme. `bg` is the ground either way, so comparing it to
+        # look's two grounds says which palette won the update above. Nothing in
+        # this file branches on it any more -- every colour is a palette lookup --
+        # so it is here as the answer to "which theme is this", which is what
+        # test_studio asks it for.
+        self.dark = self.C["bg"] == look.PALETTES["dark"]["bg"]
         self._apply_theme()
         self.speeds = load_speeds()
         self.advanced_open = False
@@ -627,40 +748,57 @@ class Studio(ttk.Frame):
         self._apply_preset()
         self._scan_corpus(quiet=True)
         self._load_saved(quiet=True)
-        self.after(100, self._drain)
+        self._drain_after = None
+        self.bind("<Destroy>", self._stop_draining, add="+")
+        self._keep_draining()
 
     def _apply_theme(self):
         """Restyle ttk for the active palette.
 
-        On Windows the default 'vista' theme draws its widgets from native
-        bitmaps and IGNORES background colour, so a dark palette produced light
-        grey boxes with pale text on them - unreadable, and worse than not
-        offering dark mode at all. 'clam' is drawn by Tk itself and does honour
-        the colours, so dark mode switches theme as well as palette. Light mode
-        keeps 'vista' because it should look like the rest of Windows.
+        A natively drawn theme IGNORES the colours you configure: "The XP theme
+        field element is drawn by the native XP themeing engine so you don't get
+        to pick and choose - the user gets what she expects from the theme she has
+        chosen for Windows" (wiki.tcl-lang.org/page/Ttk, quoting comp.lang.tcl
+        2011-03-16), and vista, winnative and aqua are all drawn that way. So a
+        dark palette under 'vista' produced light grey boxes with pale text on
+        them, unreadable and worse than not offering dark mode at all. 'clam' is
+        drawn by Tk itself and does honour the colours.
+
+        BOTH THEMES NOW NEED IT, where light used to be skipped. Skipping was
+        right while this file's light `bg` was #f0f0f0, which IS the Windows grey:
+        vista drew the native widget and the native widget already matched. look's
+        light ground is warm paper instead, and no native widget can be moved onto
+        it, so light under vista left 59 ttk widgets on the platform grey with the
+        plot, the log and the scrolling sidebar on paper around them. Every value
+        below is a palette lookup rather than a branch on the theme, so one path
+        serves both. What is lost is the light theme looking like the rest of
+        Windows, which stopped being available when the ground stopped being that
+        grey -- unrendered here, because this machine has no torch.
         """
         C = self.C
         style = ttk.Style()
         if not self.embedded:
             try:
-                style.theme_use("clam" if self.dark else "vista")
+                style.theme_use("clam")
             except tk.TclError:
                 pass
-        if not self.dark:
-            return
         style.configure(".", background=C["bg"], foreground=C["fg"],
                         fieldbackground=C["field"], bordercolor=C["panel"],
                         lightcolor=C["panel"], darkcolor=C["panel"])
         style.configure("TFrame", background=C["bg"])
         style.configure("TLabel", background=C["bg"], foreground=C["fg"])
-        style.configure("TLabelframe", background=C["bg"], bordercolor="#3a3f47")
+        # line and select, not the two hex literals that survived here when the
+        # rest of the colours were collected: a card's edge is the hairline, and a
+        # button under the pointer is the shaded band. Both were dark-only greys,
+        # so they were also the reason this styling could not be reused in light.
+        style.configure("TLabelframe", background=C["bg"], bordercolor=C["line"])
         style.configure("TLabelframe.Label", background=C["bg"],
                         foreground=C["fg"])
         style.configure("TRadiobutton", background=C["bg"], foreground=C["fg"])
         style.configure("TCheckbutton", background=C["bg"], foreground=C["fg"])
         style.configure("TButton", background=C["panel"], foreground=C["fg"])
         style.map("TButton",
-                  background=[("active", "#333840"), ("disabled", C["bg"])],
+                  background=[("active", C["select"]), ("disabled", C["bg"])],
                   foreground=[("disabled", C["faint"])])
         style.map("TRadiobutton", background=[("active", C["bg"])])
         style.configure("TEntry", fieldbackground=C["field"],
@@ -679,10 +817,10 @@ class Studio(ttk.Frame):
         # the Start button with it. A scrollbar that appears only when it is
         # needed is the difference between "cramped" and "the button is gone".
         outer = ttk.Frame(self)
-        outer.grid(row=0, column=0, sticky="nsw", padx=(0, 10))
+        outer.grid(row=0, column=0, sticky="nsw", padx=(0, SPACE.item))
         outer.rowconfigure(0, weight=1)
         canvas = tk.Canvas(outer, highlightthickness=0, borderwidth=0,
-                           width=340, bg=self.C["bg"])
+                           width=sidebar_width(self), bg=self.C["bg"])
         canvas.grid(row=0, column=0, sticky="nsew")
         bar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
         canvas.configure(yscrollcommand=bar.set)
@@ -699,34 +837,36 @@ class Studio(ttk.Frame):
                 bar.grid(row=0, column=1, sticky="ns")
             else:
                 bar.grid_remove()
+            # A binding is per widget, so anything that joined the column since
+            # the last pass needs one. Configure fires when a child is added.
+            self._bind_wheel(outer)
         left.bind("<Configure>", _fit)
         canvas.bind("<Configure>", _fit)
-        canvas.bind_all(
-            "<MouseWheel>",
-            lambda e: canvas.yview_scroll(int(-e.delta / 120), "units")
-            if str(canvas) in str(e.widget) or self._left_bar.winfo_ismapped()
-            else None)
+        self._bind_wheel(outer)
 
         # --- 1. text
         box = ttk.LabelFrame(left, text=" 1 · What should it learn from? ")
-        box.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        box.grid(row=0, column=0, sticky="ew", pady=(0, SPACE.item))
         box.columnconfigure(0, weight=1)
         self.v_data = tk.StringVar(value=str(HERE / "corpus.txt"))
         self.l_file = ttk.Label(box, text="—", font=SANS(9, "bold"))
-        self.l_file.grid(row=0, column=0, sticky="w", padx=10, pady=(8, 0))
+        self.l_file.grid(row=0, column=0, sticky="w", padx=SPACE.item,
+                         pady=(SPACE.inner, 0))
         self.l_corpus = ttk.Label(box, text="—", foreground=self.C["muted"],
                                   wraplength=300, justify="left")
-        self.l_corpus.grid(row=1, column=0, sticky="w", padx=10, pady=(2, 4))
+        self.l_corpus.grid(row=1, column=0, sticky="w", padx=SPACE.item,
+                           pady=SPACE.tight)
         brow = ttk.Frame(box)
-        brow.grid(row=2, column=0, sticky="w", padx=10, pady=(0, 9))
+        brow.grid(row=2, column=0, sticky="w", padx=SPACE.item,
+                  pady=(0, SPACE.inner))
         ttk.Button(brow, text="Get better text…",
                    command=self._get_corpus).grid(row=0, column=0)
         ttk.Button(brow, text="Use my own file…", command=self._browse).grid(
-            row=0, column=1, padx=(6, 0))
+            row=0, column=1, padx=(SPACE.inner, 0))
 
         # --- 2. size
         arch = ttk.LabelFrame(left, text=" 2 · How big should it be? ")
-        arch.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+        arch.grid(row=1, column=0, sticky="ew", pady=(0, SPACE.item))
         arch.columnconfigure(0, weight=1)
         # Radio and blurb get their OWN rows. Sharing one cell and separating
         # them with padding put the description on top of the option's name, so
@@ -734,28 +874,31 @@ class Studio(ttk.Frame):
         for i, name in enumerate(SIZES):
             ttk.Radiobutton(arch, text=name, value=name, variable=self.size_name,
                             command=self._apply_preset).grid(
-                row=2 * i, column=0, sticky="w", padx=10,
-                pady=(8 if i == 0 else 6, 0))
+                row=2 * i, column=0, sticky="w", padx=SPACE.item,
+                pady=(SPACE.inner, 0))
             ttk.Label(arch, text=SIZES[name]["blurb"], foreground=self.C["faint"],
                       wraplength=280, justify="left").grid(
-                row=2 * i + 1, column=0, sticky="w", padx=(30, 10), pady=(0, 2))
+                row=2 * i + 1, column=0, sticky="w", padx=(INDENT, SPACE.item),
+                pady=(0, SPACE.tight))
         self.l_params = ttk.Label(arch, text="", font=SANS(9, "bold"),
                                   foreground=self.C["ok"], wraplength=300,
                                   justify="left")
         self.l_params.grid(row=2 * len(SIZES), column=0, sticky="w",
-                           padx=10, pady=(6, 9))
+                           padx=SPACE.item, pady=SPACE.inner)
 
         # --- 3. how long
         tr = ttk.LabelFrame(left, text=" 3 · How long should it practise? ")
-        tr.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        tr.grid(row=2, column=0, sticky="ew", pady=(0, SPACE.item))
         tr.columnconfigure(0, weight=1)
         for i, name in enumerate(LENGTHS):
             ttk.Radiobutton(tr, text=name, value=name, variable=self.length_name,
                             command=self._apply_preset).grid(
-                row=i, column=0, sticky="w", padx=10, pady=(6 if i == 0 else 2, 0))
+                row=i, column=0, sticky="w", padx=SPACE.item,
+                pady=(SPACE.inner if i == 0 else SPACE.tight, 0))
         self.l_time = ttk.Label(tr, text="", foreground=self.C["muted"], wraplength=300,
                                 justify="left")
-        self.l_time.grid(row=len(LENGTHS), column=0, sticky="w", padx=10, pady=(4, 9))
+        self.l_time.grid(row=len(LENGTHS), column=0, sticky="w", padx=SPACE.item,
+                         pady=(SPACE.tight, SPACE.inner))
 
         # --- run
         run = ttk.Frame(left)
@@ -766,15 +909,80 @@ class Studio(ttk.Frame):
         self.b_train.grid(row=0, column=0, sticky="ew", ipady=8)
         self.b_stop = ttk.Button(run, text="■  Stop", command=self._stop,
                                  state="disabled")
-        self.b_stop.grid(row=0, column=1, padx=(6, 0), ipady=8)
+        self.b_stop.grid(row=0, column=1, padx=(SPACE.inner, 0), ipady=8)
 
         # --- advanced, shut by default
         self.b_adv = ttk.Button(left, text="▸  Show advanced settings",
                                 command=self._toggle_advanced)
-        self.b_adv.grid(row=4, column=0, sticky="w", pady=(12, 0))
+        self.b_adv.grid(row=4, column=0, sticky="w", pady=(SPACE.item, 0))
         self.adv = ttk.LabelFrame(left, text=" Advanced — every knob, as before ")
         self.adv.columnconfigure(1, weight=1)
         self._build_advanced()
+        self._bind_wheel(outer)
+
+    def _bind_wheel(self, w) -> None:
+        """Bind the wheel on w and every widget inside it. Safe to repeat.
+
+        PER WIDGET, NOT bind_all. The "all" tag holds one script per sequence for
+        the whole application, and t/lab.py binds <MouseWheel>, <Button-4> and
+        <Button-5> there for its own scrolling step list; with this page embedded
+        as that window's Train tab, whichever of the two was built second
+        replaced the other's script and one of the two areas silently stopped
+        scrolling. Tk 8.6 sends the wheel to the window under the pointer rather
+        than to the focus window (wiki.tcl-lang.org/page/mousewheel), so binding
+        the subtree is sufficient and needs no Enter/Leave bookkeeping - and the
+        Enter/Leave-plus-unbind_all recipe would be worse than useless here,
+        since unbind_all removes the host's binding along with ours. Rebinding a
+        widget just replaces its script, so calling this again from _fit costs a
+        walk and nothing else. Every widget in the column is created by
+        _build_left and _build_advanced, so one pass covers it; the _fit pass is
+        there for anything added later, since an unbound widget is a hole in the
+        scroll area -- Tk offers a wheel event to the widget's OWN bindtags, not
+        to its parent's.
+        """
+        if not hasattr(self, "_wheel_seqs"):
+            cv = self._left_canvas
+            divisor, buttons = tk_wheel_setup(cv)
+            self._wheel_carry = 0.0
+
+            def on_wheel(e):
+                # e.delta is 0 whenever Tk hands tkinter a non-integer %D: it
+                # swallows the conversion error rather than raising (cpython
+                # Lib/tkinter/__init__.py, Misc._substitute, getint(D) inside a
+                # try). That scrolls nothing and leaves the carry alone, so a
+                # later whole delta still lands; there is nothing better to do
+                # from here, the value is gone before Python sees it.
+                units, self._wheel_carry = wheel_units(-e.delta, divisor,
+                                                       self._wheel_carry)
+                if units:
+                    cv.yview_scroll(units, "units")
+                return "break"      # never let a class binding act on it as well
+
+            self._wheel_seqs = [("<MouseWheel>", on_wheel)]
+            if buttons:
+                self._wheel_seqs += [("<Button-4>", lambda _e: self._wheel_step(-1)),
+                                     ("<Button-5>", lambda _e: self._wheel_step(1))]
+        tree, stack = [], [w]
+        while stack:                            # iterative: a deep column is fine
+            widget = stack.pop()
+            tree.append(widget)
+            stack.extend(widget.winfo_children())
+        # Walk every time, bind only when the column grew. _fit runs on every
+        # <Configure>, which during a resize drag is dozens a second, and
+        # rebinding ~150 widgets times 3 sequences each time is thousands of Tcl
+        # calls a second for no change. A count, not an identity check: this
+        # column only ever gains widgets.
+        if len(tree) == getattr(self, "_wheel_bound", -1):
+            return
+        self._wheel_bound = len(tree)
+        for widget in tree:
+            for seq, fn in self._wheel_seqs:
+                widget.bind(seq, fn)
+
+    def _wheel_step(self, units: int) -> str:
+        """One X11 wheel button press: buttons 4 and 5 carry no delta."""
+        self._left_canvas.yview_scroll(units, "units")
+        return "break"
 
     def _build_advanced(self):
         """The original controls, unchanged in meaning and still free text.
@@ -804,11 +1012,13 @@ class Studio(ttk.Frame):
                 ("save to", self.v_out)]
         for r, (label, var) in enumerate(rows):
             ttk.Label(self.adv, text=label).grid(row=r, column=0, sticky="w",
-                                                 padx=(10, 6), pady=1)
+                                                 padx=(SPACE.item, SPACE.inner),
+                                                 pady=SPACE.tight)
             ttk.Entry(self.adv, textvariable=var, width=12).grid(
-                row=r, column=1, sticky="w", pady=1)
+                row=r, column=1, sticky="w", pady=SPACE.tight)
         ttk.Checkbutton(self.adv, text="force CPU", variable=self.v_cpu).grid(
-            row=len(rows), column=0, columnspan=2, sticky="w", padx=10, pady=(4, 8))
+            row=len(rows), column=0, columnspan=2, sticky="w", padx=SPACE.item,
+            pady=(SPACE.tight, SPACE.inner))
 
         self._preset_values: dict[str, str] = {}
         for v in (self.v_layer, self.v_head, self.v_embd, self.v_block,
@@ -818,7 +1028,7 @@ class Studio(ttk.Frame):
     def _toggle_advanced(self):
         self.advanced_open = not self.advanced_open
         if self.advanced_open:
-            self.adv.grid(row=5, column=0, sticky="ew", pady=(6, 0))
+            self.adv.grid(row=5, column=0, sticky="ew", pady=(SPACE.inner, 0))
             self.b_adv.config(text="▾  Hide advanced settings")
         else:
             self.adv.grid_remove()
@@ -837,7 +1047,7 @@ class Studio(ttk.Frame):
         self.l_headline = ttk.Label(
             right, text="Press “Start training” and this will fill in.",
             font=SANS(12, "bold"), wraplength=640, justify="left")
-        self.l_headline.grid(row=0, column=0, sticky="w", pady=(0, 6))
+        self.l_headline.grid(row=0, column=0, sticky="w", pady=(0, SPACE.inner))
 
         self.plot = LearningPlot(right, self.C, height=190)
         self.plot.grid(row=1, column=0, sticky="nsew")
@@ -848,7 +1058,7 @@ class Studio(ttk.Frame):
                  "The orange line is text it was never shown — if orange stops "
                  "falling while blue keeps going, it has started memorising "
                  "instead of learning.")
-        self.l_explain.grid(row=2, column=0, sticky="ew", pady=(6, 8))
+        self.l_explain.grid(row=2, column=0, sticky="ew", pady=SPACE.inner)
 
         # A hard-coded wraplength is a guess about the window width, and it was
         # wrong: at the default size the sentence ran off the right edge mid-word.
@@ -867,58 +1077,64 @@ class Studio(ttk.Frame):
         self.log = tk.Text(logbox, height=5, bg=self.C["log_bg"], fg=self.C["log_fg"],
                            insertbackground=self.C["log_fg"], font=MONO(9),
                            wrap="word", relief="flat")
-        self.log.grid(row=0, column=0, sticky="nsew", padx=4, pady=4)
+        self.log.grid(row=0, column=0, sticky="nsew", padx=SPACE.tight,
+                      pady=SPACE.tight)
         sb = ttk.Scrollbar(logbox, command=self.log.yview)
         sb.grid(row=0, column=1, sticky="ns")
         self.log["yscrollcommand"] = sb.set
 
         # --- 4. try it
         gen = ttk.LabelFrame(right, text=" 4 · Try it out ")
-        gen.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        gen.grid(row=4, column=0, sticky="ew", pady=(SPACE.item, 0))
         gen.columnconfigure(1, weight=1)
 
         ttk.Label(gen, text="Start it off with:").grid(
-            row=0, column=0, padx=(10, 6), pady=(8, 2), sticky="w")
+            row=0, column=0, padx=(SPACE.item, SPACE.inner),
+            pady=(SPACE.inner, SPACE.tight), sticky="w")
         self.v_prompt = tk.StringVar(value="def ")
         ttk.Entry(gen, textvariable=self.v_prompt).grid(
-            row=0, column=1, sticky="ew", pady=(8, 2), padx=(0, 10))
+            row=0, column=1, sticky="ew", pady=(SPACE.inner, SPACE.tight),
+            padx=(0, SPACE.item))
 
         ttk.Label(gen, text="How adventurous?").grid(
-            row=1, column=0, padx=(10, 6), sticky="w")
+            row=1, column=0, padx=(SPACE.item, SPACE.inner), sticky="w")
         srow = ttk.Frame(gen)
-        srow.grid(row=1, column=1, sticky="ew", padx=(0, 10))
+        srow.grid(row=1, column=1, sticky="ew", padx=(0, SPACE.item))
         srow.columnconfigure(0, weight=1)
         ttk.Scale(srow, from_=0, to=len(STYLES) - 1, orient="horizontal",
                   variable=self.style_idx,
                   command=lambda *_: self._style_label()).grid(
             row=0, column=0, sticky="ew")
         self.l_style = ttk.Label(srow, text="", width=16, foreground=self.C["muted"])
-        self.l_style.grid(row=0, column=1, padx=(8, 0))
+        self.l_style.grid(row=0, column=1, padx=(SPACE.inner, 0))
         # Inside srow, not in `gen`: gen's row 2 already holds the length slider,
         # and gridding on top of it would stack two widgets in one cell.
         self.l_style_note = ttk.Label(srow, text="", foreground=self.C["faint"])
         self.l_style_note.grid(row=1, column=0, columnspan=2, sticky="w",
-                               pady=(1, 0))
+                               pady=(SPACE.tight, 0))
 
         ttk.Label(gen, text="How much text?").grid(
-            row=2, column=0, padx=(10, 6), sticky="w", pady=(2, 8))
+            row=2, column=0, padx=(SPACE.item, SPACE.inner), sticky="w",
+            pady=(SPACE.tight, SPACE.inner))
         lrow = ttk.Frame(gen)
-        lrow.grid(row=2, column=1, sticky="ew", padx=(0, 10), pady=(2, 8))
+        lrow.grid(row=2, column=1, sticky="ew", padx=(0, SPACE.item),
+                  pady=(SPACE.tight, SPACE.inner))
         lrow.columnconfigure(0, weight=1)
         ttk.Scale(lrow, from_=100, to=2000, orient="horizontal",
                   variable=self.sample_len,
                   command=lambda *_: self._len_label()).grid(
             row=0, column=0, sticky="ew")
         self.l_len = ttk.Label(lrow, text="", width=16, foreground=self.C["muted"])
-        self.l_len.grid(row=0, column=1, padx=(8, 0))
+        self.l_len.grid(row=0, column=1, padx=(SPACE.inner, 0))
 
         self.b_gen = ttk.Button(gen, text="Write something",
                                 command=self._generate, state="disabled")
         self.b_gen.grid(row=3, column=0, columnspan=2, sticky="ew",
-                        padx=10, pady=(0, 10), ipady=4)
+                        padx=SPACE.item, pady=(0, SPACE.item), ipady=4)
 
         self.status = ttk.Label(self, text="", foreground=self.C["muted"])
-        self.status.grid(row=1, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        self.status.grid(row=1, column=0, columnspan=2, sticky="w",
+                         pady=(SPACE.inner, 0))
         self._style_label()
         self._len_label()
         self._set_status(f"Ready. Training will use "
@@ -946,9 +1162,16 @@ class Studio(ttk.Frame):
                                        ("steps", self.v_steps),
                                        ("batch", self.v_batch))}
         if now != self._preset_values:
+            # The one colour literal left after the move to look.py, and the only
+            # text in either half of the window that misses the bar look's tests
+            # hold every palette pair to: darkgoldenrod measures 2.79:1 on look's
+            # light paper and 3.07:1 on its card, against the 4.5:1 of SC 1.4.3.
+            # `warn` is the same amber intention at 4.60 and 5.06, and it follows
+            # the theme, which a literal cannot -- the line it is reset to two
+            # methods down already reads `ok` from the palette.
             self.l_params.config(
                 text=self.l_params.cget("text").split("  —")[0] + "  — edited by hand",
-                foreground="#b8860b")
+                foreground=self.C["warn"])
 
     def _apply_preset(self):
         """Presets are the source of truth; the advanced fields are written FROM
@@ -1025,26 +1248,29 @@ class Studio(ttk.Frame):
 
         ttk.Label(win, text="What should your AI read?",
                   font=SANS(11, "bold")).grid(
-            row=0, column=0, sticky="w", padx=14, pady=(12, 8))
+            row=0, column=0, sticky="w", padx=SPACE.card,
+            pady=(SPACE.item, SPACE.inner))
         for i, name in enumerate(sorted(get_corpus.SOURCES)):
             s = get_corpus.SOURCES[name]
             label = {"stories": "Simple stories  (recommended)",
                      "books": "Classic books"}.get(name, name)
             ttk.Radiobutton(win, text=label, value=name, variable=choice).grid(
-                row=1 + 2 * i, column=0, sticky="w", padx=14)
+                row=1 + 2 * i, column=0, sticky="w", padx=SPACE.card)
             ttk.Label(win, text=s["best_for"], foreground=self.C["faint"],
                       wraplength=430, justify="left").grid(
-                row=2 + 2 * i, column=0, sticky="w", padx=(36, 14), pady=(0, 8))
+                row=2 + 2 * i, column=0, sticky="w", padx=(INDENT, SPACE.card),
+                pady=(0, SPACE.inner))
 
         size_row = ttk.Frame(win)
-        size_row.grid(row=9, column=0, sticky="ew", padx=14, pady=(4, 2))
+        size_row.grid(row=9, column=0, sticky="ew", padx=SPACE.card,
+                      pady=SPACE.tight)
         ttk.Label(size_row, text="How much?").grid(row=0, column=0)
         l_mb = ttk.Label(size_row, text="", width=22, foreground=self.C["muted"])
         ttk.Scale(size_row, from_=20, to=600, orient="horizontal", variable=mb,
                   length=250,
                   command=lambda *_: l_mb.config(
                       text=f"{int(mb.get())} MB  (~{int(mb.get())*1_000_000/1e6:.0f}M characters)")
-                  ).grid(row=0, column=1, padx=8)
+                  ).grid(row=0, column=1, padx=SPACE.inner)
         l_mb.grid(row=0, column=2)
         l_mb.config(text="200 MB  (~200M characters)")
 
@@ -1052,14 +1278,15 @@ class Studio(ttk.Frame):
                   text="Downloaded once and kept, so this is a one-time wait. "
                        "Only plain text is fetched — the model itself is always "
                        "built from scratch on this computer.").grid(
-            row=10, column=0, sticky="w", padx=14, pady=(6, 8))
+            row=10, column=0, sticky="w", padx=SPACE.card, pady=SPACE.inner)
 
         btns = ttk.Frame(win)
-        btns.grid(row=11, column=0, sticky="e", padx=14, pady=(0, 12))
+        btns.grid(row=11, column=0, sticky="e", padx=SPACE.card,
+                  pady=(0, SPACE.item))
         b_go = ttk.Button(btns, text="Download")
         b_go.grid(row=0, column=0)
         ttk.Button(btns, text="Cancel", command=win.destroy).grid(
-            row=0, column=1, padx=(6, 0))
+            row=0, column=1, padx=(SPACE.inner, 0))
 
         def go():
             b_go.config(state="disabled", text="Downloading…")
@@ -1102,39 +1329,39 @@ class Studio(ttk.Frame):
         self.vocab = len(set(text))
         sampled = len(text) > SCAN_SAMPLE_BYTES
         sample = text[:SCAN_SAMPLE_BYTES] if sampled else text
+        # MEASURING HERE, JUDGING IN look.say_corpus. Which sentence and which
+        # colour go with which verdict was an if/elif ladder in this method, over
+        # the three leakage verdicts, the three split problems and the precedence
+        # between them; TrainWorker decides the same thing from the same two
+        # reports, in its own longer words, for the log. The measurements stay
+        # here. Calling say_corpus with no verdict is what "the scan has not
+        # produced one" looks like, so the except arm needs no second copy of that
+        # sentence either.
+        rep = None
+        say = look.say_corpus(None)
         try:
             tr_txt, va_txt = group_split(sample)
             rep = leakage_scan(tr_txt, va_txt, doc_aligned=True)  # group_split: it is
             health = split_health(sample)
-            colour = {"CLEAN": self.C["ok"], "SUSPECT": self.C["warn"],
-                      "CONTAMINATED": self.C["bad"]}[rep.verdict]
-            note = {"CLEAN": "Looks fine to train on.",
-                    "SUSPECT": "Some passages repeat — the fairness test may be weak.",
-                    "CONTAMINATED": "Heavy repetition — the fairness test will not "
-                                    "mean much."}[rep.verdict]
-            verdict = split_verdict(health)
-            if rep.trustworthy and verdict == "corpus":
-                colour = self.C["warn"]
-                note = (f"This text cannot be split into a fair test — at most "
-                        f"{health['achievable_val_frac']:.1%} can be held back. More, "
-                        f"smaller files would help.")
-            elif rep.trustworthy and verdict == "splitter":
-                colour = self.C["warn"]
-                note = ("Only a sliver was held back for testing, though this text "
-                        "could support more — another seed would split it better.")
-            elif rep.trustworthy and verdict:
-                colour = self.C["warn"]
-                note = "Nothing could be held back for testing."
+            say = look.say_corpus(rep.verdict, rep.trustworthy,
+                                  split_verdict(health),
+                                  health["achievable_val_frac"])
         except Exception:                       # never let the scan block training
-            colour, note, rep = self.C["ok"], "", None
+            # rep too, so the report below stays quiet about a scan that did not
+            # finish. THIS ARM USED TO CLAIM A PASS: it fell back to the ok colour
+            # and an empty note, so a check that crashed was indistinguishable
+            # from one that passed. It now reads "Not checked", in muted, which is
+            # the one behaviour change in this method.
+            rep = None
         docs = len(documents(sample))
+        note = f"{say.mark} {say.word} — {say.why}"
         self.l_corpus.config(
             text=f"{len(text):,} characters · {self.vocab} different characters"
                  + (f" · {docs:,} document(s)\n{note}" if not sampled else
                     f"\n{note}  (checked the first "
                     f"{SCAN_SAMPLE_BYTES // 1_000_000} MB; the full check runs "
                     f"when training starts)"),
-            foreground=colour)
+            foreground=self.C[TONE_KEY.get(say.tone, say.tone)])
         # Show the "pure guessing" baseline as soon as a file is chosen, not only
         # once training starts. Before this the chart opened as an empty 1-10 box
         # with nothing to compare anything against, which is the exact problem the
@@ -1185,7 +1412,9 @@ class Studio(ttk.Frame):
         self.b_train.config(state="disabled")
         self.b_stop.config(state="normal")
         self.b_gen.config(state="disabled")
-        self.l_headline.config(text="Starting…")
+        # Explicit fg: _headline colours this label by tone, so a plain text
+        # change would leave the last run's green or amber on a neutral word.
+        self.l_headline.config(text="Starting…", foreground=self.C["fg"])
         self.worker = TrainWorker(cfg, self.q, self.stop_evt)
         self.worker.start()
 
@@ -1274,20 +1503,56 @@ class Studio(ttk.Frame):
         threading.Thread(target=work, daemon=True).start()
 
     # ------------------------------------------------------------ headline
-    def _headline(self, train_loss: float) -> str:
-        """One sentence a person can act on, from the same number the chart plots."""
-        choices = math.exp(min(train_loss, 20))
-        if not self.vocab:
-            return f"Narrowed down to about {choices:.0f} choices per character."
-        if choices >= self.vocab * 0.95:
-            return (f"Still guessing: all {self.vocab} characters look equally "
-                    f"likely to it. This is where every model starts.")
-        pct = (1 - (choices - 1) / max(self.vocab - 1, 1)) * 100
-        return (f"It has narrowed each next character down to about "
-                f"{choices:.1f} of {self.vocab} possibilities "
-                f"— {pct:.0f}% of the way from guessing to certainty.")
+    def _headline(self, train_loss: float, prefix: str = "") -> None:
+        """Show how far it has got, from the same number the chart plots.
+
+        The sentences and the 0.95 "still guessing" bar are look.say_progress's
+        now; what it adds is a mark, a word and a tone, so the finding above the
+        chart is shown the way every other judgement in the window is. It SETS
+        the label rather than returning a string, because a Say that is rendered
+        in one place cannot leave the colour of the last one behind it.
+        """
+        say = look.say_progress(train_loss, self.vocab)
+        self.l_headline.config(
+            text=f"{prefix}{say.mark} {say.word} — {say.why}",
+            foreground=self.C[TONE_KEY.get(say.tone, say.tone)])
 
     # -------------------------------------------------------------- pump
+    # WHY THE TOPLEVEL AND NOT self.after(100, self._drain). Misc.after() registers
+    # a Tcl command on the widget it is called on and appends the name to THAT
+    # widget's _tclCommands. Misc.after_cancel() deletes the command and then
+    # removes the name from the widget it is called on. So cancelling through a
+    # different widget than the one that scheduled splits the bookkeeping: the Tcl
+    # command goes, the stale name stays on the scheduler, and that widget's
+    # destroy() later tries to delete a command that is already gone and raises
+    # TclError "can't delete Tcl command".
+    #
+    # That is not hypothetical. t/test_lab_gui.py's tearDown does exactly this --
+    # `for cb in root.tk.call("after", "info"): root.after_cancel(cb)` and then
+    # root.destroy() -- so a loop scheduled on this frame broke teardown every
+    # single run, while lab.py's fourteen loops never did because they all
+    # schedule on the root and so cancel consistently. Scheduling on the toplevel
+    # is what keeps the register and the cancel on one widget.
+    # (Mechanism read in the failing interpreter's own tkinter/__init__.py:
+    # Misc.after, _register, after_cancel, deletecommand, 2026-09-21.)
+    #
+    # The id is still held and cancelled on destroy, for the other case: this page
+    # being taken down while the window lives on, where nothing else would stop
+    # the loop.
+    def _keep_draining(self, ms: int = 100):
+        if self.winfo_exists():
+            self._drain_after = self.winfo_toplevel().after(ms, self._drain)
+
+    def _stop_draining(self, event=None):
+        if event is not None and event.widget is not self:
+            return                       # a child being destroyed, not this page
+        if self._drain_after is not None:
+            try:
+                self.winfo_toplevel().after_cancel(self._drain_after)
+            except (tk.TclError, KeyError):
+                pass                     # already cancelled, or the window is going
+            self._drain_after = None
+
     def _drain(self):
         try:
             while True:
@@ -1309,7 +1574,7 @@ class Studio(ttk.Frame):
                 elif kind == "metrics":
                     m = payload
                     self.plot.add(m["step"], m["train"], m["val"])
-                    self.l_headline.config(text=self._headline(m["train"]))
+                    self._headline(m["train"])
                     self._set_status(
                         f"Training… {m['step'] + 1:,} steps done · "
                         f"about {human_time(m['remaining'])} left")
@@ -1321,8 +1586,7 @@ class Studio(ttk.Frame):
                     self.b_train.config(state="normal")
                     self.b_stop.config(state="disabled")
                     self.b_gen.config(state="normal")
-                    self.l_headline.config(
-                        text="Done. " + self._headline(payload["train"]))
+                    self._headline(payload["train"], prefix="Done. ")
                     self._set_status(
                         f"Finished in {human_time(payload['elapsed'])}. "
                         f"Press “Write something” to see what it learned.")
@@ -1346,26 +1610,13 @@ class Studio(ttk.Frame):
                     self._set_status("Something went wrong — see the panel above.")
         except queue.Empty:
             pass
-        self.after(100, self._drain)
+        self._keep_draining()
 
 
 def main():
-    # DPI AWARENESS, BEFORE THE ROOT EXISTS. Windows scales unaware apps by
-    # stretching their bitmap, so on a 150%-scaled display every label came out
-    # soft and slightly blurred. Telling Windows we handle it ourselves, then
-    # telling Tk the real pixel density, gets crisp text at any scale. Wrapped
-    # because neither call exists off Windows and neither is worth failing over.
-    try:
-        import ctypes
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)   # per-monitor aware
-    except Exception:                                    # noqa: BLE001
-        pass
-
+    claim_dpi_awareness()
     root = tk.Tk()
-    try:
-        root.tk.call("tk", "scaling", root.winfo_fpixels("1i") / 72.0)
-    except tk.TclError:
-        pass
+    apply_tk_scaling(root)
     root.title("Train My AI — built from scratch on this computer")
     try:
         ttk.Style().theme_use("vista")
@@ -1376,45 +1627,42 @@ def main():
     root.mainloop()
 
 
-def fit_to_screen(root: tk.Tk, want: tuple[int, int]) -> None:
-    """Size and place the window so it cannot open off-screen or clipped.
+def claim_dpi_awareness() -> None:
+    """Tell Windows this process scales itself. Must run BEFORE any Tk root.
 
-    Three things went wrong before, and all three are the same mistake -- a
-    pixel size written down in advance by someone who could not see the screen
-    it would open on:
+    Windows scales unaware apps by stretching their bitmap, so on a 150%-scaled
+    display every label came out soft and slightly blurred. Claiming awareness
+    here and then telling Tk the real pixel density (apply_tk_scaling) gets crisp
+    text at any scale. Wrapped because the call does not exist off Windows and is
+    not worth failing over.
 
-      * a fixed 1180x820 is bigger than the usable area on a 1366x768 laptop,
-        so the bottom of the window - which is where the buttons are - was
-        simply not reachable;
-      * turning on DPI awareness scales every font by the display factor (1.5
-        here) while leaving that pixel count alone, so the content grew and the
-        window did not, and the right-hand column was cut off mid-sentence;
-      * a window remembered at a position from a second monitor opens off the
-        edge of a single-monitor machine.
-
-    So: ask the layout how big it actually wants to be, scale the preference by
-    the same factor the fonts were scaled by, clamp both to the work area, and
-    centre it. The minimum is clamped too, because a minsize larger than the
-    screen is unrecoverable - the user cannot resize their way out of it.
+    Module level, not inside main(), because main() runs only when this file is
+    the program: in the merged window t/lab.py owns the root, so a host that
+    wants crisp text on a scaled display calls this before creating it.
     """
-    root.update_idletasks()
+    try:
+        import ctypes                                    # noqa: PLC0415
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)   # per-monitor aware
+    except Exception:                                    # noqa: BLE001
+        pass
+
+
+def apply_tk_scaling(widget: tk.Misc) -> float:
+    """Point Tk at the display's real pixel density; return the factor in force.
+
+    `tk scaling` is per interpreter and there is exactly one, so this is the
+    window owner's call to make and not a page's - which is why Studio does not
+    make it even standalone. Idempotent: winfo_fpixels("1i") comes from the
+    screen's reported geometry and does not move when the scaling factor does.
+    Returns 1.0 if Tk refuses, which is also what it was using.
+    """
+    root = widget.winfo_toplevel()
     try:
         scale = root.winfo_fpixels("1i") / 72.0
+        root.tk.call("tk", "scaling", scale)
     except tk.TclError:
-        scale = 1.0
-
-    # Leave room for the taskbar and window chrome rather than assuming none.
-    avail_w = max(640, root.winfo_screenwidth() - int(80 * scale))
-    avail_h = max(480, root.winfo_screenheight() - int(100 * scale))
-
-    need_w = max(root.winfo_reqwidth(), int(want[0] * scale))
-    need_h = max(root.winfo_reqheight(), int(want[1] * scale))
-    w, h = min(need_w, avail_w), min(need_h, avail_h)
-
-    x = max(0, (root.winfo_screenwidth() - w) // 2)
-    y = max(0, (root.winfo_screenheight() - h) // 3)
-    root.geometry(f"{w}x{h}+{x}+{y}")
-    root.minsize(min(int(760 * scale), avail_w), min(int(560 * scale), avail_h))
+        return 1.0
+    return scale
 
 
 if __name__ == "__main__":

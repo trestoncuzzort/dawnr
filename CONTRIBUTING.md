@@ -22,11 +22,34 @@ cd t
 ls test_*.py | grep -v test_lab_gui | sed 's/\.py$//' | xargs python3 -m unittest
 ```
 
+And the model builder's own tests, which the command above does not reach
+because it only looks inside `t/`:
+
+```bash
+cd locallm
+ls test_*.py | sed 's/\.py$//' | xargs python3 -m unittest
+```
+
+On a machine without torch that reports 102 tests and 20 errors, and every one of
+the 20 is `ModuleNotFoundError: No module named 'torch'` raised while *importing*
+the test module, not a failure in anything. The two that cover the window's own
+look and its front page are written to need neither torch nor a display, so they
+run anywhere:
+
+```bash
+cd locallm && python3 -m unittest test_look test_home
+```
+
 **Exclude `test_lab_gui.py` when you want a number.** It passes on its own, but
 inside a combined run its tkinter teardown raises `Tcl_AsyncDelete: async
 handler deleted by the wrong thread`, the interpreter takes SIGABRT, and the
 tally is never printed -- so `python3 -m unittest discover` ends with no count
-at all rather than with a failure you can read.
+at all rather than with a failure you can read. Run it on its own, because it
+is the only test that builds the real window:
+
+```bash
+cd t && python3 -m unittest test_lab_gui
+```
 
 Known-failing, so nobody goes hunting: one assertion in
 `t/test_lower_spark_loop_cert.py` (the two-loop fallback emits `F_Cert` where
