@@ -2376,8 +2376,14 @@ def main():
     root.title("locallm: make a model out of your own words")
     root.configure(bg=look.palette()["paper"])
     Home(root)
-    if studio is not None:
-        studio.fit_to_screen(root, want=(960, 880))
+    # look.fit_to_screen, NOT studio's. This used to be gated on `studio is not
+    # None`, so on a machine where torch will not import the window skipped
+    # sizing entirely and opened at whatever the layout happened to request,
+    # which on macOS was 477x425: narrower than the 759 minimum the sizer would
+    # have set, with the cards clipped and a scrollbar over them. How big a
+    # window opens has nothing to do with whether it can train, and the helper
+    # lives in look.py now precisely so it needs no torch.
+    look.fit_to_screen(root, want=(1100, 860))
     root.mainloop()
 
 
