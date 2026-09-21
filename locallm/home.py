@@ -1058,6 +1058,26 @@ class _Slider(tk.Canvas):
             smooth=True, fill=self.C["ink"], outline=edge, width=1)
 
 
+
+def _wraps(widget) -> int:
+    """How wide this label wraps, or 0, whatever Tk hands back.
+
+    `int(widget.cget("wraplength"))` looks safe and raises TypeError on macOS:
+    tkinter runs with wantobjects on, so an option that Tcl has typed comes back
+    as a _tkinter.Tcl_Obj rather than a string or an int, and int() will not take
+    one. str() of that object always gives the value, on every Tk. Measured on
+    macOS 26.5.1, Python 3.9.6, Tk 8.5, 2026-09-21, where this raised on every
+    <Configure> event and so on every resize of the window.
+
+    Empty is a real answer too, for a label that was never given a wraplength,
+    and it is not a number, so it is caught rather than allowed to raise.
+    """
+    try:
+        return int(str(widget.cget("wraplength")))
+    except (ValueError, TypeError, tk.TclError):
+        return 0
+
+
 class _Scroller(tk.Frame):
     """A column that can never be taller than the screen.
 
@@ -1321,7 +1341,7 @@ class Home(ttk.Frame):
         """
         width = max(320, event.width - look.SPACE.group)
         for child in self._title_wrap.winfo_children():
-            if isinstance(child, tk.Label) and int(child.cget("wraplength")):
+            if isinstance(child, tk.Label) and _wraps(child):
                 child.configure(wraplength=width)
         for label in getattr(self, "_wrapped", ()):
             try:
