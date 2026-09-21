@@ -54,6 +54,29 @@ successful measurements is not measuring anything.
   window believed it had a table. The same root cause had already silently
   dropped the caller's decoding flags in `t/gen_fleet.sh`.
 
+## 2026-09-21: the README said a model ships with the repository. It ships with the download.
+
+**Claimed**, in README.md's "Running it" section, published 2026-09-21 and live for
+about four hours: "A trained model ships with the repository and
+`locallm/plain_generate.py` runs it in the standard library alone."
+
+**True**: the release zip built by `locallm/release.py` contains one, at
+`included-model/`, and unzipping it and running does work with nothing installed.
+A clone does not. `locallm/included-model/` does not exist in the repository, and
+the checkpoints that do exist live under `t/runs/` behind Git LFS, so a plain
+`git clone` retrieves pointer files rather than weights.
+
+**How it shows**: `home.ready_made()` looks for `included-model/` and falls back to
+any locally trained model. Run against the repository's own `locallm/` folder it
+returns None, so the "try the model that came with it" offer has nothing behind it
+for anyone who cloned rather than downloaded.
+
+**Found by** asking what a `git clone` actually contains, rather than what the
+release does, after writing a sentence that conflated the two.
+
+**Fixed** by saying which copy carries a model, and giving a cloner the two
+commands that get them one.
+
 ## A token count with no file behind it, removed 2026-09-20
 
 `README.md` said locallm was trained on "46M tokens of source plus **50,142

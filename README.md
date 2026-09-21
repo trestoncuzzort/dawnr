@@ -56,11 +56,26 @@ Debian and Ubuntu means `sudo apt install python3-tk`, because tkinter ships as 
 separate package there. Training additionally needs PyTorch; the window opens,
 explains itself, and can still write text without it.
 
-**It does something before you install anything else.** A trained model ships
-with the repository and `locallm/plain_generate.py` runs it in the standard
-library alone, no PyTorch and no numpy: measured here, a 43.5 MB checkpoint loads
-instantly and generates at 292 ms per character. Slow, and enough to see what the
-thing does on a machine that has never installed a machine learning library.
+**It does something before you install anything else**, and it is worth being
+exact about which copy. `locallm/plain_generate.py` runs a trained model in the
+standard library alone, no PyTorch and no numpy: measured, a 43.5 MB checkpoint
+loads instantly and generates at 292 ms per character. Slow, and enough to see
+what the thing does on a machine that has never installed a machine learning
+library.
+
+**The download carries a model. A clone does not.** The release zip built by
+`locallm/release.py` includes one as `included-model/`, so unzipping and running
+gives you something that talks back immediately. This repository stores its
+checkpoints under `t/runs/` through Git LFS, so a plain `git clone` gets pointer
+files rather than weights. To get them:
+
+```
+git lfs pull
+python3 locallm/plain_generate.py --out t/runs/2026-09-17/home-4080/models/model-r4 --prompt "function to "
+```
+
+An earlier version of this section said a trained model ships with the
+repository. It ships with the download. See [`CORRECTIONS.md`](CORRECTIONS.md).
 
 ## What it reads
 
