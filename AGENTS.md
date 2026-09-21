@@ -1,6 +1,8 @@
 # Working in this repository
 
-Read this first, then `internal/HANDOFF-2026-09-19.md`, which is the live state of the work.
+Read this first, then `internal/HANDOFF-2026-09-20-antigravity.md` for the state of the pipeline, and
+`t/RUN-NEXT-locallm-r12.md` for the next locallm run: the nine defects to fix before it trains, and how
+it is judged.
 
 ## What this is
 
@@ -30,7 +32,8 @@ exists to answer is whether a model built from that data does more per parameter
 5. **Look for it before you write it.** Every implementation checks for a repository, a paper or an online
    source that already solves the problem, *before* any code is written — not after, and not only when the
    problem looks hard. If nothing usable exists, say so in the commit message with the word `INVENTED:` and what
-   was searched for. This is enforced rather than remembered: `.git/hooks/pre-commit` refuses a commit that
+   was searched for. This is enforced rather than remembered: the `commit-msg` hook (tracked in `.githooks/`; install
+   with `cp .githooks/commit-msg .git/hooks/`) refuses a commit that
    changes Python and cites neither a source nor `INVENTED:`. It is enforced because it was skipped twice in one
    session on 2026-09-20 while both a skill and a memory told the author to follow it, and searching afterwards
    found a paper that had already made one of the same design decisions and taken the opposite choice on
@@ -46,7 +49,9 @@ exists to answer is whether a model built from that data does more per parameter
 
 | Path | What |
 |---|---|
-| `internal/HANDOFF-2026-09-19.md` | **start here** — current state, what is running, the traps that have cost hours |
+| `internal/HANDOFF-2026-09-20-antigravity.md` | **start here** — current state, what is running, the traps that have cost hours |
+| `t/RUN-NEXT-locallm-r12.md` | the next locallm run: blockers, data, recipe, how it is judged |
+| `t/DECONTAMINATION-2026-09-21.md` | the 32 held-out problems with a same-task source in training |
 | `internal/ROADMAP-LOG.md` | the roadmap of record: every hurdle, its measurement, its DONE WHEN |
 | `ROADMAP.md` | the public face of the same, updated as things finish |
 | `t/RUN-NEXT.md` | the recipe for the next pipeline run, with the number behind each choice |
@@ -59,7 +64,7 @@ exists to answer is whether a model built from that data does more per parameter
 
 All compute runs on the lab workstation, never the home desktop. `t/lab-workstation.conf` (gitignored) holds
 `T_LAB=user@host`; the python with the whole stack is `~/.venv-vllm/bin/python` there. The four GPUs are
-**shared with another user** and must be given back the moment they ask: `bash t/lab_gpu.sh stop` clears every
+**shared with other users** and must be given back the moment they ask: `bash t/lab_gpu.sh stop` clears every
 process of ours off them in seconds, and every answer is written to its own file so nothing in flight is lost.
 
 Kernels need their PATH or Verus silently reports MALFORMED for every cell:

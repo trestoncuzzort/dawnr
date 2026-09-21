@@ -32,6 +32,30 @@ every number here is comparable to every earlier one.
 Phi's row was regraded on 2026-09-19 beside round 7 and reproduced exactly,
 cell for cell, so the comparison is one evaluator and not two.
 
+**On the 200 problems locallm's training data does not already answer, added
+2026-09-21.** 32 of the 232 held-out problems have a same-task source in the
+training data (`t/DECONTAMINATION-2026-09-21.md`: identical references with names
+erased, near-identical statements, the same function found by running corpus
+documents on the problem's own assertions, and two held-out problems lifted into
+every corpus since round 7 under a Dafny dataset's name). Scored over the other
+200 with `t/score_heldout.py`:
+
+| arm | well formed | tests pass | clean | clean on the 32 |
+|---|---:|---:|---:|---:|
+| locallm, rounds 4 and 5 | 179, 170 | **0, 0** | 0, 0 | 2, 2 |
+| locallm, rounds 7, 7b greedy, 8 headed (headline), 8, 9, 9 seed 7 | 73-124 | **0 each** | 0 | 1-3 |
+| locallm, round 9 seed 42 | 81 | **1** (spec disagrees) | 1 | 2 |
+| locallm, round 10 (regraded) | 84 | **0** | 0 | 5 |
+| Phi-4-mini | 8 | 5 | **2** | 1 |
+| Qwen2.5-Coder-1.5B, untrained | 32 | 10 | **3** | 0 |
+| DeepSeek-Prover-V2-7B | 28 | 6 | **3** | 3 |
+| Qwen3-235B | 56 | 44 | **9** | 2 |
+
+Every clean answer locallm has produced is on the 32. On the 200 it writes
+well-formed programs and has computed the right function once, with a wrong
+specification. That is the number the next run is built to move
+(`t/RUN-NEXT-locallm-r12.md`).
+
 **Recited or written, added 2026-09-21.** `t/score_heldout.py --corpus TAG=PATH`
 splits a clean count by whether the answer, names erased, is a document of the
 corpus that model trained on (answer overlap, after Lewis, Stenetorp and Riedel,

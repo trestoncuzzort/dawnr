@@ -44,6 +44,15 @@ conversion rate; it is the absence of any observed failure to convert, on a
 sample far too small to distinguish 100% from 60%. It is reported because the
 failures, when they come, will be informative.
 
+**Corrected 2026-09-21, the larger correction: every locallm clean answer is on
+a problem its training data already answered.** 32 of the 232 held-out problems
+have a same-task source in training (`t/DECONTAMINATION-2026-09-21.md`); 22 of
+locallm's 23 clean answers across all rounds are on them, and the 23rd has a
+specification that disagrees with its problem. On the other 200, locallm has
+passed a problem's tests once in ten arms, against Phi-4-mini's 5. The
+conversion rates above are therefore rates of converting recalled, already-proved
+programs, and say nothing yet about proving new ones.
+
 **Corrected 2026-09-21: r4's and r5's rows are recall, not conversion.** All four
 of their clean answers are, with names erased, documents of the corpus each was
 trained on, answering a held-out MBPP problem that repeats a training one under

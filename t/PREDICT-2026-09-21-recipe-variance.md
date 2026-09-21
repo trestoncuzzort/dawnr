@@ -73,3 +73,17 @@ graded by `t/grade_lab.sh heldout` with `T_SPARK_JOBS=1` now its default.
   group at a time.
 - **1 fails with fewer than 200 identical:** the variance is in the hardware,
   and deterministic training has to come before any comparison.
+
+---
+
+## Note added 2026-09-21, after registration and before any r11 table was read
+
+"Written" (`clean, novel`) turned out to be too narrow a filter. It catches a
+clean answer that is a training document with names erased, but not one whose
+problem has a same-task source in training under a different program
+(`t/DECONTAMINATION-2026-09-21.md`: 32 such held-out problems, and every locallm
+clean answer so far is on them). So every r11 arm is also reported on the other
+200 problems, where no locallm arm has yet been clean with a specification that
+agrees with its problem (one, r9 seed 42's, disagrees). The predictions above are
+left exactly as registered and are graded as written; the clean-200 column is
+reported beside them, not in place of them.

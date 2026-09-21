@@ -1,5 +1,8 @@
 # The next run, step by step
 
+> **For a locallm training run, read `t/RUN-NEXT-locallm-r12.md` instead.** This page is the recipe for a
+> teacher-generation run (2026-09-19) and still holds for one.
+
 Written 2026-09-19 from the day's measurements, for whoever runs the pipeline next. Follow it top to bottom.
 Every number here names the file it came from; nothing is estimated. Where two files in this repository
 disagree, the last section says so rather than picking a winner.

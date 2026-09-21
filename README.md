@@ -14,7 +14,9 @@ model gets on it.
 
 **locallm's headline model has 92 million parameters. Phi-4-mini has 3.8
 billion, 41 times more. On 232 held-out programming problems, both produced
-exactly 3 answers that were correct and formally proved.**
+exactly 3 answers that were correct and formally proved. All three of
+locallm's are on problems its training data already answered: on the 200 that
+it did not, locallm has produced none in any round, and Phi has 2.**
 
 | | locallm | Phi-4-mini |
 |---|---:|---:|
@@ -23,6 +25,7 @@ exactly 3 answers that were correct and formally proved.**
 | **clean answers of 232** | **3** | **3** |
 | of those, confirmed to specify the right problem | **3** | 2 |
 | of those, written rather than recalled from its training set | **2** | 3 |
+| **clean answers on the 200 problems its training data does not already answer** | **0** | **2** |
 
 An answer counts as **clean** only when it passes the problem's own tests, is
 verified against its specification by **seven independent proof systems** (Dafny,
@@ -39,26 +42,29 @@ greedily. The smaller rounds, trained from random weights on the corpus alone,
 are separate checkpoints with their own sizes. Every arm is listed with its
 parameter count, decoding and score in [`SCOREBOARD.md`](SCOREBOARD.md).
 
-**It is a tie, not a win, and it is three answers wide.** 3 of 232 is 1.3%: both
-models fail the overwhelming majority of the time. Phi has never seen t, so most
-of its answers do not parse, which makes this a weaker claim than beating it at
-Python. The full caveats are in [`LIMITS.md`](LIMITS.md), and they are not buried
-there to be hidden: they are the reason this section is short.
+**The tie is on problems locallm had, in effect, already seen.** Checked on
+2026-09-21: 32 of the 232 held-out problems have a training document that solves
+the same function. MBPP repeats functions under different ids across the split,
+and two of the 32 are the held-out problems themselves, lifted from a Dafny
+dataset under a name the held-out filter did not recognize. Of locallm's 23 clean
+answers across every round, 22 are on those 32, and the 23rd has a specification
+that describes the wrong function. On the other 200 problems, locallm has passed
+a problem's own tests once in ten runs. Phi-4-mini passes 5 there and is clean on
+2. So locallm today writes well-formed, proved programs, and has not yet solved a
+problem it was not effectively shown.
+[`t/DECONTAMINATION-2026-09-21.md`](t/DECONTAMINATION-2026-09-21.md) has the 32
+with the reason for each.
 
-**One of locallm's three was recalled, not written.** Its answer to "minimum of
-two numbers" is, with names erased, the training document for another MBPP
-problem that asks the same thing. Checked on 2026-09-21 across every round: 10 of
-locallm's 23 clean answers are a training document, against 1 of 23 for models
-that never saw its corpus. Counting only answers it wrote, locallm has 2 to Phi's
-3. [`t/FINDINGS-r10-and-recitation-2026-09-21.md`](t/FINDINGS-r10-and-recitation-2026-09-21.md)
-has the table.
+Two narrower findings from the same day, with their tables in
+[`t/FINDINGS-r10-and-recitation-2026-09-21.md`](t/FINDINGS-r10-and-recitation-2026-09-21.md):
+10 of locallm's 23 clean answers are a training document with names erased
+(against 1 of 23 for models that never saw the corpus), and a later checkpoint,
+round 10, scored 5 clean. All five are on the 32.
 
-**A later checkpoint scored higher, and is not the headline.** Round 10, regraded
-from its raw answers on 2026-09-21 with nothing cached, has **5 clean, 4 of them
-written**, all five confirmed against their problems. Its training set came out
-of a session that was reversed, and the same recipe on a corpus 99% identical
-wrote 1. Whether that gap is the data or the draw is being measured across ten
-training seeds ([`t/PREDICT-2026-09-21-recipe-variance.md`](t/PREDICT-2026-09-21-recipe-variance.md)).
+**What happens next is in [`t/RUN-NEXT-locallm-r12.md`](t/RUN-NEXT-locallm-r12.md):**
+nine defects fixed before anything trains, a corpus decontaminated against the
+32, and one number to move: tests passed on the 200. Phi has never seen t, so most
+of its answers do not parse; the full caveats are in [`LIMITS.md`](LIMITS.md).
 
 ## Running it
 
@@ -123,17 +129,15 @@ Eight results, each linked to the script that produced it:
    **209 of 232** unseen problems. Phi-4-mini, about 350 times larger, managed
    **12**. Everyone assumes notation is the hard part for a tiny model. It isn't.
    It's nearly free.
-2. **It ties a model 41 times its size on clean answers**, 3 each. All three of
-   locallm's survived a check that the specification describes the problem
-   actually asked; one of Phi's three could not be checked. One of locallm's
-   three is a recalled training program, so on answers it wrote it trails, 2 to
-   3.
+2. **It ties a model 41 times its size on clean answers**, 3 each, and only on
+   problems its training data already answered. On the 200 held-out problems
+   that it did not, locallm has 0 and Phi 2.
 3. **When it is right, it is almost always provably right.** Across every round,
    **23 of the 25** locallm answers that passed their problem's tests also cleared
    all seven provers with the sabotaged copy caught. Phi's rate is 3 of 6. The
-   two exceptions are one answer each in round 9 seed 7 and round 10. Rounds 4
-   and 5 add nothing to this: all four of their answers were training programs,
-   verified before the model ever saw them.
+   two exceptions are one answer each in round 9 seed 7 and round 10. This is
+   weaker than it sounds: 22 of the 23 are on problems whose training document
+   was already verified, so it mostly measures recall of proved programs.
 4. **Stop it and restart it and you get the identical model**, bit for bit, with
    a test that fails the moment that stops being true. That is resuming on a CPU.
    Retraining the same recipe from scratch on a GPU does not reproduce: every
