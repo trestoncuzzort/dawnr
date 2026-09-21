@@ -40,6 +40,24 @@ run anywhere:
 cd locallm && python3 -m unittest test_look test_home
 ```
 
+### On macOS, and why it is not optional
+
+The portable tests run on Apple's system Python, which is 3.9 with **Tk 8.5**, the
+oldest Tk of the three platforms. Measured 2026-09-21: 139 tests, OK.
+
+Run them there before believing a GUI change. Two bugs landed that day that no
+test on Linux could have caught, because both are Tk 8.5 against Tk 8.6:
+
+* `configure(style=...)` on a `ttk.Scrollbar` answers `unknown option "-style"`
+  and took the whole window down on launch. Set a ttk style at construction,
+  which every platform accepts.
+* `create_text(..., angle=90)` answers `unknown option "-angle"`, because canvas
+  text rotation arrived in Tk 8.6. It did not crash; the label simply never drew,
+  and only the log knew.
+
+The rule that follows: a widget option that works here is not a widget option that
+works. Check it against Tk 8.5 or set it at construction.
+
 **Exclude `test_lab_gui.py` when you want a number.** It passes on its own, but
 inside a combined run its tkinter teardown raises `Tcl_AsyncDelete: async
 handler deleted by the wrong thread`, the interpreter takes SIGABRT, and the

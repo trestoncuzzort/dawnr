@@ -177,3 +177,6 @@ email_founders.py
 # Build output. locallm/release.py assembles it from the tree; it is reproducible
 # by construction, so committing it would only be a large duplicate.
 /dist/
+
+# the Mac that demos and tests it, which is nobody else business either
+t/mac-workstation.conf
