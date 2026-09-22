@@ -1,7 +1,6 @@
 # locallm
 
-**Point it at your own writing and it builds a language model from random
-numbers, on your computer, with nothing uploaded. The same repository holds the
+**Give this model any file type/data, and it will train extensively until you like how it operates; then it is yours to use for any purpose. The same repository holds the
 machine that made its training data: a specification language lowered into seven
 independent proof systems, where an example is kept only if all seven prove it
 and all seven catch a deliberately broken copy of it.**
