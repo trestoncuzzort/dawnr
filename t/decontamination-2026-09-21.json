@@ -1,0 +1,245 @@
+{
+ "schema": 1,
+ "about": "Held-out problems (t/out/loop/split-v3.json eval_ids) with a same-task source in training, and what to drop. Human-readable version with reasons and prior art: t/DECONTAMINATION-2026-09-21.md",
+ "overlap_ids": [
+  10,
+  138,
+  161,
+  208,
+  269,
+  347,
+  358,
+  366,
+  402,
+  411,
+  443,
+  492,
+  502,
+  518,
+  527,
+  565,
+  566,
+  604,
+  626,
+  682,
+  687,
+  699,
+  719,
+  729,
+  775,
+  800,
+  813,
+  842,
+  887,
+  928,
+  931,
+  970
+ ],
+ "overlap_stratum": {
+  "problem-level same task (names-erased reference equal)": [
+   366,
+   527,
+   699,
+   719,
+   775,
+   800,
+   842,
+   161
+  ],
+  "problem-level same task (near-identical text/reference, read)": [
+   10,
+   208,
+   347,
+   402,
+   411,
+   604,
+   813,
+   928,
+   970
+  ],
+  "same function, found by running train/corpus docs on the eval problem's own assertions (read)": [
+   138,
+   358,
+   443,
+   492,
+   502,
+   518,
+   566,
+   682,
+   687,
+   729,
+   887,
+   931
+  ],
+  "eval problem itself lifted into the corpus (MBPP-DFY)": [
+   269,
+   626
+  ],
+  "degenerate in t (identity), recited by locallm-r5": [
+   565
+  ]
+ },
+ "drop_documents": {
+  "committed:contains": [
+   492
+  ],
+  "committed:digit_sum": [
+   566
+  ],
+  "committed:gcd": [
+   687
+  ],
+  "committed:remainder": [
+   502
+  ],
+  "lifted:clover_array_product__arrayProduct": [
+   682
+  ],
+  "lifted:clover_array_sum__arraySum": [
+   729
+  ],
+  "lifted:clover_is_even__computeIsEven": [
+   138
+  ],
+  "lifted:clover_min_array__minArray": [
+   443
+  ],
+  "lifted:clover_min_of_two__min": [
+   970
+  ],
+  "lifted:dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot1": [
+   518
+  ],
+  "lifted:dafny_synthesis_task_id_242__countCharacters": [
+   813
+  ],
+  "lifted:dafny_synthesis_task_id_269__asciiValue": [
+   269
+  ],
+  "lifted:dafny_synthesis_task_id_404__min": [
+   970
+  ],
+  "lifted:dafny_synthesis_task_id_406__isOdd": [
+   887
+  ],
+  "lifted:dafny_synthesis_task_id_445__multiplyElements": [
+   682
+  ],
+  "lifted:dafny_synthesis_task_id_600__isEven": [
+   138
+  ],
+  "lifted:dafny_synthesis_task_id_616__elementWiseModulo": [
+   358
+  ],
+  "lifted:dafny_synthesis_task_id_626__areaOfLargestTriangleInSemicircle": [
+   626
+  ],
+  "lifted:dafny_synthesis_task_id_62__findSmallest": [
+   443
+  ],
+  "lifted:dafny_synthesis_task_id_728__addLists": [
+   729
+  ],
+  "lifted:dafny_tmp_tmpv_d3qi10_2_min__minArray": [
+   443
+  ],
+  "lifted:dafny_tmp_tmpv_d3qi10_2_min__minMethod": [
+   970
+  ],
+  "lifted:dafny_verify_tmp_tmphq7j0row_generated_code_minimum__minimum": [
+   443
+  ],
+  "lifted:dafny_verify_tmp_tmphq7j0row_test_cases_index__min": [
+   970
+  ],
+  "lifted:dafnyexercises_tmp_tmpd6qyevja_part1_q1__addArrays": [
+   729
+  ],
+  "lifted:programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_05_hoangkim_ex_05_hoangkim__gcdI": [
+   687
+  ],
+  "lifted:programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex06_solution__gcdI": [
+   687
+  ],
+  "lifted:programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_06_hoangkim_ex_06_hoangkim__gcdI": [
+   687
+  ],
+  "lifted:stunning_palm_tree_tmp_tmpr84c2iwh_ch1__min": [
+   970
+  ],
+  "positive:apps_124__search": [
+   492
+  ],
+  "positive:apps_2465__divisorGame": [
+   138
+  ],
+  "positive:mbpp_242__count_charac": [
+   813
+  ],
+  "positive:mbpp_404__minimum": [
+   970
+  ],
+  "positive:mbpp_451__remove_whitespaces": [
+   800
+  ],
+  "positive:mbpp_498__gcd": [
+   687
+  ],
+  "positive:mbpp_504__sum_Of_Series": [
+   931
+  ],
+  "positive:mbpp_728__sum_list": [
+   729
+  ]
+ },
+ "exclude_future_train_ids": [
+  29,
+  76,
+  102,
+  242,
+  404,
+  427,
+  451,
+  496,
+  498,
+  504,
+  595,
+  728,
+  759,
+  767,
+  790,
+  930,
+  952,
+  200124,
+  202465,
+  203929,
+  204462
+ ],
+ "weak_test_eval_ids": [
+  20,
+  45,
+  68,
+  72,
+  179,
+  201,
+  269,
+  355,
+  362,
+  541,
+  565,
+  605,
+  683,
+  711,
+  741,
+  768,
+  804,
+  866
+ ],
+ "kept_despite_passing_eval_tests": [
+  "committed:is_prime",
+  "positive:mbpp_173__remove_splchar",
+  "positive:mbpp_455__check_monthnumb_number",
+  "positive:mbpp_676__remove_extra_char",
+  "positive:mbpp_732__replace_specialchar"
+ ]
+}
