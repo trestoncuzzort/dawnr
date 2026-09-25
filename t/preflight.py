@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """t/preflight.py -- everything that could make a round's numbers wrong, checked before the round (2026-09-18).
 
-    python3 t/preflight.py [--split t/out/loop/split-v3.json] [--tokenizer NAME] [--quick] [--strict]
+    python3 t/preflight.py --split t/out/loop/split-v5.json --pool t/out/loop/sft-r12.jsonl \
+        --corpus t/out/loop/corpus-r12.txt [--answer-set TAG] [--audit-history] \
+        [--tokenizer NAME] [--quick] [--strict]
 
 Each check below exists because something went wrong once. A round should not start while any of them fails,
 and the ones that fail print what to do. `--strict` exits non-zero on a warning as well as a failure.
@@ -11,8 +13,9 @@ and the ones that fail print what to do. `--strict` exits non-zero on a warning 
      every Verus cell because a non-login shell had no Rust toolchain.
   2. No held-out problem appears in the training set or the pairs. The split is the whole basis of every
      held-out number.
-  3. Every answer counted clean agrees with its problem's own solution (t/spec_check.py). Five did not on
-     2026-09-18, and all five had passed the tests, all seven proofs and a refuted twin.
+  3. No selected training input contains a program recorded as disagreeing with its problem's own solution
+     (t/spec_check.py). Five did on 2026-09-18, and all five had passed the tests, all seven proofs and a
+     refuted twin.
   4. No cell counted clean is marked FLAKED, and none of a clean answer's cells is a timeout. A timeout is not
      a verdict, and grading at 64 jobs on a shared machine produces them.
   5. The copy check's keys are unique, so no answer entered the pool twice under two tags.
@@ -33,10 +36,10 @@ and the ones that fail print what to do. `--strict` exits non-zero on a warning 
      gitignored, so anything a clone needs -- the id lists, the splits, the pool files -- is only there if it
      was `git add -f`ed; the audit of 2026-09-19 found round 6's whole pool missing from the repository. A run
      that dies in its first seconds with FileNotFoundError is almost always one of these.
- 10. Every answer set that has a kernels.md also has a tests.json and an extract.json (2026-09-19).
+ 10. Every selected answer set has a kernels.md, tests.json and an extract.json (2026-09-19).
      `clean_rows` reads a missing tests.json as "no answer passed its tests", so half a set does not announce
      itself: it quietly contributes nothing to a count that is then reported as if it had been counted.
- 11. No answer set's kernels.md has fewer than the seven kernel columns (2026-09-19). A table graded with
+ 11. No selected answer set's kernels.md has fewer than the seven kernel columns (2026-09-19). A table graded with
      `--kernels lean` alone reports agreement among one column; the audit of that day made the cell say
      `(only N kernels)`, and this refuses to let such a table sit where a clean count is taken from it.
  12. The tokenizer of the base model the run names round-trips a line of t, and loop_generate.py still holds
@@ -50,6 +53,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -141,94 +145,187 @@ def check_kernels() -> bool:
     return ok
 
 
-def leaked_detail(leaked: dict[int, set[str]]) -> str:
-    """Return a concise account of ids a data guard found."""
-    rows = [f"{task_id} ({', '.join(sorted(names))})" for task_id, names in sorted(leaked.items())]
-    return f"{len(leaked)} leaked: {rows[:5]}" + (" ..." if len(rows) > 5 else "")
+
+def _decoded_strings(value):
+    """Yield JSON strings after decoding so task declarations are real newlines."""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for child in value.values():
+            yield from _decoded_strings(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _decoded_strings(child)
 
 
-def decontamination_detail(names: set[str], task_ids: set[int]) -> str:
-    """Return a concise account of known same-task training sources."""
-    rows = sorted(names) + [f"task_id={task_id}" for task_id in sorted(task_ids)]
-    return f"{len(rows)} known same-task source(s): {rows[:5]}" + (" ..." if len(rows) > 5 else "")
+def _pool_metadata(text: str) -> tuple[str, list[str | None], list[object]]:
+    """Extract explicit producer metadata without trusting a display-name alias."""
+    decoded, names, task_ids = [text], [], []
+    for line in text.splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        decoded.extend(_decoded_strings(row))
+        if isinstance(row, dict):
+            names.append(row.get("task"))
+            task_ids.append(row.get("task_id"))
+    return "\n".join(decoded), names, task_ids
+
+
+def _check_training_validation(path: Path, validation, verb: str) -> bool:
+    """Print the two independent training-data guarantees from the shared gate."""
+    import loop_filter
+
+    held = say(not validation.held_out, f"{path.name} {verb} no held-out problem",
+               "" if not validation.held_out else loop_filter.held_out_detail(validation.held_out))
+    same = say(not (validation.same_task_names or validation.same_task_ids),
+               f"{path.name} {verb} no same-task training source",
+               "" if not (validation.same_task_names or validation.same_task_ids)
+               else loop_filter.same_task_detail(validation))
+    return held and same
 
 
 def check_pool_files(eval_ids: set[int], files: list[Path]) -> bool:
-    """Check JSONL pool rows by explicit id and every task-name alias."""
+    """Check selected JSONL training rows through the shared data validator."""
     import loop_filter
 
-    policy = loop_filter.decontamination()
     ok = True
     for path in files:
-        text = path.read_text(errors="replace")
-        found = loop_filter.problem_ids_in(text)
-        names = set(loop_filter.task_names(text))
-        for line in text.splitlines():
-            try:
-                row = json.loads(line)
-                task_id = row.get("task_id")
-                if isinstance(task_id, bool):
-                    continue
-                task_id = int(task_id)
-            except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
-                continue
-            found.setdefault(task_id, set()).add(f"task_id={task_id}")
-            if isinstance(row.get("task"), str):
-                names.add(row["task"])
-        leaked = {task_id: names for task_id, names in found.items() if task_id in eval_ids}
-        blocked_names = names & policy.drop_document_names
-        blocked_ids = set(found) & policy.exclude_train_ids
-        ok = say(not leaked, f"{path.name} holds no held-out problem",
-                 "" if not leaked else leaked_detail(leaked)) and ok
-        ok = say(not (blocked_names or blocked_ids), f"{path.name} holds no same-task training source",
-                 "" if not (blocked_names or blocked_ids) else decontamination_detail(blocked_names, blocked_ids)) and ok
+        try:
+            text = path.read_text(errors="replace")
+        except OSError as error:
+            ok = say(False, f"{path.name} readable", str(error)[:80]) and ok
+            continue
+        payload, names, task_ids = _pool_metadata(text)
+        validation = loop_filter.validate_training_data(payload, eval_ids, names=names, task_ids=task_ids)
+        ok = _check_training_validation(path, validation, "holds") and ok
     return ok
 
 
 def check_corpora(eval_ids: set[int], corpora: list[Path]) -> bool:
-    """Check every task-name alias in each training corpus."""
+    """Check selected text corpora through the shared data validator."""
     import loop_filter
 
-    policy = loop_filter.decontamination()
     ok = True
     for path in corpora:
-        text = path.read_text(errors="replace")
-        leaked = loop_filter.held_out_ids_in(text, eval_ids)
-        blocked_names = set(loop_filter.task_names(text)) & policy.drop_document_names
-        blocked_ids = set(loop_filter.problem_ids_in(text)) & policy.exclude_train_ids
-        ok = say(not leaked, f"{path.name} trains on no held-out problem",
-                 "" if not leaked else leaked_detail(leaked)) and ok
-        ok = say(not (blocked_names or blocked_ids), f"{path.name} trains on no same-task source",
-                 "" if not (blocked_names or blocked_ids) else decontamination_detail(blocked_names, blocked_ids)) and ok
+        try:
+            text = path.read_text(errors="replace")
+        except OSError as error:
+            ok = say(False, f"{path.name} readable", str(error)[:80]) and ok
+            continue
+        validation = loop_filter.validate_training_data(text, eval_ids)
+        ok = _check_training_validation(path, validation, "trains on") and ok
     return ok
 
 
-def check_split(split_path: Path) -> bool:
+def _unique_paths(paths) -> list[Path]:
+    """Keep caller order while making one current file produce one verdict."""
+    result, seen = [], set()
+    for path in paths:
+        path = Path(path)
+        key = path.resolve(strict=False)
+        if key not in seen:
+            seen.add(key)
+            result.append(path)
+    return result
+
+
+def _repository_relative(path: Path) -> str | None:
+    """A selected input's stable repository-relative name, or None if it cannot be reproduced from the tree."""
+    candidate = Path(path)
+    absolute = candidate if candidate.is_absolute() else ROOT / candidate
+    try:
+        return str(absolute.resolve(strict=False).relative_to(ROOT.resolve()))
+    except ValueError:
+        return None
+
+
+def _historical_training_inputs() -> tuple[list[Path], list[Path]]:
+    """The opt-in audit of legacy artifacts, never the default run boundary."""
+    pools = sorted((OUT / "loop").glob("sft-*.jsonl")) + sorted((OUT / "loop").glob("pairs-*.jsonl"))
+    corpora = (sorted((OUT / "loop").glob("corpus-*.txt"))
+               + sorted((OUT / "loop-locallm").glob("corpus*.txt")))
+    return pools, corpora
+
+
+def selected_training_inputs(pool_files: list[Path] = (), corpora: list[Path] = (),
+                             audit_history: bool = False) -> tuple[list[Path], list[Path]]:
+    """Current training inputs, plus legacy files only under an explicit history audit."""
+    pools, texts = _unique_paths(pool_files), _unique_paths(corpora)
+    if audit_history:
+        old_pools, old_corpora = _historical_training_inputs()
+        pools = _unique_paths([*pools, *old_pools])
+        texts = _unique_paths([*texts, *old_corpora])
+    return pools, texts
+
+
+def _valid_answer_set_tag(tag: str) -> bool:
+    """Tags name direct children of spec-experiment, never arbitrary filesystem paths."""
+    return bool(isinstance(tag, str) and tag and tag not in {".", ".."} and "/" not in tag and "\\" not in tag
+                and not Path(tag).is_absolute())
+
+
+def select_answer_sets(tags: list[str], audit_history: bool = False) -> tuple[bool, list[Path]]:
+    """Resolve the result sets that this preflight is allowed to judge.
+
+    Cargo distinguishes explicit package selection from an explicit workspace-wide
+    operation: https://doc.rust-lang.org/cargo/reference/workspaces.html#package-selection .
+    We use the same boundary here. Unlike Cargo there is no meaningful implicit
+    "current" answer set before generation, so no tag defers result-quality checks;
+    ``--audit-history`` is the deliberate all-set audit. This preserves the old
+    result provenance rather than making it an accidental input, following the
+    workflow-provenance distinction in https://arxiv.org/abs/1406.0905 .
+    """
+    selected, ok = [], True
+    for tag in tags:
+        if not _valid_answer_set_tag(tag):
+            ok = say(False, "answer-set tag is a direct child of out/spec-experiment", repr(tag)) and ok
+            continue
+        directory = SE / tag
+        if not directory.is_dir() or not (directory / "kernels.md").is_file():
+            ok = say(False, f"selected answer set {tag} has kernels.md",
+                     f"expected {directory / 'kernels.md'}") and ok
+            continue
+        selected.append(directory)
+    if audit_history:
+        selected = _unique_paths([*selected, *tables()])
+        print(f"  [note] auditing {len(selected)} answer set(s), including history")
+    else:
+        selected = _unique_paths(selected)
+        if selected:
+            print(f"  [note] checking {len(selected)} selected answer set(s)")
+    return ok, selected
+
+
+def check_split(split_path: Path, pool_files: list[Path] = (), corpora: list[Path] = (),
+                audit_history: bool = False) -> bool:
+    """Validate only the training inputs selected for this run.
+
+    Historical artifacts are evidence, not implicit inputs to a new run. Use
+    audit_history when reviewing them deliberately; otherwise an old corpus
+    cannot make a new preflight fail or pass by accident.
+    """
     try:
         split = json.loads(split_path.read_text())
-    except OSError:
-        return say(False, "split readable", str(split_path))
-    ev = {int(i) for i in split["eval_ids"]}
+        eval_ids = {int(task_id) for task_id in split["eval_ids"]}
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+        return say(False, "split readable", f"{split_path}: {error}")
+    pools, corpora = selected_training_inputs(pool_files, corpora, audit_history)
+    if audit_history:
+        print(f"  [note] auditing {len(pools)} historical pool file(s) and {len(corpora)} corpus file(s)")
+    elif not pools and not corpora:
+        return say(False, "current training input selected",
+                   "pass --pool and/or --corpus; use --audit-history only for a deliberate legacy audit")
+    else:
+        print(f"  [note] checking {len(pools)} selected pool file(s) and {len(corpora)} selected corpus file(s)")
+    if not pools and not corpora:
+        return say(True, "historical training inputs", "none found")
     ok = True
-    _ = ev
-    # every pool and pair file there is, not a list that has to be edited each round: round 6's files existed
-    # for a day without being leak-checked because they were not in the list (2026-09-19)
-    files = sorted((OUT / "loop").glob("sft-*.jsonl")) + sorted((OUT / "loop").glob("pairs-*.jsonl"))
-    if not files:
-        ok = say(False, "a pool to check", "no sft-*.jsonl or pairs-*.jsonl under out/loop")
-    ok = check_pool_files(ev, files) and ok
-
-    # The pool files are not the only thing that reaches a model. A locallm
-    # corpus is the pool's answers PLUS the lifted and committed tasks, and
-    # those never pass through the pool gate at all: they come from DafnyBench,
-    # whose MBPP-DFY subset is derived from the same MBPP the held-out split is
-    # drawn from. Measured clean on 2026-09-20 (0 of 232 in four corpora) and
-    # unenforced until now, which is the same shape as the round-6 gap above.
-    corpora = sorted((OUT / "loop").glob("corpus-*.txt")) + \
-        sorted((OUT / "loop-locallm").glob("corpus*.txt"))
-    ok = check_corpora(ev, corpora) and ok
-    if not corpora:
-        note("no locallm corpus to leak-check yet")
+    if pools:
+        ok = check_pool_files(eval_ids, pools) and ok
+    if corpora:
+        ok = check_corpora(eval_ids, corpora) and ok
     return ok
 
 
@@ -257,10 +354,11 @@ def rechecked() -> set:
             if r.get("alone", "").startswith("verified / refuted")}
 
 
-def check_flakes() -> bool:
+def check_flakes(answer_sets: list[Path]) -> bool:
+    """Check only the explicitly selected result sets for flaky clean rows."""
     ok_alone = rechecked()
     flaked, timeouts, total = [], [], 0
-    for d in sorted(p for p in SE.glob("*") if (p / "kernels.md").exists()):
+    for d in _unique_paths(answer_sets):
         for name, row in clean_rows(d).items():
             total += 1
             for k in KERNELS:
@@ -277,28 +375,51 @@ def check_flakes() -> bool:
                "" if not timeouts else f"{len(timeouts)}: {timeouts[:3]}") and ok
 
 
-def check_spec_agreement() -> bool:
-    """A disagreement in a POOL answer is a failure: it would be trained on. A disagreement in a held-out
-    answer set cannot enter the pool, so it is reported, and score_heldout.py counts it in its own column."""
+def check_spec_agreement(pool_files: list[Path], corpora: list[Path]) -> bool:
+    """Reject a recorded disagreement only when its program occurs in this run's selected training inputs."""
+    pool_files, corpora = _unique_paths(pool_files), _unique_paths(corpora)
+    inputs = _unique_paths([*pool_files, *corpora])
+    if not inputs:
+        return say(True, "selected training inputs checked against specifications", "none selected")
     j = OUT / "spec-disagree.json"
     if not j.exists():
         return say(False, "specifications checked against the problems", "run python3 t/spec_check.py")
-    bad = json.loads(j.read_text()).get("disagree", [])
-    pool_text = ""
-    for name in ("sft-r4.jsonl", "pairs-r4.jsonl", "sft-r5.jsonl", "pairs-r5.jsonl"):
-        f = OUT / "loop" / name
-        if f.exists():
-            pool_text += f.read_text(errors="replace")
+    try:
+        report = json.loads(j.read_text())
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        return say(False, "specification disagreement report readable", str(error)[:80])
+    if not isinstance(report, dict):
+        return say(False, "specification disagreement report is an object")
+    bad, progs = report.get("disagree", []), report.get("programs", {})
+    if not isinstance(bad, list) or not isinstance(progs, dict):
+        return say(False, "specification disagreement report has list and program map")
+    unmapped = [key for key in bad if not isinstance(key, str) or not isinstance(progs.get(key), str)]
+    if unmapped:
+        return say(False, "specification disagreement report maps every disagreement to program text",
+                   f"{len(unmapped)} missing or invalid: {unmapped[:3]!r}")
+    texts = []
+    for path in pool_files:
+        try:
+            payload, _names, _task_ids = _pool_metadata(path.read_text(errors="replace"))
+        except OSError as error:
+            return say(False, f"{path.name} readable for specification check", str(error)[:80])
+        texts.append(payload)
+    for path in corpora:
+        try:
+            texts.append(path.read_text(errors="replace"))
+        except OSError as error:
+            return say(False, f"{path.name} readable for specification check", str(error)[:80])
     # compare the program, not the problem name: another model's answer to the same problem may be fine
-    progs = json.loads(j.read_text()).get("programs", {})
     squash = lambda s: " ".join(s.split())                       # noqa: E731
-    flat = squash(pool_text)
-    in_pool = [x for x in bad if x in progs and squash(progs[x]) in flat]
-    ok = say(not in_pool, f"no answer in the pool disagrees with its problem ({len(bad)} disagreements found)",
-             "" if not in_pool else f"{in_pool}")
-    if bad and not in_pool:
-        print(f"  [note] {len(bad)} held-out answers disagree with their problems; score_heldout.py counts "
-              f"them apart, see {j.name}")
+    flat = squash("\n".join(texts))
+    in_inputs = [x for x in bad if isinstance(x, str) and isinstance(progs.get(x), str)
+                 and squash(progs[x]) in flat]
+    ok = say(not in_inputs,
+             f"no answer in selected training inputs disagrees with its problem ({len(bad)} disagreements found)",
+             "" if not in_inputs else f"{in_inputs}")
+    if bad and not in_inputs:
+        print(f"  [note] {len(bad)} recorded disagreement(s) are outside the selected training inputs; "
+              f"score_heldout.py counts held-out ones apart, see {j.name}")
     return ok
 
 
@@ -503,9 +624,9 @@ def check_grammar() -> bool:
     return ok
 
 
-def check_data(split_path: Path, lab: str | None) -> bool:
-    """Check 9. The id lists, splits, grammars and adapters the run opens: here, tracked (t/out is gitignored,
-    so a clone has only what was `git add -f`ed), and on the machine that will do the running."""
+def check_data(split_path: Path, lab: str | None, pool_files: list[Path] = (),
+               corpora: list[Path] = ()) -> bool:
+    """Check current inputs plus recipe files: here, tracked, and on the machine that will run them."""
     text = run_text()
     # a file some step writes before another reads it (lab_gpu.sh builds apps-left.txt) is missing in a
     # different way from one nothing here can rebuild, so the two are told apart rather than filtered out
@@ -517,8 +638,18 @@ def check_data(split_path: Path, lab: str | None) -> bool:
             if v in ("none", "") or "$" in v or not v.startswith("t/"):
                 continue                                        # `none` is a real value for --adapter
             need.setdefault(v, f)
-    need.setdefault(str(split_path.relative_to(ROOT) if split_path.is_relative_to(ROOT) else split_path),
-                    "split")
+    current = [(split_path, "split"), *[(path, "pool") for path in pool_files],
+               *[(path, "corpus") for path in corpora]]
+    outside = []
+    for path, kind in current:
+        rel = _repository_relative(path)
+        if rel is None:
+            outside.append(f"{kind}={path}")
+        else:
+            need.setdefault(rel, kind)
+    if outside:
+        return say(False, "current run inputs are inside this repository",
+                   f"cannot check/reproduce {outside[:3]}")
 
     tracked = set()
     try:
@@ -548,15 +679,15 @@ def check_data(split_path: Path, lab: str | None) -> bool:
                   f"({len([p for p in need if (ROOT / p).is_file()])} files)")
     if lab:
         names = [p for p in sorted(need) if p not in later]      # nothing has written the others yet
-        script = "; ".join(f'[ -e "{n}" ] || echo "{n}"' for n in names)
+        script = "; ".join(f"[ -e {shlex.quote(n)} ] || printf '%s\\n' {shlex.quote(n)}" for n in names)
         try:
             r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab,
-                                f"cd {LAB_DIR} 2>/dev/null || exit 9; {script}"],
+                                f"cd {shlex.quote(LAB_DIR)} 2>/dev/null || exit 9; {script}"],
                                capture_output=True, text=True, timeout=30)
             if r.returncode == 9:
                 ok = say(False, f"the grading machine has a clone at ~/{LAB_DIR}") and ok
             else:
-                absent = [x for x in r.stdout.split() if x]
+                absent = [x for x in r.stdout.splitlines() if x]
                 # an id list, a split or the grammar is read by every round, so its absence there stops the
                 # next run; an adapter belongs to one round, and an old one not being there is not a fault
                 adapters = sorted((p for p, f in need.items() if f == "adapter"),
@@ -576,36 +707,38 @@ def check_data(split_path: Path, lab: str | None) -> bool:
     return ok
 
 
-def check_sets_complete() -> bool:
+def check_sets_complete(answer_sets: list[Path]) -> bool:
     """Check 10. A kernels.md with no tests.json beside it reads as a set where nothing passed its tests, and
     a scored row built from it is built from half a set."""
+    answer_sets = _unique_paths(answer_sets)
     half = []
-    for d in tables():
+    for d in answer_sets:
         gone = [f for f in ("tests.json", "extract.json") if not (d / f).exists()]
         if gone:
             half.append(f"{d.name} (no {', '.join(gone)})")
-    return say(not half, f"every graded answer set has its tests.json and extract.json ({len(tables())} sets)",
+    return say(not half, f"every selected answer set has its tests.json and extract.json ({len(answer_sets)} sets)",
                "" if not half else f"{len(half)}: {half[:3]} -- run python3 t/spec_experiment.py extract "
                                    f"--model <tag> --pool <v> then ... tests --model <tag>, or move the "
                                    f"table aside; nothing downstream can tell half a set from an empty one")
 
 
-def check_columns() -> bool:
+def check_columns(answer_sets: list[Path]) -> bool:
     """Check 11. Seven columns or it is not a clean count."""
     import spec_experiment as se
+    answer_sets = _unique_paths(answer_sets)
     partial = []
-    for d in tables():
+    for d in answer_sets:
         cols, _ = se.parse_kernel_table(d / "kernels.md")
         have = [c for c in cols if c in KERNELS]
         if len(have) < len(KERNELS):
             partial.append(f"{d.name} ({len(have)}: {', '.join(have) or 'none'})")
-    return say(not partial, f"every kernels.md carries all seven kernel columns ({len(tables())} sets)",
+    return say(not partial, f"every selected kernels.md carries all seven kernel columns ({len(answer_sets)} sets)",
                "" if not partial else f"{len(partial)}: {partial[:3]} -- finish the grading (bash "
                                       f"t/grade_lab.sh) or move the table aside; agreement among fewer than "
                                       f"seven columns is not this project's clean")
 
 
-def check_kernel_ran() -> bool:
+def check_kernel_ran(answer_sets: list[Path]) -> bool:
     """Check 11b. A column of seven is not seven columns that ran.
 
     A kernel that cannot START is recorded as `malformed`, which is the same
@@ -621,8 +754,9 @@ def check_kernel_ran() -> bool:
     never started, and no verdict in that column means anything.
     """
     import spec_experiment as se
+    answer_sets = _unique_paths(answer_sets)
     dead = []
-    for d in tables():
+    for d in answer_sets:
         cols, rows = se.parse_kernel_table(d / "kernels.md")
         if not rows:
             continue
@@ -635,12 +769,23 @@ def check_kernel_ran() -> bool:
             if len(rows) >= 10 and bad >= 0.9 * len(rows):
                 dead.append(f"{d.name}/{name} ({bad} of {len(rows)})")
     return say(not dead,
-               f"no kernel is malformed on nearly every row of a set ({len(tables())} sets)",
+               f"no kernel is malformed on nearly every row of a selected set ({len(answer_sets)} sets)",
                "" if not dead else
                f"{len(dead)}: {dead[:3]} -- that kernel did not RUN, it did not disagree. "
                f"Verus needs rustup on PATH and a non-login shell does not provide it; "
                f"t/grade_lab.sh uses bash -lc for exactly this. Regrade or move the table "
                f"aside, because every clean count over it is wrong")
+
+
+def check_result_quality(answer_sets: list[Path]) -> bool:
+    """Run result-only checks over a declared set, never a directory discovery side effect."""
+    if not answer_sets:
+        print("  [note] no answer set selected; result-quality checks are deferred until grading")
+        return True
+    ok = check_flakes(answer_sets)
+    ok = check_sets_complete(answer_sets) and ok
+    ok = check_columns(answer_sets) and ok
+    return check_kernel_ran(answer_sets) and ok
 
 
 def hf_cached(model: str) -> Path | None:
@@ -720,6 +865,14 @@ def main() -> int:
     ap.add_argument("--split", type=Path, default=OUT / "loop" / "split-v3.json")
     ap.add_argument("--tokenizer", help="round-trip this base model's tokenizer rather than the ones the "
                                         "run scripts name")
+    ap.add_argument("--pool", type=Path, action="append", default=[], metavar="JSONL",
+                    help="current JSONL training input; repeat for paired inputs")
+    ap.add_argument("--corpus", type=Path, action="append", default=[], metavar="TEXT",
+                    help="current text training corpus; repeat for each direct input")
+    ap.add_argument("--answer-set", action="append", default=[], metavar="TAG",
+                    help="graded answer-set tag to quality-check; repeat for a paired comparison")
+    ap.add_argument("--audit-history", action="store_true",
+                    help="also audit legacy pools, corpora, and answer sets; none are selected by default")
     ap.add_argument("--quick", action="store_true",
                     help="skip the one check that costs seconds (the tokenizer round-trip)")
     ap.add_argument("--strict", action="store_true")
@@ -737,15 +890,18 @@ def main() -> int:
     ok = check_grammar() and ok
     ok = check_tokenizer(a.tokenizer, a.quick) and ok
     print("the split")
-    ok = check_split(a.split) and ok
+    pools, corpora = selected_training_inputs(a.pool, a.corpus, a.audit_history)
+    ok = check_split(a.split, a.pool, a.corpus, a.audit_history) and ok
     print("what the run will open")
-    ok = check_data(a.split, lab) and ok
+    ok = check_data(a.split, lab, pools, corpora) and ok
     print("what is counted clean")
-    ok = check_flakes() and ok
-    ok = check_spec_agreement() and ok
-    ok = check_sets_complete() and ok
-    ok = check_columns() and ok
-    ok = check_kernel_ran() and ok
+    answer_sets_ok, answer_sets = select_answer_sets(a.answer_set, a.audit_history)
+    ok = answer_sets_ok and ok
+    if answer_sets_ok:
+        ok = check_result_quality(answer_sets) and ok
+    else:
+        print("  [note] result-quality checks skipped because answer-set selection failed")
+    ok = check_spec_agreement(pools, corpora) and ok
     print("housekeeping")
     ok = check_keys() and ok
     ok = check_space(lab) and ok

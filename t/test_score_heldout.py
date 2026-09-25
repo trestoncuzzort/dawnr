@@ -1,7 +1,10 @@
 """Claims of checked correctness require evidence for each current program."""
+import io
 import json
+import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,6 +18,33 @@ class ScoreEvidenceTests(unittest.TestCase):
     def test_clean_eval_ids_exclude_the_registered_overlap(self):
         policy = loop_filter.decontamination()
         self.assertEqual(score.clean_eval_ids(set(policy.overlap_eval_ids) | {1}), {1})
+
+    def test_outcome_export_has_complete_boolean_maps_without_changing_the_table(self):
+        split = self.root / "split.json"
+        split.write_text(json.dumps({"eval_ids": [1, 999999]}), encoding="utf-8")
+        outcomes = self.root / "outcomes.json"
+        (self.data / "raw").mkdir()
+        (self.data / "raw" / "1.json").write_text("{}", encoding="utf-8")
+        stdout = io.StringIO()
+        with patch.object(sys, "argv", [
+            "score_heldout.py", "--split", str(split), "--outcomes", str(outcomes), "demo",
+        ]), redirect_stdout(stdout):
+            self.assertEqual(score.main(), 0)
+        lines = stdout.getvalue().splitlines()
+        self.assertEqual(lines[0],
+                         "| tag | kernels | eval | answered | task | tests pass | graded | clean | converts | "
+                         "spec disagrees | clean, spec checked | spec unchecked | wrong but proven | "
+                         "clean, recited | clean, novel |")
+        self.assertEqual(len(lines), 4)
+        export = json.loads(outcomes.read_text(encoding="utf-8"))
+        self.assertEqual(export["schema_version"], 1)
+        for panel in ("all-2", "clean-2"):
+            tagged = export["panels"][panel]["tags"]["demo"]
+            self.assertEqual(export["panels"][panel]["task_ids"], [1, 999999])
+            self.assertEqual(tagged["clean"], {"1": True, "999999": False})
+            self.assertEqual(tagged["clean_count"], 1)
+            self.assertEqual(tagged["spec_agrees"], {"1": False, "999999": False})
+            self.assertEqual(tagged["spec_agrees_count"], 0)
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

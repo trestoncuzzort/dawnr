@@ -76,11 +76,15 @@ def main():
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
         raise ValueError(f"cannot read evaluation split {args.split}") from error
     data_text = args.data.read_text(encoding="utf-8")
-    leaked = loop_filter.held_out_ids_in(data_text, eval_ids)
-    if leaked:
-        names = "; ".join(f"{task_id} ({', '.join(sorted(spellings))})"
-                          for task_id, spellings in sorted(leaked.items()))
-        raise ValueError(f"cannot train: {args.data} contains held-out ids from {args.split}: {names}")
+    validation = loop_filter.validate_training_data(data_text, eval_ids)
+    if not validation.ok:
+        reasons = []
+        if validation.held_out:
+            reasons.append(f"contains held-out ids from {args.split}: "
+                           f"{loop_filter.held_out_detail(validation.held_out)}")
+        if validation.same_task_names or validation.same_task_ids:
+            reasons.append(loop_filter.same_task_detail(validation))
+        raise ValueError(f"cannot train: {args.data}: " + "; ".join(reasons))
 
     import torch
     from data import Corpus, load_tokenizer, tokenizer_fingerprint

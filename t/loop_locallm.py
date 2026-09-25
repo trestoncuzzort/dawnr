@@ -130,11 +130,9 @@ def held_out(split_path: str) -> set[int]:
     stops it at the point the corpus is built, which is the only place it can be
     stopped before a model has already seen the problem.
 
-    An empty set (no split given) means no filtering, which is the old
-    behaviour, so a caller that does not pass one is not silently changed.
     """
     if not split_path:
-        return set()
+        raise SystemExit("corpus construction requires --split; no unscoped training corpus is permitted")
     try:
         return {int(i) for i in json.loads(Path(split_path).read_text(encoding="utf-8"))["eval_ids"]}
     except (OSError, KeyError, ValueError) as e:
@@ -156,35 +154,15 @@ def clean_rows(table: Path) -> set[str]:
     return rows
 
 
-class Gate:
-    """Reject held-out and same-task training sources before corpus assembly."""
-
-    def __init__(self, held_out_ids: set[int], policy: loop_filter.Decontamination | None = None):
-        self.held_out_ids = held_out_ids
-        self.policy = policy or loop_filter.decontamination()
-        self.held: list[str] = []
-        self.decontaminated: list[str] = []
-
-    def admit(self, doc: str, names: list[str | None], task_ids: set[int] | None = None) -> bool:
-        names = [name for name in names if name]
-        found = set(task_ids or ()) | set(loop_filter.problem_ids_in(doc))
-        found |= {task_id for task_id in map(loop_filter.problem_id, names) if task_id is not None}
-        held = sorted(found & self.held_out_ids)
-        dropped_names = sorted(set(names) & self.policy.drop_document_names)
-        dropped_ids = sorted(found & self.policy.exclude_train_ids)
-        label = "/".join(names) or next(iter(doc.strip().splitlines()), "<unnamed>")
-        if held:
-            self.held.append(f"{label[:60]} ({', '.join(map(str, held))})")
-        if dropped_names or dropped_ids:
-            detail = dropped_names + [f"task_id={task_id}" for task_id in dropped_ids]
-            self.decontaminated.append(f"{label[:60]} ({', '.join(detail)})")
-        return not held and not (dropped_names or dropped_ids)
+# The corpus builder drops unsafe documents; preflight and continuation use the
+# same validator to refuse unsafe files. Keep the old local name for callers.
+Gate = loop_filter.TrainingDataGate
 
 
 def cmd_corpus(a) -> int:
     pool = se.pool(a.pool)
     docs, n_sft, n_lift, n_committed = [], 0, 0, 0
-    evil = held_out(getattr(a, "split", ""))      # ids that must not appear anywhere below
+    evil = held_out(a.split)      # ids that must not appear anywhere below
     gate = Gate(evil)
     if a.base:
         # an existing corpus (e.g. t/runs/2026-09-16/loop-data/corpus.txt, which
@@ -238,16 +216,20 @@ def cmd_corpus(a) -> int:
             seen.add(d)
             unique.append(d)
     docs = unique
+    corpus_text = "\n\n".join(docs)
+    final = loop_filter.validate_training_data(corpus_text, evil)
+    if not final.ok:
+        detail = (loop_filter.held_out_detail(final.held_out) if final.held_out
+                  else loop_filter.same_task_detail(final))
+        raise SystemExit(f"refusing to write an unsafe training corpus: {detail}")
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("\n\n".join(docs) + "\n", encoding="utf-8")
+    out.write_text(corpus_text + "\n", encoding="utf-8")
     print(f"corpus {out}: {len(docs)} documents (base {a.base or 'none'}, {n_sft} problem answers, {n_lift} lifted, "
           f"{n_committed} committed), {out.stat().st_size} bytes")
     if evil:
         print(f"held-out filter: {len(evil)} ids from {a.split}, {len(gate.held)} document(s) excluded"
               + (f": {', '.join(gate.held)}" if gate.held else ""))
-    else:
-        print("held-out filter: NOT APPLIED (no --split given); t/preflight.py will catch a leak after the fact")
     print(f"decontamination filter: {len(gate.decontaminated)} document(s) excluded"
           + (f": {', '.join(gate.decontaminated)}" if gate.decontaminated else ""))
     return 0
@@ -334,10 +316,9 @@ def main() -> int:
     p.add_argument("--examples", action="store_true",
                    help="put the problem's own assertions in the head; every model "
                         "compared against a model trained this way must get them too")
-    p.add_argument("--split", default="",
-                   help="exclude this split's eval_ids from every source (issue #30). "
-                        "Pass the split the model will be evaluated on; without it "
-                        "nothing is filtered and only preflight catches a leak.")
+    p.add_argument("--split", type=Path, required=True,
+                   help="the evaluation split whose eval_ids are excluded from every source; "
+                        "a corpus build without this boundary is refused")
     p = sub.add_parser("train")
     p.add_argument("--corpus", default=str(OUT / "corpus.txt"))
     p.add_argument("--model", default=str(OUT / "model"))
