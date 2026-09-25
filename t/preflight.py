@@ -141,6 +141,68 @@ def check_kernels() -> bool:
     return ok
 
 
+def leaked_detail(leaked: dict[int, set[str]]) -> str:
+    """Return a concise account of ids a data guard found."""
+    rows = [f"{task_id} ({', '.join(sorted(names))})" for task_id, names in sorted(leaked.items())]
+    return f"{len(leaked)} leaked: {rows[:5]}" + (" ..." if len(rows) > 5 else "")
+
+
+def decontamination_detail(names: set[str], task_ids: set[int]) -> str:
+    """Return a concise account of known same-task training sources."""
+    rows = sorted(names) + [f"task_id={task_id}" for task_id in sorted(task_ids)]
+    return f"{len(rows)} known same-task source(s): {rows[:5]}" + (" ..." if len(rows) > 5 else "")
+
+
+def check_pool_files(eval_ids: set[int], files: list[Path]) -> bool:
+    """Check JSONL pool rows by explicit id and every task-name alias."""
+    import loop_filter
+
+    policy = loop_filter.decontamination()
+    ok = True
+    for path in files:
+        text = path.read_text(errors="replace")
+        found = loop_filter.problem_ids_in(text)
+        names = set(loop_filter.task_names(text))
+        for line in text.splitlines():
+            try:
+                row = json.loads(line)
+                task_id = row.get("task_id")
+                if isinstance(task_id, bool):
+                    continue
+                task_id = int(task_id)
+            except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+                continue
+            found.setdefault(task_id, set()).add(f"task_id={task_id}")
+            if isinstance(row.get("task"), str):
+                names.add(row["task"])
+        leaked = {task_id: names for task_id, names in found.items() if task_id in eval_ids}
+        blocked_names = names & policy.drop_document_names
+        blocked_ids = set(found) & policy.exclude_train_ids
+        ok = say(not leaked, f"{path.name} holds no held-out problem",
+                 "" if not leaked else leaked_detail(leaked)) and ok
+        ok = say(not (blocked_names or blocked_ids), f"{path.name} holds no same-task training source",
+                 "" if not (blocked_names or blocked_ids) else decontamination_detail(blocked_names, blocked_ids)) and ok
+    return ok
+
+
+def check_corpora(eval_ids: set[int], corpora: list[Path]) -> bool:
+    """Check every task-name alias in each training corpus."""
+    import loop_filter
+
+    policy = loop_filter.decontamination()
+    ok = True
+    for path in corpora:
+        text = path.read_text(errors="replace")
+        leaked = loop_filter.held_out_ids_in(text, eval_ids)
+        blocked_names = set(loop_filter.task_names(text)) & policy.drop_document_names
+        blocked_ids = set(loop_filter.problem_ids_in(text)) & policy.exclude_train_ids
+        ok = say(not leaked, f"{path.name} trains on no held-out problem",
+                 "" if not leaked else leaked_detail(leaked)) and ok
+        ok = say(not (blocked_names or blocked_ids), f"{path.name} trains on no same-task source",
+                 "" if not (blocked_names or blocked_ids) else decontamination_detail(blocked_names, blocked_ids)) and ok
+    return ok
+
+
 def check_split(split_path: Path) -> bool:
     try:
         split = json.loads(split_path.read_text())
@@ -154,15 +216,7 @@ def check_split(split_path: Path) -> bool:
     files = sorted((OUT / "loop").glob("sft-*.jsonl")) + sorted((OUT / "loop").glob("pairs-*.jsonl"))
     if not files:
         ok = say(False, "a pool to check", "no sft-*.jsonl or pairs-*.jsonl under out/loop")
-    for p in files:
-        name = p.name
-        leaked = set()
-        for line in p.read_text(errors="replace").splitlines():
-            for tid in re.findall(r"mbpp_(\d+)", line):
-                if int(tid) in ev:
-                    leaked.add(int(tid))
-        ok = say(not leaked, f"{name} holds no held-out problem",
-                 "" if not leaked else f"{len(leaked)} leaked: {sorted(leaked)[:5]}") and ok
+    ok = check_pool_files(ev, files) and ok
 
     # The pool files are not the only thing that reaches a model. A locallm
     # corpus is the pool's answers PLUS the lifted and committed tasks, and
@@ -172,11 +226,7 @@ def check_split(split_path: Path) -> bool:
     # unenforced until now, which is the same shape as the round-6 gap above.
     corpora = sorted((OUT / "loop").glob("corpus-*.txt")) + \
         sorted((OUT / "loop-locallm").glob("corpus*.txt"))
-    for p in corpora:
-        leaked = {int(tid) for tid in re.findall(r"mbpp_(\d+)", p.read_text(errors="replace"))
-                  if int(tid) in ev}
-        ok = say(not leaked, f"{p.name} trains on no held-out problem",
-                 "" if not leaked else f"{len(leaked)} leaked: {sorted(leaked)[:5]}") and ok
+    ok = check_corpora(ev, corpora) and ok
     if not corpora:
         note("no locallm corpus to leak-check yet")
     return ok

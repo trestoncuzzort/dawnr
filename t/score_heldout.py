@@ -42,6 +42,12 @@ KERNELS = {"dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"}
 FAILING_TESTS = {"fail", "signature", "requires-excluded", "undefined"}
 
 
+def clean_eval_ids(eval_ids: set[int]) -> set[int]:
+    """Return evaluation ids without known same-task training sources."""
+    from loop_filter import decontamination
+    return set(eval_ids) - set(decontamination().overlap_eval_ids)
+
+
 def checked_spec(result: dict, task_file: Path) -> str | None:
     """A set was checked only for the exact task contents its evidence describes."""
     from spec_check import task_sha256
@@ -163,6 +169,7 @@ def main() -> int:
     ap.add_argument("tags", nargs="+")
     a = ap.parse_args()
     eval_ids = {int(i) for i in json.loads(a.split.read_text(encoding="utf-8"))["eval_ids"]}
+    clean_ids = clean_eval_ids(eval_ids)
     corpora = {}
     for pair in a.corpus:
         tag, sep, path = pair.partition("=")
@@ -176,8 +183,11 @@ def main() -> int:
     print("| " + " | ".join(heads) + " |")
     print("|" + "---|" * len(heads))
     for tag in a.tags:
-        r = score(tag, eval_ids, parsed[corpora[tag]] if tag in corpora else None)
-        print("| " + " | ".join(str(r[h]) for h in heads) + " |")
+        training_corpus = parsed[corpora[tag]] if tag in corpora else None
+        for label, ids in ((tag, eval_ids), (f"{tag} clean-{len(clean_ids)}", clean_ids)):
+            r = score(tag, ids, training_corpus)
+            r["tag"] = label
+            print("| " + " | ".join(str(r[h]) for h in heads) + " |")
     return 0
 
 
