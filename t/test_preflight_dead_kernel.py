@@ -10,8 +10,6 @@ its headline across seeds.
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
-
 import preflight
 
 HEAD = ("| task | dafny | verus | spark | framac | lean | rocq | fstar |\n"
@@ -31,8 +29,7 @@ def make(rows, verus_cell):
 
 class DeadKernelTests(unittest.TestCase):
     def run_check(self, d):
-        with mock.patch.object(preflight, "tables", lambda: [d]):
-            return preflight.check_kernel_ran()
+        return preflight.check_kernel_ran([d])
 
     def test_a_kernel_malformed_on_every_row_fails(self):
         self.assertFalse(self.run_check(make(20, "malformed / malformed")))

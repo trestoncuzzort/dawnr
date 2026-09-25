@@ -26,16 +26,17 @@ PROGRAM = "task mbpp_{i}__f(a: int) returns (r: int)\n  ensures r == a\n{{\n  r 
 
 
 def build(base_text, extra):
-    d = Path(tempfile.mkdtemp())
-    base = d / "base.txt"
-    base.write_text(base_text, encoding="utf-8")
-    out = d / "corpus.txt"
-    r = subprocess.run([sys.executable, str(HERE / "loop_locallm.py"), "corpus", "--pool", "v5",
-                        "--base", str(base), "--out", str(out), *extra],
-                       capture_output=True, text=True, cwd=HERE)
-    if r.returncode:
-        raise AssertionError(r.stderr)
-    return out.read_text(encoding="utf-8"), r.stdout
+    with tempfile.TemporaryDirectory() as temp:
+        d = Path(temp)
+        base = d / "base.txt"
+        base.write_text(base_text, encoding="utf-8")
+        out = d / "corpus.txt"
+        r = subprocess.run([sys.executable, str(HERE / "loop_locallm.py"), "corpus", "--pool", "v5",
+                            "--base", str(base), "--out", str(out), *extra],
+                           capture_output=True, text=True, cwd=HERE)
+        if r.returncode:
+            raise AssertionError(r.stderr)
+        return out.read_text(encoding="utf-8"), r.stdout
 
 
 class SplitFilterTests(unittest.TestCase):
@@ -54,11 +55,17 @@ class SplitFilterTests(unittest.TestCase):
         self.assertIn(f"mbpp_{self.safe}__", text, "the filter dropped a problem it should keep")
         self.assertIn("1 document(s) excluded", said)
 
-    def test_without_a_split_nothing_is_filtered_and_it_says_so(self):
-        """The old behaviour, unchanged, so no existing caller is silently altered."""
-        text, said = build(self.base, [])
-        self.assertIn(f"mbpp_{self.held}__", text)
-        self.assertIn("NOT APPLIED", said)
+    def test_corpus_requires_an_evaluation_split(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp) / "base.txt"
+            base.write_text(self.base, encoding="utf-8")
+            result = subprocess.run(
+                [sys.executable, str(HERE / "loop_locallm.py"), "corpus", "--pool", "v5",
+                 "--base", str(base), "--out", str(Path(temp) / "corpus.txt")],
+                capture_output=True, text=True, cwd=HERE,
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("required: --split", result.stderr)
 
     def test_the_id_reader_only_matches_real_task_names(self):
         self.assertEqual(loop_locallm.mbpp_id("mbpp_269__foo"), 269)

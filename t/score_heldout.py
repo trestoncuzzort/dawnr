@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
-"""t/score_heldout.py -- score answer sets on the held-out problems only (2026-09-17).
+"""Score held-out answer sets on both the full and decontaminated panels.
 
-    python3 t/score_heldout.py --split t/out/loop/split-v3.json TAG [TAG ...]
+    python3 t/score_heldout.py [--split SPLIT.json] [--outcomes OUTCOMES.json] TAG [TAG ...]
 
-TAG is a directory name under t/out/spec-experiment/ (spec_experiment.py's
-layout: raw/, extract.json, tests.json, kernels.md). Every count is over the
-split's eval_ids, the problems no training set may contain:
+``TAG`` is a directory under ``t/out/spec-experiment/`` with ``raw/``,
+``extract.json``, ``tests.json``, and ``kernels.md``. The Markdown table keeps
+its established columns and emits one row for all split evaluation IDs and one
+for the clean panel after registered same-task training overlaps are removed.
 
-  answered      a reply was recorded
-  task          the reply extracted to a well-formed t task
-  tests pass    the task passes every one of the problem's tests
-  graded        the task has a row in kernels.md
-  clean         tests pass AND stable verified / refuted in all seven named
-                kernels; partial tables cannot contribute clean answers
-  wrong but proven   verified / refuted in every column while failing its
-                tests: a proven program for the wrong problem, countable only
-                for failing tasks that were graded
-  clean, recited / clean, novel   with --corpus TAG=PATH, the clean answers
-                split by whether the same program, names erased, is a document
-                of the corpus that model was trained on; "-" without one
+``--outcomes`` additionally writes schema-v1 JSON for paired comparison: each
+``all-N`` and ``clean-N`` panel records its sorted task IDs and, for every tag,
+complete task-id -> Boolean ``clean`` and ``spec_agrees`` maps plus their
+matching counts. ``spec_agrees`` is true only for a clean answer with
+current-task agreement evidence. Missing, malformed, untested, or incompletely graded answers are explicitly
+``false`` rather than omitted, so a comparison cannot quietly change its paired
+population. The human-readable table remains on standard output.
 
-One line per tag, so rows for Phi-4-mini, a base model, a trained student and
-a model locallm built compare directly. Standard library only.
+A clean answer passes the problem's tests and is ``verified / refuted`` in all
+seven named kernels; partial kernel tables cannot contribute clean answers.
 """
 
 from __future__ import annotations
@@ -105,7 +101,9 @@ def corpus_keys(path: Path) -> dict:
     return keys
 
 
-def score(tag: str, eval_ids: set[int], corpus: dict | None = None) -> dict:
+def score(tag: str, eval_ids: set[int], corpus: dict | None = None,
+          clean_outcomes: dict[int, bool] | None = None,
+          spec_agrees_outcomes: dict[int, bool] | None = None) -> dict:
     d = se.outdir(tag)
     raw = {int(p.stem) for p in (d / "raw").glob("*.json") if p.stem.isdigit()}
     ext = json.loads((d / "extract.json").read_text(encoding="utf-8")) if (d / "extract.json").exists() else {}
@@ -126,6 +124,12 @@ def score(tag: str, eval_ids: set[int], corpus: dict | None = None) -> dict:
          "clean, novel": 0 if corpus is not None else "-"}
     if corpus is not None:
         from loop_filter import key
+    if clean_outcomes is not None:
+        clean_outcomes.clear()
+        clean_outcomes.update({tid: False for tid in eval_ids})
+    if spec_agrees_outcomes is not None:
+        spec_agrees_outcomes.clear()
+        spec_agrees_outcomes.update({tid: False for tid in eval_ids})
     for tid in eval_ids:
         if tid in raw:
             r["answered"] += 1
@@ -143,12 +147,18 @@ def score(tag: str, eval_ids: set[int], corpus: dict | None = None) -> dict:
         name = t.get("name") or e.get("name") or ""
         outcome = checked_spec(spec_results.get(f"{tag}/{name}", {}), d / "tasks" / f"{name}.json") \
             if proven and passed else None
-        r["clean"] += proven and passed
-        r["spec disagrees"] += bool(proven and passed and outcome == "disagrees")
-        r["clean, spec checked"] += bool(proven and passed and outcome == "agrees")
-        r["spec unchecked"] += bool(proven and passed and outcome is None)
+        is_clean = bool(proven and passed)
+        spec_agrees = bool(is_clean and outcome == "agrees")
+        r["clean"] += is_clean
+        r["spec disagrees"] += bool(is_clean and outcome == "disagrees")
+        r["clean, spec checked"] += spec_agrees
+        r["spec unchecked"] += bool(is_clean and outcome is None)
         r["wrong but proven"] += proven and t.get("overall") in FAILING_TESTS
-        if corpus is not None and proven and passed:
+        if clean_outcomes is not None:
+            clean_outcomes[tid] = is_clean
+        if spec_agrees_outcomes is not None:
+            spec_agrees_outcomes[tid] = spec_agrees
+        if corpus is not None and is_clean:
             task = json.loads((d / "tasks" / f"{name}.json").read_text(encoding="utf-8"))
             r["clean, recited" if key(task) in corpus else "clean, novel"] += 1
     # The gate this project loses at, as one number: of the answers that pass their own tests, how many the
@@ -166,10 +176,22 @@ def main() -> int:
     ap.add_argument("--corpus", action="append", default=[], metavar="TAG=PATH",
                     help="the corpus TAG's model was trained on; splits its clean answers into "
                          "recited and novel (repeatable, one per tag)")
+    ap.add_argument("--outcomes", type=Path, metavar="PATH",
+                    help="write schema-v1 per-panel Boolean clean outcomes for paired comparison")
     ap.add_argument("tags", nargs="+")
     a = ap.parse_args()
     eval_ids = {int(i) for i in json.loads(a.split.read_text(encoding="utf-8"))["eval_ids"]}
     clean_ids = clean_eval_ids(eval_ids)
+    if a.outcomes is not None and len(set(a.tags)) != len(a.tags):
+        ap.error("--outcomes needs distinct tags")
+    panel_specs = (
+        (f"all-{len(eval_ids)}", "", eval_ids),
+        (f"clean-{len(clean_ids)}", f" clean-{len(clean_ids)}", clean_ids),
+    )
+    panels = {
+        panel_name: {"task_ids": sorted(ids), "tags": {}}
+        for panel_name, _suffix, ids in panel_specs
+    }
     corpora = {}
     for pair in a.corpus:
         tag, sep, path = pair.partition("=")
@@ -184,10 +206,22 @@ def main() -> int:
     print("|" + "---|" * len(heads))
     for tag in a.tags:
         training_corpus = parsed[corpora[tag]] if tag in corpora else None
-        for label, ids in ((tag, eval_ids), (f"{tag} clean-{len(clean_ids)}", clean_ids)):
-            r = score(tag, ids, training_corpus)
-            r["tag"] = label
+        for panel_name, suffix, ids in panel_specs:
+            clean_map = {} if a.outcomes is not None else None
+            spec_agrees_map = {} if a.outcomes is not None else None
+            r = score(tag, ids, training_corpus, clean_map, spec_agrees_map)
+            r["tag"] = f"{tag}{suffix}"
             print("| " + " | ".join(str(r[h]) for h in heads) + " |")
+            if clean_map is not None and spec_agrees_map is not None:
+                panels[panel_name]["tags"][tag] = {
+                    "clean": {str(tid): clean_map[tid] for tid in sorted(clean_map)},
+                    "clean_count": r["clean"],
+                    "spec_agrees": {str(tid): spec_agrees_map[tid] for tid in sorted(spec_agrees_map)},
+                    "spec_agrees_count": r["clean, spec checked"],
+                }
+    if a.outcomes is not None:
+        outcome_export = {"schema_version": 1, "panels": panels}
+        a.outcomes.write_text(json.dumps(outcome_export, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return 0
 
 
