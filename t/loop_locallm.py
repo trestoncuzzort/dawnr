@@ -142,9 +142,9 @@ def held_out(split_path: str) -> set[int]:
 
 
 def mbpp_id(name: str) -> int | None:
-    """The MBPP number inside a lifted or committed task name, e.g. mbpp_269__f -> 269."""
-    m = re.match(r"mbpp_(\d+)__", name or "")
-    return int(m.group(1)) if m else None
+    """The MBPP number a task name stands for, or None."""
+    task_id = loop_filter.problem_id(name)
+    return task_id if task_id is not None and task_id < se.HUMANEVAL_BASE else None
 
 
 def clean_rows(table: Path) -> set[str]:
@@ -156,11 +156,36 @@ def clean_rows(table: Path) -> set[str]:
     return rows
 
 
+class Gate:
+    """Reject held-out and same-task training sources before corpus assembly."""
+
+    def __init__(self, held_out_ids: set[int], policy: loop_filter.Decontamination | None = None):
+        self.held_out_ids = held_out_ids
+        self.policy = policy or loop_filter.decontamination()
+        self.held: list[str] = []
+        self.decontaminated: list[str] = []
+
+    def admit(self, doc: str, names: list[str | None], task_ids: set[int] | None = None) -> bool:
+        names = [name for name in names if name]
+        found = set(task_ids or ()) | set(loop_filter.problem_ids_in(doc))
+        found |= {task_id for task_id in map(loop_filter.problem_id, names) if task_id is not None}
+        held = sorted(found & self.held_out_ids)
+        dropped_names = sorted(set(names) & self.policy.drop_document_names)
+        dropped_ids = sorted(found & self.policy.exclude_train_ids)
+        label = "/".join(names) or next(iter(doc.strip().splitlines()), "<unnamed>")
+        if held:
+            self.held.append(f"{label[:60]} ({', '.join(map(str, held))})")
+        if dropped_names or dropped_ids:
+            detail = dropped_names + [f"task_id={task_id}" for task_id in dropped_ids]
+            self.decontaminated.append(f"{label[:60]} ({', '.join(detail)})")
+        return not held and not (dropped_names or dropped_ids)
+
+
 def cmd_corpus(a) -> int:
     pool = se.pool(a.pool)
     docs, n_sft, n_lift, n_committed = [], 0, 0, 0
     evil = held_out(getattr(a, "split", ""))      # ids that must not appear anywhere below
-    dropped = 0
+    gate = Gate(evil)
     if a.base:
         # an existing corpus (e.g. t/runs/2026-09-16/loop-data/corpus.txt, which
         # already holds the lifted and committed tasks) under the new answers
@@ -172,22 +197,21 @@ def cmd_corpus(a) -> int:
             if not d.strip():
                 continue
             # the base corpus was built by an older run that may not have filtered
-            found = {i for i in (mbpp_id(n) for n in re.findall(r"task (mbpp_\d+__\w+)", d)) if i is not None}
-            if evil & found:
-                dropped += 1
-                continue
-            docs.append(d.strip() + "\n")
+            if gate.admit(d, loop_filter.task_names(d)):
+                docs.append(d.strip() + "\n")
     for sft in a.sft:
         for line in Path(sft).read_text(encoding="utf-8").splitlines():
             r = json.loads(line)
             m = re.search(r"```t\n(.*?)```", r["chosen"], re.S)
             entry = pool.get(r["task_id"]) or pool.get(int(r["task_id"]))
             try:
-                if int(r["task_id"]) in evil:
-                    dropped += 1
-                    continue
+                task_id = int(r["task_id"])
             except (TypeError, ValueError):
-                pass
+                task_id = None
+            body = m.group(1) if m else ""
+            if not gate.admit(body, [r.get("task")] + loop_filter.task_names(body),
+                              {task_id} if task_id is not None else set()):
+                continue
             if m and entry:
                 docs.append(problem_head(entry, a.examples) + m.group(1).strip() + "\n")
                 n_sft += 1
@@ -195,21 +219,19 @@ def cmd_corpus(a) -> int:
         keep = clean_rows(HERE / "COVERAGE-lifted-785.md")
         for f in sorted((HERE / "out" / "lifted-tasks").glob("*.json")):
             task = json.loads(f.read_text(encoding="utf-8"))
-            if mbpp_id(task.get("name")) in evil:
-                dropped += 1
-                continue
             if task.get("name") in keep:
-                docs.append(surface.print_task(task).strip() + "\n")
-                n_lift += 1
+                doc = surface.print_task(task).strip() + "\n"
+                if gate.admit(doc, [task.get("name")]):
+                    docs.append(doc)
+                    n_lift += 1
         keep = clean_rows(HERE / "AGREEMENT.md")
         for f in sorted((HERE / "tasks").glob("*.t")):
             task = surface.parse_file(str(f))
-            if mbpp_id(task.get("name")) in evil:
-                dropped += 1
-                continue
             if task.get("name") in keep:
-                docs.append(surface.print_task(task).strip() + "\n")
-                n_committed += 1
+                doc = surface.print_task(task).strip() + "\n"
+                if gate.admit(doc, [task.get("name")]):
+                    docs.append(doc)
+                    n_committed += 1
     seen, unique = set(), []
     for d in docs:               # the base corpus may already hold the same answers
         if d not in seen:
@@ -222,9 +244,12 @@ def cmd_corpus(a) -> int:
     print(f"corpus {out}: {len(docs)} documents (base {a.base or 'none'}, {n_sft} problem answers, {n_lift} lifted, "
           f"{n_committed} committed), {out.stat().st_size} bytes")
     if evil:
-        print(f"held-out filter: {len(evil)} ids from {a.split}, {dropped} document(s) excluded")
+        print(f"held-out filter: {len(evil)} ids from {a.split}, {len(gate.held)} document(s) excluded"
+              + (f": {', '.join(gate.held)}" if gate.held else ""))
     else:
         print("held-out filter: NOT APPLIED (no --split given); t/preflight.py will catch a leak after the fact")
+    print(f"decontamination filter: {len(gate.decontaminated)} document(s) excluded"
+          + (f": {', '.join(gate.decontaminated)}" if gate.decontaminated else ""))
     return 0
 
 

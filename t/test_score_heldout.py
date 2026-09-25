@@ -8,9 +8,14 @@ from unittest.mock import patch
 import score_heldout as score
 import spec_check
 import surface
+import loop_filter
 
 
 class ScoreEvidenceTests(unittest.TestCase):
+    def test_clean_eval_ids_exclude_the_registered_overlap(self):
+        policy = loop_filter.decontamination()
+        self.assertEqual(score.clean_eval_ids(set(policy.overlap_eval_ids) | {1}), {1})
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

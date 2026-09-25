@@ -19,13 +19,12 @@ import shutil
 import sys
 import time
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+ROOT = Path(__file__).resolve().parents[1]
+T = ROOT / "t"
+sys.path.insert(0, str(T))
+sys.path.insert(1, str(Path(__file__).resolve().parent))
 
-import torch
-
-from data import Corpus, load_tokenizer, tokenizer_fingerprint
-from model import GPT, GPTConfig
-import train as core_train
+import loop_filter
 
 SCHEMA = 1
 
@@ -38,11 +37,11 @@ def file_sha256(path):
     return value.hexdigest()
 
 
-def load_core(init_dir, device, dropout):
-    checkpoint = torch.load(Path(init_dir) / "ckpt.pt", map_location="cpu", weights_only=True)
+def load_core(init_dir, device, dropout, torch_module, gpt, config_type):
+    checkpoint = torch_module.load(Path(init_dir) / "ckpt.pt", map_location="cpu", weights_only=True)
     checkpoint.pop("optimizer", None)
-    config = GPTConfig(**{**checkpoint["config"], "dropout": dropout})
-    model = GPT(config)
+    config = config_type(**{**checkpoint["config"], "dropout": dropout})
+    model = gpt(config)
     model.load_state_dict(checkpoint["model"])
     return model.to(device), config, checkpoint.get("tokenizer_fingerprint")
 
@@ -51,6 +50,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--init", type=Path, required=True, help="checkpoint directory to continue")
     parser.add_argument("--data", type=Path, required=True, help="corpus .txt")
+    parser.add_argument("--split", type=Path, required=True,
+                        help="evaluation split whose eval_ids must be absent from --data")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--steps", type=int, default=500)
     parser.add_argument("--batch-size", type=int, default=8)
@@ -70,6 +71,22 @@ def main():
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
 
+    try:
+        eval_ids = {int(task_id) for task_id in json.loads(args.split.read_text(encoding="utf-8"))["eval_ids"]}
+    except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError(f"cannot read evaluation split {args.split}") from error
+    data_text = args.data.read_text(encoding="utf-8")
+    leaked = loop_filter.held_out_ids_in(data_text, eval_ids)
+    if leaked:
+        names = "; ".join(f"{task_id} ({', '.join(sorted(spellings))})"
+                          for task_id, spellings in sorted(leaked.items()))
+        raise ValueError(f"cannot train: {args.data} contains held-out ids from {args.split}: {names}")
+
+    import torch
+    from data import Corpus, load_tokenizer, tokenizer_fingerprint
+    from model import GPT, GPTConfig
+    import train as core_train
+
     device = args.device or core_train.pick_device()
     args.out.mkdir(parents=True, exist_ok=True)
     tokenizer_source = Path(args.init) / "tokenizer.json"
@@ -78,12 +95,12 @@ def main():
     if device.startswith("cuda"):
         torch.cuda.manual_seed_all(args.seed)
         torch.cuda.reset_peak_memory_stats()
-    model, config, fingerprint = load_core(args.init, device, args.dropout)
+    model, config, fingerprint = load_core(args.init, device, args.dropout, torch, GPT, GPTConfig)
     if fingerprint and fingerprint != tokenizer_fingerprint(tokenizer):
         raise ValueError("initialization checkpoint and its tokenizer disagree")
     if tokenizer.vocab_size != config.vocab_size:
         raise ValueError("tokenizer and embedding table disagree on vocabulary size")
-    corpus = Corpus(args.data.read_text(encoding="utf-8"), tokenizer, device,
+    corpus = Corpus(data_text, tokenizer, device,
                     val_frac=args.val_frac, grouped=True, seed=args.seed)
     if len(corpus.train) <= args.block_size:
         raise ValueError("corpus is smaller than one training window")
@@ -92,6 +109,7 @@ def main():
                   "tokenizer_file_sha256": file_sha256(tokenizer_source),
                   "tokenizer_fingerprint": tokenizer_fingerprint(tokenizer),
                   "corpus": str(args.data), "corpus_sha256": file_sha256(args.data),
+                  "evaluation_split": str(args.split), "evaluation_split_sha256": file_sha256(args.split),
                   "corpus_train_tokens": int(len(corpus.train)),
                   "corpus_val_tokens": int(len(corpus.val)),
                   "split": {"mode": corpus.split_mode, "val_frac": args.val_frac, "seed": args.seed},
@@ -102,8 +120,8 @@ def main():
     state_path, start = args.out / "state.pt", 0
     if args.resume and state_path.exists():
         state = torch.load(state_path, map_location=device, weights_only=False)
-        for key in ("init_ckpt_sha256", "corpus_sha256", "seed"):
-            if state["identities"][key] != identities[key]:
+        for key in ("init_ckpt_sha256", "corpus_sha256", "evaluation_split_sha256", "seed"):
+            if state["identities"].get(key) != identities[key]:
                 raise ValueError(f"cannot resume: {key} changed since this run started")
         model.load_state_dict(state["model"])
         optimizer.load_state_dict(state["optimizer"])

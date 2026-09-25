@@ -331,7 +331,7 @@
   "r7-specialize",
   "Round 7: specialize the pretrained 92M core",
   "The missing path, added 2026-09-19: every locallm row on the scoreboard is a 3.2M model trained from random weights on 77 KB, because train.py can only start a model from scratch. This continues the 92M GPT core from the 4000-step study on the filtered t corpus, keeping its frozen tokenizer and weights. Thirty seconds; held-out corpus loss went 3.104 to 0.574. Loss is not the result -- the 232 are.",
-  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && CARD=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -t, -k2 -rn | head -1 | cut -d, -f1) && PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES=$CARD ~/.venv-vllm/bin/python locallm/continue_from_checkpoint.py --init t/out/source-pretraining-longer-2026-09-19/gpt-seed1337 --data t/out/loop/corpus-r7-sft.txt --out t/out/locallm-r7-92m --steps 300 --batch-size 8 --block-size 512 --lr 3e-5'",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && CARD=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -t, -k2 -rn | head -1 | cut -d, -f1) && PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES=$CARD ~/.venv-vllm/bin/python locallm/continue_from_checkpoint.py --init t/out/source-pretraining-longer-2026-09-19/gpt-seed1337 --data t/out/loop/corpus-r7-sft.txt --split t/out/loop/split-v5.json --out t/out/locallm-r7-92m --steps 300 --batch-size 8 --block-size 512 --lr 3e-5'",
   ". t/lab-workstation.conf && ssh \"$T_LAB\" 'test -s ~/tup/t/out/locallm-r7-92m/ckpt.pt'",
   "lab"
  ],

@@ -13,6 +13,7 @@ Printed per round: samples, parsed, well-formed, novel, clean in all seven, clea
 in at least one, and the clean share of all samples.
 """
 import argparse, json, os, re, subprocess, sys, time
+from dataclasses import dataclass
 from pathlib import Path
 T = Path(__file__).resolve().parent; LL = T.parent / "locallm"
 sys.path.insert(0, str(T)); sys.path.insert(1, str(LL))
@@ -20,6 +21,71 @@ import spec_experiment as se, surface, fuzz_lower
 # this lab machine's kernel install paths, prepended when present; elsewhere PATH as is
 PATH = ("{h}/.cargo/bin:{h}/.opam/default/bin:{h}/.elan/bin:{h}/.local/fstar/fstar/bin:"
         "{h}/.local/gnatprove/gnatprove-x86_64-linux-16.1.0-1/bin:{h}/.local/verus/verus-x86-linux:").format(h=Path.home())
+
+
+_FAMILY_BASE = {"mbpp": 0, "dafny_synthesis_task_id": 0, "dafny-synthesis_task_id": 0,
+                "he": se.HUMANEVAL_BASE, "apps": se.APPS_BASE}
+_FAMILY = r"(mbpp|he|apps|dafny[_-]synthesis_task_id)_(\d+)"
+_NAME = re.compile(_FAMILY + r"(?=__|[^A-Za-z0-9_]|$)")
+_NAME_IN_TEXT = re.compile(r"(?<![A-Za-z0-9_])(" + _FAMILY + r"(?:__[A-Za-z0-9_]*)?)(?![A-Za-z0-9_])")
+
+
+def problem_id(name) -> int | None:
+    """Return the pool id named by a task, if any."""
+    if not isinstance(name, str):
+        return None
+    match = _NAME.match(name)
+    return _FAMILY_BASE[match.group(1)] + int(match.group(2)) if match else None
+
+
+def problem_ids_in(text: str) -> dict[int, set[str]]:
+    """Return every pool id and spelling found in text."""
+    found: dict[int, set[str]] = {}
+    for match in _NAME_IN_TEXT.finditer(text or ""):
+        found.setdefault(_FAMILY_BASE[match.group(2)] + int(match.group(3)), set()).add(match.group(1))
+    return found
+
+
+def held_out_ids_in(text: str, held_out: set[int]) -> dict[int, set[str]]:
+    """Return held-out pool ids and spellings found in text."""
+    return {task_id: names for task_id, names in problem_ids_in(text).items() if task_id in held_out}
+
+
+def task_names(text: str) -> list[str]:
+    """Return task names declared in text."""
+    return re.findall(r"(?m)^task\s+([A-Za-z_][A-Za-z0-9_]*)", text or "")
+
+
+@dataclass(frozen=True)
+class Decontamination:
+    drop_document_names: frozenset[str]
+    exclude_train_ids: frozenset[int]
+    overlap_eval_ids: frozenset[int]
+
+
+def decontamination(path: Path = T / "decontamination-2026-09-21.json") -> Decontamination:
+    """Load the checked-in same-task exclusions for future corpora and scoring."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        documents = data["drop_documents"]
+        train_ids = data["exclude_future_train_ids"]
+        overlap_ids = data["overlap_ids"]
+        if not isinstance(documents, dict) or not isinstance(train_ids, list) or not isinstance(overlap_ids, list):
+            raise TypeError("expected drop_documents and two id lists")
+        names = set()
+        for source in documents:
+            if not isinstance(source, str):
+                raise TypeError("a document source is not a string")
+            _, separator, name = source.partition(":")
+            if not separator or not name:
+                raise ValueError(f"invalid document source {source!r}")
+            names.add(name)
+        if len(names) != len(documents):
+            raise ValueError("document sources do not name distinct tasks")
+        return Decontamination(frozenset(names), frozenset(int(value) for value in train_ids),
+                               frozenset(int(value) for value in overlap_ids))
+    except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as error:
+        raise ValueError(f"cannot read decontamination policy {path}") from error
 
 
 HEAD_LINE = re.compile(r"^(?:Problem|Signature|Example): .*\n", re.M)
