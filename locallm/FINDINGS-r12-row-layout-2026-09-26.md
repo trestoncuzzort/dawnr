@@ -39,8 +39,8 @@ Two things differ from the denoising setup and could change the answer:
   fine-tune result.
 - **Corpus**: `t/loop_locallm.py corpus --lifted --lifted-set
   t/out/lifted-tasks-2026-09-26=t/COVERAGE-lifted-2026-09-26.md --split
-  t/out/loop/split-v5.json`, built from the main checkout (`/home/t/tup`,
-  read-only): 302 documents, 108,477 characters, 46,173 tokens under the
+  t/out/loop/split-v5.json`, built from the main checkout (read-only): 302
+  documents, 108,477 characters, 46,173 tokens under the
   core's frozen BPE tokenizer (8,192 entries) -- the same corpus, by
   construction, as the denoising note's.
 - **Trainer**: `locallm/continue_from_checkpoint.py --init <core>`, hash split
@@ -175,6 +175,135 @@ any arm), but the decision rule below is applied to the 900-step numbers.
   than by *which of these 302 documents this is*, head-keying may matter far
   less here than it did for a model that learned the alphabet from these same
   302 documents, and the finding would not transfer.
+
+## Result (written after the runs, below this line, without editing anything above it)
+
+All nine 300-step runs and all nine 900-step runs completed on the desktop's
+RTX 4080, one at a time under `systemd-run --user --scope -p MemoryMax=8G`,
+about 105-110 s each at 900 steps. Every loss is nats per token (BPE);
+`best val` is the lowest validation loss over every `metrics.jsonl` row
+(`--eval-every 20 --log-every 20`, so every row is a fresh evaluation).
+
+### The 300-step runs (kept, not the scored ones -- see "why this step budget")
+
+| arm | seed | best val | at step | final val | final train | gap |
+|---|---|---|---|---|---|---|
+| whole rows | 1337 | 0.6320 | 300 | 0.6320 | 0.2776 | 0.3543 |
+| whole rows | 7 | 0.6301 | 300 | 0.6301 | 0.2746 | 0.3554 |
+| whole rows | 42 | 0.6320 | 300 | 0.6320 | 0.2809 | 0.3511 |
+| windows | 1337 | 0.6584 | 300 | 0.6584 | 0.2056 | 0.4528 |
+| windows | 7 | 0.6559 | 300 | 0.6559 | 0.2095 | 0.4464 |
+| windows | 42 | 0.6779 | 300 | 0.6779 | 0.2103 | 0.4676 |
+| FIM 0.5 | 1337 | 0.6609 | 300 | 0.6609 | 0.3522 | 0.3088 |
+| FIM 0.5 | 7 | 0.6716 | 300 | 0.6716 | 0.3518 | 0.3198 |
+| FIM 0.5 | 42 | 0.6642 | 300 | 0.6642 | 0.3517 | 0.3124 |
+
+Every one of the nine best-val steps equals the final step: nothing had
+turned over yet at 300 steps, on any arm, at any seed. Read only as an
+early-training snapshot (not the scored comparison): whole rows already sit
+below windows and FIM on held-out loss well before anything overfits, which
+foreshadows the 900-step result below.
+
+### The scored runs, at the revised 900-step budget
+
+| arm | seed | best val | at step | best train | final val | final train | gap |
+|---|---|---|---|---|---|---|---|
+| whole rows | 1337 | 0.5905 | 440 | 0.0877 | 0.6415 | 0.0491 | 0.5924 |
+| whole rows | 7 | 0.5887 | 320 | 0.1450 | 0.6371 | 0.0491 | 0.5880 |
+| whole rows | 42 | 0.5924 | 340 | 0.1350 | 0.6463 | 0.0500 | 0.5962 |
+| **whole rows, mean (range)** | | **0.5905 (0.0038)** | | | 0.6416 (0.0092) | 0.0494 (0.0010) | **0.5922 (0.0082)** |
+| windows | 1337 | 0.6621 | 220 | 0.1676 | 0.7924 | 0.0332 | 0.7591 |
+| windows | 7 | 0.6545 | 200 | 0.2014 | 0.7795 | 0.0330 | 0.7465 |
+| windows | 42 | 0.6757 | 300 | 0.1007 | 0.7931 | 0.0325 | 0.7606 |
+| **windows, mean (range)** | | **0.6641 (0.0213)** | | | 0.7883 (0.0137) | 0.0329 (0.0007) | **0.7554 (0.0142)** |
+| FIM 0.5 | 1337 | 0.5718 | 440 | 0.1279 | 0.5974 | 0.0691 | 0.5282 |
+| FIM 0.5 | 7 | 0.5920 | 520 | 0.1042 | 0.6077 | 0.0686 | 0.5391 |
+| FIM 0.5 | 42 | 0.5768 | 480 | 0.1140 | 0.6003 | 0.0694 | 0.5309 |
+| **FIM 0.5, mean (range)** | | **0.5802 (0.0202)** | | | 0.6018 (0.0103) | 0.0690 (0.0007) | **0.5327 (0.0108)** |
+
+Noise (the larger of the two arms' seed ranges compared, matching the
+denoising note's definition):
+
+- whole rows vs. windows: best-val noise 0.0213, gap noise 0.0142.
+- whole rows vs. FIM: best-val noise 0.0202, gap noise 0.0108.
+- windows vs. FIM: best-val noise 0.0213, gap noise 0.0142.
+
+### Applying the decision rule
+
+**Rule 1 (windows reduce the gap) fails, in the wrong direction.** The
+windows arm's mean gap (0.7554) is *higher* than whole rows' (0.5922) by
+0.1632, itself many times the 0.0142 noise, and every windows seed's gap
+(0.7465-0.7606) is above every whole-rows seed's (0.5880-0.5962). Windows do
+not narrow the gap on this path; they widen it.
+
+**Rule 2 (windows generalise better) fails for the same reason and does not
+need rule 1 to fail first.** The windows arm's mean best val (0.6641) is
+*worse* than whole rows' (0.5905) by 0.0736, against a noise of 0.0213, with
+no overlap between the two arms' seeds (worst whole-rows seed 0.5924, best
+windows seed 0.6545). By rule 4, this is windows *hurting*, not helping.
+
+**Rule 3 (FIM adds beyond windows): passes, clearly.** FIM's mean best val
+(0.5802) is below windows' (0.6641) by 0.0839 against a noise of 0.0213, no
+overlap (worst FIM seed 0.5920, best windows seed 0.6545). FIM is
+unambiguously better than windows here, exactly as the denoising note found.
+
+**FIM against whole rows (not in the pre-registered rules, checked because
+the numbers are close): no clear win.** FIM's mean best val (0.5802) is
+below whole rows' (0.5905) by only 0.0103, *inside* the 0.0202 noise, and the
+two arms' seed ranges overlap (FIM 0.5718-0.5920, whole rows 0.5887-0.5924).
+FIM's gap is far narrower than whole rows' (0.5327 against 0.5922, a
+difference of 0.0595 against a noise of 0.0108, no overlap) -- but by the
+denoising note's own rule 2 language, applied here to FIM against whole
+rows instead of windows against whole rows: a narrower gap with a best val
+inside the noise is **"FIM slows memorisation but does not make the model
+generalise better,"** which is a no.
+
+**Rule 5: the finding does not hold on the r12 path, and the miss is not
+narrow.** The denoising note's central claim -- that whole-document rows
+anchored on the head drive most of the memorisation, and random windows
+remove most of it -- predicted windows would land close to FIM's numbers.
+Instead windows are the *worst* arm on every measure: worse best val than
+whole rows, worse gap than whole rows, and both worse than FIM. Whole-document
+rows, r12's current choice, are not the memorisation problem on this path;
+if anything they are the best-generalising arm measured, tied with FIM
+within noise.
+
+### Why the prediction was wrong
+
+The prediction (see above) explicitly named the mechanism at risk: a
+pretrained core, unlike a random init, does not have to learn the shape of
+text from these 302 documents, so head-keying might not dominate its
+memorisation the way it dominated the from-scratch model's. The result is
+consistent with a stronger version of that risk: windows do not merely fail
+to help, they actively hurt, plausibly because the windows path draws its
+512-token slices from the *joined* corpus (`Corpus.get_batch`, the same
+windows machinery pretraining itself uses) rather than from documents with
+their `Problem:`/`Signature:` structure intact. A window can start mid
+document or straddle two documents; whole-document rows always hand the
+model a complete, correctly-headed unit. A model that already knows how to
+read source text and English (the pretrained core) may get more usable
+signal per token from 270 complete, well-formed 150-token-average documents
+than from 512-token slices that are frequently incomplete or structurally
+broken -- the opposite of the from-scratch case, where the model had nothing
+to key on *except* the head, and randomising the cut point was pure
+regularisation. This is a plausible mechanism, not a re-measurement; it was
+not tested directly (that would mean comparing windows cut only at document
+boundaries against windows cut anywhere, which this note did not run).
+
+### Recommendation for r12's row layout
+
+**Keep `--doc-batches`.** It is not only unrefuted on the real path, it
+measures as the best or tied-best arm on held-out loss. Switching to random
+windows, which is what the denoising note's from-scratch result would have
+recommended, would make r12's fine-tune worse by every measure here. FIM at
+rate 0.5 on top of `--doc-batches` is not shown to generalise better than
+plain whole-document rows beyond noise (best val ties, at 900 steps), but it
+does cut the train/held-out gap substantially and is the only arm that
+matches whole rows' held-out loss while training on a harder, denoised
+objective; it is a reasonable candidate for a future arm judged by clean
+answers on the held-out 232 (`internal/PRETRAIN-R12-2026-09-25.md`'s own
+standard: "not loss... run the section-C fine-tune... and count tests
+passed"), not a required change for r12 to train.
 
 ## What this note does not settle
 
