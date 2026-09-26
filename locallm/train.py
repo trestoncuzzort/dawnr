@@ -439,14 +439,26 @@ class EarlyStopper:
         }
 
     def state_dict(self) -> dict:
-        """Lightning's resume keys, plus what this class adds. No weights."""
+        """Lightning's resume keys, plus what this class adds. No weights.
+
+        `best_val`/`best_train`/`best_step` are Lightning's ModelCheckpoint half
+        (which check scored best), separate from `best_score`/`best_score_step`
+        (Lightning's EarlyStopping half: the patience reference, which moves
+        only past `min_delta`). A trainer that resumes mid-run needs both: without
+        the ModelCheckpoint half a resumed run would treat its first post-resume
+        check as automatically best (best_val restarts at infinity) and could
+        overwrite a saved best checkpoint with a worse one. Still no weights;
+        those are kept on disk by whoever calls `observe`/`update` with a model.
+        """
         f = lambda v: None if v is None or not math.isfinite(v) else float(v)  # noqa: E731
         return {"wait_count": self.wait_count, "patience": self.patience,
                 "min_delta": self.min_delta, "best_score": f(self.reference),
                 "best_score_step": self.reference_step,
                 "divergence_threshold": self.divergence_threshold,
                 "stop_early": self.stop_early, "keep_best": self.keep_best,
-                "stopped_step": self.stopped_step, "stopping_reason": self.reason}
+                "stopped_step": self.stopped_step, "stopping_reason": self.reason,
+                "best_val": f(self.best_val), "best_train": f(self.best_train),
+                "best_step": self.best_step}
 
     def load_state_dict(self, state: dict) -> None:
         self.wait_count = state["wait_count"]
@@ -459,6 +471,9 @@ class EarlyStopper:
         self.keep_best = state.get("keep_best", True)
         self.stopped_step = state.get("stopped_step")
         self.reason = state.get("stopping_reason")
+        self.best_val = math.inf if state.get("best_val") is None else state["best_val"]
+        self.best_train = state.get("best_train")
+        self.best_step = state.get("best_step")
 
 
 def end_of_run(stopper: EarlyStopper, model, corpus, batch_size: int, block_size: int,
