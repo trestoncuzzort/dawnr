@@ -16,7 +16,10 @@ def main():
     ap.add_argument("--tokens", type=int, default=400)
     ap.add_argument("--temperature", type=float, default=0.8)
     ap.add_argument("--top-k", type=int, default=40)
-    ap.add_argument("--use-cache", action="store_true", help="opt-in KV cache; speed depends on model and prefix length")
+    ap.add_argument("--use-cache", action=argparse.BooleanOptionalAction, default=None,
+                    help="decode on the KV cache, or not with --no-use-cache; default: on for CPU when the "
+                         "prompt is shorter than the context, off otherwise and for CUDA and MPS "
+                         "(FINDINGS-kv-cache-2026-09-19.md)")
     ap.add_argument("--device", default=None, help="e.g. cuda:0 or cpu; default selects an available backend")
     args = ap.parse_args()
 

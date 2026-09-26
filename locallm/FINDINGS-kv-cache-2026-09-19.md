@@ -162,3 +162,118 @@ and notes that "the speed advantages disappear on CUDA devices as this is a
 tiny model". Its uncached baseline projects logits at every position; this
 one's projects only the last (`only_last=True`), so any gain here comes from
 the transformer body alone.
+
+### Measured
+
+AMD Ryzen 9 7900X (12 cores, 24 threads), PyTorch 2.14.0 CPU, Python 3.14,
+fp32. 58 configurations, one `bench_decode.py` process at a time, 15:02 to
+15:42; the one-minute load average over each configuration's runs is in the
+last column. A first attempt at 04:07 ran at load 22 to 27 while a grading
+burst filled the machine, and was killed when the desktop ran out of memory;
+none of its numbers are used. Every timing, argument and load reading is in
+[`kv-cache-cpu-results-2026-09-26.json`](kv-cache-cpu-results-2026-09-26.json).
+Each cell is the median milliseconds per token (batch 1) over 5 alternating
+repeats, then the median speedup, uncached over cached, with the noise in
+brackets and the verdict under the threshold above.
+
+| shape | vocab | prefix | new | window | 1 thread: ms/token uncached / cached | speedup (noise) | 4 threads: ms/token uncached / cached | speedup (noise) | load |
+|---|---:|---:|---:|---|---:|---|---:|---|---|
+| Small | 82 | 32 | 128 | fills after 96 | 0.92 / 0.46 | 1.99 (0.29) faster | 0.59 / 0.36 | 1.64 (0.24) faster | 1.9-2.8 |
+| Small | 82 | 128 | 128 | full from the start | 1.28 / 1.22 | 1.05 (0.10) within noise | 0.68 / 0.64 | 1.06 (0.36) within noise | 2.8-2.8 |
+| Small | 82 | 512 | 128 | full from the start | 1.19 / 1.20 | 0.99 (0.08) within noise | 0.60 / 0.61 | 0.99 (0.07) within noise | 2.8-2.8 |
+| Small | 8192 | 32 | 128 | fills after 96 | 1.00 / 0.55 | 1.82 (0.03) faster | 0.59 / 0.41 | 1.43 (0.01) faster | 2.8-3.0 |
+| Small | 8192 | 128 | 128 | full from the start | 1.29 / 1.29 | 1.00 (0.01) within noise | 0.70 / 0.70 | 0.99 (0.02) within noise | 2.9-3.0 |
+| Small | 8192 | 512 | 128 | full from the start | 1.29 / 1.31 | 0.98 (0.04) within noise | 0.86 / 0.82 | 1.04 (0.32) within noise | 2.9-3.7 |
+| Medium | 82 | 32 | 128 | fills after 96 | 5.29 / 2.25 | 2.35 (0.02) faster | 2.23 / 1.20 | 1.86 (0.04) faster | 3.5-3.6 |
+| Medium | 82 | 128 | 128 | full from the start | 7.06 / 7.37 | 0.96 (0.02) **slower** | 2.83 / 3.04 | 0.93 (0.03) **slower** | 3.1-3.3 |
+| Medium | 82 | 512 | 128 | full from the start | 6.96 / 7.32 | 0.95 (0.05) **slower** | 2.85 / 3.01 | 0.95 (0.03) **slower** | 3.0-3.2 |
+| Medium | 8192 | 32 | 128 | fills after 96 | 5.74 / 2.54 | 2.26 (0.09) faster | 2.58 / 1.52 | 1.70 (0.23) faster | 3.0-3.1 |
+| Medium | 8192 | 128 | 128 | full from the start | 7.69 / 7.77 | 0.99 (0.04) within noise | 3.28 / 3.40 | 0.97 (0.03) **slower** | 2.9-3.1 |
+| Medium | 8192 | 512 | 128 | full from the start | 7.76 / 7.90 | 0.98 (0.06) within noise | 3.27 / 3.38 | 0.97 (0.03) **slower** | 2.9-3.1 |
+| Large | 82 | 32 | 128 | inside | 32.61 / 4.49 | 7.26 (0.10) faster | 12.70 / 4.32 | 2.94 (0.06) faster | 3.2-4.2 |
+| Large | 82 | 128 | 128 | inside | 60.79 / 4.69 | 12.96 (0.01) faster | 24.00 / 4.69 | 5.12 (0.16) faster | 4.2-5.4 |
+| Large | 82 | 512 | 128 | full from the start | 88.28 / 84.93 | 1.04 (0.09) within noise | 29.08 / 30.92 | 0.94 (0.06) **slower** | 4.6-8.0 |
+| Large | 8192 | 32 | 128 | inside | 33.64 / 5.38 | 6.25 (0.11) faster | 13.90 / 5.26 | 2.64 (0.08) faster | 5.8-7.0 |
+| Large | 8192 | 128 | 128 | inside | 62.47 / 5.69 | 10.99 (0.08) faster | 22.84 / 5.33 | 4.28 (0.03) faster | 4.7-5.5 |
+| Large | 8192 | 512 | 128 | full from the start | 78.36 / 77.39 | 1.01 (0.08) within noise | 28.52 / 28.62 | 1.00 (0.04) within noise | 2.6-4.0 |
+| included | 82 | 32 | 128 | inside | 18.02 / 2.66 | 6.78 (0.05) faster | 7.04 / 2.65 | 2.65 (0.01) faster | 3.1-3.6 |
+| included | 82 | 128 | 128 | inside | 34.91 / 3.01 | 11.60 (0.07) faster | 12.47 / 2.78 | 4.48 (0.16) faster | 2.8-3.2 |
+| included | 82 | 512 | 128 | full from the start | 102.05 / 104.39 | 0.98 (0.07) within noise | 35.51 / 38.31 | 0.93 (0.09) within noise | 1.9-4.9 |
+| included | 8192 | 32 | 128 | inside | 19.90 / 3.95 | 5.04 (0.18) faster | 7.53 / 3.36 | 2.24 (0.04) faster | 4.4-5.2 |
+| included | 8192 | 128 | 128 | inside | 37.04 / 4.04 | 9.16 (0.26) faster | 14.18 / 3.84 | 3.69 (0.04) faster | 3.8-4.4 |
+| included | 8192 | 512 | 128 | full from the start | 103.18 / 103.03 | 1.00 (0.04) within noise | 36.29 / 37.29 | 0.97 (0.06) within noise | 4.1-6.3 |
+
+The window's own request (3 repeats) and the GPU shape on this CPU:
+
+| shape | vocab | prefix | new | window | 1 thread: ms/token uncached / cached | speedup (noise) | 4 threads: ms/token uncached / cached | speedup (noise) | load |
+|---|---:|---:|---:|---|---:|---|---:|---|---|
+| Small | 82 | 32 | 400 | fills after 96 | 1.12 / 0.98 | 1.14 (0.00) faster | 0.62 / 0.54 | 1.14 (0.07) faster | 6.0-6.0 |
+| Medium | 82 | 32 | 400 | fills after 96 | 6.74 / 6.06 | 1.11 (0.01) faster | 2.93 / 2.67 | 1.10 (0.10) within noise | 5.0-5.6 |
+| Large | 82 | 32 | 400 | fills after 224 | 60.30 / 40.32 | 1.50 (0.02) faster | 24.63 / 15.82 | 1.56 (0.01) faster | 3.4-5.3 |
+| included | 82 | 32 | 400 | inside | 43.63 / 3.04 | 14.34 (0.06) faster | 17.09 / 2.88 | 5.94 (0.06) faster | 4.3-5.1 |
+| core-small | 8192 | 512 | 128 | inside | 254.35 / 9.95 | 25.56 (0.08) faster | 88.23 / 8.14 | 10.84 (0.03) faster | 2.6-4.4 |
+
+Against the predictions:
+
+1. Held. Every configuration whose prompt starts inside the window is faster
+   beyond noise at both thread counts and both vocabularies, Small included
+   (1.43 to 1.99 times at prefix 32, although 32 of its 128 tokens rebuild the
+   window).
+2. Held: the included model at prefix 128 on one thread is 11.6 times faster
+   cached (9.2 with the 8,192 vocabulary).
+3. **Failed, in the direction that blocks the flip as written.** Past a full
+   window the cache is not free: Medium is 3 to 7 percent slower in 6 of its 8
+   such configurations, beyond noise of 2 to 5 percent, and Large at prefix
+   512 on 4 threads is 6 percent slower (noise 6 percent). The other 17
+   full-window configurations are within noise; none is faster beyond it. The
+   reading behind the prediction was wrong: rebuilding the window through
+   `forward_cached` is not the uncached forward plus nothing, because the keys
+   and values of every layer are kept for a step that will throw them away (the
+   next step finds the cache full and rebuilds again).
+4. Held in all 12 inside-window pairs of the first table: for example the
+   included model at prefix 128 goes from 11.6 times at 1 thread to 4.5 at 4,
+   because uncached time falls from 34.9 to 12.5 ms per token while cached time
+   stays near 3 ms. It does not hold for the 400-token rows of Small (1.14 at
+   both) and Large (1.50 to 1.56), where rebuild steps, which threads help both
+   paths through equally, make up most of the time.
+5. Held: cached and uncached greedy output is identical in all 58
+   configurations, on every run.
+6. Held: the window's 400-token request is 14.3 times faster cached on the
+   included model at one thread (from 43.6 to 3.0 ms per token), and 1.11 to
+   1.56 times on Small, Medium and Large, whose windows fill early.
+
+On the GPU shape the CPU disagrees with the card completely: core-small at
+prefix 512 is 25.6 times faster cached on one thread and 10.8 on four, where the
+RTX 6000 Ada measured 0.92. The cache saves arithmetic, which is what a CPU is
+short of; a GPU at this size is short of kernel launches, which the cache does
+not save.
+
+### The decision, and how it departs from the rule written above
+
+The rule fixed before measuring flips the CPU default only if no configuration
+is slower beyond noise. Seven are, so as written the device-wide flip is
+refused. What changed instead, decided after seeing these numbers and stated
+as such: `checkpoint.sample` decodes on the cache by default on CPU **when the
+prompt is shorter than the context window**, which is every configuration that
+measured faster (1.11 to 25.6 times) plus one within noise and no slower
+(Medium's 400-token request at 4 threads, 1.10 with noise 0.10), and stays uncached when the prompt already
+fills the window, where nothing measured faster and Medium measured slower.
+That is the brief's rule, "flip only where it measured faster", applied at the
+level the data separates. CUDA stays uncached (2026-09-19). MPS stays uncached,
+not measured. `sample_batch` is unchanged: it always decodes on the cache.
+`generate.py` now follows the same default, with `--use-cache` and
+`--no-use-cache` to force either.
+
+Not measured: a prompt just shorter than the window with a long request, where
+a few cached steps are followed by many rebuilds at up to 7 percent extra each.
+The measured 400-token rows (96 cached steps, then 304 rebuilds) still came out
+1.10 to 1.14 times faster, so the loss there is bounded but not shown to be zero.
+The cause of the rebuild penalty is fixable in `model.generate`: once the window
+is full, run the uncached forward and keep no cache, since that cache is never
+extended. That change belongs to model.py, is not made here, and would make the
+prompt-length condition unnecessary; measure it before relying on it.
+
+What this bought: on the CPU most people run, the included model now writes the
+window's default 400 characters at about 3 ms per token instead of 44 on one
+thread (2.9 instead of 17.1 on four), and the prediction that failed located a real cost (discarded key and
+value tensors on every rebuild) that the GPU measurement could not see.
