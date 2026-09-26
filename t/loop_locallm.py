@@ -30,6 +30,7 @@ generate; corpus is standard library.
 from __future__ import annotations
 
 import argparse
+import collections
 import hashlib
 import json
 import os
@@ -43,6 +44,7 @@ LOCALLM = HERE.parent / "locallm"
 sys.path.insert(0, str(HERE))
 
 import spec_experiment as se                                    # noqa: E402
+import head_align_corpus                                        # noqa: E402
 import loop_filter                                               # noqa: E402
 import surface                                                  # noqa: E402
 
@@ -333,6 +335,16 @@ def cmd_corpus(a) -> int:
     if unusable:
         raise SystemExit(f"{len(unusable)} SFT row(s) reach no document; the corpus would not equal its "
                          f"inputs: {unusable[:5]}" + (" ..." if len(unusable) > 5 else ""))
+    # English heads from sources that exist (t/heads_from_sources.py), for the
+    # lifted and committed documents that have only a signature. Humpback
+    # (https://ar5iv.labs.arxiv.org/html/2308.06259, receipt d493bc19d38e):
+    # curated instruction-output pairs keep improving with quantity, uncurated
+    # ones do not; the curation is the extractor's, recorded in each row.
+    heads = load_heads(Path(a.heads)) if getattr(a, "heads", "") else {}
+    if heads and not a.lifted:
+        raise SystemExit("--heads prefixes lifted and committed documents and --lifted was not given; "
+                         "there is no document to prefix")
+    headed: dict[str, str] = {}      # name -> source, every head that reached a document
     if a.lifted:
         keep = clean_rows(LIFTED_TABLE)
         lifted = sorted(LIFTED_DIR.glob("*.json"))
@@ -343,9 +355,14 @@ def cmd_corpus(a) -> int:
             task = json.loads(f.read_text(encoding="utf-8"))
             if task.get("name") in keep:
                 doc = surface.print_task(task).strip() + "\n"
+                row = heads.get(task.get("name"))
+                if row is not None:
+                    doc = sourced_head(task, row, a.examples) + doc
                 if gate.admit(doc, [task.get("name")]):
                     docs.append(doc)
                     n_lift += 1
+                    if row is not None:
+                        headed[task["name"]] = row["source"]
         rows, missing = agreement_gap(AGREEMENT, COMMITTED_DIR)
         if missing:
             raise SystemExit(f"{AGREEMENT.name} has rows for {len(rows)} task(s) and {COMMITTED_DIR.name}/ holds "
@@ -358,9 +375,23 @@ def cmd_corpus(a) -> int:
             task = surface.parse_file(str(f))
             if task.get("name") in keep:
                 doc = surface.print_task(task).strip() + "\n"
+                row = heads.get(task.get("name"))
+                if row is not None:
+                    doc = sourced_head(task, row, a.examples) + doc
                 if gate.admit(doc, [task.get("name")]):
                     docs.append(doc)
                     n_committed += 1
+                    if row is not None:
+                        headed[task["name"]] = row["source"]
+    if heads:
+        # A head that reaches no document is an input the corpus does not
+        # equal: the name is not a clean row, or the gates refused it (a
+        # held-out, dev or same-task id), and either is said, never skipped.
+        unmatched = sorted(set(heads) - set(headed))
+        if unmatched:
+            raise SystemExit(f"{len(unmatched)} head(s) in {a.heads} match no lifted or committed document "
+                             f"(not a clean row, or refused by the gates): {unmatched[:5]}"
+                             + (" ..." if len(unmatched) > 5 else ""))
     if spec_docs and n_spec == 0:
         # the flag names a corpus with a specification beside every positive;
         # lifted and committed tasks have no English head and get none, so a
@@ -398,7 +429,53 @@ def cmd_corpus(a) -> int:
         print(f"dev-split filter: {len(dev)} ids from t/r12-dev-ids.json refused as training data (counted above)")
     print(f"decontamination filter: {len(gate.decontaminated)} document(s) excluded"
           + (f": {', '.join(gate.decontaminated)}" if gate.decontaminated else ""))
+    if heads:
+        by_source = sorted(collections.Counter(headed.values()).items())
+        print(f"heads: {len(headed)} document(s) prefixed from {a.heads} ("
+              + ", ".join(f"{source} {n}" for source, n in by_source) + ")")
     return 0
+
+
+def load_heads(path: Path) -> dict[str, dict]:
+    """heads.jsonl (t/heads_from_sources.py) as name -> row; a malformed row or
+    a name written twice is refused by line number, not skipped."""
+    heads: dict[str, dict] = {}
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as e:
+        raise SystemExit(f"cannot read --heads {path}: {e}")
+    for number, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+            name, problem, examples = row["name"], row["problem"], row["examples"]
+            source, curation = row["source"], row["curation"]
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as e:
+            raise SystemExit(f"{path}:{number}: not a head row with name, problem, examples, source and curation: {e}")
+        if not (isinstance(name, str) and name and isinstance(problem, str) and problem.strip()
+                and isinstance(examples, list) and all(isinstance(x, str) for x in examples)
+                and isinstance(source, str) and source and isinstance(curation, str) and curation):
+            raise SystemExit(f"{path}:{number}: head row for {name!r} has the wrong shape")
+        if name in heads:
+            raise SystemExit(f"{path}:{number}: a second head for {name}")
+        heads[name] = row
+    if not heads:
+        raise SystemExit(f"--heads {path} holds no head; an empty file is not the input this flag names")
+    return heads
+
+
+def sourced_head(task: dict, row: dict, with_examples: bool) -> str:
+    """The head a sourced English line gives a lifted or committed document,
+    built the way problem_head builds one for a model's answer: Problem: the
+    English as written, Signature: from the task's own declaration
+    (head_align_corpus.head_for, which derives it from the parameter and return
+    types), and Example: lines when the corpus carries examples at all; only
+    the MBPP-sourced rows have any, since only those have test points."""
+    head = f"Problem: {' '.join(row['problem'].split())}\n" + head_align_corpus.head_for(task)
+    if with_examples:
+        head += "".join(f"Example: {' '.join(example.split())}\n" for example in row["examples"])
+    return head
 
 
 def cmd_train(a) -> int:
@@ -609,6 +686,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--split", type=Path, required=True,
                    help="the evaluation split whose eval_ids are excluded from every source; "
                         "a corpus build without this boundary is refused")
+    p.add_argument("--heads", default="",
+                   help="heads.jsonl from t/heads_from_sources.py: sourced English for the lifted and "
+                        "committed documents, applied through the same gates; a head that matches no "
+                        "document is an error")
     p = sub.add_parser("train")
     p.add_argument("--corpus", default=str(OUT / "corpus.txt"))
     p.add_argument("--model", default=str(OUT / "model"))
