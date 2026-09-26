@@ -751,6 +751,252 @@ SLOW_TESTS = [test_seeds_check_end_to_end, test_t7_two_seed_pairs,
              test_spec_fun_array_param_end_to_end]
 
 
+# ===========================================================================
+# 2026-09-26: renderer defects measured on the 2026-09-26 lift's check
+# stage (154 methods refused `lift-check-failed`, 24 of them because the
+# checker file itself did not parse or resolve). One fast test per defect
+# class on the printer, and one slow test per class that lifts a minimal
+# Dafny program reproducing the construct through the real pipeline and
+# checks it.
+# ===========================================================================
+
+def _q(kind, binders, rng, body):
+    from lift_ast import Quantifier, Param, Type
+    return Quantifier(line=1, kind=kind,
+                      binders=tuple(Param(line=1, name=b, type=Type(line=1, kind="int"))
+                                    for b in binders),
+                      attrs=(), range=rng, body=body)
+
+
+def test_resolver_binder_printed_in_source_form() -> None:
+    """rprint prints the trigger rewrite of Triggers/ExprSubstituter.cs:
+    `forall i, _t#0 | _t#0 == i + 1 :: 0 <= i < |s| - 1 ==> s[i] <= s[_t#0]`.
+    `_t#0` is not a legal identifier ("cannot declare identifier beginning
+    with underscore"); the printer must substitute it back."""
+    from lift_ast import Ident, Index, Binary, Chain, Implies, Cardinality, IntLit
+    i, t0, s = Ident(1, "i"), Ident(1, "_t#0"), Ident(1, "s")
+    rng = Chain(1, ("==",), (t0, Binary(1, "+", i, IntLit(1, 1))))
+    ante = Chain(1, ("<=", "<"), (IntLit(1, 0), i,
+                                  Binary(1, "-", Cardinality(1, s), IntLit(1, 1))))
+    body = Implies(1, ante, Chain(1, ("<=",), (Index(1, s, i), Index(1, s, t0))))
+    text = lift_check._print_expr(_q("forall", ["i", "_t#0"], rng, body), {})
+    assert "_t#" not in text and "#" not in text, text
+    assert text == "(forall i: int :: ((0 <= i < (|s| - 1)) ==> (s[i] <= s[(i + 1)])))", text
+    # A binder the author wrote, pinned by an equation, is left alone.
+    j = Ident(1, "j")
+    kept = _q("forall", ["i", "j"], Chain(1, ("==",), (j, Binary(1, "+", i, IntLit(1, 1)))),
+              Chain(1, ("<=",), (Index(1, s, i), Index(1, s, j))))
+    assert "forall i: int, j: int | (j == (i + 1))" in lift_check._print_expr(kept, {})
+    print("test_resolver_binder_printed_in_source_form: ok")
+
+
+def test_split_quantifier_rejoined() -> None:
+    """rprint prints Triggers/QuantifierSplitter.cs's split of `forall i ::
+    0 <= i < |s| ==> 1 <= s[i] <= 100` as `(A ==> 1 <= s[i]) && (A ==>
+    s[i] <= 100)`, which is not compilable in a compiled predicate. The
+    printer rejoins parts that share one antecedent (forall) or one
+    leading conjunct (exists); different antecedents stay split."""
+    from lift_ast import Ident, Index, Chain, Implies, NaryBool, Cardinality, IntLit
+    i, s = Ident(1, "i"), Ident(1, "s")
+    ante = Chain(1, ("<=", "<"), (IntLit(1, 0), i, Cardinality(1, s)))
+    b1 = Chain(1, ("<=",), (IntLit(1, 1), Index(1, s, i)))
+    b2 = Chain(1, ("<=",), (Index(1, s, i), IntLit(1, 100)))
+    split = NaryBool(1, "&&", (Implies(1, ante, b1), Implies(1, ante, b2)))
+    text = lift_check._print_expr(_q("forall", ["i"], None, split), {})
+    assert text == ("(forall i: int :: ((0 <= i < |s|) ==> "
+                    "((1 <= s[i]) && (s[i] <= 100))))"), text
+    ex = NaryBool(1, "||", (NaryBool(1, "&&", (ante, b1)), NaryBool(1, "&&", (ante, b2))))
+    text = lift_check._print_expr(_q("exists", ["i"], None, ex), {})
+    assert text == ("(exists i: int :: ((0 <= i < |s|) && "
+                    "((1 <= s[i]) || (s[i] <= 100))))"), text
+    other = Chain(1, ("<",), (i, IntLit(1, 3)))
+    mixed = NaryBool(1, "&&", (Implies(1, ante, b1), Implies(1, other, b2)))
+    text = lift_check._print_expr(_q("forall", ["i"], None, mixed), {})
+    assert text.count("==>") == 2, text
+    print("test_split_quantifier_rejoined: ok")
+
+
+def test_call_guard_substitution_respects_binders() -> None:
+    """`CalcBal(s, i, j, acc)` requires `forall i :: 0 <= i < |s| ==> ...`.
+    Substituting the call `CalcBal(s1, 0, k, 0)` must leave the bound `i`
+    alone (it printed `forall 0: int`, "invalid Ident", humaneval_dafny_119
+    match_parens), and a bound variable that occurs free in an argument is
+    renamed rather than capturing it."""
+    from lift_ast import (FunctionDecl, Param, Type, RequiresClause, Ident, Index, Call,
+                          Chain, Implies, Cardinality, IntLit)
+    i, s = Ident(1, "i"), Ident(1, "s")
+    q = _q("forall", ["i"], None,
+           Implies(1, Chain(1, ("<=", "<"), (IntLit(1, 0), i, Cardinality(1, s))),
+                   Chain(1, ("==",), (Index(1, s, i), IntLit(1, 40)))))
+    t = Type(line=1, kind="int")
+    fd = FunctionDecl(line=1, name="CalcBal", ghost=False,
+                      params=(Param(1, "s", Type(line=1, kind="seq", args=(t,))),
+                              Param(1, "i", t), Param(1, "j", t)),
+                      ret_type=t, specs=(RequiresClause(1, q),), body=IntLit(1, 0))
+    call = Call(1, Ident(1, "CalcBal"), (Ident(1, "s1"), IntLit(1, 0), Ident(1, "k")))
+    g = lift_check._call_guard(fd, call, {})
+    assert g == "((forall i: int :: ((0 <= i < |s1|) ==> (s1[i] == 40))))", g
+    call2 = Call(1, Ident(1, "CalcBal"), (Index(1, Ident(1, "t"), Ident(1, "i")),
+                                          IntLit(1, 0), IntLit(1, 1)))
+    g2 = lift_check._call_guard(fd, call2, {})
+    assert "forall i_b0: int" in g2 and "t[i][i_b0]" in g2, g2
+    print("test_call_guard_substitution_respects_binders: ok")
+
+
+def test_char_valued_function_result_viewed() -> None:
+    """A closure function returning `char` is compared against the lifted
+    spec_fun's `int` through `as int` (DafnyRef 5.2.6); a `seq<char>`
+    parameter or return maps to the string view like `string` does."""
+    from lift_ast import Type
+    ch = Type(line=1, kind="char")
+    assert lift_check._src_result_text("f_src(a)", ch) == "(f_src(a) as int)"
+    assert lift_check._src_result_text("g_src(a)", Type(line=1, kind="int")) == "g_src(a)"
+    seq_char = Type(line=1, kind="seq", args=(ch,))
+    assert lift_check._view_kind_for_type(seq_char) == "string"
+    txt = lift_check._src_result_text("h_src(a)", seq_char)
+    assert txt.startswith("(var r_src := h_src(a); (seq(|r_src|,"), txt
+    print("test_char_valued_function_result_viewed: ok")
+
+
+def test_worst_block_is_the_lemma_verdict() -> None:
+    """dafny prints a lemma's `(correctness)` and `(well-formedness)`
+    blocks in completion order. The verdict is the worst block, and a
+    failing symbol that is not a named lemma is recorded by name
+    (humaneval_dafny_038 encode_cyclic: every lemma read `verified` in a
+    file dafny finished with 2 errors)."""
+    canned = "\n".join([
+        "x.dfy(37,0): Error: a postcondition could not be proved on this return path",
+        "Dafny program verifier finished with 8 verified, 2 errors",
+        "Results for L_req (correctness)", "  Overall outcome: Correct",
+        "Results for L_ens (correctness)", "  Overall outcome: Errors",
+        "Results for L_ens (well-formedness)", "  Overall outcome: Correct",
+        "Results for helper_src (well-formedness)", "  Overall outcome: Errors",
+        "Results for Demo (correctness)", "  Overall outcome: Errors",
+    ])
+    saved = lift_check._run_dafny
+    lift_check._run_dafny = lambda args, timeout_s: (4, canned)
+    try:
+        verdicts, code, ok, first_bad, _w, lowered = lift_check._verify_checker(
+            Path("x.dfy"), ["L_req", "L_ens"], 10.0, "Demo")
+    finally:
+        lift_check._run_dafny = saved
+    assert not ok and code == 4, (ok, code)
+    assert verdicts["L_ens"] == "unproved", verdicts
+    assert verdicts["L_req"] == "verified", verdicts
+    assert verdicts.get("helper_src (well-formedness)") == "unproved", verdicts
+    assert "Demo (correctness)" not in verdicts and lowered == "unproved", (verdicts, lowered)
+    assert first_bad == "L_ens", first_bad
+    print("test_worst_block_is_the_lemma_verdict: ok")
+
+
+# Minimal Dafny programs, one per defect class, each reproducing the
+# construct that made the 2026-09-26 checker file fail. Before the fix
+# every one of them produced a checker file dafny refused to resolve
+# (exit 2) or a lemma it could not prove.
+MINIMAL_PROGRAMS = {
+    "resolver_binder": ("Pick", """
+predicate IsSorted(s: seq<int>)
+{
+  forall i :: 0 <= i < |s| - 1 ==> s[i] <= s[i + 1]
+}
+method Pick(s: seq<int>) returns (r: int)
+  requires IsSorted(s)
+  ensures r >= 0
+{
+  r := 0;
+}
+"""),
+    "split_quantifier": ("Count", """
+predicate Valid(s: seq<int>)
+{
+  forall i :: 0 <= i < |s| ==> 1 <= s[i] <= 100
+}
+method Count(s: seq<int>) returns (c: int)
+  requires Valid(s)
+  ensures c >= 0
+{
+  c := 0;
+}
+"""),
+    "seq_char_param": ("FirstIsA", """
+method FirstIsA(x: seq<char>) returns (r: bool)
+  ensures r <==> (|x| > 0 && x[0] == 'a')
+{
+  r := |x| > 0 && x[0] == 'a';
+}
+"""),
+    "char_result": ("Apply", """
+function Flip(a: char): char
+  requires a == '0' || a == '1'
+{
+  if a == '0' then '1' else '0'
+}
+method Apply(a: char) returns (r: char)
+  requires a == '0' || a == '1'
+  ensures r == Flip(a)
+{
+  r := Flip(a);
+}
+"""),
+    "guard_binder": ("Total", """
+function Sum(s: seq<int>, i: int, j: int): int
+  requires forall i :: 0 <= i < |s| ==> s[i] >= 0
+  requires 0 <= i <= j <= |s|
+  decreases j - i
+{
+  if i == j then 0 else s[j - 1] + Sum(s, i, j - 1)
+}
+method Total(s: seq<int>) returns (b: int)
+  requires forall k :: 0 <= k < |s| ==> s[k] >= 0
+  ensures b == Sum(s, 0, |s|)
+{
+  b := 0;
+  var j := 0;
+  while j < |s|
+    invariant 0 <= j <= |s|
+    invariant b == Sum(s, 0, j)
+  {
+    b := b + s[j];
+    j := j + 1;
+  }
+}
+"""),
+}
+
+
+def test_minimal_programs_check(slow: bool) -> None:
+    if not slow:
+        print("test_minimal_programs_check: skipped (pass --slow)")
+        return
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    failures = []
+    for tag, (method, text) in MINIMAL_PROGRAMS.items():
+        src = OUT_DIR / f"minimal_{tag}.dfy"
+        src.write_text(text.lstrip(), encoding="utf-8")
+        fx = _lift_source(src, method, timeout_s=120.0)
+        if fx["status"] != "ok":
+            failures.append(f"{tag}: refused upstream {fx['stage']}: {fx['detail']}")
+            continue
+        out = lift_check.check(fx["task"], fx["source"], fx["closure"], fx["record"],
+                               OUT_DIR / f"minimal_{tag}", timeout_s=300.0)
+        rec = fx["record"]
+        code = rec.dafny_exit_codes.get("verify-checker")
+        print(f"  {tag}: verify-checker exit {code}, refusal {out.refusal}, "
+              f"verdicts {rec.checker_verdicts}, diff {rec.differential_verdict}")
+        if out.refusal is not None:
+            failures.append(f"{tag}: {out.refusal} {rec.checker_verdicts}")
+        elif not (rec.differential_verdict or "").startswith("agrees on"):
+            failures.append(f"{tag}: differential {rec.differential_verdict}")
+    assert not failures, "; ".join(failures)
+    print("test_minimal_programs_check: ok")
+
+
+FAST_TESTS += [test_resolver_binder_printed_in_source_form, test_split_quantifier_rejoined,
+               test_call_guard_substitution_respects_binders,
+               test_char_valued_function_result_viewed, test_worst_block_is_the_lemma_verdict]
+SLOW_TESTS += [test_minimal_programs_check]
+
+
 def run(slow: bool = False) -> None:
     failures = 0
     for fn in FAST_TESTS:
