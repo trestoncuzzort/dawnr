@@ -228,8 +228,11 @@ def twins_of(task: dict) -> list[dict]:
             raise TwinRefused(f"{task['name']} {op}: the twin does not round trip through surface.parse")
         if executable_body(v["body"]) != executable_body(task["body"]) or v["ensures"] != task["ensures"]:
             raise TwinRefused(f"{task['name']} {op}: a hint strip changed the executable body or the ensures")
-        tlines = text.splitlines()
-        if len(plines) - len(tlines) != 1 or len([l for l in plines if l not in tlines]) != 1:
+        # A multiset difference, not a set one: a program may state the same
+        # clause twice (a lifted DafnyBench task does), and stripping one of
+        # the two removes a line whose text is still present.
+        removed = Counter(plines) - Counter(text.splitlines())
+        if len(plines) - len(text.splitlines()) != 1 or sum(removed.values()) != 1:
             raise TwinRefused(f"{task['name']} {op}: the twin is not the program less one line")
         out.append({"operator": op, "hint": h, "twin": v, "twin_text": text})
     return out
@@ -603,11 +606,20 @@ def emit(twins_dir, tasks_dir, table, written_by, split, dev_ids, out, max_progr
     chosen = _select(candidates, max_programs, max_cells)
     out = Path(out)
     (out / "pairs").mkdir(parents=True, exist_ok=True)
-    written = 0
+    written, duplicates, ids = 0, 0, set()
     for s, task, tws, _ in chosen:
         for tw in tws:
             twin_text = tw["twin_text"]
             key = hashlib.sha256((s.text + "\0" + twin_text).encode("utf-8")).hexdigest()[:16]
+            if key in ids:
+                # The same twin from two hints: a clause stated twice strips to
+                # one text. One file, counted and said, never two files or a
+                # silent overwrite (a lifted DafnyBench task, 2026-09-25).
+                duplicates += 1
+                print(f"  {s.name} {tw['operator']}: the same twin as an earlier hint of this "
+                      f"program (a clause stated twice); one file", flush=True)
+                continue
+            ids.add(key)
             w, w_err = None, None
             if tw["hint"]["kind"] == "requires":
                 try:
@@ -639,14 +651,15 @@ def emit(twins_dir, tasks_dir, table, written_by, split, dev_ids, out, max_progr
               "refused": len(refused), "programs_with_hints": len(candidates),
               "twins_available": sum(len(c[2]) for c in candidates),
               "programs_emitted": len(chosen), "twins_emitted": written,
-              "unstrippable": dict(unstrippable),
+              "twins_duplicate": duplicates, "unstrippable": dict(unstrippable),
               "max_programs": max_programs, "max_cells": max_cells}
     (out / "census.json").write_text(json.dumps(census, indent=1, sort_keys=True) + "\n",
                                      encoding="utf-8", newline="\n")
     classes = render_dir(out)
     return {"sources": len(sources), "admitted": len(admitted), "refused": len(refused),
-            "programs": len(chosen), "twins": written, "cells": written * CELLS_PER_TWIN,
-            "on_disk": sum(classes.values()), "unstrippable": dict(unstrippable)}
+            "programs": len(chosen), "twins": written, "duplicates": duplicates,
+            "cells": written * CELLS_PER_TWIN, "on_disk": sum(classes.values()),
+            "unstrippable": dict(unstrippable)}
 
 
 def classify_dir(out, table) -> Counter:
@@ -696,7 +709,8 @@ def main(argv=None) -> int:
             rep = emit(a.twins, a.tasks, a.table, a.written_by, a.split, a.dev_ids, a.out,
                        a.max_programs, a.max_cells, a.skip_refused)
             print(f"{rep['sources']} source(s), {rep['admitted']} admitted, {rep['refused']} refused; "
-                  f"{rep['programs']} program(s) emitted, {rep['twins']} twin(s), {rep['cells']} cells "
+                  f"{rep['programs']} program(s) emitted, {rep['twins']} distinct twin(s) "
+                  f"({rep['duplicates']} duplicate hint(s) folded), {rep['cells']} cells "
                   f"to grade; {rep['on_disk']} twin(s) on disk under {a.out}; "
                   f"unstrippable {rep['unstrippable']}")
             print(f"next: python3 t/run_par.py --tasks {a.out}/grade/tasks --out {a.out}/grade/out "

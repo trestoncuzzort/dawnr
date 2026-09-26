@@ -99,6 +99,27 @@ class Strip(unittest.TestCase):
         ops = [tw["operator"] for tw in th.twins_of(load("sum_upto"))]
         self.assertEqual(ops, ["drop-requires", "drop-invariant", "drop-invariant#1"])
 
+    def test_a_duplicated_clause_strips_one_copy_at_a_time(self):
+        # A lifted DafnyBench task states one requires twice; the first emit
+        # refused it because a set difference of the lines saw nothing removed.
+        text = ("t 1\ntask twice(n: int) returns (r: int)\n  requires n >= 0\n  requires n >= 0\n"
+                "  ensures r == n\n{\n  r := n;\n}\n")
+        tws = th.twins_of(surface.parse(text))
+        self.assertEqual([tw["operator"] for tw in tws], ["drop-requires", "drop-requires#1"])
+        self.assertEqual(tws[0]["twin_text"], tws[1]["twin_text"])
+        self.assertEqual(tws[0]["twin_text"].count("requires n >= 0"), 1)
+        # At emit, the two hints are one twin: one file, and the fold is counted.
+        with tempfile.TemporaryDirectory() as d:
+            tasks = Path(d) / "tasks"
+            tasks.mkdir()
+            (tasks / "twice.t").write_text(text, encoding="utf-8")
+            table = Path(d) / "table.md"
+            table.write_text(table_text({"twice": ["verified / refuted"] * 7}), encoding="utf-8")
+            split = Path(d) / "split.json"
+            split.write_text(json.dumps({"eval_ids": []}), encoding="utf-8")
+            report = th.emit(None, tasks, table, "t", split, Path(d) / "no-dev.json", Path(d) / "out")
+            self.assertEqual((report["twins"], report["duplicates"], report["on_disk"]), (1, 1, 1))
+
     def test_a_task_with_no_hint_yields_no_twin(self):
         self.assertEqual(th.twins_of(load("abs")), [])
 
