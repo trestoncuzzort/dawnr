@@ -429,20 +429,47 @@ class PlainGPT:
             self.rebuilt = 0          # window re-prefills, for the caller to report
             self.stopped_at_context = False
 
-    def step(self, token: int):
-        """Feed one token, return the logits for what comes next."""
+    def window_keep(self, exact_window: bool = False, keep: int | None = None) -> int:
+        """How many of the latest tokens a refill carries over when the window fills.
+
+        exact_window: block_size - 1, which is torch's uncached sampler exactly --
+        every next token predicted from a fresh forward over the last block_size
+        tokens -- and costs a whole window per token once full. Otherwise `keep`,
+        by default half the window.
+        """
+        if exact_window:
+            if keep is not None and keep != self.block_size - 1:
+                raise ValueError("exact_window keeps block_size - 1 tokens; "
+                                 "pass exact_window or keep, not both")
+            return self.block_size - 1
+        if keep is None:
+            return self.block_size // 2
+        if not 0 <= keep < self.block_size:
+            raise ValueError(f"keep must be between 0 and {self.block_size - 1}")
+        return keep
+
+    def step(self, token: int, keep: int | None = None):
+        """Feed one token, return the logits for what comes next.
+
+        When the window is already full, the cache is rebuilt first: the last
+        `keep` tokens of the history are re-read from position 0 and the new
+        token goes in after them. `keep` defaults to block_size - 1, the exact
+        window (see window_keep); generate() passes its own.
+        """
         if len(self.history) >= self.block_size:
-            # Same as model.generate()'s cached path, and deliberately so:
-            # FINDINGS-kv-cache-2026-09-19.md, "once the context fills, generation
-            # rebuilds the cache from the retained window on every step", because
-            # "merely deleting old keys would retain hidden states influenced by
-            # dropped tokens and change the old model's sliding-window behavior".
-            # So every token past the window costs a whole window, which under
-            # torch is one batched forward and here is 7.4 s on the ctx-128 arms
-            # and 109.8 s on round 4. Sliding the window would make this a
-            # different model, so generate() stops at the line instead.
+            # REBUILT, NEVER SLID. FINDINGS-kv-cache-2026-09-19.md: "merely
+            # deleting old keys would retain hidden states influenced by dropped
+            # tokens", and the positions are learned, so a slid cache would also
+            # run past the position table (rasbt/LLMs-from-scratch
+            # ch04/03_kv-cache asserts "Position embedding overflow" for the same
+            # reason). Keeping block_size - 1 tokens is model.generate()'s own
+            # behaviour and costs a whole window on EVERY token past it: 7.4 s
+            # on the ctx-128 arms and 109.8 s on round 4, measured 2026-09-20.
+            # Keeping fewer is the refill: one re-read of `keep` tokens buys
+            # block_size - keep new ones before the next.
+            kept = self.block_size - 1 if keep is None else keep
             self.rebuilt += 1
-            tail = self.history[-(self.block_size - 1):]
+            tail = self.history[len(self.history) - kept:]
             self.reset(keep_counters=True)
             for earlier in tail:
                 self.step(earlier)
@@ -479,15 +506,28 @@ class PlainGPT:
 
     def generate(self, ids, max_new_tokens: int, temperature: float = 0.8,
                  top_k: int | None = 40, seed: int | None = None,
-                 past_context: bool = False):
-        """Sample tokens, stopping at the context window unless past_context.
+                 past_context: bool = True, exact_window: bool = False,
+                 keep: int | None = None):
+        """Sample tokens, past the context window by refilling it.
 
-        Stopping there is not a limitation of this implementation, it is the price
-        of matching model.py's cached path: every token past the window costs a
-        full re-prefill of the window, so on the ctx-128 checkpoints a 200-token
-        request spends minutes on each of its last 72 tokens. Set past_context
-        when that is genuinely wanted; `stopped_at_context` records the clamp and
-        `rebuilt` counts the re-prefills.
+        WHAT HAPPENS AT THE WINDOW. Once block_size tokens are in, the next one
+        first clears the cache and re-reads the last `keep` tokens (half the
+        window unless told otherwise), then carries on until the window is full
+        again. Each refill costs `keep` steps and buys block_size - keep tokens,
+        so past the window a token costs about twice what it costs inside it,
+        instead of a whole window each. The price is the context: right after a
+        refill a token sees `keep` earlier tokens, just before the next it sees
+        block_size - 1, where torch's sampler always shows it block_size - 1. So
+        past the window this is NOT torch's text. exact_window=True keeps
+        block_size - 1 at every refill, which is torch's uncached crop token for
+        token and the mode the parity tests run in; it costs a whole window per
+        token past the line (7.4 s at context 128, 110 s at 512, before sumprod).
+
+        past_context=False stops at the window instead, so the prompt and the
+        text together fit in one window; `stopped_at_context` records that and
+        `rebuilt` counts refills. A prompt longer than the window is cut to its
+        last block_size tokens before reading: that is exactly the state the
+        exact window would reach token by token, without the per-token wall.
         """
         if temperature < 0 or not math.isfinite(temperature):
             raise ValueError("temperature must be finite and nonnegative")
@@ -495,10 +535,11 @@ class PlainGPT:
             raise ValueError("max_new_tokens must be nonnegative and top_k positive")
         if not ids:
             raise ValueError("generation needs at least one token")
+        keep = self.window_keep(exact_window, keep)
         rng = random.Random(seed)
         logits = None
-        for token in ids:
-            logits = self.step(token)
+        for token in list(ids)[-self.block_size:]:
+            logits = self.step(token, keep)
         room = self.block_size - len(self.history)
         if not past_context and max_new_tokens > room:
             self.stopped_at_context = True
@@ -518,7 +559,7 @@ class PlainGPT:
                 weights = [math.exp(v - top) if v > -math.inf else 0.0 for v in scaled]
                 nxt = rng.choices(range(len(weights)), weights=weights, k=1)[0]
             produced.append(nxt)
-            logits = self.step(nxt)
+            logits = self.step(nxt, keep)
         return produced
 
 
@@ -552,7 +593,8 @@ def load_checkpoint(out_dir):
 
 def sample(model, tok, prompt: str, tokens: int = 400, temperature: float = 0.8,
            top_k: int | None = 40, seed: int | None = None,
-           past_context: bool = False) -> str:
+           past_context: bool = True, exact_window: bool = False,
+           keep: int | None = None) -> str:
     """Prompt in, text out, including the prompt — checkpoint.sample's shape.
 
     An empty prompt, or one made only of characters this model never saw, encodes
@@ -563,14 +605,17 @@ def sample(model, tok, prompt: str, tokens: int = 400, temperature: float = 0.8,
     name what was lost asks tok.unknown_characters(prompt) first; main() does.
 
     The default `tokens=400` is past the window of every ctx-128 checkpoint in
-    this repository, which is why generate() clamps rather than grinding; read
-    `model.stopped_at_context` after.
+    this repository, and generate() refills the window to get there (see its
+    docstring for what that costs in context); `model.rebuilt` counts refills.
+    exact_window=True is torch's sampler token for token, at a whole window per
+    token past the line.
     """
     ids = tok.encode(prompt) or [0]
     model.reset()
     return tok.decode(ids + model.generate(ids, tokens, temperature=temperature,
                                            top_k=top_k, seed=seed,
-                                           past_context=past_context))
+                                           past_context=past_context,
+                                           exact_window=exact_window, keep=keep))
 
 
 def main() -> int:
@@ -583,9 +628,18 @@ def main() -> int:
                     help="0 decodes greedily and is the one comparable to torch")
     ap.add_argument("--top-k", type=int, default=40)
     ap.add_argument("--seed", type=int, default=None)
-    ap.add_argument("--past-context", action="store_true",
-                    help="keep going past the context window; every token after it "
-                         "re-runs the whole window, which is minutes each")
+    ap.add_argument("--exact-window", action="store_true",
+                    help="past the context window, predict every token from the "
+                         "full window, as torch does; identical to torch's text, "
+                         "but each token past the window re-reads the whole window "
+                         "(seconds to minutes each)")
+    ap.add_argument("--keep", type=int, default=None,
+                    help="past the window, how many of the latest tokens a refill "
+                         "keeps (default half the window)")
+    ap.add_argument("--stop-at-window", action="store_true",
+                    help="stop when the prompt and the text fill one window")
+    # The default since 2026-09-26; kept so command lines written before still run.
+    ap.add_argument("--past-context", action="store_true", help=argparse.SUPPRESS)
     args = ap.parse_args()
     try:
         model, tok, config = load_checkpoint(args.out)
@@ -621,17 +675,27 @@ def main() -> int:
               f"characters in your prompt ({names}), {lost} of its {total} "
               f"characters in all. They are dropped before generating, so the "
               f"text below continues what was left.{tail}", file=sys.stderr)
+    try:
+        keep = model.window_keep(args.exact_window, args.keep)
+    except ValueError as exc:
+        print(f"plain_generate: {exc}", file=sys.stderr)
+        return 2
     print(sample(model, tok, args.prompt, args.tokens, temperature=args.temperature,
-                 top_k=args.top_k, seed=args.seed, past_context=args.past_context))
+                 top_k=args.top_k, seed=args.seed,
+                 past_context=not args.stop_at_window, keep=keep))
     if model.stopped_at_context:
         # Silently returning short text would read as the model running out of
         # things to say, which is a different claim from hitting its window.
         print(f"plain_generate: stopped at this model's {config['block_size']}-token "
-              f"context window rather than re-running it per token; "
-              f"--past-context overrides", file=sys.stderr)
+              f"context window, as --stop-at-window asked", file=sys.stderr)
     if model.rebuilt:
-        print(f"plain_generate: re-prefilled the window {model.rebuilt} times",
-              file=sys.stderr)
+        how = ("the whole window each time, as torch does" if args.exact_window else
+               f"keeping the last {keep} tokens each time, so text past the window "
+               f"saw between {keep} and {config['block_size'] - 1} earlier tokens "
+               f"rather than torch's {config['block_size'] - 1}; --exact-window "
+               f"matches torch")
+        print(f"plain_generate: refilled the context window {model.rebuilt} times, "
+              f"{how}", file=sys.stderr)
     return 0
 
 

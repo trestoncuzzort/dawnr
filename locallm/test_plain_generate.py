@@ -132,6 +132,90 @@ class TheArithmetic(unittest.TestCase):
         self.assertEqual(pg._dot_plain([1.0, 2.0], [3.0, 4.0]), sum(map(mul, [1.0, 2.0], [3.0, 4.0])))
 
 
+def argmax(logits):
+    return max(range(len(logits)), key=logits.__getitem__)
+
+
+def reference_greedy(model, prompt, n, keep):
+    """Greedy decoding written from the documented rule, one fresh forward per token.
+
+    keep=None is torch's uncached sampler: the next token always comes from the
+    last block_size tokens. Otherwise the context is cut to its last `keep`
+    tokens whenever a new token would not fit, and grows again from there.
+    """
+    B = model.block_size
+    ctx, out = list(prompt[-B:]), []
+    for _ in range(n):
+        nxt = argmax(fresh_logits(model, ctx))
+        out.append(nxt)
+        if len(ctx) == B:
+            ctx = ctx[len(ctx) - (B - 1 if keep is None else keep):]
+        ctx.append(nxt)
+    return out
+
+
+class TheWindow(unittest.TestCase):
+    """block_size 8, so 30 new tokens cross the window several times."""
+
+    def setUp(self):
+        self.model, _ = tiny_model(block_size=8)
+        self.prompt = [1, 5, 2]
+
+    def gen(self, n, **kw):
+        self.model.reset()
+        return self.model.generate(self.prompt, n, temperature=0, **kw)
+
+    def test_exact_window_is_the_uncached_crop(self):
+        got = self.gen(30, exact_window=True)
+        self.assertEqual(self.model.rebuilt, 30 - (8 - 3))
+        self.assertEqual(got, reference_greedy(self.model, self.prompt, 30, None))
+
+    def test_the_refill_is_what_the_docstring_says(self):
+        for keep in (None, 1, 3, 6):
+            with self.subTest(keep=keep):
+                got = self.gen(30, keep=keep)
+                want = reference_greedy(self.model, self.prompt, 30,
+                                        4 if keep is None else keep)
+                self.assertEqual(got, want)
+
+    def test_refills_are_rare_by_default(self):
+        self.gen(30)
+        # 3 prompt + 30 tokens: full at 8, then every 4 new tokens a refill of 4.
+        self.assertEqual(self.model.rebuilt, 7)
+        self.gen(30, exact_window=True)
+        self.assertEqual(self.model.rebuilt, 25)   # every token past the line
+
+    def test_both_modes_agree_inside_the_window(self):
+        self.assertEqual(self.gen(4), self.gen(4, exact_window=True))
+
+    def test_a_long_prompt_is_cut_without_changing_the_answer(self):
+        long_prompt = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7]
+        model = self.model
+        model.reset()
+        for t in long_prompt:           # the old way: token by token, exact window
+            logits = model.step(t, model.block_size - 1)
+        self.assertEqual(model.rebuilt, len(long_prompt) - 8)
+        self.assertEqual(logits, fresh_logits(model, long_prompt[-8:]))
+        model.reset()
+        self.assertEqual(model.generate(long_prompt, 1, temperature=0)[0], argmax(logits))
+        # One refill, for feeding back the token just produced; none for the prompt.
+        self.assertEqual(model.rebuilt, 1)
+
+    def test_stop_at_window_still_stops(self):
+        got = self.gen(30, past_context=False)
+        self.assertEqual(len(got), 8 - 3)
+        self.assertTrue(self.model.stopped_at_context)
+
+    def test_a_keep_outside_the_window_is_refused(self):
+        for bad in (-1, 8, 100):
+            with self.assertRaises(ValueError):
+                self.gen(3, keep=bad)
+        with self.assertRaises(ValueError):
+            self.gen(3, exact_window=True, keep=2)
+        self.assertEqual(self.model.window_keep(True), 7)
+        self.assertEqual(self.model.window_keep(False, 0), 0)
+
+
 def _plain_generate(model, ids, n):
     with plain_arithmetic():
         return model.generate(ids, n, temperature=0)
