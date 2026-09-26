@@ -194,6 +194,11 @@ except the words you want the model to continue. Every original knob is still th
 **Show advanced settings**, which is shut by default.
 
 Checkpoints are plain `ckpt.pt` + `tokenizer.json` in your output folder. They're yours.
+Training stops on its own once the held-out text has not improved by more than
+run-to-run noise (0.005, from `FINDINGS-how-long-to-train.md`) for 5 checks in a row, and
+the folder keeps the weights from the best check, not the last; the log and the
+checkpoint's `training` entry say which step and why it stopped. `train.py --no-early-stop`
+runs every step; `--min-delta` and `--patience` change the rule.
 `generate.py --out <folder>` reads them back.
 
 ## What makes it different
