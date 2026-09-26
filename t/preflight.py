@@ -313,6 +313,13 @@ def check_split(split_path: Path, pool_files: list[Path] = (), corpora: list[Pat
         eval_ids = {int(task_id) for task_id in split["eval_ids"]}
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
         return say(False, "split readable", f"{split_path}: {error}")
+    import loop_filter
+    dev_ids = loop_filter.r12_dev_ids(split_path=split_path)
+    if dev_ids:
+        # the stopping-step dev split is refused as training data beside the held-out ids
+        print(f"  [note] {len(dev_ids)} dev-split ids (t/r12-dev-ids.json) are refused beside the "
+              f"{len(eval_ids)} held-out ids")
+        eval_ids = eval_ids | dev_ids
     pools, corpora = selected_training_inputs(pool_files, corpora, audit_history)
     if audit_history:
         print(f"  [note] auditing {len(pools)} historical pool file(s) and {len(corpora)} corpus file(s)")
@@ -882,6 +889,34 @@ def check_tokenizer(named: str | None, quick: bool = False) -> bool:
     return ok
 
 
+def check_lab_quiet(lab: str | None) -> bool:
+    """Step 0 of the r12 checklist: nothing of ours is stopped, frozen or
+    orphaned, here and on the grading machine (t/stall_check.py reads /proc;
+    12 then 26 orphaned z3s ran on the lab for a day on 2026-09-20, and the
+    cpu-yield watcher once froze the grader and exited without resuming it)."""
+    import contextlib
+    import io
+    import stall_check
+
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        rc = stall_check.main([])
+    ok = say(rc == 0, "this machine quiet: nothing of ours stopped, frozen or orphaned",
+             " ".join(buffer.getvalue().split())[:160])
+    if not lab:
+        return ok
+    try:
+        out = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab,
+                              "cd ~/tup && python3 t/stall_check.py"],
+                             capture_output=True, text=True, timeout=90)
+        detail = " ".join((out.stdout + out.stderr).split())[:160]
+        ok = say(out.returncode == 0, "the grading machine quiet: nothing of ours stopped, frozen or orphaned",
+                 detail) and ok
+    except (OSError, subprocess.SubprocessError) as error:
+        ok = say(False, "the grading machine answers stall_check", str(error)[:80]) and ok
+    return ok
+
+
 def check_run_json(path: Path, split_path: Path, corpora: list[Path] = ()) -> bool:
     """Step 5 of the r12 checklist: the trainer's record says what the recipe
     demanded. A run of continue_from_checkpoint.py is an r12 arm only if it
@@ -956,8 +991,10 @@ def main() -> int:
         m = re.search(r"^T_LAB=(\S+)", conf.read_text(), re.M)
         lab = m.group(1) if m else None
 
+    print("the machines")
+    ok = check_lab_quiet(lab)
     print("checkers")
-    ok = check_kernels()
+    ok = check_kernels() and ok
     print("the generator")
     ok = check_prompt() and ok
     ok = check_grammar() and ok

@@ -89,6 +89,32 @@ def decontamination(path: Path = T / "decontamination-2026-09-21.json") -> Decon
         raise ValueError(f"cannot read decontamination policy {path}") from error
 
 
+def r12_dev_ids(path: Path = T / "r12-dev-ids.json", split_path: Path | str | None = None) -> frozenset[int]:
+    """The dev-split ids (t/r12-dev-ids.json, written by t/r12_data_queue.sh
+    dev-ids) that choose the fine-tune's stopping step by tests passed, and so
+    must never be trained on. They belong to one split: the file records the
+    digest of the split it was drawn from, and for any other split there are no
+    dev ids, so a corpus built or checked against another split is unchanged.
+    A missing file means no dev ids; a malformed one is refused by name."""
+    import hashlib
+    path = Path(path)
+    if not path.exists():
+        return frozenset()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        ids = frozenset(int(value) for value in data["dev_ids"])
+        recorded = data["inputs"]["split_sha256"]
+    except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as error:
+        raise ValueError(f"cannot read the dev-split ids {path}") from error
+    if split_path is None:
+        return ids
+    try:
+        actual = hashlib.sha256(Path(split_path).read_bytes()).hexdigest()
+    except OSError:
+        return frozenset()
+    return ids if actual == recorded else frozenset()
+
+
 # Evaluation data must stay unseen during development, including instruction
 # tuning, not merely be excluded from the final score (Sainz et al., 2023,
 # https://arxiv.org/abs/2310.18018, sections 1 and 3). The policy is therefore
