@@ -77,6 +77,27 @@ class ExactComparisonTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cover exactly"):
             comparison.clean_outcomes_from_export(export, "clean-2", "local")
 
+    def test_schema_two_exports_are_read_and_unknown_schemas_refused(self):
+        export = {
+            "schema_version": 2,
+            "panels": {
+                "clean-1": {
+                    "task_ids": [3],
+                    "tags": {"local": {
+                        "clean": {"3": True}, "clean_count": 1,
+                        "spec_agrees": {"3": False}, "spec_agrees_count": 0,
+                        "tests_pass": {"3": True}, "tests_pass_count": 1,
+                        "answered_count": 1, "partial": False,
+                    }},
+                },
+            },
+        }
+        self.assertEqual(comparison.clean_outcomes_from_export(export, "clean-1", "local"), {3: True})
+        self.assertEqual(comparison.tests_pass_outcomes_from_export(export, "clean-1", "local"), {3: True})
+        export["schema_version"] = 3
+        with self.assertRaisesRegex(ValueError, "schema"):
+            comparison.clean_outcomes_from_export(export, "clean-1", "local")
+
     def test_cli_reports_paired_and_fixed_baseline_seed_results(self):
         export = {
             "schema_version": 1,
