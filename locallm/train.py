@@ -78,20 +78,59 @@ def sync(device: str) -> None:
         torch.mps.synchronize()
 
 
-def make_optimizer(model, lr: float):
-    """AdamW, fused where the device offers it.
+BETAS = (0.9, 0.95)
+
+
+def decay_groups(model, weight_decay: float) -> list:
+    """AdamW parameter groups: every tensor with two or more dimensions is
+    decayed, every other one (RMSNorm and LayerNorm gains, biases) is not.
+
+    The rule is nanoGPT's configure_optimizers, read from
+    raw.githubusercontent.com/karpathy/nanoGPT/master/model.py: parameters with
+    `p.dim() >= 2` go under the requested decay and `p.dim() < 2` under 0.0.
+    Before r12 this file decayed every parameter at 0.1, which barely matters
+    at that value, but the small-data re-pretraining sweep runs decay 0.8
+    (Kim et al., arXiv:2509.14786, tuned for a 150M model on 200M tokens), and
+    a norm gain pulled toward zero eight times harder is a different model.
+    The tied embedding (wte is lm_head) appears once, because
+    model.parameters() yields each Parameter once.
+    """
+    if weight_decay < 0:
+        raise ValueError(f"weight decay must not be negative, got {weight_decay}")
+    params = [p for p in model.parameters() if p.requires_grad]
+    groups = [{"params": [p for p in params if p.dim() >= 2], "weight_decay": float(weight_decay)},
+              {"params": [p for p in params if p.dim() < 2], "weight_decay": 0.0}]
+    return [group for group in groups if group["params"]]
+
+
+def decay_split(model) -> dict:
+    """How decay_groups falls on this model, for the run record."""
+    params = [p for p in model.parameters() if p.requires_grad]
+    decayed = [p for p in params if p.dim() >= 2]
+    undecayed = [p for p in params if p.dim() < 2]
+    return {"decayed_tensors": len(decayed), "decayed_parameters": sum(p.numel() for p in decayed),
+            "undecayed_tensors": len(undecayed), "undecayed_parameters": sum(p.numel() for p in undecayed)}
+
+
+def make_optimizer(model, lr: float, weight_decay: float = 0.1):
+    """AdamW, fused where the device offers it, decaying only the matrices.
 
     A small model has many small parameter tensors, so the optimizer step is
     dominated by launch overhead rather than arithmetic. Fusing it into one
     kernel measured 5.37 -> 4.93 ms/step on CUDA here; on MPS it is nearly a
     wash (21.28 -> 20.96 ms/step on an M5 Pro) but never slower.
+
+    `weight_decay` defaults to the 0.1 every recorded command ran with and
+    reaches only tensors with two or more dimensions (decay_groups); the
+    r12 sweep passes it through train_distributed.py --weight-decay.
     """
-    kw = dict(lr=lr, betas=(0.9, 0.95), weight_decay=0.1)
+    groups = decay_groups(model, weight_decay)
+    kw = dict(lr=lr, betas=BETAS)
     dev = next(model.parameters()).device.type
     try:
-        return torch.optim.AdamW(model.parameters(), fused=dev in ("cuda", "mps"), **kw)
+        return torch.optim.AdamW(groups, fused=dev in ("cuda", "mps"), **kw)
     except (RuntimeError, TypeError):
-        return torch.optim.AdamW(model.parameters(), **kw)
+        return torch.optim.AdamW(groups, **kw)
 
 
 def _leak_of(text: str) -> dict:
