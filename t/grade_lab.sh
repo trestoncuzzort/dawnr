@@ -11,9 +11,12 @@ set -u
 # runs cannot change what that job does
 main() {
 # Set T_LAB to user@host of a machine with the seven checkers installed and key login from here, or put the
-# line T_LAB=user@host in t/lab-workstation.conf (which git ignores).
-[ -f t/lab-workstation.conf ] && . t/lab-workstation.conf
-LAB=${T_LAB:?set T_LAB=user@host, or write it into t/lab-workstation.conf}
+# line T_LAB=user@host in t/lab-workstation.conf (which git ignores). T_LAB=local grades on this machine
+# through the same steps (t/lab_mode.sh, 2026-09-26). An environment T_LAB wins over the conf, so
+# `T_LAB=local bash t/grade_lab.sh matrix` works beside a conf that names the workstation.
+[ -z "${T_LAB:-}" ] && [ -f t/lab-workstation.conf ] && . t/lab-workstation.conf
+LAB=${T_LAB:?set T_LAB=user@host or T_LAB=local, or write it into t/lab-workstation.conf}
+. t/lab_mode.sh
 # The lab workstation has 120 threads and its CPUs are ours; only its GPUs are off limits. gnatprove runs one
 # core per cell and SPARK is 44 percent of all proof time, so cells, not threads, are the limit: with 16 cells
 # only 16 cores worked. Cells are cheap in memory (z3 and one prover each), so the default is most of the
@@ -24,17 +27,17 @@ LAB=${T_LAB:?set T_LAB=user@host, or write it into t/lab-workstation.conf}
 # backstop in verifiers/spark.py then fires on cells that would prove alone, and a timeout is not a verdict
 # (t/preflight.py refuses any clean answer resting on one). 32 cells is about 110 cores, which leaves the other
 # users of a shared machine a little room as well.
-JOBS=${T_LAB_JOBS:-32}              # cells at once, over all the answer sets being graded together
-SETS=${T_LAB_SETS:-4}               # answer sets at once: one small set cannot keep 120 threads busy
+JOBS=${T_LAB_JOBS:-$(default_jobs)}   # cells at once, over all the answer sets being graded together (8 here, 32 on the lab)
+SETS=${T_LAB_SETS:-$(default_sets)}   # answer sets at once: one small set cannot keep 120 threads busy (1 here, 4 on the lab)
 SE=t/out/spec-experiment
 # The lab workstation has 502 GB of memory and a 252 GB RAM disk. Grading is small-file work (a lowered source
 # per cell, a gnatprove work tree, why3 session files), so the whole working set lives in RAM and only
 # kernels.md comes back. T_LAB_WORK=~/tup-grade puts it on disk again.
-WORK=${T_LAB_WORK:-/dev/shm/tup-grade}
+WORK=${T_LAB_WORK:-$(default_work_dir)}
 SSH="ssh -o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=30"
 REMOTE_EV='.cache/t-watch/home-grade.jsonl'
 
-if ! $SSH "$LAB" true 2>/dev/null; then
+if ! reachable; then
   # unreachable: run T_VPN_CMD, if one is set, and wait up to 10 minutes for the workstation to answer
   echo "lab workstation not reachable${T_VPN_CMD:+, running T_VPN_CMD}"
   # setsid is util-linux and macOS has none at all -- github.com/jerrykuch/ersatz-setsid
@@ -60,14 +63,14 @@ os.execvp("sh", ["sh", "-c", sys.argv[1]])' "$T_VPN_CMD" >/dev/null 2>&1 &
   $SSH "$LAB" true || { echo "still cannot reach $LAB after 10 minutes"; exit 1; }
   echo "connected"
 fi
-$SSH "$LAB" "mkdir -p ~/.cache/t-watch $WORK && touch ~/$REMOTE_EV"
+remote "mkdir -p ~/.cache/t-watch $WORK && touch ~/$REMOTE_EV"
 
 # JOBS used to be 32 whatever else was on the machine. On 2026-09-19 ten
 # generation workers, a 7B model and 32 grading cells put the load average at 80
 # on a 120-core box shared with another user, and the ssh carrying this script
 # timed out mid-grade: the kernels survived as orphans and the table was never
 # written. Read the machine first and take what is actually free.
-BUSY=$($SSH "$LAB" "cut -d' ' -f1 /proc/loadavg; nproc; ps -eo cmd | grep -cE '[l]oop_locallm.py generate|[l]oop_generate.py'" 2>/dev/null | tr '\n' ' ')
+BUSY=$(remote "cut -d' ' -f1 /proc/loadavg; nproc; ps -eo cmd | grep -cE '[l]oop_locallm.py generate|[l]oop_generate.py'" 2>/dev/null | tr '\n' ' ')
 # read, not `set --`: `set --` replaces the POSITIONAL PARAMETERS, and this
 # script's mode is $1. From a6acacb until this was found on 2026-09-20,
 # `set -- $BUSY` overwrote "heldout" with the load average, the case below
@@ -96,9 +99,10 @@ fi
 # is not the tree you think it is invalidates the comparison, not the run, so
 # this reports loudly and continues: the answers are still graded, and the state
 # that graded them is printed where the operator sees it.
-if ! $SSH "$LAB" "cd ~/tup && git pull -q --ff-only" 2>/tmp/t-grade-pull.$$; then
+# Locally the grading machine IS this tree: nothing to pull, and the drift warning does not apply.
+if ! lab_is_local && ! remote "cd ~/tup && git pull -q --ff-only" 2>/tmp/t-grade-pull.$$; then
   echo "WARNING: the grading machine did not update. It is grading with:"
-  $SSH "$LAB" "cd ~/tup && echo '  HEAD '\$(git rev-parse --short HEAD) && echo '  dirty entries '\$(git status --porcelain | wc -l)"
+  remote "cd ~/tup && echo '  HEAD '\$(git rev-parse --short HEAD) && echo '  dirty entries '\$(git status --porcelain | wc -l)"
   # -n 2, not -2: BSD head documents only -n count, and this line runs here, not on the lab
   # (keith.github.io/xcode-man-pages/head.1.html). GNU head prints the same two lines either way.
   echo "  reason: $(head -n 2 /tmp/t-grade-pull.$$ | tr '\n' ' ')"
@@ -132,7 +136,7 @@ if [ -n "${T_WATCH:-}" ]; then
     echo "  unset T_WATCH to grade without the live stream."
     exit 1
   fi
-  $SSH "$LAB" "tail -n0 -F ~/$REMOTE_EV" | "${FILTER[@]}" "s/\"pid\": [0-9]*, //" >> "$T_WATCH" &
+  remote "tail -n0 -F ~/$REMOTE_EV" | "${FILTER[@]}" "s/\"pid\": [0-9]*, //" >> "$T_WATCH" &
   trap 'kill %1 2>/dev/null' EXIT
 fi
 
@@ -159,7 +163,7 @@ lab_quiet() {  # t/stall_check.py on the grading machine: nothing of ours stoppe
   # The r12 build adds t/stall_check.py; until the grading machine has it, grading is refused
   # by name rather than started blind.
   local out rc
-  out=$($SSH "$LAB" "cd ~/tup && if [ -f t/stall_check.py ]; then python3 t/stall_check.py; else echo 'REFUSED: t/stall_check.py is missing on the grading machine (the r12 build adds it; pull there first)'; exit 3; fi" 2>&1); rc=$?
+  out=$(remote "cd ~/tup && if [ -f t/stall_check.py ]; then python3 t/stall_check.py; else echo 'REFUSED: t/stall_check.py is missing on the grading machine (the r12 build adds it; pull there first)'; exit 3; fi" 2>&1); rc=$?
   if [ "$rc" -ne 0 ]; then
     echo "== the grading machine is not quiet (stall_check exit $rc):"
     printf '   %s\n' "$out"
@@ -211,7 +215,7 @@ grade() {  # tag, folder name inside the tag
   echo "== $T: $(ls "$D/$SUB" | wc -l) tasks to the lab workstation"
   # A table left in $WORK by an earlier run must not come back as this run's: it is removed
   # before run_par starts, and copied back only when run_par exits 0 and wrote it.
-  $SSH "$LAB" "mkdir -p $WORK/$T && rm -f $WORK/$T/kernels.md" && rsync -a --delete "$D/$SUB/" "$LAB:$WORK/$T/$SUB/" \
+  remote "mkdir -p $WORK/$T && rm -f $WORK/$T/kernels.md" && store -a --delete "$D/$SUB/" "$LAB:$WORK/$T/$SUB/" \
     || { rmdir "$D/.grading" 2>/dev/null; return 1; }
   # T_LAB_RUN_PAR passes flags through to the driver. It is empty by default, so
   # every existing caller grades exactly as before. --no-cache is why it exists:
@@ -227,7 +231,7 @@ grade() {  # tag, folder name inside the tag
   # is that a run's budget has to cover its subprocesses, and spark.py's own comment names -j1 as
   # what a lab sweep should set. It leaves every verdict byte-identical (spark.py, MEASURED); only
   # wall clock changes. An explicit T_SPARK_JOBS in the environment still wins.
-  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md ${T_LAB_RUN_PAR:-}'"; rc=$?
+  remote "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md ${T_LAB_RUN_PAR:-}'"; rc=$?
   # run_par exits 0 on full agreement and 1 on a finding: a DISAGREEMENT is a verdict and the
   # table is written either way (t/run_par.py main returns 0 if all_ok else 1); 2 is a refusal
   # before any cell ran and nothing was written. The first queue run (2026-09-25) discarded a
@@ -237,7 +241,7 @@ grade() {  # tag, folder name inside the tag
     rmdir "$D/.grading" 2>/dev/null
     return 1
   fi
-  rsync -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" \
+  fetch -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" \
     || { echo "== $T: run_par exited $rc but left no $WORK/$T/kernels.md"; rmdir "$D/.grading" 2>/dev/null; return 1; }
   echo "== $T: kernels.md back"
   rmdir "$D/.grading" 2>/dev/null
@@ -267,9 +271,10 @@ case "${1:-seeds}" in
            lab_quiet || exit 2
            # the same T_SPARK_JOBS=1 as grade(): the committed matrix graded at -j8 inside
            # every SPARK cell is the table that carried the timeout cells of 2026-09-21
-           $SSH "$LAB" "cd ~/tup && rm -f $WORK/AGREEMENT-lab.md && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $JOBS --out $WORK/matrix --table $WORK/AGREEMENT-lab.md'" \
-             || { echo "== matrix: run_par failed on the grading machine; no table copied back"; exit 1; }
-           rsync -a "$LAB:$WORK/AGREEMENT-lab.md" t/out/AGREEMENT-lab.md && tail -12 t/out/AGREEMENT-lab.md ;;
+           # run_par exits 1 on a finding with the table written (see grade()); only 2 means no table
+           remote "cd ~/tup && rm -f $WORK/AGREEMENT-lab.md && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $JOBS --out $WORK/matrix --table $WORK/AGREEMENT-lab.md'"; rc=$?
+           if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then echo "== matrix: run_par exited $rc on the grading machine; no table copied back"; exit 1; fi
+           fetch -a "$LAB:$WORK/AGREEMENT-lab.md" t/out/AGREEMENT-lab.md && tail -12 t/out/AGREEMENT-lab.md ;;
   seeds)   par $(for S in 1 2 3 4 5 6 7 8; do echo qwen2.5-coder-14b-v3-s$S; done) ;;
   heldout) shift 2>/dev/null || true
            # a held-out set has no grade-in/: nothing is pre-filtered, every answer is graded, which is what

@@ -16,7 +16,9 @@
 #
 # The queue is a controller: it runs here, like t/grade_lab.sh, and every Python step
 # runs on the lab workstation over ssh, niced, inside its ~/tup, so no compute happens
-# on this machine. T_LAB comes only from t/lab-workstation.conf (gitignored). Grading
+# on this machine. T_LAB comes from t/lab-workstation.conf (gitignored) or the
+# environment; T_LAB=local makes this machine the grading machine, with the seven
+# kernels installed here (t/lab_mode.sh, 2026-09-26): the same steps, no ssh. Grading
 # goes only through t/grade_lab.sh, with --no-cache, because every cache entry these
 # programs could hit came from tables graded under SPARK -j8 oversubscription, and
 # run_par caches UNPROVED (t/DATA-r12.md).
@@ -635,14 +637,14 @@ esac
 
 # ------------------------------------------------------------------- helpers --
 refuse() { echo "REFUSED: $*"; exit 3; }
-lab() { $SSH "$LAB" "cd ~/$REPO && $*"; }
-lab_py() { local name=$1; shift; _py "$name" | $SSH "$LAB" "cd ~/$REPO && nice -n 19 python3 - $*"; }
+lab() { remote "cd ~/$REPO && $*"; }                                              # t/lab_mode.sh: ssh, or here
+lab_py() { local name=$1; shift; _py "$name" | remote "cd ~/$REPO && nice -n 19 python3 - $*"; }
 local_py() { local name=$1; shift; _py "$name" | python3 - "$@"; }
 
 gate() {   # prints the decision; sets CELLS; returns 0 when the lab admits the work
   local flag=${1:-} out rc
   mkdir -p "$RD"
-  _py facts | $SSH "$LAB" "python3 -" > "$RD/.facts.json" || refuse "could not read the lab's process table"
+  _py facts | remote "python3 -" > "$RD/.facts.json" || refuse "could not read the lab's process table"
   out=$(local_py gate --facts "$RD/.facts.json" --max-cells "$MAX_CELLS" $flag); rc=$?
   echo "gate: $out"
   CELLS=$(printf '%s' "$out" | python3 -c 'import json,sys; print(json.load(sys.stdin)["cells"])' 2>/dev/null || echo 0)
@@ -664,7 +666,7 @@ take_locks() {
   mkdir -p "$RD"
   mkdir "$RD/.lock" 2>/dev/null || refuse "another queue holds $RD/.lock here"
   lab "mkdir -p $RD && mkdir $RD/.lock" 2>/dev/null || { rmdir "$RD/.lock"; refuse "another queue holds $RD/.lock on the lab"; }
-  trap 'rmdir "$RD/.lock" 2>/dev/null; $SSH "$LAB" "rmdir ~/$REPO/$RD/.lock" 2>/dev/null' EXIT
+  trap 'rmdir "$RD/.lock" 2>/dev/null; remote "rmdir ~/$REPO/$RD/.lock" 2>/dev/null' EXIT
 }
 
 grade_chunks() {  # prefix: every planned chunk, one grade_lab.sh call each, table validated here
@@ -674,8 +676,8 @@ grade_chunks() {  # prefix: every planned chunk, one grade_lab.sh call each, tab
   for c in $list; do
     if check_or_refuse "chunk-$c" "$RD/chunks/$c/manifest.json"; then continue; fi
     mkdir -p "$SE/$c"
-    rsync -a --delete "$LAB:~/$REPO/$RD/chunks/$c/grade-in/" "$SE/$c/grade-in/" || refuse "$c: cannot fetch grade-in"
-    rsync -a "$LAB:~/$REPO/$RD/chunks/$c/manifest.json" "$SE/$c/manifest.json" || refuse "$c: cannot fetch manifest"
+    fetch -a --delete "$LAB:~/$REPO/$RD/chunks/$c/grade-in/" "$SE/$c/grade-in/" || refuse "$c: cannot fetch grade-in"
+    fetch -a "$LAB:~/$REPO/$RD/chunks/$c/manifest.json" "$SE/$c/manifest.json" || refuse "$c: cannot fetch manifest"
     [ -d "$SE/$c/.grading" ] && refuse "$c: a .grading lock exists; another grade may be running"
     [ -e "$SE/$c/kernels.md" ] && mv "$SE/$c/kernels.md" "$SE/$c/kernels.md.stale-$(date -u +%Y%m%dT%H%M%SZ)"
     admit --grading
@@ -687,7 +689,7 @@ grade_chunks() {  # prefix: every planned chunk, one grade_lab.sh call each, tab
     [ "$rc" -eq 0 ] || echo "== $c: grade_lab.sh exited $rc"
     [ -s "$SE/$c/kernels.md" ] || refuse "$c: no table came back"
     local_py check_table "$SE/$c/kernels.md" "$SE/$c/manifest.json" || refuse "$c: the table failed validation"
-    rsync -a "$SE/$c/kernels.md" "$LAB:~/$REPO/$RD/chunks/$c/kernels.md" || refuse "$c: cannot store the table on the lab"
+    store -a "$SE/$c/kernels.md" "$LAB:~/$REPO/$RD/chunks/$c/kernels.md" || refuse "$c: cannot store the table on the lab"
     mark_step "chunk-$c" "$RD/chunks/$c/manifest.json" "$RD/chunks/$c/kernels.md"
   done
 }
@@ -815,7 +817,7 @@ step_r11() {
     fi
     lab "test -f t/out/gen-$T.done" || refuse "$T: no generation sentinel t/out/gen-$T.done on the lab"
     mkdir -p "$SE/$T"
-    rsync -a --delete "$LAB:~/$REPO/$SE/$T/raw/" "$SE/$T/raw/" || refuse "$T: cannot fetch the raw answers"
+    fetch -a --delete "$LAB:~/$REPO/$SE/$T/raw/" "$SE/$T/raw/" || refuse "$T: cannot fetch the raw answers"
     n=$(ls "$SE/$T/raw" | wc -l)
     [ "$n" -eq 232 ] || refuse "$T: expected 232 raw answers, found $n"
     admit --grading
@@ -823,8 +825,8 @@ step_r11() {
     echo "== $T: heldout grading with $CELLS cells, --no-cache"
     T_LAB_JOBS=$CELLS T_LAB_SETS=1 T_LAB_RUN_PAR=--no-cache bash t/grade_lab.sh heldout "$T" || echo "== $T: grade_lab.sh exited $?"
     { [ -s "$SE/$T/kernels.md" ] && [ -s "$SE/$T/tests.json" ]; } || refuse "$T: no table or tests came back"
-    rsync -a "$SE/$T/kernels.md" "$SE/$T/tests.json" "$SE/$T/extract.json" "$LAB:~/$REPO/$SE/$T/" || refuse "$T: cannot store the results on the lab"
-    rsync -a --delete "$SE/$T/tasks/" "$LAB:~/$REPO/$SE/$T/tasks/" || refuse "$T: cannot store the tasks on the lab"
+    store -a "$SE/$T/kernels.md" "$SE/$T/tests.json" "$SE/$T/extract.json" "$LAB:~/$REPO/$SE/$T/" || refuse "$T: cannot store the results on the lab"
+    store -a --delete "$SE/$T/tasks/" "$LAB:~/$REPO/$SE/$T/tasks/" || refuse "$T: cannot store the tasks on the lab"
     mark_step "r11-$T" "$SE/$T/kernels.md" "$SE/$T/tests.json"
   done
 }
@@ -833,9 +835,9 @@ step_dev_ids() {
   admit
   lab_py dev_ids --split t/out/loop/split-v5.json --decontam t/decontamination-2026-09-21.json --n 100 --salt r12-dev --out "$RD/r12-dev-ids.json" \
     || refuse "dev ids not computed"
-  rsync -a "$LAB:~/$REPO/$RD/r12-dev-ids.json" t/r12-dev-ids.json || refuse "cannot fetch the dev ids"
+  fetch -a "$LAB:~/$REPO/$RD/r12-dev-ids.json" t/r12-dev-ids.json || refuse "cannot fetch the dev ids"
   python3 -c 'import json,sys; d=json.load(open("t/r12-dev-ids.json")); open("t/out/loop/r12-dev-ids.txt","w").write("\n".join(map(str,d["dev_ids"]))+"\n"); print("t/r12-dev-ids.json:", len(d["dev_ids"]), "ids; t/out/loop/r12-dev-ids.txt written")'
-  rsync -a t/out/loop/r12-dev-ids.txt "$LAB:~/$REPO/t/out/loop/r12-dev-ids.txt"
+  store -a t/out/loop/r12-dev-ids.txt "$LAB:~/$REPO/t/out/loop/r12-dev-ids.txt"
 }
 
 status() {
@@ -850,9 +852,11 @@ main() {
     _py) _py "$2"; exit $? ;;
     ""|-h|--help) sed -n '2,12p' "$0"; exit 0 ;;
   esac
-  [ -f t/lab-workstation.conf ] && . t/lab-workstation.conf
-  LAB=${T_LAB:?set T_LAB=user@host in t/lab-workstation.conf}
-  $SSH "$LAB" true 2>/dev/null || refuse "the lab workstation is not reachable (VPN?)"
+  # T_LAB=local runs every step on this machine (t/lab_mode.sh); an environment T_LAB wins over the conf
+  [ -z "${T_LAB:-}" ] && [ -f t/lab-workstation.conf ] && . t/lab-workstation.conf
+  LAB=${T_LAB:?set T_LAB=user@host or T_LAB=local in t/lab-workstation.conf}
+  . t/lab_mode.sh
+  reachable || refuse "the lab workstation is not reachable (VPN?)"
   case "$1" in
     status)     status ;;
     gate)       gate "${2:-}" ;;
