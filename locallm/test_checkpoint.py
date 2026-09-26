@@ -160,6 +160,66 @@ def test_cli_still_works():
     assert len(p.stdout.strip()) > 10, f"generate.py printed nothing: {p.stdout!r}"
 
 
+def _seeded_model(block_size=16):
+    torch.manual_seed(173)
+    tok = CharTokenizer(sorted(set("abcdefghijklmnopqrstuvwxyz \n():=_")))
+    cfg = GPTConfig(vocab_size=len(tok.chars), block_size=block_size,
+                    n_layer=2, n_head=2, n_embd=32, dropout=0.0)
+    return GPT(cfg).eval(), tok
+
+
+def test_default_cache_follows_the_device():
+    """CPU decodes on the cache by default when the prompt is shorter than the
+    window, where it measured faster; a prompt that fills the window stays
+    uncached, where the cache measured up to 7 percent slower; CUDA stays
+    uncached as measured on 2026-09-19; MPS is unchanged because it was never
+    measured (FINDINGS-kv-cache-2026-09-19.md). No GPU is touched here: the
+    rule is a function of the device, and sample() is checked to consult it."""
+    assert checkpoint.cache_by_default("cpu", 4, 16) is True
+    assert checkpoint.cache_by_default(torch.device("cpu"), 15, 16) is True
+    assert checkpoint.cache_by_default("cpu", 16, 16) is False
+    assert checkpoint.cache_by_default("cpu", 40, 16) is False
+    for device in ("cuda", "cuda:1", torch.device("cuda", 0), "mps", "meta"):
+        assert checkpoint.cache_by_default(device, 4, 16) is False, device
+
+    model, tok = _seeded_model(block_size=16)
+    seen = []
+    generate = model.generate
+
+    def spy(*args, **kwargs):
+        seen.append(kwargs["use_cache"])
+        return generate(*args, **kwargs)
+
+    model.generate = spy
+    checkpoint.sample(model, tok, "def ", tokens=5)
+    checkpoint.sample(model, tok, "def ", tokens=5, device="cpu")
+    checkpoint.sample(model, tok, "def ", tokens=5, use_cache=False)
+    checkpoint.sample(model, tok, "abcdefghijklmnopq", tokens=5)       # 17 tokens, window 16
+    checkpoint.sample(model, tok, "abcdefghijklmnopq", tokens=5, use_cache=True)
+    assert seen == [True, True, False, False, True], seen
+
+    asked = []
+    rule = checkpoint.cache_by_default
+    checkpoint.cache_by_default = lambda device, n, block: asked.append(
+        (torch.device(device).type, n, block)) or False
+    try:
+        checkpoint.sample(model, tok, "def ", tokens=5)
+    finally:
+        checkpoint.cache_by_default = rule
+    assert asked == [("cpu", 4, 16)] and seen[-1] is False, (asked, seen)
+
+
+def test_cached_and_uncached_greedy_samples_agree():
+    """The flipped default must not change what a greedy sample says: the same
+    text inside the 16-token window, across it, and from a prompt longer than it."""
+    model, tok = _seeded_model()
+    for prompt in ("def ", "", "abcdefghijklmnopqrstu"):
+        cached = checkpoint.sample(model, tok, prompt, tokens=60, temperature=0, use_cache=True)
+        uncached = checkpoint.sample(model, tok, prompt, tokens=60, temperature=0, use_cache=False)
+        default = checkpoint.sample(model, tok, prompt, tokens=60, temperature=0)
+        assert cached == uncached == default, prompt
+
+
 if __name__ == "__main__":
     fails = []
     for name, fn in sorted(globals().items()):
