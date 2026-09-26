@@ -212,8 +212,12 @@ def weak_spec(task: dict, limit: int = 400) -> Optional[str]:
     names = [(p["name"], p["type"]) for p in task["params"]]
     funs = interp.funs_of(task, task["body"])
     ret = task["returns"][0]
-    cands = {"int": [0, 1, -1], "bool": [True, False], "seq": [(), (0,)]}.get(ret["type"]
-                                                                            if isinstance(ret["type"], str) else "")
+    base = {"int": [0, 1, -1], "bool": [True, False], "seq": [(), (0,)]}
+    rt = ret["type"]
+    if isinstance(rt, dict) and "pair" in rt:
+        cands = [interp.Pair(a, b) for a in base.get(rt["pair"][0], []) for b in base.get(rt["pair"][1], [])]
+    else:
+        cands = base.get(rt if isinstance(rt, str) else "")
     if not cands:
         return None
     admissible = []
@@ -238,7 +242,7 @@ def weak_spec(task: dict, limit: int = 400) -> Optional[str]:
                 ok = False
                 break
         if ok:
-            shown = list(c) if isinstance(c, tuple) else c
+            shown = [c.a, c.b] if isinstance(c, interp.Pair) else (list(c) if isinstance(c, tuple) else c)
             return f"the constant {json.dumps(shown)} satisfies every ensures on all {len(admissible)} admissible drawn inputs"
     return None
 

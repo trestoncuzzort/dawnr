@@ -173,6 +173,7 @@ class VType:
     text: str
     elem: Optional["VType"] = None
     reason: str = ""
+    parts: tuple = ()        # a pair's two component types (kind "pair")
 
     def dafny(self) -> str:
         if self.kind == "refuse":
@@ -237,6 +238,8 @@ class VerusFile:
     consts: dict[str, object]
     holes: list[str]
     const_text: dict = field(default_factory=dict)     # const items as written
+    failed: dict = field(default_factory=dict)         # fn name -> (reason, detail) of an unreadable item
+    lemmas: dict = field(default_factory=dict)         # proof fns with an ensures and no result
 
 
 # ----------------------------------------------------------------- parser --
@@ -339,7 +342,12 @@ class Parser:
             self.expect(")")
             if len(parts) == 1:
                 return parts[0]
-            return VType("refuse", "(" + ", ".join(p.text for p in parts) + ")", reason="tuple")
+            text = "(" + ", ".join(p.text for p in parts) + ")"
+            if len(parts) == 2 and all(p.kind in ("int", "nat", "bool") for p in parts):
+                # SPEC.md "Pairs": one value of two base components; the lifter lifts a
+                # two-result Dafny method as exactly that (lift_rewrite, multi-return-pair)
+                return VType("pair", text, parts=tuple(parts))
+            return VType("refuse", text, reason="tuple")
         if self.at("["):
             self.take()
             elem = self.parse_type()
@@ -382,6 +390,8 @@ class Parser:
             text = f"{name}<{elem.text}>"
             if elem.kind == "refuse":
                 return VType("refuse", text, reason=elem.reason)
+            if elem.kind == "pair":
+                return VType("refuse", text, reason="tuple")
             if elem.kind == "seq":
                 if elem.elem.kind == "seq":
                     return VType("refuse", text, reason="nested-seq-depth")
@@ -595,7 +605,13 @@ class Parser:
                 return ("unit",)
             e = self.parse_expr(0)
             if self.at(","):
-                raise VerusRefusal("tuple", f"tuple expression at line {t.line}")
+                items = [e]
+                while self.accept(","):
+                    if self.at(")"):
+                        break
+                    items.append(self.parse_expr(0))
+                self.expect(")")
+                return ("tuple", items)
             self.expect(")")
             return ("paren", e)
         if t.kind == "p" and t.text == "[":
@@ -841,38 +857,80 @@ class Parser:
         self.expect("{")
         attrs: list[str] = []
         while not self.at("}"):
+            if self.peek().kind == "eof":
+                raise VerusRefusal("verus-unparsed", "unterminated verus! block")
+            before = self.i
+            try:
+                attrs = self.parse_item(vf, attrs)
+            except VerusRefusal as r:
+                # an item the reader cannot read is recorded against its name and
+                # skipped; only a target that IS that item refuses (with this reason)
+                m = re.search(r"\bfn\s+([A-Za-z_]\w*)", self.text(self.item_start or self.i, self.i + 1))
+                if m:
+                    vf.failed.setdefault(m.group(1), (r.reason, r.detail))
+                self.recover()
+                if self.i == before:
+                    self.take()          # always make progress
+                attrs = []
+                self.item_start = None
+        return vf
+
+    def recover(self) -> None:
+        """Skip to the end of the item being read: its body's closing brace or its `;`."""
+        depth = 0
+        while True:
+            t = self.peek()
+            if t.kind == "eof":
+                return
+            if t.kind == "p" and t.text == "{":
+                self.skip_balanced()
+                if depth == 0:
+                    return
+                continue
+            if t.kind == "p" and t.text in ("(", "["):
+                self.skip_balanced()
+                continue
+            if t.kind == "p" and t.text == "}" and depth == 0:
+                return            # the verus! block's own close: leave it for the caller
+            self.take()
+            if t.kind == "p" and t.text == ";" and depth == 0:
+                return
+
+    def parse_item(self, vf: VerusFile, attrs: list[str]) -> list[str]:
+        """One item (or one attribute or modifier of the next), returning the pending
+        attributes."""
+        if True:
             t = self.peek()
             if t.kind == "eof":
                 raise VerusRefusal("verus-unparsed", "unterminated verus! block")
             if self.item_start is None:
                 self.item_start = self.i
+            if t.kind == "eof":
+                raise VerusRefusal("verus-unparsed", "unterminated verus! block")
             if t.text == "#":
                 attrs.append(self.skip_attr())
-                continue
+                return attrs
             if t.text in ("pub", "open", "closed", "uninterp", "broadcast", "axiom"):
                 if t.text in ("uninterp", "axiom"):
                     attrs.append(t.text)
                 self.take()
                 if self.at("("):
                     self.skip_balanced()
-                continue
+                return attrs
             if t.text == "use":
                 while not self.accept(";"):
                     self.take()
-                attrs = []
                 self.item_start = None
-                continue
+                return []
             if t.text in ("spec", "proof", "exec") and self.peek(1).text == "fn":
                 mode = self.take().text
                 self.parse_fn(vf, mode, attrs)
-                attrs = []
                 self.item_start = None
-                continue
+                return []
             if t.text == "fn":
                 self.parse_fn(vf, "exec", attrs)
-                attrs = []
                 self.item_start = None
-                continue
+                return []
             if t.text in ("struct", "enum", "trait", "type", "impl", "mod", "union"):
                 self.take()
                 name = self.peek().text
@@ -883,9 +941,8 @@ class Parser:
                     self.skip_balanced()
                 else:
                     self.take()
-                attrs = []
                 self.item_start = None
-                continue
+                return []
             if t.text in ("const", "static"):
                 self.take()
                 self.accept("mut")
@@ -896,15 +953,13 @@ class Parser:
                 vf.consts[name] = self.parse_expr(0)
                 self.accept(";")
                 vf.const_text[name] = self.text(self.item_start or 0, self.i)
-                attrs = []
                 self.item_start = None
-                continue
+                return []
             if t.text == "global":
                 while not self.accept(";"):
                     self.take()
-                continue
+                return attrs
             raise VerusRefusal("verus-unparsed", f"item at {t.text!r} line {t.line}")
-        return vf
 
     def parse_fn(self, vf: VerusFile, mode: str, attrs: list[str]) -> None:
         line = self.expect("fn").line
@@ -961,8 +1016,32 @@ class Parser:
                 vf.holes.append(f"bodyless fn {name}")
             return
         if mode == "proof":
-            self.skip_balanced()
             vf.proof_fns.add(name)
+            if ret_name is not None:
+                # a proof fn that returns a value (DafnyBench's lemmas-with-results) is a
+                # gradable function too; its body is ghost code
+                start = self.i
+                try:
+                    body = self.parse_block()
+                except VerusRefusal as r:
+                    self.i = start
+                    self.skip_balanced()
+                    body = [("refused", r.reason, r.detail)]
+                vf.exec_fns[name] = ExecFn(name, params, ret_name, ret, requires, ensures, decreases, body,
+                                           attrs + ["proof"], line, requires_src, ensures_src, ret_src)
+                if holes:
+                    vf.holes.append(f"{name}: {holes}")
+                return
+            if ensures:
+                # a lemma: kept so a corpus of lemmas (vstd) can lift each as a task whose
+                # result is a token and whose ensures is the lemma's (lift_lemma below)
+                ok = "ok"
+                while ok in {p.name for p in params}:
+                    ok += "_"
+                vf.lemmas[name] = ExecFn(name, params, ok, VType("bool", "bool"), requires, ensures, decreases,
+                                         [("expr", ("bool", True))], attrs + ["proof", "lemma"], line,
+                                         requires_src, ensures_src, "bool")
+            self.skip_balanced()
             if holes:
                 vf.holes.append(f"{name}: {holes}")
             return
@@ -1056,6 +1135,7 @@ class Renderer:
         self.renames: dict[str, str] = {}       # a shadowing `let` gets a fresh dafny name
         self.called_specs: set[str] = set()
         self.called_execs: set[str] = set()
+        self.body_ghost = False       # a proof fn's body is ghost code: `/` and `%` are Euclidean
 
     # --- expression typing, only as much as division and indexing need ---
     def kind_of(self, e) -> Optional[str]:
@@ -1172,7 +1252,13 @@ class Renderer:
         if tag == "method":
             return self.method(e, ghost)
         if tag == "field":
+            base = _strip(e[1])
+            if base[0] == "var" and self.types.get(base[1]) is not None and \
+                    self.types[base[1]].kind == "pair" and e[2] in ("0", "1"):
+                return dn(self.renames.get(base[1], base[1])) + "_" + e[2]
             raise VerusRefusal("datatype", f"field .{e[2]}")
+        if tag == "tuple":
+            raise VerusRefusal("tuple", "tuple value outside a result position")
         if tag == "call":
             return self.call(e, ghost)
         if tag == "if":
@@ -1344,18 +1430,18 @@ class Renderer:
                 return
             if lhs[0] == "index" and _strip(lhs[1])[0] == "var":
                 v = dn(self.renames.get(_strip(lhs[1])[1], _strip(lhs[1])[1]))
-                lines.append(f"{ind}{v} := {v}[{self.expr(lhs[2], False)} := {self.rhs(rhs)}];")
+                lines.append(f"{ind}{v} := {v}[{self.expr(lhs[2], self.body_ghost)} := {self.rhs(rhs)}];")
                 return
             raise VerusRefusal("verus-unparsed", "assignment target")
         if tag in ("exprstmt", "expr"):
             e = _strip(s[1])
             if e[0] == "method" and e[2] == "push" and _strip(e[1])[0] == "var":
                 v = dn(self.renames.get(_strip(e[1])[1], _strip(e[1])[1]))
-                lines.append(f"{ind}{v} := {v} + [{self.expr(e[3][0], False)}];")
+                lines.append(f"{ind}{v} := {v} + [{self.expr(e[3][0], self.body_ghost)}];")
                 return
             if e[0] == "method" and e[2] == "set" and _strip(e[1])[0] == "var" and len(e[3]) == 2:
                 v = dn(self.renames.get(_strip(e[1])[1], _strip(e[1])[1]))
-                lines.append(f"{ind}{v} := {v}[{self.expr(e[3][0], False)} := {self.expr(e[3][1], False)}];")
+                lines.append(f"{ind}{v} := {v}[{self.expr(e[3][0], self.body_ghost)} := {self.expr(e[3][1], self.body_ghost)}];")
                 return
             if e[0] == "method" and e[2] == "pop" and not e[3] and _strip(e[1])[0] == "var" and tag == "exprstmt":
                 v = dn(self.renames.get(_strip(e[1])[1], _strip(e[1])[1]))
@@ -1372,26 +1458,26 @@ class Renderer:
                 self.stmts(e[1], ind, ret_name, lines, is_tail and tag == "expr")
                 return
             if tag == "expr" and is_tail:
-                lines.append(f"{ind}{dn(ret_name)} := {self.rhs(e)};")
+                lines += self.result_assign(e, ind, ret_name)
                 return
             raise VerusRefusal("verus-unparsed", f"statement expression {e[0]}")
         if tag == "return":
             if s[1] is None:
                 lines.append(f"{ind}return;")
             else:
-                lines.append(f"{ind}{dn(ret_name)} := {self.rhs(s[1])};")
+                lines += self.result_assign(s[1], ind, ret_name)
                 lines.append(f"{ind}return;")
             return
         if tag == "while":
             _, cond, spec, body, _line = s
-            self.loop_header(f"while {self.expr(cond, False)}", spec, ind, lines)
+            self.loop_header(f"while {self.expr(cond, self.body_ghost)}", spec, ind, lines)
             lines.append(f"{ind}{{")
             self.stmts(body, ind + "  ", ret_name, lines, False)
             lines.append(f"{ind}}}")
             return
         if tag == "for":
             _, var, lo, hi, spec, body, _line = s
-            lo_t, hi_t = self.expr(lo, False), self.expr(hi, False)
+            lo_t, hi_t = self.expr(lo, self.body_ghost), self.expr(hi, self.body_ghost)
             self.types[var] = VType("int", "int")
             dvar = var
             if var in self.declared:
@@ -1415,6 +1501,17 @@ class Renderer:
             return
         raise VerusRefusal("verus-unparsed", f"statement {tag}")
 
+    def result_assign(self, e, ind: str, ret_name: str) -> list[str]:
+        """`ret := e`, or for a pair result `(a, b)` the two components' assignments."""
+        rt = self.types.get(ret_name)
+        if rt is not None and rt.kind == "pair":
+            e = _strip(e)
+            if e[0] != "tuple" or len(e[1]) != 2:
+                raise VerusRefusal("tuple", "a pair result not written as (a, b)")
+            return [f"{ind}{dn(ret_name)}_0 := {self.rhs(e[1][0])};",
+                    f"{ind}{dn(ret_name)}_1 := {self.rhs(e[1][1])};"]
+        return [f"{ind}{dn(ret_name)} := {self.rhs(e)};"]
+
     def loop_header(self, head: str, spec: dict, ind: str, lines: list[str], default_dec: str = "") -> None:
         if spec.get("ensures"):
             raise VerusRefusal("loop-exit", "loop ensures")
@@ -1430,7 +1527,7 @@ class Renderer:
 
     def if_stmt(self, e, ind: str, ret_name: str, lines: list[str], is_tail: bool) -> None:
         _, cond, then, other = e
-        lines.append(f"{ind}if {self.expr(cond, False)} {{")
+        lines.append(f"{ind}if {self.expr(cond, self.body_ghost)} {{")
         self.stmts(then, ind + "  ", ret_name, lines, is_tail)
         if other is not None:
             lines.append(f"{ind}}} else {{")
@@ -1438,7 +1535,7 @@ class Renderer:
         lines.append(f"{ind}}}")
 
     def rhs(self, e) -> str:
-        return self.expr(e, False)
+        return self.expr(e, self.body_ghost)
 
     def infer(self, e) -> Optional[VType]:
         e = _strip(e)
@@ -1498,7 +1595,9 @@ def target_name(text: str) -> Optional[str]:
     for m in re.finditer(r"(\b(?:spec|proof)\s+)?\bfn\s+([A-Za-z_][A-Za-z0-9_]*)", spec):
         if not m.group(1):
             return m.group(2)
-    return None
+    # otherwise a proof fn that returns a value, `proof fn f(..) -> (r: T)`
+    m = re.search(r"\bproof\s+fn\s+([A-Za-z_][A-Za-z0-9_]*)[^{;]*?->\s*\(\s*[A-Za-z_]", spec)
+    return m.group(1) if m else None
 
 
 def _reach(vf: VerusFile, names: set[str]) -> list[str]:
@@ -1547,18 +1646,39 @@ def trust_holes(text: str) -> list[str]:
     return [name for pat, name in HOLE_PATTERNS if pat.search(code)]
 
 
-def render(text: str) -> Rendering:
-    """Render one vericoding Verus file as Dafny, or refuse it by name."""
-    target = target_name(text)
+def targets(text: str, lemmas: bool = False) -> list[str]:
+    """Every gradable function in a Verus file that is not a vericoding task (a corpus
+    such as verus-lang/verus's examples): each exec fn and value-returning proof fn with
+    an ensures, and, with `lemmas`, each proof fn with an ensures and no result."""
+    try:
+        vf = Parser(tokenize(text)).parse_file()
+    except VerusRefusal:
+        return []
+    out = [n for n, f in vf.exec_fns.items() if f.ensures]
+    if lemmas:
+        out += [n for n in vf.lemmas if n not in out]
+    return out
+
+
+def render(text: str, target: Optional[str] = None, lemma: bool = False) -> Rendering:
+    """Render one Verus file's gradable function (the vericoding task's, or `target`) as
+    Dafny, or refuse it by name. `lemma` renders a proof fn with no result as a task whose
+    result is `ok: bool` (assigned true) and whose requires and ensures are the lemma's:
+    the program is trivial, the proof obligation is the lemma, restated in t."""
+    corpus = target is not None      # a named target in a corpus file: holes are judged per function
+    if target is None:
+        target = target_name(text)
     if target is None:
         return Rendering(None, None, ("no-method", "no <vc-spec> fn"))
-    holes = trust_holes(text)
+    holes = trust_holes(text) if not corpus else []
     if holes:
         return Rendering(None, target, ("trust-hole", ", ".join(holes)))
     try:
         vf = Parser(tokenize(text)).parse_file()
     except VerusRefusal as r:
         return Rendering(None, target, (r.reason, r.detail))
+    if lemma and target in vf.lemmas and target not in vf.exec_fns:
+        vf.exec_fns[target] = vf.lemmas[target]
     try:
         return _render_file(vf, target)
     except VerusRefusal as r:
@@ -1569,10 +1689,14 @@ def render(text: str) -> Rendering:
 
 def _render_file(vf: VerusFile, target: str) -> Rendering:
     fn = vf.exec_fns.get(target)
+    if fn is None and target in vf.failed:
+        raise VerusRefusal(*vf.failed[target])
     if fn is None:
         raise VerusRefusal("no-method", f"{target} is not an exec fn")
     if any(a.startswith("generics") for a in fn.attrs):
         raise VerusRefusal("generics", target)
+    if any(re.search(r"external|admit|assume_specification|uninterp|axiom", a) for a in fn.attrs):
+        raise VerusRefusal("trust-hole", f"{target}: {[a for a in fn.attrs if not a.startswith('generics')]}")
     if not fn.ensures:
         raise VerusRefusal("zero-ensures", target)
     if fn.ret.kind == "unit":
@@ -1582,12 +1706,15 @@ def _render_file(vf: VerusFile, target: str) -> Rendering:
     for p in fn.params:
         if p.type.kind == "refuse":
             raise VerusRefusal(p.type.reason, f"parameter {p.name}: {p.type.text}")
+        if p.type.kind == "pair":
+            raise VerusRefusal("tuple", f"parameter {p.name}: {p.type.text}")
     if fn.ret.kind == "refuse":
         raise VerusRefusal(fn.ret.reason, f"return {fn.ret.text}")
     ret_name = fn.ret_name or "result"
     types = {p.name: p.type for p in fn.params}
     types[ret_name] = fn.ret
     rd = Renderer(vf, types)
+    rd.body_ghost = "proof" in fn.attrs
     # spec positions first: the requires/ensures reach the spec fns the file must carry
     reqs = [rd.expr(e, True) for e in fn.requires]
     enss = [rd.expr(e, True) for e in fn.ensures]
@@ -1617,7 +1744,11 @@ def _render_file(vf: VerusFile, target: str) -> Rendering:
                 raise VerusRefusal("bodyless-spec-fn", name)
             if sf.ret.kind == "refuse":
                 raise VerusRefusal(sf.ret.reason, f"spec fn {name} returns {sf.ret.text}")
+            if sf.ret.kind == "pair":
+                raise VerusRefusal("tuple", f"spec fn {name} returns {sf.ret.text}")
             for p in sf.params:
+                if p.type.kind == "pair":
+                    raise VerusRefusal("tuple", f"spec fn {name} parameter {p.name}")
                 if p.type.kind == "refuse":
                     raise VerusRefusal(p.type.reason, f"spec fn {name} parameter {p.name}: {p.type.text}")
             srd = Renderer(vf, {p.name: p.type for p in sf.params})
@@ -1634,7 +1765,12 @@ def _render_file(vf: VerusFile, target: str) -> Rendering:
     params = ", ".join(f"{dn(p.name)}: {p.type.dafny()}" for p in fn.params)
     out = [f"// rendered from Verus by t/lift_verus.py: fn {target}", ""]
     out += fn_lines
-    out.append(f"method {dn(target)}({params}) returns ({dn(ret_name)}: {fn.ret.dafny()})")
+    if fn.ret.kind == "pair":
+        rets = ", ".join(f"{dn(ret_name)}_{k}: {fn.ret.parts[k].dafny()}" for k in (0, 1))
+        rd.rewrites.append("pair-result-as-two-returns")
+    else:
+        rets = f"{dn(ret_name)}: {fn.ret.dafny()}"
+    out.append(f"method {dn(target)}({params}) returns ({rets})")
     for r in reqs:
         out.append(f"  requires {r}")
     for e in enss:
