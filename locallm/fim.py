@@ -26,13 +26,21 @@ text against 0.68 held out). A document seen left to right teaches one
 ordering; transformed afresh every epoch it is a different prediction problem
 each time, and the model has to use the suffix to predict the middle.
 
-`span="t"` is this project's addition and is NOT from the paper (section 8.2
-lists syntax-aware spans as future work): for a t document the middle is one
-whole syntactic unit (a requires/ensures clause, an invariant or decreases
-line, or a statement), chosen with probability 0.5, and a character-level span
-otherwise, because section 4.5 finds line-only spans fail at random-span
-infilling (0.015 against 0.321) and 8.1 recommends always keeping some
-character-level spans.
+`span="t"` follows AST-FIM (Gong et al., "Structure-Aware Fill-in-the-Middle
+Pretraining for Code", arXiv:2506.00204, section 3.3 and 5.1), which the
+paper above lists as future work in its 8.2: the middle is one whole
+syntactic unit, sampled with probability proportional to its size in
+characters (AST-FIM's single-node masking), for 90% of FIM documents, and a
+random character span for the other 10% (AST-FIM's mix; its section 7 finds
+that without the random share the model fails at random-span infilling, as
+Bavarian et al. 4.5 found for line spans). t's units, in AST-FIM's taxonomy
+of blocks, statements and expressions: a clause (requires/ensures), an
+invariant (invariant/decreases), a statement (a line ending in `;`), an
+expression (a clause's condition, a loop or branch condition, the right side
+of `:=`), and a block (a `{ ... }` region, braces included). Units are found
+lexically, not by t's parser, so this module stays free of the t package;
+AST-FIM's aligned-span masking (several adjacent siblings) is not
+implemented.
 """
 from __future__ import annotations
 
@@ -45,9 +53,14 @@ PRE, SUF, MID, EOT = "<PRE>", "<SUF>", "<MID>", "<EOT>"
 SENTINELS = (PRE, SUF, MID, EOT)
 SPANS = ("char", "t")
 
-# A clause or statement line of a t program: the unit a t-aware middle covers.
-_CLAUSE = re.compile(r"^(requires|ensures|invariant|decreases)\b")
+# The syntactic units of a t program a t-aware middle covers (see t_units).
+_CLAUSE = re.compile(r"^(requires|ensures)\s+(.+?)\s*$")
+_INVARIANT = re.compile(r"^(invariant|decreases)\s+(.+?)\s*$")
+_CONDITION = re.compile(r"^(?:\}\s*else\s+)?(?:while|if)\s+(.+?)\s*\{?\s*$")
+_ASSIGN = re.compile(r":=\s*(.+?)\s*;\s*$")
 _STATEMENT = re.compile(r";\s*$")
+T_UNIT_KINDS = ("clause", "invariant", "statement", "expression", "block")
+T_SYNTAX_SHARE = 0.9   # AST-FIM section 5.1: 90% AST-FIM, 10% random-character FIM
 
 
 def has_sentinels(tokenizer) -> bool:
@@ -76,29 +89,52 @@ def char_split(doc: str, rng: random.Random) -> tuple[str, str, str]:
     return doc[:a], doc[a:b], doc[b:]
 
 
-def t_units(doc: str) -> list[tuple[int, int]]:
-    """Character ranges of the whole clauses and statements in a t document.
+def t_units(doc: str) -> list[tuple[int, int, str]]:
+    """(start, end, kind) of every syntactic unit of a t document.
 
-    A range runs from the line's first non-blank character to its end, newline
-    excluded, so the middle is the unit itself and the indentation stays with
-    the prefix.
+    A line unit runs from the line's first non-blank character to its end,
+    newline excluded, so the indentation stays with the prefix. An expression
+    is the text after its keyword or `:=`, without the `;` or `{`. A block runs
+    from a `{` to its matching `}`.
     """
-    units, offset = [], 0
+    units, offset, opens = [], 0, []
     for line in doc.splitlines(keepends=True):
         body = line.rstrip("\r\n")
         stripped = body.lstrip()
-        if stripped and (_CLAUSE.match(stripped) or _STATEMENT.search(stripped)):
-            start = offset + len(body) - len(stripped)
-            units.append((start, offset + len(body)))
+        start = offset + len(body) - len(stripped)
+        end = offset + len(body)
+        if stripped:
+            for pattern, kind in ((_CLAUSE, "clause"), (_INVARIANT, "invariant")):
+                m = pattern.match(stripped)
+                if m:
+                    units.append((start, end, kind))
+                    units.append((start + m.start(2), start + m.end(2), "expression"))
+            m = _CONDITION.match(stripped)
+            if m:
+                units.append((start + m.start(1), start + m.end(1), "expression"))
+            if _STATEMENT.search(stripped) and not _CLAUSE.match(stripped):
+                units.append((start, end, "statement"))
+                m = _ASSIGN.search(stripped)
+                if m:
+                    units.append((start + m.start(1), start + m.end(1), "expression"))
+        for k, ch in enumerate(line):
+            if ch == "{":
+                opens.append(offset + k)
+            elif ch == "}" and opens:
+                units.append((opens.pop(), offset + k + 1, "block"))
         offset += len(line)
-    return units
+    return [u for u in units if u[1] > u[0]]
 
 
 def t_split(doc: str, rng: random.Random) -> tuple[str, str, str]:
-    """A whole unit half the time, a character span otherwise (or when there is no unit)."""
+    """One whole unit, size-weighted, for 90% of documents; a character span otherwise.
+
+    The size weighting is AST-FIM's single-node masking ("probability
+    proportional to its size"); a document with no unit falls back to a
+    character span."""
     units = t_units(doc)
-    if units and rng.random() < 0.5:
-        a, b = units[rng.randrange(len(units))]
+    if units and rng.random() < T_SYNTAX_SHARE:
+        a, b, _ = rng.choices(units, weights=[b - a for a, b, _ in units])[0]
         return doc[:a], doc[a:b], doc[b:]
     return char_split(doc, rng)
 
