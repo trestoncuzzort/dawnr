@@ -299,18 +299,40 @@ class GPT(nn.Module):
             x = x[:, -1:, :]
         return self.lm_head(x), tuple(next_cache)
 
-    @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, *, use_cache=False):
-        """Sample tokens; caching is opt-in because small prefixes can run faster without it."""
+    @staticmethod
+    def _validate_sampling(temperature, top_k, max_new_tokens):
         if temperature < 0 or not math.isfinite(temperature):
             raise ValueError("temperature must be finite and nonnegative")
         if max_new_tokens < 0 or (top_k is not None and top_k < 1):
             raise ValueError("max_new_tokens must be nonnegative and top_k positive")
+
+    @torch.no_grad()
+    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, *, use_cache=False,
+                 stop=None, generator=None):
+        """Sample tokens; caching is opt-in because small prefixes can run faster without it.
+
+        ``stop(row, new_tokens) -> bool`` is asked after every token for each row that
+        has not stopped yet, with that row's new token ids so far. The loop ends when
+        every row has stopped or the budget is spent. Stopped rows stay in the batch and
+        keep sampling until then, as HF's StoppingCriteria and nanochat's engine do
+        (github.com/huggingface/transformers src/transformers/generation/stopping_criteria.py,
+        github.com/karpathy/nanochat nanochat/engine.py), so every row is bitwise the
+        unstopped row cut at the step the loop ended, at any temperature, cached or not.
+        The return type does not change with ``stop``: the (batch, prompt + generated)
+        tensor, so ``out[0, n:]`` keeps working for every caller. A caller that wants a
+        row cut at its own stop re-applies its boundary to the text; ``sample_many``
+        below returns per-row lengths instead.
+
+        ``generator`` seeds the multinomial draws; ``None`` uses torch's global state.
+        """
+        self._validate_sampling(temperature, top_k, max_new_tokens)
         if idx.ndim != 2 or idx.size(1) == 0:
             raise ValueError("generation requires a nonempty batch of token sequences")
         was_training = self.training
         self.eval()
         cache = None
+        live = [True] * idx.size(0) if stop is not None else None
+        new = [[] for _ in range(idx.size(0))] if stop is not None else None
         try:
             for _ in range(max_new_tokens):
                 if use_cache:
@@ -320,16 +342,122 @@ class GPT(nn.Module):
                         logits, cache = self.forward_cached(idx[:, -1:], cache, only_last=True)
                 else:
                     logits, _ = self(idx[:, -self.config.block_size:], only_last=True)
-                logits = logits[:, -1, :]
-                if temperature == 0:
-                    idx_next = logits.argmax(dim=-1, keepdim=True)
-                else:
-                    logits = logits / temperature
-                    if top_k is not None:
-                        v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                        logits = logits.masked_fill(logits < v[:, [-1]], -float("Inf"))
-                    idx_next = torch.multinomial(F.softmax(logits, dim=-1), num_samples=1)
+                idx_next = _next_token(logits[:, -1, :], temperature, top_k, generator)
                 idx = torch.cat((idx, idx_next), dim=1)
+                if stop is not None:
+                    column = idx_next[:, 0].tolist()
+                    for row, token in enumerate(column):
+                        if live[row]:
+                            new[row].append(token)
+                            if stop(row, new[row]):
+                                live[row] = False
+                    if not any(live):
+                        break
             return idx
         finally:
             self.train(was_training)
+
+    @torch.no_grad()
+    def sample_many(self, prompt, num_samples, max_new_tokens, *, temperature, top_k,
+                    stop=None, generator=None):
+        """k completions of one prompt, decoded together with the KV cache.
+
+        ``prompt`` is a 1-D tensor of token ids. Returns a list of ``Sampled`` in row
+        order: each row's new tokens (through its stop token when it stopped), the
+        log-probability of every new token under the untempered fp32 distribution,
+        and whether its stop fired.
+
+        The prompt is prefilled once at batch 1 and the cache and last logits are
+        expanded to k rows (nanochat engine.py, github.com/karpathy/nanochat). Rows
+        decode in lockstep; a row whose ``stop(row, new_tokens)`` returns True leaves
+        the batch (index_select on the cache), the iteration-level scheduling of vLLM,
+        arXiv:2309.06180, because one long row would otherwise keep every other row
+        decoding to the budget. The price is stated plainly: kernels are not
+        batch-invariant (thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference),
+        so a run is bitwise reproducible only for the same seed, k and departure
+        pattern; at k=1 it is bitwise ``generate(use_cache=True)`` with the same
+        generator, which the tests check.
+
+        Log-probabilities are taken before temperature and top-k, because ranking by
+        mean token log-probability under the model's own distribution is the heuristic
+        Codex measured (arXiv:2107.03374, figure 7); the caller decides which tokens to
+        average over.
+        """
+        self._validate_sampling(temperature, top_k, max_new_tokens)
+        if prompt.ndim != 1 or prompt.numel() == 0:
+            raise ValueError("sample_many takes one nonempty 1-D prompt")
+        if num_samples < 1:
+            raise ValueError("num_samples must be positive")
+        was_training = self.training
+        self.eval()
+        try:
+            block = self.config.block_size
+            idx = prompt[None, :]
+            logits, cache = self.forward_cached(idx[:, -block:], only_last=True)
+            logits = logits[:, -1, :].expand(num_samples, -1).contiguous()
+            cache = tuple((k.expand(num_samples, -1, -1, -1).contiguous(),
+                           v.expand(num_samples, -1, -1, -1).contiguous()) for k, v in cache)
+            idx = idx.expand(num_samples, -1).contiguous()
+            rows = list(range(num_samples))                    # original row of each live batch row
+            results = [Sampled([], [], False) for _ in range(num_samples)]
+            for _ in range(max_new_tokens):
+                logp = F.log_softmax(logits.float(), dim=-1)
+                idx_next = _next_token(logits, temperature, top_k, generator)
+                chosen = logp.gather(1, idx_next)[:, 0].tolist()
+                column = idx_next[:, 0].tolist()
+                idx = torch.cat((idx, idx_next), dim=1)
+                keep = []
+                for b, row in enumerate(rows):
+                    results[row].tokens.append(column[b])
+                    results[row].logprobs.append(chosen[b])
+                    if stop is not None and stop(row, results[row].tokens):
+                        results[row].stopped = True
+                    else:
+                        keep.append(b)
+                if not keep:
+                    break
+                if len(keep) < len(rows):
+                    select = torch.tensor(keep, device=idx.device)
+                    idx = idx.index_select(0, select)
+                    cache = tuple((k.index_select(0, select), v.index_select(0, select)) for k, v in cache)
+                    rows = [rows[b] for b in keep]
+                if cache[0][0].size(-2) == block:                 # the window is full: rebuild, as generate does
+                    logits, cache = self.forward_cached(idx[:, -block:], only_last=True)
+                else:
+                    logits, cache = self.forward_cached(idx[:, -1:], cache, only_last=True)
+                logits = logits[:, -1, :]
+            return results
+        finally:
+            self.train(was_training)
+
+
+def _next_token(logits, temperature, top_k, generator=None):
+    """One sampling step over (batch, vocab) logits: greedy at temperature 0, else
+    temperature, then top-k, then a multinomial draw. Shared by generate and
+    sample_many so the two cannot drift."""
+    if temperature == 0:
+        return logits.argmax(dim=-1, keepdim=True)
+    logits = logits / temperature
+    if top_k is not None:
+        v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+        logits = logits.masked_fill(logits < v[:, [-1]], -float("Inf"))
+    return torch.multinomial(F.softmax(logits, dim=-1), num_samples=1, generator=generator)
+
+
+@dataclass
+class Sampled:
+    """One row of sample_many: new tokens (through the stop token if it stopped),
+    the log-probability of each under the untempered distribution, and whether the
+    stop fired. The mean here is over every new token; a caller that knows which
+    tokens the reply keeps (checkpoint.sample_batch) averages over those."""
+    tokens: list
+    logprobs: list
+    stopped: bool
+
+    @property
+    def logprob_sum(self) -> float:
+        return float(sum(self.logprobs))
+
+    @property
+    def mean_logprob(self):
+        return self.logprob_sum / len(self.tokens) if self.tokens else None
