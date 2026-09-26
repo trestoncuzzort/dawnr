@@ -11,7 +11,8 @@ This file asks the question the points cannot answer. A candidate (the program p
 problem P) is run against P's reference solution on DRAWS inputs drawn like P's first point, with
 t/spec_check.py's draw() seeded per problem (behavioural_decontam.draws_for), the same inputs the
 project's behavioural rule of 2026-09-25 uses. The program is P's twin unless the two answer at least
-one drawn input differently; one such input clears it of P. That is differential testing against the
+NEAR_TWIN_FRACTION (10%) of the drawn inputs both answer differently; fewer differences make it a near
+twin, still refused (see NEAR_TWIN_FRACTION). That is differential testing against the
 ground truth on generated inputs "structurally similar to the seeds", which EvalPlus (Liu et al.,
 https://ar5iv.labs.arxiv.org/html/2305.01210) showed catches programs a benchmark's few tests pass
 ("a logically flawed solution can still pass all simple tests"); research receipt 8de65a1ec350.
@@ -56,11 +57,21 @@ SOURCES = ("https://ar5iv.labs.arxiv.org/html/2305.01210",
            "https://raw.githubusercontent.com/evalplus/evalplus/master/evalplus/eval/__init__.py")
 RULE = ("a lifted program that passes every test point of a gated pool problem is that problem's twin unless, "
         f"on {DRAWS} inputs drawn like the problem's first point (spec_check.draw, seeded per problem), the program "
-        "and the problem's reference answer at least one input differently, the reference's answer read as a value "
+        "and the problem's reference answer at least 10% of the inputs both answer differently (fewer is a near twin), "
+        "the reference's answer read as a value "
         "of the program's own type; an input either side does not answer, or whose answer has no such reading, is "
         "dropped; a reference that does not load, a kind no draw can produce, or no input both answer keeps the "
         "program the twin; a program is admitted only when it is the twin of no gated problem")
-VERDICTS = ("differs", "agrees", "no draw answered by both", "no reference", "cannot draw")
+VERDICTS = ("differs", "near twin", "agrees", "no draw answered by both", "no reference", "cannot draw")
+# A clearance needs differences on at least this share of the draws both sides answer.
+# Training on "semantic duplicates", equivalent or near-equivalent content, raises scores on
+# the duplicated items and on other held-out items alike (Spiesberger et al., "Soft
+# Contamination Means Benchmarks Test Shallow Generalization", arXiv:2602.12413, receipt
+# 199fd916242f); a program that computes a held-out problem's function everywhere but at a
+# few edge-case inputs is such a duplicate. The paper gives no line; 10% is ours: on the lift
+# of 2026-09-26 it separates 8 thin clearances (1 to 9 differing draws, e.g. a binary search
+# differing only on duplicate keys) from 71 that differ on 14% of their draws or more.
+NEAR_TWIN_FRACTION = 0.10
 MAX_CODE_POINT = 0x10FFFF
 
 
@@ -243,6 +254,13 @@ def draw_check(task: dict, tid: int, entry: dict, reference_runner: bd.Runner, n
             check["witness"] = {"input": bd._brief(list(args)), "program": bd._brief(mine[1]),
                                 "reference": bd._brief(theirs[1])}
     if check["differed"]:
+        fraction = check["differed"] / check["answered_by_both"]
+        check["differ_fraction"] = round(fraction, 4)
+        if fraction < NEAR_TWIN_FRACTION:
+            return _decided(check, "near twin",
+                            f"differs on {check['differed']} of {check['answered_by_both']} draws both answer, under "
+                            f"{NEAR_TWIN_FRACTION:.0%}: the same function except at edge cases, a near-equivalent "
+                            f"semantic duplicate (arXiv:2602.12413)")
         return _decided(check, "differs")
     if check["answered_by_both"]:
         return _decided(check, "agrees")
