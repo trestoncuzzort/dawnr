@@ -882,6 +882,54 @@ def check_tokenizer(named: str | None, quick: bool = False) -> bool:
     return ok
 
 
+def check_run_json(path: Path, split_path: Path, corpora: list[Path] = ()) -> bool:
+    """Step 5 of the r12 checklist: the trainer's record says what the recipe
+    demanded. A run of continue_from_checkpoint.py is an r12 arm only if it
+    finished, split its holdout by document hash under its own split seed,
+    trained on whole-document rows, and ran with deterministic algorithms on
+    (the r11 rerun of one recipe reproduced 186 of 232 replies, so a comparison
+    over seeds needs every arm trained the same way); the corpus and split it
+    names must be the ones this preflight was given, by digest."""
+    import hashlib
+
+    def digest(p: Path) -> str:
+        return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+
+    try:
+        report = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        return say(False, f"{path} readable", str(error)[:80])
+    if not isinstance(report, dict) or not isinstance(report.get("identities"), dict):
+        return say(False, f"{path.name} is a run record with identities")
+    ident = report["identities"]
+    ok = say(report.get("schema") == 2, f"{path.name} schema 2 (split seed, batches, reproducibility recorded)",
+             f"schema {report.get('schema')!r}")
+    ok = say(report.get("status") == "complete", f"{path.name} run complete",
+             f"status {report.get('status')!r}") and ok
+    split = ident.get("split") if isinstance(ident.get("split"), dict) else {}
+    ok = say(isinstance(ident.get("split_seed"), int) and not isinstance(ident.get("split_seed"), bool),
+             f"{path.name} records its own split seed", f"split_seed {ident.get('split_seed')!r}") and ok
+    ok = say(split.get("by") == "hash", f"{path.name} holdout decided by document hash",
+             f"split.by {split.get('by')!r}") and ok
+    batches = ident.get("batches") if isinstance(ident.get("batches"), dict) else {}
+    ok = say(batches.get("kind") == "documents", f"{path.name} trained on whole-document rows",
+             f"batches.kind {batches.get('kind')!r}") and ok
+    repro = ident.get("reproducibility") if isinstance(ident.get("reproducibility"), dict) else {}
+    ok = say(repro.get("use_deterministic_algorithms") is True,
+             f"{path.name} trained with deterministic algorithms on",
+             f"use_deterministic_algorithms {repro.get('use_deterministic_algorithms')!r}") and ok
+    try:
+        ok = say(ident.get("evaluation_split_sha256") == digest(split_path),
+                 f"{path.name} names this split by digest", "") and ok
+        if corpora:
+            digests = {digest(c): Path(c).name for c in corpora}
+            ok = say(ident.get("corpus_sha256") in digests, f"{path.name} names a selected corpus by digest",
+                     f"corpus {ident.get('corpus')!r} matches none of {sorted(digests.values())}") and ok
+    except OSError as error:
+        ok = say(False, f"{path.name} digests comparable", str(error)[:80]) and ok
+    return ok
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--split", type=Path, default=OUT / "loop" / "split-v3.json")
@@ -895,6 +943,9 @@ def main() -> int:
                     help="graded answer-set tag to quality-check; repeat for a paired comparison")
     ap.add_argument("--audit-history", action="store_true",
                     help="also audit legacy pools, corpora, and answer sets; none are selected by default")
+    ap.add_argument("--run-json", type=Path, action="append", default=[], metavar="RUN.JSON",
+                    help="a trained arm's run record (continue_from_checkpoint.py --out DIR/run.json), "
+                         "checked against the split and corpora given here; repeat per arm")
     ap.add_argument("--quick", action="store_true",
                     help="skip the one check that costs seconds (the tokenizer round-trip)")
     ap.add_argument("--strict", action="store_true")
@@ -917,6 +968,10 @@ def main() -> int:
     print("what the run will open")
     ok = check_data(a.split, lab, pools, corpora) and ok
     ok = check_agreement_covers_tasks() and ok
+    if a.run_json:
+        print("the trained arms")
+        for run in a.run_json:
+            ok = check_run_json(run, a.split, corpora) and ok
     print("what is counted clean")
     answer_sets_ok, answer_sets = select_answer_sets(a.answer_set, a.audit_history)
     ok = answer_sets_ok and ok
