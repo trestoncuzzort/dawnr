@@ -8,7 +8,7 @@ number is arithmetic rather than a measurement it says so on the same line.
 The short version, and it is not the expected one:
 
 1. **Generation needs no torch at all.** It is now implemented and measured:
-   [`plain_generate.py`](plain_generate.py), 26 KB of standard library, reads a
+   [`plain_generate.py`](plain_generate.py), 40 KB of standard library, reads a
    `ckpt.pt` and writes text at 102–117 ms per token on the round-4 checkpoint
    under Python 3.12 or later (186–210 ms on 3.10 and 3.11, §2), on a machine
    with neither torch nor numpy installed. One copy of that file
@@ -19,7 +19,7 @@ The short version, and it is not the expected one:
    environment per operating system and CPU architecture, and there are five in
    play, not three.
 3. **A generation-only stick that works on all three, with nothing installed on
-   the target, is 200,599,772 bytes.** A training stick for the same three is
+   the target, is 200,612,972 bytes.** A training stick for the same three is
    about 2 GB unpacked. Both are far below the 2.5 GB-per-platform figure that a
    plain `pip install torch` suggests, and §3 says why that figure is real but
    avoidable.
@@ -233,7 +233,7 @@ table, which that chapter's own code asserts against.
 
 ### What `plain_generate.py` is, and what it weighs
 
-**26,819 bytes, 539 lines, one file, zero dependencies** — `argparse`, `array`,
+**40,019 bytes, 781 lines, one file, zero dependencies** — `argparse`, `array`,
 `io`, `json`, `math`, `pickle`, `random`, `sys`, `zipfile`, `operator.mul`,
 `pathlib`. It mirrors [`checkpoint.py`](checkpoint.py)'s interface on purpose —
 `checkpoint_exists`, `load_checkpoint`, `sample` with the same arguments — so a
@@ -327,17 +327,17 @@ platform dependency a stick cannot carry.
 
 | item | bytes |
 |---|---:|
-| `plain_generate.py` | 26,819 |
+| `plain_generate.py` | 40,019 |
 | round-4 `ckpt.pt` | 43,526,601 |
 | round-4 `tokenizer.json` | 411 |
-| *shared subtotal* | *43,553,831* |
+| *shared subtotal* | *43,567,031* |
 | Windows embeddable Python | 11,994,671 |
 | macOS arm64 standalone Python | 25,293,188 |
 | Linux x86-64 standalone Python | 119,758,082 |
-| **total, three platforms** | **200,599,772** (191 MiB) |
+| **total, three platforms** | **200,612,972** (191 MiB) |
 
 Add the other two CPU architectures — macOS x86-64 (25,037,769) and Linux
-aarch64 (91,086,530) — and it is 316,724,071 bytes, 302 MiB. On a machine that
+aarch64 (91,086,530) — and it is 316,737,271 bytes, 302 MiB. On a machine that
 already has Python 3.10 or newer, the whole stick is the 41.5 MiB shared subtotal
 and nothing else.
 
