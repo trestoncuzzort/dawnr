@@ -1,0 +1,6996 @@
+{
+ "schema": 1,
+ "about": "Train problems whose reference solution computes the same function as a held-out problem's (t/out/loop/split-v3.json eval ids, unchanged through split-v6) on both problems' own assertion inputs and on drawn inputs. Human-readable report with examples: t/DECONTAMINATION-BEHAVIOURAL-2026-09-25.md. Loaded by loop_filter.decontamination(), which merges exclude_train_ids into the same-task exclusions of t/decontamination-2026-09-21.json.",
+ "rule": {
+  "text": "a train problem is a behavioural duplicate of a held-out problem of the same signature kinds when both references run and return equal values (as t reads them) on every one of both problems' own assertion inputs and on every drawn input that both answered, with at least MIN_DRAWS_AGREED of the pair's 100 draws (50 per problem, spec_check.draw shaped like the problem's first example) answered alike (equal values, or both references raising the same exception) and at least MIN_DRAWS_VALUED of them equal values; an input where exactly one reference raises is a difference; an input a reference did not answer in time says nothing; a reference that does not run is reported by name and never counted as agreeing",
+  "seed": "behavioural-decontam-2026-09-25",
+  "draws_per_problem": 50,
+  "draws_per_pair": 100,
+  "min_draws_agreed": 50,
+  "min_draws_valued": 10,
+  "timeout_s_cpu": 1.0,
+  "budget_s_cpu": 60.0,
+  "max_timeouts": 20,
+  "pair_timeouts": 2,
+  "signature": "argument kinds and result kind of the first assertion",
+  "one_sided_raise": "a difference",
+  "timeout": "an input a reference did not answer in time is undefined: never agreement, never a difference",
+  "outputs_compared": "as t reads them (canon)",
+  "code": "t/behavioural_decontam.py"
+ },
+ "sources": [
+  "https://ar5iv.labs.arxiv.org/html/2403.04811",
+  "https://arxiv.org/html/2602.12413v1",
+  "https://arxiv.org/html/2311.04850v2",
+  "https://arxiv.org/html/2508.01357v1"
+ ],
+ "pools": {
+  "v5": {
+   "split": "split-v5.json",
+   "split_sha256": "49103716b2eddf92ecdc811eb614f71eed8fb3804ab4ac849f9640a4c7f8693e",
+   "pool_size": 3003,
+   "eval_ids": 232,
+   "train_ids": 2771,
+   "pairs": 48734,
+   "verdicts": {
+    "different": 47939,
+    "not run": 214,
+    "no reference": 429,
+    "minimal pair": 70,
+    "duplicate": 71,
+    "insufficient": 11
+   },
+   "references_not_run": 32
+  },
+  "v6": {
+   "split": "split-v6.json",
+   "split_sha256": "aac8f8eb82265d8a5cdb78ed5f6c4e2f1deb26df0c0bf342410ec6e4e012a17b",
+   "pool_size": 4035,
+   "eval_ids": 232,
+   "train_ids": 3803,
+   "pairs": 66891,
+   "verdicts": {
+    "different": 65641,
+    "no reference": 429,
+    "not run": 655,
+    "minimal pair": 74,
+    "duplicate": 78,
+    "insufficient": 14
+   },
+   "references_not_run": 63,
+   "pairs_copied_from": {
+    "pool": [
+     "v5"
+    ],
+    "pairs": 8084,
+    "file": null
+   }
+  }
+ },
+ "distinct": {
+  "duplicate_pairs": 78,
+  "minimal_pairs": 74,
+  "insufficient_pairs": 14,
+  "references_not_run": 63
+ },
+ "exclude_train_ids": [
+  29,
+  41,
+  62,
+  71,
+  102,
+  152,
+  199,
+  242,
+  372,
+  388,
+  404,
+  427,
+  451,
+  496,
+  504,
+  567,
+  595,
+  600,
+  635,
+  756,
+  759,
+  767,
+  790,
+  930,
+  940,
+  955,
+  100013,
+  100023,
+  100057,
+  200178,
+  200201,
+  200343,
+  202415,
+  202457,
+  202465,
+  202493,
+  202504,
+  202525,
+  202542,
+  202551,
+  202658,
+  202849,
+  202860,
+  202893,
+  202914,
+  203008,
+  203031,
+  203336,
+  203383,
+  203632,
+  203736,
+  203778,
+  203920,
+  203929,
+  203985,
+  204152,
+  204154,
+  204157,
+  204207,
+  204444,
+  204455,
+  204462,
+  204498,
+  204695,
+  204735,
+  300281,
+  300683,
+  300709,
+  301606,
+  5973913,
+  8141530,
+  9333067
+ ],
+ "exclude_train_ids_by_eval": {
+  "29": [
+   842
+  ],
+  "41": [
+   629
+  ],
+  "62": [
+   443
+  ],
+  "71": [
+   428
+  ],
+  "102": [
+   411
+  ],
+  "152": [
+   141,
+   428
+  ],
+  "199": [
+   302
+  ],
+  "242": [
+   813
+  ],
+  "372": [
+   141,
+   428
+  ],
+  "388": [
+   302
+  ],
+  "404": [
+   970
+  ],
+  "427": [
+   928
+  ],
+  "451": [
+   800
+  ],
+  "496": [
+   10
+  ],
+  "504": [
+   931
+  ],
+  "567": [
+   670,
+   680
+  ],
+  "595": [
+   699
+  ],
+  "600": [
+   138
+  ],
+  "635": [
+   141,
+   428
+  ],
+  "756": [
+   719
+  ],
+  "759": [
+   208
+  ],
+  "767": [
+   527
+  ],
+  "790": [
+   775
+  ],
+  "930": [
+   719
+  ],
+  "940": [
+   141,
+   428
+  ],
+  "955": [
+   541
+  ],
+  "100013": [
+   687
+  ],
+  "100023": [
+   813
+  ],
+  "100057": [
+   68
+  ],
+  "200178": [
+   548
+  ],
+  "200201": [
+   583
+  ],
+  "200343": [
+   325
+  ],
+  "202415": [
+   736
+  ],
+  "202457": [
+   701
+  ],
+  "202465": [
+   138
+  ],
+  "202493": [
+   911
+  ],
+  "202504": [
+   782
+  ],
+  "202525": [
+   203
+  ],
+  "202542": [
+   68
+  ],
+  "202551": [
+   175
+  ],
+  "202658": [
+   203
+  ],
+  "202849": [
+   701
+  ],
+  "202860": [
+   885
+  ],
+  "202893": [
+   224
+  ],
+  "202914": [
+   161
+  ],
+  "203008": [
+   877
+  ],
+  "203031": [
+   670,
+   680
+  ],
+  "203336": [
+   566
+  ],
+  "203383": [
+   138
+  ],
+  "203632": [
+   224
+  ],
+  "203736": [
+   443
+  ],
+  "203778": [
+   443
+  ],
+  "203920": [
+   203
+  ],
+  "203929": [
+   604
+  ],
+  "203985": [
+   701
+  ],
+  "204152": [
+   687
+  ],
+  "204154": [
+   334
+  ],
+  "204157": [
+   175
+  ],
+  "204207": [
+   931
+  ],
+  "204444": [
+   541
+  ],
+  "204455": [
+   935
+  ],
+  "204462": [
+   366
+  ],
+  "204498": [
+   961
+  ],
+  "204695": [
+   935
+  ],
+  "204735": [
+   736
+  ],
+  "300281": [
+   47
+  ],
+  "300683": [
+   269
+  ],
+  "300709": [
+   224
+  ],
+  "301606": [
+   339
+  ],
+  "5973913": [
+   566
+  ],
+  "8141530": [
+   687
+  ],
+  "9333067": [
+   502
+  ]
+ },
+ "behavioural_overlap_eval_ids": [
+  10,
+  47,
+  68,
+  138,
+  141,
+  161,
+  175,
+  203,
+  208,
+  224,
+  269,
+  302,
+  325,
+  334,
+  339,
+  366,
+  411,
+  428,
+  443,
+  502,
+  527,
+  541,
+  548,
+  566,
+  583,
+  604,
+  629,
+  670,
+  680,
+  687,
+  699,
+  701,
+  719,
+  736,
+  775,
+  782,
+  800,
+  813,
+  842,
+  877,
+  885,
+  911,
+  928,
+  931,
+  935,
+  961,
+  970
+ ],
+ "rediscovered_from_2026_09_21": [
+  29,
+  102,
+  242,
+  404,
+  427,
+  451,
+  496,
+  504,
+  595,
+  759,
+  767,
+  790,
+  930,
+  202465,
+  203929,
+  204462
+ ],
+ "new_exclusions": [
+  41,
+  62,
+  71,
+  152,
+  199,
+  372,
+  388,
+  567,
+  600,
+  635,
+  756,
+  940,
+  955,
+  100013,
+  100023,
+  100057,
+  200178,
+  200201,
+  200343,
+  202415,
+  202457,
+  202493,
+  202504,
+  202525,
+  202542,
+  202551,
+  202658,
+  202849,
+  202860,
+  202893,
+  202914,
+  203008,
+  203031,
+  203336,
+  203383,
+  203632,
+  203736,
+  203778,
+  203920,
+  203985,
+  204152,
+  204154,
+  204157,
+  204207,
+  204444,
+  204455,
+  204498,
+  204695,
+  204735,
+  300281,
+  300683,
+  300709,
+  301606,
+  5973913,
+  8141530,
+  9333067
+ ],
+ "not_rediscovered_from_2026_09_21": [
+  76,
+  498,
+  728,
+  952,
+  200124
+ ],
+ "duplicates": [
+  {
+   "pool": "v5",
+   "train_id": 29,
+   "train": "mbpp_29__get_Odd_Occurrence",
+   "eval_id": 842,
+   "eval": "mbpp_842__get_odd_occurence",
+   "agreed_inputs": 49,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 45
+  },
+  {
+   "pool": "v5",
+   "train_id": 41,
+   "train": "mbpp_41__filter_evennumbers",
+   "eval_id": 629,
+   "eval": "mbpp_629__Split",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 62,
+   "train": "mbpp_62__smallest_num",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 90,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 84
+  },
+  {
+   "pool": "v5",
+   "train_id": 71,
+   "train": "mbpp_71__comb_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 102,
+   "train": "mbpp_102__snake_to_camel",
+   "eval_id": 411,
+   "eval": "mbpp_411__snake_to_camel",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 152,
+   "train": "mbpp_152__merge_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 152,
+   "train": "mbpp_152__merge_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 199,
+   "train": "mbpp_199__highest_Power_of_2",
+   "eval_id": 302,
+   "eval": "mbpp_302__set_Bit_Number",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 242,
+   "train": "mbpp_242__count_charac",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 372,
+   "train": "mbpp_372__heap_assending",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 372,
+   "train": "mbpp_372__heap_assending",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 388,
+   "train": "mbpp_388__highest_Power_of_2",
+   "eval_id": 302,
+   "eval": "mbpp_302__set_Bit_Number",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 404,
+   "train": "mbpp_404__minimum",
+   "eval_id": 970,
+   "eval": "mbpp_970__min_of_two",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 427,
+   "train": "mbpp_427__change_date_format",
+   "eval_id": 928,
+   "eval": "mbpp_928__change_date_format",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 451,
+   "train": "mbpp_451__remove_whitespaces",
+   "eval_id": 800,
+   "eval": "mbpp_800__remove_all_spaces",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 496,
+   "train": "mbpp_496__heap_queue_smallest",
+   "eval_id": 10,
+   "eval": "mbpp_10__small_nnum",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 504,
+   "train": "mbpp_504__sum_Of_Series",
+   "eval_id": 931,
+   "eval": "mbpp_931__sum_series",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 567,
+   "train": "mbpp_567__issort_list",
+   "eval_id": 670,
+   "eval": "mbpp_670__decreasing_trend",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 567,
+   "train": "mbpp_567__issort_list",
+   "eval_id": 680,
+   "eval": "mbpp_680__increasing_trend",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 595,
+   "train": "mbpp_595__min_Swaps",
+   "eval_id": 699,
+   "eval": "mbpp_699__min_Swaps",
+   "agreed_inputs": 52,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 47
+  },
+  {
+   "pool": "v5",
+   "train_id": 600,
+   "train": "mbpp_600__is_Even",
+   "eval_id": 138,
+   "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 635,
+   "train": "mbpp_635__heap_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 635,
+   "train": "mbpp_635__heap_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 756,
+   "train": "mbpp_756__text_match_zero_one",
+   "eval_id": 719,
+   "eval": "mbpp_719__text_match",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 759,
+   "train": "mbpp_759__is_decimal",
+   "eval_id": 208,
+   "eval": "mbpp_208__is_decimal",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 767,
+   "train": "mbpp_767__get_Pairs_Count",
+   "eval_id": 527,
+   "eval": "mbpp_527__get_pairs_count",
+   "agreed_inputs": 45,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 41
+  },
+  {
+   "pool": "v5",
+   "train_id": 790,
+   "train": "mbpp_790__even_position",
+   "eval_id": 775,
+   "eval": "mbpp_775__odd_position",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 930,
+   "train": "mbpp_930__text_match",
+   "eval_id": 719,
+   "eval": "mbpp_719__text_match",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 940,
+   "train": "mbpp_940__heap_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 940,
+   "train": "mbpp_940__heap_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 955,
+   "train": "mbpp_955__is_abundant",
+   "eval_id": 541,
+   "eval": "mbpp_541__check_abundant",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 100013,
+   "train": "he_13__greatest_common_divisor",
+   "eval_id": 687,
+   "eval": "mbpp_687__recur_gcd",
+   "agreed_inputs": 107,
+   "own_inputs": 7,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 100023,
+   "train": "he_23__strlen",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 100057,
+   "train": "he_57__monotonic",
+   "eval_id": 68,
+   "eval": "mbpp_68__is_Monotonic",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 200178,
+   "train": "apps_178__lengthOfLIS",
+   "eval_id": 548,
+   "eval": "mbpp_548__longest_increasing_subsequence",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 200201,
+   "train": "apps_201__numTrees",
+   "eval_id": 583,
+   "eval": "mbpp_583__catalan_number",
+   "agreed_inputs": 76,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 72
+  },
+  {
+   "pool": "v5",
+   "train_id": 200343,
+   "train": "apps_343__numSquares",
+   "eval_id": 325,
+   "eval": "mbpp_325__get_Min_Squares",
+   "agreed_inputs": 99,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 95
+  },
+  {
+   "pool": "v5",
+   "train_id": 202415,
+   "train": "apps_2415__searchInsert",
+   "eval_id": 736,
+   "eval": "mbpp_736__left_insertion",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202457,
+   "train": "apps_2457__pivotIndex",
+   "eval_id": 701,
+   "eval": "mbpp_701__equilibrium_index",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202465,
+   "train": "apps_2465__divisorGame",
+   "eval_id": 138,
+   "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202493,
+   "train": "apps_2493__maximumProduct",
+   "eval_id": 911,
+   "eval": "mbpp_911__maximum_product",
+   "agreed_inputs": 63,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 59
+  },
+  {
+   "pool": "v5",
+   "train_id": 202504,
+   "train": "apps_2504__sumOddLengthSubarrays",
+   "eval_id": 782,
+   "eval": "mbpp_782__Odd_Length_Sum",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202525,
+   "train": "apps_2525__hammingDistance",
+   "eval_id": 203,
+   "eval": "mbpp_203__hamming_Distance",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202542,
+   "train": "apps_2542__isMonotonic",
+   "eval_id": 68,
+   "eval": "mbpp_68__is_Monotonic",
+   "agreed_inputs": 103,
+   "own_inputs": 3,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202551,
+   "train": "apps_2551__isValid",
+   "eval_id": 175,
+   "eval": "mbpp_175__is_valid_parenthese",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202658,
+   "train": "apps_2658__convert_bits",
+   "eval_id": 203,
+   "eval": "mbpp_203__hamming_Distance",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202849,
+   "train": "apps_2849__peak",
+   "eval_id": 701,
+   "eval": "mbpp_701__equilibrium_index",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202860,
+   "train": "apps_2860__isomorph",
+   "eval_id": 885,
+   "eval": "mbpp_885__is_Isomorphic",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202893,
+   "train": "apps_2893__plant_doubling",
+   "eval_id": 224,
+   "eval": "mbpp_224__count_Set_Bits",
+   "agreed_inputs": 107,
+   "own_inputs": 7,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 202914,
+   "train": "apps_2914__array_diff",
+   "eval_id": 161,
+   "eval": "mbpp_161__remove_elements",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203008,
+   "train": "apps_3008__sort_array",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203031,
+   "train": "apps_3031__alphabetic",
+   "eval_id": 670,
+   "eval": "mbpp_670__decreasing_trend",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203031,
+   "train": "apps_3031__alphabetic",
+   "eval_id": 680,
+   "eval": "mbpp_680__increasing_trend",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203336,
+   "train": "apps_3336__get_sum_of_digits",
+   "eval_id": 566,
+   "eval": "mbpp_566__sum_digits",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203383,
+   "train": "apps_3383__is_even",
+   "eval_id": 138,
+   "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203632,
+   "train": "apps_3632__hamming_weight",
+   "eval_id": 224,
+   "eval": "mbpp_224__count_Set_Bits",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203736,
+   "train": "apps_3736__minimum",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 91,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 83
+  },
+  {
+   "pool": "v5",
+   "train_id": 203778,
+   "train": "apps_3778__find_smallest_int",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 97,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 86
+  },
+  {
+   "pool": "v5",
+   "train_id": 203920,
+   "train": "apps_3920__hamming_distance",
+   "eval_id": 203,
+   "eval": "mbpp_203__hamming_Distance",
+   "agreed_inputs": 107,
+   "own_inputs": 7,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203929,
+   "train": "apps_3929__reverse",
+   "eval_id": 604,
+   "eval": "mbpp_604__reverse_words",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203985,
+   "train": "apps_3985__find_even_index",
+   "eval_id": 701,
+   "eval": "mbpp_701__equilibrium_index",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204152,
+   "train": "apps_4152__mygcd",
+   "eval_id": 687,
+   "eval": "mbpp_687__recur_gcd",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204154,
+   "train": "apps_4154__is_triangle",
+   "eval_id": 334,
+   "eval": "mbpp_334__check_Validity",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204157,
+   "train": "apps_4157__group_check",
+   "eval_id": 175,
+   "eval": "mbpp_175__is_valid_parenthese",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204207,
+   "train": "apps_4207__sum_cubes",
+   "eval_id": 931,
+   "eval": "mbpp_931__sum_series",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204444,
+   "train": "apps_4444__abundant_number",
+   "eval_id": 541,
+   "eval": "mbpp_541__check_abundant",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204455,
+   "train": "apps_4455__sumin",
+   "eval_id": 935,
+   "eval": "mbpp_935__series_sum",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204462,
+   "train": "apps_4462__adjacent_element_product",
+   "eval_id": 366,
+   "eval": "mbpp_366__adjacent_num_product",
+   "agreed_inputs": 78,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 67
+  },
+  {
+   "pool": "v5",
+   "train_id": 204498,
+   "train": "apps_4498__solution",
+   "eval_id": 961,
+   "eval": "mbpp_961__roman_to_int",
+   "agreed_inputs": 25,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 17
+  },
+  {
+   "pool": "v5",
+   "train_id": 204695,
+   "train": "apps_4695__count_squares",
+   "eval_id": 935,
+   "eval": "mbpp_935__series_sum",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204735,
+   "train": "apps_4735__keep_order",
+   "eval_id": 736,
+   "eval": "mbpp_736__left_insertion",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 29,
+   "train": "mbpp_29__get_Odd_Occurrence",
+   "eval_id": 842,
+   "eval": "mbpp_842__get_odd_occurence",
+   "agreed_inputs": 49,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 45
+  },
+  {
+   "pool": "v6",
+   "train_id": 41,
+   "train": "mbpp_41__filter_evennumbers",
+   "eval_id": 629,
+   "eval": "mbpp_629__Split",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 62,
+   "train": "mbpp_62__smallest_num",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 90,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 84
+  },
+  {
+   "pool": "v6",
+   "train_id": 71,
+   "train": "mbpp_71__comb_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 102,
+   "train": "mbpp_102__snake_to_camel",
+   "eval_id": 411,
+   "eval": "mbpp_411__snake_to_camel",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 152,
+   "train": "mbpp_152__merge_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 152,
+   "train": "mbpp_152__merge_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 199,
+   "train": "mbpp_199__highest_Power_of_2",
+   "eval_id": 302,
+   "eval": "mbpp_302__set_Bit_Number",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 242,
+   "train": "mbpp_242__count_charac",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 372,
+   "train": "mbpp_372__heap_assending",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 372,
+   "train": "mbpp_372__heap_assending",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 388,
+   "train": "mbpp_388__highest_Power_of_2",
+   "eval_id": 302,
+   "eval": "mbpp_302__set_Bit_Number",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 404,
+   "train": "mbpp_404__minimum",
+   "eval_id": 970,
+   "eval": "mbpp_970__min_of_two",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 427,
+   "train": "mbpp_427__change_date_format",
+   "eval_id": 928,
+   "eval": "mbpp_928__change_date_format",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 451,
+   "train": "mbpp_451__remove_whitespaces",
+   "eval_id": 800,
+   "eval": "mbpp_800__remove_all_spaces",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 496,
+   "train": "mbpp_496__heap_queue_smallest",
+   "eval_id": 10,
+   "eval": "mbpp_10__small_nnum",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 504,
+   "train": "mbpp_504__sum_Of_Series",
+   "eval_id": 931,
+   "eval": "mbpp_931__sum_series",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 567,
+   "train": "mbpp_567__issort_list",
+   "eval_id": 670,
+   "eval": "mbpp_670__decreasing_trend",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 567,
+   "train": "mbpp_567__issort_list",
+   "eval_id": 680,
+   "eval": "mbpp_680__increasing_trend",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 595,
+   "train": "mbpp_595__min_Swaps",
+   "eval_id": 699,
+   "eval": "mbpp_699__min_Swaps",
+   "agreed_inputs": 52,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 47
+  },
+  {
+   "pool": "v6",
+   "train_id": 600,
+   "train": "mbpp_600__is_Even",
+   "eval_id": 138,
+   "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 635,
+   "train": "mbpp_635__heap_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 635,
+   "train": "mbpp_635__heap_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 756,
+   "train": "mbpp_756__text_match_zero_one",
+   "eval_id": 719,
+   "eval": "mbpp_719__text_match",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 759,
+   "train": "mbpp_759__is_decimal",
+   "eval_id": 208,
+   "eval": "mbpp_208__is_decimal",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 767,
+   "train": "mbpp_767__get_Pairs_Count",
+   "eval_id": 527,
+   "eval": "mbpp_527__get_pairs_count",
+   "agreed_inputs": 45,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 41
+  },
+  {
+   "pool": "v6",
+   "train_id": 790,
+   "train": "mbpp_790__even_position",
+   "eval_id": 775,
+   "eval": "mbpp_775__odd_position",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 930,
+   "train": "mbpp_930__text_match",
+   "eval_id": 719,
+   "eval": "mbpp_719__text_match",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 940,
+   "train": "mbpp_940__heap_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 940,
+   "train": "mbpp_940__heap_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 955,
+   "train": "mbpp_955__is_abundant",
+   "eval_id": 541,
+   "eval": "mbpp_541__check_abundant",
+   "agreed_inputs": 105,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 100013,
+   "train": "he_13__greatest_common_divisor",
+   "eval_id": 687,
+   "eval": "mbpp_687__recur_gcd",
+   "agreed_inputs": 107,
+   "own_inputs": 7,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 100023,
+   "train": "he_23__strlen",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 100057,
+   "train": "he_57__monotonic",
+   "eval_id": 68,
+   "eval": "mbpp_68__is_Monotonic",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 200178,
+   "train": "apps_178__lengthOfLIS",
+   "eval_id": 548,
+   "eval": "mbpp_548__longest_increasing_subsequence",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 200201,
+   "train": "apps_201__numTrees",
+   "eval_id": 583,
+   "eval": "mbpp_583__catalan_number",
+   "agreed_inputs": 76,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 72
+  },
+  {
+   "pool": "v6",
+   "train_id": 200343,
+   "train": "apps_343__numSquares",
+   "eval_id": 325,
+   "eval": "mbpp_325__get_Min_Squares",
+   "agreed_inputs": 99,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 95
+  },
+  {
+   "pool": "v6",
+   "train_id": 202415,
+   "train": "apps_2415__searchInsert",
+   "eval_id": 736,
+   "eval": "mbpp_736__left_insertion",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202457,
+   "train": "apps_2457__pivotIndex",
+   "eval_id": 701,
+   "eval": "mbpp_701__equilibrium_index",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202465,
+   "train": "apps_2465__divisorGame",
+   "eval_id": 138,
+   "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202493,
+   "train": "apps_2493__maximumProduct",
+   "eval_id": 911,
+   "eval": "mbpp_911__maximum_product",
+   "agreed_inputs": 63,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 59
+  },
+  {
+   "pool": "v6",
+   "train_id": 202504,
+   "train": "apps_2504__sumOddLengthSubarrays",
+   "eval_id": 782,
+   "eval": "mbpp_782__Odd_Length_Sum",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202525,
+   "train": "apps_2525__hammingDistance",
+   "eval_id": 203,
+   "eval": "mbpp_203__hamming_Distance",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202542,
+   "train": "apps_2542__isMonotonic",
+   "eval_id": 68,
+   "eval": "mbpp_68__is_Monotonic",
+   "agreed_inputs": 103,
+   "own_inputs": 3,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202551,
+   "train": "apps_2551__isValid",
+   "eval_id": 175,
+   "eval": "mbpp_175__is_valid_parenthese",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202658,
+   "train": "apps_2658__convert_bits",
+   "eval_id": 203,
+   "eval": "mbpp_203__hamming_Distance",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202849,
+   "train": "apps_2849__peak",
+   "eval_id": 701,
+   "eval": "mbpp_701__equilibrium_index",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202860,
+   "train": "apps_2860__isomorph",
+   "eval_id": 885,
+   "eval": "mbpp_885__is_Isomorphic",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202893,
+   "train": "apps_2893__plant_doubling",
+   "eval_id": 224,
+   "eval": "mbpp_224__count_Set_Bits",
+   "agreed_inputs": 107,
+   "own_inputs": 7,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 202914,
+   "train": "apps_2914__array_diff",
+   "eval_id": 161,
+   "eval": "mbpp_161__remove_elements",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203008,
+   "train": "apps_3008__sort_array",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203031,
+   "train": "apps_3031__alphabetic",
+   "eval_id": 670,
+   "eval": "mbpp_670__decreasing_trend",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203031,
+   "train": "apps_3031__alphabetic",
+   "eval_id": 680,
+   "eval": "mbpp_680__increasing_trend",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203336,
+   "train": "apps_3336__get_sum_of_digits",
+   "eval_id": 566,
+   "eval": "mbpp_566__sum_digits",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203383,
+   "train": "apps_3383__is_even",
+   "eval_id": 138,
+   "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203632,
+   "train": "apps_3632__hamming_weight",
+   "eval_id": 224,
+   "eval": "mbpp_224__count_Set_Bits",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203736,
+   "train": "apps_3736__minimum",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 91,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 83
+  },
+  {
+   "pool": "v6",
+   "train_id": 203778,
+   "train": "apps_3778__find_smallest_int",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 97,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 86
+  },
+  {
+   "pool": "v6",
+   "train_id": 203920,
+   "train": "apps_3920__hamming_distance",
+   "eval_id": 203,
+   "eval": "mbpp_203__hamming_Distance",
+   "agreed_inputs": 107,
+   "own_inputs": 7,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203929,
+   "train": "apps_3929__reverse",
+   "eval_id": 604,
+   "eval": "mbpp_604__reverse_words",
+   "agreed_inputs": 106,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203985,
+   "train": "apps_3985__find_even_index",
+   "eval_id": 701,
+   "eval": "mbpp_701__equilibrium_index",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204152,
+   "train": "apps_4152__mygcd",
+   "eval_id": 687,
+   "eval": "mbpp_687__recur_gcd",
+   "agreed_inputs": 108,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204154,
+   "train": "apps_4154__is_triangle",
+   "eval_id": 334,
+   "eval": "mbpp_334__check_Validity",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204157,
+   "train": "apps_4157__group_check",
+   "eval_id": 175,
+   "eval": "mbpp_175__is_valid_parenthese",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204207,
+   "train": "apps_4207__sum_cubes",
+   "eval_id": 931,
+   "eval": "mbpp_931__sum_series",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204444,
+   "train": "apps_4444__abundant_number",
+   "eval_id": 541,
+   "eval": "mbpp_541__check_abundant",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204455,
+   "train": "apps_4455__sumin",
+   "eval_id": 935,
+   "eval": "mbpp_935__series_sum",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204462,
+   "train": "apps_4462__adjacent_element_product",
+   "eval_id": 366,
+   "eval": "mbpp_366__adjacent_num_product",
+   "agreed_inputs": 78,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 67
+  },
+  {
+   "pool": "v6",
+   "train_id": 204498,
+   "train": "apps_4498__solution",
+   "eval_id": 961,
+   "eval": "mbpp_961__roman_to_int",
+   "agreed_inputs": 25,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 17
+  },
+  {
+   "pool": "v6",
+   "train_id": 204695,
+   "train": "apps_4695__count_squares",
+   "eval_id": 935,
+   "eval": "mbpp_935__series_sum",
+   "agreed_inputs": 109,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204735,
+   "train": "apps_4735__keep_order",
+   "eval_id": 736,
+   "eval": "mbpp_736__left_insertion",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 300281,
+   "train": "apps_100281__apps_stdin_281",
+   "eval_id": 47,
+   "eval": "mbpp_47__compute_Last_Digit",
+   "agreed_inputs": 110,
+   "own_inputs": 10,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 300683,
+   "train": "apps_100683__apps_stdin_683",
+   "eval_id": 269,
+   "eval": "mbpp_269__ascii_value",
+   "agreed_inputs": 104,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 300709,
+   "train": "apps_100709__apps_stdin_709",
+   "eval_id": 224,
+   "eval": "mbpp_224__count_Set_Bits",
+   "agreed_inputs": 93,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 82
+  },
+  {
+   "pool": "v6",
+   "train_id": 301606,
+   "train": "apps_101606__apps_stdin_1606",
+   "eval_id": 339,
+   "eval": "mbpp_339__find_Divisor",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 5973913,
+   "train": "apps_5773913__cc_stdin_p03587_Tenka1_Programmer_Beginner_Contest___Accepted____",
+   "eval_id": 566,
+   "eval": "mbpp_566__sum_digits",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 8141530,
+   "train": "apps_7941530__cc_stdin_p02256_Greatest_Common_Divisor",
+   "eval_id": 687,
+   "eval": "mbpp_687__recur_gcd",
+   "agreed_inputs": 111,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 9333067,
+   "train": "apps_9133067__cc_stdin_p02476_Remainder_of_Big_Integers",
+   "eval_id": 502,
+   "eval": "mbpp_502__find",
+   "agreed_inputs": 96,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 85
+  }
+ ],
+ "minimal_pairs": [
+  {
+   "pool": "v5",
+   "train_id": 29,
+   "train": "mbpp_29__get_Odd_Occurrence",
+   "eval_id": 119,
+   "eval": "mbpp_119__search",
+   "agreed_inputs": 16,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 10,
+   "difference": {
+    "eval_said": 4,
+    "input": [
+     [
+      1,
+      0,
+      4,
+      3,
+      2,
+      5
+     ],
+     5
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 54,
+   "train": "mbpp_54__counting_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 101,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 95,
+   "difference": {
+    "eval_said": [
+     -1,
+     24
+    ],
+    "input": [
+     [
+      -1,
+      24
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     24,
+     24
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 54,
+   "train": "mbpp_54__counting_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 101,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 95,
+   "difference": {
+    "eval_said": [
+     -1,
+     24
+    ],
+    "input": [
+     [
+      -1,
+      24
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     24,
+     24
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 54,
+   "train": "mbpp_54__counting_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 89,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 83,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 54,
+   "train": "mbpp_54__counting_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 87,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 81,
+   "difference": {
+    "eval_said": 21,
+    "input": [
+     [
+      21
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     21
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 71,
+   "train": "mbpp_71__comb_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 105,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 99,
+   "difference": {
+    "eval_said": [
+     17,
+     36,
+     39,
+     42,
+     50,
+     50,
+     77
+    ],
+    "input": [
+     [
+      50,
+      36,
+      39,
+      50,
+      42,
+      77,
+      17
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     17,
+     39,
+     36,
+     42,
+     50,
+     50,
+     77
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 71,
+   "train": "mbpp_71__comb_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 97,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 71,
+   "train": "mbpp_71__comb_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 91,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 85,
+   "difference": {
+    "eval_said": 47,
+    "input": [
+     [
+      47
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     47
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 76,
+   "train": "mbpp_76__count_Squares",
+   "eval_id": 347,
+   "eval": "mbpp_347__count_Squares",
+   "agreed_inputs": 29,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 25,
+   "difference": {
+    "eval_said": -35,
+    "input": [
+     6,
+     0
+    ],
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 152,
+   "train": "mbpp_152__merge_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 84,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 78,
+   "difference": {
+    "eval_said": [
+     10,
+     0,
+     0,
+     4,
+     5,
+     8,
+     8,
+     9
+    ],
+    "input": [
+     [
+      5,
+      8,
+      8,
+      10,
+      0,
+      4,
+      9,
+      0
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     0,
+     0,
+     4,
+     5,
+     8,
+     8,
+     9,
+     10
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 152,
+   "train": "mbpp_152__merge_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 81,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 75,
+   "difference": {
+    "eval_said": [
+     0,
+     0,
+     1,
+     4,
+     6,
+     7,
+     11
+    ],
+    "input": [
+     [
+      1,
+      7,
+      4,
+      -1,
+      0,
+      6,
+      11
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     0,
+     1,
+     4,
+     6,
+     7,
+     11
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 372,
+   "train": "mbpp_372__heap_assending",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 85,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 79,
+   "difference": {
+    "eval_said": [
+     3,
+     6,
+     9,
+     17,
+     20,
+     -1
+    ],
+    "input": [
+     [
+      20,
+      17,
+      3,
+      6,
+      -1,
+      9
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     3,
+     6,
+     9,
+     17,
+     20
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 372,
+   "train": "mbpp_372__heap_assending",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 86,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": [
+     0,
+     3,
+     6,
+     9,
+     17,
+     20
+    ],
+    "input": [
+     [
+      20,
+      17,
+      3,
+      6,
+      -1,
+      9
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     3,
+     6,
+     9,
+     17,
+     20
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 455,
+   "train": "mbpp_455__check_monthnumb_number",
+   "eval_id": 887,
+   "eval": "mbpp_887__is_odd",
+   "agreed_inputs": 85,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 81,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     10
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 480,
+   "train": "mbpp_480__get_max_occuring_char",
+   "eval_id": 362,
+   "eval": "mbpp_362__max_occurrences",
+   "agreed_inputs": 86,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 480,
+   "train": "mbpp_480__get_max_occuring_char",
+   "eval_id": 658,
+   "eval": "mbpp_658__max_occurrences",
+   "agreed_inputs": 86,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 480,
+   "train": "mbpp_480__get_max_occuring_char",
+   "eval_id": 937,
+   "eval": "mbpp_937__max_char",
+   "agreed_inputs": 94,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 88,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 498,
+   "train": "mbpp_498__gcd",
+   "eval_id": 687,
+   "eval": "mbpp_687__recur_gcd",
+   "agreed_inputs": 103,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 97,
+   "difference": {
+    "eval_said": 11,
+    "input": [
+     11,
+     0
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 635,
+   "train": "mbpp_635__heap_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 71,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 65,
+   "difference": {
+    "eval_said": [
+     0,
+     1,
+     3,
+     9,
+     11,
+     11,
+     11,
+     -1
+    ],
+    "input": [
+     [
+      -1,
+      11,
+      11,
+      9,
+      11,
+      3,
+      0,
+      1
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     0,
+     1,
+     3,
+     9,
+     11,
+     11,
+     11
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 635,
+   "train": "mbpp_635__heap_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 65,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 59,
+   "difference": {
+    "eval_said": [
+     0,
+     0,
+     1,
+     3,
+     9,
+     11,
+     11,
+     11
+    ],
+    "input": [
+     [
+      -1,
+      11,
+      11,
+      9,
+      11,
+      3,
+      0,
+      1
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     0,
+     1,
+     3,
+     9,
+     11,
+     11,
+     11
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 678,
+   "train": "mbpp_678__remove_spaces",
+   "eval_id": 800,
+   "eval": "mbpp_800__remove_all_spaces",
+   "agreed_inputs": 94,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 88,
+   "difference": {
+    "eval_said": [
+     81,
+     48,
+     63
+    ],
+    "input": [
+     [
+      81,
+      30,
+      48,
+      63
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     81,
+     30,
+     48,
+     63
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 728,
+   "train": "mbpp_728__sum_list",
+   "eval_id": 729,
+   "eval": "mbpp_729__add_list",
+   "agreed_inputs": 67,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 61,
+   "difference": {
+    "eval_said": [],
+    "input": [
+     [
+      12,
+      15,
+      29,
+      32
+     ],
+     []
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 771,
+   "train": "mbpp_771__check_expression",
+   "eval_id": 175,
+   "eval": "mbpp_175__is_valid_parenthese",
+   "agreed_inputs": 79,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 73,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      127,
+      49,
+      46,
+      48,
+      80,
+      82,
+      94,
+      104
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 784,
+   "train": "mbpp_784__mul_even_odd",
+   "eval_id": 38,
+   "eval": "mbpp_38__div_even_odd",
+   "agreed_inputs": 71,
+   "own_inputs": 3,
+   "draws": 100,
+   "draws_agreed": 68,
+   "difference": {
+    "eval_said": 0.4,
+    "input": [
+     [
+      2,
+      5,
+      8,
+      1
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 10,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 847,
+   "train": "mbpp_847__lcopy",
+   "eval_id": 565,
+   "eval": "mbpp_565__split",
+   "agreed_inputs": 97,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": [
+     0,
+     0,
+     0,
+     2,
+     3
+    ],
+    "input": [
+     [
+      -1,
+      0,
+      0,
+      2,
+      3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     0,
+     0,
+     2,
+     3
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 940,
+   "train": "mbpp_940__heap_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 86,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": [
+     10,
+     1
+    ],
+    "input": [
+     [
+      1,
+      10
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     1,
+     10
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 940,
+   "train": "mbpp_940__heap_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 95,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 89,
+   "difference": {
+    "eval_said": 14,
+    "input": [
+     [
+      14
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     14
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 952,
+   "train": "mbpp_952__nCr_mod_p",
+   "eval_id": 402,
+   "eval": "mbpp_402__ncr_modp",
+   "agreed_inputs": 89,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 84,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     0,
+     2,
+     9
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 100059,
+   "train": "he_59__largest_prime_factor",
+   "eval_id": 32,
+   "eval": "mbpp_32__max_Prime_Factors",
+   "agreed_inputs": 104,
+   "own_inputs": 7,
+   "draws": 100,
+   "draws_agreed": 97,
+   "difference": {
+    "eval_said": -1,
+    "input": [
+     1
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200124,
+   "train": "apps_124__search",
+   "eval_id": 492,
+   "eval": "mbpp_492__binary_search",
+   "agreed_inputs": 99,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 95,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      0,
+      4,
+      4,
+      2,
+      5,
+      1
+     ],
+     2
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200138,
+   "train": "apps_138__getMaxLen",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 75,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 71,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     [
+      0
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200168,
+   "train": "apps_168__canConstruct",
+   "eval_id": 899,
+   "eval": "mbpp_899__check",
+   "agreed_inputs": 22,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 18,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      47,
+      89,
+      63,
+      81,
+      106,
+      73,
+      75,
+      67,
+      36,
+      108,
+      109
+     ],
+     2
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200171,
+   "train": "apps_171__maxProduct",
+   "eval_id": 463,
+   "eval": "mbpp_463__max_subarray_product",
+   "agreed_inputs": 98,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 94,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     [
+      -3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": -3,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200283,
+   "train": "apps_283__smallestDistancePair",
+   "eval_id": 736,
+   "eval": "mbpp_736__left_insertion",
+   "agreed_inputs": 29,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 25,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     [
+      0,
+      5
+     ],
+     2
+    ],
+    "kind": "disagree",
+    "train_said": 5,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200287,
+   "train": "apps_287__countArrangement",
+   "eval_id": 269,
+   "eval": "mbpp_269__ascii_value",
+   "agreed_inputs": 93,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 89,
+   "difference": {
+    "eval_said": 4,
+    "input": [
+     4
+    ],
+    "kind": "disagree",
+    "train_said": 8,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200296,
+   "train": "apps_296__findMin",
+   "eval_id": 45,
+   "eval": "mbpp_45__get_gcd",
+   "agreed_inputs": 23,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 19,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     [
+      0,
+      4,
+      5
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200296,
+   "train": "apps_296__findMin",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 80,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 76,
+   "difference": {
+    "eval_said": -5,
+    "input": [
+     [
+      0,
+      -1,
+      -3,
+      -5,
+      0,
+      -3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": -3,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200309,
+   "train": "apps_309__longestArithSeqLength",
+   "eval_id": 66,
+   "eval": "mbpp_66__pos_count",
+   "agreed_inputs": 26,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 22,
+   "difference": {
+    "eval_said": 4,
+    "input": [
+     [
+      1,
+      4,
+      5,
+      14
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 2,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200332,
+   "train": "apps_332__countSubstrings",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 95,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": 5,
+    "input": [
+     [
+      91,
+      50,
+      71,
+      71,
+      94
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 6,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200389,
+   "train": "apps_389__splitArraySameAverage",
+   "eval_id": 472,
+   "eval": "mbpp_472__check_Consecutive",
+   "agreed_inputs": 72,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 68,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      -1,
+      0,
+      1,
+      6,
+      9
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200403,
+   "train": "apps_403__increasingTriplet",
+   "eval_id": 670,
+   "eval": "mbpp_670__decreasing_trend",
+   "agreed_inputs": 54,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 50,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      3,
+      3,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200403,
+   "train": "apps_403__increasingTriplet",
+   "eval_id": 680,
+   "eval": "mbpp_680__increasing_trend",
+   "agreed_inputs": 57,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 53,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      3,
+      3,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200441,
+   "train": "apps_441__consecutiveNumbersSum",
+   "eval_id": 224,
+   "eval": "mbpp_224__count_Set_Bits",
+   "agreed_inputs": 76,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 72,
+   "difference": {
+    "eval_said": 2,
+    "input": [
+     9
+    ],
+    "kind": "disagree",
+    "train_said": 3,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200449,
+   "train": "apps_449__findMin",
+   "eval_id": 45,
+   "eval": "mbpp_45__get_gcd",
+   "agreed_inputs": 20,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 16,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     [
+      6
+     ]
+    ],
+    "kind": "one raised",
+    "train_said": 6,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200449,
+   "train": "apps_449__findMin",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 68,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 64,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     [
+      1,
+      2,
+      6,
+      6,
+      5,
+      0
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 6,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200456,
+   "train": "apps_456__canCross",
+   "eval_id": 670,
+   "eval": "mbpp_670__decreasing_trend",
+   "agreed_inputs": 30,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 26,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      -1,
+      2,
+      4,
+      4,
+      8,
+      9
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 201641,
+   "train": "apps_1641__normalize",
+   "eval_id": 565,
+   "eval": "mbpp_565__split",
+   "agreed_inputs": 84,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": [
+     0
+    ],
+    "input": [
+     [
+      -5
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -5
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202453,
+   "train": "apps_2453__isHappy",
+   "eval_id": 605,
+   "eval": "mbpp_605__prime_num",
+   "agreed_inputs": 69,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 65,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     28
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202467,
+   "train": "apps_2467__specialArray",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 90,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 86,
+   "difference": {
+    "eval_said": 3,
+    "input": [
+     [
+      1,
+      1,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": -1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202474,
+   "train": "apps_2474__mySqrt",
+   "eval_id": 518,
+   "eval": "mbpp_518__sqrt_root",
+   "agreed_inputs": 37,
+   "own_inputs": 3,
+   "draws": 100,
+   "draws_agreed": 34,
+   "difference": {
+    "eval_said": 1.7320508075688772,
+    "input": [
+     3
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202487,
+   "train": "apps_2487__repeatedSubstringPattern",
+   "eval_id": 741,
+   "eval": "mbpp_741__all_Characters_Same",
+   "agreed_inputs": 90,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 86,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      73
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202493,
+   "train": "apps_2493__maximumProduct",
+   "eval_id": 919,
+   "eval": "mbpp_919__multiply_list",
+   "agreed_inputs": 37,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 33,
+   "difference": {
+    "eval_said": -30,
+    "input": [
+     [
+      -1,
+      1,
+      2,
+      3,
+      5
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 30,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202497,
+   "train": "apps_2497__threeConsecutiveOdds",
+   "eval_id": 741,
+   "eval": "mbpp_741__all_Characters_Same",
+   "agreed_inputs": 59,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 55,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      1,
+      3,
+      5,
+      5
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202506,
+   "train": "apps_2506__isIsomorphic",
+   "eval_id": 885,
+   "eval": "mbpp_885__is_Isomorphic",
+   "agreed_inputs": 100,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 96,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      37,
+      81,
+      85,
+      104,
+      32,
+      104
+     ],
+     [
+      89,
+      58,
+      94,
+      67,
+      72
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202510,
+   "train": "apps_2510__canWinNim",
+   "eval_id": 683,
+   "eval": "mbpp_683__sum_Square",
+   "agreed_inputs": 48,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 44,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     6
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202511,
+   "train": "apps_2511__repeatedNTimes",
+   "eval_id": 937,
+   "eval": "mbpp_937__max_char",
+   "agreed_inputs": 32,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 28,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     [
+      -1,
+      -1,
+      1,
+      3,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": -1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 202516,
+   "train": "apps_2516__containsNearbyDuplicate",
+   "eval_id": 899,
+   "eval": "mbpp_899__check",
+   "agreed_inputs": 27,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 23,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      2,
+      3,
+      4,
+      3,
+      4,
+      3
+     ],
+     0
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203008,
+   "train": "apps_3008__sort_array",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 94,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 86,
+   "difference": {
+    "eval_said": [
+     53
+    ],
+    "input": [
+     [
+      53
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 53,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203008,
+   "train": "apps_3008__sort_array",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 98,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 90,
+   "difference": {
+    "eval_said": [
+     53
+    ],
+    "input": [
+     [
+      53
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 53,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203008,
+   "train": "apps_3008__sort_array",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 83,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 75,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203160,
+   "train": "apps_3160__multi",
+   "eval_id": 919,
+   "eval": "mbpp_919__multiply_list",
+   "agreed_inputs": 87,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 83,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203207,
+   "train": "apps_3207__reverseWords",
+   "eval_id": 604,
+   "eval": "mbpp_604__reverse_words",
+   "agreed_inputs": 90,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 86,
+   "difference": {
+    "eval_said": [
+     60,
+     95,
+     32,
+     90,
+     115,
+     43,
+     91,
+     40,
+     59,
+     58,
+     103,
+     76
+    ],
+    "input": [
+     [
+      90,
+      115,
+      43,
+      91,
+      40,
+      59,
+      58,
+      103,
+      76,
+      31,
+      60,
+      95
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     90,
+     115,
+     43,
+     91,
+     40,
+     59,
+     58,
+     103,
+     76,
+     31,
+     60,
+     95
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203496,
+   "train": "apps_3496__sort_by_area",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 88,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 84,
+   "difference": {
+    "eval_said": [
+     -5,
+     2
+    ],
+    "input": [
+     [
+      -5,
+      2
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     2,
+     -5
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203496,
+   "train": "apps_3496__sort_by_area",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 88,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 84,
+   "difference": {
+    "eval_said": [
+     -5,
+     2
+    ],
+    "input": [
+     [
+      -5,
+      2
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     2,
+     -5
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203496,
+   "train": "apps_3496__sort_by_area",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 60,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 56,
+   "difference": {
+    "eval_said": [
+     0,
+     3,
+     6
+    ],
+    "input": [
+     [
+      -1,
+      6,
+      3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     3,
+     6
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203613,
+   "train": "apps_3613__is_substitution_cipher",
+   "eval_id": 885,
+   "eval": "mbpp_885__is_Isomorphic",
+   "agreed_inputs": 106,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 97,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      100,
+      96,
+      96,
+      100,
+      101
+     ],
+     [
+      96,
+      97,
+      99
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203718,
+   "train": "apps_3718__divisors",
+   "eval_id": 96,
+   "eval": "mbpp_96__divisor",
+   "agreed_inputs": 85,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 77,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     0
+    ],
+    "kind": "one raised",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203992,
+   "train": "apps_3992__is_happy",
+   "eval_id": 20,
+   "eval": "mbpp_20__is_woodall",
+   "agreed_inputs": 97,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     496
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 204165,
+   "train": "apps_4165__uni_total",
+   "eval_id": 798,
+   "eval": "mbpp_798___sum",
+   "agreed_inputs": 100,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 89,
+   "difference": {
+    "eval_said": 7,
+    "input": [
+     [
+      -1,
+      2,
+      3,
+      3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 8,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 204342,
+   "train": "apps_4342__no_space",
+   "eval_id": 800,
+   "eval": "mbpp_800__remove_all_spaces",
+   "agreed_inputs": 84,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 76,
+   "difference": {
+    "eval_said": [
+     55,
+     79,
+     78,
+     40,
+     45,
+     94,
+     104,
+     64,
+     72,
+     85,
+     50,
+     64
+    ],
+    "input": [
+     [
+      55,
+      79,
+      78,
+      40,
+      45,
+      94,
+      104,
+      64,
+      30,
+      72,
+      85,
+      31,
+      50,
+      64
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     55,
+     79,
+     78,
+     40,
+     45,
+     94,
+     104,
+     64,
+     30,
+     72,
+     85,
+     31,
+     50,
+     64
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 29,
+   "train": "mbpp_29__get_Odd_Occurrence",
+   "eval_id": 119,
+   "eval": "mbpp_119__search",
+   "agreed_inputs": 16,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 10,
+   "difference": {
+    "eval_said": 4,
+    "input": [
+     [
+      1,
+      0,
+      4,
+      3,
+      2,
+      5
+     ],
+     5
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 54,
+   "train": "mbpp_54__counting_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 101,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 95,
+   "difference": {
+    "eval_said": [
+     -1,
+     24
+    ],
+    "input": [
+     [
+      -1,
+      24
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     24,
+     24
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 54,
+   "train": "mbpp_54__counting_sort",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 101,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 95,
+   "difference": {
+    "eval_said": [
+     -1,
+     24
+    ],
+    "input": [
+     [
+      -1,
+      24
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     24,
+     24
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 54,
+   "train": "mbpp_54__counting_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 89,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 83,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 54,
+   "train": "mbpp_54__counting_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 87,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 81,
+   "difference": {
+    "eval_said": 21,
+    "input": [
+     [
+      21
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     21
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 71,
+   "train": "mbpp_71__comb_sort",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 105,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 99,
+   "difference": {
+    "eval_said": [
+     17,
+     36,
+     39,
+     42,
+     50,
+     50,
+     77
+    ],
+    "input": [
+     [
+      50,
+      36,
+      39,
+      50,
+      42,
+      77,
+      17
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     17,
+     39,
+     36,
+     42,
+     50,
+     50,
+     77
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 71,
+   "train": "mbpp_71__comb_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 97,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 71,
+   "train": "mbpp_71__comb_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 91,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 85,
+   "difference": {
+    "eval_said": 47,
+    "input": [
+     [
+      47
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     47
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 76,
+   "train": "mbpp_76__count_Squares",
+   "eval_id": 347,
+   "eval": "mbpp_347__count_Squares",
+   "agreed_inputs": 29,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 25,
+   "difference": {
+    "eval_said": -35,
+    "input": [
+     6,
+     0
+    ],
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 152,
+   "train": "mbpp_152__merge_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 84,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 78,
+   "difference": {
+    "eval_said": [
+     10,
+     0,
+     0,
+     4,
+     5,
+     8,
+     8,
+     9
+    ],
+    "input": [
+     [
+      5,
+      8,
+      8,
+      10,
+      0,
+      4,
+      9,
+      0
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     0,
+     0,
+     4,
+     5,
+     8,
+     8,
+     9,
+     10
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 152,
+   "train": "mbpp_152__merge_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 81,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 75,
+   "difference": {
+    "eval_said": [
+     0,
+     0,
+     1,
+     4,
+     6,
+     7,
+     11
+    ],
+    "input": [
+     [
+      1,
+      7,
+      4,
+      -1,
+      0,
+      6,
+      11
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     0,
+     1,
+     4,
+     6,
+     7,
+     11
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 372,
+   "train": "mbpp_372__heap_assending",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 85,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 79,
+   "difference": {
+    "eval_said": [
+     3,
+     6,
+     9,
+     17,
+     20,
+     -1
+    ],
+    "input": [
+     [
+      20,
+      17,
+      3,
+      6,
+      -1,
+      9
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     3,
+     6,
+     9,
+     17,
+     20
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 372,
+   "train": "mbpp_372__heap_assending",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 86,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": [
+     0,
+     3,
+     6,
+     9,
+     17,
+     20
+    ],
+    "input": [
+     [
+      20,
+      17,
+      3,
+      6,
+      -1,
+      9
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     3,
+     6,
+     9,
+     17,
+     20
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 455,
+   "train": "mbpp_455__check_monthnumb_number",
+   "eval_id": 887,
+   "eval": "mbpp_887__is_odd",
+   "agreed_inputs": 85,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 81,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     10
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 480,
+   "train": "mbpp_480__get_max_occuring_char",
+   "eval_id": 362,
+   "eval": "mbpp_362__max_occurrences",
+   "agreed_inputs": 86,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 480,
+   "train": "mbpp_480__get_max_occuring_char",
+   "eval_id": 658,
+   "eval": "mbpp_658__max_occurrences",
+   "agreed_inputs": 86,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 480,
+   "train": "mbpp_480__get_max_occuring_char",
+   "eval_id": 937,
+   "eval": "mbpp_937__max_char",
+   "agreed_inputs": 94,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 88,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 498,
+   "train": "mbpp_498__gcd",
+   "eval_id": 687,
+   "eval": "mbpp_687__recur_gcd",
+   "agreed_inputs": 103,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 97,
+   "difference": {
+    "eval_said": 11,
+    "input": [
+     11,
+     0
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 635,
+   "train": "mbpp_635__heap_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 71,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 65,
+   "difference": {
+    "eval_said": [
+     0,
+     1,
+     3,
+     9,
+     11,
+     11,
+     11,
+     -1
+    ],
+    "input": [
+     [
+      -1,
+      11,
+      11,
+      9,
+      11,
+      3,
+      0,
+      1
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     0,
+     1,
+     3,
+     9,
+     11,
+     11,
+     11
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 635,
+   "train": "mbpp_635__heap_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 65,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 59,
+   "difference": {
+    "eval_said": [
+     0,
+     0,
+     1,
+     3,
+     9,
+     11,
+     11,
+     11
+    ],
+    "input": [
+     [
+      -1,
+      11,
+      11,
+      9,
+      11,
+      3,
+      0,
+      1
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     0,
+     1,
+     3,
+     9,
+     11,
+     11,
+     11
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 678,
+   "train": "mbpp_678__remove_spaces",
+   "eval_id": 800,
+   "eval": "mbpp_800__remove_all_spaces",
+   "agreed_inputs": 94,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 88,
+   "difference": {
+    "eval_said": [
+     81,
+     48,
+     63
+    ],
+    "input": [
+     [
+      81,
+      30,
+      48,
+      63
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     81,
+     30,
+     48,
+     63
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 728,
+   "train": "mbpp_728__sum_list",
+   "eval_id": 729,
+   "eval": "mbpp_729__add_list",
+   "agreed_inputs": 67,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 61,
+   "difference": {
+    "eval_said": [],
+    "input": [
+     [
+      12,
+      15,
+      29,
+      32
+     ],
+     []
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 771,
+   "train": "mbpp_771__check_expression",
+   "eval_id": 175,
+   "eval": "mbpp_175__is_valid_parenthese",
+   "agreed_inputs": 79,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 73,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      127,
+      49,
+      46,
+      48,
+      80,
+      82,
+      94,
+      104
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 784,
+   "train": "mbpp_784__mul_even_odd",
+   "eval_id": 38,
+   "eval": "mbpp_38__div_even_odd",
+   "agreed_inputs": 71,
+   "own_inputs": 3,
+   "draws": 100,
+   "draws_agreed": 68,
+   "difference": {
+    "eval_said": 0.4,
+    "input": [
+     [
+      2,
+      5,
+      8,
+      1
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 10,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 847,
+   "train": "mbpp_847__lcopy",
+   "eval_id": 565,
+   "eval": "mbpp_565__split",
+   "agreed_inputs": 97,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": [
+     0,
+     0,
+     0,
+     2,
+     3
+    ],
+    "input": [
+     [
+      -1,
+      0,
+      0,
+      2,
+      3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     0,
+     0,
+     2,
+     3
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 940,
+   "train": "mbpp_940__heap_sort",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 86,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": [
+     10,
+     1
+    ],
+    "input": [
+     [
+      1,
+      10
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     1,
+     10
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 940,
+   "train": "mbpp_940__heap_sort",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 95,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 89,
+   "difference": {
+    "eval_said": 14,
+    "input": [
+     [
+      14
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     14
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 952,
+   "train": "mbpp_952__nCr_mod_p",
+   "eval_id": 402,
+   "eval": "mbpp_402__ncr_modp",
+   "agreed_inputs": 89,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 84,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     0,
+     2,
+     9
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 100059,
+   "train": "he_59__largest_prime_factor",
+   "eval_id": 32,
+   "eval": "mbpp_32__max_Prime_Factors",
+   "agreed_inputs": 104,
+   "own_inputs": 7,
+   "draws": 100,
+   "draws_agreed": 97,
+   "difference": {
+    "eval_said": -1,
+    "input": [
+     1
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200124,
+   "train": "apps_124__search",
+   "eval_id": 492,
+   "eval": "mbpp_492__binary_search",
+   "agreed_inputs": 99,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 95,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      0,
+      4,
+      4,
+      2,
+      5,
+      1
+     ],
+     2
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200138,
+   "train": "apps_138__getMaxLen",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 75,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 71,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     [
+      0
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200168,
+   "train": "apps_168__canConstruct",
+   "eval_id": 899,
+   "eval": "mbpp_899__check",
+   "agreed_inputs": 22,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 18,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      47,
+      89,
+      63,
+      81,
+      106,
+      73,
+      75,
+      67,
+      36,
+      108,
+      109
+     ],
+     2
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200171,
+   "train": "apps_171__maxProduct",
+   "eval_id": 463,
+   "eval": "mbpp_463__max_subarray_product",
+   "agreed_inputs": 98,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 94,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     [
+      -3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": -3,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200283,
+   "train": "apps_283__smallestDistancePair",
+   "eval_id": 736,
+   "eval": "mbpp_736__left_insertion",
+   "agreed_inputs": 29,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 25,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     [
+      0,
+      5
+     ],
+     2
+    ],
+    "kind": "disagree",
+    "train_said": 5,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200287,
+   "train": "apps_287__countArrangement",
+   "eval_id": 269,
+   "eval": "mbpp_269__ascii_value",
+   "agreed_inputs": 93,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 89,
+   "difference": {
+    "eval_said": 4,
+    "input": [
+     4
+    ],
+    "kind": "disagree",
+    "train_said": 8,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200296,
+   "train": "apps_296__findMin",
+   "eval_id": 45,
+   "eval": "mbpp_45__get_gcd",
+   "agreed_inputs": 23,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 19,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     [
+      0,
+      4,
+      5
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200296,
+   "train": "apps_296__findMin",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 80,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 76,
+   "difference": {
+    "eval_said": -5,
+    "input": [
+     [
+      0,
+      -1,
+      -3,
+      -5,
+      0,
+      -3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": -3,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200309,
+   "train": "apps_309__longestArithSeqLength",
+   "eval_id": 66,
+   "eval": "mbpp_66__pos_count",
+   "agreed_inputs": 26,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 22,
+   "difference": {
+    "eval_said": 4,
+    "input": [
+     [
+      1,
+      4,
+      5,
+      14
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 2,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200332,
+   "train": "apps_332__countSubstrings",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 95,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": 5,
+    "input": [
+     [
+      91,
+      50,
+      71,
+      71,
+      94
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 6,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200389,
+   "train": "apps_389__splitArraySameAverage",
+   "eval_id": 472,
+   "eval": "mbpp_472__check_Consecutive",
+   "agreed_inputs": 72,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 68,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      -1,
+      0,
+      1,
+      6,
+      9
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200403,
+   "train": "apps_403__increasingTriplet",
+   "eval_id": 670,
+   "eval": "mbpp_670__decreasing_trend",
+   "agreed_inputs": 54,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 50,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      3,
+      3,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200403,
+   "train": "apps_403__increasingTriplet",
+   "eval_id": 680,
+   "eval": "mbpp_680__increasing_trend",
+   "agreed_inputs": 57,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 53,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      3,
+      3,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200441,
+   "train": "apps_441__consecutiveNumbersSum",
+   "eval_id": 224,
+   "eval": "mbpp_224__count_Set_Bits",
+   "agreed_inputs": 76,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 72,
+   "difference": {
+    "eval_said": 2,
+    "input": [
+     9
+    ],
+    "kind": "disagree",
+    "train_said": 3,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200449,
+   "train": "apps_449__findMin",
+   "eval_id": 45,
+   "eval": "mbpp_45__get_gcd",
+   "agreed_inputs": 20,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 16,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     [
+      6
+     ]
+    ],
+    "kind": "one raised",
+    "train_said": 6,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200449,
+   "train": "apps_449__findMin",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 68,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 64,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     [
+      1,
+      2,
+      6,
+      6,
+      5,
+      0
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 6,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200456,
+   "train": "apps_456__canCross",
+   "eval_id": 670,
+   "eval": "mbpp_670__decreasing_trend",
+   "agreed_inputs": 30,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 26,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      -1,
+      2,
+      4,
+      4,
+      8,
+      9
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 201641,
+   "train": "apps_1641__normalize",
+   "eval_id": 565,
+   "eval": "mbpp_565__split",
+   "agreed_inputs": 84,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 80,
+   "difference": {
+    "eval_said": [
+     0
+    ],
+    "input": [
+     [
+      -5
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -5
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202453,
+   "train": "apps_2453__isHappy",
+   "eval_id": 605,
+   "eval": "mbpp_605__prime_num",
+   "agreed_inputs": 69,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 65,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     28
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202467,
+   "train": "apps_2467__specialArray",
+   "eval_id": 813,
+   "eval": "mbpp_813__string_length",
+   "agreed_inputs": 90,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 86,
+   "difference": {
+    "eval_said": 3,
+    "input": [
+     [
+      1,
+      1,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": -1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202474,
+   "train": "apps_2474__mySqrt",
+   "eval_id": 518,
+   "eval": "mbpp_518__sqrt_root",
+   "agreed_inputs": 37,
+   "own_inputs": 3,
+   "draws": 100,
+   "draws_agreed": 34,
+   "difference": {
+    "eval_said": 1.7320508075688772,
+    "input": [
+     3
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202487,
+   "train": "apps_2487__repeatedSubstringPattern",
+   "eval_id": 741,
+   "eval": "mbpp_741__all_Characters_Same",
+   "agreed_inputs": 90,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 86,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      73
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202493,
+   "train": "apps_2493__maximumProduct",
+   "eval_id": 919,
+   "eval": "mbpp_919__multiply_list",
+   "agreed_inputs": 37,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 33,
+   "difference": {
+    "eval_said": -30,
+    "input": [
+     [
+      -1,
+      1,
+      2,
+      3,
+      5
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 30,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202497,
+   "train": "apps_2497__threeConsecutiveOdds",
+   "eval_id": 741,
+   "eval": "mbpp_741__all_Characters_Same",
+   "agreed_inputs": 59,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 55,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      1,
+      3,
+      5,
+      5
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202506,
+   "train": "apps_2506__isIsomorphic",
+   "eval_id": 885,
+   "eval": "mbpp_885__is_Isomorphic",
+   "agreed_inputs": 100,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 96,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      37,
+      81,
+      85,
+      104,
+      32,
+      104
+     ],
+     [
+      89,
+      58,
+      94,
+      67,
+      72
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202510,
+   "train": "apps_2510__canWinNim",
+   "eval_id": 683,
+   "eval": "mbpp_683__sum_Square",
+   "agreed_inputs": 48,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 44,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     6
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202511,
+   "train": "apps_2511__repeatedNTimes",
+   "eval_id": 937,
+   "eval": "mbpp_937__max_char",
+   "agreed_inputs": 32,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 28,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     [
+      -1,
+      -1,
+      1,
+      3,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": -1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 202516,
+   "train": "apps_2516__containsNearbyDuplicate",
+   "eval_id": 899,
+   "eval": "mbpp_899__check",
+   "agreed_inputs": 27,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 23,
+   "difference": {
+    "eval_said": true,
+    "input": [
+     [
+      2,
+      3,
+      4,
+      3,
+      4,
+      3
+     ],
+     0
+    ],
+    "kind": "disagree",
+    "train_said": false,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203008,
+   "train": "apps_3008__sort_array",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 94,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 86,
+   "difference": {
+    "eval_said": [
+     53
+    ],
+    "input": [
+     [
+      53
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 53,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203008,
+   "train": "apps_3008__sort_array",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 98,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 90,
+   "difference": {
+    "eval_said": [
+     53
+    ],
+    "input": [
+     [
+      53
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 53,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203008,
+   "train": "apps_3008__sort_array",
+   "eval_id": 516,
+   "eval": "mbpp_516__radix_sort",
+   "agreed_inputs": 83,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 75,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203160,
+   "train": "apps_3160__multi",
+   "eval_id": 919,
+   "eval": "mbpp_919__multiply_list",
+   "agreed_inputs": 87,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 83,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203207,
+   "train": "apps_3207__reverseWords",
+   "eval_id": 604,
+   "eval": "mbpp_604__reverse_words",
+   "agreed_inputs": 90,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 86,
+   "difference": {
+    "eval_said": [
+     60,
+     95,
+     32,
+     90,
+     115,
+     43,
+     91,
+     40,
+     59,
+     58,
+     103,
+     76
+    ],
+    "input": [
+     [
+      90,
+      115,
+      43,
+      91,
+      40,
+      59,
+      58,
+      103,
+      76,
+      31,
+      60,
+      95
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     90,
+     115,
+     43,
+     91,
+     40,
+     59,
+     58,
+     103,
+     76,
+     31,
+     60,
+     95
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203496,
+   "train": "apps_3496__sort_by_area",
+   "eval_id": 141,
+   "eval": "mbpp_141__pancake_sort",
+   "agreed_inputs": 88,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 84,
+   "difference": {
+    "eval_said": [
+     -5,
+     2
+    ],
+    "input": [
+     [
+      -5,
+      2
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     2,
+     -5
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203496,
+   "train": "apps_3496__sort_by_area",
+   "eval_id": 428,
+   "eval": "mbpp_428__shell_sort",
+   "agreed_inputs": 88,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 84,
+   "difference": {
+    "eval_said": [
+     -5,
+     2
+    ],
+    "input": [
+     [
+      -5,
+      2
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     2,
+     -5
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203496,
+   "train": "apps_3496__sort_by_area",
+   "eval_id": 877,
+   "eval": "mbpp_877__sort_String",
+   "agreed_inputs": 60,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 56,
+   "difference": {
+    "eval_said": [
+     0,
+     3,
+     6
+    ],
+    "input": [
+     [
+      -1,
+      6,
+      3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     -1,
+     3,
+     6
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203613,
+   "train": "apps_3613__is_substitution_cipher",
+   "eval_id": 885,
+   "eval": "mbpp_885__is_Isomorphic",
+   "agreed_inputs": 106,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 97,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     [
+      100,
+      96,
+      96,
+      100,
+      101
+     ],
+     [
+      96,
+      97,
+      99
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203718,
+   "train": "apps_3718__divisors",
+   "eval_id": 96,
+   "eval": "mbpp_96__divisor",
+   "agreed_inputs": 85,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 77,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     0
+    ],
+    "kind": "one raised",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203992,
+   "train": "apps_3992__is_happy",
+   "eval_id": 20,
+   "eval": "mbpp_20__is_woodall",
+   "agreed_inputs": 97,
+   "own_inputs": 6,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     496
+    ],
+    "kind": "disagree",
+    "train_said": true,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 204165,
+   "train": "apps_4165__uni_total",
+   "eval_id": 798,
+   "eval": "mbpp_798___sum",
+   "agreed_inputs": 100,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 89,
+   "difference": {
+    "eval_said": 7,
+    "input": [
+     [
+      -1,
+      2,
+      3,
+      3
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 8,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 204342,
+   "train": "apps_4342__no_space",
+   "eval_id": 800,
+   "eval": "mbpp_800__remove_all_spaces",
+   "agreed_inputs": 84,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 76,
+   "difference": {
+    "eval_said": [
+     55,
+     79,
+     78,
+     40,
+     45,
+     94,
+     104,
+     64,
+     72,
+     85,
+     50,
+     64
+    ],
+    "input": [
+     [
+      55,
+      79,
+      78,
+      40,
+      45,
+      94,
+      104,
+      64,
+      30,
+      72,
+      85,
+      31,
+      50,
+      64
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": [
+     55,
+     79,
+     78,
+     40,
+     45,
+     94,
+     104,
+     64,
+     30,
+     72,
+     85,
+     31,
+     50,
+     64
+    ],
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 300849,
+   "train": "apps_100849__apps_stdin_849",
+   "eval_id": 489,
+   "eval": "mbpp_489__frequency_Of_Largest",
+   "agreed_inputs": 17,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 13,
+   "difference": {
+    "eval_said": 1,
+    "input": [
+     0,
+     [
+      2,
+      6,
+      5,
+      5,
+      4
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 304308,
+   "train": "apps_104308__apps_stdin_4308",
+   "eval_id": 502,
+   "eval": "mbpp_502__find",
+   "agreed_inputs": 71,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 60,
+   "difference": {
+    "eval_said": 4,
+    "input": [
+     14,
+     5
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 3959195,
+   "train": "apps_3759195__cc_stdin_p03644_AtCoder_Beginner_Contest_068___Break_Number",
+   "eval_id": 302,
+   "eval": "mbpp_302__set_Bit_Number",
+   "agreed_inputs": 108,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 97,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     0
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 6969223,
+   "train": "apps_6769223__cc_stdin_805_A__Fake_NP",
+   "eval_id": 339,
+   "eval": "mbpp_339__find_Divisor",
+   "agreed_inputs": 107,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 96,
+   "difference": {
+    "eval_said": 4,
+    "input": [
+     4,
+     4
+    ],
+    "kind": "disagree",
+    "train_said": 2,
+    "where": "draw"
+   }
+  }
+ ],
+ "insufficient_evidence": [
+  {
+   "pool": "v5",
+   "train_id": 200294,
+   "train": "apps_294__totalNQueens",
+   "eval_id": 518,
+   "eval": "mbpp_518__sqrt_root",
+   "agreed_inputs": 1,
+   "own_inputs": 3,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 102
+  },
+  {
+   "pool": "v5",
+   "train_id": 200294,
+   "train": "apps_294__totalNQueens",
+   "eval_id": 849,
+   "eval": "mbpp_849__Sum",
+   "agreed_inputs": 1,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v5",
+   "train_id": 200370,
+   "train": "apps_370__largestComponentSize",
+   "eval_id": 313,
+   "eval": "mbpp_313__pos_nos",
+   "agreed_inputs": 1,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v5",
+   "train_id": 200370,
+   "train": "apps_370__largestComponentSize",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 1,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v5",
+   "train_id": 201645,
+   "train": "apps_1645__sum_of_squares",
+   "eval_id": 325,
+   "eval": "mbpp_325__get_Min_Squares",
+   "agreed_inputs": 8,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v5",
+   "train_id": 203579,
+   "train": "apps_3579__choose",
+   "eval_id": 28,
+   "eval": "mbpp_28__binomial_Coeff",
+   "agreed_inputs": 7,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 104
+  },
+  {
+   "pool": "v5",
+   "train_id": 203731,
+   "train": "apps_3731__square_sums_row",
+   "eval_id": 20,
+   "eval": "mbpp_20__is_woodall",
+   "agreed_inputs": 2,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v5",
+   "train_id": 203731,
+   "train": "apps_3731__square_sums_row",
+   "eval_id": 711,
+   "eval": "mbpp_711__product_Equal",
+   "agreed_inputs": 2,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v5",
+   "train_id": 204032,
+   "train": "apps_4032__solve",
+   "eval_id": 583,
+   "eval": "mbpp_583__catalan_number",
+   "agreed_inputs": 80,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 73,
+   "undefined": 28
+  },
+  {
+   "pool": "v5",
+   "train_id": 204712,
+   "train": "apps_4712__lucasnum",
+   "eval_id": 389,
+   "eval": "mbpp_389__find_lucas",
+   "agreed_inputs": 3,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 102
+  },
+  {
+   "pool": "v5",
+   "train_id": 204714,
+   "train": "apps_4714__remainder",
+   "eval_id": 502,
+   "eval": "mbpp_502__find",
+   "agreed_inputs": 42,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 34,
+   "undefined": 66
+  },
+  {
+   "pool": "v6",
+   "train_id": 200294,
+   "train": "apps_294__totalNQueens",
+   "eval_id": 518,
+   "eval": "mbpp_518__sqrt_root",
+   "agreed_inputs": 1,
+   "own_inputs": 3,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 102
+  },
+  {
+   "pool": "v6",
+   "train_id": 200294,
+   "train": "apps_294__totalNQueens",
+   "eval_id": 849,
+   "eval": "mbpp_849__Sum",
+   "agreed_inputs": 1,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v6",
+   "train_id": 200370,
+   "train": "apps_370__largestComponentSize",
+   "eval_id": 313,
+   "eval": "mbpp_313__pos_nos",
+   "agreed_inputs": 1,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v6",
+   "train_id": 200370,
+   "train": "apps_370__largestComponentSize",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 1,
+   "own_inputs": 4,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v6",
+   "train_id": 201645,
+   "train": "apps_1645__sum_of_squares",
+   "eval_id": 325,
+   "eval": "mbpp_325__get_Min_Squares",
+   "agreed_inputs": 8,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v6",
+   "train_id": 203579,
+   "train": "apps_3579__choose",
+   "eval_id": 28,
+   "eval": "mbpp_28__binomial_Coeff",
+   "agreed_inputs": 7,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 104
+  },
+  {
+   "pool": "v6",
+   "train_id": 203731,
+   "train": "apps_3731__square_sums_row",
+   "eval_id": 20,
+   "eval": "mbpp_20__is_woodall",
+   "agreed_inputs": 2,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v6",
+   "train_id": 203731,
+   "train": "apps_3731__square_sums_row",
+   "eval_id": 711,
+   "eval": "mbpp_711__product_Equal",
+   "agreed_inputs": 2,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 103
+  },
+  {
+   "pool": "v6",
+   "train_id": 204032,
+   "train": "apps_4032__solve",
+   "eval_id": 583,
+   "eval": "mbpp_583__catalan_number",
+   "agreed_inputs": 80,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 73,
+   "undefined": 28
+  },
+  {
+   "pool": "v6",
+   "train_id": 204712,
+   "train": "apps_4712__lucasnum",
+   "eval_id": 389,
+   "eval": "mbpp_389__find_lucas",
+   "agreed_inputs": 3,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 102
+  },
+  {
+   "pool": "v6",
+   "train_id": 204714,
+   "train": "apps_4714__remainder",
+   "eval_id": 502,
+   "eval": "mbpp_502__find",
+   "agreed_inputs": 42,
+   "own_inputs": 8,
+   "draws": 100,
+   "draws_agreed": 34,
+   "undefined": 66
+  },
+  {
+   "pool": "v6",
+   "train_id": 304176,
+   "train": "apps_104176__apps_stdin_4176",
+   "eval_id": 876,
+   "eval": "mbpp_876__lcm",
+   "agreed_inputs": 5,
+   "own_inputs": 11,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 106
+  },
+  {
+   "pool": "v6",
+   "train_id": 304681,
+   "train": "apps_104681__apps_stdin_4681",
+   "eval_id": 389,
+   "eval": "mbpp_389__find_lucas",
+   "agreed_inputs": 104,
+   "own_inputs": 5,
+   "draws": 100,
+   "draws_agreed": 100,
+   "undefined": 1
+  },
+  {
+   "pool": "v6",
+   "train_id": 3762772,
+   "train": "apps_3562772__cc_stdin_p03544_AtCoder_Beginner_Contest_079___Lucas_Number",
+   "eval_id": 389,
+   "eval": "mbpp_389__find_lucas",
+   "agreed_inputs": 7,
+   "own_inputs": 9,
+   "draws": 100,
+   "draws_agreed": 0,
+   "undefined": 102
+  }
+ ],
+ "references_not_run": [
+  {
+   "pool": "v5",
+   "id": 200179,
+   "name": "apps_179__getLengthOfOptimalCompression",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 200215,
+   "name": "apps_215__isGoodArray",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 200229,
+   "name": "apps_229__canReorderDoubled",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 200242,
+   "name": "apps_242__maxEqualFreq",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 200259,
+   "name": "apps_259__smallestDivisor",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 200278,
+   "name": "apps_278__largestMultipleOfThree",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 200297,
+   "name": "apps_297__numTilePossibilities",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 200300,
+   "name": "apps_300__leastOpsExpressTarget",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 200365,
+   "name": "apps_365__uniqueLetterString",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 200426,
+   "name": "apps_426__reorderedPowerOf2",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 201642,
+   "name": "apps_1642__multiply",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 201643,
+   "name": "apps_1643__almost_everywhere_zero",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 201666,
+   "name": "apps_1666__solution",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 201669,
+   "name": "apps_1669__isNStraightHand",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 202414,
+   "name": "apps_2414__countGoodTriplets",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 202443,
+   "name": "apps_2443__maxNumberOfBalloons",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 202785,
+   "name": "apps_2785__parameter",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 202803,
+   "name": "apps_2803__DPC_sequence",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 202924,
+   "name": "apps_2924__are_coprime",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 203314,
+   "name": "apps_3314__solve",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v5",
+   "id": 203401,
+   "name": "apps_3401__eq_dice",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 203454,
+   "name": "apps_3454__candies_to_buy",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 203687,
+   "name": "apps_3687__mn_lcm",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 203844,
+   "name": "apps_3844__poly_from_roots",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 203863,
+   "name": "apps_3863__final_attack_value",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 203916,
+   "name": "apps_3916__mean_vs_median",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 204012,
+   "name": "apps_4012__encrypt",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 204061,
+   "name": "apps_4061__count_ones",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 204169,
+   "name": "apps_4169__para_to_rect",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 204384,
+   "name": "apps_4384__fraction",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 204439,
+   "name": "apps_4439__div_num",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v5",
+   "id": 204752,
+   "name": "apps_4752__has_subpattern",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 200179,
+   "name": "apps_179__getLengthOfOptimalCompression",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 200215,
+   "name": "apps_215__isGoodArray",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 200229,
+   "name": "apps_229__canReorderDoubled",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 200242,
+   "name": "apps_242__maxEqualFreq",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 200259,
+   "name": "apps_259__smallestDivisor",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 200278,
+   "name": "apps_278__largestMultipleOfThree",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 200297,
+   "name": "apps_297__numTilePossibilities",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 200300,
+   "name": "apps_300__leastOpsExpressTarget",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 200365,
+   "name": "apps_365__uniqueLetterString",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 200426,
+   "name": "apps_426__reorderedPowerOf2",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 201642,
+   "name": "apps_1642__multiply",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 201643,
+   "name": "apps_1643__almost_everywhere_zero",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 201666,
+   "name": "apps_1666__solution",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 201669,
+   "name": "apps_1669__isNStraightHand",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 202414,
+   "name": "apps_2414__countGoodTriplets",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 202443,
+   "name": "apps_2443__maxNumberOfBalloons",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 202785,
+   "name": "apps_2785__parameter",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 202803,
+   "name": "apps_2803__DPC_sequence",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 202924,
+   "name": "apps_2924__are_coprime",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 203314,
+   "name": "apps_3314__solve",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 203401,
+   "name": "apps_3401__eq_dice",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 203454,
+   "name": "apps_3454__candies_to_buy",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 203687,
+   "name": "apps_3687__mn_lcm",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 203844,
+   "name": "apps_3844__poly_from_roots",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 203863,
+   "name": "apps_3863__final_attack_value",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 203916,
+   "name": "apps_3916__mean_vs_median",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 204012,
+   "name": "apps_4012__encrypt",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 204061,
+   "name": "apps_4061__count_ones",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 204169,
+   "name": "apps_4169__para_to_rect",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 204384,
+   "name": "apps_4384__fraction",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 204439,
+   "name": "apps_4439__div_num",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 204752,
+   "name": "apps_4752__has_subpattern",
+   "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
+  },
+  {
+   "pool": "v6",
+   "id": 300070,
+   "name": "apps_100070__apps_stdin_70",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 300081,
+   "name": "apps_100081__apps_stdin_81",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 300313,
+   "name": "apps_100313__apps_stdin_313",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 300377,
+   "name": "apps_100377__apps_stdin_377",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 300397,
+   "name": "apps_100397__apps_stdin_397",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 301113,
+   "name": "apps_101113__apps_stdin_1113",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 301470,
+   "name": "apps_101470__apps_stdin_1470",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 301625,
+   "name": "apps_101625__apps_stdin_1625",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 301846,
+   "name": "apps_101846__apps_stdin_1846",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 301930,
+   "name": "apps_101930__apps_stdin_1930",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 302509,
+   "name": "apps_102509__apps_stdin_2509",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 303714,
+   "name": "apps_103714__apps_stdin_3714",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 303774,
+   "name": "apps_103774__apps_stdin_3774",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 304070,
+   "name": "apps_104070__apps_stdin_4070",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 304309,
+   "name": "apps_104309__apps_stdin_4309",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 304402,
+   "name": "apps_104402__apps_stdin_4402",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 304442,
+   "name": "apps_104442__apps_stdin_4442",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 304484,
+   "name": "apps_104484__apps_stdin_4484",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 304559,
+   "name": "apps_104559__apps_stdin_4559",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 304593,
+   "name": "apps_104593__apps_stdin_4593",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 304683,
+   "name": "apps_104683__apps_stdin_4683",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 2059334,
+   "name": "apps_1859334__cc_stdin_taand",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 3453886,
+   "name": "apps_3253886__cc_stdin_p03659_AtCoder_Beginner_Contest_067___Splitting_Pile",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 4806287,
+   "name": "apps_4606287__cc_stdin_p02603_M_SOLUTIONS_Programming_Contest_2020___Road_to_Millionaire",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 5046167,
+   "name": "apps_4846167__cc_stdin_341_C__Iahub_and_Permutations",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 5455213,
+   "name": "apps_5255213__cc_stdin_tree",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 7855165,
+   "name": "apps_7655165__cc_stdin_cdva1501",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 7922531,
+   "name": "apps_7722531__cc_stdin_p02642_AtCoder_Beginner_Contest_170___Not_Divisible",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 8836270,
+   "name": "apps_8636270__cc_stdin_340_E__Iahub_and_Permutations",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 9092507,
+   "name": "apps_8892507__cc_stdin_chefeq",
+   "why": "reference raised on every input it was given"
+  },
+  {
+   "pool": "v6",
+   "id": 9105357,
+   "name": "apps_8905357__cc_stdin_p03064_Tenka1_Programmer_Contest_2019___Three_Colors",
+   "why": "reference raised on every input it was given"
+  }
+ ]
+}

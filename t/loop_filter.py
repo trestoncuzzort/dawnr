@@ -15,7 +15,8 @@ in at least one, and the clean share of all samples.
 import argparse, json, os, re, subprocess, sys, time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from types import MappingProxyType
+from typing import Iterable, Mapping
 T = Path(__file__).resolve().parent; LL = T.parent / "locallm"
 sys.path.insert(0, str(T)); sys.path.insert(1, str(LL))
 import spec_experiment as se, surface, fuzz_lower
@@ -62,10 +63,46 @@ class Decontamination:
     drop_document_names: frozenset[str]
     exclude_train_ids: frozenset[int]
     overlap_eval_ids: frozenset[int]
+    # 2026-09-25: which policy file excluded each train id, by file name, so a
+    # refusal can say whether an id is a same-task reading (2026-09-21) or a
+    # behavioural twin (t/behavioural_decontam.py); and the held-out ids that
+    # have such a twin in training, for a scorer that splits held-out results
+    # by similarity. The clean 200 stay defined by overlap_eval_ids alone, so
+    # every arm scored before this file remains comparable.
+    excluded_by: Mapping[int, tuple[str, ...]] = field(default_factory=dict, hash=False)
+    behavioural_overlap_eval_ids: frozenset[int] = frozenset()
 
 
-def decontamination(path: Path = T / "decontamination-2026-09-21.json") -> Decontamination:
-    """Load the checked-in same-task exclusions for future corpora and scoring."""
+BEHAVIOURAL_POLICY = T / "decontamination-behavioural-2026-09-25.json"
+
+
+def _behavioural_exclusions(path: Path) -> tuple[frozenset[int], frozenset[int]]:
+    """The train ids t/behavioural_decontam.py excluded, and the held-out ids they twin.
+
+    Refused by name when the file is missing or does not describe what it
+    claims: a policy that silently loads as empty would let every behavioural
+    twin back into the corpus, which is the failure this file exists to stop
+    (Riddell et al., https://ar5iv.labs.arxiv.org/html/2403.04811; Soft
+    Contamination, https://arxiv.org/html/2602.12413v1)."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("schema") != 1:
+        raise TypeError(f"schema {data.get('schema')!r} is not 1")
+    rule, ids, duplicates = data.get("rule"), data.get("exclude_train_ids"), data.get("duplicates")
+    if not isinstance(rule, dict) or not isinstance(ids, list) or not isinstance(duplicates, list):
+        raise TypeError("expected rule, exclude_train_ids and duplicates")
+    excluded = frozenset(int(value) for value in ids)
+    listed = frozenset(int(row["train_id"]) for row in duplicates)
+    if excluded != listed:
+        raise ValueError("exclude_train_ids does not equal the train ids of the listed duplicates")
+    return excluded, frozenset(int(value) for value in data.get("behavioural_overlap_eval_ids", []))
+
+
+def decontamination(path: Path = T / "decontamination-2026-09-21.json",
+                    behavioural_path: Path | None = BEHAVIOURAL_POLICY) -> Decontamination:
+    """Load the checked-in exclusions for future corpora and scoring: the same-task
+    list read by hand (2026-09-21) merged with the behavioural duplicates computed
+    by t/behavioural_decontam.py (2026-09-25). `behavioural_path=None` loads the
+    first file alone; the default path must exist."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         documents = data["drop_documents"]
@@ -83,10 +120,21 @@ def decontamination(path: Path = T / "decontamination-2026-09-21.json") -> Decon
             names.add(name)
         if len(names) != len(documents):
             raise ValueError("document sources do not name distinct tasks")
-        return Decontamination(frozenset(names), frozenset(int(value) for value in train_ids),
-                               frozenset(int(value) for value in overlap_ids))
+        same_task = frozenset(int(value) for value in train_ids)
+        overlap = frozenset(int(value) for value in overlap_ids)
     except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as error:
         raise ValueError(f"cannot read decontamination policy {path}") from error
+    excluded_by = {task_id: (Path(path).name,) for task_id in same_task}
+    behavioural, behavioural_evals = frozenset(), frozenset()
+    if behavioural_path is not None:
+        try:
+            behavioural, behavioural_evals = _behavioural_exclusions(Path(behavioural_path))
+        except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as error:
+            raise ValueError(f"cannot read behavioural decontamination policy {behavioural_path}") from error
+        for task_id in behavioural:
+            excluded_by[task_id] = excluded_by.get(task_id, ()) + (Path(behavioural_path).name,)
+    return Decontamination(frozenset(names), same_task | behavioural, overlap,
+                           MappingProxyType(excluded_by), behavioural_evals)
 
 
 def r12_dev_ids(path: Path = T / "r12-dev-ids.json", split_path: Path | str | None = None) -> frozenset[int]:

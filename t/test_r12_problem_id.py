@@ -59,13 +59,48 @@ class TempDirTestCase(unittest.TestCase):
 
 
 class ProblemIdTests(TempDirTestCase):
+    # The 21 same-task exclusions read by hand on 2026-09-21.
+    SAME_TASK_IDS = frozenset({
+        29, 76, 102, 242, 404, 427, 451, 496, 498, 504, 595, 728, 759, 767,
+        790, 930, 952, 200124, 202465, 203929, 204462,
+    })
+    # The 72 behavioural duplicates t/behavioural_decontam.py measured on 2026-09-25
+    # (pool v5 and pool v6 against the same 232 held-out ids): 16 of the 21 above
+    # rediscovered, 56 new, 7 of those stdin-shaped problems that only pool v6 holds.
+    BEHAVIOURAL_IDS = frozenset({
+        29, 41, 62, 71, 102, 152, 199, 242, 372, 388, 404, 427, 451, 496, 504, 567, 595, 600, 635,
+        756, 759, 767, 790, 930, 940, 955, 100013, 100023, 100057, 200178, 200201, 200343, 202415,
+        202457, 202465, 202493, 202504, 202525, 202542, 202551, 202658, 202849, 202860, 202893,
+        202914, 203008, 203031, 203336, 203383, 203632, 203736, 203778, 203920, 203929, 203985,
+        204152, 204154, 204157, 204207, 204444, 204455, 204462, 204498, 204695, 204735,
+        300281, 300683, 300709, 301606, 5973913, 8141530, 9333067,
+    })
+
     def test_decontamination_policy_has_the_registered_scope(self):
         policy = loop_filter.decontamination()
         self.assertEqual(len(policy.drop_document_names), 37)
-        self.assertEqual(policy.exclude_train_ids, frozenset({
-            29, 76, 102, 242, 404, 427, 451, 496, 498, 504, 595, 728, 759, 767,
-            790, 930, 952, 200124, 202465, 203929, 204462,
-        }))
+        # 77 excluded train ids: the 21 read by hand and the 72 measured, 16 in both
+        self.assertEqual(len(self.SAME_TASK_IDS), 21)
+        self.assertEqual(len(self.BEHAVIOURAL_IDS), 72)
+        self.assertEqual(len(self.SAME_TASK_IDS & self.BEHAVIOURAL_IDS), 16)
+        self.assertEqual(policy.exclude_train_ids, self.SAME_TASK_IDS | self.BEHAVIOURAL_IDS)
+        self.assertEqual(len(policy.exclude_train_ids), 77)
+        # provenance: every excluded id names the file(s) that excluded it
+        self.assertEqual(set(policy.excluded_by), set(policy.exclude_train_ids))
+        by_file = {}
+        for files in policy.excluded_by.values():
+            for name in files:
+                by_file[name] = by_file.get(name, 0) + 1
+        self.assertEqual(by_file, {"decontamination-2026-09-21.json": 21,
+                                   "decontamination-behavioural-2026-09-25.json": 72})
+        self.assertEqual(policy.excluded_by[76], ("decontamination-2026-09-21.json",))
+        self.assertEqual(policy.excluded_by[41], ("decontamination-behavioural-2026-09-25.json",))
+        self.assertEqual(policy.excluded_by[242], ("decontamination-2026-09-21.json",
+                                                   "decontamination-behavioural-2026-09-25.json"))
+        # 47 held-out ids have a behavioural twin in training; the clean 200 stay the 32's complement
+        self.assertEqual(len(policy.behavioural_overlap_eval_ids), 47)
+        self.assertTrue({47, 141, 269, 428, 813, 931}.issubset(policy.behavioural_overlap_eval_ids))
+        self.assertEqual(len(policy.overlap_eval_ids), 32)
         self.assertEqual(policy.overlap_eval_ids, frozenset({
             10, 138, 161, 208, 269, 347, 358, 366, 402, 411, 443, 492, 502, 518,
             527, 565, 566, 604, 626, 682, 687, 699, 719, 729, 775, 800, 813, 842,
