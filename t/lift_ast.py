@@ -679,6 +679,10 @@ class MethodDecl(Decl):
     specs: tuple[MSpec, ...] = ()
     body: Optional[tuple[Stmt, ...]] = None
     attrs: tuple[Attr, ...] = ()
+    # `ghost method` (2026-09-26, methods-as-callees): a ghost method is
+    # never compiled, so a call of one is not a t method call; kept so the
+    # classifier can refuse it by name rather than lift it.
+    ghost: bool = False
 
 
 @dataclass

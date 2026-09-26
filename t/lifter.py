@@ -513,6 +513,12 @@ def lift_file(dfy_path: Path, out_dir: Optional[Path] = None,
         if err is not None:
             outcome.methods.append(MethodOutcome(method=method_name, refusal=err))
             continue
+        if getattr(rewrite_result, "refusal", None) is not None:
+            # Row 37: a named rewrite-stage refusal (a callee's spec_fun
+            # conflicts with this task's under one name).
+            outcome.methods.append(MethodOutcome(
+                method=method_name, refusal=rewrite_result.refusal))
+            continue
         task, record = rewrite_result.task, rewrite_result.record
         record.warnings.extend(src_warnings)
 
@@ -525,7 +531,8 @@ def lift_file(dfy_path: Path, out_dir: Optional[Path] = None,
                                      stem, method_name or "_")
         check_output, err = _stage_call(
             "check", "lift_check.check", method_line,
-            lift_check.check, task, method, plan.closure, record, scratch, timeout_s)
+            lift_check.check, task, method, plan.closure, record, scratch, timeout_s,
+            callees=getattr(rewrite_result, "callees", ()))
         if err is not None:
             outcome.methods.append(MethodOutcome(
                 method=method_name, task=task, record=record, refusal=err))

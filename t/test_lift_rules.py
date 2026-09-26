@@ -1745,20 +1745,32 @@ method UseCompr(n: int) returns (r: bool)
           "refuse `set` at classify, never reaching rewrite")
 
 
-def test_calls_other_method_in_assignment() -> None:
-    """Section 4.5's `x := M(args);` row: a call of a DIFFERENT method,
-    as a plain assignment's or a var-init's right-hand side, must refuse
-    `calls-other-method` -- previously only a bare `M(args);` call
-    STATEMENT was caught, so this shape (nitwit's `nit_flip` calling the
-    method `max_nit`, VSI-Benchmarks' `Mul` calling `Add`) reached
-    lift_rewrite and either crashed or emitted an unknown-fun call."""
-    src = """
+_HELPER_SRC = """
 method Helper(x: int) returns (h: int)
   ensures h == x
 {
   h := x;
 }
+"""
 
+
+def _classify_real(src: str, method_name: str):
+    """classify one method through the real parser (`lift_parse.parse`, no
+    dafny), for shapes the shim does not read (`ghost method`)."""
+    import lift_parse
+    mod = lift_parse.parse(src)
+    m = next(d for d in lift_parse.gradable_methods(mod) if d.name == method_name)
+    return mod, C.classify(mod, m)
+
+
+def test_calls_other_method_in_assignment() -> None:
+    """Row 37 (SPEC.md "Methods (v1)"): `var t := Helper(x);` of a
+    one-return method is the whole right-hand side of a var init, the shape
+    a t method call is, so it lifts: `Helper` becomes the task's one
+    `methods` entry, the call names it, and check_wf passes. It refused
+    `calls-other-method` until 2026-09-26, when t had no methods (nitwit's
+    `nit_flip` calling `max_nit`, VSI-Benchmarks' `Mul` calling `Add`)."""
+    src = _HELPER_SRC + """
 method Caller(x: int) returns (r: int)
   ensures r == x
 {
@@ -1766,10 +1778,204 @@ method Caller(x: int) returns (r: int)
   r := t;
 }
 """
-    v = _classify_one(src, "Caller")
-    assert isinstance(v, C.Refusal) and v.reason == "calls-other-method", f"expected calls-other-method, got {v}"
-    print("test_calls_other_method_in_assignment: `var t := Helper(x);` refuses "
-          "calls-other-method (not just a bare call statement)")
+    task, record = _lift_one(src, "Caller")
+    methods = task.get("methods", [])
+    assert [m["name"] for m in methods] == ["unit__helper"], methods
+    m = methods[0]
+    assert m["returns"][0]["type"] == "int" and len(m["ensures"]) == 1, m
+    calls = [c["fun"] for c in _find_all(task["body"], "call")]
+    assert calls == ["unit__helper"], calls
+    assert "method-lifted" in _rule_names(record), _rule_names(record)
+    ref = interp.Reference(task)
+    assert ref.points and all(v == env["x"] for env, v in ref.points[:20]), ref.points[:3]
+    print("test_calls_other_method_in_assignment: `var t := Helper(x);` lifts to a "
+          "`methods` entry and a call of it; check_wf [] and interp agree")
+
+
+def test_method_call_uncovered_shapes_refuse() -> None:
+    """Row 37's uncovered shapes each refuse by name, never lift: a call
+    inside an expression or as another call's argument (Dafny 8.5.2: a
+    method call is a whole right-hand side, never an argument), a call
+    statement of a method with no out-parameter, a destructuring call of a
+    two-return method, a ghost method, mutual recursion between methods,
+    and a callee that is itself refused (its reason, prefixed)."""
+    cases = {
+        "method-call-position": (_HELPER_SRC + """
+method Caller(x: int) returns (r: int)
+  ensures r == x + 1
+{
+  r := Helper(x) + 1;
+}
+""", "Caller"),
+        "method-call-position#arg": (_HELPER_SRC + """
+method Caller(x: int) returns (r: int)
+  ensures r == x
+{
+  r := Helper(Helper(x));
+}
+""", "Caller"),
+        "calls-other-method": ("""
+method Nop(x: int)
+{
+}
+method Caller(x: int) returns (r: int)
+  ensures r == x
+{
+  Nop(x);
+  r := x;
+}
+""", "Caller"),
+        "method-call-multi-return": ("""
+method Two(x: int) returns (a: int, b: int)
+  ensures a == x && b == x
+{
+  a := x;
+  b := x;
+}
+method Caller(x: int) returns (r: int)
+  ensures r == x
+{
+  var a, b := Two(x);
+  r := a;
+}
+""", "Caller"),
+        "method-call-ghost": ("""
+ghost method G(x: int) returns (h: int)
+  ensures h == x
+{
+  h := x;
+}
+method Caller(x: int) returns (r: int)
+  ensures r == x
+{
+  var t := G(x);
+  r := x;
+}
+""", "Caller"),
+        "method-mutual-recursion": ("""
+method A(n: nat) returns (r: int)
+  ensures r == 0
+  decreases n
+{
+  if n == 0 { r := 0; } else { r := B(n - 1); }
+}
+method B(n: nat) returns (r: int)
+  ensures r == 0
+  decreases n
+{
+  if n == 0 { r := 0; } else { r := A(n - 1); }
+}
+""", "A"),
+        "callee-refused:assume": ("""
+method Bad(x: int) returns (h: int)
+  ensures h == x
+{
+  assume x > 0;
+  h := x;
+}
+method Caller(x: int) returns (r: int)
+  ensures r == x
+{
+  var t := Bad(x);
+  r := t;
+}
+""", "Caller"),
+    }
+    for want, (src, name) in cases.items():
+        _mod, v = _classify_real(src, name)
+        assert isinstance(v, C.Refusal) and v.reason == want.split("#")[0], (want, v)
+    print(f"test_method_call_uncovered_shapes_refuse: {len(cases)} shapes refuse by name")
+
+
+def test_recursive_callee_lifts() -> None:
+    """Row 37: a self-recursive callee with a decreases (vericoding DB0052's
+    `Pow`) lifts as a method that calls itself, carrying the decreases
+    (SPEC.md "Methods (v1)": required iff the body self-calls); a chain
+    Top -> B1 -> C1 lifts callees first, each once, sharing one spec_fun."""
+    src = """
+function Exp(x: nat, y: nat): nat { if y == 0 then 1 else x * Exp(x, y - 1) }
+method Pow(x: nat, y: nat) returns (p: nat)
+  ensures p == Exp(x, y)
+  decreases y
+{
+  if y == 0 { p := 1; } else { var q := Pow(x, y - 1); p := x * q; }
+}
+method Caller(b: nat, e: nat) returns (r: nat)
+  ensures r == Exp(b, e) + 1
+{
+  var t := Pow(b, e);
+  r := t + 1;
+}
+"""
+    mod, v = _classify_real(src, "Caller")
+    assert isinstance(v, C.Liftable), v
+    rr = R.rewrite(mod, v, "unit.dfy", "sha")
+    assert rr.refusal is None and fuzz_lower.check_wf(rr.task) == [], fuzz_lower.check_wf(rr.task)
+    (m,) = rr.task["methods"]
+    assert m["name"] == "unit__pow" and "decreases" in m, m
+    assert "unit__pow" in [c["fun"] for c in _find_all(m["body"], "call")], m["body"]
+    assert [f["name"] for f in rr.task["spec_funs"]] == ["exp"], rr.task["spec_funs"]
+    ref = interp.Reference(rr.task)
+    env, val = next((e, x) for e, x in ref.points if e["b"] == 2 and e["e"] == 3)
+    assert val == 9, (env, val)
+
+    chain = """
+function Id(x: int): int { x }
+method C1(x: int) returns (h: int)
+  ensures h == Id(x)
+{
+  h := x;
+}
+method B1(x: int) returns (h: int)
+  ensures h == Id(x)
+{
+  h := C1(x);
+}
+method Top(x: int) returns (r: int)
+  ensures r == Id(x)
+{
+  var u := B1(x);
+  r := C1(u);
+}
+"""
+    mod, v = _classify_real(chain, "Top")
+    rr = R.rewrite(mod, v, "unit.dfy", "sha")
+    assert fuzz_lower.check_wf(rr.task) == [], fuzz_lower.check_wf(rr.task)
+    assert [m["name"] for m in rr.task["methods"]] == ["unit__c1", "unit__b1"], rr.task["methods"]
+    assert [c.name for c in rr.callees] == ["C1", "B1"], rr.callees
+    assert [f["name"] for f in rr.task["spec_funs"]] == ["id"], rr.task["spec_funs"]
+    print("test_recursive_callee_lifts: Pow lifts with its decreases and self-call "
+          "(interp 2^3+1 == 9); a callee chain lifts callees first, one spec_fun")
+
+
+def test_method_spec_fun_conflict_refused() -> None:
+    """Row 37: two DIFFERENT spec_funs under one t name after merging a
+    callee's are refused by that name at rewrite, never merged: `Foo` and
+    `foo` both lift to `foo` in separate contexts (the renamer lowers an
+    uppercase initial), and the caller's own `foo` and the callee's `Foo`
+    are not the same function."""
+    src = """
+function foo(x: int): int { x + 1 }
+function Foo(x: int): int { x + 2 }
+method Callee(x: int) returns (h: int)
+  ensures h == Foo(x)
+{
+  h := x + 2;
+}
+method Caller(x: int) returns (r: int)
+  ensures r == foo(x)
+{
+  var t := Callee(x);
+  r := x + 1;
+}
+"""
+    mod, v = _classify_real(src, "Caller")
+    assert isinstance(v, C.Liftable), v
+    rr = R.rewrite(mod, v, "unit.dfy", "sha")
+    assert rr.refusal is not None and rr.refusal.reason == "method-spec-fun-conflict", rr.refusal
+    assert rr.refusal.token == "foo", rr.refusal
+    print("test_method_spec_fun_conflict_refused: `foo` vs `Foo` refuses "
+          "method-spec-fun-conflict, not merged")
 
 
 def test_lemma_call_is_dropped_not_refused() -> None:
@@ -3528,6 +3734,8 @@ UNIT_TESTS = [
     test_function_reads_non_array_still_refuses,
     test_decreases_tuple_projection_and_guess_sum, test_multi_method_one_task_each,
     test_set_refused_before_rewrite, test_calls_other_method_in_assignment,
+    test_method_call_uncovered_shapes_refuse, test_recursive_callee_lifts,
+    test_method_spec_fun_conflict_refused,
     test_lemma_call_is_dropped_not_refused,
     test_null_refuses_heap, test_bodyless_method_refused,
     test_method_level_decreases_neither_projects_nor_sums,
