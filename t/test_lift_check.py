@@ -997,6 +997,92 @@ FAST_TESTS += [test_resolver_binder_printed_in_source_form, test_split_quantifie
 SLOW_TESTS += [test_minimal_programs_check]
 
 
+_CALLEE_SRC = """
+method Helper(x: int) returns (h: int)
+  requires x >= 0
+  ensures h == x
+{
+  h := x;
+}
+
+method Caller(x: int) returns (r: int)
+  requires x >= 0
+  ensures r == x
+{
+  var t := Helper(x);
+  r := t;
+}
+"""
+
+
+def test_method_callees_checked_end_to_end() -> None:
+    """Row 37 (methods as callees): `check` checks each callee method on
+    its own before the caller -- its L_req/L_ens against the SOURCE
+    callee's contract -- because a caller's proof uses only the callee's
+    contract. (a) The honest lift passes, with `Helper/L_req` and
+    `Helper/L_ens` verified on the caller's record. (b) A callee whose
+    lifted ensures is wrong (`h == x + 1`, in both the callee task and the
+    caller's `methods` entry) is caught: `lift-check-failed`, token
+    `Helper:L_ens`. (c) A caller whose `methods` entry is not the checked
+    callee is refused `method-entry-mismatch` before any dafny runs.
+    Runs dafny when it is installed (two short verify runs and two
+    `dafny run`s), else prints skipped."""
+    import copy
+    import dataclasses
+    import tempfile
+    from verifiers.dafny import DAFNY
+
+    module = lift_parse.parse(_CALLEE_SRC)
+    caller = next(m for m in lift_parse.gradable_methods(module) if m.name == "Caller")
+    plan = lift_classify.classify(module, caller)
+    assert not isinstance(plan, Refusal), plan
+    rr = lift_rewrite.rewrite(module, plan, "unit.dfy", "0" * 64)
+    assert rr.refusal is None and [c.name for c in rr.callees] == ["Helper"], rr
+
+    # (c) needs no prover.
+    bad_task = copy.deepcopy(rr.task)
+    bad_task["methods"][0]["ensures"] = [{"bool": True}]
+    with tempfile.TemporaryDirectory() as d:
+        out = lift_check.check(bad_task, plan.method, plan.closure,
+                               copy.deepcopy(rr.record), Path(d) / "c.dfy",
+                               callees=rr.callees)
+    assert out.refusal is not None and out.refusal.reason == "method-entry-mismatch", out.refusal
+
+    if DAFNY is None:
+        print("test_method_callees_checked_end_to_end: (a)/(b) skipped (no dafny)")
+        return
+
+    with tempfile.TemporaryDirectory() as d:
+        out = lift_check.check(rr.task, plan.method, plan.closure, rr.record,
+                               Path(d) / "a.dfy", callees=rr.callees)
+    assert out.refusal is None, out.refusal
+    v = out.record.checker_verdicts
+    assert v.get("Helper/L_req") == "verified" and v.get("Helper/L_ens") == "verified", v
+    assert v.get("L_ens") == "verified", v
+
+    wrong = {"op": "==", "args": [{"var": "h"},
+                                  {"op": "+", "args": [{"var": "x"}, {"int": 1}]}]}
+    cl = rr.callees[0]
+    assert cl.task["ensures"] and cl.task["returns"][0]["name"] == "h", cl.task
+    bad_cl_task = copy.deepcopy(cl.task)
+    bad_cl_task["ensures"] = [wrong]
+    bad_cl = dataclasses.replace(cl, task=bad_cl_task, record=copy.deepcopy(cl.record))
+    bad_task = copy.deepcopy(rr.task)
+    bad_task["methods"] = [lift_rewrite._method_entry(bad_cl_task)]
+    with tempfile.TemporaryDirectory() as d:
+        out = lift_check.check(bad_task, plan.method, plan.closure,
+                               copy.deepcopy(rr.record), Path(d) / "b.dfy",
+                               callees=(bad_cl,))
+    assert out.refusal is not None and out.refusal.reason == "lift-check-failed", out.refusal
+    assert out.refusal.token == "Helper:L_ens", out.refusal
+    print("test_method_callees_checked_end_to_end: honest lift checks (Helper/L_req, "
+          "Helper/L_ens verified); a wrong callee ensures refuses lift-check-failed "
+          "Helper:L_ens; a mismatched methods entry refuses method-entry-mismatch")
+
+
+FAST_TESTS += [test_method_callees_checked_end_to_end]
+
+
 def run(slow: bool = False) -> None:
     failures = 0
     for fn in FAST_TESTS:

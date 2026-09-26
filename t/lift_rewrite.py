@@ -55,7 +55,7 @@ from lift_ast import (
     EnsuresClause, Expr, ForStmt, Fresh, FunctionDecl, Ident, IfExpr, IfStmt,
     Iff, Implies, Index, IntLit, InvariantClause, LabelStmt, LemmaDecl,
     LiftRecord, Lhs, MethodDecl, Module, NaryBool, NewRhs, Old, Param,
-    Quantifier, ReadsClause, Rename, RequiresClause, ReturnStmt, Rewrite,
+    Quantifier, ReadsClause, Refusal, Rename, RequiresClause, ReturnStmt, Rewrite,
     SeqDisplay, SeqUpdate, Slice, Stmt, StringLit, Type, Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
@@ -368,11 +368,15 @@ class Scope:
     # so it is set ONLY on `body_scope`, never on the outer `scope`.
     pair_view: dict = field(default_factory=dict)
     pair_ret: Optional[tuple] = None                # (pair t-name, dafny a-name, dafny b-name)
+    # Row 37 (methods as callees): dafny name -> the declared return `Type`
+    # of every other method this one calls, so an untyped `var x := M(a);`
+    # gets `M`'s return type rather than `_t_type_of(None)`'s int default.
+    method_rets: dict = field(default_factory=dict)
 
     def copy(self) -> "Scope":
         return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
                      self.old_array_name, self.old_array_param_tname, self.null_drop_ids,
-                     dict(self.pair_view), self.pair_ret)
+                     dict(self.pair_view), self.pair_ret, dict(self.method_rets))
 
 
 # ---------------------------------------------------------------------------
@@ -1184,9 +1188,16 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 else:
                     rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
                     json_ty = None
+                    callee_ret = (scope.method_rets.get(rhs.fn.name)
+                                  if isinstance(rhs, Call) and isinstance(rhs.fn, Ident) else None)
                     if nm.type is not None:
                         ty = _t_type_of(nm.type)
                         json_ty = _t_json_type(nm.type)
+                    elif callee_ret is not None:
+                        # Row 37: Dafny types `var x := M(a);` by `M`'s
+                        # declared out-parameter.
+                        ty = _t_type_of(callee_ret)
+                        json_ty = _t_json_type(callee_ret)
                     else:
                         # Rows 25-27: an UNTYPED local (`var r := [];`,
                         # `var r := r + [x];`) is exactly as common a
@@ -1494,13 +1505,86 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
 # ---------------------------------------------------------------------------
 
 @dataclass
+class CalleeLift:
+    """Row 37: one method a lifted task calls, lifted on its own. `task` is
+    the callee lifted exactly as a task is (its own `methods`, if it calls
+    others, included); the caller's `methods` entry is that task's name,
+    params, returns, contract, decreases and body, verbatim. `source` and
+    `closure` are the callee's own source method and call-graph closure,
+    what `lift_check` compares the lift against; `callees` are this
+    callee's own transitive callees, callees-first."""
+    name: str                 # the callee's dafny name
+    source: MethodDecl
+    closure: tuple
+    task: dict
+    record: LiftRecord
+    callees: tuple = ()
+
+
+@dataclass
 class RewriteResult:
     task: dict
     record: LiftRecord
+    # Row 37: every method the task calls, transitively, callees first, once
+    # each (the order of the task's own `methods`).
+    callees: tuple = ()
+    # Row 37: a named refusal this stage found (two different spec_funs
+    # under one name after merging a callee's), else None. `task` is then
+    # not a lift.
+    refusal: Optional[Refusal] = None
+
+
+def _canon_fun(f: dict) -> str:
+    """A spec_fun's JSON with its parameter and binder names replaced by
+    their order of first appearance, so two lifts of one Dafny function
+    that the renamer spelled differently (a parameter `n` became `n_v` in
+    a lift whose own method already had an `n`) compare equal, and two
+    different functions do not."""
+    import json as _json
+    names: dict = {}
+
+    def canon(x):
+        if isinstance(x, dict):
+            out = {}
+            for k, v in x.items():
+                if k in ("var", "name") and isinstance(v, str):
+                    out[k] = names.setdefault(v, f"_{len(names)}")
+                else:
+                    out[k] = canon(v)
+            return out
+        if isinstance(x, list):
+            return [canon(v) for v in x]
+        return x
+    body = {"params": canon(f.get("params", [])), "result": f.get("result"),
+            "decreases": canon(f.get("decreases")), "body": canon(f.get("body"))}
+    return _json.dumps(body, sort_keys=True)
+
+
+def _method_entry(t: dict) -> dict:
+    """A lifted callee task as a `methods` entry (SPEC.md "Methods (v1)"):
+    name, params, the one return, requires, ensures, decreases if the
+    callee self-calls, body. An empty ensures list is Dafny's default
+    postcondition `true` (the caller knows nothing of the result), written
+    out because t requires one clause."""
+    m = {"name": t["name"], "params": t["params"], "returns": t["returns"],
+         "requires": t["requires"], "ensures": t["ensures"] or [{"bool": True}],
+         "body": t["body"]}
+    if "decreases" in t:
+        m["decreases"] = t["decreases"]
+    return m
 
 
 def rewrite(module: Module, plan: Liftable, source_path: str,
             rprint_sha256: str) -> RewriteResult:
+    # Row 37 (methods as callees): each callee is lifted first, on its own,
+    # by this same function -- the machinery that lifts a task -- and becomes
+    # a `methods` entry below; its task name is what a call of it lifts to.
+    callee_results = []
+    for cname, cplan in getattr(plan, "callees", ()):
+        crr = rewrite(module, cplan, source_path, rprint_sha256)
+        if crr.refusal is not None:
+            return RewriteResult(task=crr.task, record=crr.record, refusal=crr.refusal)
+        callee_results.append((cname, cplan, crr))
     # Let expressions (2026-09-26): the plan carries the source's own method and
     # closure (`classify`'s comment says why); everything below lifts them with
     # every let substituted away, the same deterministic `lift_let.expand_scope`
@@ -1559,6 +1643,8 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
 
     scope = Scope()
     scope.null_drop_ids = null_drop_ids
+    scope.method_rets = {cname: cplan.method.returns[0].type
+                         for cname, cplan, _crr in callee_results}
     params_out = []
     for p in method.params:
         tname = renamer.fresh(p.name, record, "param")
@@ -1670,8 +1756,16 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     for d in fn_decls:
         fn_names[d.name] = renamer.fresh(d.name, record, "function")
     spec_funs_out = [_lift_function(d, renamer, fn_names, record) for d in fn_decls]
+    # Row 37: a call of a callee method lifts to a call of its task name
+    # (`_lift_expr`'s `Call` case reads `fn_names`); set after the spec_funs
+    # are lifted, since no function body can call a method.
+    callee_fn_names = set()
+    for cname, cplan, crr in callee_results:
+        fn_names[cname] = crr.task["name"]
+        callee_fn_names |= {d.name for d in cplan.closure if d.name}
     unused = [d for d in module.decls if isinstance(d, (FunctionDecl, LemmaDecl))
-              and d is not method and d.name not in fn_names]
+              and d is not method and d.name not in fn_names
+              and d.name not in callee_fn_names]
     if unused:
         record.clauses_dropped.append(ClauseDropped(rule="unused-function-dropped", count=len(unused)))
         for d in unused:
@@ -1902,7 +1996,47 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     if gate:
         task["gate"] = gate
 
-    return RewriteResult(task=task, record=record)
+    # Row 37: the callees' methods, callees first, each once; their spec_funs
+    # merged into this task's, one per name. The same Dafny function lifted
+    # in two contexts may differ only in its parameter spelling (`_canon_fun`);
+    # two DIFFERENT definitions under one name is refused by that name.
+    callees: list = []
+    if callee_results:
+        methods_out: list = []
+        seen_methods: set = set()
+        funs_by_name = {f["name"]: f for f in spec_funs_out}
+        for cname, cplan, crr in callee_results:
+            for m in crr.task.get("methods", []):
+                if m["name"] not in seen_methods:
+                    seen_methods.add(m["name"])
+                    methods_out.append(m)
+            for cl in crr.callees:
+                if cl.task["name"] not in {c.task["name"] for c in callees}:
+                    callees.append(cl)
+            if crr.task["name"] not in seen_methods:
+                seen_methods.add(crr.task["name"])
+                methods_out.append(_method_entry(crr.task))
+                callees.append(CalleeLift(name=cname, source=cplan.method,
+                                          closure=cplan.closure, task=crr.task,
+                                          record=crr.record, callees=tuple(crr.callees)))
+                record.rewrites.append(Rewrite(rule="method-lifted", line=cplan.method.line))
+                if not crr.task["ensures"]:
+                    record.clauses_added.append(ClauseAdded(
+                        rule="method-ensures-true", text=f"{crr.task['name']}: ensures true"))
+            for f in crr.task.get("spec_funs", []):
+                have = funs_by_name.get(f["name"])
+                if have is None:
+                    funs_by_name[f["name"]] = f
+                    spec_funs_out.append(f)
+                elif _canon_fun(have) != _canon_fun(f):
+                    return RewriteResult(task=task, record=record, refusal=Refusal(
+                        reason="method-spec-fun-conflict", token=f["name"],
+                        line=cplan.method.line, stage="rewrite"))
+        if spec_funs_out:
+            task["spec_funs"] = spec_funs_out
+        task["methods"] = methods_out
+
+    return RewriteResult(task=task, record=record, callees=tuple(callees))
 
 
 def _method_level_decreases(method: MethodDecl, scope: Scope, fn_names: dict,

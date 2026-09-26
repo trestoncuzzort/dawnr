@@ -627,7 +627,8 @@ class _Parser:
             body = self.parse_block()
         return MethodDecl(line, name=name, type_params=type_params,
                            params=tuple(params), returns=tuple(returns),
-                           specs=tuple(specs), body=body, attrs=attrs)
+                           specs=tuple(specs), body=body, attrs=attrs,
+                           ghost="ghost" in modifiers)
 
     def _check_hint_chain_semicolon(self) -> None:
         """A fully-parsed Expr followed immediately by ";" (measured in a

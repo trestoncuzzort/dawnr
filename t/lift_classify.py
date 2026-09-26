@@ -448,7 +448,8 @@ def _closure_fn_kinds(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str
     return kinds
 
 
-def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str, str]:
+def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
+                    method_kinds: Optional[dict] = None) -> dict[str, str]:
     """Name -> `int`/`bool`/`seq` for rows 25-27's own questions: every
     parameter and the one return by declared type (the method's own and
     every closure function's -- a `+`/slice/literal can sit inside a
@@ -471,7 +472,8 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str, 
     accepted. `setdefault` throughout: an outer param/return/local name
     a quantifier binder or `for`-var happens to share is not clobbered
     by the (rare) shadowing case, the more common reading kept."""
-    env: dict[str, str] = dict(_closure_fn_kinds(method, closure))
+    env: dict[str, str] = dict(method_kinds or {})
+    env.update(_closure_fn_kinds(method, closure))
     for p in method.params:
         k = _declared_kind(p.type)
         if k is not None:
@@ -1947,13 +1949,27 @@ class Liftable:
     # not enough on its own -- classify already confirmed both
     # component types AND every other row-29 condition below.
     pair_returns: Optional[tuple[Param, Param]] = None
+    # Methods as callees (2026-09-26, SPEC.md "Methods (v1)", LIFTER-DECISIONS.md
+    # row 37): every OTHER method this one calls, once each in first-call order,
+    # as (dafny name, that method's own `Liftable`). Each callee was classified
+    # by this same function (its refusal is this method's refusal), so its own
+    # `callees` carry the rest of the call graph; `lift_rewrite.rewrite` lifts
+    # them callees-first into the task's `methods`.
+    callees: tuple = ()
 
 
 def _first(issues: list[tuple[int, str, str]]) -> tuple[int, str, str]:
     return min(issues, key=lambda t: t[0])
 
 
-def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
+def classify(module: Module, method: MethodDecl, _stack: tuple = (),
+             _memo: Optional[dict] = None) -> "Refusal | Liftable":
+    """`_stack` (the callers whose classification is in progress, outermost
+    first) and `_memo` (dafny method name -> its verdict, shared by one
+    top-level call) are the methods-as-callees recursion's own state; a
+    caller outside this module passes neither."""
+    if _memo is None:
+        _memo = {}
     issues: list[tuple[int, str, str]] = []
     rewrites: list[Rewrite] = []
 
@@ -2159,7 +2175,7 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     # parameter, a seq local/parameter/return, a slice-of-a-slice) now
     # lifts the same way a plain seq does, per SPEC.md's own note that
     # `a[..]` on an array parameter "is the parameter itself, unchanged".
-    kind_env = _build_kind_env(method, closure)
+    kind_env = _build_kind_env(method, closure, _method_return_kinds(module))
     char_names, char_seq_names = _build_char_names(method, closure)
     mutated_array_name = array_mutation.name if array_mutation is not None else None
     for root in scope_roots:
@@ -2278,6 +2294,10 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     # -- self-recursion shape (section 4.5's `r := M(args)` row) ---------
     issues += _self_call_positions(method)
 
+    # -- calls of OTHER methods (SPEC.md "Methods (v1)", row 37) ----------
+    callee_plans, call_issues = _method_calls(module, method, _stack, _memo)
+    issues += call_issues
+
     # -- returns (tail vs early-exit) ------------------------------------
     if method.body is not None:
         ri, rr = scan_returns(method.body, True)
@@ -2372,8 +2392,10 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     rewrites += _plan_rewrites(module, method, closure, ret_param, array_params,
                                 mutated_param_name, array_mutation)
 
+    for cname, _cplan in callee_plans:
+        rewrites.append(Rewrite(rule="method-lifted", line=_cplan.method.line))
     return Liftable(method=source_method, closure=source_closure, rewrites=rewrites,
-                    pair_returns=pair_returns)
+                    pair_returns=pair_returns, callees=tuple(callee_plans))
 
 
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,
@@ -2473,14 +2495,117 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
             issues.append((n.line, "calls-other-method", n.name))
         # else: a lemma call in the closure -- dropped, not refused
         # (decision 8; see _plan_rewrites' lemma-call-dropped entry).
-    elif (isinstance(n, Call) and isinstance(n.fn, Ident)
-          and n.fn.name != method_name and n.fn.name in method_names):
-        # `x := M(args)` / `var x := M(args)` / any other expression
-        # position naming a DIFFERENT method (section 4.5's row; a
-        # same-named self-call is section 4.5's own rewrite, handled by
-        # `_self_call_positions`, and a call of a closure function is an
-        # ordinary spec_fun application, not this row at all).
-        issues.append((n.line, "calls-other-method", n.fn.name))
+    # A `Call` naming a DIFFERENT method (`x := M(args)`, `var x := M(args)`,
+    # or any other position) is no longer refused here: `_method_calls`
+    # (row 37, SPEC.md "Methods (v1)") decides it with the context it needs.
+
+
+def _method_return_kinds(module: Module) -> dict[str, str]:
+    """dafny method name -> the kind of its one return, for every method of
+    `module` with exactly one out-parameter of a kind `expr_kind` knows, so
+    `var x := M(args);` types `x` from `M`'s declared return (row 37)."""
+    kinds: dict[str, str] = {}
+    for d in module.decls:
+        if isinstance(d, MethodDecl) and d.name and len(d.returns) == 1:
+            k = _declared_kind(d.returns[0].type)
+            if k is not None:
+                kinds[d.name] = k
+    return kinds
+
+
+def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
+                  ) -> tuple[list, list[tuple[int, str, str]]]:
+    """Row 37 (2026-09-26, SPEC.md "Methods (v1)"): every call of ANOTHER
+    method in `method`'s body, decided. Covered, and returned as
+    `(name, Liftable)` once per callee in first-call order: the callee is a
+    non-ghost method of this module with exactly one out-parameter and no
+    type parameters, the call is the whole right-hand side of a one-target
+    `x := M(args);` or a one-name `var x := M(args);` (Dafny reference
+    manual 8.5.2: a method call is a whole right-hand side, its results
+    assigned to as many left-hand sides as it has out-parameters, and "the
+    result of a method call is not allowed to be used as an argument of
+    another method call"), no argument calls a method, the callee itself
+    classifies `Liftable` (recursively, this function's own caller), it
+    neither mutates nor allocates an array (a heap effect on the caller, or
+    an array result, t's call has no word for), and no method on the call
+    chain is reached again (a callee's DIRECT self-recursion is its own
+    classify's self-call row, with its own decreases rule). Everything else
+    is an issue by name: `method-call-ghost`, `method-call-no-return`,
+    `method-call-multi-return`, `method-call-generic`, `method-call-position`,
+    `method-call-array`, `method-mutual-recursion`, or
+    `callee-refused:<the callee's own reason>` (token `<callee>:<token>`).
+    A call STATEMENT `M(args);` of a method that is not a lemma is still
+    `calls-other-method` (`_scan_node_for_issues`): a method with no
+    out-parameter has no value for t to bind."""
+    issues: list[tuple[int, str, str]] = []
+    plans: list = []
+    if method.body is None:
+        return plans, issues
+    by_name = {d.name: d for d in module.decls if isinstance(d, MethodDecl) and d.name}
+
+    def is_other_call(n) -> bool:
+        return (isinstance(n, Call) and isinstance(n.fn, Ident)
+                and n.fn.name in by_name and n.fn.name != method.name)
+
+    whole_rhs: set[int] = set()
+    for s in walk(method.body):
+        rhs = None
+        if (isinstance(s, Assign) and len(s.targets) == 1 and len(s.values) == 1
+                and s.targets[0].kind == "name"):
+            rhs = s.values[0]
+        elif (isinstance(s, VarDeclStmt) and not s.ghost and s.init
+                and len(s.names) == 1 and len(s.init) == 1):
+            rhs = s.init[0]
+        if rhs is not None and is_other_call(rhs):
+            whole_rhs.add(id(rhs))
+
+    seen: set[str] = set()
+    for n in walk(method.body):
+        if not is_other_call(n):
+            continue
+        name = n.fn.name
+        callee = by_name[name]
+        if callee.ghost:
+            issues.append((n.line, "method-call-ghost", name))
+            continue
+        if len(callee.returns) == 0:
+            issues.append((n.line, "method-call-no-return", name))
+            continue
+        if len(callee.returns) > 1:
+            issues.append((n.line, "method-call-multi-return", name))
+            continue
+        if callee.type_params:
+            issues.append((n.line, "method-call-generic", name))
+            continue
+        if id(n) not in whole_rhs or any(is_other_call(x) for a in n.args for x in walk(a)):
+            issues.append((n.line, "method-call-position", name))
+            continue
+        if name in stack:
+            issues.append((n.line, "method-mutual-recursion", name))
+            continue
+        if name in seen:
+            continue
+        seen.add(name)
+        verdict = memo.get(name)
+        if verdict is None:
+            verdict = classify(module, callee, stack + (method.name,), memo)
+            memo[name] = verdict
+        if isinstance(verdict, Refusal):
+            if verdict.reason == "method-mutual-recursion":
+                issues.append((n.line, verdict.reason, verdict.token))
+            elif verdict.reason.startswith("callee-refused:"):
+                # a callee's callee: one prefix, the chain in the token
+                issues.append((n.line, verdict.reason, f"{name}:{verdict.token}"))
+            else:
+                issues.append((n.line, f"callee-refused:{verdict.reason}",
+                               f"{name}:{verdict.token}"))
+            continue
+        mutation, _ = find_array_mutation(callee, _closure(module, callee))
+        if mutation is not None:
+            issues.append((n.line, "method-call-array", name))
+            continue
+        plans.append((name, verdict))
+    return plans, issues
 
 
 def _self_call_positions(method: MethodDecl) -> list[tuple[int, str, str]]:
