@@ -33,7 +33,14 @@ sys.path.insert(0, str(HERE))
 # long enough that no document of the r12 corpus is cut (longest 1,262 chars).
 SHAPE = dict(n_layer=4, n_head=4, n_embd=256, block_size=1280)
 TRAIN = dict(steps=3000, batch_size=16, lr=3e-3, warmup=100, dropout=0.0, eval_every=50)
-ARMS = {"fim0-char": (0.0, "char"), "fim0.5-char": (0.5, "char"), "fim0.5-t": (0.5, "t")}
+# arm: (fim rate, span, extra arguments). The last two are controls added
+# after the first result (see the findings note): a standard regulariser, and
+# left-to-right training on random windows, which like FIM takes away the
+# guarantee that every row starts at its document's head.
+WINDOWS_KEEP = 50
+ARMS = {"fim0-char": (0.0, "char", ()), "fim0.5-char": (0.5, "char", ()), "fim0.5-t": (0.5, "t", ()),
+        "ar-dropout0.1": (0.0, "char", ("--dropout", "0.1")),
+        "ar-windows": (0.0, "char", ("--windows",))}
 
 
 def make_init(corpus: Path, out: Path, seed: int) -> None:
@@ -59,26 +66,60 @@ def run(args) -> None:
         init = work / f"init-s{seed}"
         make_init(Path(args.corpus), init, seed)
         for arm in args.arms:
-            rate, span = ARMS[arm]
+            rate, span, extra = ARMS[arm]
+            windows = "--windows" in extra
+            extra = [a for a in extra if a != "--windows"]
             out = work / f"{arm}-s{seed}"
             done = out / "run.json"
             if done.exists() and json.loads(done.read_text()).get("status") == "complete":
                 continue
             cmd = [sys.executable, str(HERE / "continue_from_checkpoint.py"), "--init", str(init),
                    "--data", str(args.corpus), "--split", str(args.split), "--out", str(out),
-                   "--doc-batches", "--steps", str(args.steps), "--batch-size", str(TRAIN["batch_size"]),
+                   *([] if windows else ["--doc-batches"]),
+                   *(["--keep-every", str(WINDOWS_KEEP), "--eval-iters", "8"] if windows else []),
+                   "--steps", str(args.steps), "--batch-size", str(TRAIN["batch_size"]),
                    "--block-size", str(SHAPE["block_size"]), "--lr", str(TRAIN["lr"]),
                    "--warmup", str(TRAIN["warmup"]), "--dropout", str(TRAIN["dropout"]),
                    "--eval-every", str(TRAIN["eval_every"]), "--log-every", str(TRAIN["eval_every"]),
                    "--save-every", str(args.steps), "--seed", str(seed),
-                   "--fim-rate", str(rate), "--fim-span", span]
+                   # extra last: argparse keeps the last value, so an arm's --dropout wins
+                   "--fim-rate", str(rate), "--fim-span", span, *extra]
             print(f"== {arm} seed {seed}", flush=True)
             with (work / f"{arm}-s{seed}.log").open("w") as log:
                 subprocess.run(cmd, check=True, stdout=log, stderr=subprocess.STDOUT)
 
 
 def curve(out: Path) -> list[dict]:
-    return [json.loads(line) for line in (out / "metrics.jsonl").read_text().splitlines()]
+    """Document losses per evaluation. A windows run's own evaluations are
+    window estimates, so its kept checkpoints are re-scored here with the
+    same document loss every other arm reports (cached in doc-curve.json)."""
+    if not (out / f"ckpt-step-{WINDOWS_KEEP}.pt").exists():
+        return [json.loads(line) for line in (out / "metrics.jsonl").read_text().splitlines()]
+    cache = out / "doc-curve.json"
+    if cache.exists():
+        return json.loads(cache.read_text())
+    import torch
+    import checkpoint
+    import data
+    from continue_from_checkpoint import document_loss
+    run = json.loads((out / "run.json").read_text())
+    ident = run["identities"]
+    text = Path(ident["corpus"]).read_text(encoding="utf-8")
+    split = ident["split"]
+    train, val = data.split_documents(text, split["val_frac"], split["seed"], by=split["by"])
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    rows = None
+    points = []
+    for kept in sorted(out.glob("ckpt-step-*.pt"), key=lambda q: int(q.stem.split("-")[-1])):
+        model, tok, _ = checkpoint.load_checkpoint(kept, device=device)
+        if rows is None:
+            rows = {k: data.DocumentBatches(v, tok, SHAPE["block_size"], 0, device)
+                    for k, v in (("train", train), ("val", val))}
+        points.append({"step": int(kept.stem.split("-")[-1]),
+                       **{k: document_loss(model, r, TRAIN["batch_size"], torch, data.IGNORE_INDEX)
+                          for k, r in rows.items()}})
+    cache.write_text(json.dumps(points))
+    return points
 
 
 def summarize(args) -> dict:
@@ -94,7 +135,7 @@ def summarize(args) -> dict:
                 continue
             c = curve(out)
             best = min(c, key=lambda r: r["val"])
-            final = run["final_losses"]
+            final = c[-1] if (out / "doc-curve.json").exists() else run["final_losses"]
             rows.append({"seed": run["identities"]["seed"], "final_val": final["val"],
                          "best_val": best["val"], "best_step": best["step"],
                          "final_train": final["train"], "gap": final["val"] - final["train"],
@@ -129,7 +170,7 @@ def infill(args) -> None:
         units = fim.t_units(body)
         probes = []
         if units:
-            a, b = units[rng.randrange(len(units))]
+            a, b, _ = units[rng.randrange(len(units))]
             probes.append(("unit", body[:a], body[a:b], body[b:]))
         probes.append(("chars",) + fim.char_split(body, rng))
         for kind, prefix, middle, suffix in probes:
