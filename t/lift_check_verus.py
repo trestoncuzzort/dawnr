@@ -220,6 +220,25 @@ def _expr(e) -> str:
     return _QUANT.sub(lambda m: f"{m.group(1)}|{m.group(2)}| #![auto]", text)
 
 
+def _drop_inner_attrs(text: str) -> str:
+    """A clause's leading `#![trigger ...]` (the lemma's own trigger choice for callers)
+    is not part of the formula and cannot sit inside parentheses; drop it, brackets
+    balanced."""
+    t = text.lstrip()
+    while t.startswith("#!["):
+        depth, k = 0, 2
+        while k < len(t):
+            if t[k] == "[":
+                depth += 1
+            elif t[k] == "]":
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        t = t[k + 1:].lstrip()
+    return t
+
+
 def _conj(texts: list[str]) -> str:
     return "(" + " && ".join(f"({t})" for t in texts) + ")" if texts else "true"
 
@@ -340,6 +359,8 @@ def _induction_lemma(sf: lift_verus.SpecFn, lifted_name: str, views: "Views") ->
     rhs = f"{lifted_name}({args_lift})"
     if sf.ret.kind in ("int", "nat"):
         lhs = f"({lhs} as int)"
+    if re.search(r"verifier\s*::\s*opaque", sf.text):
+        steps.insert(0, f"        reveal({sf.name});")
     return (f"broadcast proof fn t_eq_fn_{sf.name}({ps})\n"
             f"    ensures {lhs} == {rhs},\n"
             f"    decreases {dec}\n"
@@ -435,15 +456,18 @@ def build(source_text: str, task: dict, rename_map: dict, target: Optional[str] 
     rview = views.view(src_ret, fn.ret)
     used = views.uses + used
     use = f"    broadcast use {', '.join(used)};\n" if used else ""
+    # a source spec fn marked opaque is revealed for the equivalence (Verus guide,
+    # "Opaque definitions": reveal(f) makes the body visible in one proof)
+    use += "".join(f"    reveal({n});\n" for n in reach if re.search(r"verifier\s*::\s*opaque", vf.spec_fns[n].text))
     use_pre = use + _map_bridges(fn, views, False)
     use_post = use + _map_bridges(fn, views, True)
-    req_src = _conj(fn.requires_src)
+    req_src = _conj([_drop_inner_attrs(x) for x in fn.requires_src])
     eq = [f"proof fn t_eq_requires({sps})\n"
           f"    ensures {req_src} <==> t_lift_pre({pviews}),\n"
           "{\n" + use_pre + "}\n",
           f"proof fn t_eq_ensures({', '.join(x for x in (sps, f'{src_ret}: {fn.ret_src}') if x)})\n"
           f"    requires {req_src},\n"
-          f"    ensures {_conj(fn.ensures_src)} <==> t_lift_post({', '.join(x for x in (pviews, rview) if x)}),\n"
+          f"    ensures {_conj([_drop_inner_attrs(x) for x in fn.ensures_src])} <==> t_lift_post({', '.join(x for x in (pviews, rview) if x)}),\n"
           "{\n" + use_post + "}\n"]
     text = ("use vstd::prelude::*;\n\nverus! {\n\n"
             "// ---- the source's own declarations, as written\n"
