@@ -89,6 +89,17 @@ RULES: dict[str, str] = {
     "ite-branches": "ite branches must have the same type",
     "local-shadow": "a local must not shadow a name already in scope (Gate 1 scope rule)",
     "local-v0": "locals are a v1 construct (Gate 2)",
+    "method-call-position": "a method call is the whole right-hand side of an "
+                            "assign or a var init, with call-free arguments; "
+                            "never in a spec, a guard, an invariant, a "
+                            "decreases, a return or another expression (Methods; "
+                            "Dafny reference 8.5.2)",
+    "method-decreases": "a method decreases requires a self-recursive method "
+                        "body, and vice versa (Methods)",
+    "method-name": "method names are distinct from each other, the task, and "
+                   "the spec_funs, and match [A-Za-z][A-Za-z0-9_]* (Methods)",
+    "method-order": "a method body calls only EARLIER methods, or itself with "
+                    "a decreases; the task body calls any method (Methods)",
     "name": "the task name matches [A-Za-z][A-Za-z0-9_]*",
     "no-self-in-ensures": "ensures never references the task's own name (Gate 3)",
     "one-return": "exactly one return value (SPEC.md v0 and v1)",
@@ -121,7 +132,7 @@ RULES: dict[str, str] = {
     "unknown-stmt": "a Stmt is one of assign/var/if/while/return (v0 Stmt; Gate 2)",
     "update-types": "update wants (seq, int, int) or (seq<seq>, int, seq) "
                     "for the row (Sequences as values; Nested sequences)",
-    "v0-frozen": "t:0 is frozen; spec_funs/decreases/gate are v1 fields",
+    "v0-frozen": "t:0 is frozen; spec_funs/methods/decreases/gate are v1 fields",
     "v0-int-only": "v0 has int only",
     "v1-expr-v0": "ite/forall/exists/call are v1 expression forms (v1: the three gates)",
     "valid-type": "a declared type is int, bool, seq, a pair of two base "
@@ -564,7 +575,8 @@ def check_wf(task: dict, positions: dict | None = None,
         _e(errs, task, "ensures must be non-empty", "ensures-nonempty")
     funs = dict(expression_funs or {})
     funs.update({f["name"]: f for f in task.get("spec_funs", [])})
-    if ver == 0 and (funs or "decreases" in task or "gate" in task):
+    if ver == 0 and (funs or "decreases" in task or "gate" in task
+                     or "methods" in task):
         _e(errs, task, "v1 field in a v0 task", "v0-frozen")
     penv = {p["name"]: p["type"] for p in task["params"]}
     if ver == 0 and any(t != "int" for t in penv.values()):
@@ -600,14 +612,144 @@ def check_wf(task: dict, positions: dict | None = None,
         _e(errs, task, "self-recursive body without a task decreases", "decreases-selfcall")
     if not selfrec and "decreases" in task:
         _e(errs, task, "task decreases without a self-call", "decreases-selfcall")
+    methods = task.get("methods", [])       # a v0 task with methods: v0-frozen above
+    mnames = [m.get("name") for m in methods]
+    msigs = {}
+    for i, m in enumerate(methods):
+        _check_method(m, i, task, funs, msigs, mnames, ver, errs)
+        if isinstance(m.get("name"), str) and len(m.get("returns", [])) == 1:
+            msigs[m["name"]] = {"params": m["params"],
+                                "result": m["returns"][0]["type"],
+                                "body": None, "decreases": None, "_method": True}
+    all_methods = {n for n in mnames if isinstance(n, str)}
+    for e in list(task.get("requires", [])) + list(task["ensures"]):
+        _no_method_calls(e, all_methods, errs)
+    if "decreases" in task:
+        _no_method_calls(task["decreases"], all_methods, errs)
+    for f in task.get("spec_funs", []):
+        _no_method_calls(f["body"], all_methods, errs)
+        _no_method_calls(f["decreases"], all_methods, errs)
     bfuns = dict(funs)
+    bfuns.update(msigs)
     if selfrec:
         bfuns[task["name"]] = {"params": task["params"],
                                "result": ret["type"], "body": None,
                                "decreases": None}
+    _check_call_positions(task["body"], all_methods, errs)
     _check_stmts(task["body"], dict(eenv), bfuns, ver, errs, {ret["name"]})
     _check_returns(task["body"], ret["name"], errs)
     return errs
+
+
+def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs):
+    """One entry of `methods` (SPEC.md "Methods (v1)"): a named body with
+    its own contract, checked like a task, whose body may call the
+    spec_funs, every EARLIER method, and itself when it carries a
+    decreases. Copied from Dafny's methods (reference manual 6.3, 8.5.2):
+    a call is one statement's whole right-hand side."""
+    name = m.get("name")
+    if not isinstance(name, str) or not NAME_RE.match(name):
+        _e(errs, m, f"bad method name {name!r}", "method-name")
+        return
+    if name == task["name"] or name in funs or mnames.count(name) > 1:
+        _e(errs, m, f"method name {name} collides with the task, a spec_fun "
+                    f"or another method", "method-name")
+    for k in ("params", "returns", "requires", "ensures", "body"):
+        if k not in m:
+            _e(errs, m, f"method {name} is missing {k!r}", "method-name")
+            return
+    if len(m["returns"]) != 1:
+        _e(errs, m, f"method {name}: exactly one return value", "one-return")
+        return
+    if not m["ensures"]:
+        _e(errs, m, f"method {name}: ensures must be non-empty", "ensures-nonempty")
+    penv = {p["name"]: p["type"] for p in m["params"]}
+    for p in m["params"] + m["returns"]:
+        if not _valid_type(p["type"]):
+            _e(errs, p, f"method {name}: {p['name']} has an invalid type: "
+                        f"{p['type']!r}", "valid-type")
+    for e in m["requires"]:
+        if _ty(e, penv, funs, ver, errs, set()) != "bool":
+            _e(errs, e, f"method {name}: requires clause is not bool", "requires-bool")
+    r = m["returns"][0]
+    eenv = dict(penv)
+    eenv[r["name"]] = r["type"]
+    if len(eenv) != len(m["params"]) + 1:
+        _e(errs, m, f"method {name}: a parameter and the return share a name",
+           "local-shadow")
+    for e in m["ensures"]:
+        if _ty(e, eenv, funs, ver, errs, set()) != "bool":
+            _e(errs, e, f"method {name}: ensures clause is not bool", "ensures-bool")
+    here = {n for n in mnames if isinstance(n, str)} | {task["name"]}
+    for e in list(m["requires"]) + list(m["ensures"]):
+        _no_method_calls(e, here, errs)
+    selfrec = _self_calls(m["body"], name)
+    if selfrec and "decreases" not in m:
+        _e(errs, m, f"method {name}: self-recursive body without a decreases",
+           "method-decreases")
+    if not selfrec and "decreases" in m:
+        _e(errs, m, f"method {name}: decreases without a self-call", "method-decreases")
+    if "decreases" in m:
+        _no_method_calls(m["decreases"], here, errs)
+        if _ty(m["decreases"], penv, funs, ver, errs, set()) != "int":
+            _e(errs, m, f"method {name}: decreases is not int", "method-decreases")
+    later = {n for n in mnames[i + 1:] if isinstance(n, str)} | {task["name"]}
+    if _calls_any(m["body"], later):
+        _e(errs, m, f"method {name} calls a later method or the task", "method-order")
+    bfuns = dict(funs)
+    bfuns.update(earlier_sigs)
+    if selfrec:
+        bfuns[name] = {"params": m["params"], "result": r["type"],
+                       "body": None, "decreases": None, "_method": True}
+    _check_call_positions(m["body"], here, errs)
+    _check_stmts(m["body"], dict(eenv), bfuns, ver, errs, {r["name"]})
+    _check_returns(m["body"], r["name"], errs)
+
+
+def _calls_any(e, names) -> bool:
+    if isinstance(e, dict):
+        if "call" in e and isinstance(e["call"], dict) and e["call"].get("fun") in names:
+            return True
+        return any(_calls_any(v, names) for v in e.values())
+    if isinstance(e, list):
+        return any(_calls_any(v, names) for v in e)
+    return False
+
+
+def _no_method_calls(e, names, errs) -> None:
+    if names and _calls_any(e, names):
+        _e(errs, e, "a method call outside the right-hand side of an assign "
+                    "or var init", "method-call-position")
+
+
+def _check_call_positions(body, names, errs) -> None:
+    """Dafny reference manual 8.5.2: a method call is the whole right-hand
+    side of `:=`, and its result is never an argument or an operand."""
+    if not names:
+        return
+    for s in body:
+        rhs = None
+        if "assign" in s:
+            rhs = s["assign"][1]
+        elif "var" in s and isinstance(s["var"], dict):
+            rhs = s["var"].get("init")
+        if rhs is not None:
+            if "call" in rhs and rhs["call"]["fun"] in names:
+                _no_method_calls(rhs["call"]["args"], names, errs)
+            else:
+                _no_method_calls(rhs, names, errs)
+        elif "return" in s:
+            _no_method_calls(s["return"][1], names, errs)
+        elif "if" in s:
+            _no_method_calls(s["if"]["cond"], names, errs)
+            _check_call_positions(s["if"]["then"], names, errs)
+            _check_call_positions(s["if"]["else"], names, errs)
+        elif "while" in s:
+            w = s["while"]
+            _no_method_calls(w.get("cond"), names, errs)
+            _no_method_calls(w.get("invariants", []), names, errs)
+            _no_method_calls(w.get("decreases"), names, errs)
+            _check_call_positions(w.get("body", []), names, errs)
 
 
 def _check_returns(body, rname, errs):

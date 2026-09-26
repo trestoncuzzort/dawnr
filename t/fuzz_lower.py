@@ -375,6 +375,9 @@ def ev(e: dict, env: dict, funs: dict, st: St):
             # Executed for real, not modelled by its contract: ground truth
             # has to be the value, and the contract is what the KERNEL uses.
             body, ret = f["_exec"]
+            for rq in f.get("_requires", ()):
+                if not ev(rq, dict(sub), funs, st):
+                    raise Undef(f"call of {c['fun']} violates its requires")
             st.d += 1
             if st.d > MAX_DEPTH:
                 st.d -= 1
@@ -684,6 +687,10 @@ def sample_inputs(task, rng, k):
 def _funs_of(task, body):
     """spec_funs, plus the task itself when the body self-calls (gate 3)."""
     funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    for m in task.get("methods", []):      # SPEC.md "Methods (v1)", as interp.funs_of
+        funs[m["name"]] = {"params": m["params"],
+                           "_exec": (m["body"], m["returns"][0]["name"]),
+                           "_requires": m["requires"]}
     if _self_calls(body, task["name"]):
         funs[task["name"]] = {"params": task["params"],
                               "_exec": (body, task["returns"][0]["name"])}
