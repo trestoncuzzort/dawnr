@@ -8,6 +8,7 @@ from __future__ import annotations
 import array
 import hashlib
 import json
+import math
 import os
 import random
 from pathlib import Path
@@ -32,40 +33,27 @@ def documents(text: str) -> list[str]:
     return [d for d in docs if d.strip()]
 
 
-def group_split(text: str, val_frac: float = 0.1, seed: int = 1337) -> tuple[str, str]:
-    """Split by whole document, never mid-document, after removing duplicates.
+SPLIT_MODES = ("order", "hash")
+_SPLIT_SALT = b"locallm-split"
 
-    The naive alternative is to cut the corpus at 90% of its length. That splits
-    in the middle of a document and, worse, lets duplicated material sit on both
-    sides of the split, so validation measures memorisation instead of
-    generalisation. See leakage.py, which will tell you how bad it is.
 
-    Assignment is by hash of the document text, so it is deterministic, and two
-    identical documents always land on the same side even if de-duplication is
-    skipped.
+def _order_split(docs: list[tuple[str, str]], val_frac: float, seed: int) -> tuple[list[str], list[str]]:
+    """The split every run before r12 used, byte for byte (test_r12_split pins it).
+
+    Two passes, both bounded by the target.
+
+    Pass 1 walks the documents in a SEED-SHUFFLED order and takes any that
+    still fit. That is what makes `seed` real: a different seed produces a
+    genuinely different validation set, which is the only way to measure how
+    much of a result is split-induced rather than model-induced.
+
+    Pass 2 fills the leftover gap smallest-first. Without it, one early large
+    document can consume the budget and leave validation far short of target.
+    Never "add until the target is passed": one document bigger than the whole
+    target would land in validation and take most of the corpus with it.
     """
-    seen, docs = set(), []
-    for d in documents(text):
-        key = hashlib.sha1(d.encode("utf-8")).hexdigest()
-        if key in seen:
-            continue          # exact duplicate: keep one copy, in one split
-        seen.add(key)
-        docs.append((key, d))
-
     total = sum(len(d) for _, d in docs)
     target = total * val_frac
-
-    # Two passes, both bounded by the target.
-    #
-    # Pass 1 walks the documents in a SEED-SHUFFLED order and takes any that
-    # still fit. That is what makes `seed` real: a different seed produces a
-    # genuinely different validation set, which is the only way to measure how
-    # much of a result is split-induced rather than model-induced.
-    #
-    # Pass 2 fills the leftover gap smallest-first. Without it, one early large
-    # document can consume the budget and leave validation far short of target.
-    # Never "add until the target is passed": one document bigger than the whole
-    # target would land in validation and take most of the corpus with it.
     rng = random.Random(seed)
     order = list(docs)
     rng.shuffle(order)
@@ -88,6 +76,83 @@ def group_split(text: str, val_frac: float = 0.1, seed: int = 1337) -> tuple[str
 
     if not train:                            # tiny corpora: never empty the train side
         train, val = val, []
+    return train, val
+
+
+def hash_holdout(doc: str, seed: int, val_frac: float) -> bool:
+    """Does this document, on its own text, belong to the validation side?
+
+    The key is the stripped text salted with the split seed, so the answer
+    depends on nothing else in the corpus: Google's repeatable-splitting recipe
+    (hash an invariant field, let the integer decide; never hash a random
+    number), developers.google.com/machine-learning/data-prep/construct/
+    sampling-splitting/randomization. Leading and trailing newlines are not
+    part of the document: the corpus builder's "\\n\\n" join gives every
+    document after the first a leading newline that depends on where it sits.
+    """
+    payload = _SPLIT_SALT + b"\x00" + str(int(seed)).encode("ascii") + b"\x00" + doc.strip().encode("utf-8")
+    digest = hashlib.sha256(payload).digest()
+    return int.from_bytes(digest[:8], "big") < val_frac * 2 ** 64
+
+
+def split_documents(text: str, val_frac: float = 0.1, seed: int = 1337,
+                    by: str = "order") -> tuple[list[str], list[str]]:
+    """Split by whole document, never mid-document, after removing duplicates.
+
+    The naive alternative is to cut the corpus at 90% of its length. That splits
+    in the middle of a document and, worse, lets duplicated material sit on both
+    sides of the split, so validation measures memorisation instead of
+    generalisation. See leakage.py, which will tell you how bad it is.
+
+    Two modes, and the difference is which documents are held out:
+
+    by="order" (the default, and every run before r12): the holdout is filled
+    from a seed-shuffled ORDER of the documents. Membership therefore depends
+    on the rest of the corpus. Measured on corpus-r8 (301 documents) against an
+    r10-like edit of it (drop 4, reword 4, add 2), the same seed moves 45-51 of
+    the 295 shared documents across the split; appending one document moves 21.
+    r9 and r10 differed by about 53 documents, not by the 1% their corpora did.
+    Duplicates are removed on the raw text, which misses a copy of the FIRST
+    document because later copies carry the join's leading newline. Kept as is,
+    so old runs reproduce; the golden hashes in test_r12_split pin its bytes.
+
+    by="hash": each document is held out by hash_holdout() on its own stripped
+    text and the split seed, so the same edit moves 0 documents and a copy of
+    any document, with or without surrounding newlines, lands once, on one
+    side. The cost is that the holdout's size is binomial rather than filled to
+    the target: on corpus-r8 at val_frac 0.1 the split seeds 1337, 42, 7, 1, 2,
+    3, 4 and 5 hold out 27, 22, 30, 18, 27, 32, 33 and 34 documents, 6.1% to
+    12.4% of the characters. A caller that needs the share checks it
+    (continue_from_checkpoint.py refuses a holdout under split_verdict's floor
+    and records the share in run.json).
+
+    This docstring used to say "assignment is by hash of the document text"
+    while the code did the order split. It was wrong from 2026-09-17 until the
+    r12 build.
+    """
+    if by not in SPLIT_MODES:
+        raise ValueError(f"unknown split mode {by!r}; expected one of {SPLIT_MODES}")
+    seen, docs = set(), []
+    for d in documents(text):
+        key = hashlib.sha1((d if by == "order" else d.strip()).encode("utf-8")).hexdigest()
+        if key in seen:
+            continue          # exact duplicate: keep one copy, in one split
+        seen.add(key)
+        docs.append((key, d))
+    if by == "order":
+        return _order_split(docs, val_frac, seed)
+    train, val = [], []
+    for _, d in docs:
+        (val if hash_holdout(d, seed, val_frac) else train).append(d)
+    if docs and not train:
+        raise ValueError(f"every document landed in validation at val_frac {val_frac} with split seed "
+                         f"{seed}; nothing is left to train on")
+    return train, val
+
+
+def group_split(text: str, val_frac: float = 0.1, seed: int = 1337, by: str = "order") -> tuple[str, str]:
+    """split_documents, joined back into two texts. See its docstring for the modes."""
+    train, val = split_documents(text, val_frac, seed, by)
     return "\n\n".join(train), "\n\n".join(val)
 
 
@@ -462,20 +527,32 @@ class Corpus:
 
     def __init__(self, text: str, tokenizer: CharTokenizer | BPETokenizer, device: str,
                  val_frac: float = 0.1, grouped: bool = True, seed: int = 1337,
-                 validation_text: str | None = None):
+                 validation_text: str | None = None, split_by: str = "order"):
         """grouped=True splits by whole document and de-duplicates first, so
         validation text cannot also be training text. grouped=False reproduces
         the naive positional cut; it is kept only so leakage.py can show what
-        that costs, and it should not be used for real comparisons."""
+        that costs, and it should not be used for real comparisons.
+
+        split_by picks the grouped split's rule, "order" (every run before r12)
+        or "hash" (membership by each document's own text); see
+        split_documents. It means nothing on the other two paths."""
+        if split_by not in SPLIT_MODES:
+            raise ValueError(f"unknown split mode {split_by!r}; expected one of {SPLIT_MODES}")
         # Explicit partitions have already been grouped by their source builder.
         # Their exact bytes and order are part of the experiment identity.
         self.split_mode = "explicit" if validation_text is not None else ("grouped" if grouped else "positional")
+        self.split_by = split_by if self.split_mode == "grouped" else None
+        train_docs = val_docs = None
         if validation_text is not None:
             train_text, val_text = text, validation_text
             train_ids = torch.tensor(cached_encode(tokenizer, train_text, "train"), dtype=torch.int32)
             val_ids = torch.tensor(cached_encode(tokenizer, val_text, "validation"), dtype=torch.int32)
         elif grouped:
-            train_text, val_text = group_split(text, val_frac, seed)
+            train_text, val_text = group_split(text, val_frac, seed, by=split_by)
+            # The documents behind the two texts, for DocumentBatches. Read back
+            # from the joined text rather than split a second time, because
+            # test_bpe patches group_split and this must follow the patch.
+            train_docs, val_docs = documents(train_text), documents(val_text)
             train_ids = torch.tensor(tokenizer.encode(train_text), dtype=torch.int32)
             val_ids = torch.tensor(tokenizer.encode(val_text), dtype=torch.int32)
         else:
@@ -483,6 +560,8 @@ class Corpus:
             n = int(len(data) * (1 - val_frac))
             train_ids, val_ids = data[:n], data[n:]
             train_text = val_text = None
+        self.train_docs = train_docs
+        self.val_docs = val_docs
 
         # THE SPLIT THIS RUN ACTUALLY TRAINED ON, kept rather than discarded.
         # Anything that wants to describe the holdout — a baseline, a leakage
@@ -615,3 +694,114 @@ class Corpus:
         if x.device.type != self.device:
             x, y = x.to(self.device), y.to(self.device)
         return x, y
+
+
+# One whole document per training row. model.GPT.forward's loss is
+# F.cross_entropy(..., ignore_index=-1), so a padded target of -1 costs nothing.
+IGNORE_INDEX = -1
+# The separator group_split joins documents with. Appended to every row as its
+# end sentinel, the way Ding et al. mark document ends (arXiv:2404.10830).
+DOC_END = "\n\n"
+
+
+class DocumentBatches:
+    """Every training row is one whole document, from its first token.
+
+    Corpus.get_batch cuts random windows from the joined corpus. On the r12
+    corpus about 23% of the target tokens then belong to a row whose
+    Problem/Signature head was cut off, and the head sits at position 0, the
+    only place generation ever puts it, in under 1% of windows. Ding et al.
+    (arXiv:2404.10830) measure what truncation costs: tokens lose the context
+    that grounds them, and removing it is worth +9.2% relative on program
+    synthesis; Zhao et al. (arXiv:2402.13991) show tokens attending across a
+    document boundary are distracted by the previous document. Here a row is
+    `document + DOC_END`, right-padded with pad_id and with IGNORE_INDEX
+    targets, so no row holds two documents and every row starts at its head.
+
+    Where this departs from Ding: documents are padded, not packed (the corpus
+    is ~50K tokens and a fine-tune is seconds, so the efficiency does not
+    matter), and a document longer than the block is cut at its END and
+    counted, never kept as a headless tail chunk, because a headless row is the
+    defect being removed. Leading newlines are dropped from a document (the
+    corpus builder's join gives every document after the first one) so the
+    head is at position 0, where generation puts it.
+
+    Order: epoch e's permutation is the (e+1)-th randperm drawn from one
+    generator seeded with `seed`, as PyTorch's RandomSampler draws one per
+    epoch (torch/utils/data/sampler.py). DistributedSampler's seed+epoch is
+    deliberately not used: seed s at epoch 1 would equal seed s+1 at epoch 0,
+    and consecutive seeds are consecutive arms here. get_batch(step) is a pure
+    function of (seed, step), so a resumed run continues the same sequence with
+    no sampler state saved. The last batch of an epoch is short rather than
+    dropped.
+    """
+
+    def __init__(self, docs, tokenizer, block_size: int, seed: int, device: str = "cpu",
+                 end: str = DOC_END, pad_id: int = 0):
+        docs = list(docs)
+        if block_size < 1:
+            raise ValueError(f"block_size must be positive, not {block_size}")
+        if not docs:
+            raise ValueError("no documents to batch")
+        end_ids = tokenizer.encode(end)
+        if not end_ids or tokenizer.decode(end_ids) != end:
+            raise ValueError(f"the tokenizer cannot encode the document end marker {end!r}")
+        self.block_size, self.seed, self.device = block_size, seed, device
+        self.end, self.pad_id = end, pad_id
+        self.documents = len(docs)
+        self.target_tokens = self.cut_documents = self.cut_tokens = self.longest_tokens = 0
+        self.dropped_characters = 0          # characters a CharTokenizer silently drops; 0 for BPE
+        self.blank_line_documents = []       # indices of documents that documents() would split
+        rows_x, rows_y = [], []
+        for i, d in enumerate(docs):
+            body = d.strip("\r\n")
+            if not body.strip():
+                raise ValueError(f"document {i} is empty")
+            if "\n\n" in body:
+                self.blank_line_documents.append(i)
+            if isinstance(tokenizer, CharTokenizer):
+                self.dropped_characters += sum(tokenizer.unknown_characters(body + end).values())
+            ids = tokenizer.encode(body + end)
+            if len(ids) < 2:
+                raise ValueError(f"document {i} encodes to fewer than two tokens: {body[:40]!r}")
+            self.longest_tokens = max(self.longest_tokens, len(ids))
+            if len(ids) > block_size + 1:
+                self.cut_documents += 1
+                self.cut_tokens += len(ids) - (block_size + 1)
+                ids = ids[:block_size + 1]
+            pad = block_size - (len(ids) - 1)
+            rows_x.append(ids[:-1] + [pad_id] * pad)
+            rows_y.append(ids[1:] + [IGNORE_INDEX] * pad)
+            self.target_tokens += len(ids) - 1
+        self.x = torch.tensor(rows_x, dtype=torch.long).to(device)
+        self.y = torch.tensor(rows_y, dtype=torch.long).to(device)
+        self._generator = torch.Generator().manual_seed(seed)
+        self._orders: list[list[int]] = []
+
+    def order(self, epoch: int) -> list[int]:
+        """The row order of one epoch; drawn once and cached, so it never depends on who asked first."""
+        while len(self._orders) <= epoch:
+            self._orders.append(torch.randperm(self.documents, generator=self._generator).tolist())
+        return self._orders[epoch]
+
+    def batches_per_epoch(self, batch_size: int) -> int:
+        return math.ceil(self.documents / batch_size)
+
+    def get_batch(self, step: int, batch_size: int):
+        epoch, k = divmod(step, self.batches_per_epoch(batch_size))
+        idx = self.order(epoch)[k * batch_size:(k + 1) * batch_size]
+        ix = torch.tensor(idx, dtype=torch.long, device=self.x.device)
+        return self.x[ix], self.y[ix]
+
+    def in_order(self, batch_size: int):
+        """Fixed sequential batches, for evaluating every document exactly once."""
+        for start in range(0, self.documents, batch_size):
+            yield self.x[start:start + batch_size], self.y[start:start + batch_size]
+
+    def record(self) -> dict:
+        return {"documents": self.documents, "target_tokens": self.target_tokens,
+                "cut_documents": self.cut_documents, "cut_tokens": self.cut_tokens,
+                "longest_tokens": self.longest_tokens, "dropped_characters": self.dropped_characters,
+                "blank_line_documents": len(self.blank_line_documents),
+                "block_size": self.block_size, "end": self.end, "pad_id": self.pad_id,
+                "ignore_index": IGNORE_INDEX, "order_seed": self.seed}
