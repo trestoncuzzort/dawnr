@@ -183,6 +183,38 @@ class SentinelTests(unittest.TestCase):
             self.assertIn("different inputs", r.stdout)
             self.assertEqual([p.name for p in (Path(tmp) / "done").iterdir()], ["s1.json"])
 
+    def test_a_check_naming_fewer_paths_than_its_mark_reads_as_changed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            inp, out = Path(tmp) / "in.txt", Path(tmp) / "out.md"
+            inp.write_text("a")
+            out.write_text("table")
+            both = ["s1", "--dir", f"{tmp}/done", "--inputs", str(inp), str(out)]
+            self.assertEqual(run("sentinel", "write", *both).returncode, 0)
+            self.assertEqual(run("sentinel", "check", *both).returncode, 0)
+            self.assertEqual(run("sentinel", "check", "s1", "--dir", f"{tmp}/done", "--inputs", str(inp)).returncode, 3)
+
+    def test_every_step_checks_the_same_paths_its_mark_records(self):
+        """The sentinel digests every path it is given, so a check naming fewer paths than the mark
+        wrote never matches, and a finished step refused the queue on resume as done with different
+        inputs (found 2026-09-26 in chunk-, spec-, build-r12, build-r12v6 and the two lift steps).
+        verifyVT in snowleopard/build (src/Build/Trace.hs) verifies exactly what recordVT stored."""
+        import re
+        import shlex
+        text = QUEUE.read_text(encoding="utf-8")
+
+        def calls(verb: str) -> dict[str, list[list[str]]]:
+            found: dict[str, list[list[str]]] = {}
+            for m in re.finditer(rf"\b{verb} (.+?)(?:; then|\s*\|\||$)", text, re.M):
+                words = shlex.split(m.group(1))
+                found.setdefault(words[0], []).append(words[1:])
+            return found
+
+        checks, marks = calls("check_or_refuse"), calls("mark_step")
+        self.assertGreaterEqual(len(marks), 10)
+        self.assertEqual(sorted(checks), sorted(marks), "a step is checked or marked under a name the other never uses")
+        for step, marked in marks.items():
+            self.assertEqual(checks[step], marked, f"{step}: the check names other paths than the mark records")
+
 
 class RepairTests(unittest.TestCase):
     def record(self, tid, reply):
