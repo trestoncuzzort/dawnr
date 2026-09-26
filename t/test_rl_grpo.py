@@ -25,6 +25,15 @@ class Advantages(unittest.TestCase):
         self.assertGreater(a[1, 3], a[1, 2])
         self.assertGreater(a[1, 2], a[1, 0])
 
+    def test_mean_scale_keeps_a_format_step_small(self):
+        # a group whose only spread is 0 vs 0.05: GRPO's std makes it +-1-sized, Dr. GRPO keeps it 0.05-sized
+        r = torch.tensor([[0.0, 0.05, 0.0, 0.05], [0.0, 1.0, 0.0, 1.0]])
+        std = rl_grpo.group_advantages(r)
+        mean = rl_grpo.group_advantages(r, scale="mean")
+        self.assertAlmostEqual(float(std[0].abs().max()), float(std[1].abs().max()), places=4)
+        self.assertAlmostEqual(float(mean[0, 1]), 0.025, places=6)
+        self.assertAlmostEqual(float(mean[1, 1]), 0.5, places=6)
+
     def test_equal_rewards_give_zero_not_nan(self):
         a = rl_grpo.group_advantages(torch.tensor([[0.1, 0.1, 0.1], [1.0, 1.0, 1.0]]))
         self.assertTrue(torch.equal(a, torch.zeros(2, 3)))
