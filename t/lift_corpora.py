@@ -285,7 +285,15 @@ def build(args) -> dict:
             tally["refused: " + reason.split(", ")[1]] += 1
             refused.append({"name": task["name"], "source": source, "reason": reason})
             continue
-        document = surface.print_task(task).strip() + "\n"
+        try:
+            document = surface.print_task(task).strip() + "\n"
+        except surface.SurfaceError as error:
+            # The lifter keeps Dafny's identifiers; a few are t keywords (a local named
+            # `len`, 2026-09-26) and have no notation in t's surface syntax, so the task
+            # cannot become a document. Refused by name; renaming is the lifter's job.
+            tally["refused: no t notation"] += 1
+            refused.append({"name": task["name"], "source": source, "reason": f"no t surface notation: {error}"})
+            continue
         if not gate.admit(document, [task["name"]], named):
             tally["refused: gates"] += 1
             refused.append({"name": task["name"], "source": source, "reason": "held-out, listed or dev id under an alias"})
