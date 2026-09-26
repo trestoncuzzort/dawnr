@@ -278,8 +278,57 @@ def _vector(tensor):
     return tensor["flat"][tensor["offset"]: tensor["offset"] + tensor["numel"]]
 
 
+def _dot_plain(p, q):
+    """The dot product every Python has: one Python float per product, summed."""
+    return sum(map(mul, p, q))
+
+
+def _attend_plain(weights, columns):
+    """softmax(scores) @ V for one head, in the arithmetic this file always had.
+
+    `weights` are the unnormalised exp(score - max) over time and `columns` are
+    the head's values stored one column per dimension, so each output dimension
+    is one dot product over time. Normalising the weights first and summing the
+    products in time order is, operation for operation, the double loop this
+    replaced (`weight *= norm; accumulated[j] += weight * value[j]`); on Python
+    3.10 and 3.11, where this is the path taken, `sum` adds floats left to right
+    as that loop did, so the result is the same to the last bit.
+    """
+    norm = 1.0 / sum(weights)
+    scaled = [weight * norm for weight in weights]
+    return [sum(map(mul, scaled, column)) for column in columns]
+
+
+def _attend_sumprod(weights, columns):
+    """The same product through math.sumprod, normalised once per output."""
+    sumprod = math.sumprod
+    norm = 1.0 / sum(weights)
+    return [sumprod(weights, column) * norm for column in columns]
+
+
+# THE DOT PRODUCT IS NEARLY ALL OF THE TIME, and Python 3.12 added a better one.
+# math.sumprod(p, q) is "roughly equivalent to sum(map(operator.mul, p, q,
+# strict=True))" (docs.python.org/3/library/math.html#math.sumprod), but in
+# CPython it is one C loop that builds no Python float per product:
+# Modules/mathmodule.c, math_sumprod_impl, accumulates float pairs with tl_fma,
+# the Ogita-Rump-Oishi accurate dot product (doi.org/10.1137/030601818), and
+# rounds once at the end. So it is about twice as fast as the sum, and slightly
+# MORE accurate, which also means its last bit can differ from the sum's and a
+# greedy choice between two near-equal logits could in principle flip. That was
+# checked over 200 greedy tokens on the included model against the old code
+# (SHIPPING.md, section 2). Python 3.10 and 3.11 have no sumprod and keep the
+# old arithmetic exactly. The values are stored one column per head dimension
+# (see PlainGPT.reset) so that attention is dot products too: the old double
+# loop over (time, dimension) in Python was the one place no C loop helped.
+if hasattr(math, "sumprod"):
+    _dot, _attend = math.sumprod, _attend_sumprod
+else:
+    _dot, _attend = _dot_plain, _attend_plain
+
+
 def _matvec(rows, x, bias):
-    return [sum(map(mul, row, x)) + b for row, b in zip(rows, bias)]
+    dot = _dot
+    return [dot(row, x) + b for row, b in zip(rows, bias)]
 
 
 def _layernorm(x, weight, bias, eps=1e-5):
@@ -366,8 +415,14 @@ class PlainGPT:
                 + self.n_layer * per_layer + 2 * self.n_embd)
 
     def reset(self, keep_counters: bool = False):
+        # Keys are kept one row per token, because a score is q . k for one k.
+        # Values are kept one COLUMN per head dimension, because the attended
+        # output's dimension j is sum over time of weight * value[j]: stored
+        # this way, that is one dot product per dimension instead of a Python
+        # loop over time and dimension together.
         self.keys = [[[] for _ in range(self.n_head)] for _ in range(self.n_layer)]
-        self.values = [[[] for _ in range(self.n_head)] for _ in range(self.n_layer)]
+        self.values = [[[[] for _ in range(self.head_dim)] for _ in range(self.n_head)]
+                       for _ in range(self.n_layer)]
         self.history = []
         if not keep_counters:
             self.rebuilt = 0          # window re-prefills, for the caller to report
@@ -394,27 +449,24 @@ class PlainGPT:
         self.history.append(token)
         x = [a + b for a, b in zip(self.wte[token], self.wpe[position])]
         scale = 1.0 / math.sqrt(self.head_dim)
+        # Looked up once per step, and at call time rather than bound at import,
+        # so a test can put either arithmetic under the same model.
+        dot, attend = _dot, _attend
+        width = self.n_embd
         for index, layer in enumerate(self.layers):
             h = _layernorm(x, layer["ln1_w"], layer["ln1_b"])
             qkv = _matvec(layer["qkv_w"], h, layer["qkv_b"])
-            width = self.n_embd
             attended = [0.0] * width
             for head in range(self.n_head):
                 lo, hi = head * self.head_dim, (head + 1) * self.head_dim
                 q = qkv[lo:hi]
-                past_k, past_v = self.keys[index][head], self.values[index][head]
+                past_k, columns = self.keys[index][head], self.values[index][head]
                 past_k.append(qkv[width + lo: width + hi])
-                past_v.append(qkv[2 * width + lo: 2 * width + hi])
-                scores = [sum(map(mul, q, k)) * scale for k in past_k]
+                for column, value in zip(columns, qkv[2 * width + lo: 2 * width + hi]):
+                    column.append(value)
+                scores = [dot(q, k) * scale for k in past_k]
                 top = max(scores)
-                weights = [math.exp(s - top) for s in scores]
-                norm = 1.0 / sum(weights)
-                accumulated = [0.0] * self.head_dim
-                for weight, value in zip(weights, past_v):
-                    weight *= norm
-                    for j in range(self.head_dim):
-                        accumulated[j] += weight * value[j]
-                attended[lo:hi] = accumulated
+                attended[lo:hi] = attend([math.exp(s - top) for s in scores], columns)
             projected = _matvec(layer["attn_out_w"], attended, layer["attn_out_b"])
             x = [a + b for a, b in zip(x, projected)]
             h = _layernorm(x, layer["ln2_w"], layer["ln2_b"])
@@ -422,7 +474,7 @@ class PlainGPT:
             out = _matvec(layer["mlp_out_w"], inner, layer["mlp_out_b"])
             x = [a + b for a, b in zip(x, out)]
         h = _layernorm(x, self.ln_f_w, self.ln_f_b)
-        return [sum(map(mul, row, h)) for row in self.head]   # lm_head has no bias
+        return [dot(row, h) for row in self.head]   # lm_head has no bias
 
     def generate(self, ids, max_new_tokens: int, temperature: float = 0.8,
                  top_k: int | None = 40, seed: int | None = None,
