@@ -26,3 +26,5 @@ PROVENANCE
 THIRD-PARTY MATERIAL
   The problem corpora under nl/, the packages tup builds from, the software inside a built image and the seven
   verifiers are not part of the Work and keep their own licenses. See LICENSE section 7.
+  locallm/ingest.py copies eight keywords and two thresholds from charset-normalizer (MIT License,
+  Copyright (c) 2025 TAHRI Ahmed R.); its notice is reproduced in that file beside them.
