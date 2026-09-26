@@ -46,6 +46,8 @@ and the ones that fail print what to do. `--strict` exits non-zero on a warning 
      its own round-trip guard (2026-09-18). DeepSeek-Prover-V2-7B loads as LlamaTokenizer under transformers
      5.17 and drops every space on the way back: 122 answers came out as `t1tasksmall_nnum(s:seq,n:int)`.
      This one costs a few seconds where a tokenizer library is installed, like a kernel check does.
+ 13. t/AGREEMENT.md has a row for every committed task (2026-09-25). A one-task run_par.py sweep overwrote
+     the table on 2026-09-20, and the corpus builder then kept 1 of 35 committed tasks without a word.
 """
 
 from __future__ import annotations
@@ -624,6 +626,26 @@ def check_grammar() -> bool:
     return ok
 
 
+def check_agreement_covers_tasks() -> bool:
+    """Check 13. t/AGREEMENT.md has a row for every committed task before the corpus builder reads it.
+
+    A derived table has to cover every row of its source (Deequ's hasSize and
+    isComplete, github.com/awslabs/deequ). On 2026-09-20 a one-task run_par.py
+    sweep overwrote the table, and `loop_locallm.py corpus --lifted` then kept
+    1 of 35 committed tasks without a word (blocker A3).
+    """
+    import loop_locallm
+    try:
+        rows, missing = loop_locallm.agreement_gap()
+    except SystemExit as e:
+        return say(False, "committed tasks readable", str(e))
+    total = len(rows) + len(missing)
+    return say(not missing, f"AGREEMENT.md covers the {total} committed tasks",
+               "" if not missing else f"{len(rows)} row(s) for {total} tasks; no row for {missing[:5]}"
+               + (" ..." if len(missing) > 5 else "")
+               + " (regrade: bash t/grade_lab.sh matrix, then copy t/out/AGREEMENT-lab.md over it)")
+
+
 def check_data(split_path: Path, lab: str | None, pool_files: list[Path] = (),
                corpora: list[Path] = ()) -> bool:
     """Check current inputs plus recipe files: here, tracked, and on the machine that will run them."""
@@ -894,6 +916,7 @@ def main() -> int:
     ok = check_split(a.split, a.pool, a.corpus, a.audit_history) and ok
     print("what the run will open")
     ok = check_data(a.split, lab, pools, corpora) and ok
+    ok = check_agreement_covers_tasks() and ok
     print("what is counted clean")
     answer_sets_ok, answer_sets = select_answer_sets(a.answer_set, a.audit_history)
     ok = answer_sets_ok and ok
