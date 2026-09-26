@@ -66,6 +66,7 @@ from __future__ import annotations
 import codecs
 import posixpath
 import re
+import unicodedata
 import xml.etree.ElementTree as ET
 import zipfile
 from collections import Counter
@@ -88,8 +89,9 @@ class Read(NamedTuple):
     kind      "text", "docx", "epub", "html", or "refused" — where the
               characters came from, so a window can say "read 41,000 characters
               out of that .docx" rather than just "read 41,000 characters".
-    encoding  what actually decoded it: "utf-8", "utf-16 (BOM)", "cp1252", or
-              "" when nothing was decoded.
+    encoding  what actually decoded it: "utf-8", "utf-16 (BOM)", "cp1252", a
+              code page charset-normalizer named such as "cp1251 (detected)",
+              or "" when nothing was decoded.
     dropped   characters that could not be decoded. 0 on any accept.
     say       a look.Say: mark, one word, one plain sentence, tone.
     """
@@ -197,15 +199,14 @@ RARE_BELOW = 10
 #    join it only if it refuses at least one byte value, and the list is
 #    ordered most-refusing first. That keeps every rung falsifiable.
 #
-#    WHAT THIS LADDER HONESTLY CANNOT DO: tell cp1252 from cp1251 or KOI8-R. A
+#    WHAT THE RUNG CANNOT DO BY ITSELF: tell cp1252 from cp1251 or KOI8-R. A
 #    Russian file in cp1251 decodes as cp1252 into Latin mojibake that passes
 #    every structural test there is, because both encodings define nearly all
-#    256 bytes. No amount of ordering fixes that; only character statistics or
-#    a declaration would, and both are out of scope for a reader that must be
-#    explainable. What is done instead is to REPORT the encoding that won, on
-#    screen, so a person who knows their file is Russian can see "cp1252" and
-#    know to re-save it as UTF-8. A guess that says which guess it made is a
-#    different thing from a guess that does not.
+#    256 bytes. Until 2026-09-26 that was accepted and only reported ("read as
+#    cp1252"), which broke this file's own rule. The rung now carries a
+#    character statistic, THE ACCENT GATE below: a stretch of text in which 35%
+#    or more of the letters carry an accent is what a non-Latin script looks
+#    like read as cp1252, and it is refused.
 #
 # 4. NOTHING DECODED IT: refuse, naming what was tried. Never half a string.
 #
@@ -230,9 +231,195 @@ LEGACY_ENCODINGS = ("cp1252",)
 
 #: Never tried automatically: each of these decodes all 256 byte values, so it
 #: can only ever turn a refusal into a false accept. Named rather than merely
-#: omitted, so the next person can see the decision was made.
+#: omitted, so the next person can see the decision was made. The optional
+#: detector below may still NAME one of them (KOI8-R is a real Russian code
+#: page), and that is a different act from trying it blind: it is reached only
+#: after cp1252 was refused by the accent gate, and its answer has to pass the
+#: gate, a strict decode, the text rule and a mess bound before it is taken.
 NEVER_GUESSED = ("latin-1", "iso-8859-1", "iso-8859-15", "mac_roman", "koi8-r",
                  "cp437")
+
+
+# --------------------------------------------------------------------------
+# THE ACCENT GATE on the cp1252 rung.
+#
+# THE DEFECT, measured 2026-09-26 on the nine sentences of the product review
+# (its Appendix B). Russian in cp1251, Russian in KOI8-R, Greek in cp1253 and
+# Chinese in GBK all decoded strictly as cp1252 and were ACCEPTED; the first
+# arrived as "Ïðèâåò, êàê äåëà?". Polish/Czech cp1250 and Shift-JIS were
+# refused only because they happened to hold one of cp1252's five undefined
+# bytes.
+#
+# THE RULE IS charset-normalizer's, copied rather than depended on:
+# github.com/jawah/charset_normalizer, src/charset_normalizer/md.py
+# TooManyAccentuatedPlugin (letters only, nothing judged below 8 of them, a
+# ratio of 0.35 or more is mess) and constant.py _ACCENT_KEYWORDS (the eight
+# phrases below, matched against a letter's Unicode name as utils.py
+# _character_flags does). What it catches is structural: a non-Latin script
+# read as cp1252 lands its letters in 0xC0-0xFF, where cp1252 keeps almost
+# nothing but accented Latin letters.
+#
+# MEASURED per chunk, as cp1252: Russian in cp1251, KOI8-R, cp866, Mac and
+# ISO-8859-5 0.69-0.96; Ukrainian and Bulgarian 0.89-0.94; Greek 0.93; GBK
+# 0.79-0.82; Hebrew 0.86; Arabic 0.90; Thai 0.88; Korean 0.73; EUC-JP 0.81;
+# Vietnamese cp1258 0.355. Genuine Latin prose: German 0.058, French 0.115,
+# Spanish 0.129, Icelandic 0.200, Portuguese 0.240.
+#
+# WHAT IT CANNOT SEE, measured the same day, so nobody believes it does more:
+#   Big5 (traditional Chinese) sits at 0.344-0.348, just UNDER the line,
+#   because half of its trail bytes are ASCII letters, and is still accepted
+#   as mojibake.
+#   A wrong LATIN code page is invisible to it: Polish in cp1250 (0.015),
+#   Turkish in cp1254 (0.08) and Lithuanian in cp1257 (0.067) decode as cp1252
+#   with a few wrong letters and nothing here notices.
+#   A stretch with fewer than 8 letters is not judged, so a very short file
+#   is not judged at all.
+#
+# EQUAL CHUNKS OF AT MOST 512, NOT 512 AND A TAIL. charset-normalizer reads
+# 512-byte blocks. Cut the same way, the last block of a long French letter
+# can be its sign-off alone, and "Été à Orléans." is 4 accented letters of 11
+# (0.36): one line would refuse the whole file. Cutting the text into equal
+# parts of at most 512 characters keeps every part above 256 characters
+# whenever the text is longer than 512, so no line is judged on its own.
+#
+# The notice charset-normalizer's licence asks to be carried with what was
+# copied from it (the eight keywords, 0.35 and 8):
+#
+#   MIT License
+#
+#   Copyright (c) 2025 TAHRI Ahmed R.
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a
+#   copy of this software and associated documentation files (the "Software"),
+#   to deal in the Software without restriction, including without limitation
+#   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+#   and/or sell copies of the Software, and to permit persons to whom the
+#   Software is furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included in
+#   all copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+#   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+#   DEALINGS IN THE SOFTWARE.
+# --------------------------------------------------------------------------
+ACCENT_KEYWORDS = (
+    "WITH GRAVE",
+    "WITH ACUTE",
+    "WITH CEDILLA",
+    "WITH DIAERESIS",
+    "WITH CIRCUMFLEX",
+    "WITH TILDE",
+    "WITH MACRON",
+    "WITH RING ABOVE",
+)
+ACCENT_SHARE_LIMIT = 0.35
+ACCENT_MIN_LETTERS = 8
+ACCENT_CHUNK = 512
+
+#: The mess ratio above which the optional detector's answer is not taken.
+#: charset-normalizer's own default is 0.2; on high-byte noise shaped like
+#: words it once named KOI8-R at 0.187, while every real legacy file measured
+#: here came back at 0.000.
+DETECTOR_MAX_CHAOS = 0.1
+
+
+class Legacy(NamedTuple):
+    """What the accent gate found: parts that tripped, parts judged, the worst."""
+    tripped: int
+    judged: int
+    worst: float
+
+
+class Decoded(NamedTuple):
+    """decode_bytes' answer. `legacy` is set only when the gate refused cp1252."""
+    text: str | None
+    encoding: str
+    tried: list[str]
+    legacy: Legacy | None = None
+
+
+def _accent_class(ch: str) -> str:
+    """"." for a non-letter, "b" for an accented letter, "a" for any other."""
+    if not ch.isalpha():
+        return "."
+    name = unicodedata.name(ch, "")
+    return "b" if any(k in name for k in ACCENT_KEYWORDS) else "a"
+
+
+def accent_verdict(text: str) -> Legacy:
+    """The gate over a whole text, part by part.
+
+    ONE PASS IN C, NOT ONE PER CHARACTER IN PYTHON: each distinct character is
+    classified once, str.translate maps the text to a string of classes, and
+    each part is two str.count calls. Measured on 16 MB of cp1252 prose,
+    0.52 s, against 0.67 s for the text rule that already runs on every file.
+    """
+    if not text:
+        return Legacy(0, 0, 0.0)
+    classes = text.translate({ord(c): _accent_class(c) for c in set(text)})
+    parts = -(-len(classes) // ACCENT_CHUNK)
+    step = -(-len(classes) // parts)
+    tripped = judged = 0
+    worst = 0.0
+    for i in range(0, len(classes), step):
+        part = classes[i:i + step]
+        letters = len(part) - part.count(".")
+        if letters < ACCENT_MIN_LETTERS:
+            continue
+        judged += 1
+        share = part.count("b") / letters
+        worst = max(worst, share)
+        if share >= ACCENT_SHARE_LIMIT:
+            tripped += 1
+    return Legacy(tripped, judged, worst)
+
+
+def _detected(data: bytes) -> tuple[str, str] | None:
+    """(text, codec) from charset-normalizer when it is installed and sure.
+
+    OPTIONAL AND NEVER REQUIRED: imported here and nowhere else, so this module
+    still imports in a bare standard-library process, where the answer is
+    simply None and the file is refused.
+
+    ONLY EVER ASKED AFTER THE GATE REFUSED cp1252, never instead of the rung.
+    Measured on the review's five genuine cp1252 sentences, from_bytes named
+    mac_latin2 for the French one and cp1250 for the Portuguese and Icelandic
+    ones, each decoding to wrong letters ("Năo" for "Não"). On the four the
+    gate refuses it named cp1251, koi8_r, cp1253 and gb18030, each exact.
+
+    Its answer is checked, not trusted: a UTF codec is refused (a file with no
+    byte order mark is never read as UTF-16 here), the decode is repeated
+    strictly, and the result must pass the text rule and the accent gate and
+    carry a mess ratio of at most DETECTOR_MAX_CHAOS.
+    """
+    try:
+        from charset_normalizer import from_bytes  # noqa: PLC0415
+    except ImportError:
+        return None
+    try:
+        best = from_bytes(data).best()
+    except Exception:                                            # noqa: BLE001
+        return None          # a broken optional install is the same as none
+    if best is None or best.chaos > DETECTOR_MAX_CHAOS:
+        return None
+    try:
+        codec = codecs.lookup(best.encoding).name
+    except LookupError:
+        return None
+    if codec.startswith("utf"):
+        return None
+    try:
+        text = data.decode(codec)
+    except UnicodeDecodeError:
+        return None
+    if not text_is_readable(text) or accent_verdict(text).tripped:
+        return None
+    return text, codec
 
 _PDF_MAGIC = b"%PDF-"          # rfc-editor.org/rfc/rfc8118.txt sec 8: "All PDF
                                # files start with the characters \"%PDF-\""
@@ -263,8 +450,16 @@ def _bom_of(data: bytes) -> tuple[bytes, str, str] | None:
     return None
 
 
-def decode_bytes(data: bytes, prefer: str = "") -> tuple[str | None, str, list[str]]:
-    """(text, encoding, what was tried). text is None when nothing decoded it.
+def decode_bytes(data: bytes, prefer: str = "", judge: bool = True) -> Decoded:
+    """(text, encoding, what was tried, legacy). text is None when nothing
+    decoded it, and `legacy` says why when cp1252 decoded it and the accent
+    gate refused the result.
+
+    The gate runs on the cp1252 rung only, and only on text that passes the
+    text rule, so a binary file is still refused by that rule in its own words
+    rather than called a Russian letter. A declared encoding (`prefer`) is the
+    file's own statement and is not second-guessed. `judge=False` skips the
+    gate, for the cheap check, which leaves the judgement to read_any.
 
     `prefer` is a codec named by the file itself — an HTML meta charset — which
     is tried after the BOM and before UTF-8, and which is allowed to be wrong:
@@ -282,26 +477,35 @@ def decode_bytes(data: bytes, prefer: str = "") -> tuple[str | None, str, list[s
         _, codec, label = found
         tried.append(label)
         try:
-            return data.decode(codec), label, tried
+            return Decoded(data.decode(codec), label, tried)
         except UnicodeDecodeError:
             # The file declared itself and then did not match. Falling through
             # to another encoding here would mean ignoring a declaration in
             # favour of a guess, which is how a truncated UTF-16 file becomes
             # a page of mojibake instead of a sentence about a damaged file.
-            return None, "", tried
+            return Decoded(None, "", tried)
     if prefer:
         tried.append(prefer)
         try:
-            return data.decode(prefer), prefer, tried
+            return Decoded(data.decode(prefer), prefer, tried)
         except (UnicodeDecodeError, LookupError):
             pass
     for codec in ("utf-8", *LEGACY_ENCODINGS):
         tried.append(codec)
         try:
-            return data.decode(codec), codec, tried
+            text = data.decode(codec)
         except UnicodeDecodeError:
             continue
-    return None, "", tried
+        if codec == "cp1252" and judge and text_is_readable(text):
+            verdict = accent_verdict(text)
+            if verdict.tripped:
+                found = _detected(data)
+                if found is None:
+                    return Decoded(None, "", tried, verdict)
+                tried.append(found[1])
+                return Decoded(found[0], f"{found[1]} (detected)", tried)
+        return Decoded(text, codec, tried)
+    return Decoded(None, "", tried)
 
 
 def _undecodable_count(data: bytes) -> int:
@@ -538,15 +742,15 @@ def _declared_encoding(head: bytes) -> str:
         return ""
 
 
-def _html_text(data: bytes) -> tuple[str | None, str, list[str]]:
-    """(text, encoding, tried) for a page's bytes."""
-    text, encoding, tried = decode_bytes(data, prefer=_declared_encoding(data))
-    if text is None:
-        return None, "", tried
+def _html_text(data: bytes) -> Decoded:
+    """decode_bytes' answer for a page's bytes, with the markup taken out."""
+    got = decode_bytes(data, prefer=_declared_encoding(data))
+    if got.text is None:
+        return got
     parser = _TextOnly()
-    parser.feed(text)
+    parser.feed(got.text)
     parser.close()
-    return parser.text(), encoding, tried
+    return got._replace(text=parser.text())
 
 
 # --------------------------------------------------------------------------
@@ -842,8 +1046,10 @@ def read_any(path, max_bytes: int = MAX_BYTES) -> Read:
                                else "epub", max_bytes)
 
     if suffix in _HTML_EXTS:
-        text, encoding, tried = _html_text(data)
+        text, encoding, tried, legacy = _html_text(data)
         if text is None:
+            if legacy is not None:
+                return _refused_legacy(name, legacy)
             return _refused_decode(name, data, tried)
         if not text.strip():
             return _refused(
@@ -854,8 +1060,10 @@ def read_any(path, max_bytes: int = MAX_BYTES) -> Read:
         return _accepted(text, "html", encoding,
                          _read_say(name, text, "html", encoding))
 
-    text, encoding, tried = decode_bytes(data)
+    text, encoding, tried, legacy = decode_bytes(data)
     if text is None:
+        if legacy is not None:
+            return _refused_legacy(name, legacy)
         return _refused_decode(name, data, tried)
     if not text:
         # A FILE THAT IS NOTHING BUT A BYTE ORDER MARK, which is what a Save as
@@ -898,6 +1106,32 @@ def _refused_decode(name: str, data: bytes, tried: list[str]) -> Read:
         f"any of them. Nothing was read rather than read partly — if this really "
         f"is writing, open it in the program that made it and save it as UTF-8.",
         dropped=lost)
+
+
+#: The one word a legacy-encoding refusal carries. read_corpus counts refusals
+#: by word, so it is a constant rather than a literal typed twice.
+LEGACY_WORD = "Old encoding"
+
+
+def _refused_legacy(name: str, legacy: Legacy) -> Read:
+    """cp1252 decoded it, and what came out is a non-Latin script misread.
+
+    THE SHARE IS IN THE SENTENCE because it is the evidence: "38 of 40" says
+    the whole file is in another encoding, "1 of 12" says one passage is, and
+    a person deciding whether to believe the refusal needs to know which.
+    `dropped` stays 0: every byte decoded, into the wrong characters.
+    """
+    pct = round(100 * legacy.tripped / legacy.judged)
+    part = "part" if legacy.judged == 1 else "parts"
+    return _refused(
+        LEGACY_WORD,
+        f"“{name}” looks like text saved in an older Cyrillic, Greek, Chinese "
+        f"or other non-Latin encoding. Read as cp1252, the one older encoding "
+        f"this tries, {legacy.tripped:,} of its {legacy.judged:,} {part} "
+        f"({pct}%) came out as mostly accented Latin letters, which is what "
+        f"that text turns into. Nothing was read rather than read wrongly: open "
+        f"it in the program that made it and save it as UTF-8, and this will "
+        f"read it.")
 
 
 def _refused_declaration(name: str, data: bytes, codec: str, label: str) -> Read:
@@ -969,7 +1203,7 @@ def _read_container(name: str, data: bytes, kind: str, max_bytes: int) -> Read:
                 raw = _zip_read(zf, member, max_bytes)
                 if raw is None:
                     continue
-                one, _, _ = _html_text(raw)
+                one = _html_text(raw).text
                 if one:
                     chapters.append(one)
             text = _tidy("\n\n".join(chapters))
@@ -1025,8 +1259,28 @@ def can_train_on(path) -> bool:
         # says yes and lets read_any do the real decode, which is also the only
         # place that can explain a declaration that turned out to be a lie.
         return True
-    text, _, _ = decode_bytes(trim_to_char_boundary(head))
+    # judge=False for the same reason. A Russian file in cp1251 is text a
+    # person can fix in ten seconds, and a "no" here reaches them as a picker's
+    # generic "not text" box, or as a folder count with no reason in it; a
+    # "yes" sends it to read_any, which says what it is and what to do.
+    text = decode_bytes(trim_to_char_boundary(head), judge=False).text
     return text is not None and text_is_readable(text)
+
+
+def _legacy_note(n: int, other: bool = True) -> str:
+    """What a folder's summary says about files the accent gate refused.
+
+    Counted apart from "not text" because they ARE text, and the fix is one
+    Save as away.
+    """
+    if not n:
+        return ""
+    one = n == 1
+    return (f" {n:,} {'other ' if other else ''}file{'' if one else 's'} "
+            f"{'looks' if one else 'look'} like text saved in an older "
+            f"Cyrillic, Greek, Chinese or other non-Latin encoding and "
+            f"{'was' if one else 'were'} left out; saved as UTF-8, "
+            f"{'it' if one else 'they'} would be read.")
 
 
 def read_corpus(paths, max_bytes: int = MAX_BYTES) -> Read:
@@ -1073,6 +1327,7 @@ def read_corpus(paths, max_bytes: int = MAX_BYTES) -> Read:
     kinds: set[str] = set()
     encodings: set[str] = set()
     skipped = 0
+    legacy = 0
     reasons: Counter = Counter()
     for f in files:
         if not can_train_on(f):
@@ -1080,7 +1335,10 @@ def read_corpus(paths, max_bytes: int = MAX_BYTES) -> Read:
             continue
         got = read_any(f, max_bytes)
         if got.text is None:
-            skipped += 1
+            if got.say.word == LEGACY_WORD:
+                legacy += 1
+            else:
+                skipped += 1
             reasons[got.say.word] += 1
             continue
         parts.append(got.text)
@@ -1094,7 +1352,7 @@ def read_corpus(paths, max_bytes: int = MAX_BYTES) -> Read:
             f"None of the {len(files):,} files in “{where}” could be read as "
             f"text" + (f" ({detail})." if detail else ".") +
             " Text files of any kind work, and so do .docx, .epub and saved web "
-            "pages.")
+            "pages." + _legacy_note(legacy, other=False))
 
     text = "\n\n".join(parts)
     # One kind or one encoding when they agree, which is the common case and the
@@ -1112,5 +1370,6 @@ def read_corpus(paths, max_bytes: int = MAX_BYTES) -> Read:
         why += (f" {skipped:,} other file{'' if skipped == 1 else 's'} in there "
                 f"{'is' if skipped == 1 else 'are'} not text and "
                 f"{'was' if skipped == 1 else 'were'} left out.")
+    why += _legacy_note(legacy)
     return Read(text, kind, encoding, 0,
                 look.Say(look.PROVED, "Read", why, "proved"))

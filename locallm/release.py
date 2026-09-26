@@ -68,14 +68,16 @@ INCLUDED = "included-model"
 # Everything locallm imports and does not ship. torch is 800 MB of wheel
 # (github.com/pytorch/pytorch/issues/94262) and install.py fetches it on the
 # machine that wants it; tokenizers is optional inside data.py; tkinterdnd2 is the
-# optional drag-and-drop in home.py. The list is short on purpose: any other name
+# optional drag-and-drop in home.py; charset_normalizer is the optional encoding
+# detector inside ingest.py, asked only after cp1252 was refused as mojibake.
+# The list is short on purpose: any other name
 # that is neither the standard library nor a file beside home.py is a module
 # somebody forgot, and the closure refuses instead of building a zip that dies on
 # import. sys.stdlib_module_names is the standard library's own answer to "is this
 # one of mine" (docs.python.org/3/library/sys.html#sys.stdlib_module_names) and
 # needs Python 3.10; this is a build tool, not the shipped program, so that is a
 # cheaper dependency here than a hand-kept list of module names.
-EXTERNAL = frozenset({"torch", "tokenizers", "tkinterdnd2"})
+EXTERNAL = frozenset({"torch", "tokenizers", "tkinterdnd2", "charset_normalizer"})
 STDLIB = frozenset(sys.stdlib_module_names)
 
 # The programs a person starts. look.py is imported by home.py rather than run,
