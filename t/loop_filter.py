@@ -380,8 +380,13 @@ def main():
         src = [d.strip() + "\n"
                for d in re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", text) if d.strip()]
     corpus = src
-    seen, unparsed = set(), 0
+    seen, unparsed, spec_documents = set(), 0, 0
     for doc in src:
+        if is_spec_document(doc):
+            # a `Spec:` document (corpus --spec-docs) holds no program: it is
+            # counted and named here, not parsed into the copy check
+            spec_documents += 1
+            continue
         try:
             seen.add(key(surface.parse(strip_head(doc))))
         except Exception:
@@ -391,6 +396,7 @@ def main():
             unparsed += 1
     clean = []
     print(f"source: {len(src)} blocks, {sum(map(len, src))} chars, {len(seen)} parse"
+          + (f", {spec_documents} spec documents (no program, not in the copy check)" if spec_documents else "")
           + (f", {unparsed} DID NOT PARSE and are absent from the copy check" if unparsed else ""),
           flush=True)
     seed_docs = list(corpus)

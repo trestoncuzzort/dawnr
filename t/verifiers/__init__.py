@@ -177,6 +177,14 @@ def run_tree(cmd, *, timeout, cwd=None, env=None, capture_output=True,
         # group's id is reused only after the pid counter wraps (4,194,304
         # on the lab), so the kill cannot land on a stranger.
         _kill_group(proc.pid)
+        # The group is not the whole tree: gnatprove's why3server puts each z3 in
+        # its own process group (PGID = PID, measured 2026-09-25: six orphaned z3s
+        # of ours, each its own group leader, inside the dead gnatprove's
+        # session), so killpg on the leader's group never reaches them. The
+        # SESSION does: start_new_session=True made the leader's pid the session
+        # id of everything under it, and setpgid cannot leave a session
+        # (setsid can; that remains stall_check's job).
+        _kill_session(proc.pid)
         if proc.returncode is None:          # exception path: leader not reaped yet
             try:
                 proc.wait(timeout=5)
@@ -187,6 +195,37 @@ def run_tree(cmd, *, timeout, cwd=None, env=None, capture_output=True,
                     pipe.close()
         _LIVE_GROUPS.discard(proc.pid)       # after the kill, so atexit covers the window
     return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
+
+
+def _kill_session(sid: int) -> None:
+    """SIGKILL every process of this user whose session id is `sid`, read from
+    /proc/<pid>/stat field 6 (proc_pid_stat(5), man7.org/linux/man-pages/man5/
+    proc_pid_stat.5.html): a prover that moved itself into a new process group
+    is still in the cell's session. Only Linux has /proc in this form; elsewhere
+    the group kill above is all there is. A process that vanished between the
+    read and the signal, or one we may not signal, is left alone."""
+    import signal
+    proc_dir = "/proc"
+    if not os.path.isdir(proc_dir):
+        return
+    me = os.getuid()
+    for name in os.listdir(proc_dir):
+        if not name.isdigit() or int(name) == sid:
+            continue
+        pid = int(name)
+        try:
+            if os.stat(f"{proc_dir}/{name}").st_uid != me:
+                continue
+            with open(f"{proc_dir}/{name}/stat", "rb") as stream:
+                stat = stream.read()
+            # field 2 is "(comm)" and may hold spaces or parentheses; everything
+            # after the last ")" is fixed-position: state ppid pgrp session ...
+            fields = stat[stat.rindex(b")") + 2:].split()
+            if int(fields[3]) != sid:
+                continue
+            os.kill(pid, signal.SIGKILL)
+        except (OSError, ValueError, IndexError):
+            continue
 
 
 def _kill_group(pgid: int) -> None:

@@ -36,6 +36,7 @@ wc -l t/out/loop/sft-r10.jsonl t/out/loop/pairs-r10.jsonl
 echo
 echo "Then train on it, headed and greedy, which is the recipe that tied Phi:"
 echo "  python3 t/loop_locallm.py corpus --pool v5 --lifted --sft t/out/loop/sft-r10.jsonl \\"
+echo "      --split t/out/loop/split-v5.json --heads t/out/loop/heads-2026-09-25.jsonl --spec-docs \\"
 echo "      --out t/out/loop/corpus-r10.txt"
 echo "  python3 t/head_align_corpus.py --corpus t/out/loop/corpus-r10.txt \\"
 echo "      --out t/out/loop/corpus-r10-headed.txt"

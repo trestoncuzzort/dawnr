@@ -207,9 +207,14 @@ class DevIdsFileTests(unittest.TestCase):
                          self.dev["inputs"]["split_sha256"])
 
     def test_no_dev_id_is_on_the_decontamination_list(self):
-        policy = json.loads((HERE / "decontamination-2026-09-21.json").read_text())
-        listed = set(policy["exclude_future_train_ids"]) | set(policy["overlap_ids"])
-        self.assertFalse(listed & set(self.dev["dev_ids"]))
+        # the merged policy: the hand list of 2026-09-21 plus the behavioural
+        # duplicates of 2026-09-25, as loop_filter.decontamination() reads them
+        import loop_filter
+        merged = loop_filter.decontamination()
+        listed = set(merged.exclude_train_ids) | set(merged.overlap_eval_ids)
+        self.assertFalse(listed & set(self.dev["dev_ids"]),
+                         f"dev ids on the merged exclusion list: {sorted(listed & set(self.dev['dev_ids']))}; "
+                         f"regenerate t/r12-dev-ids.json (bash t/r12_data_queue.sh dev-ids)")
 
     def test_the_choice_recomputes_from_the_recorded_eligible_list_and_salt(self):
         ordered = sorted(self.dev["eligible_in_hash_order"],
