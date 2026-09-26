@@ -774,6 +774,287 @@ def _view_kind_for_type(t: Optional[Type]) -> Optional[str]:
     return None
 
 
+def _src_result_text(call_text: str, ret_type: Optional[Type]) -> str:
+    """A SOURCE closure function's call, viewed in t's shape when its
+    result type is not t's own: a `char` result compared against the lifted
+    spec_fun's `int` result is a type error ("arguments must have
+    comparable types (got char and int)", measured 2026-09-26 on
+    humaneval_dafny_011 string_xor's `char_xor` and vericoding DJ0072's
+    `InnerExprReplaceBlanksWithChars`). The view is the same one the
+    params get (`_view_text`); the call is bound once to a name the view
+    text can repeat, through a `var` expression."""
+    kind = _view_kind_for_type(ret_type)
+    if kind is None:
+        return call_text
+    if kind == "char":
+        return f"({call_text} as int)"
+    if kind == "string":
+        return f"(var r_src := {call_text}; {_view_text('r_src', {'r_src': 'string'})})"
+    return f"(var r_src := {call_text}; {_view_text('r_src', {'r_src': kind})})"
+
+
+def _view_hint_lines(vws: dict, declared) -> list:
+    """Body lines for a lemma whose lifted side reads a string through its
+    code-point view `(seq(|s|, (k: int) requires 0 <= k < |s| => s[k] as
+    int))`: one proved assertion per such name, `forall k_view :: 0 <=
+    k_view < |s| ==> <view>[k_view] == s[k_view] as int`. It states what
+    the comprehension means elementwise, so the solver can relate
+    `s[i] == s[j]` on chars to the same comparison on the view's ints
+    under a quantifier, which it does not find unaided (measured
+    2026-09-26: humaneval_dafny_112 check_palindrome's `L_fun`, unproved
+    without it, verified with it; the named-function alternative verified
+    too). An `assert` is proved where it stands, so nothing is assumed and
+    neither side of the lemma changes."""
+    out = []
+    for n, kind in vws.items():
+        if n not in declared:
+            continue
+        v = _view_text(n, vws)
+        if kind == "string":
+            out.append(f"  assert forall k_view: int :: 0 <= k_view < |{n}| ==> "
+                       f"{v}[k_view] == ({n}[k_view] as int);")
+        elif kind == "array":
+            # The same elementwise statement for decision 1's `(a[..])`
+            # view. L_ens/L_inv_k carry it as a requires already
+            # (`array_view_fact`); L_req had nothing, and its
+            # `forall i, j :: 0 <= i < j < a.Length ==> a[i] < a[j]`
+            # against the lifted nested forall over `(a[..])` read
+            # unproved (vericoding DD0100 BinarySearch, DV0068
+            # SearchInsert).
+            out.append(f"  assert |{v}| == {n}.Length;")
+            out.append(f"  assert forall k_view: int :: 0 <= k_view < {n}.Length ==> "
+                       f"{v}[k_view] == {n}[k_view];")
+    return out
+
+
+def _body(hints: list) -> list:
+    return ["{"] + hints + ["}"] if hints else ["{ }"]
+
+
+def _induction_hint(fd: FunctionDecl, f: dict, rename: dict):
+    """`(decreases_text, body_lines)` for `L_fun_F` when F calls itself,
+    else `(None, [])`: the induction hypothesis, stated as a forall
+    statement over every argument tuple whose measure is smaller, and the
+    measure itself as the lemma's `decreases` so dafny accepts the
+    recursive lemma call. This is strong induction on F's own measure,
+    the proof dafny's automatic induction does not find when the measure
+    is not a parameter counting down (vericoding DA0047's `SumCosts(s,
+    t, index)`, `decreases |s| - index`, recursing on `index + 1`: its
+    L_fun read unproved). Only a single measure is used, and only one
+    that is an integer expression (a bare parameter of another type is
+    ordered by rank, which `0 <= D' < D` cannot state)."""
+    if fd.body is None:
+        return None, []
+    if not any(call.fn.name == fd.name for call, _q in _find_fun_calls([fd.body], {fd.name})):
+        return None, []
+    decs = [sp for sp in fd.specs if isinstance(sp, DecreasesClause)]
+    if len(decs) != 1 or isinstance(decs[0].exprs, Star) or len(decs[0].exprs) != 1:
+        return None, []
+    d = decs[0].exprs[0]
+    int_params = {p.name for p in fd.params
+                  if p.type is not None and (p.type.kind in ("int", "nat"))}
+    if isinstance(d, Ident):
+        if d.name not in int_params:
+            return None, []
+    elif not isinstance(d, (Binary, Unary, Cardinality, IntLit)):
+        return None, []
+    prime = {p.name: f"{p.name}_ih" for p in fd.params}
+    ren2 = dict(rename)
+    ren2.update(prime)
+    binders = ", ".join(f"{prime[p.name]}: {_lemma_param_type(p.type)}" for p in fd.params)
+    args2 = ", ".join(prime[p.name] for p in fd.params)
+    views2 = {prime[k]: v for k, v in _fn_param_views(fd.params).items()}
+    lifted2 = ", ".join(_view_text(prime[p.name], views2) for p in fd.params)
+    nat2 = _and([f"{prime[p.name]} >= 0" for p in fd.params if _is_nat_type(p.type)])
+    req2 = _conj_text([sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)], ren2)
+    d_now = _print_expr(d, rename)
+    d_ih = _print_expr(d, ren2)
+    fn_src = rename.get(fd.name, fd.name)
+    src_call = _src_result_text(f"{fn_src}({args2})", fd.ret_type)
+    guard = _and([nat2, req2, f"(0 <= {d_ih} < {d_now})"])
+    return d_now, [f"  forall {binders} | {guard} ensures {src_call} == "
+                   f"{f['name']}({lifted2}) {{ L_fun_{f['name']}({args2}); }}"]
+
+
+def _has_partial(e, index_ok: bool = True) -> bool:
+    """True when `e` contains an operation that is not total: a slice, a
+    function call, a division, or (unless `index_ok`) an index."""
+    for n in _walk_exprs(e):
+        if isinstance(n, (Slice, Call)):
+            return True
+        if isinstance(n, Binary) and n.op in ("/", "%") \
+                and not (isinstance(n.right, IntLit) and n.right.value != 0):
+            return True
+        if not index_ok and isinstance(n, Index):
+            return True
+    return False
+
+
+def _membership_bridge_lines(exprs: list, rename: dict) -> list:
+    """Proved bridges for section 4.4's membership row. A source
+    `forall x :: x in R ==> B(x)` is lifted to `forall j in [0, len(R)) .
+    B(R[j])` (and `x in R` itself to `exists k ...`), a true equivalence
+    dafny does not find when it has to chain the two quantifiers through
+    `in` (measured 2026-09-26: humaneval_dafny_034 uniqueSorted's L_ens,
+    `forall x :: x in result ==> x in s`, unproved; an asserted
+    `forall v :: v in s <==> exists k :: s[k] == v` did not help, the
+    explicit two-direction proof below did). For each such quantifier
+    whose free names are the lemma's own, one statement
+
+        assert Q <==> (forall j_m :: 0 <= j_m < |R| ==> B(R[j_m])) by {
+          if Q { forall j_m | 0 <= j_m < |R| ensures B(R[j_m]) { assert R[j_m] in R; } }
+          if (...) { forall x | x in R ensures B(x) { var j_m :| 0 <= j_m < |R| && R[j_m] == x; } }
+        }
+
+    is emitted. It is proved where it stands, so it changes neither side
+    of the lemma; it only gives dafny the index form of the source
+    quantifier, which is the lifted one's shape."""
+    out = []
+    seen = set()
+
+    def visit(e, bound):
+        if isinstance(e, Quantifier):
+            names = {b.name for b in e.binders}
+            if not bound and e.kind == "forall" and len(e.binders) == 1:
+                x = e.binders[0].name
+                mem, body = None, None
+                if e.range is not None and isinstance(e.range, Chain) \
+                        and e.range.ops == ("in",) and isinstance(e.range.operands[0], Ident) \
+                        and e.range.operands[0].name == x:
+                    mem, body = e.range.operands[1], e.body
+                elif e.range is None and isinstance(e.body, Implies) \
+                        and isinstance(e.body.left, Chain) and e.body.left.ops == ("in",) \
+                        and isinstance(e.body.left.operands[0], Ident) \
+                        and e.body.left.operands[0].name == x:
+                    mem, body = e.body.left.operands[1], e.body.right
+                # Only for operands that are total wherever the quantifier
+                # can be read: a slice or a call in them could be
+                # ill-formed at the lemma's top level (`x in arr[..i]` for
+                # an unconstrained `i`), and a hint that is not
+                # well-formed fails the lemma it was meant to help.
+                if mem is not None and x not in _free_idents(mem) \
+                        and not _has_partial(mem) and not _has_partial(body, index_ok=False):
+                    used = _free_idents(e)
+                    j = "j_m"
+                    while j in used or j in rename.values():
+                        j += "_"
+                    r_txt = _print_expr(mem, rename)
+                    q_txt = _print_expr(e, rename)
+                    b_idx = _print_expr(_subst_params(body, {x: Index(e.line, mem, Ident(e.line, j))}), rename)
+                    x_txt = rename.get(x, x)
+                    b_txt = _print_expr(body, rename)
+                    idx_q = f"(forall {j}: int :: 0 <= {j} < |{r_txt}| ==> {b_idx})"
+                    key = (q_txt, idx_q)
+                    if key not in seen:
+                        seen.add(key)
+                        out.append(f"  assert {q_txt} <==> {idx_q} by {{")
+                        out.append(f"    if {q_txt} {{ forall {j}: int | 0 <= {j} < |{r_txt}| "
+                                   f"ensures {b_idx} {{ assert {r_txt}[{j}] in {r_txt}; }} }}")
+                        out.append(f"    if {idx_q} {{ forall {x_txt}: int | {x_txt} in {r_txt} "
+                                   f"ensures {b_txt} {{ var {j} :| 0 <= {j} < |{r_txt}| && "
+                                   f"{r_txt}[{j}] == {x_txt}; }} }}")
+                        out.append("  }")
+            for c in _expr_children(e):
+                visit(c, bound | names)
+            return
+        for c in _expr_children(e):
+            visit(c, bound)
+
+    for e in exprs:
+        visit(e, set())
+    return out
+
+
+def _membership_point_lines(exprs: list, rename: dict, array_names=frozenset()) -> list:
+    """The pointwise half of the membership row: a source `E in R` under
+    enclosing quantifiers is lifted to `exists k in [0, len(R)) . R[k] ==
+    E`, and dafny does not relate the two under a quantifier it has to
+    instantiate (humaneval_dafny_034 uniqueSorted's L_inv_0, `forall j ::
+    0 <= j < i ==> s[j] in result`, unproved; verified once the forall
+    statement below stood in its body). For each such `E in R` whose
+    enclosing binders are quantifiers of the clause, one proved statement
+
+        forall <binders> | <ranges> && <index bounds of E and R>
+          ensures (E in R) <==> (exists k_m :: 0 <= k_m < |R| && R[k_m] == E) { }
+
+    The index bounds (`0 <= t < |A|` for every `A[t]` in E or R) keep the
+    statement well-formed on its own, without the clause's earlier
+    conjuncts. A membership with no enclosing binder is left alone: its
+    operands are lemma parameters, where dafny needs no instantiation."""
+    out, seen = [], set()
+
+    def rng_of(q):
+        if q.range is not None:
+            return [q.range]
+        if q.kind == "forall" and isinstance(q.body, Implies):
+            return [q.body.left]
+        if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
+            return [q.body.args[0]]
+        return []
+
+    def bounds(e):
+        bs = []
+        for node in _walk_exprs(e):
+            if isinstance(node, Index):
+                base = _print_expr(node.base, rename)
+                idx = _print_expr(node.index, rename)
+                ln = (f"{base}.Length" if isinstance(node.base, Ident)
+                      and rename.get(node.base.name, node.base.name) in array_names
+                      else f"|{base}|")
+                b = f"0 <= {idx} < {ln}"
+                if b not in bs:
+                    bs.append(b)
+        return bs
+
+    def visit(e, stack):
+        if isinstance(e, Chain) and e.ops == ("in",) and stack:
+            elem, coll = e.operands
+            binders = [b for q in stack for b in q.binders]
+            free = _free_idents(elem) | _free_idents(coll)
+            # `x in R` with `x` a binder of an enclosing quantifier is the
+            # bridge's shape (`_membership_bridge_lines`); a pointwise
+            # statement over every int `x` there only adds an unbounded
+            # quantified fact, and measured as noise that cost vericoding
+            # DJ0099 FindOddNumbers its L_ens.
+            is_bound_elem = isinstance(elem, Ident) and elem.name in {b.name for b in binders}
+            if any(b.name in free for b in binders) and not is_bound_elem \
+                    and not isinstance(coll, (SetDisplay, MapDisplay)) \
+                    and not _has_partial(elem) and not _has_partial(coll):
+                used = set()
+                for q in stack:
+                    used |= _free_idents(q)
+                k = "k_m"
+                while k in used or k in rename.values():
+                    k += "_"
+                # Index bounds alone when E and R are built from indexing,
+                # arithmetic and lengths: they make the statement
+                # well-formed, and the quantifier's own range, a chain like
+                # `0 <= j < i`, measured as a worse trigger context (the
+                # same uniqueSorted L_inv_0 stayed unproved with it). Any
+                # other partial operation keeps the enclosing ranges too.
+                simple = all(isinstance(n, (Ident, IntLit, Index, Binary, Unary, Cardinality))
+                             for n in list(_walk_exprs(elem)) + list(_walk_exprs(coll)))
+                parts = [] if simple else [_print_expr(r, rename) for q in stack for r in rng_of(q)]
+                parts += bounds(elem) + bounds(coll)
+                c_txt = _print_expr(coll, rename)
+                e_txt = _print_expr(elem, rename)
+                b_txt = ", ".join(_print_binder(b, rename) for b in binders)
+                line = (f"  forall {b_txt} | {_and([f'({x})' for x in parts])} ensures "
+                        f"({e_txt} in {c_txt}) <==> (exists {k}: int :: 0 <= {k} < |{c_txt}| "
+                        f"&& {c_txt}[{k}] == {e_txt}) {{ }}")
+                if line not in seen and len({b.name for b in binders}) == len(binders):
+                    seen.add(line)
+                    out.append(line)
+        if isinstance(e, Quantifier):
+            stack = stack + [e]
+        for c in _expr_children(e):
+            visit(c, stack)
+
+    for e in exprs:
+        visit(e, [])
+    return out
+
+
 def _fn_param_views(params) -> dict:
     """Row 28: a closure FUNCTION's own char/string-typed params, keyed
     by name, in `_view_text`'s vocabulary -- distinct from the METHOD
@@ -1434,6 +1715,25 @@ def _array_index_guards(call: Call, src_params: list, crename: dict) -> list:
     return out
 
 
+def _slice_guards(call: Call, src_params: list, crename: dict) -> list:
+    """`0 <= lo && lo <= hi && hi <= |base|` (with `.Length` for an array
+    parameter) for every slice in `call`'s arguments."""
+    arrays = {p.name for p in src_params if p.type is not None and p.type.kind == "array"}
+    out = []
+    for a in call.args:
+        for node in _walk_exprs(a):
+            if isinstance(node, Slice):
+                base = _print_expr(node.base, crename)
+                ln = (f"{base}.Length" if isinstance(node.base, Ident) and node.base.name in arrays
+                      else f"|{base}|")
+                lo = _print_expr(node.lo, crename) if node.lo is not None else "0"
+                hi = _print_expr(node.hi, crename) if node.hi is not None else ln
+                g = f"0 <= {lo} && {lo} <= {hi} && {hi} <= {ln}"
+                if g not in out:
+                    out.append(g)
+    return out
+
+
 def _find_fun_calls(exprs: list, fd_names: set) -> list:
     """Every distinct `Call` to a closure function found anywhere in
     `exprs` (an invariant's, say), de-duplicated by (callee, printed
@@ -1468,13 +1768,81 @@ def _call_guard(fd: FunctionDecl, call: Call, crename: dict) -> str:
     inside a freshly generated `if` guard immediately before the matching
     call, never re-parsed or nested further)."""
     arg_texts = [_print_expr(a, crename) for a in call.args]
-    subst = dict(crename)
-    for p, txt in zip(fd.params, arg_texts):
-        subst[p.name] = txt
     nat_clause = _and([f"{txt} >= 0" for p, txt in zip(fd.params, arg_texts)
                        if _is_nat_type(p.type)])
-    p_src = _conj_text([sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)], subst)
+    # 2026-09-26: the substitution is done on the tree, not through the
+    # printer's flat rename dict. The flat dict mapped `i` to the call's
+    # argument text `0` everywhere, the callee's own `forall i :: ...`
+    # binder included, and printed `forall 0: int :: ...` ("invalid Ident",
+    # humaneval_dafny_119 match_parens: `CalcBal(s, i, j, acc)` requires
+    # `forall i :: 0 <= i < |s| ==> ...`). A bound variable shadows the
+    # parameter of the same name, and one that occurs free in an argument
+    # is renamed first so the argument is not captured.
+    req = [_subst_params(sp.expr, dict(zip((p.name for p in fd.params), call.args)))
+           for sp in fd.specs if isinstance(sp, RequiresClause)]
+    p_src = _conj_text(req, crename)
     return _and([nat_clause, p_src])
+
+
+def _free_idents(e) -> set:
+    out = set()
+    for node in _walk_exprs(e):
+        if isinstance(node, Ident):
+            out.add(node.name)
+    return out
+
+
+def _subst_params(e, sub: dict):
+    """Capture-avoiding substitution of `Ident(name)` by `sub[name]` (an
+    Expr in the CALLER's namespace) throughout `e`, for the binder forms
+    `Quantifier` and `Comprehension`: a binder removes its own name from
+    `sub` in its scope, and a binder whose name occurs free in a
+    substituted argument is renamed to a fresh `<name>_b<k>` first."""
+    if not sub:
+        return e
+    if isinstance(e, Ident):
+        return sub.get(e.name, e)
+    if isinstance(e, tuple):
+        return tuple(_subst_params(x, sub) for x in e)
+    if not (isinstance(e, Expr) and dataclasses.is_dataclass(e)):
+        return e
+    if isinstance(e, (Quantifier, Comprehension, LetExpr)):
+        inner = {k: v for k, v in sub.items() if k not in {b.name for b in e.binders}}
+        arg_free = set()
+        for v in inner.values():
+            arg_free |= _free_idents(v)
+        used = arg_free | _free_idents(e) | set(inner)
+        binders = []
+        for b in e.binders:
+            if b.name in arg_free:
+                k = 0
+                fresh = f"{b.name}_b{k}"
+                while fresh in used:
+                    k += 1
+                    fresh = f"{b.name}_b{k}"
+                used.add(fresh)
+                inner[b.name] = Ident(b.line, fresh)
+                binders.append(dataclasses.replace(b, name=fresh))
+            else:
+                binders.append(b)
+        changes = {"binders": tuple(binders)}
+        for f in dataclasses.fields(e):
+            if f.name in ("binders", "attrs", "line"):
+                continue
+            v = getattr(e, f.name)
+            if isinstance(v, (Expr, tuple)):
+                # A plain let's right-hand sides are outside its binders'
+                # scope (DafnyRef let expressions); everything else here is
+                # inside it.
+                outside = isinstance(e, LetExpr) and e.op == ":=" and f.name == "rhs"
+                changes[f.name] = _subst_params(v, sub if outside else inner)
+        return dataclasses.replace(e, **changes)
+    changes = {}
+    for f in dataclasses.fields(e):
+        v = getattr(e, f.name)
+        if isinstance(v, (Expr, tuple)):
+            changes[f.name] = _subst_params(v, sub)
+    return dataclasses.replace(e, **changes) if changes else e
 
 
 def _match_spec_fun(fd: FunctionDecl, spec_funs: list, record: LiftRecord):
@@ -1581,23 +1949,24 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     # "alloc-fill" return); row 28 (2026-09-09, SPEC.md "Strings as
     # sequences of code points (v1)") adds `string`/`char` params and
     # return, the same "one lemma parameter, typed to the source" reading.
+    # 2026-09-26: through `_view_kind_for_type`, the one map every other
+    # view dict here already uses. The hand-written kind test this replaces
+    # knew `string` but not its spelling `seq<char>`, so a `seq<char>`
+    # param or return was left bare on the lifted side of L_req/L_ens while
+    # L_inv_k (built through `_view_kind_for_type`) viewed it: "arguments
+    # to >= must have a common supertype (got char and int)" on the lifted
+    # requires' own code-point range clause, 8 methods of the 2026-09-26
+    # lift (vericoding DA0042, DD0066, DD0069, DD0742, DJ0072, DV0118,
+    # DV0144, DV0147). DafnyRef 5.2.6: a char converts to its code point
+    # with `as int`, which is what the view spells.
     views: dict = {}
     for sp, tp in zip(source.params, task["params"]):
-        if sp.type is None:
-            continue
-        if sp.type.kind == "array":
-            views[tp["name"]] = "array"
-        elif sp.type.kind == "string":
-            views[tp["name"]] = "string"
-        elif sp.type.kind == "char":
-            views[tp["name"]] = "char"
-    if ret_type_src is not None:
-        if ret_type_src.kind == "array":
-            views[ret["name"]] = "array"
-        elif ret_type_src.kind == "string":
-            views[ret["name"]] = "string"
-        elif ret_type_src.kind == "char":
-            views[ret["name"]] = "char"
+        kind = _view_kind_for_type(sp.type)
+        if kind is not None:
+            views[tp["name"]] = kind
+    ret_kind = _view_kind_for_type(ret_type_src)
+    if ret_kind is not None:
+        views[ret["name"]] = ret_kind
     lifted_req = _t_conj(task.get("requires", []), views)
 
     # 2026-09-14 fix (LIFTER-785-RESIDUALS.md, the 2 `while`-shaped
@@ -1636,6 +2005,35 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
                             f"{name}[k] == {name}[..][k])"
                             for name, kind in views.items() if kind == "array"])
 
+    # Section 9 item 5's forall-statement hints, one per spec_fun. Built
+    # before the L_fun lemmas and L_req (2026-09-26) so both get them too: a source requires
+    # that calls a closure function needs `L_fun_F` exactly as L_ens does,
+    # and L_req had an empty body (vericoding DJ0133
+    # GetElementCheckProperty, `forall j :: ... f(arr[..], j)`, unproved).
+    hint_lines = []
+    fun_hints: dict = {}
+    for fd in fdecls:
+        f = _match_spec_fun(fd, task.get("spec_funs", []), record)
+        if f is None:
+            continue
+        binders = ", ".join(f"{p.name}: {_lemma_param_type(p.type)}" for p in fd.params)
+        args = ", ".join(p.name for p in fd.params)
+        fd_views = _fn_param_views(fd.params)
+        lifted_args = ", ".join(_view_text(p.name, fd_views) for p in fd.params)
+        nat_clause = _and([f"{p.name} >= 0" for p in fd.params if _is_nat_type(p.type)])
+        p_src = _conj_text([sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)],
+                           rename)
+        guard = _and([nat_clause, p_src])
+        fn_src = rename.get(fd.name, fd.name)
+        # `L_fun_{f['name']}(args)`: L_fun's OWN signature (`ps` above, in
+        # its own defining loop) is typed to the SOURCE's params too, so
+        # calling it with raw `args` is right, unlike the direct
+        # `f['name'](...)` call just before it, which needs `lifted_args`.
+        src_call = _src_result_text(f"{fn_src}({args})", fd.ret_type)
+        hint_lines.append(
+            f"  forall {binders} | {guard} ensures "
+            f"{src_call} == {f['name']}({lifted_args}) {{ L_fun_{f['name']}({args}); }}")
+        fun_hints[fd.name] = hint_lines[-1]
     # (3) L_fun_F per spec_fun whose closure function is found. `args`
     # (raw names) calls the SOURCE function, whose own params genuinely
     # carry the source's types; `lifted_args` (row 28: `_view_text` per
@@ -1667,8 +2065,29 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         if p_src != "true":
             lines.append(f"  requires {p_src}")
         fn_src = rename.get(fd.name, fd.name)
-        lines.append(f"  ensures {fn_src}({args}) == {f['name']}({lifted_args})")
-        lines.append("{ }")
+        src_call = _src_result_text(f"{fn_src}({args})", fd.ret_type)
+        lines.append(f"  ensures {src_call} == {f['name']}({lifted_args})")
+        ih_dec, ih_lines = _induction_hint(fd, f, rename)
+        if ih_dec is not None:
+            lines.append(f"  decreases {ih_dec}")
+        # 2026-09-26: the hints of every OTHER closure function this one
+        # calls, as L_ens has had since section 9 item 5. An `L_fun_F`
+        # whose F calls G compares `F_src` (calling `G_src`) with `f`
+        # (calling `g`), and dafny does not apply `L_fun_G` unprompted any
+        # more than it did in L_ens (vericoding DA0047: `CostForT` calls
+        # `SumCosts`, `IsOptimalT` calls `CostForT`, both unproved with an
+        # empty body). The closure's call graph has no cycle through two
+        # functions (mutual recursion is refused upstream), so no lemma
+        # calls itself through another.
+        callee_names = []
+        for call, _q in _find_fun_calls(
+                ([fd.body] if fd.body is not None else [])
+                + [sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)],
+                set(fun_hints)):
+            if call.fn.name != fd.name and call.fn.name not in callee_names:
+                callee_names.append(call.fn.name)
+        lines.extend(_body(_view_hint_lines(fd_views, {p.name for p in fd.params})
+                           + [fun_hints[n] for n in callee_names] + ih_lines))
         lines.append("")
 
     # Both L_req/L_ens/L_inv compare a SOURCE-clause conjunction (source's
@@ -1745,9 +2164,19 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
                         if _is_nat_type(sp.type)])
     src_req_conj = _conj_text(
         [sp.expr for sp in source.specs if isinstance(sp, RequiresClause)], crename)
+    src_req_premise = _and([type_clause, src_req_conj])
+    array_src_names = frozenset(crename.get(sp.name, sp.name) for sp in src_params
+                                if sp.type is not None and sp.type.kind == "array")
     lines.append(f"lemma L_req({lem_ps})")
     lines.append(f"  ensures ({lifted_req}) <==> ({_and([type_clause, src_req_conj])})")
-    lines.append("{ }")
+    lines.extend(_body(_view_hint_lines(views, {tp["name"] for tp in task_params})
+                       + hint_lines
+                       + _membership_bridge_lines(
+                           [sp.expr for sp in source.specs if isinstance(sp, RequiresClause)],
+                           crename)
+                       + _membership_point_lines(
+                           [sp.expr for sp in source.specs if isinstance(sp, RequiresClause)],
+                           crename, array_src_names)))
     lines.append("")
 
     # (5) L_ens.
@@ -1770,33 +2199,23 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     else:
         ret_type_clause = (f"{ret['name']} >= 0" if _is_nat_type(ret_type_src) else "true")
     lifted_ens = _t_conj(task.get("ensures", []), views)
-    hint_lines = []
-    for fd in fdecls:
-        f = _match_spec_fun(fd, task.get("spec_funs", []), record)
-        if f is None:
-            continue
-        binders = ", ".join(f"{p.name}: {_lemma_param_type(p.type)}" for p in fd.params)
-        args = ", ".join(p.name for p in fd.params)
-        fd_views = _fn_param_views(fd.params)
-        lifted_args = ", ".join(_view_text(p.name, fd_views) for p in fd.params)
-        nat_clause = _and([f"{p.name} >= 0" for p in fd.params if _is_nat_type(p.type)])
-        p_src = _conj_text([sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)],
-                           rename)
-        guard = _and([nat_clause, p_src])
-        fn_src = rename.get(fd.name, fd.name)
-        # `L_fun_{f['name']}(args)`: L_fun's OWN signature (`ps` above, in
-        # its own defining loop) is typed to the SOURCE's params too, so
-        # calling it with raw `args` is right, unlike the direct
-        # `f['name'](...)` call just before it, which needs `lifted_args`.
-        hint_lines.append(
-            f"  forall {binders} | {guard} ensures "
-            f"{fn_src}({args}) == {f['name']}({lifted_args}) {{ L_fun_{f['name']}({args}); }}")
     lines.append(f"lemma L_ens({lem_ps_ens})")
-    lines.append(f"  requires {_and([lifted_req, ens_length_fact, array_view_fact])}")
+    # `src_req_premise` (2026-09-26): the source's own requires, after the
+    # lifted one. L_req proves the two equivalent, so a premise that is
+    # already implied adds nothing to what the lemmas together establish;
+    # what it adds is well-formedness: a source ensures that calls a
+    # closure function with a precondition (`char_xor(a[i], b[i])`
+    # requiring `represents_byte(a[i])`) is well-formed only under the
+    # SOURCE requires, which the lifted one implies only through L_fun,
+    # a lemma dafny does not apply while checking a specification
+    # ("function precondition could not be proved" on the source side of
+    # humaneval_dafny_011 string_xor's L_ens).
+    lines.append(f"  requires {_and([lifted_req, src_req_premise, ens_length_fact, array_view_fact])}")
     lines.append(f"  ensures ({_and([ret_type_clause, ens_length_fact, src_ens_conj])}) <==> ({lifted_ens})")
-    lines.append("{")
-    lines.extend(hint_lines)
-    lines.append("}")
+    lines.extend(_body(_view_hint_lines(
+        views, {tp["name"] for tp in task_params} | {ret["name"]}) + hint_lines
+        + _membership_bridge_lines(ens_exprs, crename)
+        + _membership_point_lines(ens_exprs, crename, array_src_names)))
     lines.append("")
 
     # (6) L_inv_k / decreases-equality per loop, pre-order.
@@ -1958,6 +2377,24 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # body, and states nothing else; see its docstring for why an
         # enclosing invariant or an enclosing `while`'s guard is NOT
         # available and is deliberately not taken.
+        # A source `for i := lo to hi` loop has the implicit invariant
+        # `lo <= i <= hi` ahead of its stated ones (DafnyRef 8.13 gives the
+        # loop as a while loop with `invariant _lo <= i <= _hi`, `_hi`
+        # evaluated once). The lifted loop states it (decision 15's
+        # desugaring adds `lo <= i` and `i <= h`), the source side of
+        # L_inv_k did not, and without it the source invariant is not
+        # even well-formed: `forall j :: 0 <= j < i ==> result[j] ==
+        # f(a[j])` indexes `a` only for `i <= |a|` (humaneval_dafny_011
+        # string_xor, "index out of range" on the source side). Stated
+        # over the cached bound `h`, the one name that holds `_hi`; the
+        # lower half only for a literal `lo`, whose text cannot change.
+        for_range_fact = "true"
+        if isinstance(loop, ForStmt) and loop.direction == "to":
+            _bounds = getattr(record, "for_bound_locals", {}).get(loop.line) or []
+            _i = loop_crename.get(loop.var, loop.var)
+            if _bounds and _bounds[0] in full_names and _i in full_names:
+                _parts = ([f"({loop.lo.value} <= {_i})"] if isinstance(loop.lo, IntLit) else [])
+                for_range_fact = _and(_parts + [f"({_i} <= {_bounds[0]})"])
         encl_fact = _and(_for_index_range_facts(ancestors, record, loop_crename,
                                                 set(full_names)))
         # decision 22: only usable when THIS loop's own lemma parameters
@@ -2049,6 +2486,19 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             f = _match_spec_fun(fd_match, task.get("spec_funs", []), record)
             if f is None:
                 continue
+            if q is not None:
+                # 2026-09-26: covered by the universal hint for this
+                # spec_fun (`hint_lines`, now in every L_inv_k body). The
+                # per-call form re-quantified the call under the source
+                # quantifier's range and the callee's guard, and that
+                # range is not always well-formed where the hint stands:
+                # `forall j | 0 <= j < i && represents_byte(a[j])` indexes
+                # `a` past its end for an `i` the lemma does not bound
+                # (humaneval_dafny_011 string_xor's L_inv_0, "index out of
+                # range" in the hint itself). The universal hint quantifies
+                # over the callee's own parameters under its own guard, so
+                # it is well-formed by construction.
+                continue
             args = ", ".join(_print_expr(a, loop_crename) for a in call.args)
             guard = _call_guard(fd_match, call, loop_crename)
             call_line = f"L_fun_{f['name']}({args});"
@@ -2061,7 +2511,14 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
                 # top-level `call_guards` above (which would leak into the
                 # lemma's own `requires`/`ensures` unconditionally, wrongly
                 # narrowing a case where the sentinel legitimately holds).
-                full_guard = _and([guard] + array_bounds) if array_bounds else guard
+                # A slice argument (`L_fun_positive(v[0..i])`) is only
+                # well-formed for `0 <= lo <= hi <= |v|`; unguarded, the
+                # hint failed its own well-formedness for an `i` the
+                # lemma leaves free (vericoding DD0105 mpositive, "upper
+                # bound below lower bound or above length").
+                slice_bounds = _slice_guards(call, src_params, loop_crename)
+                full_guard = (_and([guard] + array_bounds + slice_bounds)
+                              if (array_bounds or slice_bounds) else guard)
                 if full_guard == "true":
                     inv_hints.append(f"  {call_line}")
                 else:
@@ -2094,10 +2551,18 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
                 # out of range` recurs one conjunct over).
                 if array_bounds:
                     rng = _and(array_bounds + [rng])
-                body_line = (f"    {call_line}" if guard == "true"
-                            else f"    if {guard} {{ {call_line} }}")
+                # The callee's domain guard joins the range rather than
+                # wrapping the call in an `if`: dafny carries a forall
+                # statement's conclusion out only when its body is the
+                # call itself ("the conclusion of the body of this forall
+                # statement will not be known outside the forall
+                # statement", warned on every guarded hint of the
+                # 2026-09-26 lift, e.g. humaneval_dafny_011 string_xor's
+                # L_inv_0), so the guarded hint proved nothing.
+                if guard != "true":
+                    rng = _and([rng, guard])
                 inv_hints.append(f"  forall {binders} | {rng} {{")
-                inv_hints.append(body_line)
+                inv_hints.append(f"    {call_line}")
                 inv_hints.append("  }")
         lines.append(f"lemma L_inv_{k}({ps_inv})")
         # `nat_clause`/`call_guards` also belong in `requires`, not only
@@ -2130,14 +2595,11 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # well-formed too (10 verified, 0 errors on 401 either way), and
         # leaving the `<==>` text alone keeps this row from perturbing a
         # single already-measured program that has no nested `for`.
-        lines.append(f"  requires {_and([lifted_req, nat_clause, encl_fact, call_guards, this_length_fact, extra_fact, array_view_fact])}")
-        lines.append(f"  ensures ({_and([nat_clause, call_guards, this_length_fact, extra_fact, src_inv])}) <==> ({lifted_inv})")
-        if inv_hints:
-            lines.append("{")
-            lines.extend(inv_hints)
-            lines.append("}")
-        else:
-            lines.append("{ }")
+        lines.append(f"  requires {_and([lifted_req, src_req_premise, nat_clause, encl_fact, call_guards, this_length_fact, extra_fact, array_view_fact])}")
+        lines.append(f"  ensures ({_and([nat_clause, call_guards, this_length_fact, extra_fact, for_range_fact, src_inv])}) <==> ({lifted_inv})")
+        lines.extend(_body(_view_hint_lines(loop_views, set(full_names)) + inv_hints + hint_lines
+                           + _membership_bridge_lines(inv_exprs, loop_crename)
+                           + _membership_point_lines(inv_exprs, loop_crename, array_src_names)))
         lines.append("")
 
         dec_specs = [sp for sp in loop.specs if isinstance(sp, DecreasesClause)]
@@ -2158,7 +2620,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             if dec_req != "true":
                 lines.append(f"  requires {dec_req}")
             lines.append(f"  ensures ({src_dec}) == ({lifted_dec})")
-            lines.append("{ }")
+            lines.extend(_body(_view_hint_lines(views, set(full_names))))
             lines.append("")
             record.decreases_origin.setdefault(loop_key, "checked")
         else:
