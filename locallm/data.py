@@ -15,6 +15,8 @@ from pathlib import Path
 
 import torch
 
+import fim
+
 DOC_MARKER = "\n\n# file: "
 
 
@@ -306,15 +308,40 @@ def _is_capacity_error(e: BaseException) -> bool:
     return any(tell in msg for tell in _CAPACITY_TELLS)
 
 
+# A character tokenizer that carries sentinels is saved as this object; one
+# without them is still saved as the bare list every earlier checkpoint holds.
+CHAR_FORMAT = "locallm-char-tokenizer"
+
+
 class CharTokenizer:
-    def __init__(self, chars):
+    """One id per corpus character, plus optional sentinel ids after them.
+
+    SENTINELS (fim.SENTINELS) take the ids len(chars), len(chars)+1, ... and
+    are absent from stoi, so encode() of any text, including text that spells
+    out a sentinel's name, never yields one. That is the only way to be sure
+    they cannot collide with a real character: a reserved Unicode code point
+    would still be a character somebody's corpus could contain.
+    """
+    def __init__(self, chars, sentinels=()):
         self.chars = list(chars)
+        self.sentinels = tuple(sentinels)
         self.stoi = {c: i for i, c in enumerate(self.chars)}
         self.itos = {i: c for i, c in enumerate(self.chars)}
+        for k, name in enumerate(self.sentinels):
+            self.itos[len(self.chars) + k] = name
 
     @property
     def vocab_size(self) -> int:
-        return len(self.chars)
+        return len(self.chars) + len(self.sentinels)
+
+    def sentinel_id(self, name: str) -> int:
+        return len(self.chars) + self.sentinels.index(name)
+
+    def with_sentinels(self, sentinels) -> "CharTokenizer":
+        """The same character ids, with `sentinels` appended after them."""
+        if self.sentinels:
+            raise ValueError(f"this tokenizer already carries sentinels {self.sentinels}")
+        return CharTokenizer(self.chars, sentinels)
 
     @classmethod
     def from_text(cls, text: str) -> "CharTokenizer":
@@ -372,11 +399,21 @@ class CharTokenizer:
         return "".join(self.itos[int(i)] for i in ids)
 
     def save(self, path):
-        Path(path).write_text(json.dumps(self.chars, ensure_ascii=False), encoding="utf-8")
+        payload = self.chars if not self.sentinels else \
+            {"format": CHAR_FORMAT, "version": 1, "chars": self.chars, "sentinels": list(self.sentinels)}
+        Path(path).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
     @classmethod
     def load(cls, path) -> "CharTokenizer":
-        return cls(json.loads(Path(path).read_text(encoding="utf-8")))
+        return cls.from_payload(json.loads(Path(path).read_text(encoding="utf-8")))
+
+    @classmethod
+    def from_payload(cls, payload) -> "CharTokenizer":
+        if isinstance(payload, list) and all(isinstance(c, str) for c in payload):
+            return cls(payload)
+        if isinstance(payload, dict) and payload.get("format") == CHAR_FORMAT and payload.get("version") == 1:
+            return cls(payload["chars"], payload.get("sentinels", ()))
+        raise ValueError("not a locallm character tokenizer")
 
 
 class BPETokenizer:
@@ -386,13 +423,28 @@ class BPETokenizer:
     unseen Unicode survive encoding. The optional tokenizers library only learns
     merges from the supplied training text.
     """
-    def __init__(self, backend, training: dict | None = None):
+    def __init__(self, backend, training: dict | None = None, sentinels=()):
         self.backend = backend
         self.training = training or {}
+        # Sentinel ids follow the backend's vocabulary and are NOT registered
+        # with it as added tokens: the tokenizers library matches added tokens
+        # in raw input text, so a document that spelled one out would encode
+        # to it. Kept outside, no text can reach them (see CharTokenizer).
+        self.sentinels = tuple(sentinels)
+        self._base = backend.get_vocab_size()
 
     @property
     def vocab_size(self) -> int:
-        return self.backend.get_vocab_size()
+        return self._base + len(self.sentinels)
+
+    def sentinel_id(self, name: str) -> int:
+        return self._base + self.sentinels.index(name)
+
+    def with_sentinels(self, sentinels) -> "BPETokenizer":
+        """The same BPE ids, with `sentinels` appended after them."""
+        if self.sentinels:
+            raise ValueError(f"this tokenizer already carries sentinels {self.sentinels}")
+        return BPETokenizer(self.backend, self.training, sentinels)
 
     @classmethod
     def from_text(cls, text: str, vocab_size: int = 8192, min_frequency: int = 2):
@@ -423,11 +475,30 @@ class BPETokenizer:
         return self.backend.encode(text, add_special_tokens=False).ids
 
     def decode(self, ids) -> str:
-        return self.backend.decode([int(i) for i in ids], skip_special_tokens=False)
+        ids = [int(i) for i in ids]
+        if not self.sentinels:
+            return self.backend.decode(ids, skip_special_tokens=False)
+        # Decode each run of ordinary ids on its own and name the sentinels
+        # between them, so a byte split across a run boundary is the only
+        # thing that can differ from decoding the runs joined.
+        parts, run = [], []
+        for i in ids:
+            if i >= self._base:
+                if run:
+                    parts.append(self.backend.decode(run, skip_special_tokens=False))
+                    run = []
+                parts.append(self.sentinels[i - self._base])
+            else:
+                run.append(i)
+        if run:
+            parts.append(self.backend.decode(run, skip_special_tokens=False))
+        return "".join(parts)
 
     def save(self, path):
         payload = {"format": "locallm-tokenizer", "version": 1, "kind": "byte-bpe",
                    "backend": json.loads(self.backend.to_str()), "training": self.training}
+        if self.sentinels:
+            payload["sentinels"] = list(self.sentinels)
         Path(path).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
     @classmethod
@@ -440,7 +511,8 @@ class BPETokenizer:
             from tokenizers import Tokenizer
         except ImportError as exc:
             raise RuntimeError("this checkpoint needs tokenizers: pip install tokenizers") from exc
-        return cls(Tokenizer.from_str(json.dumps(payload["backend"])), payload.get("training", {}))
+        return cls(Tokenizer.from_str(json.dumps(payload["backend"])), payload.get("training", {}),
+                   payload.get("sentinels", ()))
 
 
 def load_tokenizer(path):
@@ -448,17 +520,25 @@ def load_tokenizer(path):
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if isinstance(payload, list) and all(isinstance(c, str) for c in payload):
         return CharTokenizer(payload)
+    if isinstance(payload, dict) and payload.get("format") == CHAR_FORMAT:
+        return CharTokenizer.from_payload(payload)
     return BPETokenizer.load(path)
 
 
 def tokenizer_fingerprint(tokenizer) -> str:
-    """Identify token IDs and encoding rules, independent of training metadata."""
+    """Identify token IDs and encoding rules, independent of training metadata.
+
+    Sentinels enter the payload only when there are any, so every tokenizer
+    without them keeps the fingerprint its checkpoints already record.
+    """
     if isinstance(tokenizer, CharTokenizer):
         payload = {"kind": "char", "chars": tokenizer.chars}
     elif isinstance(tokenizer, BPETokenizer):
         payload = {"kind": "byte-bpe", "backend": json.loads(tokenizer.backend.to_str())}
     else:
         raise TypeError(f"unsupported tokenizer type: {type(tokenizer).__name__}")
+    if tokenizer.sentinels:
+        payload["sentinels"] = list(tokenizer.sentinels)
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -737,8 +817,15 @@ class DocumentBatches:
     """
 
     def __init__(self, docs, tokenizer, block_size: int, seed: int, device: str = "cpu",
-                 end: str = DOC_END, pad_id: int = 0):
+                 end: str = DOC_END, pad_id: int = 0, fim_rate: float = 0.0,
+                 fim_spm_rate: float = 0.5, fim_span: str = "char"):
         docs = list(docs)
+        if not 0 <= fim_rate <= 1 or not 0 <= fim_spm_rate <= 1:
+            raise ValueError(f"fim_rate and fim_spm_rate must lie in [0, 1], not {fim_rate}, {fim_spm_rate}")
+        if fim_span not in fim.SPANS:
+            raise ValueError(f"unknown FIM span {fim_span!r}; expected one of {fim.SPANS}")
+        if fim_rate > 0:
+            fim.require_sentinels(tokenizer)
         if block_size < 1:
             raise ValueError(f"block_size must be positive, not {block_size}")
         if not docs:
@@ -753,8 +840,12 @@ class DocumentBatches:
         self.dropped_characters = 0          # characters a CharTokenizer silently drops; 0 for BPE
         self.blank_line_documents = []       # indices of documents that documents() would split
         rows_x, rows_y = [], []
+        self._tokenizer, self._bodies = tokenizer, []
+        self.fim_rate, self.fim_spm_rate, self.fim_span = fim_rate, fim_spm_rate, fim_span
+        self.fim_rows = self.fim_cut_rows = 0
         for i, d in enumerate(docs):
             body = d.strip("\r\n")
+            self._bodies.append(body)
             if not body.strip():
                 raise ValueError(f"document {i} is empty")
             if "\n\n" in body:
@@ -791,10 +882,41 @@ class DocumentBatches:
         epoch, k = divmod(step, self.batches_per_epoch(batch_size))
         idx = self.order(epoch)[k * batch_size:(k + 1) * batch_size]
         ix = torch.tensor(idx, dtype=torch.long, device=self.x.device)
-        return self.x[ix], self.y[ix]
+        if self.fim_rate <= 0:
+            return self.x[ix], self.y[ix]
+        return self._fim_batch(epoch, idx, ix)
+
+    def _fim_batch(self, epoch: int, idx: list[int], ix: torch.Tensor):
+        """The batch with each document FIM-transformed afresh for this epoch.
+
+        A document's transform is drawn from fim.doc_rng(seed, epoch, index),
+        so get_batch stays a pure function of (seed, step) and a resumed run
+        redraws the same transforms. Documents left left to right keep their
+        precomputed row, byte for byte the fim_rate 0 row. A FIM row is ended
+        by <EOT> in place of DOC_END (arXiv:2207.14255, section 3: <eot> is
+        what joins the middle to the suffix), and one longer than the block is
+        cut at its end and counted in fim_cut_rows.
+        """
+        x, y = self.x[ix].clone(), self.y[ix].clone()
+        for r, i in enumerate(idx):
+            ids = fim.transform(self._bodies[i], self._tokenizer, fim.doc_rng(self.seed, epoch, i),
+                                self.fim_rate, self.fim_spm_rate, self.fim_span)
+            if ids is None:
+                continue
+            self.fim_rows += 1
+            if len(ids) > self.block_size + 1:
+                self.fim_cut_rows += 1
+                ids = ids[:self.block_size + 1]
+            pad = self.block_size - (len(ids) - 1)
+            x[r] = torch.tensor(ids[:-1] + [self.pad_id] * pad, dtype=torch.long)
+            y[r] = torch.tensor(ids[1:] + [IGNORE_INDEX] * pad, dtype=torch.long)
+        return x, y
 
     def in_order(self, batch_size: int):
-        """Fixed sequential batches, for evaluating every document exactly once."""
+        """Fixed sequential batches, for evaluating every document exactly once.
+
+        Always the untransformed rows, whatever fim_rate is: losses measured
+        here are comparable between runs with and without FIM."""
         for start in range(0, self.documents, batch_size):
             yield self.x[start:start + batch_size], self.y[start:start + batch_size]
 
@@ -804,7 +926,73 @@ class DocumentBatches:
                 "longest_tokens": self.longest_tokens, "dropped_characters": self.dropped_characters,
                 "blank_line_documents": len(self.blank_line_documents),
                 "block_size": self.block_size, "end": self.end, "pad_id": self.pad_id,
-                "ignore_index": IGNORE_INDEX, "order_seed": self.seed}
+                "ignore_index": IGNORE_INDEX, "order_seed": self.seed,
+                **({"fim": {"rate": self.fim_rate, "spm_rate": self.fim_spm_rate, "span": self.fim_span}}
+                   if self.fim_rate > 0 else {})}
+
+
+class FIMWindows:
+    """Random training windows over a stream re-transformed by FIM every epoch.
+
+    The windows path (Corpus.get_batch) cuts block-size windows from one
+    fixed token tensor, which cannot teach a document more than one way. This
+    rebuilds that tensor from the training documents, each FIM-transformed
+    with probability fim_rate by fim.doc_rng(seed, epoch, index) and joined by
+    `joiner` as group_split joins them, and moves to the next epoch's stream
+    once as many target tokens have been drawn as the stream holds. It is the
+    paper's document-level FIM (arXiv:2207.14255, section 3); windows then cut
+    across FIM documents, which section 4.4 measures as harmless to
+    left-to-right loss. Windows are drawn from the global generator on the
+    stream's device, exactly as Corpus.get_batch draws them.
+
+    Only the training batches come from here. Validation, and the train loss a
+    run reports, stay on Corpus's untransformed text.
+    """
+
+    def __init__(self, docs, tokenizer, seed: int, fim_rate: float, device: str = "cpu",
+                 fim_spm_rate: float = 0.5, fim_span: str = "char", joiner: str = "\n\n"):
+        if not 0 < fim_rate <= 1 or not 0 <= fim_spm_rate <= 1:
+            raise ValueError(f"FIMWindows needs 0 < fim_rate <= 1 and 0 <= fim_spm_rate <= 1")
+        if fim_span not in fim.SPANS:
+            raise ValueError(f"unknown FIM span {fim_span!r}; expected one of {fim.SPANS}")
+        fim.require_sentinels(tokenizer)
+        self.docs = [d for d in docs if d.strip()]
+        if not self.docs:
+            raise ValueError("no documents to transform")
+        self.tokenizer, self.seed, self.device = tokenizer, seed, device
+        self.fim_rate, self.fim_spm_rate, self.fim_span = fim_rate, fim_spm_rate, fim_span
+        self.joiner_ids = tokenizer.encode(joiner)
+        self.epoch, self.drawn = -1, 0
+        self.stream = None
+        self._advance()
+
+    def _advance(self) -> None:
+        self.epoch += 1
+        ids: list[int] = []
+        for i, d in enumerate(self.docs):
+            if i:
+                ids += self.joiner_ids
+            got = fim.transform(d, self.tokenizer, fim.doc_rng(self.seed, self.epoch, i),
+                                self.fim_rate, self.fim_spm_rate, self.fim_span)
+            ids += self.tokenizer.encode(d) if got is None else got
+        self.stream = torch.tensor(ids, dtype=torch.int32).to(self.device)
+        self.drawn = 0
+
+    def get_batch(self, batch_size: int, block_size: int):
+        if self.drawn >= len(self.stream):
+            self._advance()
+        d = self.stream
+        hi = len(d) - block_size
+        if hi < 1:
+            raise ValueError(f"the FIM stream holds {len(d)} tokens but block_size is {block_size}")
+        ix = torch.randint(hi, (batch_size,), device=d.device)
+        chunk = d[ix[:, None] + torch.arange(block_size + 1, device=d.device)].long()
+        self.drawn += batch_size * block_size
+        return chunk[:, :-1].contiguous(), chunk[:, 1:].contiguous()
+
+    def record(self) -> dict:
+        return {"rate": self.fim_rate, "spm_rate": self.fim_spm_rate, "span": self.fim_span,
+                "kind": "windows", "seed": self.seed}
 
 
 class PairBatches:
