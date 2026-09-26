@@ -127,7 +127,7 @@ The whole experiment, once the pool is rebuilt:
     ~/.venv-vllm/bin/python locallm/continue_from_checkpoint.py \
         --init t/out/source-pretraining-longer-2026-09-19/gpt-seed1337 \
         --data t/out/loop/corpus-ex-headed.txt --split t/out/loop/split-v5.json --out t/out/locallm-ex --steps 300 --lr 3e-5
-    python3 t/loop_locallm.py generate --model t/out/locallm-ex --tag locallm-ex \
+    python3 t/loop_locallm.py generate --temperature 0 --model t/out/locallm-ex --tag locallm-ex \
         --split t/out/loop/split-v5.json --tokens 1200 --temperature 0 --examples
     bash t/grade_lab.sh heldout locallm-ex
     python3 t/spec_check.py locallm-ex --pool v5 --n 100 --only clean --out t/SPEC-CHECK-ex.md

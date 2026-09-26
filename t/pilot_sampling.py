@@ -52,17 +52,10 @@ DECONTAMINATION = HERE / "decontamination-2026-09-21.json"
 SCHEMA = 1
 
 
-def reply_cut(head: str, text: str) -> int | None:
-    """Where cmd_generate's extraction ends the reply: the start of the first
-    boundary match in the body, as an index into ``text``, or None."""
-    body_start = len(head) if text.startswith(head) else 0
-    match = REPLY_BOUNDARY.search(text, body_start)
-    return match.start() if match else None
-
-
-def reply_stop(head: str):
-    """The text-level stop checkpoint.sample and sample_batch take."""
-    return lambda text: reply_cut(head, text)
+# One definition of the reply cut, shared with cmd_generate since 2026-09-25;
+# the names stay here for the tests and callers that pinned them.
+reply_cut = loop_locallm.reply_cut
+reply_stop = loop_locallm.reply_stop
 
 
 def extract_reply(head: str, text: str) -> str:

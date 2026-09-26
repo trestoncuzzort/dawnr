@@ -131,7 +131,7 @@
   "locallm",
   "Build a locallm model",
   "From scratch, on the clean pool, then its held-out answers.",
-  "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl --out t/out/loop-locallm/corpus-r4.txt && ~/.venv-vllm/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt --model t/out/loop-locallm/model-r4 && ~/.venv-vllm/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
+  "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl --out t/out/loop-locallm/corpus-r4.txt && ~/.venv-vllm/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt --model t/out/loop-locallm/model-r4 && ~/.venv-vllm/bin/python t/loop_locallm.py generate --temperature 0.5 --model t/out/loop-locallm/model-r4 --tag locallm-r4",
   "test $(ls t/out/spec-experiment/locallm-r4/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -155,7 +155,7 @@
   "r5-answers",
   "Round 5: answer the training problems",
   "The student and locallm answer the 417 training problems, so their own failures can be graded and used. Held-out problems are not touched.",
-  "~/.venv-vllm/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 --ids-file t/out/loop/train-ids.txt && ~/.venv-vllm/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4-train --ids-file t/out/loop/train-ids.txt || true",
+  "~/.venv-vllm/bin/python t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 --ids-file t/out/loop/train-ids.txt && ~/.venv-vllm/bin/python t/loop_locallm.py generate --temperature 0.5 --model t/out/loop-locallm/model-r4 --tag locallm-r4-train --ids-file t/out/loop/train-ids.txt || true",
   "test $(ls t/out/spec-experiment/student-r4-train/raw 2>/dev/null | wc -l) -ge 417",
   "gpu"
  ],
@@ -171,7 +171,7 @@
   "r5-locallm",
   "Round 5: a bigger locallm",
   "From scratch on the round 5 pool, with more capacity and more steps than r4 (8 layers, 512 wide across 8 heads, 6000 steps), then its held-out answers.",
-  "python3 t/loop_locallm.py corpus --pool v5 --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl --out t/out/loop-locallm/corpus-r5.txt && ~/.venv-vllm/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 --heads 8 --steps 6000 && ~/.venv-vllm/bin/python t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
+  "python3 t/loop_locallm.py corpus --pool v5 --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r5.jsonl --out t/out/loop-locallm/corpus-r5.txt && ~/.venv-vllm/bin/python t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 --heads 8 --steps 6000 && ~/.venv-vllm/bin/python t/loop_locallm.py generate --temperature 0.5 --model t/out/loop-locallm/model-r5 --tag locallm-r5",
   "test $(ls t/out/spec-experiment/locallm-r5/raw 2>/dev/null | wc -l) -ge 232",
   "gpu"
  ],
@@ -339,7 +339,7 @@
   "r7-answers",
   "Round 7: the 92M core answers the 232",
   "Greedy-sampled answers to the held-out problems from the specialized core, then copies the answer set back here so the ordinary extract, tests and grading path can read it. This is the first time a pretrained locallm has ever answered the held-out split.",
-  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && CARD=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -t, -k2 -rn | head -1 | cut -d, -f1) && PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES=$CARD ~/.venv-vllm/bin/python t/loop_locallm.py generate --model t/out/locallm-r7-92m --tag locallm-r7-92m --split t/out/loop/split-v5.json --tokens 1200' && mkdir -p t/out/spec-experiment && rsync -a \"$T_LAB:~/tup/t/out/spec-experiment/locallm-r7-92m\" t/out/spec-experiment/",
+  ". t/lab-workstation.conf && ssh \"$T_LAB\" 'cd ~/tup && CARD=$(nvidia-smi --query-gpu=index,memory.free --format=csv,noheader,nounits | sort -t, -k2 -rn | head -1 | cut -d, -f1) && PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True CUDA_VISIBLE_DEVICES=$CARD ~/.venv-vllm/bin/python t/loop_locallm.py generate --temperature 0.5 --model t/out/locallm-r7-92m --tag locallm-r7-92m --split t/out/loop/split-v5.json --tokens 1200' && mkdir -p t/out/spec-experiment && rsync -a \"$T_LAB:~/tup/t/out/spec-experiment/locallm-r7-92m\" t/out/spec-experiment/",
   "test $(ls t/out/spec-experiment/locallm-r7-92m/raw 2>/dev/null | wc -l) -ge 232",
   "lab"
  ],

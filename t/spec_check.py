@@ -25,7 +25,6 @@ import datetime
 import hashlib
 import json
 import random
-import re
 import signal
 import sys
 from pathlib import Path
@@ -35,6 +34,7 @@ sys.path.insert(0, str(HERE))
 
 import harness                                                  # noqa: E402
 import interp                                                   # noqa: E402
+import loop_filter                                             # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 import surface                                                 # noqa: E402
 
@@ -52,11 +52,10 @@ def problem_id(name: str, extracted: dict) -> int | None:
            if str(tid).isdigit() and entry.get("name") == name}
     if len(ids) > 1:
         raise ValueError(f"ambiguous problem IDs for {name}: {sorted(ids)}")
-    match = re.fullmatch(r"(mbpp|he|apps)_(\d+)__.+", name)
-    named = None
-    if match:
-        named = int(match[2]) + {"mbpp": 0, "he": se.HUMANEVAL_BASE,
-                                 "apps": se.APPS_BASE}[match[1]]
+    # every name family a corpus or answer set uses, including the Dafny-dataset
+    # lifts (dafny_synthesis_task_id_N__) that the old (mbpp|he|apps) pattern
+    # missed; the same function the corpus builder and preflight use (A1)
+    named = loop_filter.problem_id(name)
     if ids:
         tid = next(iter(ids))
         if named is not None and tid != named:

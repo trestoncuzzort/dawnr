@@ -96,7 +96,7 @@ A small, readable, from-scratch GPT and a GUI so you don't need a terminal to us
 
 | File | What it is |
 |---|---|
-| `model.py` | The transformer. Decoder-only GPT, written out in full: attention, MLP, blocks, weight tying, GPT-2 scaled init. ~145 lines. |
+| `model.py` | The transformer. Decoder-only GPT, written out in full: attention, MLP, blocks, weight tying, GPT-2 scaled init. ~460 lines. |
 | `data.py` | A character-level tokenizer built from *your* corpus, plus batching. No external tokenizer, nothing downloaded. |
 | `train.py` | The training loop. Random init → your weights. Cosine schedule, warmup, gradient clipping, bf16 autocast where it is measured to help (CUDA and Apple-silicon GPUs). |
 | `generate.py` | Sample from a model you trained. |
@@ -230,7 +230,7 @@ months learning, at 8B scale, exactly how measurement lies:
   overwrites cannot show you a trend.
 - **This README is machine-checked.** `python verify_claims.py` re-derives every
   factual claim below from the repo itself and exits non-zero if one has drifted: that
-  the listed files exist, that `model.py` really is ~145 lines, that the dependency
+  the listed files exist, that `model.py` really is ~460 lines, that the dependency
   claim holds (against the interpreter's own stdlib list, not a hand-written one), that
   nothing imports a network module, and that **every number in the worked result below
   matches `exp_lr_width_result.json` to the digit**: means, ranges, gap, overlap and
