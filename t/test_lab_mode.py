@@ -57,6 +57,12 @@ class LocalModeTests(unittest.TestCase):
         lines = run('reachable && echo yes', lab="user@host").stdout.strip().splitlines()
         self.assertEqual(lines, ["SSH user@host true", "yes"])   # the probe went through the stub SSH
 
+    def test_a_workstation_store_creates_missing_parent_directories(self):
+        # a step stores into <name>.meta/staged/ before the lab has <name>.meta: rsync makes only
+        # the last directory of a destination, --mkpath makes the rest (rsync.1, 3.2.3+)
+        out = run('rsync() { echo rsync "$@"; }; store -a a/ "user@host:~/tup/x.meta/staged/"', lab="user@host").stdout.strip()
+        self.assertEqual(out, "rsync --mkpath -a a/ user@host:~/tup/x.meta/staged/")
+
     def test_defaults_follow_the_machine(self):
         self.assertEqual(run("default_jobs; default_sets").stdout.split(), ["8", "1"])
         self.assertEqual(run("default_jobs; default_sets", lab="user@host").stdout.split(), ["32", "4"])

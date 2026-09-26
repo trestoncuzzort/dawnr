@@ -36,7 +36,9 @@ remote() {
 # local rsync with the host dropped, or nothing when every SRC already sits in DST
 # (the queue stores a chunk's table "on the lab" from the directory it is in here).
 xfer() {
-  if ! lab_is_local; then rsync "$@"; return; fi
+  # --mkpath: rsync creates only the last directory of a destination, and a step stores
+  # into t/out/<name>.meta/staged/ before the lab has <name>.meta (rsync.1, --mkpath, 3.2.3+)
+  if ! lab_is_local; then rsync --mkpath "$@"; return; fi
   local args=() a n dst src same=1
   for a in "$@"; do args+=("$(localize "$a")"); done
   n=${#args[@]}; dst=$(readlink -f "${args[n-1]%/}")
