@@ -13,6 +13,7 @@ import argparse
 import contextlib
 import hashlib
 import json
+import math
 import os
 import platform
 import random
@@ -28,7 +29,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from data import CharTokenizer, Corpus, build_tokenizer, load_tokenizer, tokenizer_fingerprint
 from model import GPT, GPTConfig
-from train import BETAS, MODEL_PRESETS, auto_lr, cosine_lr, decay_split, enable_fast_math, make_optimizer
+from train import (BETAS, EARLY_STOP_MIN_DELTA, EARLY_STOP_PATIENCE, MODEL_PRESETS, EarlyStopper,
+                   auto_lr, cosine_lr, decay_split, enable_fast_math, make_optimizer)
 
 HERE = Path(__file__).resolve().parent
 SCHEMA = 2
@@ -71,6 +73,16 @@ def parse_args(argv=None):
                         help="deterministic CUDA kernels and stable DDP reduction order across resume")
     parser.add_argument("--log-every", type=int, default=1, help="stdout optimizer-step interval; 0 prints evaluations only")
     parser.add_argument("--resume", action="store_true", help="resume --out/ckpt.pt at its next optimizer step")
+    parser.add_argument("--early-stop", action=argparse.BooleanOptionalAction, default=False,
+                        help="stop at the validation minimum (train.EarlyStopper's patience rule against "
+                             "--min-delta/--patience). Off by default, unlike train.py: a recorded sweep "
+                             "command's --steps is a fixed schedule horizon (cosine decay target, warmup "
+                             "fraction), so cutting it short changes the run rather than just ending it "
+                             "sooner. The best-validation weights are kept in best.pt either way.")
+    parser.add_argument("--min-delta", type=float, default=EARLY_STOP_MIN_DELTA,
+                        help="an improvement smaller than this does not reset patience (train.EarlyStopper)")
+    parser.add_argument("--patience", type=int, default=EARLY_STOP_PATIENCE,
+                        help="evaluations without a real improvement before --early-stop stops the run")
     args = parser.parse_args(argv)
     for name, value in MODEL_PRESETS[args.preset].items():
         if getattr(args, name) is None:
@@ -87,6 +99,10 @@ def parse_args(argv=None):
         parser.error("invalid validation fraction, learning rate, weight decay or warm-up")
     if args.stop_after is not None and not 0 < args.stop_after <= args.steps:
         parser.error("--stop-after must be within the unchanged --steps horizon")
+    if not (args.min_delta >= 0 and math.isfinite(args.min_delta)):
+        parser.error("--min-delta must be a finite number >= 0")
+    if int(args.patience) != args.patience or args.patience < 1:
+        parser.error("--patience must be a whole number of evaluations >= 1")
     return args
 
 
@@ -112,7 +128,7 @@ def training_identity(args, cfg: GPTConfig, corpus: Corpus, text: str, token_has
                      "val_frac": None if explicit else args.val_frac},
             "training": {name: getattr(args, name) for name in
                          ("steps", "batch_size", "grad_accum", "lr", "warmup_steps", "seed", "bf16", "device",
-                          "deterministic", "cpu_threads")},
+                          "deterministic", "cpu_threads", "early_stop", "min_delta", "patience")},
             # Its own key rather than a "training" entry, so run_pretraining_study's
             # check of the recorded training keys and every ledger written before
             # r12 still read the same; a resume with another decay is refused here.
@@ -156,7 +172,7 @@ def validate_resume(checkpoint: dict, identity: dict) -> None:
 
 def save_checkpoint(path: Path, model: GPT, optimizer, completed: int, identity: dict,
                     generator: torch.Generator, device: torch.device, rank: int, world: int,
-                    losses: dict, initial_losses: dict) -> None:
+                    losses: dict, initial_losses: dict, early_stopping: dict) -> None:
     # The optimizer step has completed on every rank before its state is published.
     dist.barrier()
     rngs = [None] * world
@@ -165,11 +181,35 @@ def save_checkpoint(path: Path, model: GPT, optimizer, completed: int, identity:
         checkpoint = {"distributed_schema": SCHEMA, "model": model.state_dict(), "config": asdict(model.config),
                       "tokenizer_fingerprint": identity["tokenizer_fingerprint"], "optimizer": optimizer.state_dict(),
                       "step": completed, "identity": identity, "rank_rng": rngs, "losses": losses,
-                      "initial_losses": initial_losses}
+                      "initial_losses": initial_losses, "early_stopping": early_stopping}
         temporary = path.with_name(path.name + ".tmp")
         torch.save(checkpoint, temporary)
         temporary.replace(path)
     dist.barrier()
+
+
+def save_best_checkpoint(path: Path, stopper: EarlyStopper, config: GPTConfig, tokenizer_fingerprint: str) -> None:
+    """The single best-validation snapshot, rank 0 only, atomic.
+
+    Weights only (no optimizer/RNG): `--resume` always continues from ckpt.pt at
+    its last completed step regardless of which step scored best, so nothing
+    here needs to be itself resumable. `stopper.best_state` is already a frozen
+    CPU copy (train.EarlyStopper.observe -> cpu_state_copy), so this is a plain
+    write, not a device-to-host copy.
+    """
+    checkpoint = {"model": stopper.best_state, "config": asdict(config),
+                 "tokenizer_fingerprint": tokenizer_fingerprint, "step": stopper.best_step,
+                 "val_nats_per_token": stopper.best_val, "train_nats_per_token": stopper.best_train}
+    temporary = path.with_name(path.name + ".tmp")
+    torch.save(checkpoint, temporary)
+    temporary.replace(path)
+
+
+def best_record(stopper: EarlyStopper) -> dict:
+    """The best checkpoint's step and loss, for run.json. No weights, no state."""
+    f = lambda v: None if v is None or not math.isfinite(v) else float(v)  # noqa: E731
+    return {"step": stopper.best_step, "val_nats_per_token": f(stopper.best_val),
+            "train_nats_per_token": f(stopper.best_train)}
 
 
 def get_batch(corpus: Corpus, split: str, args, generator: torch.Generator, device: torch.device):
@@ -308,6 +348,12 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
     generator = torch.Generator(device="cpu").manual_seed(args.seed + 1000003 * rank)
     # Distinct dropout streams after identical model initialization/broadcast.
     torch.manual_seed(args.seed + rank)
+    # Every rank computes the same val loss (estimate_loss all-reduces it), so
+    # every rank's stopper reaches the same decision without a broadcast; only
+    # rank 0 is given the model, so only rank 0 pays for the CPU weight copy
+    # and only rank 0 ever holds a best.pt to write (see save_best_checkpoint).
+    stopper = EarlyStopper(min_delta=args.min_delta, patience=args.patience,
+                           stop_early=args.early_stop, keep_best=True)
     completed, losses, initial_losses = 0, {}, {}
     if args.resume:
         checkpoint = torch.load(out / "ckpt.pt", map_location="cpu", weights_only=True)
@@ -317,6 +363,8 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
         completed, losses = checkpoint["step"], checkpoint.get("losses", {})
         initial_losses = checkpoint["initial_losses"]
         restore_rng(checkpoint["rank_rng"][rank], generator, device)
+        if checkpoint.get("early_stopping") is not None:
+            stopper.load_state_dict(checkpoint["early_stopping"])
         del checkpoint
     stop = args.stop_after or args.steps
     if stop < completed:
@@ -372,8 +420,15 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
         step_seconds = time.monotonic() - step_started
         optimizer_seconds += step_seconds
         evaluate = completed % args.eval_every == 0 or completed == stop
+        should_stop = False
         if evaluate:
             losses.update(estimate_loss(model, corpus, args, device, rank, world))
+            previous_best_step = stopper.best_step
+            should_stop = stopper.update(completed, losses["val_nats_per_token"],
+                                         model=model if rank == 0 else None,
+                                         train=losses.get("train_nats_per_token"))
+            if rank == 0 and stopper.best_step is not None and stopper.best_step != previous_best_step:
+                save_best_checkpoint(out / "best.pt", stopper, cfg, token_hash)
         if rank == 0:
             row = {"step": completed, "lr": lr, "train_step_nats_per_token": train_loss.item(),
                    "optimizer_seconds": step_seconds,
@@ -383,12 +438,18 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
                 append_metric(out / "metrics.jsonl", row)
             if evaluate or (args.log_every and completed % args.log_every == 0):
                 print(json.dumps(row), flush=True)
-        if completed % args.save_every == 0 or completed == stop:
+        if completed % args.save_every == 0 or completed == stop or should_stop:
             save_checkpoint(out / "ckpt.pt", model, optimizer, completed, identity, generator,
-                            device, rank, world, losses, initial_losses)
+                            device, rank, world, losses, initial_losses, stopper.state_dict())
             if rank == 0:
                 write_json(out / "run.json", {**metadata, "status": "complete" if completed == args.steps else "running",
-                                              "completed_steps": completed, "losses": losses})
+                                              "completed_steps": completed, "losses": losses,
+                                              "best": best_record(stopper)})
+        if should_stop:
+            break
+
+    if stopper.reason is None and completed == args.steps:
+        stopper.finish(completed, "finished")
 
     peak = torch.tensor(torch.cuda.max_memory_allocated(device) if device.type == "cuda" else 0,
                         device=device, dtype=torch.int64)
@@ -407,7 +468,8 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
                   / max(optimizer_seconds, 1e-9),
                   "tokens_per_second": (completed - starting_step) * metadata["tokens_per_step"] / max(elapsed, 1e-9),
                   "peak_allocated_bytes_by_rank": [p.item() for p in peaks],
-                  "peak_reserved_bytes_by_rank": [p.item() for p in reservations]}
+                  "peak_reserved_bytes_by_rank": [p.item() for p in reservations],
+                  "best": best_record(stopper), "stop_reason": stopper.reason}
         write_json(out / "run.json", result)
         return result
     return None
