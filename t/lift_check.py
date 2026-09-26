@@ -2705,8 +2705,57 @@ def build_differential(task: dict, source: MethodDecl, closure: tuple) -> str:
     return _build_differential_with_points(task, source, closure, points)
 
 
+def _callee_closure(closure: tuple, callees: tuple) -> tuple:
+    """Row 37: `closure` plus, for every callee method (transitively), its
+    own call-graph closure and its source method, each declaration once by
+    name. The differential harness RUNS the source method, whose body calls
+    the callees, so they are printed and renamed `_src` like the rest of
+    the closure; the lowered side names them by their task names
+    (`<stem>__<m>`), so the two copies never collide."""
+    out = list(closure)
+    names = {getattr(d, "name", None) for d in out}
+    for cl in callees:
+        for d in list(cl.closure) + [cl.source]:
+            if d.name not in names:
+                names.add(d.name)
+                out.append(d)
+    return tuple(out)
+
+
+def _drop_lemma_calls(md: MethodDecl, lemma_names: set) -> MethodDecl:
+    """`md` with every call statement of a lemma in `lemma_names` removed,
+    at any depth. Only for the differential harness, which runs under
+    `dafny run --no-verify`: a lemma call is ghost and erased from compiled
+    code (DafnyRef 6.3.3, "a lemma is a ghost method"), so removing it
+    changes no value the harness compares; printed, it named `<lemma>_src`,
+    a declaration the harness never prints (lemma bodies are not parsed,
+    `lift_ast.LemmaDecl`), and the harness did not resolve (measured:
+    humaneval_dafny_077 iscube, "unresolved identifier:
+    cube_of_larger_is_larger_src", arm-unavailable)."""
+    from lift_ast import Stmt
+
+    def fix_list(stmts):
+        return tuple(fix(s) for s in stmts
+                     if not (isinstance(s, CallStmt) and s.name in lemma_names))
+
+    def fix(s):
+        changes = {}
+        for f in dataclasses.fields(s):
+            v = getattr(s, f.name)
+            if isinstance(v, tuple) and v and all(isinstance(x, Stmt) for x in v):
+                changes[f.name] = fix_list(v)
+            elif isinstance(v, Stmt):
+                changes[f.name] = fix(v)
+        return dataclasses.replace(s, **changes) if changes else s
+
+    if md.body is None or not lemma_names:
+        return md
+    return dataclasses.replace(md, body=fix_list(md.body))
+
+
 def _build_differential_with_points(task: dict, source: MethodDecl,
-                                    closure: tuple, points: list) -> str:
+                                    closure: tuple, points: list,
+                                    callees: tuple = ()) -> str:
     """Section 10(a), item (a)'s data-not-statements form (integrator fix
     2026-09-06): the OLD Main emitted one `{ var srcv := ...; ...}` block
     PER POINT, so N points meant N call statements for `dafny run` to
@@ -2723,9 +2772,13 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
     same 2048 points, same machine: 8.7s compile+run (see
     DIFF_MAX_POINTS's own comment for the full before/after numbers this
     justifies)."""
+    closure = _callee_closure(closure, callees)
     rename = _closure_rename_map(source, closure)
     fdecls = [_source_form_decl(d) for d in closure if isinstance(d, FunctionDecl)]
-    mdecls = [d for d in closure if isinstance(d, MethodDecl)]
+    from lift_ast import LemmaDecl
+    lemma_names = {d.name for d in closure if isinstance(d, LemmaDecl) and d.name}
+    mdecls = [_drop_lemma_calls(d, lemma_names) for d in closure if isinstance(d, MethodDecl)]
+    source = _drop_lemma_calls(source, lemma_names)
 
     lines = ["// Section 10(a) / 18.5 differential harness: source vs. "
              "lifted, plus the source's printed values for the interp "
@@ -2959,7 +3012,8 @@ def _extract_warnings(out: str) -> list:
 
 
 def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
-                    lowered_name: Optional[str] = None):
+                    lowered_name: Optional[str] = None,
+                    lowered_methods: frozenset = frozenset()):
     """Runs `dafny verify` on `path`; returns (verdicts: dict[name,str],
     exit_code, all_ok: bool, first_failing_token: str|None,
     warnings: list[str], lowered_verdict: str|None).
@@ -2974,7 +3028,13 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
     wrong (decision 17's "two columns" -- see LiftRecord.lowered_task_
     verdict). Only when EVERY error in the finish line is attributable to
     the lowered method's own body does this function still report
-    `all_ok=True`; a genuine lemma failure is unaffected."""
+    `all_ok=True`; a genuine lemma failure is unaffected.
+
+    `lowered_methods` (row 37, methods as callees): the symbols of the
+    lowered task's own `methods`, printed by `lower_dafny.lower` beside it.
+    Each is exempt exactly as the lowered task is, for the same reason: its
+    proof is the kernel's (and each callee's LIFT is checked by its own
+    checker file, `check`'s step 0), not evidence about this lift."""
     exit_code, out = _run_dafny(
         ["verify", str(path), "--allow-warnings", "--log-format", "text"],
         timeout_s)
@@ -3038,7 +3098,8 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
     # recorded under its own name and block kind, so the sidecar never
     # reads all-verified for a file dafny did not verify.
     for sym, kind, outcome in blocks:
-        if sym in lemma_names or sym == lowered_name or outcome == "Correct":
+        if (sym in lemma_names or sym == lowered_name or sym in lowered_methods
+                or outcome == "Correct"):
             continue
         verdicts[f"{sym} ({kind})"] = _DAFNY_OUTCOME.get(outcome, Outcome.TOOL_ERROR)
         all_ok = False
@@ -3060,14 +3121,19 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
             # its failure is the kernel's, not the lift's (see docstring).
             culprit = None
             for sym, kind, outcome in blocks:
-                if outcome != "Correct" and sym != lowered_name:
+                if (outcome != "Correct" and sym != lowered_name
+                        and sym not in lowered_methods):
                     culprit = sym
                     break
+            lowered_method_failed = any(
+                outcome != "Correct" and sym in lowered_methods
+                for sym, _kind, outcome in blocks)
             if culprit is not None:
                 first_bad = culprit
                 all_ok = False
-            elif not (lowered_name is not None and lowered_verdict is not None
-                     and lowered_verdict != Outcome.VERIFIED):
+            elif not ((lowered_name is not None and lowered_verdict is not None
+                       and lowered_verdict != Outcome.VERIFIED)
+                      or lowered_method_failed):
                 # no lemma is bad and the lowered method isn't the (sole)
                 # culprit either -- still an unattributed error.
                 first_bad = "unattributed-error"
@@ -3133,7 +3199,8 @@ def _dafny_value_matches(printed: str, py_value) -> bool:
 
 def check(task: dict, source: MethodDecl, closure: tuple,
           record: LiftRecord, dfy_path: Path,
-          timeout_s: float = DEFAULT_TIMEOUT_S) -> CheckOutput:
+          timeout_s: float = DEFAULT_TIMEOUT_S, callees: tuple = (),
+          _callees_checked: bool = False) -> CheckOutput:
     """Run the full post-rewrite pipeline of section 2's data-flow line on
     one lifted method, mutating and returning `record`.
 
@@ -3182,8 +3249,54 @@ def check(task: dict, source: MethodDecl, closure: tuple,
     explicit and unconditional ("Never. The checker never argues for the
     lifter; the row stays refused."); a `lift-check-failed`/`lift-diff
     -failed` row is a bug report against the lifter, not a puzzle this
-    function tries to solve."""
+    function tries to solve.
+
+    Row 37 (methods as callees): `callees` are `lift_rewrite.CalleeLift`s,
+    every method the task calls, transitively, callees first. Step (0)
+    checks each one ON ITS OWN, as the task it was lifted as, by this same
+    function: check_wf, its own L_fun/L_req/L_ens/L_inv lemmas against its
+    own source contract, and its own differential run. A caller's proof
+    uses only a callee's contract (Dafny's modular rule, SPEC.md "Methods
+    (v1)"), so a callee whose lifted contract is not the source's would
+    make every caller's verdict about the wrong program; its failure is
+    this task's refusal, under the callee's own reason, token
+    `<callee>:<token>`. The callee's lemma verdicts are copied onto this
+    record as `<callee>/<lemma>`. The caller's own checker file then carries
+    the lowered methods (exempt as the lowered task is), and its
+    differential harness the callees' source methods, renamed `_src`.
+    `_callees_checked` is this function's own recursion flag: a callee's
+    callees were already checked earlier in the same list."""
     dfy_path = Path(dfy_path)
+
+    # (0) Row 37: every callee, checked as the task it was lifted as.
+    if not _callees_checked:
+        import lift_rewrite
+        entries = {m["name"]: m for m in task.get("methods", [])}
+        for cl in callees:
+            # The method the caller's proof uses must be the one checked
+            # below, not merely one lifted from the same source.
+            if entries.get(cl.task["name"]) != lift_rewrite._method_entry(cl.task):
+                refusal = Refusal(reason="method-entry-mismatch", token=cl.name,
+                                  line=0, stage="check")
+                return CheckOutput(checker_dfy="", differential_dfy="", record=record,
+                                   refusal=refusal, interp_points=0, interp_first_value=None)
+        for cl in callees:
+            sub_path = dfy_path.with_name(f"{dfy_path.stem}.callee_{cl.task['name']}.dfy")
+            sub = check(cl.task, cl.source, cl.closure, cl.record, sub_path, timeout_s,
+                        callees=cl.callees, _callees_checked=True)
+            for k, v in sub.record.checker_verdicts.items():
+                record.checker_verdicts[f"{cl.name}/{k}"] = v
+            record.warnings.append(
+                f"callee {cl.name}: differential {sub.record.differential_verdict}; "
+                f"lowered {sub.record.lowered_task_verdict}")
+            if sub.refusal is not None:
+                refusal = Refusal(reason=sub.refusal.reason,
+                                  token=f"{cl.name}:{sub.refusal.token}",
+                                  line=sub.refusal.line, stage="check")
+                return CheckOutput(checker_dfy=sub.checker_dfy,
+                                   differential_dfy=sub.differential_dfy, record=record,
+                                   refusal=refusal, interp_points=0, interp_first_value=None)
+    lowered_methods = frozenset(m["name"] for m in task.get("methods", []))
 
     # (1) check_wf gate.
     errs = fuzz_lower.check_wf(task)
@@ -3215,7 +3328,7 @@ def check(task: dict, source: MethodDecl, closure: tuple,
     lowered_name = task["name"].capitalize()  # matches lower_dafny.lower's own naming
     t0 = time.monotonic()
     verdicts, exit_code, all_ok, first_bad, warnings, lowered_verdict = _verify_checker(
-        checker_path, lemma_names, timeout_s, lowered_name)
+        checker_path, lemma_names, timeout_s, lowered_name, lowered_methods)
     record.checker_verdicts.update(verdicts)
     record.lowered_task_verdict = lowered_verdict
     record.dafny_exit_codes["verify-checker"] = exit_code
@@ -3237,7 +3350,8 @@ def check(task: dict, source: MethodDecl, closure: tuple,
     # produced them in, so this is a prefix, not a resample.
     diff_points = ref.points[:DIFF_MAX_POINTS]
     try:
-        diff_text = _build_differential_with_points(task, source, closure, diff_points)
+        diff_text = _build_differential_with_points(task, source, closure, diff_points,
+                                                    callees)
     except (TypeError, KeyError) as exc:
         # Row 30 (2026-09-10): a nested-seq param/return's own JSON type
         # is the compound `{"seq": "seq"}`, not a plain string -- if
