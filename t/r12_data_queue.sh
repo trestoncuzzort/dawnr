@@ -761,6 +761,8 @@ admit() {  # gate, or wait for it up to R12_WAIT_MINUTES; never kills anything
 }
 done_step() { lab_py sentinel check "$1" --dir "$RD/done" --inputs "${@:2}"; }   # 0 done, 1 not, 3 different inputs
 mark_step() { lab_py sentinel write "$1" --dir "$RD/done" --inputs "${@:2}" || refuse "could not record $1"; }
+# A check names exactly the paths its mark records, outputs included: the digest covers every path it is
+# given, so a shorter list never matches a finished step, and an output not written yet reads as not done.
 check_or_refuse() { local rc; done_step "$@"; rc=$?; [ "$rc" -eq 3 ] && refuse "$1 was done with different inputs"; return $rc; }
 
 take_locks() {
@@ -782,7 +784,7 @@ grade_chunks() {  # prefix: every planned chunk, one grade_lab.sh call each, tab
   list=$(lab "ls -d $RD/chunks/$prefix[0-9]* 2>/dev/null | xargs -rn1 basename")
   [ -n "$list" ] || { echo "== $prefix: no chunk to grade"; return 0; }
   for c in $list; do
-    if check_or_refuse "chunk-$c" "$RD/chunks/$c/manifest.json"; then continue; fi
+    if check_or_refuse "chunk-$c" "$RD/chunks/$c/manifest.json" "$RD/chunks/$c/kernels.md"; then continue; fi
     mkdir -p "$SE/$c"
     fetch -a --delete "$LAB:~/$REPO/$RD/chunks/$c/grade-in/" "$SE/$c/grade-in/" || refuse "$c: cannot fetch grade-in"
     fetch -a "$LAB:~/$REPO/$RD/chunks/$c/manifest.json" "$SE/$c/manifest.json" || refuse "$c: cannot fetch manifest"
@@ -867,7 +869,7 @@ step_spec() {
               qwen3.8-27b-fp8-np1024:v5 qwen235-train:v5 qwen235-train-p4:v5 prover-train2:v5 \
               qwen235-v6new-r12:v6 qwen235-v6new-p4:v6; do
     TAG=${pair%%:*}; POOL=${pair##*:}
-    if check_or_refuse "spec-$TAG" "$SE/$TAG/kernels.md"; then continue; fi
+    if check_or_refuse "spec-$TAG" "$SE/$TAG/kernels.md" "$RD/SPEC-CHECK-$TAG.md"; then continue; fi
     admit
     lab "nice -n 19 python3 t/spec_check.py $TAG --pool $POOL --n 100 --only clean --out $RD/SPEC-CHECK-$TAG.md 2>&1 | tee $RD/spec-$TAG.log" \
       || refuse "$TAG: spec_check failed"
@@ -885,14 +887,14 @@ step_build() {
   local RELABEL=t/out/loop/relabel-2026-09-25.jsonl RELABEL_ARGS="" RELABEL_INPUT=""
   if lab "test -f $RELABEL"; then RELABEL_ARGS="--relabel-rows $RELABEL --relabel-cap 3"; RELABEL_INPUT=$RELABEL
   else echo "== build-r12: no $RELABEL on the lab; the pool gets no relabeled rows"; fi
-  if ! check_or_refuse build-r12 t/out/loop/split-v5.json t/decontamination-2026-09-21.json t/decontamination-behavioural-2026-09-25.json $RELABEL_INPUT; then
+  if ! check_or_refuse build-r12 t/out/loop/split-v5.json t/decontamination-2026-09-21.json t/decontamination-behavioural-2026-09-25.json $RELABEL_INPUT t/out/loop/sft-r12.jsonl; then
     admit
     lab "cd $SE && for t in $V5; do [ -f \$t/kernels.md ] || { echo missing table: \$t; exit 3; }; done" || refuse "a v5 build tag has no table"
     lab "cd $SE && TAGS=\"$V5\" && cd ~/$REPO && nice -n 19 python3 t/loop_dataset.py --from-samples \$TAGS --split t/out/loop/split-v5.json --min-kernels 7 --out-suffix r12 $RELABEL_ARGS && wc -l t/out/loop/sft-r12.jsonl t/out/loop/pairs-r12.jsonl" \
       || refuse "loop_dataset (r12) failed"
     mark_step build-r12 t/out/loop/split-v5.json t/decontamination-2026-09-21.json t/decontamination-behavioural-2026-09-25.json $RELABEL_INPUT t/out/loop/sft-r12.jsonl
   fi
-  if ! check_or_refuse build-r12v6 t/out/loop/split-v6.json; then
+  if ! check_or_refuse build-r12v6 t/out/loop/split-v6.json t/out/loop/sft-r12v6.jsonl; then
     admit
     lab "test -f t/out/loop/split-v6.json" || refuse "t/out/loop/split-v6.json is missing on the lab"
     lab "nice -n 19 python3 t/loop_dataset.py --from-samples $V6 --split t/out/loop/split-v6.json --min-kernels 7 --out-suffix r12v6 && wc -l t/out/loop/sft-r12v6.jsonl" \
@@ -950,7 +952,7 @@ step_r11() {
 step_lift_2026_09_26() {
   local D=t/out/lifted-tasks-2026-09-26 M=t/out/lifted-tasks-2026-09-26.meta TABLE=t/out/COVERAGE-lifted-2026-09-26.md
   [ -d "$D" ] && [ -d "$M/staged" ] && [ -f "$M/lift-census.json" ] || refuse "no $D with $M/staged here: run python3 t/lift_corpora.py first"
-  if check_or_refuse lift-2026-09-26 "$M/lift-census.json"; then echo "== lift-2026-09-26: graded already"; return 0; fi
+  if check_or_refuse lift-2026-09-26 "$M/lift-census.json" "$TABLE"; then echo "== lift-2026-09-26: graded already"; return 0; fi
   admit
   store -a --delete "$D/" "$LAB:~/$REPO/$D/" || refuse "cannot stage the lifted tasks on the lab"
   store -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the lifted sources on the lab"
@@ -985,7 +987,7 @@ step_lift_2026_09_26() {
 step_lift_2026_09_26_recovered() {
   local D=t/out/lifted-tasks-2026-09-26-recovered M=t/out/lifted-tasks-2026-09-26-recovered.meta TABLE=t/out/COVERAGE-lifted-2026-09-26-recovered.md
   [ -d "$D" ] && [ -d "$M/staged" ] && [ -f "$M/lift-census.json" ] || refuse "no $D with $M/staged here: run python3 t/lift_corpora.py --recover-twins first"
-  if check_or_refuse lift-2026-09-26-recovered "$M/lift-census.json"; then echo "== lift-2026-09-26-recovered: graded already"; return 0; fi
+  if check_or_refuse lift-2026-09-26-recovered "$M/lift-census.json" "$TABLE"; then echo "== lift-2026-09-26-recovered: graded already"; return 0; fi
   admit
   store -a --delete "$D/" "$LAB:~/$REPO/$D/" || refuse "cannot stage the recovered tasks on the lab"
   store -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the recovered sources on the lab"
