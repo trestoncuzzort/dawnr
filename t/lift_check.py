@@ -350,6 +350,11 @@ def _print_expr(e, rename: dict) -> str:
         rhs = ", ".join(_print_expr(r, rename) for r in e.rhs)
         return f"({g}var {binders} {e.op} {rhs}; {_print_expr(e.body, rename)})"
     if isinstance(e, Quantifier):
+        # Every source quantifier prints in source form (`_source_form`),
+        # wherever it sits: a closure body, a method's own assert (the
+        # differential harness prints the source method's statements too;
+        # vericoding DA0543's `assert forall j, _t#0 | ...` measured).
+        e = _source_form(e)
         binders = ", ".join(_print_binder(b, rename) for b in e.binders)
         rng = f" | {_print_expr(e.range, rename)}" if e.range is not None else ""
         return f"({e.kind} {binders}{rng} :: {_print_expr(e.body, rename)})"
@@ -594,6 +599,146 @@ def _print_method_decl(md: MethodDecl, rename: dict) -> list:
         lines.append("}")
     lines.append("")
     return lines
+
+
+# ===========================================================================
+# Undoing the resolver's two quantifier rewrites before a closure function
+# is printed. The closure's functions come from `dafny resolve --rprint`,
+# and `lift_resolve.check_against_source` corrects only the METHOD's own
+# clauses back to the source's tree, never a closure function's body or
+# requires. rprint prints two rewrites the resolver makes for trigger
+# selection, and both leave text that is not the source program:
+#
+#   * Triggers/ExprSubstituter.cs replaces a trigger subterm E (`s[i + 1]`'s
+#     `i + 1`) with a fresh bound variable named `_t#N` and conjoins
+#     `_t#N == E` to the range. `_t#N` is not a legal user identifier
+#     (DafnyRef 2.6.2: an ident beginning with `_` is not permitted), so the
+#     checker file fails to parse: "cannot declare identifier beginning
+#     with underscore" (7 methods of the 2026-09-26 lift).
+#   * Triggers/QuantifierSplitter.cs splits `forall x :: A ==> (B && C)`
+#     into `A ==> B` and `A ==> C` (`exists x :: A && (B || C)` into
+#     `(A && B) || (A && C)`), and rprint prints the parts joined under one
+#     binder. The range antecedent is then no longer the body's top-level
+#     antecedent, so the quantifier in a compiled `predicate` is no longer
+#     compilable: "quantifiers in non-ghost contexts must be compilable"
+#     (7 methods of the same lift). The differential harness prints the
+#     same declarations and runs them, so declaring them ghost would not do.
+#
+# Both inverses are exact: substituting E back for `_t#N` and dropping the
+# binder and its defining equation gives the source's own expression (the
+# lifted side already does the same in `lift_classify.bound_quantifier`,
+# row 33); rejoining parts that share one antecedent is the same formula
+# and needs no more for well-formedness than the split one did. Only
+# resolver-synthesised binders (a `#` in the name) are eliminated; a
+# binder the author wrote is never touched. Sources:
+# github.com/dafny-lang/dafny/blob/master/Source/DafnyCore/Triggers/ExprSubstituter.cs
+# github.com/dafny-lang/dafny/blob/master/Source/DafnyCore/Triggers/QuantifierSplitter.cs
+# ===========================================================================
+
+def _is_synth_binder(name: str) -> bool:
+    return name.startswith("_") and "#" in name
+
+
+def _nary(op: str, args, line: int) -> Expr:
+    args = tuple(args)
+    return args[0] if len(args) == 1 else NaryBool(line, op, args)
+
+
+def _common_prefix(arg_lists: list) -> list:
+    """Longest structurally common prefix of `arg_lists`, leaving every
+    list at least one argument of its own."""
+    from lift_resolve import _struct_eq
+    n = min(len(a) for a in arg_lists) - 1
+    out = []
+    for k in range(n):
+        x = arg_lists[0][k]
+        if all(_struct_eq(a[k], x) for a in arg_lists[1:]):
+            out.append(x)
+        else:
+            break
+    return out
+
+
+def _rejoin_split_body(kind: str, body: Expr) -> Expr:
+    """Inverse of QuantifierSplitter.SplitAndStitch on a printed body:
+    forall `(A ==> B1) && (A ==> B2)` -> `A ==> (B1 && B2)`, forall
+    `(A || B1) && (A || B2)` -> `A || (B1 && B2)`, exists
+    `(A && B1) || (A && B2)` -> `A && (B1 || B2)`. Anything else is
+    returned unchanged."""
+    from lift_resolve import _struct_eq
+    if not (isinstance(body, NaryBool) and len(body.args) >= 2):
+        return body
+    if kind == "forall" and body.op == "&&" and all(isinstance(a, Implies) for a in body.args):
+        ante = body.args[0].left
+        if all(_struct_eq(a.left, ante) for a in body.args[1:]):
+            return Implies(body.line, ante, _nary("&&", (a.right for a in body.args), body.line))
+        return body
+    inner = {"forall": ("&&", "||"), "exists": ("||", "&&")}.get(kind)
+    if inner is None or body.op != inner[0]:
+        return body
+    part_op = inner[1]
+    if not all(isinstance(a, NaryBool) and a.op == part_op and len(a.args) >= 2
+               for a in body.args):
+        return body
+    common = _common_prefix([a.args for a in body.args])
+    if not common:
+        return body
+    rest = tuple(_nary(part_op, a.args[len(common):], body.line) for a in body.args)
+    return NaryBool(body.line, part_op, tuple(common) + (NaryBool(body.line, body.op, rest),))
+
+
+def _source_form(e):
+    """`e` with the two resolver rewrites above undone, bottom-up."""
+    if isinstance(e, tuple):
+        out = tuple(_source_form(x) for x in e)
+        return e if all(a is b for a, b in zip(out, e)) else out
+    if not isinstance(e, Expr) or not dataclasses.is_dataclass(e):
+        return e
+    changes = {}
+    for f in dataclasses.fields(e):
+        v = getattr(e, f.name)
+        if isinstance(v, (Expr, tuple)):
+            nv = _source_form(v)
+            if nv is not v:
+                changes[f.name] = nv
+    if changes:
+        e = dataclasses.replace(e, **changes)
+    if isinstance(e, Quantifier):
+        import lift_classify
+        while True:
+            synth = tuple(b for b in e.binders if _is_synth_binder(b.name))
+            found = (lift_classify._binder_defining_equality(synth, e.range)
+                     if synth else None)
+            if found is None:
+                break
+            name, repl, remaining = found
+            binders = tuple(b for b in e.binders if b.name != name)
+            if not binders:
+                break
+            body = lift_classify._subst_ast(e.body, name, repl)
+            if remaining is not None:
+                remaining = lift_classify._subst_ast(remaining, name, repl)
+            e = dataclasses.replace(e, binders=binders, range=remaining, body=body)
+        body = _rejoin_split_body(e.kind, e.body)
+        if body is not e.body:
+            e = dataclasses.replace(e, body=body)
+    return e
+
+
+def _source_form_decl(d):
+    """A closure declaration with its clauses and body in source form."""
+    specs = []
+    for sp in d.specs:
+        if isinstance(getattr(sp, "expr", None), Expr):
+            specs.append(dataclasses.replace(sp, expr=_source_form(sp.expr)))
+        elif isinstance(getattr(sp, "exprs", None), tuple):
+            specs.append(dataclasses.replace(sp, exprs=_source_form(sp.exprs)))
+        else:
+            specs.append(sp)
+    changes = {"specs": tuple(specs)}
+    if isinstance(d, FunctionDecl) and d.body is not None:
+        changes["body"] = _source_form(d.body)
+    return dataclasses.replace(d, **changes)
 
 
 def _closure_rename_map(source: MethodDecl, closure: tuple) -> dict:
@@ -1360,7 +1505,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     lemma_names) so `check` need not re-derive the lemma name list by
     re-parsing its own generated text."""
     rename = _closure_rename_map(source, closure)
-    fdecls = [d for d in closure if isinstance(d, FunctionDecl)]
+    fdecls = [_source_form_decl(d) for d in closure if isinstance(d, FunctionDecl)]
     mdecls = [d for d in closure if isinstance(d, MethodDecl)]
 
     lines = ["// Section 9 checker file: source closure (renamed _src) "
@@ -2117,7 +2262,7 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
     DIFF_MAX_POINTS's own comment for the full before/after numbers this
     justifies)."""
     rename = _closure_rename_map(source, closure)
-    fdecls = [d for d in closure if isinstance(d, FunctionDecl)]
+    fdecls = [_source_form_decl(d) for d in closure if isinstance(d, FunctionDecl)]
     mdecls = [d for d in closure if isinstance(d, MethodDecl)]
 
     lines = ["// Section 10(a) / 18.5 differential harness: source vs. "
