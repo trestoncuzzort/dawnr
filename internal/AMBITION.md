@@ -180,7 +180,7 @@ is judged by the same rule: nothing is trusted without evidence.
 | a brain that understands language and code | transformer pretraining from random weights | **built**: the locallm core; the weight-decay sweep is running |
 | to learn, not memorise | regularisation, denoising (fill in the middle), early stopping, more verified data | **in progress** |
 | to know when it is right | verification as the judge, calibration, uncertainty, refusal | **the seven-kernel proof engine is this**; calibration not started |
-| to get better at reasoning | reinforcement learning with the verifier as the reward | **started**: the reward and the feasibility gate first (`t/RL-DESIGN-2026-09-26.md`); the best fit of anything here, because the reward cannot be fooled |
+| to get better at reasoning | reinforcement learning with the verifier as the reward | **built, waiting on data**: tiered proof reward inspected by hand, GRPO trainer (Dr. GRPO advantages hold; plain GRPO unlearned). The model solves 0.6% of problems outside its corpus, too few to reinforce, so new verified data comes first (`t/RL-DESIGN-2026-09-26.md`) |
 | to know what it was not trained on | retrieval, embeddings, a vector index | not started |
 | to remember the person and past work | long-term memory, continual learning without forgetting | not started (replay against forgetting exists in the fine-tune) |
 | to do things, not only talk | tool use, agents, planning | not started; write a program, prove it, then run it |
