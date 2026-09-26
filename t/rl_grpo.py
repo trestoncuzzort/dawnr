@@ -52,12 +52,19 @@ import spec_experiment as se                                    # noqa: E402
 
 # ----------------------------------------------------------------- the loss --
 
-def group_advantages(rewards: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
-    """(r - mean) / std within each row of a (groups, G) reward tensor; a row
-    whose rewards are all equal gets advantage 0 everywhere (not a division by 0)."""
+def group_advantages(rewards: torch.Tensor, eps: float = 1e-6, scale: str = "std") -> torch.Tensor:
+    """(r - mean) / std within each row of a (groups, G) reward tensor (GRPO), or
+    r - mean with ``scale="mean"`` (Dr. GRPO, arXiv:2503.20783, drops the std
+    division); a row whose rewards are all equal gets advantage 0 everywhere.
+
+    Why the option: the first pilot (t/RL-DESIGN-2026-09-26.md section 5) had
+    groups whose only spread was 0 / 0.05 / 0.10 (format tiers); dividing by
+    their small std gave those differences the weight of a proof, the "illusory
+    advantages" Pref-GRPO names (arXiv:2508.20751), and the policy traded
+    memorised correct answers for well-formed wrong ones."""
     mean = rewards.mean(dim=1, keepdim=True)
     std = rewards.std(dim=1, keepdim=True)
-    adv = (rewards - mean) / (std + eps)
+    adv = (rewards - mean) / (std + eps) if scale == "std" else rewards - mean
     return torch.where(std > 0, adv, torch.zeros_like(adv))
 
 
@@ -140,6 +147,8 @@ def main(argv=None) -> int:
     ap.add_argument("--beta", type=float, default=0.04)
     ap.add_argument("--clip", type=float, default=0.2)
     ap.add_argument("--mu", type=int, default=1, help="policy updates per sampled batch")
+    ap.add_argument("--advantage", choices=("std", "mean"), default="std",
+                    help="std: GRPO's (r - mean) / std; mean: Dr. GRPO's r - mean")
     ap.add_argument("--micro", type=int, default=16, help="answers per forward/backward")
     ap.add_argument("--jobs", type=int, default=2, help="run_par cells in flight on the lab")
     ap.add_argument("--seed", type=int, default=1)
@@ -192,7 +201,7 @@ def main(argv=None) -> int:
         results = score(a.out, step, items, a.jobs)
         t_score = time.time() - t0 - t_sample
         rewards = torch.tensor([r["reward"] for r in results], dtype=torch.float32).view(len(groups), a.group)
-        adv = group_advantages(rewards)
+        adv = group_advantages(rewards, scale=a.advantage)
         live = [gi for gi in range(len(groups)) if rewards[gi].std() > 0]
         tiers = {}
         for r in results:
