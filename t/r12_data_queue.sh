@@ -11,6 +11,7 @@
 #   bash t/r12_data_queue.sh dev-ids                t/r12-dev-ids.json, the stopping-step dev split
 #   bash t/r12_data_queue.sh verify-dev CORPUS      refuse a corpus that names a dev id under any alias
 #   bash t/r12_data_queue.sh r11                    the twelve r11 baseline arms, extracted, tested and graded (heldout)
+#   bash t/r12_data_queue.sh lift-2026-09-26        the 2026-09-26 corpus lifts: lifter checks on the lab, then the seven kernels (not in `all`)
 #   bash t/r12_data_queue.sh all                    everything above, in that order
 #   bash t/r12_data_queue.sh _py NAME               print one embedded program (the tests read them so)
 #
@@ -615,6 +616,40 @@ if hits:
 print(f"{a.corpus}: none of the {len(dev)} dev ids appears under any alias")
 PY
 ;;
+lift_check_filter) cat <<'PY'
+# Keep only the lifted tasks whose lifter check stage (LIFTER-DESIGN.md sections 9 and 10:
+# the equivalence lemmas under dafny and the differential run) passed on this machine;
+# the desktop lift ran with --skip-check because it has no dafny. A verdict value this
+# program has not seen before is a refusal, not a pass: it says what it saw and stops.
+import argparse, json, shutil, sys
+from collections import Counter
+from pathlib import Path
+ap = argparse.ArgumentParser()
+ap.add_argument("tasks"); ap.add_argument("checked"); ap.add_argument("--failed", required=True)
+a = ap.parse_args()
+tasks, checked, failed = Path(a.tasks), Path(a.checked), Path(a.failed)
+failed.mkdir(parents=True, exist_ok=True)
+seen, kept, moved, missing = Counter(), 0, 0, 0
+for task in sorted(tasks.glob("*.json")):
+    sidecar = checked / (task.name[:-5] + ".lift.json")
+    if not sidecar.exists():
+        missing += 1; shutil.move(str(task), failed / task.name); continue
+    rec = json.loads(sidecar.read_text(encoding="utf-8"))
+    diff = str(rec.get("differential_verdict"))
+    lemmas = {str(v) for v in (rec.get("checker_verdicts") or {}).values()}
+    seen[f"differential={diff.split(' ')[0]}"] += 1
+    for v in lemmas: seen[f"lemma={v}"] += 1
+    ok = (diff.startswith("ok") or (diff.startswith("points=") and "bad=0" in diff)) and lemmas <= {"verified", "ok"}
+    if ok: kept += 1
+    else: moved += 1; shutil.move(str(task), failed / task.name)
+unknown = [k for k in seen if not (k.startswith("differential=ok") or k.startswith("differential=points=") or k in ("lemma=verified", "lemma=ok"))]
+print(json.dumps({"kept": kept, "check_failed": moved, "no_sidecar": missing, "verdicts_seen": dict(seen)}))
+if unknown:
+    print(f"REFUSED: unfamiliar checker verdict value(s) {unknown}; read the sidecars before trusting this filter"); sys.exit(3)
+if kept == 0:
+    print("REFUSED: no lifted task passed the check stage"); sys.exit(3)
+PY
+;;
 status) cat <<'PY'
 import json, sys
 from pathlib import Path
@@ -838,6 +873,38 @@ step_r11() {
   done
 }
 
+# The corpora lifted on 2026-09-26 (t/lift_corpora.py: vericoding-benchmark and
+# HumanEval-Dafny, each task with its source's own English as its head). The desktop
+# lift skipped the lifter's check stage (no dafny there), so this step first reruns
+# t/lifter.py with checks on the grading machine, drops every task whose lemmas or
+# differential run did not pass, then grades what remains in all seven kernels the
+# way the 785 DafnyBench lifts were graded (t/COVERAGE-lifted-785.md). Not part of
+# `all`: the operator runs `bash t/r12_data_queue.sh lift-2026-09-26` after reading
+# t/LIFT-2026-09-26.md. The clean-in-all-seven count is unmeasured until it runs.
+step_lift_2026_09_26() {
+  local D=t/out/lifted-tasks-2026-09-26 M=t/out/lifted-tasks-2026-09-26.meta TABLE=t/out/COVERAGE-lifted-2026-09-26.md
+  [ -d "$D" ] && [ -d "$M/staged" ] && [ -f "$M/lift-census.json" ] || refuse "no $D with $M/staged here: run python3 t/lift_corpora.py first"
+  if check_or_refuse lift-2026-09-26 "$M/lift-census.json"; then echo "== lift-2026-09-26: graded already"; return 0; fi
+  admit
+  rsync -a --delete "$D/" "$LAB:~/$REPO/$D/" || refuse "cannot stage the lifted tasks on the lab"
+  rsync -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the lifted sources on the lab"
+  rsync -a "$M/lift-census.json" "$LAB:~/$REPO/$M/lift-census.json" || refuse "cannot stage the census on the lab"
+  echo "== lift-2026-09-26: the lifter's check stage on the grading machine (dafny), 4 jobs, niced"
+  lab "nice -n 19 python3 t/lifter.py --dir $M/staged --out $M/lift-checked --jobs 4 --timeout 120" || refuse "the lifter's check stage failed"
+  lab_py lift_check_filter "$D" "$M/lift-checked" --failed "$M/check-failed" || refuse "lift-2026-09-26: the check filter refused"
+  admit --grading
+  [ "${CELLS:-0}" -ge 1 ] || refuse "lift-2026-09-26: no grading cell admitted"
+  echo "== lift-2026-09-26: grading with $CELLS cells, T_SPARK_JOBS=1"
+  lab "T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=1 bash -lc 'python3 t/run_par.py --jobs $CELLS --tasks $D --out /dev/shm/tup-grade/lift-2026-09-26 --table $TABLE'"
+  rc=$?
+  # run_par: 0 full agreement, 1 a finding with the table written, 2 a refusal with nothing written
+  [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ] || refuse "lift-2026-09-26: run_par exited $rc, no table"
+  rsync -a "$LAB:~/$REPO/$TABLE" "$TABLE" || refuse "lift-2026-09-26: cannot fetch the table"
+  rsync -a "$LAB:~/$REPO/$M/check-failed/" "$M/check-failed/" 2>/dev/null
+  mark_step lift-2026-09-26 "$M/lift-census.json" "$TABLE"
+  echo "next: read $TABLE; copy it to t/COVERAGE-lifted-2026-09-26.md and give the corpus builder --lifted-dir $D --lifted-table t/COVERAGE-lifted-2026-09-26.md --heads $M/heads.jsonl"
+}
+
 step_dev_ids() {
   admit
   lab_py dev_ids --split t/out/loop/split-v5.json --decontam t/decontamination-2026-09-21.json --n 100 --salt r12-dev --out "$RD/r12-dev-ids.json" \
@@ -880,6 +947,7 @@ main() {
                   build)      step_build ;;
                   dev-ids)    step_dev_ids ;;
                   r11)        step_r11 ;;
+                  lift-2026-09-26) step_lift_2026_09_26 ;;
                   all)        step_p4_extract; step_train; step_p4; step_prover2; step_v6new; step_spec; step_build; step_dev_ids; step_r11 ;;
                   *)          refuse "unknown command '$1'" ;;
                 esac ;;
