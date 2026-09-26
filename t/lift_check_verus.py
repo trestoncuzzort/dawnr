@@ -119,8 +119,20 @@ class Views:
                     f"        assert forall|i: int| 0 <= i < s.len() implies s[i] == u[i] by {{\n"
                     f"            t_view_{n}_index(s, i);\n            t_view_{n}_index(u, i);\n"
                     f"            assert(t_view_{n}(s)[i] == t_view_{n}(u)[i]);\n        }}\n"
-                    f"        assert(s =~= u);\n    }}\n}}\n")
-                self.uses += [f"t_view_{n}_len", f"t_view_{n}_index", f"t_view_{n}_eq"]
+                    f"        assert(s =~= u);\n    }}\n}}\n"
+                    # views commute with slicing and concatenation (each by extensionality)
+                    f"broadcast proof fn t_view_{n}_sub(s: Seq<{t}>, a: int, b: int)\n"
+                    f"    requires 0 <= a <= b <= s.len(),\n"
+                    f"    ensures #[trigger] t_view_{n}(s).subrange(a, b) == t_view_{n}(s.subrange(a, b)),\n"
+                    f"{{\n    assert(t_view_{n}(s).subrange(a, b) =~= t_view_{n}(s.subrange(a, b)));\n}}\n"
+                    f"broadcast proof fn t_view_{n}_add(s: Seq<{t}>, u: Seq<{t}>)\n"
+                    f"    ensures #[trigger] t_view_{n}(s + u) == t_view_{n}(s) + t_view_{n}(u),\n"
+                    f"{{\n    assert(t_view_{n}(s + u) =~= t_view_{n}(s) + t_view_{n}(u));\n}}\n"
+                    f"broadcast proof fn t_view_{n}_push(s: Seq<{t}>, x: {t})\n"
+                    f"    ensures #[trigger] t_view_{n}(s.push(x)) == t_view_{n}(s).push(x as int),\n"
+                    f"{{\n    assert(t_view_{n}(s.push(x)) =~= t_view_{n}(s).push(x as int));\n}}\n")
+                self.uses += [f"t_view_{n}_len", f"t_view_{n}_index", f"t_view_{n}_eq", f"t_view_{n}_sub",
+                              f"t_view_{n}_add", f"t_view_{n}_push"]
             return f"t_view_{n}"
         if elem.kind == "seq" and elem.elem is not None and elem.elem.kind in ("int", "nat", "char"):
             inner = self.family(elem.elem)
@@ -177,13 +189,21 @@ def _prefixed(task: dict) -> tuple[dict, dict[str, str]]:
     return t2, mapping
 
 
+_QUANT = re.compile(r"\b(forall|exists)\|([^|]*)\|(?!\s*#!\[)")
+
+
 def _expr(e) -> str:
+    """t's printer for one expression, with `#![auto]` on any quantifier it left without
+    a trigger: Verus refuses a quantifier whose trigger it cannot choose, and the harness
+    only states the lifted contract, so the solver may pick any trigger it finds (Verus
+    guide, "Triggers": #![auto] asks it to)."""
     saved = lower_verus._SUFFIX_INT
     lower_verus._SUFFIX_INT = True
     try:
-        return lower_verus.expr(e)
+        text = lower_verus.expr(e)
     finally:
         lower_verus._SUFFIX_INT = saved
+    return _QUANT.sub(lambda m: f"{m.group(1)}|{m.group(2)}| #![auto]", text)
 
 
 def _conj(texts: list[str]) -> str:
@@ -377,7 +397,9 @@ def build(source_text: str, task: dict, rename_map: dict) -> tuple[str, list[str
     tps = ", ".join(f"{p['name']}: {_t_type(p['type'])}" for p in tparams)
     rname = tret["name"]
     lifted.append(f"spec fn t_lift_pre({tps}) -> bool {{\n    {_conj([_expr(e) for e in t2.get('requires', [])])}\n}}\n")
-    lifted.append(f"spec fn t_lift_post({tps}, {rname}: {_t_type(tret['type'])}) -> bool {{\n"
+    rdecl = f"{rname}: {_t_type(tret['type'])}"
+    post_params = ", ".join(x for x in (tps, rdecl) if x)
+    lifted.append(f"spec fn t_lift_post({post_params}) -> bool {{\n"
                   f"    {_conj([_expr(e) for e in t2['ensures']])}\n}}\n")
 
     views = Views()
@@ -404,9 +426,9 @@ def build(source_text: str, task: dict, rename_map: dict) -> tuple[str, list[str
     eq = [f"proof fn t_eq_requires({sps})\n"
           f"    ensures {req_src} <==> t_lift_pre({pviews}),\n"
           "{\n" + use_pre + "}\n",
-          f"proof fn t_eq_ensures({sps}, {src_ret}: {fn.ret_src})\n"
+          f"proof fn t_eq_ensures({', '.join(x for x in (sps, f'{src_ret}: {fn.ret_src}') if x)})\n"
           f"    requires {req_src},\n"
-          f"    ensures {_conj(fn.ensures_src)} <==> t_lift_post({pviews}, {rview}),\n"
+          f"    ensures {_conj(fn.ensures_src)} <==> t_lift_post({', '.join(x for x in (pviews, rview) if x)}),\n"
           "{\n" + use_post + "}\n"]
     text = ("use vstd::prelude::*;\n\nverus! {\n\n"
             "// ---- the source's own declarations, as written\n"
