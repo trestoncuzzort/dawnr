@@ -617,10 +617,16 @@ print(f"{a.corpus}: none of the {len(dev)} dev ids appears under any alias")
 PY
 ;;
 lift_check_filter) cat <<'PY'
-# Keep only the lifted tasks whose lifter check stage (LIFTER-DESIGN.md sections 9 and 10:
-# the equivalence lemmas under dafny and the differential run) passed on this machine;
-# the desktop lift ran with --skip-check because it has no dafny. A verdict value this
-# program has not seen before is a refusal, not a pass: it says what it saw and stops.
+# Keep the lifted tasks the lifter's own check stage accepted on this grading machine
+# (LIFTER-DESIGN.md sections 9 and 10): every equivalence lemma verified by dafny, and
+# the bounded differential run agreeing or, where its C# arm could not be built,
+# recorded as unavailable (the design's rule: "arm-unavailable, never a refusal; the
+# lemma-based checks stand on their own"). The verdict is read from the lifter's
+# outcome records (<stem>.outcome.json: `checked` and `refusal` per method), not
+# re-derived from verdict strings: the first version of this filter (2026-09-26)
+# expected strings the checker never writes and rejected all 373. A task with no
+# outcome record is a refusal. Tasks a previous run moved aside are moved back first,
+# so a rerun decides again from the records.
 import argparse, json, shutil, sys
 from collections import Counter
 from pathlib import Path
@@ -629,23 +635,33 @@ ap.add_argument("tasks"); ap.add_argument("checked"); ap.add_argument("--failed"
 a = ap.parse_args()
 tasks, checked, failed = Path(a.tasks), Path(a.checked), Path(a.failed)
 failed.mkdir(parents=True, exist_ok=True)
-seen, kept, moved, missing = Counter(), 0, 0, 0
+for back in failed.glob("*.json"):
+    shutil.move(str(back), tasks / back.name)
+outcome = {}
+for rec in checked.glob("*.outcome.json"):
+    for m in json.loads(rec.read_text(encoding="utf-8")).get("methods", []):
+        if m.get("task_file"):
+            outcome[Path(m["task_file"]).name] = m
+reasons, differential, kept, moved, missing = Counter(), Counter(), 0, 0, 0
 for task in sorted(tasks.glob("*.json")):
-    sidecar = checked / (task.name[:-5] + ".lift.json")
-    if not sidecar.exists():
-        missing += 1; shutil.move(str(task), failed / task.name); continue
-    rec = json.loads(sidecar.read_text(encoding="utf-8"))
-    diff = str(rec.get("differential_verdict"))
-    lemmas = {str(v) for v in (rec.get("checker_verdicts") or {}).values()}
-    seen[f"differential={diff.split(' ')[0]}"] += 1
-    for v in lemmas: seen[f"lemma={v}"] += 1
-    ok = (diff.startswith("ok") or (diff.startswith("points=") and "bad=0" in diff)) and lemmas <= {"verified", "ok"}
-    if ok: kept += 1
-    else: moved += 1; shutil.move(str(task), failed / task.name)
-unknown = [k for k in seen if not (k.startswith("differential=ok") or k.startswith("differential=points=") or k in ("lemma=verified", "lemma=ok"))]
-print(json.dumps({"kept": kept, "check_failed": moved, "no_sidecar": missing, "verdicts_seen": dict(seen)}))
-if unknown:
-    print(f"REFUSED: unfamiliar checker verdict value(s) {unknown}; read the sidecars before trusting this filter"); sys.exit(3)
+    m = outcome.get(task.name)
+    if m is None:
+        missing += 1; reasons["no outcome record"] += 1
+        shutil.move(str(task), failed / task.name); continue
+    r = m.get("refusal")
+    if m.get("checked") and r is None:
+        kept += 1
+        side = checked / (task.name[:-5] + ".lift.json")
+        verdict = str(json.loads(side.read_text(encoding="utf-8")).get("differential_verdict")) if side.exists() else "no sidecar"
+        differential[verdict.split(" ")[0].rstrip(":")] += 1
+    else:
+        moved += 1
+        reasons[f"{(r or {}).get('stage', '?')}: {(r or {}).get('reason', 'not checked')}"] += 1
+        shutil.move(str(task), failed / task.name)
+print(json.dumps({"kept": kept, "check_failed": moved, "no_outcome": missing,
+                  "kept_by_differential": dict(differential), "refused_by_reason": dict(reasons.most_common())}))
+if missing:
+    print(f"REFUSED: {missing} lifted task(s) have no outcome record in {checked}; the check stage did not see them"); sys.exit(3)
 if kept == 0:
     print("REFUSED: no lifted task passed the check stage"); sys.exit(3)
 PY
@@ -890,7 +906,10 @@ step_lift_2026_09_26() {
   store -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the lifted sources on the lab"
   store -a "$M/lift-census.json" "$LAB:~/$REPO/$M/lift-census.json" || refuse "cannot stage the census on the lab"
   echo "== lift-2026-09-26: the lifter's check stage on the grading machine (dafny), 4 jobs, niced"
-  lab "nice -n 19 python3 t/lifter.py --dir $M/staged --out $M/lift-checked --jobs 4 --timeout 120" || refuse "the lifter's check stage failed"
+  # the differential arm compiles to C# (`dafny run`): the .NET SDK is on PATH for this stage
+  # only; ~/.dotnet is where dotnet-install.sh puts a user-space SDK (learn.microsoft.com/
+  # en-us/dotnet/core/tools/dotnet-install-script), and a machine without one is unchanged
+  lab "PATH=\$HOME/.dotnet:\$PATH DOTNET_ROOT=\$HOME/.dotnet DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 nice -n 19 python3 t/lifter.py --dir $M/staged --out $M/lift-checked --jobs 4 --timeout 120" || refuse "the lifter's check stage failed"
   lab_py lift_check_filter "$D" "$M/lift-checked" --failed "$M/check-failed" || refuse "lift-2026-09-26: the check filter refused"
   admit --grading
   [ "${CELLS:-0}" -ge 1 ] || refuse "lift-2026-09-26: no grading cell admitted"
