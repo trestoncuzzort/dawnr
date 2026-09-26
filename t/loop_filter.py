@@ -74,6 +74,12 @@ class Decontamination:
 
 
 BEHAVIOURAL_POLICY = T / "decontamination-behavioural-2026-09-25.json"
+# t/behavioural_decontam.SCHEMA. 2 since the review of 2026-09-25: an own input a
+# reference did not answer leaves the count (HyClone, https://arxiv.org/html/2508.01357v1,
+# drops such inputs), and a pair the rule left undecided carries a reading by
+# hand, `read_by_hand`, whose same-function rows are excluded like duplicates.
+BEHAVIOURAL_SCHEMA = 2
+BEHAVIOURAL_SAME = "same function"
 
 
 def _behavioural_exclusions(path: Path) -> tuple[frozenset[int], frozenset[int]]:
@@ -85,15 +91,23 @@ def _behavioural_exclusions(path: Path) -> tuple[frozenset[int], frozenset[int]]
     (Riddell et al., https://ar5iv.labs.arxiv.org/html/2403.04811; Soft
     Contamination, https://arxiv.org/html/2602.12413v1)."""
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schema") != 1:
-        raise TypeError(f"schema {data.get('schema')!r} is not 1")
+    if data.get("schema") != BEHAVIOURAL_SCHEMA:
+        raise TypeError(f"schema {data.get('schema')!r} is not {BEHAVIOURAL_SCHEMA}")
     rule, ids, duplicates = data.get("rule"), data.get("exclude_train_ids"), data.get("duplicates")
-    if not isinstance(rule, dict) or not isinstance(ids, list) or not isinstance(duplicates, list):
-        raise TypeError("expected rule, exclude_train_ids and duplicates")
+    read_by_hand, undecided = data.get("read_by_hand"), data.get("undecided")
+    if (not isinstance(rule, dict) or not isinstance(ids, list) or not isinstance(duplicates, list)
+            or not isinstance(read_by_hand, list) or not isinstance(undecided, list)):
+        raise TypeError("expected rule, exclude_train_ids, duplicates, read_by_hand and undecided")
+    unread = [row for row in undecided if row.get("reading") not in (BEHAVIOURAL_SAME, "different function")]
+    if unread:
+        # a pair the rule could not decide is not admitted by default: it is read, or the file is refused
+        raise ValueError(f"{len(unread)} undecided pair(s) have no reading by hand, e.g. "
+                         f"{unread[0].get('train_id')} vs {unread[0].get('eval_id')}")
     excluded = frozenset(int(value) for value in ids)
-    listed = frozenset(int(row["train_id"]) for row in duplicates)
+    listed = (frozenset(int(row["train_id"]) for row in duplicates)
+              | frozenset(int(row["train_id"]) for row in read_by_hand if row.get("reading") == BEHAVIOURAL_SAME))
     if excluded != listed:
-        raise ValueError("exclude_train_ids does not equal the train ids of the listed duplicates")
+        raise ValueError("exclude_train_ids does not equal the train ids of the listed duplicates and same-function readings")
     return excluded, frozenset(int(value) for value in data.get("behavioural_overlap_eval_ids", []))
 
 
@@ -101,7 +115,8 @@ def decontamination(path: Path = T / "decontamination-2026-09-21.json",
                     behavioural_path: Path | None = BEHAVIOURAL_POLICY) -> Decontamination:
     """Load the checked-in exclusions for future corpora and scoring: the same-task
     list read by hand (2026-09-21) merged with the behavioural duplicates computed
-    by t/behavioural_decontam.py (2026-09-25). `behavioural_path=None` loads the
+    by t/behavioural_decontam.py (2026-09-25) and the pairs its rule left
+    undecided that were read by hand as the same function. `behavioural_path=None` loads the
     first file alone; the default path must exist."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -130,7 +145,8 @@ def decontamination(path: Path = T / "decontamination-2026-09-21.json",
         try:
             behavioural, behavioural_evals = _behavioural_exclusions(Path(behavioural_path))
         except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError) as error:
-            raise ValueError(f"cannot read behavioural decontamination policy {behavioural_path}") from error
+            raise ValueError(f"cannot read behavioural decontamination policy {behavioural_path}: "
+                             f"{type(error).__name__}: {error}") from error
         for task_id in behavioural:
             excluded_by[task_id] = excluded_by.get(task_id, ()) + (Path(behavioural_path).name,)
     return Decontamination(frozenset(names), same_task | behavioural, overlap,

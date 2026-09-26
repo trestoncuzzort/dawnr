@@ -1,6 +1,9 @@
 """Behavioural decontamination (t/behavioural_decontam.py) and the merged policy loader (t/loop_filter.py)."""
 import json
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -34,6 +37,17 @@ UPPER = entry("upper", "def upper(s):\n    return s.upper()\n",
               [([[104, 105]], [72, 73]), ([[97, 98, 99]], [65, 66, 67]), ([[120]], [88])])
 UPPER["rec"]["test_list"] = ["assert upper('hi') == 'HI'", "assert upper('abc') == 'ABC'", "assert upper('x') == 'X'"]
 UPPER["points"][2]["args"] = [("int", 120)]      # a one-character string is a t character
+STRLEN = entry("strlen", "def strlen(s):\n    return len(s)\n", [([[104, 105]], 2), ([[97, 98, 99]], 3), ([[120]], 1)])
+STRLEN["rec"]["test_list"] = ["assert strlen('hi') == 2", "assert strlen('abc') == 3", "assert strlen('x') == 1"]
+STRLEN["points"][2]["args"] = [("int", 120)]
+LEN_LIST = entry("len_list", "def len_list(a):\n    return len(a)\n", [([[104, 105]], 2), ([[97]], 1), ([[]], 0)])
+# answers its own small inputs at once and spins on anything larger
+SLOW = entry("slow", "def slow(n):\n    while n > 100:\n        pass\n    return n\n", [([5], 5), ([7], 7), ([9], 9)])
+BIG = entry("big", "def big(n):\n    return n\n", [([1000], 1000), ([2000], 2000), ([50], 50)])
+# agrees with min on its own inputs, spins on most of a wider shape's draws
+FEW = entry("few", "def few(a, b):\n    if a + b > 6:\n        while True:\n            pass\n    return a if a < b else b\n",
+            [([3, 2], 2), ([1, 4], 1), ([2, 2], 2)])
+DIE = entry("die", "import os\ndef die(a, b):\n    os._exit(0)\n", [([1, 2], 1), ([3, 4], 3), ([5, 6], 5)])
 
 
 class CanonTests(unittest.TestCase):
@@ -101,14 +115,14 @@ class PairTests(unittest.TestCase):
         self.assertGreaterEqual(result["draws_agreed"], bd.MIN_DRAWS_VALUED)
         self.assertEqual(result["differences"] + result["one_sided"], 0)
         # a stored pair is re-judged from its counts, so the thresholds live here and not in the run
-        self.assertEqual(bd.verdict_of(dict(result, draws_agreed=bd.MIN_DRAWS_VALUED - 1)), "insufficient")
+        self.assertEqual(bd.verdict_of(dict(result, draws_agreed=bd.MIN_DRAWS_VALUED - 1)), "undecided")
         self.assertEqual(bd.verdict_of(dict(result, train_answered=0)), "not run")
 
     def test_a_pair_separated_only_by_a_draw_is_a_minimal_pair_and_kept(self):
         result, _ = self.compare({1: LEN_A, 2: DISTINCT}, 1, 2)
         self.assertEqual(result["verdict"], "minimal pair")
         self.assertEqual(result["own_agreed"], result["own_inputs"])
-        self.assertEqual(result["difference"]["where"], "draw")
+        self.assertIn(result["difference"]["where"], ("draw_eval", "draw_train"))
         self.assertEqual(result["difference"]["kind"], "disagree")
         self.assertGreater(result["differences"], 0)
 
@@ -158,8 +172,8 @@ class PairTests(unittest.TestCase):
         pool = {1: even_a, 2: even_b}
         draws = {tid: bd.draws_for(tid, e) for tid, e in pool.items()}
         inputs = bd.pair_inputs(pool[1], pool[2], draws[1], draws[2])
-        self.assertEqual(sum(w for tag, _a, w in inputs if tag == "draw"), 2 * bd.DRAWS_PER_PROBLEM)
-        self.assertLess(len([1 for tag, _a, _w in inputs if tag == "draw"]), 12)
+        self.assertEqual(sum(w for tag, _a, w in inputs if tag.startswith("draw")), 2 * bd.DRAWS_PER_PROBLEM)
+        self.assertLess(len([1 for tag, _a, _w in inputs if tag.startswith("draw")]), 12)
         result = bd.compare_pair(bd.Runner(pool), 1, 2, inputs)
         self.assertEqual(result["draws"], 2 * bd.DRAWS_PER_PROBLEM)
         self.assertEqual(result["verdict"], "duplicate")
@@ -204,22 +218,123 @@ class PairTests(unittest.TestCase):
         self.assertIn("error", result)
         self.assertNotIn("pairs", result)
 
-    def test_a_timeout_is_an_undefined_input_bounded_per_pair_never_a_difference(self):
-        # the train example is large, so its draws are large and the held-out reference spins on them;
-        # the held-out example is small, so its draws are answered by both
-        slow = entry("slow", "def slow(n):\n    while n > 100:\n        pass\n    return n\n", [([5], 5), ([7], 7), ([9], 9)])
-        big = entry("big", "def big(n):\n    return n\n", [([1000], 1000), ([2000], 2000), ([50], 50)])
-        pool = {1: big, 2: slow}
+    def test_an_own_input_a_reference_did_not_answer_leaves_the_count(self):
+        # The train example is large, so its draws are large and the held-out
+        # reference spins on them; the held-out example is small, so its own
+        # inputs and draws are answered by both. Schema 1 required every own
+        # input to agree, so the two timed-out own inputs (1000, 2000) made a
+        # duplicate impossible although nothing ever differed; now they leave
+        # the count (HyClone, https://arxiv.org/html/2508.01357v1, drops such inputs).
+        pool = {1: BIG, 2: SLOW}
         runner = bd.Runner(pool, timeout_s=0.2)
         draws = {tid: bd.draws_for(tid, e) for tid, e in pool.items()}
         result = bd.compare_pair(runner, 1, 2, bd.pair_inputs(pool[1], pool[2], draws[1], draws[2]))
         self.assertEqual(result["differences"], 0)
         self.assertEqual(result["one_sided"], 0)
-        self.assertGreater(result["timeouts"], bd.PAIR_TIMEOUTS - 1)
-        self.assertEqual(runner.timeouts[2], bd.PAIR_TIMEOUTS)          # then the rest of the pair was skipped
-        self.assertEqual(result["own_agreed"], 4)                       # 5, 7, 9 and 50; 1000 and 2000 timed out
-        self.assertEqual(result["verdict"], "insufficient" if result["draws_agreed"] < bd.MIN_DRAWS_AGREED else "duplicate")
+        self.assertEqual(result["own_inputs"], 6)
+        self.assertEqual(result["own_agreed"], 4)                       # 5, 7, 9 and 50
+        self.assertEqual(result["own_unanswered"], 2)                   # 1000 and 2000: the held-out reference spun
+        self.assertEqual(result["own_eval_agreed"], 3)
+        self.assertGreaterEqual(result["draws_agreed"], bd.DRAWS_PER_PROBLEM)    # the held-out shape's draws, all answered
+        self.assertEqual(result["verdict"], "duplicate")
         self.assertNotIn("difference", result)
+        # own inputs never stop a pair's draws; the draw allowance is per draw shape
+        self.assertEqual(runner.timeouts[2], 2 + bd.PAIR_TIMEOUTS)
+        self.assertEqual(bd.verdict_of(dict(result, own_eval_agreed=0)), "undecided")
+        self.assertEqual(bd.verdict_of(dict(result, own_agreed=3)), "undecided")
+
+    def test_a_reference_slow_on_the_other_shape_is_still_asked_its_own(self):
+        # the train reference spins on the held-out problem's large draws but
+        # answers its own; schema 1 skipped every draw after two timeouts anywhere
+        pool = {1: SLOW, 2: BIG}
+        runner = bd.Runner(pool, timeout_s=0.2)
+        draws = {tid: bd.draws_for(tid, e) for tid, e in pool.items()}
+        result = bd.compare_pair(runner, 1, 2, bd.pair_inputs(pool[1], pool[2], draws[1], draws[2]))
+        self.assertEqual(result["own_unanswered"], 2)
+        self.assertEqual(result["own_eval_agreed"], 1)                  # 50
+        self.assertEqual(runner.timeouts[1], 2 + bd.PAIR_TIMEOUTS)      # then the held-out shape's draws were skipped
+        self.assertGreaterEqual(result["draws_agreed"], bd.DRAWS_PER_PROBLEM)    # its own shape's draws were not
+        self.assertLess(result["draws_agreed"], 2 * bd.DRAWS_PER_PROBLEM)
+        self.assertEqual(result["verdict"], "duplicate")
+
+    def test_an_input_the_other_shape_cannot_hold_says_nothing(self):
+        # 'x' is the t character 120: the list-shaped reference cannot be handed
+        # it, which schema 1 counted as a one-sided raise, a difference
+        result, _ = self.compare({1: STRLEN, 2: LEN_LIST}, 1, 2)
+        self.assertEqual(result["unrenderable"], 1)
+        self.assertEqual(result["own_unanswered"], 1)
+        self.assertEqual(result["own_agreed"], result["own_inputs"] - 1)
+        self.assertEqual(result["differences"] + result["one_sided"], 0)
+        self.assertNotIn("difference", result)
+        self.assertEqual(result["verdict"], "duplicate")
+
+    def test_running_out_of_recursion_depth_is_unanswered_not_a_raise(self):
+        def deep(n):
+            return deep(n + 1)
+        self.assertEqual(bd.run_reference(deep, [1]), ("exhausted", "RecursionError"))
+        self.assertEqual(sys.getrecursionlimit(), bd.RECURSION_LIMIT)
+        # a reference that raised the limit at load time does not change what the next one can answer
+        import sys as _sys
+        _sys.setrecursionlimit(bd.RECURSION_LIMIT * 4)
+        try:
+            self.assertEqual(bd.run_reference(deep, [1]), ("exhausted", "RecursionError"))
+            self.assertEqual(_sys.getrecursionlimit(), bd.RECURSION_LIMIT * 4)   # put back after the call
+        finally:
+            _sys.setrecursionlimit(bd.RECURSION_LIMIT)
+
+    def test_a_timeout_escapes_a_reference_that_catches_exception(self):
+        # spec_check.Timeout is an Exception; a corpus solution's `except Exception`
+        # swallowed it and the call returned a value after the budget
+        def swallows(n):
+            try:
+                while True:
+                    n = (n * 31 + 1) % 1000003
+            except Exception:                                   # noqa: BLE001
+                return 0
+        self.assertEqual(bd.run_reference(swallows, [1], timeout_s=0.2), ("timeout",))
+        self.assertTrue(issubclass(bd.ReferenceTimeout, BaseException))
+        self.assertFalse(issubclass(bd.ReferenceTimeout, Exception))
+
+    def test_a_reference_that_swallows_the_timeout_and_returns_late_is_a_timeout(self):
+        def swallows_everything(n):
+            try:
+                while True:
+                    n = (n * 31 + 1) % 1000003
+            except BaseException:                               # noqa: BLE001
+                pass
+            end = time.process_time() + 0.2                     # keeps working past the budget, then answers
+            while time.process_time() < end:
+                pass
+            return n
+        self.assertEqual(bd.run_reference(swallows_everything, [1], timeout_s=0.2), ("timeout",))
+
+    def test_a_reference_that_swallows_every_timeout_exits_the_worker_and_is_named(self):
+        # nothing in the process can stop a bare except around a busy loop; the
+        # wall-clock backstop names the reference and exits (pytest-timeout's
+        # thread method does the same with os._exit)
+        with tempfile.TemporaryDirectory() as tmp:
+            sidecar = Path(tmp) / "v5.jsonl.hung"
+            code = (
+                "import sys\n"
+                "sys.path.insert(0, sys.argv[1])\n"
+                "import behavioural_decontam as bd\n"
+                "bd._TIMER.update(tid=7, name='mbpp_7__spin', eval_id=5, hung_path=sys.argv[2])\n"
+                "def spin(n):\n"
+                "    while True:\n"
+                "        try:\n"
+                "            for i in range(1000):\n"
+                "                n = (n * 31 + i) % 1000003\n"
+                "        except BaseException:\n"
+                "            pass\n"
+                "print(bd.run_reference(spin, [1], timeout_s=0.1))\n")
+            done = subprocess.run([sys.executable, "-c", code, str(HERE), str(sidecar)], capture_output=True,
+                                  text=True, timeout=30)
+            self.assertEqual(done.returncode, bd.HUNG_EXIT, done.stderr[-500:])
+            self.assertNotIn("timeout", done.stdout)
+            self.assertIn("worker exiting", done.stderr)
+            self.assertIn("mbpp_7__spin", done.stderr)
+            self.assertEqual(bd.read_hung(sidecar), {7: bd.HUNG_WHY})
+            self.assertEqual(bd.read_hung(Path(tmp) / "absent"), {})
 
 
 class RunTests(unittest.TestCase):
@@ -239,6 +354,7 @@ class RunTests(unittest.TestCase):
 
     def test_run_writes_a_resumable_progress_file_and_the_policy_follows(self):
         result = bd.run_pool("v5", self.split, self.progress, jobs=1, log=open(self.root / "log", "w"), pool=self.POOL)
+        self.assertEqual(json.loads(self.progress.read_text().splitlines()[0])["schema"], 2)
         self.assertEqual(result["progress"], str(self.progress))
         lines = [json.loads(l) for l in self.progress.read_text().splitlines()]
         self.assertEqual(lines[0]["kind"], "header")
@@ -268,6 +384,12 @@ class RunTests(unittest.TestCase):
         self.assertEqual(policy["references_not_run"], [{"pool": "v5", "id": 8, "name": "mbpp_8__raises",
                                                          "why": "reference raised on every input it was given"}])
         self.assertEqual(policy["pools"]["v5"]["pairs"], 7)
+        self.assertEqual(policy["undecided"], [])
+        self.assertEqual(policy["read_by_hand"], [])
+        self.assertEqual(policy["exclude_train_ids_by_reading"], [])
+        self.assertEqual(policy["exclusions_by_class"]["all"], {"mbpp": 1, "humaneval": 0, "apps": 0, "stdin": 0})
+        self.assertEqual(policy["exclusions_by_class"]["new"], {"mbpp": 0, "humaneval": 0, "apps": 0, "stdin": 0})
+        self.assertEqual(policy["schema"], 2)
         report = self.root / "report.md"
         bd.write_report(policy, [run], {"v5": self.POOL}, report)
         text = report.read_text()
@@ -320,11 +442,112 @@ class RunTests(unittest.TestCase):
             bd.load_split(self.POOL, "v5", self.split)
 
     def test_a_progress_file_from_other_settings_is_refused(self):
-        self.progress.write_text(json.dumps({"kind": "header", "pool": "v5", "split_sha256": "0" * 64,
+        self.progress.write_text(json.dumps({"kind": "header", "schema": bd.SCHEMA, "pool": "v5", "split_sha256": "0" * 64,
                                              "seed": bd.SEED, "draws_per_problem": 50, "min_draws_agreed": 50}) + "\n")
         with self.assertRaises(SystemExit) as caught:
             bd.run_pool("v5", self.split, self.progress, jobs=1, log=open(self.root / "log", "w"), pool=self.POOL)
         self.assertIn("split_sha256", str(caught.exception))
+
+    def test_a_schema_1_progress_file_is_refused_not_reread(self):
+        # schema 1 records lack own_unanswered: the verdicts cannot be re-derived from them
+        bd.run_pool("v5", self.split, self.progress, jobs=1, log=open(self.root / "log", "w"), pool=self.POOL)
+        lines = self.progress.read_text().splitlines()
+        header = json.loads(lines[0])
+        header["schema"] = 1
+        self.progress.write_text("\n".join([json.dumps(header)] + lines[1:]) + "\n")
+        with self.assertRaises(SystemExit) as caught:
+            bd.read_progress(self.progress)
+        self.assertIn("schema 1", str(caught.exception))
+        with self.assertRaises(SystemExit) as caught:
+            bd.run_pool("v5", self.split, self.progress, jobs=1, log=open(self.root / "log", "w"), pool=self.POOL)
+        self.assertIn("schema", str(caught.exception))
+        with self.assertRaises(SystemExit):
+            bd.verdict_of({"train_answered": 1, "eval_answered": 1, "differences": 0, "one_sided": 0,
+                           "own_inputs": 3, "own_agreed": 3, "draws_agreed": 60, "draws_refused_alike": 0})
+
+    def test_an_undecided_pair_must_be_read_before_the_policy_is_written(self):
+        pool = {1: FEW, 5: MIN_B}
+        split = self.root / "split-u.json"
+        split.write_text(json.dumps({"pool": "v5", "pool_size": 2, "eval_ids": [5], "train_ids": [1]}))
+        progress = self.root / "u.jsonl"
+        bd.run_pool("v5", split, progress, jobs=1, timeout_s=0.2, log=open(self.root / "log", "w"), pool=pool)
+        run = bd.read_progress(progress)
+        (pair,) = run["pairs"]
+        self.assertEqual(pair["verdict"], "undecided")
+        self.assertEqual(pair["differences"] + pair["one_sided"], 0)
+        self.assertGreater(pair["own_unanswered"], 0)
+        self.assertIn("draws", bd.why_undecided(pair))
+        with self.assertRaises(SystemExit) as caught:
+            bd.build_policy([run], {"v5": pool}, a2_policy=self.a2)
+        self.assertIn("1:5", str(caught.exception))
+        self.assertIn("no reading", str(caught.exception))
+        draft = bd.build_policy([run], {"v5": pool}, a2_policy=self.a2, unread_ok=True)
+        self.assertEqual(draft["exclude_train_ids"], [])
+        self.assertEqual(draft["distinct"]["undecided_unread"], 1)
+        self.assertNotIn("reading", draft["undecided"][0])
+        # a reading for a pair the rule decided, or never compared, is refused
+        with self.assertRaises(SystemExit):
+            bd.build_policy([run], {"v5": pool}, a2_policy=self.a2,
+                            readings={(1, 5): {"reading": "same function", "note": "min"},
+                                      (2, 5): {"reading": "same function", "note": "stray"}})
+        readings = bd.parse_readings(["1:5=both return the smaller of two integers"], [])
+        self.assertEqual(readings, {(1, 5): {"reading": "same function", "note": "both return the smaller of two integers"}})
+        policy = bd.build_policy([run], {"v5": pool}, a2_policy=self.a2, readings=readings)
+        self.assertEqual(policy["exclude_train_ids"], [1])
+        self.assertEqual(policy["exclude_train_ids_by_reading"], [1])
+        self.assertEqual(policy["exclude_train_ids_by_eval"], {"1": [5]})
+        self.assertEqual(policy["behavioural_overlap_eval_ids"], [5])
+        self.assertEqual(policy["duplicates"], [])
+        self.assertEqual(policy["read_by_hand"][0]["reading"], "same function")
+        self.assertEqual(policy["read_by_hand"][0]["train"], "mbpp_1__few")
+        self.assertIn("train_text", policy["read_by_hand"][0])
+        self.assertEqual(policy["undecided"][0]["note"], "both return the smaller of two integers")
+        report = self.root / "report.md"
+        bd.write_report(policy, [run], {"v5": pool}, report)
+        text = report.read_text()
+        self.assertIn("**same function**", text)
+        self.assertIn("1 read by hand as the same function", text)
+        kept = bd.build_policy([run], {"v5": pool}, a2_policy=self.a2,
+                               readings=bd.parse_readings([], ["1:5=a different function"]))
+        self.assertEqual(kept["exclude_train_ids"], [])
+        self.assertEqual(kept["distinct"]["undecided_read_as_different"], 1)
+        for bad in (["1:5"], ["1:5="], ["1-5=x"], ["a:5=x"]):
+            with self.assertRaises(SystemExit):
+                bd.parse_readings(bad, [])
+        with self.assertRaises(SystemExit):
+            bd.parse_readings(["1:5=x"], ["1:5=y"])
+
+    def test_a_lost_worker_is_named_not_waited_on(self):
+        # a worker that dies mid-task leaves multiprocessing.Pool waiting forever
+        # (CPython issue 66587, open); the run gives up after inactivity_s and
+        # names the held-out ids it never got
+        pool = {1: MIN_A, 5: MIN_B, 9: DIE}
+        split = self.root / "split-d.json"
+        split.write_text(json.dumps({"pool": "v5", "pool_size": 3, "eval_ids": [5], "train_ids": [1, 9]}))
+        progress = self.root / "d.jsonl"
+        started = time.time()
+        with self.assertRaises(SystemExit) as caught:
+            bd.run_pool("v5", split, progress, jobs=2, timeout_s=0.2, inactivity_s=3.0,
+                        log=open(self.root / "log", "w"), pool=pool)
+        self.assertLess(time.time() - started, 25)
+        self.assertIn("[5]", str(caught.exception))
+        self.assertIn("no held-out id finished", str(caught.exception))
+        self.assertEqual(len(progress.read_text().splitlines()), 1)     # the header only: nothing was invented
+
+    def test_a_reference_named_in_the_sidecar_is_refused_by_name_on_the_next_run(self):
+        hung = bd.hung_path_for(self.progress)
+        hung.write_text(json.dumps({"kind": "hung", "eval_id": 5, "tid": 1, "name": "mbpp_1__min_a",
+                                    "why": bd.HUNG_WHY}) + "\n")
+        log = self.root / "log"
+        bd.run_pool("v5", self.split, self.progress, jobs=1, log=open(log, "w"), pool=self.POOL)
+        self.assertIn("refusing 1 reference", log.read_text())
+        run = bd.read_progress(self.progress)
+        verdict = {(p["train_id"], p["eval_id"]): p["verdict"] for p in run["pairs"]}
+        self.assertEqual(verdict[(1, 5)], "no reference")
+        self.assertEqual(run["not_run"][1], bd.HUNG_WHY)
+        policy = bd.build_policy([run], {"v5": self.POOL}, a2_policy=self.a2)
+        self.assertEqual(policy["exclude_train_ids"], [])
+        self.assertIn({"pool": "v5", "id": 1, "name": "mbpp_1__min_a", "why": bd.HUNG_WHY}, policy["references_not_run"])
 
 
 class LoaderTests(unittest.TestCase):
@@ -338,19 +561,24 @@ class LoaderTests(unittest.TestCase):
         self.a2.write_text(json.dumps({"drop_documents": {"positive:mbpp_1__x": [5]},
                                        "exclude_future_train_ids": [1, 2], "overlap_ids": [5]}))
         self.behavioural = self.root / "decontamination-behavioural.json"
-        self.behavioural.write_text(json.dumps({
-            "schema": 1, "rule": {"text": "..."}, "exclude_train_ids": [2, 3],
+        self.policy = {
+            "schema": 2, "rule": {"text": "..."}, "exclude_train_ids": [2, 3, 4],
             "duplicates": [{"train_id": 2, "eval_id": 5}, {"train_id": 3, "eval_id": 6}],
-            "behavioural_overlap_eval_ids": [5, 6]}))
+            "read_by_hand": [{"train_id": 4, "eval_id": 6, "reading": "same function", "note": "read"}],
+            "undecided": [{"train_id": 4, "eval_id": 6, "reading": "same function", "note": "read"},
+                          {"train_id": 7, "eval_id": 6, "reading": "different function", "note": "read"}],
+            "behavioural_overlap_eval_ids": [5, 6]}
+        self.behavioural.write_text(json.dumps(self.policy))
 
     def test_exclusions_are_merged_and_each_id_names_the_file_that_excluded_it(self):
         policy = loop_filter.decontamination(self.a2, self.behavioural)
-        self.assertEqual(policy.exclude_train_ids, frozenset({1, 2, 3}))
+        self.assertEqual(policy.exclude_train_ids, frozenset({1, 2, 3, 4}))     # 4: read by hand as the same function
         self.assertEqual(policy.overlap_eval_ids, frozenset({5}))        # the clean 200 are unchanged
         self.assertEqual(policy.behavioural_overlap_eval_ids, frozenset({5, 6}))
         self.assertEqual(dict(policy.excluded_by), {1: ("decontamination-a2.json",),
                                                     2: ("decontamination-a2.json", "decontamination-behavioural.json"),
-                                                    3: ("decontamination-behavioural.json",)})
+                                                    3: ("decontamination-behavioural.json",),
+                                                    4: ("decontamination-behavioural.json",)})
         self.assertEqual(policy.drop_document_names, frozenset({"mbpp_1__x"}))
         with self.assertRaises(TypeError):
             policy.excluded_by[9] = ("x",)
@@ -359,11 +587,24 @@ class LoaderTests(unittest.TestCase):
         with self.assertRaises(ValueError) as caught:
             loop_filter.decontamination(self.a2, self.root / "absent.json")
         self.assertIn("absent.json", str(caught.exception))
-        self.behavioural.write_text(json.dumps({"schema": 1, "rule": {}, "exclude_train_ids": [2, 3],
-                                                "duplicates": [{"train_id": 2, "eval_id": 5}]}))
+        self.behavioural.write_text(json.dumps({**self.policy, "duplicates": [{"train_id": 2, "eval_id": 5}]}))
         with self.assertRaises(ValueError):
             loop_filter.decontamination(self.a2, self.behavioural)     # exclusions and duplicates disagree
-        self.behavioural.write_text(json.dumps({"schema": 2, "rule": {}, "exclude_train_ids": [], "duplicates": []}))
+        for schema in (1, 3):
+            self.behavioural.write_text(json.dumps({**self.policy, "schema": schema}))
+            with self.assertRaises(ValueError):
+                loop_filter.decontamination(self.a2, self.behavioural)
+        # an undecided pair without a reading: the file is refused, the pair is not admitted quietly
+        self.behavioural.write_text(json.dumps({**self.policy, "undecided": [{"train_id": 8, "eval_id": 6}]}))
+        with self.assertRaises(ValueError) as caught:
+            loop_filter.decontamination(self.a2, self.behavioural)
+        self.assertIn("no reading", str(caught.exception))
+        # a same-function reading whose id is missing from exclude_train_ids
+        self.behavioural.write_text(json.dumps({**self.policy, "exclude_train_ids": [2, 3]}))
+        with self.assertRaises(ValueError):
+            loop_filter.decontamination(self.a2, self.behavioural)
+        without = {k: v for k, v in self.policy.items() if k != "read_by_hand"}
+        self.behavioural.write_text(json.dumps(without))
         with self.assertRaises(ValueError):
             loop_filter.decontamination(self.a2, self.behavioural)
 
@@ -384,6 +625,13 @@ class LoaderTests(unittest.TestCase):
         self.assertEqual(policy.exclude_train_ids,
                          frozenset(a2["exclude_future_train_ids"]) | frozenset(behavioural["exclude_train_ids"]))
         self.assertEqual(set(policy.excluded_by), set(policy.exclude_train_ids))
+        self.assertEqual(behavioural["schema"], bd.SCHEMA)
+        self.assertEqual(behavioural["distinct"]["undecided_unread"], 0)
+        for row in behavioural["undecided"]:
+            self.assertIn(row["reading"], ("same function", "different function"), row)
+            self.assertTrue(row["note"])
+        self.assertEqual(sorted(behavioural["exclude_train_ids_by_reading"]),
+                         sorted({r["train_id"] for r in behavioural["read_by_hand"] if r["reading"] == "same function"}))
         self.assertEqual(sorted(behavioural["rediscovered_from_2026_09_21"]),
                          sorted(set(a2["exclude_future_train_ids"]) & set(behavioural["exclude_train_ids"])))
         for row in behavioural["duplicates"]:

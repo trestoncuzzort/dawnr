@@ -1,8 +1,8 @@
 {
- "schema": 1,
- "about": "Train problems whose reference solution computes the same function as a held-out problem's (t/out/loop/split-v3.json eval ids, unchanged through split-v6) on both problems' own assertion inputs and on drawn inputs. Human-readable report with examples: t/DECONTAMINATION-BEHAVIOURAL-2026-09-25.md. Loaded by loop_filter.decontamination(), which merges exclude_train_ids into the same-task exclusions of t/decontamination-2026-09-21.json.",
+ "schema": 2,
+ "about": "Train problems whose reference solution computes the same function as a held-out problem's (t/out/loop/split-v3.json eval ids, unchanged through split-v6) on both problems' own assertion inputs and on drawn inputs, plus the pairs the rule left undecided and were read by hand as the same function (read_by_hand). Human-readable report with examples: t/DECONTAMINATION-BEHAVIOURAL-2026-09-25.md. Loaded by loop_filter.decontamination(), which merges exclude_train_ids into the same-task exclusions of t/decontamination-2026-09-21.json.",
  "rule": {
-  "text": "a train problem is a behavioural duplicate of a held-out problem of the same signature kinds when both references run and return equal values (as t reads them) on every one of both problems' own assertion inputs and on every drawn input that both answered, with at least MIN_DRAWS_AGREED of the pair's 100 draws (50 per problem, spec_check.draw shaped like the problem's first example) answered alike (equal values, or both references raising the same exception) and at least MIN_DRAWS_VALUED of them equal values; an input where exactly one reference raises is a difference; an input a reference did not answer in time says nothing; a reference that does not run is reported by name and never counted as agreeing",
+  "text": "a train problem is a behavioural duplicate of a held-out problem of the same signature kinds when both references run and return equal values (as t reads them) on every one of both problems' own assertion inputs that both answered, at least one of them the held-out problem's own, and on every drawn input that both answered, with at least MIN_DRAWS_AGREED of the pair's 100 draws (50 per problem, spec_check.draw shaped like the problem's first example) answered alike (equal values, or both references raising the same exception) and at least MIN_DRAWS_VALUED of them equal values; an input where exactly one reference raises is a difference; an input a reference did not answer (not in time, not within its recursion or memory limit, or a t value the other problem's argument shape cannot hold) says nothing: it leaves the count and is never a difference; a pair that never differed but falls short of this bar is undecided and must be read by hand before the policy is written; a reference that does not run is reported by name and never counted as agreeing",
   "seed": "behavioural-decontam-2026-09-25",
   "draws_per_problem": 50,
   "draws_per_pair": 100,
@@ -12,9 +12,11 @@
   "budget_s_cpu": 60.0,
   "max_timeouts": 20,
   "pair_timeouts": 2,
+  "recursion_limit": 1000,
   "signature": "argument kinds and result kind of the first assertion",
   "one_sided_raise": "a difference",
-  "timeout": "an input a reference did not answer in time is undefined: never agreement, never a difference",
+  "unanswered": "an input a reference did not answer (not in time, over its recursion or memory limit, or a t value the other problem's argument shape cannot hold) is undefined: never agreement, never a difference; an own input so left leaves the own-input count",
+  "undecided": "a pair that never differed and fell short of the bar; read by hand before this file is written, and excluded when read as the same function",
   "outputs_compared": "as t reads them (canon)",
   "code": "t/behavioural_decontam.py"
  },
@@ -33,14 +35,13 @@
    "train_ids": 2771,
    "pairs": 48734,
    "verdicts": {
-    "different": 47939,
-    "not run": 214,
+    "different": 48148,
     "no reference": 429,
-    "minimal pair": 70,
-    "duplicate": 71,
-    "insufficient": 11
+    "minimal pair": 78,
+    "duplicate": 75,
+    "not run": 4
    },
-   "references_not_run": 32
+   "references_not_run": 20
   },
   "v6": {
    "split": "split-v6.json",
@@ -50,28 +51,30 @@
    "train_ids": 3803,
    "pairs": 66891,
    "verdicts": {
-    "different": 65641,
+    "different": 65849,
     "no reference": 429,
-    "not run": 655,
-    "minimal pair": 74,
-    "duplicate": 78,
-    "insufficient": 14
+    "not run": 445,
+    "minimal pair": 85,
+    "duplicate": 83
    },
-   "references_not_run": 63,
+   "references_not_run": 51,
    "pairs_copied_from": {
     "pool": [
      "v5"
     ],
-    "pairs": 8084,
-    "file": null
+    "pairs": 48734,
+    "file": "v5.jsonl"
    }
   }
  },
  "distinct": {
-  "duplicate_pairs": 78,
-  "minimal_pairs": 74,
-  "insufficient_pairs": 14,
-  "references_not_run": 63
+  "duplicate_pairs": 83,
+  "minimal_pairs": 85,
+  "undecided_pairs": 0,
+  "undecided_read_as_same": 0,
+  "undecided_read_as_different": 0,
+  "undecided_unread": 0,
+  "references_not_run": 51
  },
  "exclude_train_ids": [
   29,
@@ -123,12 +126,14 @@
   203031,
   203336,
   203383,
+  203579,
   203632,
   203736,
   203778,
   203920,
   203929,
   203985,
+  204032,
   204152,
   204154,
   204157,
@@ -138,11 +143,14 @@
   204462,
   204498,
   204695,
+  204712,
+  204714,
   204735,
   300281,
   300683,
   300709,
   301606,
+  304681,
   5973913,
   8141530,
   9333067
@@ -301,6 +309,9 @@
   "203383": [
    138
   ],
+  "203579": [
+   28
+  ],
   "203632": [
    224
   ],
@@ -318,6 +329,9 @@
   ],
   "203985": [
    701
+  ],
+  "204032": [
+   583
   ],
   "204152": [
    687
@@ -346,6 +360,12 @@
   "204695": [
    935
   ],
+  "204712": [
+   389
+  ],
+  "204714": [
+   502
+  ],
   "204735": [
    736
   ],
@@ -361,6 +381,9 @@
   "301606": [
    339
   ],
+  "304681": [
+   389
+  ],
   "5973913": [
    566
   ],
@@ -371,8 +394,30 @@
    502
   ]
  },
+ "exclude_train_ids_by_reading": [],
+ "exclusions_by_class": {
+  "all": {
+   "mbpp": 26,
+   "humaneval": 3,
+   "apps": 40,
+   "stdin": 8
+  },
+  "new": {
+   "mbpp": 13,
+   "humaneval": 3,
+   "apps": 37,
+   "stdin": 8
+  },
+  "rediscovered": {
+   "mbpp": 13,
+   "humaneval": 0,
+   "apps": 3,
+   "stdin": 0
+  }
+ },
  "behavioural_overlap_eval_ids": [
   10,
+  28,
   47,
   68,
   138,
@@ -388,6 +433,7 @@
   334,
   339,
   366,
+  389,
   411,
   428,
   443,
@@ -474,11 +520,13 @@
   203031,
   203336,
   203383,
+  203579,
   203632,
   203736,
   203778,
   203920,
   203985,
+  204032,
   204152,
   204154,
   204157,
@@ -487,11 +535,14 @@
   204455,
   204498,
   204695,
+  204712,
+  204714,
   204735,
   300281,
   300683,
   300709,
   301606,
+  304681,
   5973913,
   8141530,
   9333067
@@ -512,6 +563,8 @@
    "eval": "mbpp_842__get_odd_occurence",
    "agreed_inputs": 49,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 45
   },
@@ -523,6 +576,8 @@
    "eval": "mbpp_629__Split",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -534,6 +589,8 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 90,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 84
   },
@@ -545,6 +602,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -556,6 +615,8 @@
    "eval": "mbpp_411__snake_to_camel",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -567,6 +628,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -578,6 +641,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -589,6 +654,8 @@
    "eval": "mbpp_302__set_Bit_Number",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -600,6 +667,8 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -611,6 +680,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -622,6 +693,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -633,6 +706,8 @@
    "eval": "mbpp_302__set_Bit_Number",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -644,6 +719,8 @@
    "eval": "mbpp_970__min_of_two",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -655,6 +732,8 @@
    "eval": "mbpp_928__change_date_format",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -666,6 +745,8 @@
    "eval": "mbpp_800__remove_all_spaces",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -677,6 +758,8 @@
    "eval": "mbpp_10__small_nnum",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -688,6 +771,8 @@
    "eval": "mbpp_931__sum_series",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -699,6 +784,8 @@
    "eval": "mbpp_670__decreasing_trend",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -710,6 +797,8 @@
    "eval": "mbpp_680__increasing_trend",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -721,6 +810,8 @@
    "eval": "mbpp_699__min_Swaps",
    "agreed_inputs": 52,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 47
   },
@@ -732,6 +823,8 @@
    "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -743,6 +836,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -754,6 +849,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -765,6 +862,8 @@
    "eval": "mbpp_719__text_match",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -776,6 +875,8 @@
    "eval": "mbpp_208__is_decimal",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -787,6 +888,8 @@
    "eval": "mbpp_527__get_pairs_count",
    "agreed_inputs": 45,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 41
   },
@@ -798,6 +901,8 @@
    "eval": "mbpp_775__odd_position",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -809,6 +914,8 @@
    "eval": "mbpp_719__text_match",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -820,6 +927,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -831,6 +940,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -842,6 +953,8 @@
    "eval": "mbpp_541__check_abundant",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -853,6 +966,8 @@
    "eval": "mbpp_687__recur_gcd",
    "agreed_inputs": 107,
    "own_inputs": 7,
+   "own_agreed": 7,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -864,6 +979,8 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -875,6 +992,8 @@
    "eval": "mbpp_68__is_Monotonic",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -886,6 +1005,8 @@
    "eval": "mbpp_548__longest_increasing_subsequence",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -895,10 +1016,12 @@
    "train": "apps_201__numTrees",
    "eval_id": 583,
    "eval": "mbpp_583__catalan_number",
-   "agreed_inputs": 76,
+   "agreed_inputs": 93,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
-   "draws_agreed": 72
+   "draws_agreed": 89
   },
   {
    "pool": "v5",
@@ -908,6 +1031,8 @@
    "eval": "mbpp_325__get_Min_Squares",
    "agreed_inputs": 99,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 95
   },
@@ -919,6 +1044,8 @@
    "eval": "mbpp_736__left_insertion",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -930,6 +1057,8 @@
    "eval": "mbpp_701__equilibrium_index",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -941,6 +1070,8 @@
    "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -952,6 +1083,8 @@
    "eval": "mbpp_911__maximum_product",
    "agreed_inputs": 63,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 59
   },
@@ -963,6 +1096,8 @@
    "eval": "mbpp_782__Odd_Length_Sum",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -974,6 +1109,8 @@
    "eval": "mbpp_203__hamming_Distance",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -985,6 +1122,8 @@
    "eval": "mbpp_68__is_Monotonic",
    "agreed_inputs": 103,
    "own_inputs": 3,
+   "own_agreed": 3,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -996,6 +1135,8 @@
    "eval": "mbpp_175__is_valid_parenthese",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1007,6 +1148,8 @@
    "eval": "mbpp_203__hamming_Distance",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1018,6 +1161,8 @@
    "eval": "mbpp_701__equilibrium_index",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1029,6 +1174,8 @@
    "eval": "mbpp_885__is_Isomorphic",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1040,6 +1187,8 @@
    "eval": "mbpp_224__count_Set_Bits",
    "agreed_inputs": 107,
    "own_inputs": 7,
+   "own_agreed": 7,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1051,6 +1200,8 @@
    "eval": "mbpp_161__remove_elements",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1062,6 +1213,8 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1073,6 +1226,8 @@
    "eval": "mbpp_670__decreasing_trend",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1084,6 +1239,8 @@
    "eval": "mbpp_680__increasing_trend",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1095,6 +1252,8 @@
    "eval": "mbpp_566__sum_digits",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1106,6 +1265,21 @@
    "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 203579,
+   "train": "apps_3579__choose",
+   "eval_id": 28,
+   "eval": "mbpp_28__binomial_Coeff",
+   "agreed_inputs": 107,
+   "own_inputs": 11,
+   "own_agreed": 7,
+   "own_unanswered": 4,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1117,6 +1291,8 @@
    "eval": "mbpp_224__count_Set_Bits",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1128,6 +1304,8 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 91,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 83
   },
@@ -1139,6 +1317,8 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 97,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86
   },
@@ -1150,6 +1330,8 @@
    "eval": "mbpp_203__hamming_Distance",
    "agreed_inputs": 107,
    "own_inputs": 7,
+   "own_agreed": 7,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1161,6 +1343,8 @@
    "eval": "mbpp_604__reverse_words",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1172,8 +1356,23 @@
    "eval": "mbpp_701__equilibrium_index",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204032,
+   "train": "apps_4032__solve",
+   "eval_id": 583,
+   "eval": "mbpp_583__catalan_number",
+   "agreed_inputs": 96,
+   "own_inputs": 8,
+   "own_agreed": 7,
+   "own_unanswered": 1,
+   "draws": 100,
+   "draws_agreed": 89
   },
   {
    "pool": "v5",
@@ -1183,6 +1382,8 @@
    "eval": "mbpp_687__recur_gcd",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1194,6 +1395,8 @@
    "eval": "mbpp_334__check_Validity",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1205,6 +1408,8 @@
    "eval": "mbpp_175__is_valid_parenthese",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1216,6 +1421,8 @@
    "eval": "mbpp_931__sum_series",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1227,6 +1434,8 @@
    "eval": "mbpp_541__check_abundant",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1238,6 +1447,8 @@
    "eval": "mbpp_935__series_sum",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1249,6 +1460,8 @@
    "eval": "mbpp_366__adjacent_num_product",
    "agreed_inputs": 78,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 67
   },
@@ -1260,6 +1473,8 @@
    "eval": "mbpp_961__roman_to_int",
    "agreed_inputs": 25,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 17
   },
@@ -1271,8 +1486,36 @@
    "eval": "mbpp_935__series_sum",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
+  },
+  {
+   "pool": "v5",
+   "train_id": 204712,
+   "train": "apps_4712__lucasnum",
+   "eval_id": 389,
+   "eval": "mbpp_389__find_lucas",
+   "agreed_inputs": 55,
+   "own_inputs": 5,
+   "own_agreed": 3,
+   "own_unanswered": 2,
+   "draws": 100,
+   "draws_agreed": 52
+  },
+  {
+   "pool": "v5",
+   "train_id": 204714,
+   "train": "apps_4714__remainder",
+   "eval_id": 502,
+   "eval": "mbpp_502__find",
+   "agreed_inputs": 85,
+   "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
+   "draws": 100,
+   "draws_agreed": 77
   },
   {
    "pool": "v5",
@@ -1282,6 +1525,8 @@
    "eval": "mbpp_736__left_insertion",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1293,6 +1538,8 @@
    "eval": "mbpp_842__get_odd_occurence",
    "agreed_inputs": 49,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 45
   },
@@ -1304,6 +1551,8 @@
    "eval": "mbpp_629__Split",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1315,6 +1564,8 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 90,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 84
   },
@@ -1326,6 +1577,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1337,6 +1590,8 @@
    "eval": "mbpp_411__snake_to_camel",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1348,6 +1603,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1359,6 +1616,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1370,6 +1629,8 @@
    "eval": "mbpp_302__set_Bit_Number",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1381,6 +1642,8 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1392,6 +1655,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1403,6 +1668,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1414,6 +1681,8 @@
    "eval": "mbpp_302__set_Bit_Number",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1425,6 +1694,8 @@
    "eval": "mbpp_970__min_of_two",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1436,6 +1707,8 @@
    "eval": "mbpp_928__change_date_format",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1447,6 +1720,8 @@
    "eval": "mbpp_800__remove_all_spaces",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1458,6 +1733,8 @@
    "eval": "mbpp_10__small_nnum",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1469,6 +1746,8 @@
    "eval": "mbpp_931__sum_series",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1480,6 +1759,8 @@
    "eval": "mbpp_670__decreasing_trend",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1491,6 +1772,8 @@
    "eval": "mbpp_680__increasing_trend",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1502,6 +1785,8 @@
    "eval": "mbpp_699__min_Swaps",
    "agreed_inputs": 52,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 47
   },
@@ -1513,6 +1798,8 @@
    "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1524,6 +1811,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1535,6 +1824,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1546,6 +1837,8 @@
    "eval": "mbpp_719__text_match",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1557,6 +1850,8 @@
    "eval": "mbpp_208__is_decimal",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1568,6 +1863,8 @@
    "eval": "mbpp_527__get_pairs_count",
    "agreed_inputs": 45,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 41
   },
@@ -1579,6 +1876,8 @@
    "eval": "mbpp_775__odd_position",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1590,6 +1889,8 @@
    "eval": "mbpp_719__text_match",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1601,6 +1902,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1612,6 +1915,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1623,6 +1928,8 @@
    "eval": "mbpp_541__check_abundant",
    "agreed_inputs": 105,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1634,6 +1941,8 @@
    "eval": "mbpp_687__recur_gcd",
    "agreed_inputs": 107,
    "own_inputs": 7,
+   "own_agreed": 7,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1645,6 +1954,8 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1656,6 +1967,8 @@
    "eval": "mbpp_68__is_Monotonic",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1667,6 +1980,8 @@
    "eval": "mbpp_548__longest_increasing_subsequence",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1676,10 +1991,12 @@
    "train": "apps_201__numTrees",
    "eval_id": 583,
    "eval": "mbpp_583__catalan_number",
-   "agreed_inputs": 76,
+   "agreed_inputs": 93,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
-   "draws_agreed": 72
+   "draws_agreed": 89
   },
   {
    "pool": "v6",
@@ -1689,6 +2006,8 @@
    "eval": "mbpp_325__get_Min_Squares",
    "agreed_inputs": 99,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 95
   },
@@ -1700,6 +2019,8 @@
    "eval": "mbpp_736__left_insertion",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1711,6 +2032,8 @@
    "eval": "mbpp_701__equilibrium_index",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1722,6 +2045,8 @@
    "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1733,6 +2058,8 @@
    "eval": "mbpp_911__maximum_product",
    "agreed_inputs": 63,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 59
   },
@@ -1744,6 +2071,8 @@
    "eval": "mbpp_782__Odd_Length_Sum",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1755,6 +2084,8 @@
    "eval": "mbpp_203__hamming_Distance",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1766,6 +2097,8 @@
    "eval": "mbpp_68__is_Monotonic",
    "agreed_inputs": 103,
    "own_inputs": 3,
+   "own_agreed": 3,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1777,6 +2110,8 @@
    "eval": "mbpp_175__is_valid_parenthese",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1788,6 +2123,8 @@
    "eval": "mbpp_203__hamming_Distance",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1799,6 +2136,8 @@
    "eval": "mbpp_701__equilibrium_index",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1810,6 +2149,8 @@
    "eval": "mbpp_885__is_Isomorphic",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1821,6 +2162,8 @@
    "eval": "mbpp_224__count_Set_Bits",
    "agreed_inputs": 107,
    "own_inputs": 7,
+   "own_agreed": 7,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1832,6 +2175,8 @@
    "eval": "mbpp_161__remove_elements",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1843,6 +2188,8 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1854,6 +2201,8 @@
    "eval": "mbpp_670__decreasing_trend",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1865,6 +2214,8 @@
    "eval": "mbpp_680__increasing_trend",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1876,6 +2227,8 @@
    "eval": "mbpp_566__sum_digits",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1887,6 +2240,21 @@
    "eval": "mbpp_138__is_Sum_Of_Powers_Of_Two",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 203579,
+   "train": "apps_3579__choose",
+   "eval_id": 28,
+   "eval": "mbpp_28__binomial_Coeff",
+   "agreed_inputs": 107,
+   "own_inputs": 11,
+   "own_agreed": 7,
+   "own_unanswered": 4,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1898,6 +2266,8 @@
    "eval": "mbpp_224__count_Set_Bits",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1909,6 +2279,8 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 91,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 83
   },
@@ -1920,6 +2292,8 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 97,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86
   },
@@ -1931,6 +2305,8 @@
    "eval": "mbpp_203__hamming_Distance",
    "agreed_inputs": 107,
    "own_inputs": 7,
+   "own_agreed": 7,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1942,6 +2318,8 @@
    "eval": "mbpp_604__reverse_words",
    "agreed_inputs": 106,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1953,8 +2331,23 @@
    "eval": "mbpp_701__equilibrium_index",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204032,
+   "train": "apps_4032__solve",
+   "eval_id": 583,
+   "eval": "mbpp_583__catalan_number",
+   "agreed_inputs": 96,
+   "own_inputs": 8,
+   "own_agreed": 7,
+   "own_unanswered": 1,
+   "draws": 100,
+   "draws_agreed": 89
   },
   {
    "pool": "v6",
@@ -1964,6 +2357,8 @@
    "eval": "mbpp_687__recur_gcd",
    "agreed_inputs": 108,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1975,6 +2370,8 @@
    "eval": "mbpp_334__check_Validity",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1986,6 +2383,8 @@
    "eval": "mbpp_175__is_valid_parenthese",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -1997,6 +2396,8 @@
    "eval": "mbpp_931__sum_series",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2008,6 +2409,8 @@
    "eval": "mbpp_541__check_abundant",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2019,6 +2422,8 @@
    "eval": "mbpp_935__series_sum",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2030,6 +2435,8 @@
    "eval": "mbpp_366__adjacent_num_product",
    "agreed_inputs": 78,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 67
   },
@@ -2041,6 +2448,8 @@
    "eval": "mbpp_961__roman_to_int",
    "agreed_inputs": 25,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 17
   },
@@ -2052,8 +2461,36 @@
    "eval": "mbpp_935__series_sum",
    "agreed_inputs": 109,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 204712,
+   "train": "apps_4712__lucasnum",
+   "eval_id": 389,
+   "eval": "mbpp_389__find_lucas",
+   "agreed_inputs": 55,
+   "own_inputs": 5,
+   "own_agreed": 3,
+   "own_unanswered": 2,
+   "draws": 100,
+   "draws_agreed": 52
+  },
+  {
+   "pool": "v6",
+   "train_id": 204714,
+   "train": "apps_4714__remainder",
+   "eval_id": 502,
+   "eval": "mbpp_502__find",
+   "agreed_inputs": 85,
+   "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
+   "draws": 100,
+   "draws_agreed": 77
   },
   {
    "pool": "v6",
@@ -2063,6 +2500,8 @@
    "eval": "mbpp_736__left_insertion",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2074,6 +2513,8 @@
    "eval": "mbpp_47__compute_Last_Digit",
    "agreed_inputs": 110,
    "own_inputs": 10,
+   "own_agreed": 10,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2085,6 +2526,8 @@
    "eval": "mbpp_269__ascii_value",
    "agreed_inputs": 104,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2096,6 +2539,8 @@
    "eval": "mbpp_224__count_Set_Bits",
    "agreed_inputs": 93,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 82
   },
@@ -2107,6 +2552,21 @@
    "eval": "mbpp_339__find_Divisor",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
+   "draws": 100,
+   "draws_agreed": 100
+  },
+  {
+   "pool": "v6",
+   "train_id": 304681,
+   "train": "apps_104681__apps_stdin_4681",
+   "eval_id": 389,
+   "eval": "mbpp_389__find_lucas",
+   "agreed_inputs": 104,
+   "own_inputs": 5,
+   "own_agreed": 4,
+   "own_unanswered": 1,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2118,6 +2578,8 @@
    "eval": "mbpp_566__sum_digits",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2129,6 +2591,8 @@
    "eval": "mbpp_687__recur_gcd",
    "agreed_inputs": 111,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 100
   },
@@ -2140,10 +2604,13 @@
    "eval": "mbpp_502__find",
    "agreed_inputs": 96,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 85
   }
  ],
+ "read_by_hand": [],
  "minimal_pairs": [
   {
    "pool": "v5",
@@ -2153,24 +2620,27 @@
    "eval": "mbpp_119__search",
    "agreed_inputs": 16,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 10,
    "difference": {
-    "eval_said": 4,
+    "eval_said": -6,
     "input": [
      [
+      -1,
       1,
-      0,
-      4,
-      3,
       2,
+      2,
+      4,
+      5,
       5
      ],
      5
     ],
     "kind": "disagree",
-    "train_said": 1,
-    "where": "draw"
+    "train_said": -1,
+    "where": "draw_eval"
    }
   },
   {
@@ -2181,6 +2651,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 101,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 95,
    "difference": {
@@ -2199,7 +2671,7 @@
      24,
      24
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -2210,6 +2682,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 101,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 95,
    "difference": {
@@ -2228,7 +2702,7 @@
      24,
      24
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -2239,6 +2713,8 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 89,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 83,
    "difference": {
@@ -2248,7 +2724,7 @@
     ],
     "kind": "one raised",
     "train_said": [],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2259,20 +2735,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 87,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 81,
    "difference": {
-    "eval_said": 21,
+    "eval_said": 101,
     "input": [
      [
-      21
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     21
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2283,6 +2761,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 105,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 99,
    "difference": {
@@ -2316,7 +2796,7 @@
      50,
      77
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2327,6 +2807,8 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 97,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 91,
    "difference": {
@@ -2336,7 +2818,7 @@
     ],
     "kind": "one raised",
     "train_said": [],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2347,20 +2829,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 91,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 85,
    "difference": {
-    "eval_said": 47,
+    "eval_said": 101,
     "input": [
      [
-      47
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     47
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2371,17 +2855,19 @@
    "eval": "mbpp_347__count_Squares",
    "agreed_inputs": 29,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 25,
    "difference": {
-    "eval_said": -35,
+    "eval_said": 49,
     "input": [
      6,
-     0
+     4
     ],
     "kind": "disagree",
-    "train_said": 0,
-    "where": "draw"
+    "train_said": 50,
+    "where": "draw_eval"
    }
   },
   {
@@ -2392,43 +2878,18 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 84,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 78,
    "difference": {
-    "eval_said": [
-     10,
-     0,
-     0,
-     4,
-     5,
-     8,
-     8,
-     9
-    ],
+    "eval_said": "raised",
     "input": [
-     [
-      5,
-      8,
-      8,
-      10,
-      0,
-      4,
-      9,
-      0
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": [
-     0,
-     0,
-     4,
-     5,
-     8,
-     8,
-     9,
-     10
-    ],
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw_eval"
    }
   },
   {
@@ -2439,40 +2900,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 81,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 75,
    "difference": {
-    "eval_said": [
-     0,
-     0,
-     1,
-     4,
-     6,
-     7,
-     11
-    ],
+    "eval_said": 101,
     "input": [
      [
-      1,
-      7,
-      4,
-      -1,
-      0,
-      6,
-      11
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     -1,
-     0,
-     1,
-     4,
-     6,
-     7,
-     11
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2483,37 +2926,18 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 85,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 79,
    "difference": {
-    "eval_said": [
-     3,
-     6,
-     9,
-     17,
-     20,
-     -1
-    ],
+    "eval_said": "raised",
     "input": [
-     [
-      20,
-      17,
-      3,
-      6,
-      -1,
-      9
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": [
-     -1,
-     3,
-     6,
-     9,
-     17,
-     20
-    ],
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw_eval"
    }
   },
   {
@@ -2524,37 +2948,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 86,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
-    "eval_said": [
-     0,
-     3,
-     6,
-     9,
-     17,
-     20
-    ],
+    "eval_said": 101,
     "input": [
      [
-      20,
-      17,
-      3,
-      6,
-      -1,
-      9
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     -1,
-     3,
-     6,
-     9,
-     17,
-     20
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2565,16 +2974,18 @@
    "eval": "mbpp_887__is_odd",
    "agreed_inputs": 85,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 81,
    "difference": {
     "eval_said": false,
     "input": [
-     10
+     8
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2585,16 +2996,29 @@
    "eval": "mbpp_362__max_occurrences",
    "agreed_inputs": 86,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
-    "eval_said": "raised",
+    "eval_said": -1,
     "input": [
-     []
+     [
+      -1,
+      11,
+      6,
+      4,
+      -1,
+      0,
+      1,
+      11,
+      0,
+      4
+     ]
     ],
-    "kind": "one raised",
-    "train_said": [],
-    "where": "draw"
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw_eval"
    }
   },
   {
@@ -2605,16 +3029,36 @@
    "eval": "mbpp_658__max_occurrences",
    "agreed_inputs": 86,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
-    "eval_said": "raised",
+    "eval_said": 4,
     "input": [
-     []
+     [
+      4,
+      1,
+      0,
+      11,
+      11,
+      11,
+      4,
+      3,
+      0,
+      9,
+      4,
+      7,
+      9,
+      5,
+      6,
+      -1,
+      0
+     ]
     ],
-    "kind": "one raised",
-    "train_said": [],
-    "where": "draw"
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw_eval"
    }
   },
   {
@@ -2625,6 +3069,8 @@
    "eval": "mbpp_937__max_char",
    "agreed_inputs": 94,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 88,
    "difference": {
@@ -2634,7 +3080,7 @@
     ],
     "kind": "one raised",
     "train_said": [],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2645,6 +3091,8 @@
    "eval": "mbpp_687__recur_gcd",
    "agreed_inputs": 103,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 97,
    "difference": {
@@ -2655,7 +3103,7 @@
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -2666,43 +3114,18 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 71,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 65,
    "difference": {
-    "eval_said": [
-     0,
-     1,
-     3,
-     9,
-     11,
-     11,
-     11,
-     -1
-    ],
+    "eval_said": "raised",
     "input": [
-     [
-      -1,
-      11,
-      11,
-      9,
-      11,
-      3,
-      0,
-      1
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": [
-     -1,
-     0,
-     1,
-     3,
-     9,
-     11,
-     11,
-     11
-    ],
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw_eval"
    }
   },
   {
@@ -2713,43 +3136,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 65,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 59,
    "difference": {
-    "eval_said": [
-     0,
-     0,
-     1,
-     3,
-     9,
-     11,
-     11,
-     11
-    ],
+    "eval_said": 101,
     "input": [
      [
-      -1,
-      11,
-      11,
-      9,
-      11,
-      3,
-      0,
-      1
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     -1,
-     0,
-     1,
-     3,
-     9,
-     11,
-     11,
-     11
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2760,30 +3162,49 @@
    "eval": "mbpp_800__remove_all_spaces",
    "agreed_inputs": 94,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 88,
    "difference": {
     "eval_said": [
-     81,
-     48,
-     63
+     88,
+     85,
+     46,
+     63,
+     34,
+     105,
+     116,
+     55
     ],
     "input": [
      [
-      81,
+      88,
+      85,
       30,
-      48,
-      63
+      46,
+      63,
+      34,
+      105,
+      116,
+      30,
+      55
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     81,
+     88,
+     85,
      30,
-     48,
-     63
+     46,
+     63,
+     34,
+     105,
+     116,
+     30,
+     55
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2794,22 +3215,32 @@
    "eval": "mbpp_729__add_list",
    "agreed_inputs": 67,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 61,
    "difference": {
-    "eval_said": [],
+    "eval_said": [
+     1,
+     8,
+     10
+    ],
     "input": [
      [
-      12,
-      15,
-      29,
-      32
+      -1,
+      0,
+      2,
+      2
      ],
-     []
+     [
+      2,
+      8,
+      8
+     ]
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2820,25 +3251,27 @@
    "eval": "mbpp_175__is_valid_parenthese",
    "agreed_inputs": 79,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 73,
    "difference": {
     "eval_said": false,
     "input": [
      [
-      127,
-      49,
-      46,
-      48,
-      80,
-      82,
-      94,
-      104
+      74,
+      111,
+      99,
+      50,
+      47,
+      97,
+      79,
+      124
      ]
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2849,21 +3282,21 @@
    "eval": "mbpp_38__div_even_odd",
    "agreed_inputs": 71,
    "own_inputs": 3,
+   "own_agreed": 3,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 68,
    "difference": {
-    "eval_said": 0.4,
+    "eval_said": 2,
     "input": [
      [
-      2,
-      5,
-      8,
-      1
+      6,
+      3
      ]
     ],
     "kind": "disagree",
-    "train_said": 10,
-    "where": "draw"
+    "train_said": 18,
+    "where": "draw_eval"
    }
   },
   {
@@ -2874,6 +3307,8 @@
    "eval": "mbpp_565__split",
    "agreed_inputs": 97,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 91,
    "difference": {
@@ -2901,7 +3336,7 @@
      2,
      3
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -2912,25 +3347,18 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 86,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
-    "eval_said": [
-     10,
-     1
-    ],
+    "eval_said": "raised",
     "input": [
-     [
-      1,
-      10
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": [
-     1,
-     10
-    ],
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw_eval"
    }
   },
   {
@@ -2941,20 +3369,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 95,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 89,
    "difference": {
-    "eval_said": 14,
+    "eval_said": 101,
     "input": [
      [
-      14
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     14
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2965,18 +3395,20 @@
    "eval": "mbpp_402__ncr_modp",
    "agreed_inputs": 89,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 84,
    "difference": {
     "eval_said": 0,
     "input": [
      0,
-     2,
-     9
+     1,
+     10
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -2987,6 +3419,8 @@
    "eval": "mbpp_32__max_Prime_Factors",
    "agreed_inputs": 104,
    "own_inputs": 7,
+   "own_agreed": 7,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 97,
    "difference": {
@@ -2996,7 +3430,7 @@
     ],
     "kind": "disagree",
     "train_said": 1,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3007,6 +3441,8 @@
    "eval": "mbpp_492__binary_search",
    "agreed_inputs": 99,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 95,
    "difference": {
@@ -3024,7 +3460,7 @@
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -3035,6 +3471,8 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 75,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 71,
    "difference": {
@@ -3046,7 +3484,7 @@
     ],
     "kind": "disagree",
     "train_said": 0,
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -3057,29 +3495,19 @@
    "eval": "mbpp_899__check",
    "agreed_inputs": 22,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 18,
    "difference": {
-    "eval_said": true,
+    "eval_said": "raised",
     "input": [
-     [
-      47,
-      89,
-      63,
-      81,
-      106,
-      73,
-      75,
-      67,
-      36,
-      108,
-      109
-     ],
-     2
+     [],
+     3
     ],
-    "kind": "disagree",
+    "kind": "one raised",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3090,18 +3518,20 @@
    "eval": "mbpp_463__max_subarray_product",
    "agreed_inputs": 98,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 94,
    "difference": {
     "eval_said": 1,
     "input": [
      [
-      -3
+      0
      ]
     ],
     "kind": "disagree",
-    "train_said": -3,
-    "where": "draw"
+    "train_said": 0,
+    "where": "draw_eval"
    }
   },
   {
@@ -3112,20 +3542,25 @@
    "eval": "mbpp_736__left_insertion",
    "agreed_inputs": 29,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 25,
    "difference": {
-    "eval_said": 1,
+    "eval_said": 5,
     "input": [
      [
-      0,
+      1,
+      2,
+      3,
+      5,
       5
      ],
-     2
+     7
     ],
     "kind": "disagree",
-    "train_said": 5,
-    "where": "draw"
+    "train_said": 3,
+    "where": "draw_eval"
    }
   },
   {
@@ -3136,16 +3571,62 @@
    "eval": "mbpp_269__ascii_value",
    "agreed_inputs": 93,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 89,
    "difference": {
-    "eval_said": 4,
+    "eval_said": 12,
     "input": [
-     4
+     12
     ],
     "kind": "disagree",
-    "train_said": 8,
-    "where": "draw"
+    "train_said": 4010,
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200294,
+   "train": "apps_294__totalNQueens",
+   "eval_id": 518,
+   "eval": "mbpp_518__sqrt_root",
+   "agreed_inputs": 21,
+   "own_inputs": 3,
+   "own_agreed": 1,
+   "own_unanswered": 2,
+   "draws": 100,
+   "draws_agreed": 20,
+   "difference": {
+    "eval_said": 2.8284271247461903,
+    "input": [
+     8
+    ],
+    "kind": "disagree",
+    "train_said": 92,
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200294,
+   "train": "apps_294__totalNQueens",
+   "eval_id": 849,
+   "eval": "mbpp_849__Sum",
+   "agreed_inputs": 13,
+   "own_inputs": 4,
+   "own_agreed": 1,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 12,
+   "difference": {
+    "eval_said": 7,
+    "input": [
+     7
+    ],
+    "kind": "disagree",
+    "train_said": 40,
+    "where": "draw_eval"
    }
   },
   {
@@ -3156,20 +3637,22 @@
    "eval": "mbpp_45__get_gcd",
    "agreed_inputs": 23,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 19,
    "difference": {
-    "eval_said": 1,
+    "eval_said": 2,
     "input": [
      [
-      0,
       4,
-      5
+      14,
+      18
      ]
     ],
     "kind": "disagree",
-    "train_said": 0,
-    "where": "draw"
+    "train_said": 4,
+    "where": "draw_eval"
    }
   },
   {
@@ -3180,6 +3663,8 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 80,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 76,
    "difference": {
@@ -3196,7 +3681,7 @@
     ],
     "kind": "disagree",
     "train_said": -3,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3207,21 +3692,21 @@
    "eval": "mbpp_66__pos_count",
    "agreed_inputs": 26,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 22,
    "difference": {
-    "eval_said": 4,
+    "eval_said": 1,
     "input": [
      [
-      1,
       4,
-      5,
-      14
+      -3
      ]
     ],
     "kind": "disagree",
     "train_said": 2,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3232,22 +3717,96 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 95,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 91,
    "difference": {
-    "eval_said": 5,
+    "eval_said": 7,
     "input": [
      [
-      91,
-      50,
-      71,
-      71,
-      94
+      120,
+      111,
+      110,
+      106,
+      123,
+      102,
+      102
      ]
     ],
     "kind": "disagree",
-    "train_said": 6,
-    "where": "draw"
+    "train_said": 8,
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200361,
+   "train": "apps_361__tilingRectangle",
+   "eval_id": 375,
+   "eval": "mbpp_375__round_num",
+   "agreed_inputs": 23,
+   "own_inputs": 4,
+   "own_agreed": 1,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 22,
+   "difference": {
+    "eval_said": 2,
+    "input": [
+     2,
+     2
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw_train"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200370,
+   "train": "apps_370__largestComponentSize",
+   "eval_id": 313,
+   "eval": "mbpp_313__pos_nos",
+   "agreed_inputs": 4,
+   "own_inputs": 4,
+   "own_agreed": 1,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 3,
+   "difference": {
+    "eval_said": null,
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 200370,
+   "train": "apps_370__largestComponentSize",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 4,
+   "own_inputs": 4,
+   "own_agreed": 1,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 3,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     [
+      1,
+      0
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 2,
+    "where": "draw_eval"
    }
   },
   {
@@ -3258,22 +3817,21 @@
    "eval": "mbpp_472__check_Consecutive",
    "agreed_inputs": 72,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 68,
    "difference": {
     "eval_said": false,
     "input": [
      [
-      -1,
-      0,
-      1,
-      6,
-      9
+      2,
+      2
      ]
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3284,20 +3842,18 @@
    "eval": "mbpp_670__decreasing_trend",
    "agreed_inputs": 54,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 50,
    "difference": {
     "eval_said": true,
     "input": [
-     [
-      3,
-      3,
-      4
-     ]
+     []
     ],
     "kind": "disagree",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3308,20 +3864,18 @@
    "eval": "mbpp_680__increasing_trend",
    "agreed_inputs": 57,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 53,
    "difference": {
     "eval_said": true,
     "input": [
-     [
-      3,
-      3,
-      4
-     ]
+     []
     ],
     "kind": "disagree",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3332,6 +3886,8 @@
    "eval": "mbpp_224__count_Set_Bits",
    "agreed_inputs": 76,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 72,
    "difference": {
@@ -3341,7 +3897,7 @@
     ],
     "kind": "disagree",
     "train_said": 3,
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -3352,18 +3908,22 @@
    "eval": "mbpp_45__get_gcd",
    "agreed_inputs": 20,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 16,
    "difference": {
-    "eval_said": "raised",
+    "eval_said": 2,
     "input": [
      [
-      6
+      4,
+      14,
+      18
      ]
     ],
-    "kind": "one raised",
-    "train_said": 6,
-    "where": "draw"
+    "kind": "disagree",
+    "train_said": 4,
+    "where": "draw_eval"
    }
   },
   {
@@ -3374,23 +3934,25 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 68,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 64,
    "difference": {
-    "eval_said": 0,
+    "eval_said": -8,
     "input": [
      [
-      1,
-      2,
-      6,
-      6,
+      -6,
       5,
-      0
+      -2,
+      -3,
+      2,
+      -8
      ]
     ],
     "kind": "disagree",
-    "train_said": 6,
-    "where": "draw"
+    "train_said": -3,
+    "where": "draw_eval"
    }
   },
   {
@@ -3401,23 +3963,18 @@
    "eval": "mbpp_670__decreasing_trend",
    "agreed_inputs": 30,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 26,
    "difference": {
     "eval_said": true,
     "input": [
-     [
-      -1,
-      2,
-      4,
-      4,
-      8,
-      9
-     ]
+     []
     ],
     "kind": "disagree",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3428,6 +3985,8 @@
    "eval": "mbpp_565__split",
    "agreed_inputs": 84,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
@@ -3443,7 +4002,29 @@
     "train_said": [
      -5
     ],
-    "where": "draw"
+    "where": "draw_train"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 201645,
+   "train": "apps_1645__sum_of_squares",
+   "eval_id": 325,
+   "eval": "mbpp_325__get_Min_Squares",
+   "agreed_inputs": 96,
+   "own_inputs": 11,
+   "own_agreed": 8,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 88,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     0
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw_eval"
    }
   },
   {
@@ -3454,16 +4035,18 @@
    "eval": "mbpp_605__prime_num",
    "agreed_inputs": 69,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 65,
    "difference": {
-    "eval_said": false,
+    "eval_said": null,
     "input": [
-     28
+     5
     ],
     "kind": "disagree",
-    "train_said": true,
-    "where": "draw"
+    "train_said": false,
+    "where": "draw_eval"
    }
   },
   {
@@ -3474,6 +4057,8 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 90,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86,
    "difference": {
@@ -3487,7 +4072,7 @@
     ],
     "kind": "disagree",
     "train_said": -1,
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -3498,16 +4083,18 @@
    "eval": "mbpp_518__sqrt_root",
    "agreed_inputs": 37,
    "own_inputs": 3,
+   "own_agreed": 3,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 34,
    "difference": {
-    "eval_said": 1.7320508075688772,
+    "eval_said": 2.8284271247461903,
     "input": [
-     3
+     8
     ],
     "kind": "disagree",
-    "train_said": 1,
-    "where": "draw"
+    "train_said": 2,
+    "where": "draw_eval"
    }
   },
   {
@@ -3518,18 +4105,20 @@
    "eval": "mbpp_741__all_Characters_Same",
    "agreed_inputs": 90,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86,
    "difference": {
     "eval_said": true,
     "input": [
      [
-      73
+      112
      ]
     ],
     "kind": "disagree",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3540,22 +4129,23 @@
    "eval": "mbpp_919__multiply_list",
    "agreed_inputs": 37,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 33,
    "difference": {
-    "eval_said": -30,
+    "eval_said": -12,
     "input": [
      [
-      -1,
       1,
-      2,
       3,
-      5
+      4,
+      -1
      ]
     ],
     "kind": "disagree",
-    "train_said": 30,
-    "where": "draw"
+    "train_said": 12,
+    "where": "draw_eval"
    }
   },
   {
@@ -3566,21 +4156,18 @@
    "eval": "mbpp_741__all_Characters_Same",
    "agreed_inputs": 59,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 55,
    "difference": {
-    "eval_said": false,
+    "eval_said": true,
     "input": [
-     [
-      1,
-      3,
-      5,
-      5
-     ]
+     []
     ],
     "kind": "disagree",
-    "train_said": true,
-    "where": "draw"
+    "train_said": false,
+    "where": "draw_eval"
    }
   },
   {
@@ -3591,30 +4178,30 @@
    "eval": "mbpp_885__is_Isomorphic",
    "agreed_inputs": 100,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 96,
    "difference": {
     "eval_said": false,
     "input": [
      [
-      37,
-      81,
-      85,
       104,
-      32,
-      104
+      97,
+      110,
+      115
      ],
      [
-      89,
-      58,
-      94,
-      67,
-      72
+      111,
+      103,
+      103,
+      117,
+      108
      ]
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3625,16 +4212,18 @@
    "eval": "mbpp_683__sum_Square",
    "agreed_inputs": 48,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 44,
    "difference": {
     "eval_said": false,
     "input": [
-     6
+     30
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3645,22 +4234,18 @@
    "eval": "mbpp_937__max_char",
    "agreed_inputs": 32,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 28,
    "difference": {
-    "eval_said": 0,
+    "eval_said": "raised",
     "input": [
-     [
-      -1,
-      -1,
-      1,
-      3,
-      4
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": -1,
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": null,
+    "where": "draw_eval"
    }
   },
   {
@@ -3671,24 +4256,19 @@
    "eval": "mbpp_899__check",
    "agreed_inputs": 27,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 23,
    "difference": {
-    "eval_said": true,
+    "eval_said": "raised",
     "input": [
-     [
-      2,
-      3,
-      4,
-      3,
-      4,
-      3
-     ],
-     0
+     [],
+     3
     ],
-    "kind": "disagree",
+    "kind": "one raised",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3699,20 +4279,22 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 94,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86,
    "difference": {
     "eval_said": [
-     53
+     79
     ],
     "input": [
      [
-      53
+      79
      ]
     ],
     "kind": "disagree",
-    "train_said": 53,
-    "where": "draw"
+    "train_said": 79,
+    "where": "draw_eval"
    }
   },
   {
@@ -3723,20 +4305,22 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 98,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 90,
    "difference": {
     "eval_said": [
-     53
+     24
     ],
     "input": [
      [
-      53
+      24
      ]
     ],
     "kind": "disagree",
-    "train_said": 53,
-    "where": "draw"
+    "train_said": 24,
+    "where": "draw_eval"
    }
   },
   {
@@ -3747,16 +4331,22 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 83,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 75,
    "difference": {
-    "eval_said": "raised",
-    "input": [
-     []
+    "eval_said": [
+     80
     ],
-    "kind": "one raised",
-    "train_said": [],
-    "where": "draw"
+    "input": [
+     [
+      80
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 80,
+    "where": "draw_eval"
    }
   },
   {
@@ -3767,6 +4357,8 @@
    "eval": "mbpp_919__multiply_list",
    "agreed_inputs": 87,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 83,
    "difference": {
@@ -3776,7 +4368,7 @@
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3787,55 +4379,48 @@
    "eval": "mbpp_604__reverse_words",
    "agreed_inputs": 90,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86,
    "difference": {
     "eval_said": [
-     60,
-     95,
+     105,
+     109,
+     69,
+     94,
+     61,
      32,
-     90,
-     115,
-     43,
-     91,
-     40,
-     59,
-     58,
-     103,
-     76
+     38,
+     86,
+     41
     ],
     "input": [
      [
-      90,
-      115,
-      43,
-      91,
-      40,
-      59,
-      58,
-      103,
-      76,
+      38,
+      86,
+      41,
       31,
-      60,
-      95
+      105,
+      109,
+      69,
+      94,
+      61
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     90,
-     115,
-     43,
-     91,
-     40,
-     59,
-     58,
-     103,
-     76,
+     38,
+     86,
+     41,
      31,
-     60,
-     95
+     105,
+     109,
+     69,
+     94,
+     61
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3846,6 +4431,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 88,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 84,
    "difference": {
@@ -3864,7 +4451,7 @@
      2,
      -5
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -3875,6 +4462,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 88,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 84,
    "difference": {
@@ -3893,7 +4482,7 @@
      2,
      -5
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -3904,28 +4493,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 60,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 56,
    "difference": {
-    "eval_said": [
-     0,
-     3,
-     6
-    ],
+    "eval_said": 101,
     "input": [
      [
-      -1,
-      6,
-      3
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     -1,
-     3,
-     6
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3936,27 +4519,30 @@
    "eval": "mbpp_885__is_Isomorphic",
    "agreed_inputs": 106,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 97,
    "difference": {
     "eval_said": false,
     "input": [
      [
-      100,
-      96,
-      96,
-      100,
-      101
+      104,
+      97,
+      110,
+      115
      ],
      [
-      96,
-      97,
-      99
+      111,
+      103,
+      103,
+      117,
+      108
      ]
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -3967,6 +4553,8 @@
    "eval": "mbpp_96__divisor",
    "agreed_inputs": 85,
    "own_inputs": 9,
+   "own_agreed": 8,
+   "own_unanswered": 1,
    "draws": 100,
    "draws_agreed": 77,
    "difference": {
@@ -3976,7 +4564,51 @@
     ],
     "kind": "one raised",
     "train_said": 0,
-    "where": "draw"
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203731,
+   "train": "apps_3731__square_sums_row",
+   "eval_id": 20,
+   "eval": "mbpp_20__is_woodall",
+   "agreed_inputs": 36,
+   "own_inputs": 5,
+   "own_agreed": 2,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 34,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     0
+    ],
+    "kind": "disagree",
+    "train_said": [],
+    "where": "draw_train"
+   }
+  },
+  {
+   "pool": "v5",
+   "train_id": 203731,
+   "train": "apps_3731__square_sums_row",
+   "eval_id": 711,
+   "eval": "mbpp_711__product_Equal",
+   "agreed_inputs": 41,
+   "own_inputs": 5,
+   "own_agreed": 2,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 39,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     0
+    ],
+    "kind": "disagree",
+    "train_said": [],
+    "where": "draw_train"
    }
   },
   {
@@ -3987,6 +4619,8 @@
    "eval": "mbpp_20__is_woodall",
    "agreed_inputs": 97,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 91,
    "difference": {
@@ -3996,7 +4630,7 @@
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4007,6 +4641,8 @@
    "eval": "mbpp_798___sum",
    "agreed_inputs": 100,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 89,
    "difference": {
@@ -4021,7 +4657,7 @@
     ],
     "kind": "disagree",
     "train_said": 8,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4032,59 +4668,49 @@
    "eval": "mbpp_800__remove_all_spaces",
    "agreed_inputs": 84,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 76,
    "difference": {
     "eval_said": [
-     55,
-     79,
-     78,
-     40,
-     45,
-     94,
-     104,
-     64,
-     72,
+     88,
      85,
-     50,
-     64
+     46,
+     63,
+     34,
+     105,
+     116,
+     55
     ],
     "input": [
      [
-      55,
-      79,
-      78,
-      40,
-      45,
-      94,
-      104,
-      64,
-      30,
-      72,
+      88,
       85,
-      31,
-      50,
-      64
+      30,
+      46,
+      63,
+      34,
+      105,
+      116,
+      30,
+      55
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     55,
-     79,
-     78,
-     40,
-     45,
-     94,
-     104,
-     64,
-     30,
-     72,
+     88,
      85,
-     31,
-     50,
-     64
+     30,
+     46,
+     63,
+     34,
+     105,
+     116,
+     30,
+     55
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4095,24 +4721,27 @@
    "eval": "mbpp_119__search",
    "agreed_inputs": 16,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 10,
    "difference": {
-    "eval_said": 4,
+    "eval_said": -6,
     "input": [
      [
+      -1,
       1,
-      0,
-      4,
-      3,
       2,
+      2,
+      4,
+      5,
       5
      ],
      5
     ],
     "kind": "disagree",
-    "train_said": 1,
-    "where": "draw"
+    "train_said": -1,
+    "where": "draw_eval"
    }
   },
   {
@@ -4123,6 +4752,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 101,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 95,
    "difference": {
@@ -4141,7 +4772,7 @@
      24,
      24
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -4152,6 +4783,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 101,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 95,
    "difference": {
@@ -4170,7 +4803,7 @@
      24,
      24
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -4181,6 +4814,8 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 89,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 83,
    "difference": {
@@ -4190,7 +4825,7 @@
     ],
     "kind": "one raised",
     "train_said": [],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4201,20 +4836,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 87,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 81,
    "difference": {
-    "eval_said": 21,
+    "eval_said": 101,
     "input": [
      [
-      21
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     21
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4225,6 +4862,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 105,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 99,
    "difference": {
@@ -4258,7 +4897,7 @@
      50,
      77
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4269,6 +4908,8 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 97,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 91,
    "difference": {
@@ -4278,7 +4919,7 @@
     ],
     "kind": "one raised",
     "train_said": [],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4289,20 +4930,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 91,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 85,
    "difference": {
-    "eval_said": 47,
+    "eval_said": 101,
     "input": [
      [
-      47
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     47
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4313,17 +4956,19 @@
    "eval": "mbpp_347__count_Squares",
    "agreed_inputs": 29,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 25,
    "difference": {
-    "eval_said": -35,
+    "eval_said": 49,
     "input": [
      6,
-     0
+     4
     ],
     "kind": "disagree",
-    "train_said": 0,
-    "where": "draw"
+    "train_said": 50,
+    "where": "draw_eval"
    }
   },
   {
@@ -4334,43 +4979,18 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 84,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 78,
    "difference": {
-    "eval_said": [
-     10,
-     0,
-     0,
-     4,
-     5,
-     8,
-     8,
-     9
-    ],
+    "eval_said": "raised",
     "input": [
-     [
-      5,
-      8,
-      8,
-      10,
-      0,
-      4,
-      9,
-      0
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": [
-     0,
-     0,
-     4,
-     5,
-     8,
-     8,
-     9,
-     10
-    ],
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw_eval"
    }
   },
   {
@@ -4381,40 +5001,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 81,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 75,
    "difference": {
-    "eval_said": [
-     0,
-     0,
-     1,
-     4,
-     6,
-     7,
-     11
-    ],
+    "eval_said": 101,
     "input": [
      [
-      1,
-      7,
-      4,
-      -1,
-      0,
-      6,
-      11
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     -1,
-     0,
-     1,
-     4,
-     6,
-     7,
-     11
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4425,37 +5027,18 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 85,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 79,
    "difference": {
-    "eval_said": [
-     3,
-     6,
-     9,
-     17,
-     20,
-     -1
-    ],
+    "eval_said": "raised",
     "input": [
-     [
-      20,
-      17,
-      3,
-      6,
-      -1,
-      9
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": [
-     -1,
-     3,
-     6,
-     9,
-     17,
-     20
-    ],
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw_eval"
    }
   },
   {
@@ -4466,37 +5049,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 86,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
-    "eval_said": [
-     0,
-     3,
-     6,
-     9,
-     17,
-     20
-    ],
+    "eval_said": 101,
     "input": [
      [
-      20,
-      17,
-      3,
-      6,
-      -1,
-      9
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     -1,
-     3,
-     6,
-     9,
-     17,
-     20
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4507,16 +5075,18 @@
    "eval": "mbpp_887__is_odd",
    "agreed_inputs": 85,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 81,
    "difference": {
     "eval_said": false,
     "input": [
-     10
+     8
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4527,16 +5097,29 @@
    "eval": "mbpp_362__max_occurrences",
    "agreed_inputs": 86,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
-    "eval_said": "raised",
+    "eval_said": -1,
     "input": [
-     []
+     [
+      -1,
+      11,
+      6,
+      4,
+      -1,
+      0,
+      1,
+      11,
+      0,
+      4
+     ]
     ],
-    "kind": "one raised",
-    "train_said": [],
-    "where": "draw"
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw_eval"
    }
   },
   {
@@ -4547,16 +5130,36 @@
    "eval": "mbpp_658__max_occurrences",
    "agreed_inputs": 86,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
-    "eval_said": "raised",
+    "eval_said": 4,
     "input": [
-     []
+     [
+      4,
+      1,
+      0,
+      11,
+      11,
+      11,
+      4,
+      3,
+      0,
+      9,
+      4,
+      7,
+      9,
+      5,
+      6,
+      -1,
+      0
+     ]
     ],
-    "kind": "one raised",
-    "train_said": [],
-    "where": "draw"
+    "kind": "disagree",
+    "train_said": 0,
+    "where": "draw_eval"
    }
   },
   {
@@ -4567,6 +5170,8 @@
    "eval": "mbpp_937__max_char",
    "agreed_inputs": 94,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 88,
    "difference": {
@@ -4576,7 +5181,7 @@
     ],
     "kind": "one raised",
     "train_said": [],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4587,6 +5192,8 @@
    "eval": "mbpp_687__recur_gcd",
    "agreed_inputs": 103,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 97,
    "difference": {
@@ -4597,7 +5204,7 @@
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -4608,43 +5215,18 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 71,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 65,
    "difference": {
-    "eval_said": [
-     0,
-     1,
-     3,
-     9,
-     11,
-     11,
-     11,
-     -1
-    ],
+    "eval_said": "raised",
     "input": [
-     [
-      -1,
-      11,
-      11,
-      9,
-      11,
-      3,
-      0,
-      1
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": [
-     -1,
-     0,
-     1,
-     3,
-     9,
-     11,
-     11,
-     11
-    ],
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw_eval"
    }
   },
   {
@@ -4655,43 +5237,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 65,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 59,
    "difference": {
-    "eval_said": [
-     0,
-     0,
-     1,
-     3,
-     9,
-     11,
-     11,
-     11
-    ],
+    "eval_said": 101,
     "input": [
      [
-      -1,
-      11,
-      11,
-      9,
-      11,
-      3,
-      0,
-      1
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     -1,
-     0,
-     1,
-     3,
-     9,
-     11,
-     11,
-     11
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4702,30 +5263,49 @@
    "eval": "mbpp_800__remove_all_spaces",
    "agreed_inputs": 94,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 88,
    "difference": {
     "eval_said": [
-     81,
-     48,
-     63
+     88,
+     85,
+     46,
+     63,
+     34,
+     105,
+     116,
+     55
     ],
     "input": [
      [
-      81,
+      88,
+      85,
       30,
-      48,
-      63
+      46,
+      63,
+      34,
+      105,
+      116,
+      30,
+      55
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     81,
+     88,
+     85,
      30,
-     48,
-     63
+     46,
+     63,
+     34,
+     105,
+     116,
+     30,
+     55
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4736,22 +5316,32 @@
    "eval": "mbpp_729__add_list",
    "agreed_inputs": 67,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 61,
    "difference": {
-    "eval_said": [],
+    "eval_said": [
+     1,
+     8,
+     10
+    ],
     "input": [
      [
-      12,
-      15,
-      29,
-      32
+      -1,
+      0,
+      2,
+      2
      ],
-     []
+     [
+      2,
+      8,
+      8
+     ]
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4762,25 +5352,27 @@
    "eval": "mbpp_175__is_valid_parenthese",
    "agreed_inputs": 79,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 73,
    "difference": {
     "eval_said": false,
     "input": [
      [
-      127,
-      49,
-      46,
-      48,
-      80,
-      82,
-      94,
-      104
+      74,
+      111,
+      99,
+      50,
+      47,
+      97,
+      79,
+      124
      ]
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4791,21 +5383,21 @@
    "eval": "mbpp_38__div_even_odd",
    "agreed_inputs": 71,
    "own_inputs": 3,
+   "own_agreed": 3,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 68,
    "difference": {
-    "eval_said": 0.4,
+    "eval_said": 2,
     "input": [
      [
-      2,
-      5,
-      8,
-      1
+      6,
+      3
      ]
     ],
     "kind": "disagree",
-    "train_said": 10,
-    "where": "draw"
+    "train_said": 18,
+    "where": "draw_eval"
    }
   },
   {
@@ -4816,6 +5408,8 @@
    "eval": "mbpp_565__split",
    "agreed_inputs": 97,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 91,
    "difference": {
@@ -4843,7 +5437,7 @@
      2,
      3
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -4854,25 +5448,18 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 86,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
-    "eval_said": [
-     10,
-     1
-    ],
+    "eval_said": "raised",
     "input": [
-     [
-      1,
-      10
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": [
-     1,
-     10
-    ],
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": [],
+    "where": "draw_eval"
    }
   },
   {
@@ -4883,20 +5470,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 95,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 89,
    "difference": {
-    "eval_said": 14,
+    "eval_said": 101,
     "input": [
      [
-      14
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     14
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4907,18 +5496,20 @@
    "eval": "mbpp_402__ncr_modp",
    "agreed_inputs": 89,
    "own_inputs": 5,
+   "own_agreed": 5,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 84,
    "difference": {
     "eval_said": 0,
     "input": [
      0,
-     2,
-     9
+     1,
+     10
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4929,6 +5520,8 @@
    "eval": "mbpp_32__max_Prime_Factors",
    "agreed_inputs": 104,
    "own_inputs": 7,
+   "own_agreed": 7,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 97,
    "difference": {
@@ -4938,7 +5531,7 @@
     ],
     "kind": "disagree",
     "train_said": 1,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -4949,6 +5542,8 @@
    "eval": "mbpp_492__binary_search",
    "agreed_inputs": 99,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 95,
    "difference": {
@@ -4966,7 +5561,7 @@
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -4977,6 +5572,8 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 75,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 71,
    "difference": {
@@ -4988,7 +5585,7 @@
     ],
     "kind": "disagree",
     "train_said": 0,
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -4999,29 +5596,19 @@
    "eval": "mbpp_899__check",
    "agreed_inputs": 22,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 18,
    "difference": {
-    "eval_said": true,
+    "eval_said": "raised",
     "input": [
-     [
-      47,
-      89,
-      63,
-      81,
-      106,
-      73,
-      75,
-      67,
-      36,
-      108,
-      109
-     ],
-     2
+     [],
+     3
     ],
-    "kind": "disagree",
+    "kind": "one raised",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5032,18 +5619,20 @@
    "eval": "mbpp_463__max_subarray_product",
    "agreed_inputs": 98,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 94,
    "difference": {
     "eval_said": 1,
     "input": [
      [
-      -3
+      0
      ]
     ],
     "kind": "disagree",
-    "train_said": -3,
-    "where": "draw"
+    "train_said": 0,
+    "where": "draw_eval"
    }
   },
   {
@@ -5054,20 +5643,25 @@
    "eval": "mbpp_736__left_insertion",
    "agreed_inputs": 29,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 25,
    "difference": {
-    "eval_said": 1,
+    "eval_said": 5,
     "input": [
      [
-      0,
+      1,
+      2,
+      3,
+      5,
       5
      ],
-     2
+     7
     ],
     "kind": "disagree",
-    "train_said": 5,
-    "where": "draw"
+    "train_said": 3,
+    "where": "draw_eval"
    }
   },
   {
@@ -5078,16 +5672,62 @@
    "eval": "mbpp_269__ascii_value",
    "agreed_inputs": 93,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 89,
    "difference": {
-    "eval_said": 4,
+    "eval_said": 12,
     "input": [
-     4
+     12
     ],
     "kind": "disagree",
-    "train_said": 8,
-    "where": "draw"
+    "train_said": 4010,
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200294,
+   "train": "apps_294__totalNQueens",
+   "eval_id": 518,
+   "eval": "mbpp_518__sqrt_root",
+   "agreed_inputs": 21,
+   "own_inputs": 3,
+   "own_agreed": 1,
+   "own_unanswered": 2,
+   "draws": 100,
+   "draws_agreed": 20,
+   "difference": {
+    "eval_said": 2.8284271247461903,
+    "input": [
+     8
+    ],
+    "kind": "disagree",
+    "train_said": 92,
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200294,
+   "train": "apps_294__totalNQueens",
+   "eval_id": 849,
+   "eval": "mbpp_849__Sum",
+   "agreed_inputs": 13,
+   "own_inputs": 4,
+   "own_agreed": 1,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 12,
+   "difference": {
+    "eval_said": 7,
+    "input": [
+     7
+    ],
+    "kind": "disagree",
+    "train_said": 40,
+    "where": "draw_eval"
    }
   },
   {
@@ -5098,20 +5738,22 @@
    "eval": "mbpp_45__get_gcd",
    "agreed_inputs": 23,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 19,
    "difference": {
-    "eval_said": 1,
+    "eval_said": 2,
     "input": [
      [
-      0,
       4,
-      5
+      14,
+      18
      ]
     ],
     "kind": "disagree",
-    "train_said": 0,
-    "where": "draw"
+    "train_said": 4,
+    "where": "draw_eval"
    }
   },
   {
@@ -5122,6 +5764,8 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 80,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 76,
    "difference": {
@@ -5138,7 +5782,7 @@
     ],
     "kind": "disagree",
     "train_said": -3,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5149,21 +5793,21 @@
    "eval": "mbpp_66__pos_count",
    "agreed_inputs": 26,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 22,
    "difference": {
-    "eval_said": 4,
+    "eval_said": 1,
     "input": [
      [
-      1,
       4,
-      5,
-      14
+      -3
      ]
     ],
     "kind": "disagree",
     "train_said": 2,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5174,22 +5818,96 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 95,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 91,
    "difference": {
-    "eval_said": 5,
+    "eval_said": 7,
     "input": [
      [
-      91,
-      50,
-      71,
-      71,
-      94
+      120,
+      111,
+      110,
+      106,
+      123,
+      102,
+      102
      ]
     ],
     "kind": "disagree",
-    "train_said": 6,
-    "where": "draw"
+    "train_said": 8,
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200361,
+   "train": "apps_361__tilingRectangle",
+   "eval_id": 375,
+   "eval": "mbpp_375__round_num",
+   "agreed_inputs": 23,
+   "own_inputs": 4,
+   "own_agreed": 1,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 22,
+   "difference": {
+    "eval_said": 2,
+    "input": [
+     2,
+     2
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw_train"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200370,
+   "train": "apps_370__largestComponentSize",
+   "eval_id": 313,
+   "eval": "mbpp_313__pos_nos",
+   "agreed_inputs": 4,
+   "own_inputs": 4,
+   "own_agreed": 1,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 3,
+   "difference": {
+    "eval_said": null,
+    "input": [
+     []
+    ],
+    "kind": "one raised",
+    "train_said": "raised",
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 200370,
+   "train": "apps_370__largestComponentSize",
+   "eval_id": 443,
+   "eval": "mbpp_443__largest_neg",
+   "agreed_inputs": 4,
+   "own_inputs": 4,
+   "own_agreed": 1,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 3,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     [
+      1,
+      0
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 2,
+    "where": "draw_eval"
    }
   },
   {
@@ -5200,22 +5918,21 @@
    "eval": "mbpp_472__check_Consecutive",
    "agreed_inputs": 72,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 68,
    "difference": {
     "eval_said": false,
     "input": [
      [
-      -1,
-      0,
-      1,
-      6,
-      9
+      2,
+      2
      ]
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5226,20 +5943,18 @@
    "eval": "mbpp_670__decreasing_trend",
    "agreed_inputs": 54,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 50,
    "difference": {
     "eval_said": true,
     "input": [
-     [
-      3,
-      3,
-      4
-     ]
+     []
     ],
     "kind": "disagree",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5250,20 +5965,18 @@
    "eval": "mbpp_680__increasing_trend",
    "agreed_inputs": 57,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 53,
    "difference": {
     "eval_said": true,
     "input": [
-     [
-      3,
-      3,
-      4
-     ]
+     []
     ],
     "kind": "disagree",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5274,6 +5987,8 @@
    "eval": "mbpp_224__count_Set_Bits",
    "agreed_inputs": 76,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 72,
    "difference": {
@@ -5283,7 +5998,7 @@
     ],
     "kind": "disagree",
     "train_said": 3,
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -5294,18 +6009,22 @@
    "eval": "mbpp_45__get_gcd",
    "agreed_inputs": 20,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 16,
    "difference": {
-    "eval_said": "raised",
+    "eval_said": 2,
     "input": [
      [
-      6
+      4,
+      14,
+      18
      ]
     ],
-    "kind": "one raised",
-    "train_said": 6,
-    "where": "draw"
+    "kind": "disagree",
+    "train_said": 4,
+    "where": "draw_eval"
    }
   },
   {
@@ -5316,23 +6035,25 @@
    "eval": "mbpp_443__largest_neg",
    "agreed_inputs": 68,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 64,
    "difference": {
-    "eval_said": 0,
+    "eval_said": -8,
     "input": [
      [
-      1,
-      2,
-      6,
-      6,
+      -6,
       5,
-      0
+      -2,
+      -3,
+      2,
+      -8
      ]
     ],
     "kind": "disagree",
-    "train_said": 6,
-    "where": "draw"
+    "train_said": -3,
+    "where": "draw_eval"
    }
   },
   {
@@ -5343,23 +6064,18 @@
    "eval": "mbpp_670__decreasing_trend",
    "agreed_inputs": 30,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 26,
    "difference": {
     "eval_said": true,
     "input": [
-     [
-      -1,
-      2,
-      4,
-      4,
-      8,
-      9
-     ]
+     []
     ],
     "kind": "disagree",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5370,6 +6086,8 @@
    "eval": "mbpp_565__split",
    "agreed_inputs": 84,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 80,
    "difference": {
@@ -5385,7 +6103,29 @@
     "train_said": [
      -5
     ],
-    "where": "draw"
+    "where": "draw_train"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 201645,
+   "train": "apps_1645__sum_of_squares",
+   "eval_id": 325,
+   "eval": "mbpp_325__get_Min_Squares",
+   "agreed_inputs": 96,
+   "own_inputs": 11,
+   "own_agreed": 8,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 88,
+   "difference": {
+    "eval_said": 0,
+    "input": [
+     0
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw_eval"
    }
   },
   {
@@ -5396,16 +6136,18 @@
    "eval": "mbpp_605__prime_num",
    "agreed_inputs": 69,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 65,
    "difference": {
-    "eval_said": false,
+    "eval_said": null,
     "input": [
-     28
+     5
     ],
     "kind": "disagree",
-    "train_said": true,
-    "where": "draw"
+    "train_said": false,
+    "where": "draw_eval"
    }
   },
   {
@@ -5416,6 +6158,8 @@
    "eval": "mbpp_813__string_length",
    "agreed_inputs": 90,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86,
    "difference": {
@@ -5429,7 +6173,7 @@
     ],
     "kind": "disagree",
     "train_said": -1,
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -5440,16 +6184,18 @@
    "eval": "mbpp_518__sqrt_root",
    "agreed_inputs": 37,
    "own_inputs": 3,
+   "own_agreed": 3,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 34,
    "difference": {
-    "eval_said": 1.7320508075688772,
+    "eval_said": 2.8284271247461903,
     "input": [
-     3
+     8
     ],
     "kind": "disagree",
-    "train_said": 1,
-    "where": "draw"
+    "train_said": 2,
+    "where": "draw_eval"
    }
   },
   {
@@ -5460,18 +6206,20 @@
    "eval": "mbpp_741__all_Characters_Same",
    "agreed_inputs": 90,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86,
    "difference": {
     "eval_said": true,
     "input": [
      [
-      73
+      112
      ]
     ],
     "kind": "disagree",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5482,22 +6230,23 @@
    "eval": "mbpp_919__multiply_list",
    "agreed_inputs": 37,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 33,
    "difference": {
-    "eval_said": -30,
+    "eval_said": -12,
     "input": [
      [
-      -1,
       1,
-      2,
       3,
-      5
+      4,
+      -1
      ]
     ],
     "kind": "disagree",
-    "train_said": 30,
-    "where": "draw"
+    "train_said": 12,
+    "where": "draw_eval"
    }
   },
   {
@@ -5508,21 +6257,18 @@
    "eval": "mbpp_741__all_Characters_Same",
    "agreed_inputs": 59,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 55,
    "difference": {
-    "eval_said": false,
+    "eval_said": true,
     "input": [
-     [
-      1,
-      3,
-      5,
-      5
-     ]
+     []
     ],
     "kind": "disagree",
-    "train_said": true,
-    "where": "draw"
+    "train_said": false,
+    "where": "draw_eval"
    }
   },
   {
@@ -5533,30 +6279,30 @@
    "eval": "mbpp_885__is_Isomorphic",
    "agreed_inputs": 100,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 96,
    "difference": {
     "eval_said": false,
     "input": [
      [
-      37,
-      81,
-      85,
       104,
-      32,
-      104
+      97,
+      110,
+      115
      ],
      [
-      89,
-      58,
-      94,
-      67,
-      72
+      111,
+      103,
+      103,
+      117,
+      108
      ]
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5567,16 +6313,18 @@
    "eval": "mbpp_683__sum_Square",
    "agreed_inputs": 48,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 44,
    "difference": {
     "eval_said": false,
     "input": [
-     6
+     30
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5587,22 +6335,18 @@
    "eval": "mbpp_937__max_char",
    "agreed_inputs": 32,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 28,
    "difference": {
-    "eval_said": 0,
+    "eval_said": "raised",
     "input": [
-     [
-      -1,
-      -1,
-      1,
-      3,
-      4
-     ]
+     []
     ],
-    "kind": "disagree",
-    "train_said": -1,
-    "where": "draw"
+    "kind": "one raised",
+    "train_said": null,
+    "where": "draw_eval"
    }
   },
   {
@@ -5613,24 +6357,19 @@
    "eval": "mbpp_899__check",
    "agreed_inputs": 27,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 23,
    "difference": {
-    "eval_said": true,
+    "eval_said": "raised",
     "input": [
-     [
-      2,
-      3,
-      4,
-      3,
-      4,
-      3
-     ],
-     0
+     [],
+     3
     ],
-    "kind": "disagree",
+    "kind": "one raised",
     "train_said": false,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5641,20 +6380,22 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 94,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86,
    "difference": {
     "eval_said": [
-     53
+     79
     ],
     "input": [
      [
-      53
+      79
      ]
     ],
     "kind": "disagree",
-    "train_said": 53,
-    "where": "draw"
+    "train_said": 79,
+    "where": "draw_eval"
    }
   },
   {
@@ -5665,20 +6406,22 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 98,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 90,
    "difference": {
     "eval_said": [
-     53
+     24
     ],
     "input": [
      [
-      53
+      24
      ]
     ],
     "kind": "disagree",
-    "train_said": 53,
-    "where": "draw"
+    "train_said": 24,
+    "where": "draw_eval"
    }
   },
   {
@@ -5689,16 +6432,22 @@
    "eval": "mbpp_516__radix_sort",
    "agreed_inputs": 83,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 75,
    "difference": {
-    "eval_said": "raised",
-    "input": [
-     []
+    "eval_said": [
+     80
     ],
-    "kind": "one raised",
-    "train_said": [],
-    "where": "draw"
+    "input": [
+     [
+      80
+     ]
+    ],
+    "kind": "disagree",
+    "train_said": 80,
+    "where": "draw_eval"
    }
   },
   {
@@ -5709,6 +6458,8 @@
    "eval": "mbpp_919__multiply_list",
    "agreed_inputs": 87,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 83,
    "difference": {
@@ -5718,7 +6469,7 @@
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5729,55 +6480,48 @@
    "eval": "mbpp_604__reverse_words",
    "agreed_inputs": 90,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 86,
    "difference": {
     "eval_said": [
-     60,
-     95,
+     105,
+     109,
+     69,
+     94,
+     61,
      32,
-     90,
-     115,
-     43,
-     91,
-     40,
-     59,
-     58,
-     103,
-     76
+     38,
+     86,
+     41
     ],
     "input": [
      [
-      90,
-      115,
-      43,
-      91,
-      40,
-      59,
-      58,
-      103,
-      76,
+      38,
+      86,
+      41,
       31,
-      60,
-      95
+      105,
+      109,
+      69,
+      94,
+      61
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     90,
-     115,
-     43,
-     91,
-     40,
-     59,
-     58,
-     103,
-     76,
+     38,
+     86,
+     41,
      31,
-     60,
-     95
+     105,
+     109,
+     69,
+     94,
+     61
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5788,6 +6532,8 @@
    "eval": "mbpp_141__pancake_sort",
    "agreed_inputs": 88,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 84,
    "difference": {
@@ -5806,7 +6552,7 @@
      2,
      -5
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -5817,6 +6563,8 @@
    "eval": "mbpp_428__shell_sort",
    "agreed_inputs": 88,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 84,
    "difference": {
@@ -5835,7 +6583,7 @@
      2,
      -5
     ],
-    "where": "draw"
+    "where": "draw_train"
    }
   },
   {
@@ -5846,28 +6594,22 @@
    "eval": "mbpp_877__sort_String",
    "agreed_inputs": 60,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 56,
    "difference": {
-    "eval_said": [
-     0,
-     3,
-     6
-    ],
+    "eval_said": 101,
     "input": [
      [
-      -1,
-      6,
-      3
+      101
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     -1,
-     3,
-     6
+     101
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5878,27 +6620,30 @@
    "eval": "mbpp_885__is_Isomorphic",
    "agreed_inputs": 106,
    "own_inputs": 9,
+   "own_agreed": 9,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 97,
    "difference": {
     "eval_said": false,
     "input": [
      [
-      100,
-      96,
-      96,
-      100,
-      101
+      104,
+      97,
+      110,
+      115
      ],
      [
-      96,
-      97,
-      99
+      111,
+      103,
+      103,
+      117,
+      108
      ]
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5909,6 +6654,8 @@
    "eval": "mbpp_96__divisor",
    "agreed_inputs": 85,
    "own_inputs": 9,
+   "own_agreed": 8,
+   "own_unanswered": 1,
    "draws": 100,
    "draws_agreed": 77,
    "difference": {
@@ -5918,7 +6665,51 @@
     ],
     "kind": "one raised",
     "train_said": 0,
-    "where": "draw"
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203731,
+   "train": "apps_3731__square_sums_row",
+   "eval_id": 20,
+   "eval": "mbpp_20__is_woodall",
+   "agreed_inputs": 36,
+   "own_inputs": 5,
+   "own_agreed": 2,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 34,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     0
+    ],
+    "kind": "disagree",
+    "train_said": [],
+    "where": "draw_train"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 203731,
+   "train": "apps_3731__square_sums_row",
+   "eval_id": 711,
+   "eval": "mbpp_711__product_Equal",
+   "agreed_inputs": 41,
+   "own_inputs": 5,
+   "own_agreed": 2,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 39,
+   "difference": {
+    "eval_said": false,
+    "input": [
+     0
+    ],
+    "kind": "disagree",
+    "train_said": [],
+    "where": "draw_train"
    }
   },
   {
@@ -5929,6 +6720,8 @@
    "eval": "mbpp_20__is_woodall",
    "agreed_inputs": 97,
    "own_inputs": 6,
+   "own_agreed": 6,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 91,
    "difference": {
@@ -5938,7 +6731,7 @@
     ],
     "kind": "disagree",
     "train_said": true,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5949,6 +6742,8 @@
    "eval": "mbpp_798___sum",
    "agreed_inputs": 100,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 89,
    "difference": {
@@ -5963,7 +6758,7 @@
     ],
     "kind": "disagree",
     "train_said": 8,
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -5974,59 +6769,49 @@
    "eval": "mbpp_800__remove_all_spaces",
    "agreed_inputs": 84,
    "own_inputs": 8,
+   "own_agreed": 8,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 76,
    "difference": {
     "eval_said": [
-     55,
-     79,
-     78,
-     40,
-     45,
-     94,
-     104,
-     64,
-     72,
+     88,
      85,
-     50,
-     64
+     46,
+     63,
+     34,
+     105,
+     116,
+     55
     ],
     "input": [
      [
-      55,
-      79,
-      78,
-      40,
-      45,
-      94,
-      104,
-      64,
-      30,
-      72,
+      88,
       85,
-      31,
-      50,
-      64
+      30,
+      46,
+      63,
+      34,
+      105,
+      116,
+      30,
+      55
      ]
     ],
     "kind": "disagree",
     "train_said": [
-     55,
-     79,
-     78,
-     40,
-     45,
-     94,
-     104,
-     64,
-     30,
-     72,
+     88,
      85,
-     31,
-     50,
-     64
+     30,
+     46,
+     63,
+     34,
+     105,
+     116,
+     30,
+     55
     ],
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -6037,23 +6822,48 @@
    "eval": "mbpp_489__frequency_Of_Largest",
    "agreed_inputs": 17,
    "own_inputs": 4,
+   "own_agreed": 4,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 13,
    "difference": {
     "eval_said": 1,
     "input": [
-     0,
+     2,
      [
+      0,
       2,
-      6,
+      3,
       5,
-      5,
-      4
+      5
      ]
     ],
     "kind": "disagree",
     "train_said": 0,
-    "where": "draw"
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 304176,
+   "train": "apps_104176__apps_stdin_4176",
+   "eval_id": 876,
+   "eval": "mbpp_876__lcm",
+   "agreed_inputs": 82,
+   "own_inputs": 11,
+   "own_agreed": 4,
+   "own_unanswered": 7,
+   "draws": 100,
+   "draws_agreed": 78,
+   "difference": {
+    "eval_said": "raised",
+    "input": [
+     0,
+     11
+    ],
+    "kind": "one raised",
+    "train_said": 0,
+    "where": "draw_eval"
    }
   },
   {
@@ -6064,17 +6874,41 @@
    "eval": "mbpp_502__find",
    "agreed_inputs": 71,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 60,
    "difference": {
     "eval_said": 4,
     "input": [
-     14,
+     4,
      5
     ],
     "kind": "disagree",
     "train_said": 1,
-    "where": "draw"
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 3762772,
+   "train": "apps_3562772__cc_stdin_p03544_AtCoder_Beginner_Contest_079___Lucas_Number",
+   "eval_id": 389,
+   "eval": "mbpp_389__find_lucas",
+   "agreed_inputs": 97,
+   "own_inputs": 9,
+   "own_agreed": 6,
+   "own_unanswered": 3,
+   "draws": 100,
+   "draws_agreed": 91,
+   "difference": {
+    "eval_said": 2,
+    "input": [
+     0
+    ],
+    "kind": "disagree",
+    "train_said": 1,
+    "where": "draw_eval"
    }
   },
   {
@@ -6085,6 +6919,8 @@
    "eval": "mbpp_302__set_Bit_Number",
    "agreed_inputs": 108,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 97,
    "difference": {
@@ -6094,7 +6930,7 @@
     ],
     "kind": "one raised",
     "train_said": "raised",
-    "where": "draw"
+    "where": "draw_eval"
    }
   },
   {
@@ -6105,6 +6941,8 @@
    "eval": "mbpp_339__find_Divisor",
    "agreed_inputs": 107,
    "own_inputs": 11,
+   "own_agreed": 11,
+   "own_unanswered": 0,
    "draws": 100,
    "draws_agreed": 96,
    "difference": {
@@ -6115,372 +6953,40 @@
     ],
     "kind": "disagree",
     "train_said": 2,
-    "where": "draw"
+    "where": "draw_eval"
+   }
+  },
+  {
+   "pool": "v6",
+   "train_id": 10980869,
+   "train": "apps_10780869__cc_stdin_318_A__Even_Odds",
+   "eval_id": 844,
+   "eval": "mbpp_844__get_Number",
+   "agreed_inputs": 59,
+   "own_inputs": 10,
+   "own_agreed": 6,
+   "own_unanswered": 4,
+   "draws": 100,
+   "draws_agreed": 53,
+   "difference": {
+    "eval_said": 2,
+    "input": [
+     2,
+     0
+    ],
+    "kind": "disagree",
+    "train_said": -1,
+    "where": "draw_eval"
    }
   }
  ],
- "insufficient_evidence": [
-  {
-   "pool": "v5",
-   "train_id": 200294,
-   "train": "apps_294__totalNQueens",
-   "eval_id": 518,
-   "eval": "mbpp_518__sqrt_root",
-   "agreed_inputs": 1,
-   "own_inputs": 3,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 102
-  },
-  {
-   "pool": "v5",
-   "train_id": 200294,
-   "train": "apps_294__totalNQueens",
-   "eval_id": 849,
-   "eval": "mbpp_849__Sum",
-   "agreed_inputs": 1,
-   "own_inputs": 4,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v5",
-   "train_id": 200370,
-   "train": "apps_370__largestComponentSize",
-   "eval_id": 313,
-   "eval": "mbpp_313__pos_nos",
-   "agreed_inputs": 1,
-   "own_inputs": 4,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v5",
-   "train_id": 200370,
-   "train": "apps_370__largestComponentSize",
-   "eval_id": 443,
-   "eval": "mbpp_443__largest_neg",
-   "agreed_inputs": 1,
-   "own_inputs": 4,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v5",
-   "train_id": 201645,
-   "train": "apps_1645__sum_of_squares",
-   "eval_id": 325,
-   "eval": "mbpp_325__get_Min_Squares",
-   "agreed_inputs": 8,
-   "own_inputs": 11,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v5",
-   "train_id": 203579,
-   "train": "apps_3579__choose",
-   "eval_id": 28,
-   "eval": "mbpp_28__binomial_Coeff",
-   "agreed_inputs": 7,
-   "own_inputs": 11,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 104
-  },
-  {
-   "pool": "v5",
-   "train_id": 203731,
-   "train": "apps_3731__square_sums_row",
-   "eval_id": 20,
-   "eval": "mbpp_20__is_woodall",
-   "agreed_inputs": 2,
-   "own_inputs": 5,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v5",
-   "train_id": 203731,
-   "train": "apps_3731__square_sums_row",
-   "eval_id": 711,
-   "eval": "mbpp_711__product_Equal",
-   "agreed_inputs": 2,
-   "own_inputs": 5,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v5",
-   "train_id": 204032,
-   "train": "apps_4032__solve",
-   "eval_id": 583,
-   "eval": "mbpp_583__catalan_number",
-   "agreed_inputs": 80,
-   "own_inputs": 8,
-   "draws": 100,
-   "draws_agreed": 73,
-   "undefined": 28
-  },
-  {
-   "pool": "v5",
-   "train_id": 204712,
-   "train": "apps_4712__lucasnum",
-   "eval_id": 389,
-   "eval": "mbpp_389__find_lucas",
-   "agreed_inputs": 3,
-   "own_inputs": 5,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 102
-  },
-  {
-   "pool": "v5",
-   "train_id": 204714,
-   "train": "apps_4714__remainder",
-   "eval_id": 502,
-   "eval": "mbpp_502__find",
-   "agreed_inputs": 42,
-   "own_inputs": 8,
-   "draws": 100,
-   "draws_agreed": 34,
-   "undefined": 66
-  },
-  {
-   "pool": "v6",
-   "train_id": 200294,
-   "train": "apps_294__totalNQueens",
-   "eval_id": 518,
-   "eval": "mbpp_518__sqrt_root",
-   "agreed_inputs": 1,
-   "own_inputs": 3,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 102
-  },
-  {
-   "pool": "v6",
-   "train_id": 200294,
-   "train": "apps_294__totalNQueens",
-   "eval_id": 849,
-   "eval": "mbpp_849__Sum",
-   "agreed_inputs": 1,
-   "own_inputs": 4,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v6",
-   "train_id": 200370,
-   "train": "apps_370__largestComponentSize",
-   "eval_id": 313,
-   "eval": "mbpp_313__pos_nos",
-   "agreed_inputs": 1,
-   "own_inputs": 4,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v6",
-   "train_id": 200370,
-   "train": "apps_370__largestComponentSize",
-   "eval_id": 443,
-   "eval": "mbpp_443__largest_neg",
-   "agreed_inputs": 1,
-   "own_inputs": 4,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v6",
-   "train_id": 201645,
-   "train": "apps_1645__sum_of_squares",
-   "eval_id": 325,
-   "eval": "mbpp_325__get_Min_Squares",
-   "agreed_inputs": 8,
-   "own_inputs": 11,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v6",
-   "train_id": 203579,
-   "train": "apps_3579__choose",
-   "eval_id": 28,
-   "eval": "mbpp_28__binomial_Coeff",
-   "agreed_inputs": 7,
-   "own_inputs": 11,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 104
-  },
-  {
-   "pool": "v6",
-   "train_id": 203731,
-   "train": "apps_3731__square_sums_row",
-   "eval_id": 20,
-   "eval": "mbpp_20__is_woodall",
-   "agreed_inputs": 2,
-   "own_inputs": 5,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v6",
-   "train_id": 203731,
-   "train": "apps_3731__square_sums_row",
-   "eval_id": 711,
-   "eval": "mbpp_711__product_Equal",
-   "agreed_inputs": 2,
-   "own_inputs": 5,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 103
-  },
-  {
-   "pool": "v6",
-   "train_id": 204032,
-   "train": "apps_4032__solve",
-   "eval_id": 583,
-   "eval": "mbpp_583__catalan_number",
-   "agreed_inputs": 80,
-   "own_inputs": 8,
-   "draws": 100,
-   "draws_agreed": 73,
-   "undefined": 28
-  },
-  {
-   "pool": "v6",
-   "train_id": 204712,
-   "train": "apps_4712__lucasnum",
-   "eval_id": 389,
-   "eval": "mbpp_389__find_lucas",
-   "agreed_inputs": 3,
-   "own_inputs": 5,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 102
-  },
-  {
-   "pool": "v6",
-   "train_id": 204714,
-   "train": "apps_4714__remainder",
-   "eval_id": 502,
-   "eval": "mbpp_502__find",
-   "agreed_inputs": 42,
-   "own_inputs": 8,
-   "draws": 100,
-   "draws_agreed": 34,
-   "undefined": 66
-  },
-  {
-   "pool": "v6",
-   "train_id": 304176,
-   "train": "apps_104176__apps_stdin_4176",
-   "eval_id": 876,
-   "eval": "mbpp_876__lcm",
-   "agreed_inputs": 5,
-   "own_inputs": 11,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 106
-  },
-  {
-   "pool": "v6",
-   "train_id": 304681,
-   "train": "apps_104681__apps_stdin_4681",
-   "eval_id": 389,
-   "eval": "mbpp_389__find_lucas",
-   "agreed_inputs": 104,
-   "own_inputs": 5,
-   "draws": 100,
-   "draws_agreed": 100,
-   "undefined": 1
-  },
-  {
-   "pool": "v6",
-   "train_id": 3762772,
-   "train": "apps_3562772__cc_stdin_p03544_AtCoder_Beginner_Contest_079___Lucas_Number",
-   "eval_id": 389,
-   "eval": "mbpp_389__find_lucas",
-   "agreed_inputs": 7,
-   "own_inputs": 9,
-   "draws": 100,
-   "draws_agreed": 0,
-   "undefined": 102
-  }
- ],
+ "undecided": [],
  "references_not_run": [
-  {
-   "pool": "v5",
-   "id": 200179,
-   "name": "apps_179__getLengthOfOptimalCompression",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 200215,
-   "name": "apps_215__isGoodArray",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 200229,
-   "name": "apps_229__canReorderDoubled",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 200242,
-   "name": "apps_242__maxEqualFreq",
-   "why": "reference raised on every input it was given"
-  },
   {
    "pool": "v5",
    "id": 200259,
    "name": "apps_259__smallestDivisor",
    "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
-  },
-  {
-   "pool": "v5",
-   "id": 200278,
-   "name": "apps_278__largestMultipleOfThree",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 200297,
-   "name": "apps_297__numTilePossibilities",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 200300,
-   "name": "apps_300__leastOpsExpressTarget",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 200365,
-   "name": "apps_365__uniqueLetterString",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 200426,
-   "name": "apps_426__reorderedPowerOf2",
-   "why": "reference raised on every input it was given"
   },
   {
    "pool": "v5",
@@ -6499,24 +7005,6 @@
    "id": 201666,
    "name": "apps_1666__solution",
    "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
-  },
-  {
-   "pool": "v5",
-   "id": 201669,
-   "name": "apps_1669__isNStraightHand",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 202414,
-   "name": "apps_2414__countGoodTriplets",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v5",
-   "id": 202443,
-   "name": "apps_2443__maxNumberOfBalloons",
-   "why": "reference raised on every input it was given"
   },
   {
    "pool": "v5",
@@ -6616,63 +7104,9 @@
   },
   {
    "pool": "v6",
-   "id": 200179,
-   "name": "apps_179__getLengthOfOptimalCompression",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 200215,
-   "name": "apps_215__isGoodArray",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 200229,
-   "name": "apps_229__canReorderDoubled",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 200242,
-   "name": "apps_242__maxEqualFreq",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
    "id": 200259,
    "name": "apps_259__smallestDivisor",
    "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
-  },
-  {
-   "pool": "v6",
-   "id": 200278,
-   "name": "apps_278__largestMultipleOfThree",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 200297,
-   "name": "apps_297__numTilePossibilities",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 200300,
-   "name": "apps_300__leastOpsExpressTarget",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 200365,
-   "name": "apps_365__uniqueLetterString",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 200426,
-   "name": "apps_426__reorderedPowerOf2",
-   "why": "reference raised on every input it was given"
   },
   {
    "pool": "v6",
@@ -6691,24 +7125,6 @@
    "id": 201666,
    "name": "apps_1666__solution",
    "why": "reference does not load (no code, an import or syntax error, or the function is missing)"
-  },
-  {
-   "pool": "v6",
-   "id": 201669,
-   "name": "apps_1669__isNStraightHand",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 202414,
-   "name": "apps_2414__countGoodTriplets",
-   "why": "reference raised on every input it was given"
-  },
-  {
-   "pool": "v6",
-   "id": 202443,
-   "name": "apps_2443__maxNumberOfBalloons",
-   "why": "reference raised on every input it was given"
   },
   {
    "pool": "v6",
