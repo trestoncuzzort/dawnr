@@ -221,6 +221,26 @@ class Quantifier(Expr):
 
 
 @dataclass
+class LetExpr(Expr):
+    """Dafny's let expression (Reference Manual 9.31.7, grammar 17.2.7.39,
+    dafny.org/latest/DafnyRef/DafnyRef#sec-let-expression): `["ghost"] "var"
+    x1[: T1], ..., xn[: Tn] op e1, ..., en ";" body`, the scope of every `xi`
+    being `body` alone (never the right-hand sides). `op` is ":=" (a plain
+    binding, lowered by `lift_let` to `body[x1 := e1, ..., xn := en]`), ":|"
+    (such-that: `rhs` holds the one predicate; a choice, refused
+    `let-such-that`) or ":-" (let-or-fail over a failure-compatible datatype,
+    refused `let-or-fail`). rprint prints every binder's inferred type; the
+    source cross-check (row 32) may put an untyped source binder in its
+    place, so `binders[i].type` can be `None`. Tuple and datatype patterns
+    never reach this node: the parser refuses them `let-pattern`."""
+    ghost: bool
+    binders: tuple[Param, ...]
+    op: str                      # ":=" | ":|" | ":-"
+    rhs: tuple[Expr, ...]
+    body: Expr
+
+
+@dataclass
 class SetDisplay(Expr):
     elems: tuple[Expr, ...]
 
@@ -811,7 +831,12 @@ class LiftRecord:
     recorded and ignored, never promoted to a refusal. `lowered_task_verdict`
     is the checker file's own lowered-`<Method>` verdict (decision 8's
     dropped hints show up here as UNPROVED, decision 17's own column: never
-    folded into `checker_verdicts` or a `lift-check-failed` refusal)."""
+    folded into `checker_verdicts` or a `lift-check-failed` refusal).
+    `let_substitution` is `lift_let.ScopeExpansion.census()` when the method
+    or its closure held a let expression the lift substituted away (`lets`,
+    `max_uses`, `nodes_before`, `nodes_after`: the size of every clause,
+    body and closure function before and after, in Expr nodes), `{}`
+    otherwise."""
     source_path: str
     method: str
     rprint_sha256: str
@@ -827,3 +852,4 @@ class LiftRecord:
     dafny_exit_codes: dict[str, int] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     lowered_task_verdict: Optional[str] = None
+    let_substitution: dict = field(default_factory=dict)

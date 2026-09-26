@@ -110,7 +110,7 @@ from typing import Optional
 from lift_ast import (
     LiftRecord, MethodDecl, FunctionDecl, Decl, Refusal, Param, Type, Star,
     Expr, IntLit, RealLit, BoolLit, CharLit, StringLit, Ident, Old, Fresh,
-    Unary, Binary, NaryBool, Implies, Iff, Chain, IfExpr, Quantifier,
+    Unary, Binary, NaryBool, Implies, Iff, Chain, IfExpr, LetExpr, Quantifier,
     SetDisplay, MapDisplay, SeqDisplay, Comprehension, TupleExpr, Call,
     Index, Slice, SeqUpdate, Member, Cast, TypeTest, Cardinality,
     RequiresClause, EnsuresClause, InvariantClause, ReadsClause,
@@ -122,6 +122,7 @@ from lift_ast import (
 )
 
 import fuzz_lower
+import lift_let
 import interp
 import harness
 import lower_dafny
@@ -252,6 +253,34 @@ def _print_binder(p: Param, rename: dict) -> str:
     return f"{g}{rename.get(p.name, p.name)}: {_print_type(p.type)}"
 
 
+def _print_let_binder(p: Param, rename: dict) -> str:
+    """A let binder: renamed like `_print_binder`, typed only with a type
+    Dafny itself declares (see `_print_expr`'s `LetExpr` case), and with
+    every `nat` in it read as `int`: the lemma compares values, a `nat`
+    binder would add a subset-type obligation the lemma's free variables
+    cannot always discharge (the source proved it in the method's own
+    context), and the lift itself keeps no such bound."""
+    name = rename.get(p.name, p.name)
+    if p.type is None or p.type.kind == "id" or any(
+            a.kind == "id" for a in _type_args_deep(p.type)):
+        return name
+    return f"{name}: {_print_type(_nat_as_int(p.type))}"
+
+
+def _type_args_deep(t: Type):
+    for a in t.args:
+        yield a
+        yield from _type_args_deep(a)
+
+
+def _nat_as_int(t: Type) -> Type:
+    if t.kind == "nat":
+        return dataclasses.replace(t, kind="int")
+    if t.args:
+        return dataclasses.replace(t, args=tuple(_nat_as_int(a) for a in t.args))
+    return t
+
+
 # ===========================================================================
 # Expression printing. Every compound expression is fully parenthesised;
 # only atoms (literals, names, calls, indexing) are not. The output is
@@ -307,6 +336,19 @@ def _print_expr(e, rename: dict) -> str:
     if isinstance(e, IfExpr):
         return (f"(if {_print_expr(e.cond, rename)} then "
                 f"{_print_expr(e.then, rename)} else {_print_expr(e.else_, rename)})")
+    if isinstance(e, LetExpr):
+        # 2026-09-26: the SOURCE's own let, printed as the source wrote it, so
+        # L_req/L_ens/L_inv_k/L_fun_F make dafny prove the lift's substitution
+        # (lift_let) equivalent to it. Parenthesised: a let's body runs as far
+        # right as it can (dafny.org/latest/DafnyRef/DafnyRef#sec-let-expression).
+        # Binders go through `rename` for the same reason a quantifier's do
+        # (`_print_binder`); a type is printed only when it is one of Dafny's
+        # own, since a user type rprint inferred (a subset type) is not
+        # declared in the checker file and dafny infers it from the right side.
+        g = "ghost " if e.ghost else ""
+        binders = ", ".join(_print_let_binder(b, rename) for b in e.binders)
+        rhs = ", ".join(_print_expr(r, rename) for r in e.rhs)
+        return f"({g}var {binders} {e.op} {rhs}; {_print_expr(e.body, rename)})"
     if isinstance(e, Quantifier):
         binders = ", ".join(_print_binder(b, rename) for b in e.binders)
         rng = f" | {_print_expr(e.range, rename)}" if e.range is not None else ""
@@ -1811,7 +1853,11 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         # parameters (not universally quantified), so a direct call
         # suffices in place of a forall.
         fd_names = {fd.name for fd in fdecls}
-        inv_calls = _find_fun_calls(inv_exprs, fd_names)
+        # Hints are call sites, so they come from the invariants with their lets
+        # substituted (lift_let, 2026-09-26): a call inside a let's body names the
+        # let's variable, which is not in scope at the lemma's top level, and the
+        # substituted call names what that variable was bound to.
+        inv_calls = _find_fun_calls([lift_let.expand(e).node for e in inv_exprs], fd_names)
         # Domain guards of every closure-function call embedded DIRECTLY in
         # the source invariant text (as opposed to one only invoked, under
         # its own guard, from a hint below): the source's own conjunction

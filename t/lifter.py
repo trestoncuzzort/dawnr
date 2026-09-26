@@ -183,7 +183,7 @@ def _refusal_from_dict(d: Optional[dict]) -> Optional[Refusal]:
 def _record_to_dict(rec: Optional[LiftRecord]) -> Optional[dict]:
     if rec is None:
         return None
-    return {
+    out = {
         "source_path": rec.source_path,
         "method": rec.method,
         "rprint_sha256": rec.rprint_sha256,
@@ -200,6 +200,11 @@ def _record_to_dict(rec: Optional[LiftRecord]) -> Optional[dict]:
         "dafny_exit_codes": dict(rec.dafny_exit_codes),
         "warnings": list(rec.warnings),
     }
+    # Only where a let was substituted (lift_let, 2026-09-26), so every other
+    # sidecar is byte for byte what it was.
+    if rec.let_substitution:
+        out["let_substitution"] = dict(rec.let_substitution)
+    return out
 
 
 def _record_from_dict(d: Optional[dict]) -> Optional[LiftRecord]:
@@ -224,6 +229,7 @@ def _record_from_dict(d: Optional[dict]) -> Optional[LiftRecord]:
         differential_verdict=d.get("differential_verdict"),
         dafny_exit_codes=dict(d.get("dafny_exit_codes", {})),
         warnings=list(d.get("warnings", [])),
+        let_substitution=dict(d.get("let_substitution", {})),
     )
 
 

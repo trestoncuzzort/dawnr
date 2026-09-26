@@ -431,6 +431,7 @@ def test_array_program_end_to_end(slow: bool) -> None:
     # Clover_MIN_array, not max. The max file does not parse: it carries a
     # hint-chain expression (a lemma call sequenced before the real result
     # inside a function arm), so the whole FILE refuses `let-expression`
+    # (named `stmt-in-expression` since 2026-09-26, when lets began to lift)
     # before any method is reached. That is not a Mac artifact, it is what
     # this repository's own corpus report says: LIFTER-785.md row
     # "Clover_max_array.dfy | (file) | refused:let-expression". So the test
