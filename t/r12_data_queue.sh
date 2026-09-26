@@ -10,6 +10,7 @@
 #   bash t/r12_data_queue.sh build                  the r12 (split-v5) and r12v6 (split-v6) pool files
 #   bash t/r12_data_queue.sh dev-ids                t/r12-dev-ids.json, the stopping-step dev split
 #   bash t/r12_data_queue.sh verify-dev CORPUS      refuse a corpus that names a dev id under any alias
+#   bash t/r12_data_queue.sh r11                    the twelve r11 baseline arms, extracted, tested and graded (heldout)
 #   bash t/r12_data_queue.sh all                    everything above, in that order
 #   bash t/r12_data_queue.sh _py NAME               print one embedded program (the tests read them so)
 #
@@ -685,7 +686,11 @@ grade_chunks() {  # prefix: every planned chunk, one grade_lab.sh call each, tab
 }
 
 source_step() {  # tag, trusted table or '', its graded dir or '', dedupe tag or ''
-  local TAG=$1 TRUSTED=${2:-} GDIR=${3:-} DEDUPE=${4:-} prefix="r12-$TAG-c" args=""
+  # two statements: `local` expands every word before it assigns any, so
+  # prefix="r12-$TAG-c" on the same line read TAG unset under set -u
+  # (gnu.org/software/bash/manual/html_node/Bash-Builtins.html, local)
+  local TAG=$1 TRUSTED=${2:-} GDIR=${3:-} DEDUPE=${4:-}
+  local prefix="r12-$TAG-c" args=""
   if check_or_refuse "merge-$TAG" "$SE/$TAG/kernels.md" "$SE/$TAG/tests.json"; then echo "== $TAG: merged already"; return 0; fi
   admit
   lab_py extract_check "$TAG" || refuse "$TAG: extract.json, tests.json and tasks/ do not agree"
@@ -710,7 +715,7 @@ step_p4_extract() {
 }
 step_train() {
   # the RAM-disk grade of 2026-09-21 is the only table this tag ever had; /dev/shm does not survive a reboot
-  lab "mkdir -p $RD/trusted && if [ -f /dev/shm/tup-grade/qwen235-train/kernels.md ] && [ ! -f $RD/trusted/qwen235-train.kernels.md ]; then cp /dev/shm/tup-grade/qwen235-train/kernels.md $RD/trusted/qwen235-train.kernels.md && rsync -a /dev/shm/tup-grade/qwen235-train/grade-in/ $RD/trusted/qwen235-train.grade-in/; fi; ls $RD/trusted/qwen235-train.kernels.md 2>/dev/null" \
+  lab "mkdir -p $RD/trusted && if [ -f /dev/shm/tup-grade/qwen235-train/kernels.md ] && [ ! -f $RD/trusted/qwen235-train.kernels.md ]; then cp /dev/shm/tup-grade/qwen235-train/kernels.md $RD/trusted/qwen235-train.kernels.md && rsync -a /dev/shm/tup-grade/qwen235-train/tasks/ $RD/trusted/qwen235-train.grade-in/; fi; ls $RD/trusted/qwen235-train.kernels.md 2>/dev/null" \
     && source_step qwen235-train "$RD/trusted/qwen235-train.kernels.md" "$RD/trusted/qwen235-train.grade-in" "" \
     || { echo "== qwen235-train: no trusted table to keep rows from; every passing answer is graded"; source_step qwen235-train "" "" ""; }
 }
@@ -774,6 +779,34 @@ step_build() {
   fi
   echo "next: python3 t/preflight.py --split t/out/loop/split-v5.json --pool t/out/loop/sft-r12.jsonl --strict (plan step 2)"
 }
+# The r12 baseline: the twelve r11 arms (nine seeds, a same-seed rerun, two
+# soups) were decoded on 2026-09-21 and never extracted, tested or graded.
+# Each goes through grade_lab.sh heldout, the path every held-out arm takes:
+# the raw answers come here, extraction and tests run here under the pool the
+# records name, the seven kernels run on the lab, and the results are stored
+# back on the lab, whose copy is the one of record. Last in `all`: positives
+# first, the comparison arm second.
+R11_TAGS="locallm-r11-s1 locallm-r11-s2 locallm-r11-s3 locallm-r11-s4 locallm-r11-s5 locallm-r11-s6 locallm-r11-s7 locallm-r11-s8 locallm-r11-s9 locallm-r11-rerun locallm-r11-soupA locallm-r11-soupB"
+step_r11() {
+  local T n
+  for T in $R11_TAGS; do
+    if check_or_refuse "r11-$T" "$SE/$T/kernels.md" "$SE/$T/tests.json"; then echo "== $T: graded already"; continue; fi
+    lab "test -f t/out/gen-$T.done" || refuse "$T: no generation sentinel t/out/gen-$T.done on the lab"
+    mkdir -p "$SE/$T"
+    rsync -a --delete "$LAB:~/$REPO/$SE/$T/raw/" "$SE/$T/raw/" || refuse "$T: cannot fetch the raw answers"
+    n=$(ls "$SE/$T/raw" | wc -l)
+    [ "$n" -eq 232 ] || refuse "$T: expected 232 raw answers, found $n"
+    admit --grading
+    [ "${CELLS:-0}" -ge 1 ] || refuse "$T: no grading cell admitted"
+    echo "== $T: heldout grading with $CELLS cells, --no-cache"
+    T_LAB_JOBS=$CELLS T_LAB_SETS=1 T_LAB_RUN_PAR=--no-cache bash t/grade_lab.sh heldout "$T" || echo "== $T: grade_lab.sh exited $?"
+    { [ -s "$SE/$T/kernels.md" ] && [ -s "$SE/$T/tests.json" ]; } || refuse "$T: no table or tests came back"
+    rsync -a "$SE/$T/kernels.md" "$SE/$T/tests.json" "$SE/$T/extract.json" "$LAB:~/$REPO/$SE/$T/" || refuse "$T: cannot store the results on the lab"
+    rsync -a --delete "$SE/$T/tasks/" "$LAB:~/$REPO/$SE/$T/tasks/" || refuse "$T: cannot store the tasks on the lab"
+    mark_step "r11-$T" "$SE/$T/kernels.md" "$SE/$T/tests.json"
+  done
+}
+
 step_dev_ids() {
   admit
   lab_py dev_ids --split t/out/loop/split-v5.json --decontam t/decontamination-2026-09-21.json --n 100 --salt r12-dev --out "$RD/r12-dev-ids.json" \
@@ -813,7 +846,8 @@ main() {
                   spec)       step_spec ;;
                   build)      step_build ;;
                   dev-ids)    step_dev_ids ;;
-                  all)        step_p4_extract; step_train; step_p4; step_prover2; step_v6new; step_spec; step_build; step_dev_ids ;;
+                  r11)        step_r11 ;;
+                  all)        step_p4_extract; step_train; step_p4; step_prover2; step_v6new; step_spec; step_build; step_dev_ids; step_r11 ;;
                   *)          refuse "unknown command '$1'" ;;
                 esac ;;
   esac
