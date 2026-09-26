@@ -120,15 +120,18 @@ its line changes here.
   the proved corpus went from 194 to 302 (`t/LIFT-2026-09-26.md`). More lifts
   are being graded.
 - **Denoising training.** Corrupt spans of each training document and train
-  the model to restore them, so each document teaches many ways instead of
-  being memorised one way (fill in the middle, arXiv:2207.14255). *State:*
-  measured on a small model trained from scratch on the 302 proved documents
-  (3 seeds per arm): best held-out loss 1.221 nats per character with
-  whole-document rows, 0.694 with random windows, **0.571 with fill in the
-  middle** (`locallm/FINDINGS-denoising-2026-09-26.md`). The larger finding:
-  most of the memorisation came from every training row starting at its
-  document's head, which r12's recipe does; that is being re-measured on the
-  r12 path before r12 trains.
+  the model to restore them (fill in the middle, arXiv:2207.14255). *State:*
+  measured twice, and the two disagree. From scratch on the 302 proved
+  documents, fill in the middle cut best held-out loss from 1.221 to 0.571
+  nats per character, and random windows alone reached 0.694
+  (`locallm/FINDINGS-denoising-2026-09-26.md`). On the r12 path (the
+  pretrained core, its BPE tokenizer) the layout effect inverts: whole
+  documents 0.591, random windows 0.664 (worse), fill in the middle 0.580
+  (not better than whole documents beyond noise;
+  `locallm/FINDINGS-r12-row-layout-2026-09-26.md`). r12 keeps whole-document
+  rows; fill in the middle stays available for infilling, not as the fix for
+  memorisation. The lesson: a result from a from-scratch model does not carry
+  to a pretrained one without being re-measured.
 - **Stop before memorising, keep the best.** Training stops when validation
   stops improving by more than run-to-run noise and keeps the best weights,
   not the last. *State:* in the product (`locallm/train.py`, the studio).
@@ -137,7 +140,8 @@ its line changes here.
   done. Best: weight decay 0.8 at lr 1e-3, validation 1.166 at step 7,400,
   after which it memorises its pretraining corpus too (train 0.60, validation
   1.29 by the end); the control at lr 3e-3 diverged. The best state was not
-  kept, so the pretraining trainer is getting best-checkpoint keeping.
+  kept; the pretraining trainer now keeps the best checkpoint (`best.pt`) and
+  can stop at the validation minimum.
 - **Runs anywhere with nothing installed.** The window talks to a model with
   no PyTorch, streaming, 1.8 times faster than before, and past the context
   window without the per-token wall; sampling on a CPU uses the cache (about
