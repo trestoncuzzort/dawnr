@@ -421,8 +421,16 @@ def _disarm() -> None:
     signal.signal(signal.SIGALRM, signal.SIG_IGN)
 
 
-def run_reference(fn, native: list, timeout_s: float = TIMEOUT_S) -> tuple:
-    """("ok", canon) | ("raised", name) | ("timeout",) | ("exhausted", name).
+def run_reference(fn, native: list, timeout_s: float = TIMEOUT_S, read=canon) -> tuple:
+    """("ok", read(answer)) | ("raised", name) | ("timeout",) | ("exhausted", name).
+
+    `read` keeps the answer: canon for a pair of references, which compare as t
+    reads them; the lift's twin check (t/twin_draws.py) keeps it as the
+    reference gave it, strings still strings, and reads it only when it knows
+    the lifted program's type, the way EvalPlus keeps the ground truth's raw
+    outputs and decides equality at comparison time
+    (https://raw.githubusercontent.com/evalplus/evalplus/master/evalplus/eval/__init__.py).
+    It runs inside the timers, so a huge answer is bounded like the call.
 
     timeout_s is CPU time; a wall-clock backstop fires at 10x that and then
     every timeout_s, so a reference that sleeps, or one that swallowed the CPU
@@ -457,7 +465,7 @@ def run_reference(fn, native: list, timeout_s: float = TIMEOUT_S) -> tuple:
             signal.setitimer(signal.ITIMER_REAL, 10 * timeout_s, timeout_s)
             with _quiet():
                 out = fn(*native)
-            result = ("timeout",) if _TIMER["fired"] else ("ok", canon(out))
+            result = ("timeout",) if _TIMER["fired"] else ("ok", read(out))
         finally:
             _disarm()
     except ReferenceTimeout:
@@ -486,12 +494,13 @@ class Runner:
     """Calls each problem's reference on t values, in its own native shape, with a cache per input."""
 
     def __init__(self, pool: dict, timeout_s: float = TIMEOUT_S, max_timeouts: int = MAX_TIMEOUTS,
-                 budget_s: float = BUDGET_S, refuse: dict | None = None):
+                 budget_s: float = BUDGET_S, refuse: dict | None = None, read=canon):
         self.pool = pool
         self.timeout_s = timeout_s
         self.max_timeouts = max_timeouts
         self.budget_s = budget_s
         self.refuse = {int(k): v for k, v in (refuse or {}).items()}   # from the .hung sidecar: never loaded
+        self.read = read                       # how an answer is kept (run_reference): canon unless a caller asks
         self.refs: dict[int, object] = {}
         self.shapes: dict[int, list] = {}
         self.cache: dict[tuple, tuple] = {}
@@ -542,7 +551,7 @@ class Runner:
                 self.calls[tid] = self.calls.get(tid, 0) + 1
                 _TIMER["tid"], _TIMER["name"] = int(tid), problem_name(tid, self.pool[tid])
                 started = time.process_time()
-                result = run_reference(fn, native, self.timeout_s)
+                result = run_reference(fn, native, self.timeout_s, self.read)
                 self.spent[tid] = self.spent.get(tid, 0.0) + time.process_time() - started
                 if result[0] == "timeout":
                     self.timeouts[tid] = self.timeouts.get(tid, 0) + 1

@@ -2,7 +2,9 @@
 
 The fixtures are two one-method Dafny files in the two corpora's layouts; the pool
 is a fake with one held-out problem, so the behavioural twin gate can be shown to fire
-and to stay quiet. The lifter runs for real (checks skipped: no dafny is needed).
+and to stay quiet. The lifter runs for real (checks skipped: no dafny is needed). The
+fake problems carry no reference solution, so a program that passes their points stays
+their twin: the drawn-input check cannot run (t/test_twin_draws.py has the rule itself).
 """
 import contextlib
 import io
@@ -73,8 +75,9 @@ class LiftCorporaTests(unittest.TestCase):
         self.split = self.tmp / "split.json"
         self.split.write_text(json.dumps({"eval_ids": [1], "train_ids": [2]}))
 
-    def run_build(self, pool: dict, eval_ids=(1,)):
-        self.split.write_text(json.dumps({"eval_ids": list(eval_ids), "train_ids": [2]}))
+    def run_build(self, pool: dict, eval_ids=(1,), pool_size: int | None = None):
+        self.split.write_text(json.dumps({"pool": "v5", "pool_size": len(pool) if pool_size is None else pool_size,
+                                          "eval_ids": list(eval_ids), "train_ids": [2]}))
         out = self.tmp / "out"
         args = SimpleNamespace(vericoding=str(self.tmp / "vericoding"), humaneval_dafny=str(self.tmp / "HumanEval-Dafny"),
                                out=str(out), split=str(self.split), pool="v5", jobs=1, with_check=False, resume=False)
@@ -109,6 +112,18 @@ class LiftCorporaTests(unittest.TestCase):
         self.assertTrue(all("gated problem 1 (held-out)" in r["reason"] for r in refused), refused)
         self.assertEqual((meta / "heads.jsonl").read_text(), "")
         self.assertEqual(census["accepted"], 0)
+        # the problem has no reference, so the drawn-input check cannot run and the refusal stands, recorded
+        decisions = [json.loads(line) for line in (meta / "twin-decisions.jsonl").read_text().splitlines()]
+        self.assertEqual(len(decisions), 2)
+        self.assertTrue(all(d["decision"] == "refused" and d["twin_of"] == 1 for d in decisions), decisions)
+        self.assertEqual({c["verdict"] for d in decisions for c in d["candidates"]}, {"no reference"})
+        self.assertEqual(census["twin_draws"]["cleared"], 0)
+
+    def test_a_pool_that_is_not_all_here_is_refused_before_any_gate(self):
+        # the worktree failure mode: the split records a larger pool than the one loaded
+        with self.assertRaises(SystemExit) as caught:
+            self.run_build(fake_pool([point(5, 5)]), pool_size=3003)
+        self.assertIn("pool", str(caught.exception))
 
     def test_a_humaneval_index_that_names_a_gated_problem_is_refused_before_anything_else(self):
         pool = fake_pool([point(5, 6)])
