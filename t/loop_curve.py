@@ -28,12 +28,21 @@ import json
 import re
 from pathlib import Path
 
+import loop_filter
 import spec_experiment
 
 HERE = Path(__file__).resolve().parent
 OUT_ROOT = HERE / "out" / "spec-experiment"
 HELDOUT = HERE / "out" / "loop" / "heldout.json"
-_TID = re.compile(r"^mbpp_(\d+)__")
+
+
+def mbpp_number(name: str) -> str | None:
+    """The MBPP number a kernel-table row stands for, under every name family a
+    corpus uses (mbpp_N__ and the Dafny-dataset lifts dafny_synthesis_task_id_N__,
+    which the old ^mbpp_(\\d+)__ pattern missed); HumanEval and APPS rows have
+    offset ids and are not MBPP."""
+    tid = loop_filter.problem_id(name)
+    return str(tid) if tid is not None and tid < spec_experiment.HUMANEVAL_BASE else None
 
 
 def refusal_class(text: str) -> str:
@@ -63,9 +72,9 @@ def load_tag(tag: str) -> dict:
     cols, rows = spec_experiment.parse_kernel_table(d / "kernels.md")
     out["kcols"] = cols
     for name, row in rows.items():
-        m = _TID.match(name)
-        if m:
-            out["kernels"][m.group(1)] = row
+        number = mbpp_number(name)
+        if number is not None:
+            out["kernels"][number] = row
     return out
 
 

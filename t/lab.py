@@ -213,7 +213,7 @@ STEPS = [
     ("locallm", "Build a locallm model", "From scratch, on the clean pool, then its held-out answers.",
      "python3 t/loop_locallm.py corpus --base t/runs/2026-09-16/loop-data/corpus.txt --sft t/out/loop/sft-r4.jsonl "
      f"--out t/out/loop-locallm/corpus-r4.txt && {PY} t/loop_locallm.py train --corpus t/out/loop-locallm/corpus-r4.txt "
-     f"--model t/out/loop-locallm/model-r4 && {PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4",
+     f"--model t/out/loop-locallm/model-r4 && {PY} t/loop_locallm.py generate --temperature 0.5 --model t/out/loop-locallm/model-r4 --tag locallm-r4",
      f"test $(ls {SE}/locallm-r4/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("grade-heldout", "Grade held-out answers", "Every extracted task this time, so proven but wrong can be "
      "counted. Extract and tests run here, the checkers on the lab workstation.", "bash t/grade_lab.sh heldout",
@@ -250,7 +250,7 @@ STEPS = [
      "problems, so their own failures can be graded and used. Held-out problems are not touched.",
      f"{PY} t/loop_generate.py --adapter t/out/loop/adapter-r4 --tag student-r4-train --pool v3 --prompt v3 "
      "--ids-file t/out/loop/train-ids.txt && "
-     f"{PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r4 --tag locallm-r4-train "
+     f"{PY} t/loop_locallm.py generate --temperature 0.5 --model t/out/loop-locallm/model-r4 --tag locallm-r4-train "
      "--ids-file t/out/loop/train-ids.txt || true",
      f"test $(ls {SE}/student-r4-train/raw 2>/dev/null | wc -l) -ge 417", "gpu"),
     ("r5-pool", "Round 5: pool and pairs", "Rebuilds the pool with the new clean answers and the new negatives.",
@@ -265,7 +265,7 @@ STEPS = [
      f"--out t/out/loop-locallm/corpus-r5.txt && {PY} t/loop_locallm.py train "
      "--corpus t/out/loop-locallm/corpus-r5.txt --model t/out/loop-locallm/model-r5 --layers 8 --width 512 "
      "--heads 8 "
-     f"--steps 6000 && {PY} t/loop_locallm.py generate --model t/out/loop-locallm/model-r5 --tag locallm-r5",
+     f"--steps 6000 && {PY} t/loop_locallm.py generate --temperature 0.5 --model t/out/loop-locallm/model-r5 --tag locallm-r5",
      f"test $(ls {SE}/locallm-r5/raw 2>/dev/null | wc -l) -ge 232", "gpu"),
     ("r5-train", "Round 5: train the student again", "The same 1.5B, now with the round 5 pairs, which include "
      "the model's own proven-but-wrong answers as the rejected side.",

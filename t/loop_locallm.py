@@ -50,6 +50,30 @@ CLEAN = "verified / refuted"
 # and 216 of 232 answers unparseable). One constant, because the stop rule in
 # locallm/model.py has to stop at exactly the boundary this file cuts at.
 REPLY_BOUNDARY = re.compile(r"\n\s*\n(?=Problem: |Signature: |t \d)")
+
+
+def reply_cut(head: str, text: str) -> int | None:
+    """Where the extraction ends the reply: the start of the first boundary
+    match in the body, as an index into ``text``, or None while no boundary
+    has appeared. Generation can stop there because the pattern has no end
+    anchor and a literal lookahead, so a match in a prefix is the match in the
+    full text (locallm/test_r12_decode.py proves the cut byte-identical)."""
+    body_start = len(head) if text.startswith(head) else 0
+    match = REPLY_BOUNDARY.search(text, body_start)
+    return match.start() if match else None
+
+
+def reply_stop(head: str):
+    """The text-level stop that locallm.checkpoint.sample and sample_batch take."""
+    return lambda text: reply_cut(head, text)
+
+
+def per_problem_seed(seed: int, task_id: int) -> int:
+    """torch.manual_seed input from (seed, task_id): the sha256 scheme of
+    t/loop_generate.py derive_seed, so a resume or another sharding draws the
+    same sample for a problem instead of one that depends on what the process
+    answered before it."""
+    return int(hashlib.sha256(f"{seed}:{task_id}".encode("utf-8")).hexdigest()[:16], 16) % (2 ** 31 - 1)
 AGREEMENT = HERE / "AGREEMENT.md"
 COMMITTED_DIR = HERE / "tasks"
 LIFTED_DIR = HERE / "out" / "lifted-tasks"
@@ -406,8 +430,12 @@ def cmd_generate(a) -> int:
               file=sys.stderr)
         return 1
     checkpoint_sha256 = file_sha256(ckpt)
+    # "stop" and "seeding" name the two 2026-09-25 changes to how an answer is
+    # made, so score_heldout's identical-options rule (A6) never mixes a set
+    # made the old way with one made this way
     options = {"temperature": a.temperature, "top_k": a.top_k, "max_new_tokens": a.tokens,
-               "tokenizer": type(tok).__name__, "seed": a.seed}
+               "tokenizer": type(tok).__name__, "seed": a.seed,
+               "stop": "reply-boundary", "seeding": "per-problem"}
     conflicts, resumed = [], []
     for tid in ids:
         path = d / "raw" / f"{tid}.json"
@@ -433,18 +461,26 @@ def cmd_generate(a) -> int:
         if len(conflicts) > 20:
             print(f"  ... and {len(conflicts) - 20} more", file=sys.stderr)
         return 2
-    # torch is seeded once per process, so a sampled (T > 0) answer depends on
-    # which ids this process answered before it: a resume or another sharding
-    # draws differently. Per-id seeding would change what every old sampled
-    # run means, so this stays as it is and is recorded here (2026-09-21).
-    torch.manual_seed(a.seed)
+    # Until 2026-09-25 torch was seeded once per process, so a sampled (T > 0)
+    # answer depended on which ids the process answered before it, and a resume
+    # or another sharding drew differently. Each problem is now seeded from
+    # (seed, task_id) as t/loop_generate.py derive_seed does; old sampled sets
+    # carry no options["seeding"] and are never mixed with new ones (A6).
     todo = [tid for tid in ids if tid not in resumed]
     for i, tid in enumerate(todo):
         entry = entries[tid]
         path = d / "raw" / f"{tid}.json"
         head = problem_head(entry, a.examples)
+        torch.manual_seed(per_problem_seed(a.seed, tid))
+        # Generation stops once the reply boundary appears: the same stop-string
+        # rule as Hugging Face's StopStringCriteria (github.com/huggingface/
+        # transformers/blob/main/src/transformers/generation/stopping_criteria.py),
+        # exact here because the stopped tokens are a prefix of the unstopped
+        # run's (locallm/test_r12_decode.py). Measured 2026-09-25 on r9: a reply
+        # that closes stops after ~130 tokens instead of the 1,200 budget.
         text = checkpoint.sample(model, tok, head, a.tokens, temperature=a.temperature,
-                                 top_k=a.top_k, use_cache=a.use_cache)
+                                 top_k=a.top_k, use_cache=a.use_cache, stop=reply_stop(head))
+        stopped = reply_cut(head, text) is not None
         body = text[len(head):] if text.startswith(head) else text
         # cut at the next head this project writes; see REPLY_BOUNDARY
         body = REPLY_BOUNDARY.split(body, maxsplit=1)[0]
@@ -461,7 +497,8 @@ def cmd_generate(a) -> int:
                   "pool_version": pool_version, "prompt_version": "locallm-head",
                   "options": dict(options),
                   "messages": [{"role": "user", "content": head}],
-                  "reply": "```t\n" + body.strip() + "\n```", "done_reason": "length"}
+                  "reply": "```t\n" + body.strip() + "\n```",
+                  "done_reason": "stop" if stopped else "length"}
         path.write_text(json.dumps(record, indent=1), encoding="utf-8")
         if (i + 1) % 25 == 0:
             print(f"generate: {i + 1} of {len(todo)}", flush=True)
