@@ -6,7 +6,7 @@ the route, and every number here links to the run that produced it. The ideas
 being worked toward are kept at the end of this file, stated plainly, with
 where each one stands.
 
-## The north star: a model you could trust on a spaceship
+## The north star: dawnr, a model you could trust on a spaceship
 
 A model trained so well that it could do its job on a spaceship: no network,
 no one to ask, small hardware, and a mistake that cannot be taken back. That
@@ -135,9 +135,49 @@ its line changes here.
 - **Reads only what it can read correctly.** Ingest refuses files that would
   arrive as garbage (legacy non-Latin encodings) instead of training on them.
   *State:* in the product; wrong Latin code pages are the known gap.
-- **Next:** the product installs the right PyTorch for the machine and brings
+- **Product, next:** the product installs the right PyTorch for the machine and brings
   its own Python; a sparse autoencoder to see whether the model learned
   concepts or memorised text.
+- **A checker as careful as the model.** The lift's equivalence check refused
+  154 methods; 111 of those were the checker's own defects (compiler-internal
+  names printed, characters compared with integers, a renaming that captured a
+  bound variable, a verdict read from whichever block printed last). Fixed
+  without weakening the gate; 2 of the rest are real lift defects. *State:*
+  merged; the refused methods are being re-checked and graded.
+
+## dawnr: what the whole thing grows into
+
+dawnr is the assistant this project is building: trained here from random
+weights, running on its own hardware with nothing behind it, able to
+understand, reason, act and remember, and trustworthy because what it produces
+is checked before anyone relies on it. It is a system, not one model. Each
+machine-learning idea earns its place by doing one job in it, and every part
+is judged by the same rule: nothing is trusted without evidence.
+
+| dawnr needs | the machine-learning idea | where it stands |
+|---|---|---|
+| a brain that understands language and code | transformer pretraining from random weights | **built**: the locallm core; the weight-decay sweep is running |
+| to learn, not memorise | regularisation, denoising (fill in the middle), early stopping, more verified data | **in progress** |
+| to know when it is right | verification as the judge, calibration, uncertainty, refusal | **the seven-kernel proof engine is this**; calibration not started |
+| to get better at reasoning | reinforcement learning with the verifier as the reward | not started; the best fit of anything here, because the reward cannot be fooled |
+| to know what it was not trained on | retrieval, embeddings, a vector index | not started |
+| to remember the person and past work | long-term memory, continual learning without forgetting | not started (replay against forgetting exists in the fine-tune) |
+| to do things, not only talk | tool use, agents, planning | not started; write a program, prove it, then run it |
+| to hear and speak | speech recognition, text to speech | not started |
+| to see | vision encoders, multimodal models | later |
+| to fit small hardware | quantisation, distillation, mixture of experts | partly: runs with no PyTorch, on a CPU |
+| to be understood from inside | interpretability, sparse autoencoders | planned |
+| to improve itself safely | the data engine: generate, verify, keep only what is proved, retrain | **built** |
+
+**The order**, trustworthy core first and breadth after, because a system that
+talks and sees before it reasons well is confident and wrong, the opposite of
+the north star:
+
+1. A core that learns instead of memorising (now: data, denoising, the sweep).
+2. Reinforcement learning with the provers as the reward.
+3. Retrieval and memory.
+4. Tools and agency, starting with programs it writes, proves and then runs.
+5. Speech, then vision.
 
 ---
 
