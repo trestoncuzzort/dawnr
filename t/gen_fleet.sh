@@ -49,6 +49,27 @@ PY=${T_PY:-~/.venv-vllm/bin/python}
 DONE="t/out/gen-$TAG.done"
 rm -f "$DONE"
 
+# Before a card is touched: the flags must be verifiable after the fact. The
+# headline arm was sampled at 0.5 because no --temperature reached the
+# generator and its default filled in (r12 plan, A6), so the flag is required
+# here, and an abbreviation such as --temp is refused rather than guessed at:
+# the check after the fleet compares records against these exact names.
+python3 - ${EXTRA[@]+"${EXTRA[@]}"} <<'PYEOF' || exit 2
+import argparse, sys
+KNOWN = {"--temperature": float, "--top-k": int, "--tokens": int, "--seed": int}
+ap = argparse.ArgumentParser(allow_abbrev=False)
+for name, kind in KNOWN.items():
+    ap.add_argument(name, type=kind)
+ns, unknown = ap.parse_known_args(sys.argv[1:])
+bad = [u for u in unknown if u.startswith("--")
+       and any(k != u and k.startswith(u.split("=", 1)[0]) for k in KNOWN)]
+if bad:
+    sys.exit(f"refusing to launch: {bad} abbreviates a generator flag and cannot be verified afterwards; "
+             "spell it out")
+if ns.temperature is None:
+    sys.exit("refusing to launch: no --temperature given; a default sampled the headline arm at 0.5 once")
+PYEOF
+
 python3 - "$SPLIT" "$SHARDS" <<'PYEOF'
 import json, sys
 from pathlib import Path
@@ -74,10 +95,77 @@ done
 
 rc=0
 for p in $pids; do wait "$p" || rc=1; done
-answered=$(ls "t/out/spec-experiment/$TAG/raw" 2>/dev/null | wc -l)
-echo "$TAG: $answered answers, worker status $rc"
+echo "$TAG: worker status $rc"
 # The sentinel means finished, not merely exited: a chain that waits on it would
 # otherwise score a partial answer set, which is how two chains were fooled on
-# 2026-09-19.
-[ "$rc" = "0" ] && touch "$DONE" || echo "at least one shard failed; no sentinel written"
-exit $rc
+# 2026-09-19. A worker exits 0 with an id unanswered when the pool lookup misses
+# or the raw record already exists, so the workers' status proves nothing about
+# completeness (r12 plan, A4): the answered eval ids must equal the split's, as
+# Deequ checks a table's size and completeness before it is consumed
+# (github.com/awslabs/deequ). And every record must carry the flags passed here
+# under one decoding key, the scorer's rule (t/score_heldout.decoding_key), so a
+# dropped flag is caught where its used value is observable (PCheck, Xu et al.
+# OSDI'16, usenix.org/conference/osdi16/technical-sessions/presentation/xu).
+python3 - "$SPLIT" "$TAG" "$MODEL" ${EXTRA[@]+"${EXTRA[@]}"} <<'PYEOF'
+import argparse, json, os, sys
+from pathlib import Path
+sys.path.insert(0, "t")
+import spec_experiment as se
+import score_heldout
+split, tag, model, extra = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:]
+eval_ids = {int(i) for i in json.loads(Path(split).read_text())["eval_ids"]}
+raw = se.OUT_ROOT / se.model_tag(tag) / "raw"
+answered = {int(p.stem) for p in raw.glob("*.json")} if raw.is_dir() else set()
+missing, extra_ids = sorted(eval_ids - answered), sorted(answered - eval_ids)
+problems = []
+if missing:
+    problems.append(f"missing {len(missing)} of {len(eval_ids)}: {missing[:20]}{' ...' if len(missing) > 20 else ''}")
+if extra_ids:
+    problems.append(f"{len(extra_ids)} raw record(s) that are not eval ids of {split}: {extra_ids[:20]}")
+ap = argparse.ArgumentParser(allow_abbrev=False)
+for name, kind in (("--temperature", float), ("--top-k", int), ("--tokens", int), ("--seed", int)):
+    ap.add_argument(name, type=kind)
+flags, _ = ap.parse_known_args(extra)
+passed = {"temperature": flags.temperature, "top_k": flags.top_k, "max_new_tokens": flags.tokens, "seed": flags.seed}
+passed = {k: v for k, v in passed.items() if v is not None}
+records = {}
+for tid in sorted(eval_ids & answered):
+    try:
+        records[tid] = json.loads((raw / f"{tid}.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        problems.append(f"raw/{tid}.json is not a readable record ({e})")
+# The model is compared as a path, not as a string: records store "locallm:"
+# plus the --model string exactly as passed, and a resume that spells the same
+# directory differently must not read as a different model, nor a different
+# directory as the same one.
+want = os.path.realpath(model)
+for tid, r in records.items():
+    got = str(r.get("model", ""))
+    if not got.startswith("locallm:") or os.path.realpath(got[len("locallm:"):]) != want:
+        problems.append(f"raw/{tid}.json was written for model {got!r}, this fleet ran {model!r}")
+    options = r.get("options") if isinstance(r.get("options"), dict) else {}
+    for name, value in passed.items():
+        have = options.get(name)
+        if isinstance(have, bool) or not isinstance(have, (int, float)) or float(have) != float(value):
+            problems.append(f"raw/{tid}.json has {name}={have!r}, this fleet passed {value!r}")
+keys = {}
+for tid, r in records.items():
+    keys.setdefault(score_heldout.decoding_key(r), []).append(tid)
+if len(keys) > 1:
+    combos = "; ".join(f"{len(ids)} at {k}" for k, ids in sorted(keys.items(), key=lambda kv: -len(kv[1]))[:3])
+    differ = score_heldout._differing_settings([records[ids[0]] for ids in keys.values()])
+    problems.append(f"records were decoded under {len(keys)} settings, differing in {', '.join(differ)}: {combos}")
+if problems:
+    print(f"{tag}: {len(answered & eval_ids)} of {len(eval_ids)} answered; NOT complete:")
+    for line in problems[:40]:
+        print("  " + line)
+    sys.exit(2)
+print(f"{tag}: {len(answered)} of {len(eval_ids)} answered under one decoding, flags as passed")
+PYEOF
+check=$?
+if [ "$rc" = "0" ] && [ "$check" = "0" ]; then
+  touch "$DONE"
+  exit 0
+fi
+echo "no sentinel written (worker status $rc, completeness check $check)"
+[ "$rc" = "0" ] && exit "$check" || exit "$rc"
