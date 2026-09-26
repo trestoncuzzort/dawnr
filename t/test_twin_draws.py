@@ -84,6 +84,19 @@ class TwinRuleTests(unittest.TestCase):
         self.assertEqual(check["agreed"] + check["differed"], check["answered_by_both"])
         self.assertEqual(check["witness"], {"input": [2], "program": 2, "reference": 8})
 
+    def test_a_difference_on_too_few_draws_is_a_near_twin_and_stays_refused(self):
+        # identity and cube differ on about a third of the draws shaped like 1; a line above
+        # that fraction makes the same pair a near twin: refused, with the fraction recorded
+        twin, [check] = decide(IDENTITY, {1001: CUBE})
+        self.assertIsNone(twin)
+        self.assertGreaterEqual(check["differ_fraction"], twin_draws.NEAR_TWIN_FRACTION)
+        with mock.patch.object(twin_draws, "NEAR_TWIN_FRACTION", 0.9):
+            twin, [check] = decide(IDENTITY, {1001: CUBE})
+        self.assertEqual(twin, (1001, "held-out"))
+        self.assertEqual((check["verdict"], check["twin"]), ("near twin", True))
+        self.assertLess(check["differ_fraction"], 0.9)
+        self.assertIn("near-equivalent", check["why"])
+
     def test_a_program_that_agrees_on_every_draw_stays_the_twin(self):
         twin, [check] = decide(DOUBLE, {1002: TWICE})
         self.assertEqual(twin, (1002, "held-out"))
