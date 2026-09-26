@@ -44,6 +44,15 @@ look, and an exact paired test (`t/compare_arms.py`) decide the result; the
 number to move is tests passed on the 200 held-out problems that no training
 document answers.
 
+The data is the limit: a fine-tune on the old corpus reached 0.11 nats per token on its
+training documents against 0.68 on held-out ones, which is memorisation. The first new source
+has landed. Two released corpora of verified Dafny programs (vericoding-benchmark and
+HumanEval-Dafny) were lifted into t, checked for equivalence with their sources, and graded in
+all seven kernels: 108 are clean in all seven and pass every contamination gate, so the proved
+corpus of lifted and committed documents goes from 194 to 302 documents (66,569 to 128,793
+characters; [`t/LIFT-2026-09-26.md`](t/LIFT-2026-09-26.md)). The lift's twin refusals re-decided
+on drawn inputs, and the files it refused for let expressions, are being graded next.
+
 A lab worktree from 2026-09-22 holds a comparison rig for a pinned BF16
 [Phi-4-mini-instruct](https://huggingface.co/microsoft/Phi-4-mini-instruct)
 served through vLLM, a fresh 200-task panel drawn from CodeContests (the v1-v6
