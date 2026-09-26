@@ -472,6 +472,10 @@ def ev(e: dict, env: dict, funs: dict, st: St):
                 # same name, silently changing what the call computes.
                 raise ValueError(f"{c['fun']}: return name {ret!r} collides "
                                  f"with a parameter")
+            for rq in f.get("_requires", ()):
+                if not ev(rq, dict(sub), funs, st):
+                    raise Undef(f"call of {c['fun']} violates its requires",
+                                expr=e)
             st.d += 1
             if st.d > MAX_DEPTH:
                 st.d -= 1
@@ -778,6 +782,14 @@ def funs_of(task: dict, body: list) -> dict:
     body passed in is the one that DEFINES the function: a twin's self-calls
     resolve to the twin."""
     funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    # SPEC.md "Methods (v1)": a method call runs the callee's body by value,
+    # after its `requires` is checked at the arguments (Dafny's call rule;
+    # a call whose requires is false is undefined, as `at` out of range is).
+    # A twin never mutates a method, so the real and the twin share them.
+    for m in task.get("methods", []):
+        funs[m["name"]] = {"params": m["params"],
+                           "_exec": (m["body"], m["returns"][0]["name"]),
+                           "_requires": m["requires"]}
     if self_calls(body, task["name"]):
         funs[task["name"]] = {"params": task["params"],
                               "_exec": (body, task["returns"][0]["name"])}

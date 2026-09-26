@@ -839,6 +839,78 @@ against the five lowercase vowels; twin INVARIANT-DROP on that
 invariant, witness `s = []`, exit state `i = 0, r = 1` violating the
 now-unconstrained `ensures`).
 
+### Methods (v1)
+
+Stated 2026-09-26 (t/FEATURES-TRACK.md, feature 1). Copied from Dafny's
+methods and call statement (Dafny reference manual, sections 6.3 "Method
+Declarations" and 8.5.2 "Method call with out-parameters", and its
+verification chapter: "Dafny works modularly, meaning that each method is
+considered by itself, using only the specifications of other methods"),
+restricted to one return as a task is.
+
+A new optional top-level field, v1 only:
+
+```
+"methods": [ {"name": ID,
+              "params":  [ {"name": ID, "type": Type}* ],
+              "returns": [ {"name": ID, "type": Type} ],   // exactly one
+              "requires": [ Expr* ],
+              "ensures":  [ Expr+ ],
+              "decreases"?: Expr,       // required iff the body self-calls
+              "body": [ Stmt+ ]}, ... ]
+```
+
+Written, between the task's clauses and its body, beside `spec fun`:
+
+```
+method max2(x: int, y: int) returns (m: int)
+  ensures m >= x and m >= y
+  ensures m == x or m == y
+{ if x >= y { m := x } else { m := y } }
+```
+
+Rules (check_wf's `method-*` keys):
+
+- **Names.** A method's name is distinct from the task's, every
+  spec_fun's and every other method's. `method` is contextual in the
+  notation (a variable may still be called `method`).
+- **Scope and typing.** A method is checked exactly as a task is: its
+  `requires` sees its params, its `ensures` its params and return, its
+  body its params, return and locals; a `return` in its body names its own
+  return; its params are not assignable.
+- **Order.** A method body may call the spec_funs, every EARLIER method,
+  and itself when the method carries a `decreases` (the task's own
+  self-recursion rule, Gate 3). The task body may call every method. No
+  mutual recursion, as for spec_funs.
+- **Call position.** A method call is the whole right-hand side of an
+  `assign` or a `var` init, and its arguments call no method (Dafny 8.5.2:
+  "the result of a method call is not allowed to be used as an argument
+  of another method call, as if it were an expression"). A method call in
+  a spec (a `requires`, `ensures`, spec_fun body, invariant or
+  `decreases`), a guard, a `return` or inside any other expression is
+  ill-formed. This is stricter than a task self-call, which may sit in any
+  strict body position and is hoisted; the strict form is what every
+  kernel's call statement already is, so no lowering hoists anything.
+
+Semantics:
+
+- **Verification is modular.** Each method is verified against its own
+  contract, separately (each lowering emits it as its own function or
+  procedure in the same file). At a call `x := m(e1, ..., en)` the caller
+  owes `m`'s `requires` at the arguments and then knows exactly `m`'s
+  `ensures` of the result `x`: nothing about `m`'s body. A caller whose
+  proof needs more than the callee promises does not verify, even when
+  the callee's body would have made it true
+  (`t/methods_probe/opaque_callee.t` is that probe).
+- **Execution is by value.** The interpreter (`interp.funs_of`) runs the
+  callee's body on the argument values and returns its result. A call
+  whose callee `requires` is false at the arguments is undefined (the
+  value witness vocabulary's "undefined", as for `at` out of range),
+  never a value.
+- **The twin never mutates a method.** Methods join `requires`,
+  `ensures` and `spec_funs` as the fixed instrument; only the task body is
+  broken, and a twin's calls go to the same, unmutated methods.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

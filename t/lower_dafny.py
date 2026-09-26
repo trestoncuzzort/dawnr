@@ -2390,6 +2390,34 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call
 # sites pass it; when it is present and ground-certificatable, the lowering
 # appends the refutation certificate lemma (see the section above).
+def _method_decl(task: dict, m: dict) -> list[str]:
+    """One t method as a Dafny method: its own signature, contract and
+    body. Its self-calls (whole right-hand sides, check_wf's
+    method-call-position rule) name the method itself, so the body is
+    lowered with a context whose own name is the method's."""
+    pseudo = {"name": m["name"], "params": m["params"],
+              "returns": m["returns"], "requires": m["requires"],
+              "ensures": m["ensures"], "body": m["body"],
+              "spec_funs": task.get("spec_funs", []),
+              "methods": task.get("methods", [])}
+    mctx = _Ctx(pseudo, m["name"])
+    mctx._used |= _collect_names(task)
+    name = m["name"]
+    ps = ", ".join(f"{p['name']}: {dafny_type(p['type'])}" for p in m["params"])
+    r = m["returns"][0]
+    out = [f"method {name}({ps}) returns ({r['name']}: {dafny_type(r['type'])})"]
+    for e in m["requires"]:
+        out.append(f"  requires {expr(e, name)}")
+    for e in m["ensures"]:
+        out.append(f"  ensures {expr(e, name)}")
+    if "decreases" in m:
+        out.append(f"  decreases {expr(m['decreases'], name)}")
+    out.append("{")
+    out.append(stmts(m["body"], "  ", mctx))
+    out.append("}")
+    return out
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Dafny reserved word, before anything below ever sees
@@ -2437,6 +2465,19 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         lines.append("{")
         lines.append(f"  {expr(f['body'], self_name)}")
         lines.append("}")
+        lines.append("")
+
+    # SPEC.md "Methods (v1)": each method is a Dafny method of its own,
+    # verified against its own contract, and a call `x := m(args);` is
+    # Dafny's own call statement, which the verifier reasons about through
+    # the callee's requires/ensures only (Dafny reference manual, "Dafny
+    # works modularly ... using only the specifications of other methods").
+    for m in task.get("methods", []):
+        if m["name"] == method:
+            raise NotImplementedError(
+                f"dafny: method {m['name']!r} collides with the task's "
+                f"lowered method name")
+        lines.extend(_method_decl(task, m))
         lines.append("")
 
     ps = ", ".join(f"{p['name']}: {dafny_type(p['type'])}"

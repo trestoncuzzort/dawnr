@@ -265,6 +265,12 @@ def _declared_names(task: dict, body: list, check_task_name: bool = True) -> set
         declared |= _declared_in(sf["body"])
         if "decreases" in sf:
             declared |= _declared_in(sf["decreases"])
+    for m in task.get("methods", []):      # SPEC.md "Methods (v1)"
+        declared.add(m["name"])
+        for p in m["params"] + m["returns"]:
+            declared.add(p["name"])
+        declared |= _declared_in([m["requires"], m["ensures"], m["body"],
+                                  m.get("decreases")])
     declared |= _declared_in(task.get("requires", []))
     declared |= _declared_in(task.get("ensures", []))
     if "decreases" in task:
@@ -385,6 +391,17 @@ def sanitize(task: dict, reserved: set[str], uppercase_ok: bool,
          **({"decreases": _rename_walk(sf["decreases"], mapping)}
             if "decreases" in sf else {})}
         for sf in task.get("spec_funs", [])]
+    if "methods" in task:
+        new_task["methods"] = [
+            {**m, "name": rn(m["name"]),
+             "params": [{**p, "name": rn(p["name"])} for p in m["params"]],
+             "returns": [{**r, "name": rn(r["name"])} for r in m["returns"]],
+             "requires": _rename_walk(m["requires"], mapping),
+             "ensures": _rename_walk(m["ensures"], mapping),
+             "body": _rename_walk(m["body"], mapping),
+             **({"decreases": _rename_walk(m["decreases"], mapping)}
+                if "decreases" in m else {})}
+            for m in task["methods"]]
     new_task["requires"] = _rename_walk(task.get("requires", []), mapping)
     new_task["ensures"] = _rename_walk(task.get("ensures", []), mapping)
     if "decreases" in task:
