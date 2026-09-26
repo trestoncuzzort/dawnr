@@ -37,11 +37,14 @@ No torch and no display: this is the configuration this machine and CI share.
 """
 from __future__ import annotations
 
+import importlib.util
 import pathlib
 import sys
 import tempfile
+import types
 import unittest
 import zipfile
+from unittest import mock
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -553,6 +556,262 @@ class Vocabulary(unittest.TestCase):
             chr(0x4E00 + i) for i in range(400))
         say = ingest.say_vocabulary(text)
         self.assertIn("400", say.why, "the rare characters were not counted")
+
+
+# --------------------------------------------------------------------------
+# LEGACY ENCODINGS READ AS cp1252. The nine sentences are the product review's
+# spot check (LOCALLM-USES.md, Appendix B), verbatim, so the numbers below are
+# the review's numbers and can be checked against it.
+# --------------------------------------------------------------------------
+#: Accepted as cp1252 mojibake before the accent gate: every one of these must
+#: now be refused, or read in its real encoding by the optional detector.
+MOJIBAKE = {
+    "cp1251": "Привет, как дела? Это обычный текст на русском языке, сохранённый в Windows.",
+    "koi8_r": "Съешь же ещё этих мягких французских булок, да выпей чаю.",
+    "cp1253": "Ξεσκεπάζω την ψυχοφθόρα βδελυγμία.",
+    "gbk": "这是一个普通的中文句子，用于测试编码。",
+}
+#: Refused before the gate existed, by one of cp1252's five undefined bytes.
+REFUSED_BY_LUCK = {
+    "cp1250": "Zażółć gęślą jaźń. Příliš žluťoučký kůň úpěl ďábelské ódy.",
+    "shift_jis": "日本語のテキストです。これは普通の文章。",
+}
+#: Genuine cp1252 text that must still come back byte for byte.
+GENUINE = {
+    "fr": "Le cœur a ses raisons que la raison ne connaît point. Où est la bibliothèque? Déjà vu, à côté du café.",
+    "de": "Über den Wolken muss die Freiheit wohl grenzenlos sein. Größe, Mädchen, schön, Straße.",
+    "es": "El niño comió una manzana mañana por la mañana. ¿Dónde está la estación? Acción, corazón.",
+    "pt": "Não há razão para ações sem coração. Informação, pão, irmã, você.",
+    "is": "Þetta er íslenskur texti með ð og þ og æ og ö, á, é, í, ó, ú, ý.",
+}
+#: The review's measured shares, to three places.
+REVIEW_SHARES = {"cp1251": 0.831, "koi8_r": 0.886, "cp1253": 0.862, "gbk": 0.889,
+                 "fr": 0.115, "de": 0.058, "es": 0.129, "pt": 0.240, "is": 0.200}
+#: Portuguese written to be as accented as prose gets: one accent in every
+#: word that can carry one. The review names heavy genuine text as the risk.
+PORTUGUESE_DENSE = (
+    "A informação é a condição da ação: não há solução sem razão, nem nação sem "
+    "educação. Até já, avó! Você já comeu pão com açúcar? Irmã, mãe e avô estão lá.")
+#: Vietnamese-shaped syllables using only letters cp1252 has. No real file is
+#: like this (Vietnamese needs cp1258 or UTF-8), which is why it is the
+#: extreme case rather than a typical one.
+VIETNAMESE_LIKE = (
+    "Bà cô tôi là y tá, và chú tôi là bác. Cô có cá và cà, mà tôi có gà. Bà và "
+    "cô ra chè, còn tôi ò nhà. Tôi là Tú, và cô là Hà.")
+
+
+class _Absent:
+    """sys.modules[name] = None makes `import name` raise ImportError, which is
+    what a machine without charset-normalizer does."""
+
+    def __enter__(self):
+        self._patch = mock.patch.dict(sys.modules, {"charset_normalizer": None})
+        self._patch.__enter__()
+
+    def __exit__(self, *exc):
+        return self._patch.__exit__(*exc)
+
+
+def _fake_detector(encoding: str, chaos: float = 0.0, fail: bool = False):
+    """A stand-in charset_normalizer whose from_bytes names one encoding."""
+    module = types.ModuleType("charset_normalizer")
+
+    class Match:
+        def __init__(self):
+            self.encoding, self.chaos, self.coherence = encoding, chaos, 0.5
+
+    class Matches:
+        def best(self):
+            return Match()
+
+    def from_bytes(data):
+        if fail:
+            raise RuntimeError("a broken install")
+        return Matches()
+
+    module.from_bytes = from_bytes
+    return mock.patch.dict(sys.modules, {"charset_normalizer": module})
+
+
+class LegacyEncodingsAreNotReadAsCp1252(unittest.TestCase):
+    """The accent gate on the cp1252 rung, from charset-normalizer's rule."""
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+
+    def test_the_review_numbers_are_the_numbers_here(self):
+        """Every share in the review's table, reproduced by the gate itself."""
+        for label, text in {**MOJIBAKE, **GENUINE}.items():
+            seen = text.encode(label).decode("cp1252") if label in MOJIBAKE else text
+            got = ingest.accent_verdict(seen)
+            self.assertEqual(got.judged, 1, label)
+            self.assertAlmostEqual(got.worst, REVIEW_SHARES[label], places=3,
+                                   msg=f"{label} no longer measures what the review did")
+
+    def test_the_four_mojibake_samples_are_refused_without_the_detector(self):
+        with _Absent():
+            for enc, text in MOJIBAKE.items():
+                data = text.encode(enc)
+                self.assertTrue(isinstance(data.decode("cp1252"), str),
+                                "the red witness: cp1252 still decodes these bytes")
+                got = ingest.read_any(_write(self.tmp, f"{enc}.txt", data))
+                self.assertIsNone(got.text, f"{enc} arrived as a corpus")
+                self.assertEqual(got.kind, "refused")
+                self.assertEqual(got.encoding, "")
+                self.assertEqual(got.dropped, 0, "every byte decoded, wrongly")
+                self.assertEqual(got.say.word, ingest.LEGACY_WORD)
+                self.assertEqual(got.say.mark, look.REFUTED)
+                self.assertIn("1 of its 1 part (100%)", got.say.why,
+                              "the share of parts that tripped is not in the sentence")
+                self.assertIn("save it as UTF-8", got.say.why)
+                self.assertIn(f"{enc}.txt", got.say.why)
+
+    def test_the_two_refused_by_luck_are_still_refused(self):
+        for enc, text in REFUSED_BY_LUCK.items():
+            got = ingest.read_any(_write(self.tmp, f"{enc}.txt", text.encode(enc)))
+            self.assertIsNone(got.text, enc)
+
+    def test_the_five_genuine_latin_texts_still_read_as_cp1252(self):
+        with _Absent():
+            for label, text in GENUINE.items():
+                got = ingest.read_any(_write(self.tmp, f"{label}.txt",
+                                             text.encode("cp1252")))
+                self.assertEqual(got.text, text, f"{label}: {got.say.why}")
+                self.assertEqual(got.encoding, "cp1252")
+
+    def test_heavy_genuine_text_near_the_line(self):
+        """WHERE THE RISK LANDS, measured. Dense Portuguese is 0.252, a margin
+        of 0.098 under 0.35, and reads. The Vietnamese-shaped passage is 0.425
+        and a list of accented monosyllables is 0.538: both are refused. That
+        is the price of the rule, pinned so a change to it shows up here."""
+        dense = ingest.accent_verdict(PORTUGUESE_DENSE)
+        self.assertAlmostEqual(dense.worst, 0.252, places=3)
+        got = ingest.read_any(_write(self.tmp, "pt.txt",
+                                     PORTUGUESE_DENSE.encode("cp1252")))
+        self.assertEqual(got.text, PORTUGUESE_DENSE)
+        with _Absent():
+            for label, text, share in (("vi", VIETNAMESE_LIKE, 0.425),
+                                       ("list", "já lá só pé fé nó dó pó má vá dá há é à", 0.538)):
+                self.assertAlmostEqual(ingest.accent_verdict(text).worst, share, places=3)
+                got = ingest.read_any(_write(self.tmp, f"{label}.txt", text.encode("cp1252")))
+                self.assertIsNone(got.text, f"{label} is no longer refused")
+
+    def test_a_long_letter_is_not_refused_for_its_last_line(self):
+        """Equal parts, not 512 and a tail: "Été à Orléans." alone is 0.36."""
+        tail = "Été à Orléans."
+        self.assertGreaterEqual(ingest.accent_verdict(tail).worst, 0.35)
+        body = ("Le train est parti à l'heure, et nous sommes arrivés le soir. "
+                * 9)[:ingest.ACCENT_CHUNK]
+        text = body + tail
+        self.assertEqual(text[ingest.ACCENT_CHUNK:], tail,
+                         "cut at 512, the last block would be the sign-off alone")
+        got = ingest.read_any(_write(self.tmp, "lettre.txt", text.encode("cp1252")))
+        self.assertEqual(got.text, text, got.say.why)
+
+    def test_one_russian_passage_in_an_english_file_is_caught(self):
+        """Parts, not the whole file: an average would dilute this to nothing."""
+        english = "The minutes of the meeting, as agreed by everyone present. " * 40
+        russian = MOJIBAKE["cp1251"] * 8
+        data = english.encode("cp1252") + russian.encode("cp1251")
+        with _Absent():
+            got = ingest.read_any(_write(self.tmp, "minutes.txt", data))
+        self.assertIsNone(got.text)
+        verdict = ingest.accent_verdict(data.decode("cp1252"))
+        self.assertLess(verdict.tripped, verdict.judged, "the fixture is all Russian")
+        self.assertIn(f"{verdict.tripped} of its {verdict.judged} parts", got.say.why)
+
+    def test_a_saved_page_with_no_declaration_is_judged_too(self):
+        page = (f"<html><body><p>{MOJIBAKE['cp1251']}</p></body></html>").encode("cp1251")
+        with _Absent():
+            got = ingest.read_any(_write(self.tmp, "page.html", page))
+        self.assertEqual(got.say.word, ingest.LEGACY_WORD)
+        declared = (f'<html><head><meta charset="windows-1251"></head><body><p>'
+                    f"{MOJIBAKE['cp1251']}</p></body></html>").encode("cp1251")
+        got = ingest.read_any(_write(self.tmp, "declared.html", declared))
+        self.assertIn(MOJIBAKE["cp1251"], got.text, "a declared page reads as declared")
+
+    def test_the_cheap_check_offers_it_so_read_any_can_say_why(self):
+        """The same direction as a byte order mark: yes here, the sentence there.
+        A no would reach a person as a picker's generic "not text" box."""
+        p = _write(self.tmp, "ru.txt", (MOJIBAKE["cp1251"] * 5).encode("cp1251"))
+        self.assertTrue(ingest.can_train_on(p))
+        with _Absent():
+            self.assertEqual(ingest.read_any(p).say.word, ingest.LEGACY_WORD)
+
+    def test_a_folder_says_which_files_need_saving_as_utf8(self):
+        folder = self.tmp / "letters"
+        _write(folder, "a.txt", "one two three".encode("utf-8"))
+        _write(folder, "b.txt", (MOJIBAKE["cp1251"] * 3).encode("cp1251"))
+        _write(folder, "photo.png", b"\x89PNG\r\n\x1a\n\x00\x00\x00")
+        with _Absent():
+            got = ingest.read_corpus([folder])
+        self.assertEqual(got.text, "one two three")
+        self.assertIn("1 other file in there is not text", got.say.why)
+        self.assertIn("1 other file looks like text saved in an older", got.say.why)
+        self.assertIn("UTF-8", got.say.why)
+
+        only = self.tmp / "russian"
+        _write(only, "a.txt", (MOJIBAKE["cp1251"] * 3).encode("cp1251"))
+        _write(only, "b.txt", (MOJIBAKE["koi8_r"] * 3).encode("koi8_r"))
+        with _Absent():
+            got = ingest.read_corpus([only])
+        self.assertIsNone(got.text)
+        self.assertIn("2 old encoding", got.say.why)
+        self.assertIn(" 2 files look like text saved in an older", got.say.why)
+
+    def test_a_binary_file_is_still_refused_by_the_text_rule_in_its_words(self):
+        """The gate runs only on readable text, so noise is not called Russian."""
+        blob = bytes(b for b in range(256) if b not in (0x81, 0x8D, 0x8F, 0x90, 0x9D)) * 16
+        got = ingest.read_any(_write(self.tmp, "blob.txt", blob))
+        self.assertIsNone(got.text)
+        self.assertEqual(got.say.word, "Not text")
+
+
+class TheOptionalDetector(unittest.TestCase):
+    """charset-normalizer when it is installed; the same refusal when it is not."""
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.text = MOJIBAKE["cp1251"] * 3
+        self.p = _write(self.tmp, "ru.txt", self.text.encode("cp1251"))
+
+    def test_an_answer_that_holds_up_is_read_in_the_encoding_it_names(self):
+        with _fake_detector("cp1251"):
+            got = ingest.read_any(self.p)
+        self.assertEqual(got.text, self.text)
+        self.assertEqual(got.encoding, "cp1251 (detected)")
+        self.assertEqual(got.dropped, 0)
+        self.assertIn("cp1251 (detected)", got.say.why)
+
+    def test_answers_that_do_not_hold_up_leave_the_refusal_in_place(self):
+        for label, fake in (
+                ("a mess ratio over the bound", _fake_detector("koi8_r", chaos=0.187)),
+                ("a UTF codec for a file with no mark", _fake_detector("utf_16_le")),
+                ("a Latin code page, which trips the gate again", _fake_detector("mac_latin2")),
+                ("a codec Python does not have", _fake_detector("no-such-codec")),
+                ("a broken install", _fake_detector("cp1251", fail=True))):
+            with fake:
+                got = ingest.read_any(self.p)
+            self.assertIsNone(got.text, label)
+            self.assertEqual(got.say.word, ingest.LEGACY_WORD, label)
+
+    def test_it_is_never_asked_about_genuine_cp1252(self):
+        """On the review's French sentence from_bytes answers mac_latin2, which
+        would turn "cœur" into "cúur". It is never consulted on text the gate
+        passes, so its answer cannot matter."""
+        with _fake_detector("mac_latin2"):
+            got = ingest.read_any(_write(self.tmp, "fr.txt",
+                                         GENUINE["fr"].encode("cp1252")))
+        self.assertEqual(got.text, GENUINE["fr"])
+        self.assertEqual(got.encoding, "cp1252")
+
+    @unittest.skipUnless(importlib.util.find_spec("charset_normalizer"),
+                         "charset-normalizer is not installed here")
+    def test_the_real_library_reads_the_four_exactly(self):
+        for enc, text in MOJIBAKE.items():
+            got = ingest.read_any(_write(self.tmp, f"real-{enc}.txt", text.encode(enc)))
+            self.assertEqual(got.text, text, f"{enc}: {got.say.why}")
+            self.assertTrue(got.encoding.endswith("(detected)"))
 
 
 ACCEPTS = "a table of every kind of accept, so the property below covers them all"
