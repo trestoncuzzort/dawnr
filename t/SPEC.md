@@ -911,6 +911,17 @@ Semantics:
   `ensures` and `spec_funs` as the fixed instrument; only the task body is
   broken, and a twin's calls go to the same, unmutated methods.
 
+Lowering status (2026-09-26, all seven `lower_*.py`): every column lowers
+methods, each as its own contract-carrying definition verified in the same
+file, with the body hidden from callers (natively in Dafny, Verus, Frama-C;
+`Hide_Info` in SPARK, `opaque_to_smt` in F*, `irreducible` plus the spec
+theorem in Lean, a callee bound as a function variable with its contract in
+Rocq). On the fixtures `t/methods/*.t` all seven verify every real except
+Rocq's `rev_twice` (timeout) and refute every twin except Dafny's `count_pos`
+(an undefined-index witness, no Dafny certificate); every kernel reads
+`t/methods_probe/opaque_callee.t` unproved. Each column's named abstentions
+and the per-kernel table are in `t/FEATURES-TRACK.md`.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice
