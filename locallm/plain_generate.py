@@ -99,6 +99,12 @@ class _Refused(Exception):
     """A checkpoint this module will not read, with the reason in the message."""
 
 
+# The name a caller catches: the message is a sentence meant to be shown as it is
+# (home.py puts it on a card), so a caller should not have to reach for a
+# private name to tell it from a crash.
+Refused = _Refused
+
+
 class _Loader(pickle.Unpickler):
     """Rebuild tensor metadata; fetch element bytes from the zip on demand.
 
@@ -528,6 +534,29 @@ class PlainGPT:
         `rebuilt` counts refills. A prompt longer than the window is cut to its
         last block_size tokens before reading: that is exactly the state the
         exact window would reach token by token, without the per-token wall.
+
+        This is list(iter_generate(...)): the same tokens, all at once.
+        """
+        return list(self.iter_generate(ids, max_new_tokens, temperature, top_k, seed,
+                                       past_context, exact_window, keep))
+
+    def iter_generate(self, ids, max_new_tokens: int, temperature: float = 0.8,
+                      top_k: int | None = 40, seed: int | None = None,
+                      past_context: bool = True, exact_window: bool = False,
+                      keep: int | None = None):
+        """generate(), one token id at a time, each yielded as soon as it is chosen.
+
+        The arguments are checked HERE, when this is called, not when the first
+        token is asked for, so a caller learns about a bad temperature before it
+        starts a thread to read the tokens. The prompt is read on the first
+        next(), which is the slow part before the first token.
+
+        The last token is yielded and never fed back: its logits would be for a
+        token nobody asked for, and past the window feeding it could cost a whole
+        refill. So after the loop `history` ends one token short of the text, and
+        `rebuilt` counts only refills that produced something. (Streamed after
+        the pattern of generate_text_basic_stream in rasbt/LLMs-from-scratch,
+        ch05/13_olmo3, which yields each token while the caller prints it.)
         """
         if temperature < 0 or not math.isfinite(temperature):
             raise ValueError("temperature must be finite and nonnegative")
@@ -536,16 +565,18 @@ class PlainGPT:
         if not ids:
             raise ValueError("generation needs at least one token")
         keep = self.window_keep(exact_window, keep)
-        rng = random.Random(seed)
+        return self._produce(list(ids), max_new_tokens, temperature, top_k,
+                             random.Random(seed), past_context, keep)
+
+    def _produce(self, ids, max_new_tokens, temperature, top_k, rng, past_context, keep):
         logits = None
-        for token in list(ids)[-self.block_size:]:
+        for token in ids[-self.block_size:]:
             logits = self.step(token, keep)
         room = self.block_size - len(self.history)
         if not past_context and max_new_tokens > room:
             self.stopped_at_context = True
             max_new_tokens = max(room, 0)
-        produced = []
-        for _ in range(max_new_tokens):
+        for n in range(max_new_tokens):
             if temperature == 0:
                 nxt = max(range(len(logits)), key=logits.__getitem__)
             else:
@@ -558,9 +589,9 @@ class PlainGPT:
                 top = max(scaled)
                 weights = [math.exp(v - top) if v > -math.inf else 0.0 for v in scaled]
                 nxt = rng.choices(range(len(weights)), weights=weights, k=1)[0]
-            produced.append(nxt)
-            logits = self.step(nxt, keep)
-        return produced
+            yield nxt
+            if n + 1 < max_new_tokens:
+                logits = self.step(nxt, keep)
 
 
 def checkpoint_exists(out_dir) -> bool:
@@ -618,6 +649,61 @@ def sample(model, tok, prompt: str, tokens: int = 400, temperature: float = 0.8,
                                            exact_window=exact_window, keep=keep))
 
 
+def stream(model, tok, prompt: str, tokens: int = 400, temperature: float = 0.8,
+           top_k: int | None = 40, seed: int | None = None,
+           past_context: bool = True, exact_window: bool = False,
+           keep: int | None = None):
+    """sample(), a piece at a time: "".join(stream(...)) == sample(...) for a seed.
+
+    The first piece is the prompt as the model will read it (what encode() kept,
+    or the fallback token), yielded before the model reads it; then one decoded
+    token per piece, each as soon as it is chosen. A character tokenizer decodes
+    each id on its own, so no piece is ever half a character. Arguments are
+    checked when this is called. Stop early by closing the iterator or simply
+    no longer asking: nothing runs between pieces.
+    """
+    ids = tok.encode(prompt) or [0]
+    model.reset()
+    produced = model.iter_generate(ids, tokens, temperature=temperature, top_k=top_k,
+                                   seed=seed, past_context=past_context,
+                                   exact_window=exact_window, keep=keep)
+    return _pieces(tok, ids, produced)
+
+
+def _pieces(tok, ids, produced):
+    yield tok.decode(ids)
+    for nxt in produced:
+        yield tok.decode([nxt])
+
+
+def unknown_note(tok, prompt: str, what: str = "your prompt") -> str:
+    """The sentence to show BEFORE generating when encode() will drop characters.
+
+    "" when nothing is dropped. Shared by main() and home.py so the window and
+    the command line say the same thing in the same words.
+
+    A STRANGER'S PROMPT IS THE LIKELIEST PLACE THIS MODEL'S VOCABULARY RUNS OUT.
+    Train on English, then type a line in your own script or with your word
+    processor's curly quotes, and every one of those characters is missing from
+    the 82 the included model knows. encode() drops them without a word, so the
+    text that comes back answers a prompt nobody typed unless something says so.
+    """
+    unknown = tok.unknown_characters(prompt)
+    if not unknown:
+        return ""
+    lost, total = sum(unknown.values()), len(prompt)
+    shown = list(unknown)[:12]
+    names = ", ".join(repr(c) for c in shown)
+    if len(unknown) > len(shown):
+        names += f", and {len(unknown) - len(shown)} more"
+    tail = ("" if lost < total else
+            " Nothing was left of it, so it starts from the first character it "
+            "knows instead.")
+    return (f"This model never saw {len(unknown)} of the characters in {what} "
+            f"({names}), {lost} of its {total} characters in all. They are "
+            f"dropped before it writes, so the text continues what was left.{tail}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="write text from a locallm checkpoint "
                                              "using only the standard library")
@@ -654,35 +740,26 @@ def main() -> int:
         return 1
     print(f"{model.total_params():,} numbers, {tok.vocab_size} vocabulary entries, "
           f"context {config['block_size']} — no torch, no numpy", file=sys.stderr)
-    unknown = tok.unknown_characters(args.prompt)
-    if unknown:
-        # A STRANGER'S PROMPT IS THE LIKELIEST PLACE THIS MODEL'S VOCABULARY RUNS
-        # OUT. Train on English, then type a line in your own script or with your
-        # word processor's curly quotes, and every one of those characters is
-        # missing from the 82 this checkpoint knows. encode() drops them without
-        # a word, so the text that comes back answers a prompt nobody typed and
-        # nothing on the screen says so. Said before generating, not after: at
-        # 292 ms/token a 200-token answer is a minute of waiting first.
-        lost, total = sum(unknown.values()), len(args.prompt)
-        shown = list(unknown)[:12]
-        names = ", ".join(repr(c) for c in shown)
-        if len(unknown) > len(shown):
-            names += f", and {len(unknown) - len(shown)} more"
-        tail = ("" if lost < total else
-                " Nothing was left of it, so generation starts from the first "
-                "token of the vocabulary instead.")
-        print(f"plain_generate: this model never saw {len(unknown)} of the "
-              f"characters in your prompt ({names}), {lost} of its {total} "
-              f"characters in all. They are dropped before generating, so the "
-              f"text below continues what was left.{tail}", file=sys.stderr)
+    note = unknown_note(tok, args.prompt)
+    if note:
+        # Said before generating, not after: the answer takes seconds to come.
+        print(f"plain_generate: {note}", file=sys.stderr)
     try:
-        keep = model.window_keep(args.exact_window, args.keep)
+        pieces = stream(model, tok, args.prompt, args.tokens,
+                        temperature=args.temperature, top_k=args.top_k, seed=args.seed,
+                        past_context=not args.stop_at_window,
+                        exact_window=args.exact_window, keep=args.keep)
     except ValueError as exc:
         print(f"plain_generate: {exc}", file=sys.stderr)
         return 2
-    print(sample(model, tok, args.prompt, args.tokens, temperature=args.temperature,
-                 top_k=args.top_k, seed=args.seed,
-                 past_context=not args.stop_at_window, keep=keep))
+    keep = model.window_keep(args.exact_window, args.keep)
+    # Printed as it is written, the same bytes print(sample(...)) would give at
+    # the end: a 200-token answer is half a minute, and a blank terminal for
+    # that long reads as a hang.
+    for piece in pieces:
+        sys.stdout.write(piece)
+        sys.stdout.flush()
+    sys.stdout.write("\n")
     if model.stopped_at_context:
         # Silently returning short text would read as the model running out of
         # things to say, which is a different claim from hitting its window.
@@ -694,8 +771,9 @@ def main() -> int:
                f"saw between {keep} and {config['block_size'] - 1} earlier tokens "
                f"rather than torch's {config['block_size'] - 1}; --exact-window "
                f"matches torch")
-        print(f"plain_generate: refilled the context window {model.rebuilt} times, "
-              f"{how}", file=sys.stderr)
+        times = "once" if model.rebuilt == 1 else f"{model.rebuilt} times"
+        print(f"plain_generate: refilled the context window {times}, {how}",
+              file=sys.stderr)
     return 0
 
 
