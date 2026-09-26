@@ -279,7 +279,27 @@ class TrainingDataGate:
             self.decontaminated.append(f"{label[:60]} ({', '.join(detail)})")
         return result.ok
 
-HEAD_LINE = re.compile(r"^(?:Problem|Signature|Example): .*\n", re.M)
+# The head lines t/loop_locallm.py writes in front of a program: Problem: and
+# Signature: (2026-09-19), Example: (the same evening), and Spec: (2026-09-25),
+# the marker of a specification document (loop_locallm.py corpus --spec-docs):
+# the same head, this one line with nothing after the colon, then the task's
+# declaration and its requires/ensures clauses with no body. It is a second
+# document beside the program, never a prefix inside it: Distilling
+# Step-by-Step, https://ar5iv.labs.arxiv.org/html/2305.02301, Table 2, trains
+# the extra target as its own task (ANLI 49.58) and measures it folded into
+# the answer's sequence at 43.50, under the plain finetune's 43.58.
+SPEC_LINE = "Spec:\n"
+HEAD_LINE = re.compile(r"^(?:(?:Problem|Signature|Example): .*|Spec:)\n", re.M)
+
+
+def is_spec_document(doc: str) -> bool:
+    """True for a document that carries the Spec: marker: a specification with
+    no body. Such a document has no program to key: what strip_head leaves of
+    it is a declaration that surface.parse refuses (`expected '{'`), first_task
+    finds no closing brace, and key() is never reached. A reader that computes
+    recitation keys asks here first, so a spec document is counted as what it
+    is instead of as a parse failure."""
+    return bool(re.search(r"(?m)^Spec:\n", doc))
 
 
 def strip_head(doc: str) -> str:
@@ -288,7 +308,9 @@ def strip_head(doc: str) -> str:
     The corpus grew a `Signature:` line on 2026-09-19 and an `Example:` line the
     same evening. A stripper that knows only `Problem:` and `Signature:` leaves
     the rest in front of the program, `surface.parse` fails, and the document
-    vanishes from the copy check without a word.
+    vanishes from the copy check without a word. The `Spec:` line (2026-09-25)
+    is stripped the same way; what remains of a spec document is a declaration
+    without a body, which is not a program (see is_spec_document).
     """
     out = doc
     while True:

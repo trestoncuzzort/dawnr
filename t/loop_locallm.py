@@ -10,6 +10,10 @@ learn from. Three steps, each writing files the next one reads:
                 passes the problem's own tests; train split only), written as
                 "Problem: <English>" and "Signature: <fn>(<kinds>) -> <ret>"
                 lines followed by the t task, so the model learns to answer;
+                with --spec-docs, beside each of these a second document with
+                the same head, a "Spec:" line and the task's declaration and
+                requires/ensures clauses only, so the English-to-ensures step
+                is trained on its own (arXiv:2305.02301);
               - the lifted DafnyBench tasks whose row in the sweep table reads
                 all seven, and the committed t/tasks whose row in
                 AGREEMENT.md does, written as the t task alone.
@@ -156,6 +160,41 @@ def problem_head(entry: dict, with_examples: bool = False) -> str:
     return head + examples(entry) if with_examples else head
 
 
+def spec_document(head: str, program: str) -> str:
+    """The second document `corpus --spec-docs` writes for a positive: the same
+    head, the `Spec:` line, and the task's declaration with its requires and
+    ensures clauses, nothing after them.
+
+    Why a separate document: the bottleneck named in
+    internal/RESEARCH-NEXT-2026-09-20.md is the step from the English to the
+    `ensures`, a couple of lines buried in a body the model also has to write.
+    Distilling Step-by-Step (https://ar5iv.labs.arxiv.org/html/2305.02301,
+    Table 2, a 220M T5 on ANLI) trains the extra target as its own task, 49.58,
+    and measures it folded into the answer's sequence at 43.50, under the plain
+    finetune's 43.58; so the specification is its own document, selected by the
+    `Spec:` line, never a prefix inside the program document. Where this differs
+    from the paper: its selector is a prefix on the input; ours follows an
+    identical head, so at generation nothing in the prompt selects the program,
+    and a reply that opens with `Spec:` is stripped by loop_filter.strip_head
+    and its bodiless declaration then fails to parse (not well-formed, never a
+    false program). t/test_spec_documents.py states both outcomes.
+
+    What the document carries is everything surface.print_task writes before
+    the body's brace: the format line, a gate, the declaration, requires,
+    ensures, a decreases clause and any spec fun the ensures refers to. The
+    body is emptied on a copy of the parsed task and the empty braces the
+    printer then writes are removed, so no brace appears at all. A positive
+    that does not parse raises surface.SurfaceError; the caller names it.
+    """
+    task = surface.parse(program)
+    task["body"] = []
+    printed = surface.print_task(task)
+    empty = "{\n}\n"
+    if not printed.endswith(empty):
+        raise surface.SurfaceError(f"print_task did not end an emptied body with {empty!r}")
+    return head + loop_filter.SPEC_LINE + printed[:-len(empty)]
+
+
 def held_out(split_path: str) -> set[int]:
     """The ids no corpus may contain, read from the split that defines them.
 
@@ -233,7 +272,8 @@ Gate = loop_filter.TrainingDataGate
 
 def cmd_corpus(a) -> int:
     pool = se.pool(a.pool)
-    docs, n_sft, n_lift, n_committed = [], 0, 0, 0
+    docs, n_sft, n_spec, n_lift, n_committed = [], 0, 0, 0, 0
+    spec_docs = getattr(a, "spec_docs", False)
     evil = held_out(a.split)      # ids that must not appear anywhere below
     # the dev split that picks the stopping step (t/r12-dev-ids.json) is
     # refused the same way, or the step would be chosen on trained-on problems
@@ -274,8 +314,22 @@ def cmd_corpus(a) -> int:
             elif entry is None:
                 unusable.append(f"{Path(sft).name}:{number} task_id={task_id} is not in pool {a.pool}")
             else:
-                docs.append(problem_head(entry, a.examples) + m.group(1).strip() + "\n")
+                head = problem_head(entry, a.examples)
+                docs.append(head + m.group(1).strip() + "\n")
                 n_sft += 1
+                if spec_docs:
+                    # the same head, then the specification alone: a second
+                    # document for this positive (see spec_document). It is
+                    # built from the answer the gate above just admitted, so
+                    # it names nothing the program document does not; the
+                    # whole-corpus check below reads it again anyway.
+                    try:
+                        docs.append(spec_document(head, m.group(1)))
+                    except surface.SurfaceError as e:
+                        unusable.append(f"{Path(sft).name}:{number} task_id={task_id} does not parse, so there "
+                                        f"is no specification to write for it: {e}")
+                    else:
+                        n_spec += 1
     if unusable:
         raise SystemExit(f"{len(unusable)} SFT row(s) reach no document; the corpus would not equal its "
                          f"inputs: {unusable[:5]}" + (" ..." if len(unusable) > 5 else ""))
@@ -307,12 +361,20 @@ def cmd_corpus(a) -> int:
                 if gate.admit(doc, [task.get("name")]):
                     docs.append(doc)
                     n_committed += 1
+    if spec_docs and n_spec == 0:
+        # the flag names a corpus with a specification beside every positive;
+        # lifted and committed tasks have no English head and get none, so a
+        # build with no positives has nothing to write and says so
+        raise SystemExit(f"--spec-docs asked for a specification document beside every positive and the "
+                         f"inputs hold no positive ({n_sft} problem answers, 0 spec documents); a corpus "
+                         f"without them is not the corpus this flag names")
     seen, unique = set(), []
     for d in docs:               # the base corpus may already hold the same answers
         if d not in seen:
             seen.add(d)
             unique.append(d)
     docs = unique
+    spec_in_corpus = sum(loop_filter.is_spec_document(d) for d in docs)
     corpus_text = "\n\n".join(docs)
     final = loop_filter.validate_training_data(corpus_text, evil)
     if not final.ok:
@@ -322,8 +384,13 @@ def cmd_corpus(a) -> int:
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(corpus_text + "\n", encoding="utf-8")
-    print(f"corpus {out}: {len(docs)} documents (base {a.base or 'none'}, {n_sft} problem answers, {n_lift} lifted, "
-          f"{n_committed} committed), {out.stat().st_size} bytes")
+    print(f"corpus {out}: {len(docs)} documents (base {a.base or 'none'}, {n_sft} problem answers, "
+          f"{n_spec} spec documents, {n_lift} lifted, {n_committed} committed), {out.stat().st_size} bytes")
+    if spec_docs or spec_in_corpus:
+        # two positives for one problem can share a specification; the fold
+        # above keeps one copy, and the count in the corpus is the honest one
+        print(f"spec documents: {n_spec} written for {n_sft} positives, {spec_in_corpus} in the corpus"
+              + (f" ({n_spec - spec_in_corpus} duplicate(s) folded)" if n_spec > spec_in_corpus else ""))
     if evil:
         print(f"held-out filter: {len(evil)} ids from {a.split}, {len(gate.held)} document(s) excluded"
               + (f": {', '.join(gate.held)}" if gate.held else ""))
@@ -532,6 +599,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lifted", action="store_true", help="add the lifted and committed tasks that read all seven")
     p.add_argument("--base", default="", help="start from this corpus file (documents split at blank lines)")
     p.add_argument("--out", default=str(OUT / "corpus.txt"))
+    p.add_argument("--spec-docs", action="store_true",
+                   help="beside every problem answer, a second document with the same head, a Spec: line and "
+                        "the task's declaration and clauses only, no body (Distilling Step-by-Step, "
+                        "arXiv:2305.02301: the extra target as its own task, not folded into the answer)")
     p.add_argument("--examples", action="store_true",
                    help="put the problem's own assertions in the head; every model "
                         "compared against a model trained this way must get them too")

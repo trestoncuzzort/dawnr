@@ -8,14 +8,24 @@ head. This rewrites a corpus so a bare program is preceded by the signature it
 actually has. Nothing is invented: the line is derived from the program's own
 parameter and return types, and a document that already has a head is left
 exactly as it was.
+
+A head is whatever loop_filter.HEAD_LINE says it is, so a new head line is
+added in one place. That includes the `Spec:` line of a specification document
+(loop_locallm.py corpus --spec-docs, 2026-09-25): it starts with the same
+`Problem:` head as the program it stands beside, carries no body, and is kept
+exactly as it was and counted as `spec_documents`, never parsed as a program.
 """
 import argparse
 from hashlib import sha256
 from pathlib import Path
 import re
 
+import loop_filter
 import surface
 
+# The same boundary loop_locallm.REPLY_BOUNDARY cuts at. A spec document
+# begins with `Problem: `, so it is split off there; its `Spec:` line follows
+# the head with no blank line and is never a boundary.
 SPLIT = re.compile(r"\n\s*\n(?=Problem: |Signature: |t \d)")
 
 
@@ -35,14 +45,15 @@ def head_for(task):
 
 
 def align(text):
-    documents, added, kept, unparsed = [], 0, 0, 0
+    documents, added, kept, spec, unparsed = [], 0, 0, 0, 0
     for chunk in SPLIT.split(text):
         chunk = chunk.strip()
         if not chunk:
             continue
-        if chunk.startswith(("Problem:", "Signature:")):
+        if loop_filter.HEAD_LINE.match(chunk + "\n"):
             documents.append(chunk + "\n")
             kept += 1
+            spec += loop_filter.is_spec_document(chunk)
             continue
         try:
             task = surface.parse(chunk + "\n")
@@ -52,7 +63,8 @@ def align(text):
             continue
         documents.append(head_for(task) + chunk + "\n")
         added += 1
-    return documents, {"heads_added": added, "already_headed": kept, "unparsed": unparsed}
+    return documents, {"heads_added": added, "already_headed": kept, "spec_documents": spec,
+                       "unparsed": unparsed}
 
 
 def main():
