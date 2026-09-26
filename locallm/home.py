@@ -21,7 +21,8 @@ WHAT IT DOES NOT DO. It does not train, sample, measure or judge anything itself
 Every number on the page comes from code that already existed: the presets and
 the timing arithmetic from studio.py, the corpus checks from data.py and
 leakage.py, the training loop from studio.TrainWorker, the chart from
-studio.LearningPlot, the sampling from checkpoint.sample, and every word of every
+studio.LearningPlot, the sampling from checkpoint.sample (or, with no torch,
+plain_generate.stream), and every word of every
 judgement from look.py's Say. This file is layout and wording. That is on purpose:
 a second opinion about whether a corpus is safe to train on is a second thing to
 keep true.
@@ -37,7 +38,10 @@ IT OPENS ON A MACHINE WITH NO TORCH. studio.py imports torch at module scope, so
 it is imported here lazily, once, through engine(). With no torch the page still
 opens and still explains itself: the cards say plainly which parts cannot work and
 why, rather than the window refusing to appear. That is the same reason t/lab.py
-imports studio inside build_train.
+imports studio inside build_train. Step 4 still talks: plain_generate.py reads the
+model with the standard library and the reply is shown a character at a time as
+it is written, with a Stop button, because at a few characters a second a reply
+that appeared only at the end looked like a frozen window.
 
 NOTHING HERE READS A USER'S FILE. ingest.read_any does, and it is the only thing
 allowed to: it either decodes a file properly and says which encoding worked, or
@@ -50,14 +54,15 @@ green tick beside them.
 
 Dependencies: tkinter (stdlib) and locallm/look.py. ingest is reached lazily and
 its absence is a REFUSAL, not a fallback. torch, studio, data, leakage,
-checkpoint and get_corpus are all reached lazily too, and each absence has a
-sentence.
+checkpoint, plain_generate and get_corpus are all reached lazily too, and each
+absence has a sentence.
 """
 from __future__ import annotations
 
 import queue
 import sys
 import threading
+import time
 import traceback
 from pathlib import Path
 from typing import Callable, NamedTuple
@@ -139,6 +144,112 @@ def reader() -> tuple[object | None, str]:
         except Exception as e:                                    # noqa: BLE001
             _READER.append((None, f"{type(e).__name__}: {e}"))
     return _READER[0]
+
+
+# --------------------------------------------------------------------------
+# THE THIRD LAZY IMPORT: TALKING TO A MODEL WITH NOTHING INSTALLED.
+#
+# plain_generate.py reads a ckpt.pt and writes text with the standard library
+# alone, so with no torch step 4 still talks to the model that came with this
+# copy, only slower. Lazy for the same reason as the other two: a release that
+# left the file out has to be a sentence on a card, not a traceback. It is only
+# used when studio is missing; with torch the page reads models as it always
+# did, through checkpoint.py.
+# --------------------------------------------------------------------------
+_TALKER: list[tuple[object | None, str]] = []
+
+
+def talker() -> tuple[object | None, str]:
+    """(plain_generate module, "") or (None, why not). Imported at most once."""
+    if not _TALKER:
+        try:
+            import plain_generate                                # noqa: PLC0415
+            _TALKER.append((plain_generate, ""))
+        except Exception as e:                                    # noqa: BLE001
+            _TALKER.append((None, f"{type(e).__name__}: {e}"))
+    return _TALKER[0]
+
+
+def why_unreadable(plain, e: Exception) -> str:
+    """plain_generate's own sentence for a model it will not read, not a type name.
+
+    Its refusals (a byte-BPE tokenizer, the modern core, a Git LFS stub instead
+    of the weights) and its missing-file error are written to be read by a person,
+    so they are shown whole. Anything else is a fault and keeps its type.
+    """
+    readable = (FileNotFoundError,)
+    if plain is not None and hasattr(plain, "Refused"):
+        readable += (plain.Refused,)
+    if isinstance(e, readable):
+        return str(e)
+    return f"{type(e).__name__}: {e}"
+
+
+def write_pieces(make_pieces: Callable[[], object], q: queue.Queue,
+                 stop: threading.Event, clock: Callable[[], float] = time.monotonic):
+    """The writing thread's whole job: pieces onto the queue until done or stopped.
+
+    It touches nothing but `q` and `stop`, because the tkinter docs make that a
+    correctness rule rather than a style one: Tk is single-threaded, "event
+    handlers must respond quickly", long work belongs "in another thread", and a
+    call from that thread into Tk fails when the event loop is not running
+    (docs.python.org/3/library/tkinter.html, "Threading model"). _drain, on the Tk
+    thread, is the only thing that touches a widget.
+
+    `make_pieces()` builds the stream here, off the Tk thread, because building it
+    resets the model, which the Tk thread must not do while a step is running.
+    The first piece is the prompt as the model read it; `chars` in the closing
+    message counts only what was written after it. Stop is checked between
+    pieces, since a thread cannot be interrupted inside one (nothing in
+    docs.python.org/3/library/threading.html offers that), so Stop takes effect
+    within one character's time, and the stream is closed so nothing more runs.
+    """
+    started = clock()
+    chars = 0
+    first = True
+    pieces = None
+    try:
+        pieces = make_pieces()
+        for piece in pieces:
+            if stop.is_set():
+                break
+            q.put(("partial", piece))
+            if first:
+                first = False
+            else:
+                chars += len(piece)
+    except Exception:                                             # noqa: BLE001
+        q.put(("write-failed", traceback.format_exc()))
+        return
+    finally:
+        close = getattr(pieces, "close", None)
+        if close is not None:
+            close()
+    q.put(("written", {"chars": chars, "seconds": clock() - started,
+                       "stopped": stop.is_set()}))
+
+
+def say_plain_waiting(where: Path) -> look.Say:
+    """Card 4 before anything is loaded, when only plain Python can read it."""
+    return look.Say(
+        look.NOT_APPLICABLE, "Waiting",
+        f"There is already a trained model in the “{where.name}” folder. PyTorch "
+        f"is not installed, so plain Python reads it instead: that is slower, a "
+        f"few characters a second rather than hundreds, and they appear as they "
+        f"are written. Press “Try the model that came with it” to talk to it now.",
+        "muted")
+
+
+def say_written(chars: int, seconds: float, stopped: bool) -> look.Say:
+    """What the plain path did, with the pace this computer actually managed."""
+    pace = (f", about {chars / seconds:.1f} a second on this computer"
+            if chars and seconds > 0 else "")
+    what = (f"Stopped after {chars:,} characters, as asked" if stopped else
+            f"Wrote {chars:,} characters in {seconds:.0f} seconds")
+    return look.Say(look.PROVED, "Stopped" if stopped else "Written",
+                    f"{what}{pace}, read with plain Python because PyTorch is not "
+                    f"installed. Type something else and press Write something "
+                    f"again.", "proved")
 
 
 # --------------------------------------------------------------------------
@@ -1260,6 +1371,15 @@ class Home(ttk.Frame):
         self.model = None
         self.tok = None
         self.vocab = 0
+        # Which reader holds self.model: False for checkpoint.py under torch,
+        # True for plain_generate with nothing installed. Only the plain one
+        # streams and can be stopped; the torch one answers in one piece.
+        self.plain = False
+        self.write_stop = threading.Event()
+        self._writing_since = 0.0
+        self._written = 0
+        self._prompt_shown = False
+        self._switch: float | None = None     # the interval to restore, while writing
         self.model_dir: Path | None = None
         self.more_open = False
         self.edited = False
@@ -2045,15 +2165,20 @@ class Home(ttk.Frame):
         self.b_write = _Button(row, self.C, "Write something", self._write_something)
         self.b_write.grid(row=0, column=0)
         self.b_write.set_enabled(False)
+        # Live only while plain Python is writing: that path takes seconds per
+        # line, and a wait nobody can end is the thing a Stop button is for.
+        self.b_hush = _Button(row, self.C, "Stop", self._stop_writing)
+        self.b_hush.grid(row=0, column=1, padx=(look.SPACE.item, 0))
+        self.b_hush.set_enabled(False)
         # BOTH DOORS, because a stranger with a stick should get something
         # working before they understand anything. One of these leads back to
         # step 3; the other picks up whatever model is already on the disk,
         # shipped or trained last week, and needs no waiting at all.
         _Button(row, self.C, "Train your own", self._goto_train).grid(
-            row=0, column=1, padx=(look.SPACE.inner, 0))
+            row=0, column=2, padx=(look.SPACE.inner, 0))
         self.b_ready = _Button(row, self.C, "Try the model that came with it",
                                self._use_ready_made)
-        self.b_ready.grid(row=0, column=2, padx=(look.SPACE.inner, 0))
+        self.b_ready.grid(row=0, column=3, padx=(look.SPACE.inner, 0))
 
         if self.studio is not None:
             styles = tk.Frame(body, bg=self.C["card"])
@@ -2096,39 +2221,69 @@ class Home(ttk.Frame):
             self._show(4, say_model(None))
             return
         if self.studio is None:
-            self._show(4, look.Say(
-                look.NOT_APPLICABLE, "Cannot open it",
-                f"There is a trained model in “{where.name}”, but reading it "
-                f"needs PyTorch, which is not installed for this Python yet.",
-                "unsettled"))
-            self.b_ready.set_enabled(False)
+            plain, why = talker()
+            if plain is None:
+                self._show(4, look.Say(
+                    look.NOT_APPLICABLE, "Cannot open it",
+                    f"There is a trained model in “{where.name}”, but reading it "
+                    f"needs PyTorch, which is not installed for this Python yet, "
+                    f"and the file that reads it without PyTorch is missing "
+                    f"({why}).", "unsettled"))
+                self.b_ready.set_enabled(False)
+                return
+            self._show(4, say_plain_waiting(where))
             return
         self._show(4, look.Say(
-            look.NOT_APPLICABLE, "One is waiting",
+            look.NOT_APPLICABLE, "Waiting",
             f"There is already a trained model in the “{where.name}” folder. "
             f"Press “Try the model that came with it” and you can talk to it "
             f"now, without training anything.", "muted"))
 
     def _use_ready_made(self):
         where = ready_made(HERE)
-        if where is None or self.studio is None:
+        if where is None:
             return
-        try:
-            import checkpoint                                    # noqa: PLC0415
-            model, tok, _cfg = checkpoint.load_checkpoint(where, self.device)
-        except Exception as e:                                   # noqa: BLE001
-            self._show(4, say_model(where, why_not=f"{type(e).__name__}: {e}"))
-            return
+        if self.studio is None:
+            # No torch: plain_generate reads the same two files with the standard
+            # library, in about a tenth of a second for the included model, so on
+            # this thread like the torch path below.
+            plain, _why = talker()
+            if plain is None:
+                return
+            try:
+                model, tok, _cfg = plain.load_checkpoint(where)
+            except Exception as e:                               # noqa: BLE001
+                self._show(4, say_model(where, why_not=why_unreadable(plain, e)))
+                return
+            self.plain = True
+        else:
+            try:
+                import checkpoint                                # noqa: PLC0415
+                model, tok, _cfg = checkpoint.load_checkpoint(where, self.device)
+            except Exception as e:                               # noqa: BLE001
+                self._show(4, say_model(where, why_not=f"{type(e).__name__}: {e}"))
+                return
+            self.plain = False
         self.model, self.tok, self.model_dir = model, tok, where
         self.vocab = tok.vocab_size
         self.b_write.set_enabled(True)
-        self._show(4, say_model(where, model.num_params()))
+        say = say_model(where, model.total_params())
+        if self.plain:
+            say = say._replace(why=say.why + " PyTorch is not installed, so plain "
+                               "Python writes it: a few characters a second, shown "
+                               "as they come, and Stop ends it early.")
+        self._show(4, say)
 
     def _write_something(self):
         if self.model is None:
             self._show(4, say_model(None))
             return
-        _, temp, topk = self.studio.STYLES[int(self.v_style.get())]
+        if self.studio is not None:
+            _, temp, topk = self.studio.STYLES[int(self.v_style.get())]
+        else:
+            # studio.STYLES lives behind the torch import. Its default stop,
+            # "Balanced", is 0.8 and 40, which is also plain_generate's default.
+            temp, topk = 0.8, 40
         try:
             tokens = max(1, int(self.v_tokens.get()))
         except ValueError:
@@ -2138,9 +2293,40 @@ class Home(ttk.Frame):
                 "number.", "refuted"))
             self.b_write.set_enabled(True)
             return
+        # Read here, on the Tk thread: a StringVar is a widget call.
+        prompt = self.v_prompt.get()
+        model, tok = self.model, self.tok
         self.b_write.set_enabled(False)
-        self._show(4, look.Say(_WORKING, "Writing",
-                               "It is carrying on from what you typed.", "muted"))
+        plain, _why = talker()
+        note = (plain.unknown_note(tok, prompt, what="what you typed")
+                if plain is not None and hasattr(tok, "unknown_characters") else "")
+        why = "It is carrying on from what you typed."
+        self._show(4, look.Say(_WORKING, "Writing", f"{why} {note}" if note else why,
+                               "muted"))
+
+        if self.plain:
+            self.reply.delete("1.0", "end")
+            self.write_stop.clear()
+            self.b_hush.set_enabled(True)
+            self._writing_since, self._written = time.monotonic(), 0
+            self._prompt_shown = False
+            # THE TK THREAD HAS TO GET A TURN. Every tkinter call releases the
+            # GIL around Tcl and must win it back from a thread that is doing
+            # nothing but arithmetic, which takes up to one switch interval each
+            # time: bugs.python.org/issue7946, the convoy effect. At the default
+            # 5 ms the window ran its loop twice in 2.4 s of writing and the text
+            # arrived in two jumps (measured under xvfb, 60 characters). At 1 ms
+            # it ran 33 times, 18 visible steps, and writing took no longer
+            # (2.37 s both ways). docs.python.org/3/library/sys.html
+            # #sys.setswitchinterval; put back when writing ends.
+            if self._switch is None:
+                self._switch = sys.getswitchinterval()
+                sys.setswitchinterval(min(self._switch, 0.001))
+            threading.Thread(target=write_pieces, daemon=True, args=(
+                lambda: plain.stream(model, tok, prompt, tokens,
+                                     temperature=temp, top_k=topk),
+                self.q, self.write_stop)).start()
+            return
 
         def work():
             try:
@@ -2149,12 +2335,23 @@ class Home(ttk.Frame):
                 # command line cannot drift apart about what sampling means.
                 import checkpoint                                # noqa: PLC0415
                 self.q.put(("sample", checkpoint.sample(
-                    self.model, self.tok, self.v_prompt.get(), tokens,
+                    model, tok, prompt, tokens,
                     temperature=temp, top_k=topk, device=self.device)))
             except Exception:
-                self.q.put(("error", traceback.format_exc()))
+                self.q.put(("write-failed", traceback.format_exc()))
 
         threading.Thread(target=work, daemon=True).start()
+
+    def _writing_ended(self):
+        if self._switch is not None:
+            sys.setswitchinterval(self._switch)
+            self._switch = None
+
+    def _stop_writing(self):
+        """Ask the writing thread to stop; it answers with "written" when it has."""
+        self.write_stop.set()
+        self.b_hush.set_enabled(False)
+        self._set_status("Stopping after this character.")
 
     # --------------------------------------------------------- more settings
     def _build_more(self, col):
@@ -2326,8 +2523,9 @@ class Home(ttk.Frame):
                     self.b_write.set_enabled(True)
                     self._show(3, look.say_progress(payload["train"], self.vocab),
                                prefix="Finished. ")
+                    self.plain = False
                     self._show(4, say_model(self.model_dir,
-                                            payload["model"].num_params()))
+                                            payload["model"].total_params()))
                     self._set_status(
                         f"Finished in "
                         f"{self.studio.human_time(payload['elapsed'])}. Step 4 "
@@ -2349,7 +2547,40 @@ class Home(ttk.Frame):
                     self.b_write.set_enabled(True)
                     self._show(4, say_model(
                         self.model_dir,
-                        self.model.num_params() if self.model is not None else None))
+                        self.model.total_params() if self.model is not None else None))
+                elif kind == "partial":
+                    # One piece from the plain path: the prompt first, then a
+                    # character at a time, appended where the reader can see it.
+                    self.reply.insert("end", payload)
+                    self.reply.see("end")
+                    if self._prompt_shown:
+                        self._written += len(payload)
+                    self._prompt_shown = True
+                    took = time.monotonic() - self._writing_since
+                    if self._written and took > 0:
+                        self._set_status(
+                            f"Writing… {self._written:,} characters so far, about "
+                            f"{self._written / took:.1f} a second on this computer.")
+                elif kind == "written":
+                    self._writing_ended()
+                    self.b_write.set_enabled(True)
+                    self.b_hush.set_enabled(False)
+                    self._show(4, say_written(payload["chars"], payload["seconds"],
+                                              payload["stopped"]))
+                    self._set_status("")
+                elif kind == "write-failed":
+                    # Card 4's own failure, not training's: before this the
+                    # sampling thread reported through "error", which told card 3
+                    # that training had stopped.
+                    self._writing_ended()
+                    self.b_write.set_enabled(True)
+                    self.b_hush.set_enabled(False)
+                    last = payload.strip().splitlines()[-1] if payload.strip() else ""
+                    self._show(4, look.Say(
+                        look.REFUTED, "Stopped",
+                        f"Writing stopped with an error. What Python said last: "
+                        f"{last}.", "refuted"))
+                    self._log("\nWriting stopped with an error:\n" + payload)
                 elif kind == "error":
                     self._log("\nSomething went wrong:\n" + payload)
                     if getattr(self, "b_train", None) is not None:

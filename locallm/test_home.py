@@ -277,6 +277,10 @@ class WhatItSays(unittest.TestCase):
             home.say_model(None),
             home.say_model(pathlib.Path("out_gui"), 3_194_368),
             home.say_model(pathlib.Path("out_gui"), why_not="boom"),
+            home.say_plain_waiting(pathlib.Path(home.INCLUDED)),
+            home.say_written(400, 52.3, False),
+            home.say_written(12, 2.0, True),
+            home.say_written(0, 0.0, True),
             home.say_vocab(0),
             home.say_vocab(84),
             home.say_vocab(600),
@@ -579,6 +583,97 @@ class ReadingIsIngestsJob(unittest.TestCase):
         worker = OffThread()
         worker.read(FakeIngest(), f)            # no AttributeError == no widget
         self.assertEqual(sorted(vars(worker)), ["q", "studio", "tools"])
+
+
+class TalkingWithNothingInstalled(unittest.TestCase):
+    """Step 4's writing thread, run here with no display and no torch.
+
+    The model is test_plain_generate's tiny one, built in memory, and the stream
+    is plain_generate's real one: what is under test is that the worker puts the
+    pieces on the queue in order, stops when asked, closes the stream, and says
+    how it ended — touching nothing but the queue and the event.
+    """
+
+    def setUp(self):
+        import plain_generate                                    # noqa: PLC0415
+        from test_plain_generate import tiny_model               # noqa: PLC0415
+        self.pg = plain_generate
+        self.model, self.tok = tiny_model(block_size=8)
+        self.q: queue.Queue = queue.Queue()
+
+    def drain(self):
+        out = []
+        while not self.q.empty():
+            out.append(self.q.get_nowait())
+        return out
+
+    def test_every_piece_arrives_in_order_then_a_summary(self):
+        import threading                                         # noqa: PLC0415
+        make = lambda: self.pg.stream(self.model, self.tok, "abc", 20, seed=3)  # noqa: E731
+        home.write_pieces(make, self.q, threading.Event())
+        got = self.drain()
+        kinds = [k for k, _ in got]
+        self.assertEqual(kinds, ["partial"] * 21 + ["written"])
+        text = "".join(p for k, p in got if k == "partial")
+        self.assertEqual(text, self.pg.sample(self.model, self.tok, "abc", 20, seed=3))
+        self.assertEqual(got[-1][1]["chars"], 20, "the prompt is not counted as written")
+        self.assertFalse(got[-1][1]["stopped"])
+
+    def test_stop_ends_it_between_pieces_and_closes_the_stream(self):
+        import threading                                         # noqa: PLC0415
+
+        class PressedAfterThree(threading.Event):
+            """Stop pressed while the fourth piece was being written."""
+            checks = 0
+
+            def is_set(self):
+                self.checks += 1
+                if self.checks == 4:
+                    self.set()
+                return super().is_set()
+        stop = PressedAfterThree()
+        pieces = self.pg.stream(self.model, self.tok, "ab", 500)
+        home.write_pieces(lambda: pieces, self.q, stop)
+        got = self.drain()
+        self.assertEqual([k for k, _ in got], ["partial"] * 3 + ["written"])
+        self.assertTrue(got[-1][1]["stopped"])
+        self.assertLess(len(self.model.history), 10, "it went on writing after Stop")
+        with self.assertRaises(StopIteration):
+            next(pieces)
+
+    def test_a_failure_is_reported_on_the_queue_not_raised(self):
+        import threading                                         # noqa: PLC0415
+
+        def broken():
+            yield "ab"
+            raise RuntimeError("the stick was pulled out")
+        home.write_pieces(broken, self.q, threading.Event())
+        got = self.drain()
+        self.assertEqual(got[-1][0], "write-failed")
+        self.assertIn("the stick was pulled out", got[-1][1])
+
+    def test_the_worker_touches_only_the_queue_and_the_event(self):
+        """write_pieces is a function of its arguments: no self, so no widget."""
+        import inspect                                           # noqa: PLC0415
+        self.assertEqual(list(inspect.signature(home.write_pieces).parameters),
+                         ["make_pieces", "q", "stop", "clock"])
+
+    def test_a_refusal_is_shown_in_its_own_words(self):
+        e = self.pg.Refused("this checkpoint is architecture='modern', which needs "
+                            "RMSNorm.")
+        self.assertEqual(home.why_unreadable(self.pg, e), str(e))
+        self.assertEqual(home.why_unreadable(self.pg, ValueError("x")), "ValueError: x")
+        self.assertEqual(home.why_unreadable(None, FileNotFoundError("gone")), "gone")
+
+    def test_the_pace_is_the_measured_one(self):
+        say = home.say_written(40, 8.0, False)
+        self.assertIn("5.0 a second on this computer", say.why)
+        self.assertIn("40 characters in 8 seconds", say.why)
+        self.assertIn("plain Python", say.why)
+        stopped = home.say_written(3, 1.0, True)
+        self.assertEqual(stopped.word, "Stopped")
+        self.assertNotIn("second on", home.say_written(0, 0.0, True).why,
+                         "no pace claimed when nothing was written")
 
 
 class WhatStepThreeAllows(unittest.TestCase):
