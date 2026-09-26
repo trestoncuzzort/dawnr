@@ -62,10 +62,14 @@ exists to answer is whether a model built from that data does more per parameter
 
 ## Running anything
 
-All compute runs on the lab workstation, never the home desktop. `t/lab-workstation.conf` (gitignored) holds
-`T_LAB=user@host`; the python with the whole stack is `~/.venv-vllm/bin/python` there. The four GPUs are
-**shared with other users** and must be given back the moment they ask: `bash t/lab_gpu.sh stop` clears every
-process of ours off them in seconds, and every answer is written to its own file so nothing in flight is lost.
+Two machines run the pipeline. The lab workstation (`T_LAB=user@host` in the gitignored
+`t/lab-workstation.conf`; the python with the whole stack is `~/.venv-vllm/bin/python` there) has four GPUs
+and 120 cores that are **shared with other users** and must be given back the moment they ask:
+`bash t/lab_gpu.sh stop` clears every process of ours off them in seconds, every answer is written to its
+own file so nothing in flight is lost, and nothing of ours runs there while it is handed back. The home
+desktop (24 cores, one RTX 4080) runs everything too since 2026-09-26: `T_LAB=local` makes
+`t/grade_lab.sh` and `t/r12_data_queue.sh` grade on it (`t/lab_mode.sh`), all seven kernels are installed
+under `~/.local`, and `~/.venv-locallm` has torch with CUDA for training.
 
 Kernels need their PATH or Verus silently reports MALFORMED for every cell:
 
