@@ -152,6 +152,22 @@ e5060fc9ac04)
 - **Test:** exact one-sided permutation test over seeds on the mean; Wilson
   intervals for single checkpoints; McNemar mid-p only for two fixed
   checkpoints.
+- **Verdict** (eval-stats.md protocol step 4, computed by `t/compare_arms.py`):
+  ADOPT if the permutation p is at most .05 **and** the upper bound of the
+  bootstrap interval on P(B>A) is above .75; NOT MEANINGFUL if that upper bound
+  is at most .75; otherwise INCONCLUSIVE, claimed as nothing. P(B>A) counts a
+  tie as 1/2. This departs from Bouthillier et al. (arXiv:2103.03098) twice, on
+  purpose: significance comes from the exact permutation p, not from the
+  interval's lower bound above .5, and ties are not dropped, because counts of
+  0-6 tie constantly. Two single checkpoints get McNemar and no recipe verdict.
+- **Commands** (run step 9): `python3 t/score_heldout.py --split
+  t/out/loop/split-v5.json --outcomes t/out/r12-outcomes.json <every seed tag>`
+  then `python3 t/compare_arms.py --outcomes t/out/r12-outcomes.json --arm
+  base=... --arm new=... --prereg t/PREDICT-r12.md`, where the prediction file
+  carries one line `seeds: N` (and optionally `metric:` and `problems:`), so
+  the comparison refuses to run on any other number of seeds. A tag with fewer
+  than 232 answers is refused by both scripts unless `--allow-partial`, and a
+  tag whose records mix decoding settings is refused outright.
 - **One look.** Predictions registered in a `t/PREDICT-*` file before training;
   the 232 are looked at once per decision. Exploration uses the dev split.
 
