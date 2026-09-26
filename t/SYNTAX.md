@@ -51,6 +51,7 @@ Task     ::= { "t": 0|1, "name": Id,
                "ensures":  [ Expr+ ],           (* conjoined; non-empty *)
                "gate"?: "quantifiers"|"loops"|"recursion",
                "spec_funs"?: [ SpecFun* ],      (* v1 *)
+               "methods"?: [ Method* ],         (* v1, since 2026-09-26; SPEC.md "Methods (v1)" *)
                "decreases"?: Expr,              (* v1; required iff body self-calls *)
                "body": [ Stmt+ ] }              (* every path ends in assign *)
 
@@ -104,6 +105,17 @@ SpecFun  ::= {"name": Id,
               "result": "int"|"bool",
               "decreases": Expr,                (* int-valued, over the params *)
               "body": Expr}                     (* may call itself and EARLIER spec_funs *)
+
+Method   ::= {"name": Id, "params": [ {"name": Id, "type": Type}* ],
+              "returns": [ {"name": Id, "type": Type} ],          (* exactly one *)
+              "requires": [ Expr* ], "ensures": [ Expr+ ],
+              "decreases"?: Expr,               (* required iff the body self-calls *)
+              "body": [ Stmt+ ]}                (* calls spec_funs, EARLIER methods, itself *)
+              (* written `method m(a: int) returns (b: int) requires .. ensures .. { .. }`
+                 between the task's clauses and its body. A method call is only the
+                 whole right-hand side of an assign or var init, with call-free
+                 arguments (Dafny reference manual 8.5.2); a caller knows only the
+                 callee's contract. *)
 
 Id       ::= [A-Za-z][A-Za-z0-9_]*
 ```
