@@ -3813,6 +3813,19 @@ def _divisor_bound_spark_defs(plan: dict, lo_text: str) -> str:
     return core + top
 
 
+def _with_obls(obls: list, e: str) -> str:
+    """`e` with every method-call obligation in `obls` evaluated first
+    (Lower.obls): the condition's value is irrelevant (both arms are `e`),
+    only the Pre checks of the calls it evaluates matter. `e` unchanged
+    when there are none, so a task without methods lowers as before."""
+    if not obls:
+        return e
+    # plain `and`, not `and then`: every obligation is evaluated, none
+    # under the hypothesis that an earlier one came out True
+    cond = "\n        and ".join(obls)
+    return f"(if {cond}\n      then {e}\n      else {e})"
+
+
 class Lower:
     def __init__(self, task: dict, ce: bool = False):
         self.task = task
@@ -3856,6 +3869,23 @@ class Lower:
         self.needs_str_split_w = False
         self.needs_str_join = False
         self.spec_fun_names = {sf["name"] for sf in task.get("spec_funs", [])}
+        # SPEC.md "Methods (v1)": each method's return type, for _ty and the
+        # call check in expr(); `fname` is the Ada name a self-call renders
+        # to -- "F" for the task, the method's own name when this Lower is
+        # compiling a method body (_lower_method).
+        self.method_ret = {m["name"]: m["returns"][0]["type"]
+                           for m in task.get("methods", [])}
+        self.fname = "F"
+        # SPEC.md "Methods (v1)": "the caller owes m's requires at the
+        # arguments". Substitution only evaluates a call where its result
+        # is later READ, so a call whose result is overwritten, or read on
+        # one branch only, would never have its Pre checked. Every method
+        # call statement therefore also leaves an obligation here, guarded
+        # by the path condition it executes under (`path`, pushed by
+        # compile()'s `if`), which the function being built evaluates in a
+        # value-neutral `(if OBL then E else E)` wrapper (_with_obls).
+        self.path: list[str] = []
+        self.obls: list[str] = []
         # 2026-09-14 (spark-cert, ROADMAP 16.2 "value-witness certificates
         # through loop bodies"): one UNCONTRACTED clone of each W_k this
         # compile pass lowers, keyed by the contracted helper's own name
@@ -3870,6 +3900,31 @@ class Lower:
         # transcription slip cannot make the instance disagree with the
         # theorem it instantiates (header).
         self.num = "Ce_Num" if ce else "Big_Integer"
+
+    def _is_method_call(self, e: dict) -> bool:
+        """A call to a t method (or a method's own self-call). A task's
+        self-call is not one: it keeps its pre-existing lowering."""
+        return "call" in e and (
+            e["call"]["fun"] in self.method_ret
+            or (self.fname != "F" and e["call"]["fun"] == self.task["name"]))
+
+    def _owe_call(self, text: str, ty) -> None:
+        """Record the Pre obligation of one method call statement, guarded
+        by the current path condition (see `obls` in __init__). A seq's
+        predefined "=" is not directly visible in the emitted package (the
+        file compares seqs through T_Eq), so a seq-valued call is evaluated
+        under Len instead; any Boolean that evaluates the call serves."""
+        guard = " and then ".join(f"({p})" for p in self.path)
+        if ty in ("int", "bool"):
+            ev = f"{text} = {text}"
+        elif ty == "seq" or _is_nested_seq(ty):
+            ev = f"Len ({text}) = Len ({text})"
+        else:
+            raise NotImplementedError(
+                f"spark: method call of result type {ty!r} has no "
+                f"obligation carrier")
+        self.obls.append(f"(if {guard} then {ev} else True)" if guard
+                         else f"({ev})")
 
     # --- expressions -------------------------------------------------------
 
@@ -3911,6 +3966,8 @@ class Lower:
             fun = e["call"]["fun"]
             if fun == self.task["name"]:
                 return self.task["returns"][0]["type"]
+            if fun in self.method_ret:
+                return self.method_ret[fun]
             for sf in self.task.get("spec_funs", []):
                 if sf["name"] == fun:
                     return sf["result"]
@@ -4042,9 +4099,11 @@ class Lower:
                     f"else {self.expr(c['else'], sub, types)})")
         if "call" in e:
             c = e["call"]
-            fun = "F" if c["fun"] == self.task["name"] else cap(c["fun"])
+            fun = self.fname if c["fun"] == self.task["name"] \
+                else cap(c["fun"])
             if c["fun"] != self.task["name"] \
-                    and c["fun"] not in self.spec_fun_names:
+                    and c["fun"] not in self.spec_fun_names \
+                    and c["fun"] not in self.method_ret:
                 raise ValueError(f"call to unknown function {c['fun']!r}")
             args = [self.expr(a, sub, types) for a in c["args"]]
             return f"{fun} ({', '.join(args)})" if args else fun
@@ -4382,16 +4441,23 @@ class Lower:
                 # so an empty `[]` assigned into a nested-typed name
                 # renders Rows, not Seqs (expr()'s own docstring).
                 env[v] = self.expr(e, {**psub, **env}, types, types.get(v))
+                if self._is_method_call(e):
+                    self._owe_call(env[v], types.get(v))
             elif "var" in s:
                 d = s["var"]
                 env[d["name"]] = self.expr(
                     d["init"], {**psub, **env}, types, d["type"])
                 types[d["name"]] = d["type"]
+                if self._is_method_call(d["init"]):
+                    self._owe_call(env[d["name"]], d["type"])
             elif "if" in s:
                 c = s["if"]
                 cond = self.expr(c["cond"], {**psub, **env}, types)
+                self.path.append(cond)
                 et = self.compile(c["then"], env, types, psub)
+                self.path[-1] = f"not ({cond})"
                 ee = self.compile(c["else"], env, types, psub)
+                self.path.pop()
                 for v in env:
                     if et[v] == ee[v]:
                         env[v] = et[v]
@@ -4464,6 +4530,14 @@ class Lower:
             # unaffected.
 
         for s in stmts:
+            # SPEC.md "Methods (v1)": the escape threading here does not
+            # carry compile()'s path condition, so a call obligation could
+            # not be guarded by "nothing escaped yet"; refused by name.
+            if ("assign" in s and self._is_method_call(s["assign"][1])) \
+                    or ("var" in s and self._is_method_call(s["var"]["init"])):
+                raise NotImplementedError(
+                    "spark: method call in a body with an early `return`; "
+                    "its Pre obligation has no escape-aware path guard")
             if "assign" in s:
                 v, e = s["assign"]
                 if v not in env:
@@ -4858,12 +4932,19 @@ class Lower:
             d = f"(({d}) + Big_Integer'(1))"
         variant = f"(if {d} >= 0 then {d} else 0)"
         inner = {v: cap(v) for v in state}
+        # The loop body is W_k's own expression: its method-call
+        # obligations belong there, under W_k's own (empty) path, not in the
+        # caller's (Lower.obls).
+        saved_obls, saved_path = self.obls, self.path
+        self.obls, self.path = [], []
         if body_has_return:
             benv, besc, bval = self.compile_r(
                 w["body"], inner, types, psub, ret_name)
         else:
             benv = self.compile(w["body"], inner, types, psub)
             besc = bval = None
+        body_obls = self.obls
+        self.obls, self.path = saved_obls, saved_path
         cond = self.expr(w["cond"], {**psub, **inner}, types)
         rec_args = [cap(p["name"]) for p in tparams] \
             + [benv[v] for v in state]
@@ -4911,8 +4992,10 @@ class Lower:
         else:
             fields = "\n".join(f"      {cap(v)} : {ada_type(types[v])};"
                                for v in mut)
+            rec_call = _with_obls(body_obls,
+                                  f"{name} ({', '.join(rec_args)})")
             body_expr = (f"(if {cond}\n"
-                        f"        then {name} ({', '.join(rec_args)})\n"
+                        f"        then {rec_call}\n"
                         f"        else {tname}'({agg}))")
         self.helpers.append(
             f"   type {tname} is record\n{fields}\n   end record;\n"
@@ -5748,6 +5831,143 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower,
 
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call
 # sites pass it; a certificatable witness becomes the certificate goal above.
+# SPEC.md "Methods (v1)" (2026-09-26). Each t method is its own SPARK
+# function, verified against its own Pre/Post, and a call `x := m(args)` is
+# an Ada call `M (args)` that the caller reasons about through M's contract
+# alone: GNATprove checks M's Pre at the call and assumes M's Post (SPARK UG
+# 5.2 "Subprogram Contracts", 7.4 "How to Write Subprogram Contracts": "User-
+# specified subprogram contracts are assumed to analyze a subprogram's
+# callers, and verified when the body of the subprogram is analyzed"), which
+# is Dafny's modular call rule.
+#
+# The one leak: this file can only write expression functions (SHAPE,
+# header), and GNATprove makes an expression function's body an implicit
+# postcondition everywhere the body is visible, which is everywhere in the
+# same package. A caller would then see the callee's BODY, not only its
+# contract (t/methods_probe/opaque_callee.t would verify). The method's body
+# is therefore hidden by default with GNATprove's information-hiding
+# annotation (SPARK UG appendix "Annotation for Managing the Proof Context",
+# "Pruning the Proof Context on a Case by Case Basis": `Annotate =>
+# (GNATprove, Hide_Info, "Expression_Function_Body")` on the hidden entity
+# itself "is considered to provide a default", and hides the body even from
+# the entity's own recursive calls). Hiding only REMOVES a fact from the
+# proof context -- it is not a justification, an assumption or a skip (none
+# of verifiers/spark.py's BANNED forms), so it can make a proof fail, never
+# make one pass. The method's own Post is still proved against its body.
+#
+# What abstains, by name: a method using a pair type (its record would have
+# to be declared from the method's signature, which _pair_types does not
+# read), a method whose loop is the divisor-bound shape (its lemma is wired
+# to the task only), and a method whose Ada name collides with a name this
+# package emits.
+_METHOD_HIDE = 'Annotate => (GNATprove, Hide_Info, "Expression_Function_Body")'
+
+
+def _method_pseudo(task: dict, m: dict) -> dict:
+    """A method read as a task (SPEC.md: "A method is checked exactly as a
+    task is"), so Lower's machinery compiles its body: its own name makes a
+    self-call render to itself (Lower.fname), and the task's spec_funs and
+    methods stay callable."""
+    pseudo = {"name": m["name"], "params": m["params"],
+              "returns": m["returns"], "requires": m.get("requires", []),
+              "ensures": m["ensures"], "body": m["body"],
+              "spec_funs": task.get("spec_funs", []),
+              "methods": task.get("methods", [])}
+    if "decreases" in m:
+        pseudo["decreases"] = m["decreases"]
+    return pseudo
+
+
+def _methods_need(task: dict) -> tuple[bool, bool, bool]:
+    """(needs_seq, needs_nested_seq, has_return) over the task's methods,
+    the same scans lower() runs over the task itself."""
+    ms = task.get("methods", [])
+    nested = any(
+        any(_is_nested_seq(p["type"]) for p in m["params"])
+        or _is_nested_seq(m["returns"][0]["type"])
+        or locals_nested_seq(m["body"])
+        or _has_strlib_nested_op(m) or _has_nested_seq_op(m)
+        for m in ms)
+    seq = nested or any(
+        any(p["type"] == "seq" for p in m["params"])
+        or m["returns"][0]["type"] == "seq"
+        or locals_seq(m["body"]) or _has_seq_op(m)
+        for m in ms)
+    ret = any(has_return(m["body"]) for m in ms)
+    return seq, nested, ret
+
+
+def _lower_method(task: dict, m: dict, L: "Lower") -> list[str]:
+    """One t method as its own contracted, body-hidden SPARK function,
+    preceded by its own loop helpers. `L` is the task's Lower: the loop
+    counter continues from it (helper names stay unique across the package)
+    and every preamble flag the method's body raises is folded back into
+    it, so the package declares what the method uses."""
+    pseudo = _method_pseudo(task, m)
+    name = cap(m["name"])
+    if any(isinstance(p["type"], dict) and "pair" in p["type"]
+           for p in m["params"]) \
+            or (isinstance(m["returns"][0]["type"], dict)
+                and "pair" in m["returns"][0]["type"]) \
+            or _pair_types(pseudo, m["body"]) or _has_pair_op(m):
+        raise NotImplementedError(
+            f"spark: method {m['name']!r} uses a pair type; pair records are "
+            f"declared from the task's own signature only")
+    if _find_divisor_bound_plan(pseudo, m["body"]) is not None:
+        raise NotImplementedError(
+            f"spark: method {m['name']!r} has the divisor-bound loop shape, "
+            f"whose lemma is wired to the task's F only")
+    mL = Lower(pseudo)
+    mL.fname = name
+    mL.wcount = L.wcount
+    ret = m["returns"][0]
+    psub = {p["name"]: cap(p["name"]) for p in m["params"]}
+    base_types = {**{p["name"]: p["type"] for p in m["params"]},
+                  ret["name"]: ret["type"]}
+    if has_return(m["body"]):
+        env, esc, val = mL.compile_r(
+            m["body"], {ret["name"]: None}, base_types, psub, ret["name"])
+        if env[ret["name"]] is None:
+            raise ValueError(f"method body never assigns {ret['name']!r}")
+        final = env[ret["name"]] if esc is None \
+            else f"(if {esc} then {val} else {env[ret['name']]})"
+    else:
+        env = mL.compile(m["body"], {ret["name"]: None}, base_types, psub)
+        if env[ret["name"]] is None:
+            raise ValueError(f"method body never assigns {ret['name']!r}")
+        final = env[ret["name"]]
+    final = _with_obls(mL.obls, final)
+    aspects = []
+    reqs = [mL.expr(e, psub, base_types) for e in m.get("requires", [])]
+    # An explicit Pre even when the method requires nothing: a contract is
+    # stated, never left to a default (SPARK UG 7.4.8).
+    aspects.append("Pre  => " + ("\n       and then ".join(reqs)
+                                 if reqs else "True"))
+    post_sub = {**psub, ret["name"]: f"{name}'Result"}
+    aspects.append("Post => " + "\n       and then ".join(
+        mL.expr(e, post_sub, base_types) for e in m["ensures"]))
+    if "decreases" in m:
+        d = mL.expr(m["decreases"], psub, base_types)
+        aspects.append(f"Subprogram_Variant => "
+                       f"(Decreases => (if {d} >= 0 then {d} else 0))")
+    aspects.append(_METHOD_HIDE)
+    # fold the method's own preamble needs into the task's Lower
+    L.wcount = mL.wcount
+    for k, v in vars(mL).items():
+        if k.startswith("needs_"):
+            if isinstance(v, bool):
+                setattr(L, k, getattr(L, k) or v)
+            else:
+                getattr(L, k).update(v)
+    plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
+                      for p in m["params"])
+    sig = (f"function {name} ({plist}) return {ada_type(ret['type'])}"
+           if plist else f"function {name} return {ada_type(ret['type'])}")
+    return mL.helpers + [f"   {sig} is\n"
+                         f"     ({final})\n"
+                         "   with\n     " + ",\n     ".join(aspects) + ";\n"]
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides (case-INsensitively, matching this file's own `reserved_lc`
@@ -5891,6 +6111,14 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         or _has_seq_op(task.get("requires", []))
         or _has_seq_op(task.get("ensures", []))
         or _has_seq_op(task.get("spec_funs", [])))
+    # SPEC.md "Methods (v1)": a method's own signature, locals and
+    # expressions need the same preambles the task's would. Only read when
+    # the task has methods, so no other task's package changes.
+    methods_return = False
+    if task.get("methods"):
+        m_seq, m_nested, methods_return = _methods_need(task)
+        needs_nested_seq = needs_nested_seq or m_nested
+        needs_seq = needs_seq or m_seq or m_nested
 
     # The seq and range preambles put fixed Ada names in scope; a t
     # identifier capitalizing onto one of them would be captured silently,
@@ -5925,7 +6153,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # do, always returning None.
     divisor_target = _find_divisor_bound_plan(task, body)
     needs_divisor_bound_lemma = divisor_target is not None
-    reserved = (RESERVED | ({"Esc", "Ret"} if has_return(body) else set())
+    reserved = (RESERVED | ({"Esc", "Ret"}
+                            if has_return(body) or methods_return else set())
                | (_ROTATE_LEMMA_NAMES if needs_rotate_lemma else set())
                | (_DIVISOR_BOUND_NAMES if needs_divisor_bound_lemma
                   else set()))
@@ -5972,6 +6201,21 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
 
     spec_funs = [L.lower_spec_fun(sf) for sf in task.get("spec_funs", [])]
 
+    # SPEC.md "Methods (v1)": each method, in declaration order (a method
+    # calls only earlier ones), as its own contracted function ahead of the
+    # task's F, lowered BEFORE the task body so the W_k counter continues
+    # across them (_lower_method). A method whose Ada name would meet a
+    # name this package generates is refused rather than captured.
+    method_parts: list[str] = []
+    for m in task.get("methods", []):
+        mn = cap(m["name"]).lower()
+        if re.fullmatch(r"w_\d+(_state)?(_cert)?(_state_cert)?", mn) \
+                or mn in ("f_ce", "f_cert", "ce_num", "ce_int"):
+            raise NotImplementedError(
+                f"spark: method {m['name']!r} spells a name this package "
+                f"generates ({cap(m['name'])})")
+        method_parts += _lower_method(task, m, L)
+
     # SPEC.md "Early exit" (2026-09-08): a body that can `return` is lowered
     # through compile_r, which threads the escape alongside the ordinary
     # substitution env; one without it keeps compile() exactly as it read
@@ -5991,6 +6235,9 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         if env[ret["name"]] is None:
             raise ValueError(f"body never assigns {ret['name']!r}")
         final = env[ret["name"]]
+    # SPEC.md "Methods (v1)": the task body's method-call Pre obligations
+    # (Lower.obls); none, and `final` unchanged, for a task without methods.
+    final = _with_obls(L.obls, final)
 
     # SPLIT_CONCAT_LEMMA (ROADMAP 16.2, 2026-09-11, see the preamble's own
     # note above): route F's return through Split_Concat_Lemma's own
@@ -6208,6 +6455,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [_pair_preamble(pair_types_used, L.needs_pair_eq)]
     for sf in spec_funs:
         parts += [sf]
+    parts += method_parts
     for h in L.helpers:
         parts += [h]
     parts += [
@@ -6222,6 +6470,17 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     if inst:
         parts += [inst]
     if cert:
+        # SPEC.md "Methods (v1)": the certificate is a claim about the
+        # twin's EXECUTION at one ground input ("Execution is by value": the
+        # callee's body runs), not about what a caller may assume, so the
+        # method bodies hidden for modular proof (_METHOD_HIDE) are
+        # disclosed to the certificate alone. Unhide_Info placed just after
+        # the certificate's body scopes the disclosure to that one entity
+        # (SPARK UG appendix, "Pruning the Proof Context on a Case by Case
+        # Basis"); it adds each body's own defining equation, nothing else.
+        for m in task.get("methods", []):
+            cert += (f"   pragma Annotate (GNATprove, Unhide_Info, "
+                     f"\"Expression_Function_Body\", {cap(m['name'])});\n")
         parts += [cert]
     parts += [f"end {pkg};"]
     rc = t_names.rename_comment(renames)
