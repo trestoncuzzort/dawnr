@@ -148,17 +148,56 @@ def run_tree(cmd, *, timeout, cwd=None, env=None, capture_output=True,
         text=text, **kw)
     _LIVE_GROUPS.add(proc.pid)
     try:
-        out, err = proc.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
         try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        proc.communicate()
-        raise
+            out, err = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _kill_group(proc.pid)
+            proc.communicate()
+            raise
     finally:
-        _LIVE_GROUPS.discard(proc.pid)
+        # EVERY exit path kills the group: a normal return, TimeoutExpired,
+        # any other exception, KeyboardInterrupt. Until 2026-09-25 only the
+        # timeout branch did, so a leader that exited and left a grandchild
+        # (why3server's z3 under gnatprove) orphaned it: 12 and then 26 z3
+        # processes ran for a day on the lab (r12 blocker A5). CPython's
+        # subprocess.run kills its child on every path -- `except:  #
+        # Including KeyboardInterrupt` in Lib/subprocess.py (fetched
+        # 2026-09-25, raw.githubusercontent.com/python/cpython/3.12/Lib/
+        # subprocess.py); the whole group is the unit here because a prover
+        # forks (Beyer, Loewe, Wendler, "Reliable benchmarking", STTT 2019,
+        # doi.org/10.1007/s10009-017-0469-y, section 2: a tool "may
+        # arbitrarily spawn child processes"). Process groups can be escaped
+        # with setsid/setpgid (their section 3.3); cgroups would close that
+        # and the shared lab delegates none to us, so t/stall_check.py's
+        # orphan check is the detector for that case.
+        #
+        # On the normal path the leader is already reaped, so killpg
+        # addresses its pgid with the leader gone. A pid cannot be reused
+        # while its process group still has members (POSIX), and an empty
+        # group's id is reused only after the pid counter wraps (4,194,304
+        # on the lab), so the kill cannot land on a stranger.
+        _kill_group(proc.pid)
+        if proc.returncode is None:          # exception path: leader not reaped yet
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            for pipe in (proc.stdout, proc.stderr):   # communicate() never got to close them
+                if pipe is not None and not pipe.closed:
+                    pipe.close()
+        _LIVE_GROUPS.discard(proc.pid)       # after the kill, so atexit covers the window
     return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
+
+
+def _kill_group(pgid: int) -> None:
+    """SIGKILL a process group; a group that no longer exists is not an
+    error, and one we may not signal (a stranger's, after pid reuse) is
+    left alone rather than raised over."""
+    import signal
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
 
 
 def _serial() -> bool:
