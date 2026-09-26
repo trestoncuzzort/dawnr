@@ -75,6 +75,63 @@ class ScriptShape(unittest.TestCase):
         self.assertIsNone(re.search(r"\b[a-z0-9_.-]+@[a-z0-9.-]+\.[a-z]{2,}\b|\b\d+\.\d+\.\d+\.\d+\b|/home/[a-z]", text))
 
 
+class LiftStepTests(unittest.TestCase):
+    """The recovered lift's step (lift-2026-09-26-recovered) does exactly what the lift's step does, on its
+    own directories. Both step functions run here with the queue's helpers stubbed to print their
+    arguments, under set -u, and the two traces must match once the one name is changed."""
+
+    STUBS = r"""set -u
+RD=t/out/r12-data; LAB=local; REPO=tup
+refuse() { printf 'REFUSED %s\n' "$*"; exit 3; }
+check_or_refuse() { printf 'check_or_refuse %s\n' "$*"; return 1; }
+admit() { printf 'admit %s\n' "$*"; CELLS=4; }
+store() { printf 'store %s\n' "$*"; }
+fetch() { printf 'fetch %s\n' "$*"; }
+lab() { printf 'lab %s\n' "$*"; }
+lab_py() { printf 'lab_py %s\n' "$*"; }
+mark_step() { printf 'mark_step %s\n' "$*"; }
+default_work_dir() { printf '/dev/shm/tup-grade\n'; }
+echo() { :; }
+"""
+
+    def trace(self, step: str, dirs: str) -> list[str]:
+        import re
+        text = QUEUE.read_text(encoding="utf-8")
+        body = re.search(rf"^{step}\(\) {{\n.*?^}}\n", text, re.S | re.M)
+        self.assertIsNotNone(body, f"no function {step} in the queue")
+        # the step's grading line reads REMOTE_EV under set -u: the queue itself must assign it
+        remote_ev = re.search(r"^REMOTE_EV=.*$", text, re.M)
+        self.assertIsNotNone(remote_ev, "r12_data_queue.sh does not assign REMOTE_EV, which its lift steps read")
+        with tempfile.TemporaryDirectory() as tmp:
+            meta = Path(tmp) / f"{dirs}.meta"
+            (Path(tmp) / dirs).mkdir(parents=True)
+            (meta / "staged").mkdir(parents=True)
+            (meta / "lift-census.json").write_text("{}")
+            script = self.STUBS + remote_ev.group(0) + "\n" + body.group(0) + f"{step}\n"
+            r = subprocess.run(["bash", "-c", script], capture_output=True, text=True, cwd=tmp)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(r.stderr, "")
+        return r.stdout.splitlines()
+
+    def test_the_recovered_step_mirrors_the_lift_step_on_its_own_directories(self):
+        import re
+        lift = self.trace("step_lift_2026_09_26", "t/out/lifted-tasks-2026-09-26")
+        recovered = self.trace("step_lift_2026_09_26_recovered", "t/out/lifted-tasks-2026-09-26-recovered")
+        self.assertEqual(recovered, [re.sub(r"2026-09-26(?!-recovered)", "2026-09-26-recovered", line) for line in lift])
+        self.assertTrue(any("lifter.py --dir t/out/lifted-tasks-2026-09-26-recovered.meta/staged" in line
+                            for line in recovered))
+        self.assertTrue(recovered[-1].startswith("mark_step lift-2026-09-26-recovered "))
+
+    def test_the_recovered_step_is_dispatched_and_moves_files_only_through_the_helpers(self):
+        import re
+        text = QUEUE.read_text(encoding="utf-8")
+        self.assertIn("lift-2026-09-26-recovered) step_lift_2026_09_26_recovered ;;", text)
+        self.assertIn("bash t/r12_data_queue.sh lift-2026-09-26-recovered", text)
+        body = re.search(r"^step_lift_2026_09_26_recovered\(\) \{\n.*?^\}\n", text, re.S | re.M).group(0)
+        self.assertIsNone(re.search(r"\b(rsync|ssh|scp)\b|\$SSH", body))
+        self.assertIn("default_work_dir", body)
+
+
 class GateTests(unittest.TestCase):
     def decide(self, data, *args):
         r = run_with_stdin("gate", data, *args)

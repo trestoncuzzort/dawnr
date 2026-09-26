@@ -12,6 +12,7 @@
 #   bash t/r12_data_queue.sh verify-dev CORPUS      refuse a corpus that names a dev id under any alias
 #   bash t/r12_data_queue.sh r11                    the twelve r11 baseline arms, extracted, tested and graded (heldout)
 #   bash t/r12_data_queue.sh lift-2026-09-26        the 2026-09-26 corpus lifts: lifter checks on the lab, then the seven kernels (not in `all`)
+#   bash t/r12_data_queue.sh lift-2026-09-26-recovered  its twin refusals that drawn inputs cleared (t/lift_corpora.py --recover-twins), graded the same way (not in `all`)
 #   bash t/r12_data_queue.sh all                    everything above, in that order
 #   bash t/r12_data_queue.sh _py NAME               print one embedded program (the tests read them so)
 #
@@ -49,6 +50,10 @@ CHUNK=${R12_CHUNK:-40}
 WAIT_MIN=${R12_WAIT_MINUTES:-0}   # 0: refuse and exit; N: re-check the gate every 5 minutes for N minutes
 V6NEW_MODE=${R12_V6NEW_MODE:-repair}
 LAB=; REPO=${T_LAB_REPO:-tup}
+# run_par's cell events (T_WATCH), the file t/grade_lab.sh names; the lift steps read it under set -u,
+# and only grade_lab.sh assigned it, so their grading line stopped on "REMOTE_EV: unbound variable"
+# (gnu.org/software/bash/manual/html_node/The-Set-Builtin.html, -u: "a non-interactive shell will exit")
+REMOTE_EV='.cache/t-watch/home-grade.jsonl'
 
 # ------------------------------------------------------------- embedded programs --
 # Printed, never executed by eval: `_py NAME | python3 - ARGS` here or on the lab. Each
@@ -924,6 +929,39 @@ step_lift_2026_09_26() {
   echo "next: read $TABLE; copy it to t/COVERAGE-lifted-2026-09-26.md and give the corpus builder --lifted-dir $D --lifted-table t/COVERAGE-lifted-2026-09-26.md --heads $M/heads.jsonl"
 }
 
+# The lift's twin refusals re-decided on drawn inputs (t/lift_corpora.py --recover-twins,
+# 2026-09-26). The lift refused a program that passed every test point of a gated problem, and
+# those problems carry 1 to 3 points; each such program then ran against the problem's reference
+# on 100 drawn inputs (t/twin_draws.py), and the ones no gated problem still claims were written
+# to their own directory with their own staged sources, heads, decisions and census. Graded
+# exactly as step_lift_2026_09_26 grades the lift (the lifter's check stage on the grading
+# machine, the check filter, the seven kernels); a test holds the two steps to the same trace.
+# Not part of `all`.
+step_lift_2026_09_26_recovered() {
+  local D=t/out/lifted-tasks-2026-09-26-recovered M=t/out/lifted-tasks-2026-09-26-recovered.meta TABLE=t/out/COVERAGE-lifted-2026-09-26-recovered.md
+  [ -d "$D" ] && [ -d "$M/staged" ] && [ -f "$M/lift-census.json" ] || refuse "no $D with $M/staged here: run python3 t/lift_corpora.py --recover-twins first"
+  if check_or_refuse lift-2026-09-26-recovered "$M/lift-census.json"; then echo "== lift-2026-09-26-recovered: graded already"; return 0; fi
+  admit
+  store -a --delete "$D/" "$LAB:~/$REPO/$D/" || refuse "cannot stage the recovered tasks on the lab"
+  store -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the recovered sources on the lab"
+  store -a "$M/lift-census.json" "$LAB:~/$REPO/$M/lift-census.json" || refuse "cannot stage the census on the lab"
+  echo "== lift-2026-09-26-recovered: the lifter's check stage on the grading machine (dafny), 4 jobs, niced"
+  # the differential arm compiles to C# (`dafny run`): the .NET SDK is on PATH for this stage only, as in step_lift_2026_09_26
+  lab "PATH=\$HOME/.dotnet:\$PATH DOTNET_ROOT=\$HOME/.dotnet DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 nice -n 19 python3 t/lifter.py --dir $M/staged --out $M/lift-checked --jobs 4 --timeout 120" || refuse "the lifter's check stage failed"
+  lab_py lift_check_filter "$D" "$M/lift-checked" --failed "$M/check-failed" || refuse "lift-2026-09-26-recovered: the check filter refused"
+  admit --grading
+  [ "${CELLS:-0}" -ge 1 ] || refuse "lift-2026-09-26-recovered: no grading cell admitted"
+  echo "== lift-2026-09-26-recovered: grading with $CELLS cells, T_SPARK_JOBS=1"
+  lab "T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=1 bash -lc 'python3 t/run_par.py --jobs $CELLS --tasks $D --out $(default_work_dir)/lift-2026-09-26-recovered --table $TABLE'"
+  rc=$?
+  # run_par: 0 full agreement, 1 a finding with the table written, 2 a refusal with nothing written
+  [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ] || refuse "lift-2026-09-26-recovered: run_par exited $rc, no table"
+  fetch -a "$LAB:~/$REPO/$TABLE" "$TABLE" || refuse "lift-2026-09-26-recovered: cannot fetch the table"
+  fetch -a "$LAB:~/$REPO/$M/check-failed/" "$M/check-failed/" 2>/dev/null
+  mark_step lift-2026-09-26-recovered "$M/lift-census.json" "$TABLE"
+  echo "next: read $TABLE; copy it to t/COVERAGE-lifted-2026-09-26-recovered.md and give the corpus builder --lifted-set $D=t/COVERAGE-lifted-2026-09-26-recovered.md --heads $M/heads.jsonl"
+}
+
 step_dev_ids() {
   admit
   lab_py dev_ids --split t/out/loop/split-v5.json --decontam t/decontamination-2026-09-21.json --n 100 --salt r12-dev --out "$RD/r12-dev-ids.json" \
@@ -967,6 +1005,7 @@ main() {
                   dev-ids)    step_dev_ids ;;
                   r11)        step_r11 ;;
                   lift-2026-09-26) step_lift_2026_09_26 ;;
+                  lift-2026-09-26-recovered) step_lift_2026_09_26_recovered ;;
                   all)        step_p4_extract; step_train; step_p4; step_prover2; step_v6new; step_spec; step_build; step_dev_ids; step_r11 ;;
                   *)          refuse "unknown command '$1'" ;;
                 esac ;;
