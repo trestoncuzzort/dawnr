@@ -167,7 +167,8 @@ class TheWindow(unittest.TestCase):
 
     def test_exact_window_is_the_uncached_crop(self):
         got = self.gen(30, exact_window=True)
-        self.assertEqual(self.model.rebuilt, 30 - (8 - 3))
+        # 3 prompt tokens and 29 fed back (the last is never fed): 32 - 8.
+        self.assertEqual(self.model.rebuilt, 24)
         self.assertEqual(got, reference_greedy(self.model, self.prompt, 30, None))
 
     def test_the_refill_is_what_the_docstring_says(self):
@@ -180,10 +181,10 @@ class TheWindow(unittest.TestCase):
 
     def test_refills_are_rare_by_default(self):
         self.gen(30)
-        # 3 prompt + 30 tokens: full at 8, then every 4 new tokens a refill of 4.
-        self.assertEqual(self.model.rebuilt, 7)
+        # 3 prompt + 29 fed back: full at 8, then a refill of 4 every 4 tokens.
+        self.assertEqual(self.model.rebuilt, 6)
         self.gen(30, exact_window=True)
-        self.assertEqual(self.model.rebuilt, 25)   # every token past the line
+        self.assertEqual(self.model.rebuilt, 24)   # every token past the line
 
     def test_both_modes_agree_inside_the_window(self):
         self.assertEqual(self.gen(4), self.gen(4, exact_window=True))
@@ -198,8 +199,7 @@ class TheWindow(unittest.TestCase):
         self.assertEqual(logits, fresh_logits(model, long_prompt[-8:]))
         model.reset()
         self.assertEqual(model.generate(long_prompt, 1, temperature=0)[0], argmax(logits))
-        # One refill, for feeding back the token just produced; none for the prompt.
-        self.assertEqual(model.rebuilt, 1)
+        self.assertEqual(model.rebuilt, 0, "the cut prompt needed no refill")
 
     def test_stop_at_window_still_stops(self):
         got = self.gen(30, past_context=False)
@@ -214,6 +214,75 @@ class TheWindow(unittest.TestCase):
             self.gen(3, exact_window=True, keep=2)
         self.assertEqual(self.model.window_keep(True), 7)
         self.assertEqual(self.model.window_keep(False, 0), 0)
+
+
+class Streaming(unittest.TestCase):
+    def setUp(self):
+        self.model, self.tok = tiny_model(block_size=8)
+
+    def test_generate_is_the_iterator_listed(self):
+        for kw in ({"temperature": 0}, {"temperature": 0.9, "seed": 4},
+                   {"temperature": 1.2, "top_k": 3, "seed": 11, "exact_window": True}):
+            with self.subTest(**kw):
+                self.model.reset()
+                whole = self.model.generate([2, 3], 25, **kw)
+                self.model.reset()
+                self.assertEqual(list(self.model.iter_generate([2, 3], 25, **kw)), whole)
+                self.assertEqual(len(whole), 25)
+
+    def test_the_pieces_join_to_the_sample(self):
+        for prompt in ("abc", "", "zzz", "a b.\nc"):
+            with self.subTest(prompt=prompt):
+                pieces = list(pg.stream(self.model, self.tok, prompt, 20,
+                                        temperature=0.8, seed=5))
+                self.assertEqual("".join(pieces),
+                                 pg.sample(self.model, self.tok, prompt, 20,
+                                           temperature=0.8, seed=5))
+                self.assertEqual(len(pieces), 21, "the prompt, then one piece per token")
+
+    def test_the_prompt_arrives_before_the_model_reads_it(self):
+        pieces = pg.stream(self.model, self.tok, "abc", 5)
+        self.assertEqual(next(pieces), "abc")
+        self.assertEqual(self.model.history, [], "nothing was read yet")
+
+    def test_bad_arguments_fail_at_the_call(self):
+        for kw in ({"temperature": -1}, {"top_k": 0}, {"keep": 99}):
+            with self.subTest(**kw), self.assertRaises(ValueError):
+                pg.stream(self.model, self.tok, "abc", 5, **kw)
+            with self.subTest(**kw), self.assertRaises(ValueError):
+                self.model.iter_generate([1], 5, **kw)
+
+    def test_stopping_early_costs_nothing_more(self):
+        pieces = pg.stream(self.model, self.tok, "ab", 50, temperature=0)
+        got = [next(pieces) for _ in range(4)]
+        fed = len(self.model.history)
+        pieces.close()
+        self.assertEqual(len(got), 4)
+        self.assertEqual(fed, 2 + 2, "the prompt and the tokens before the last one shown")
+
+    def test_the_unknown_character_note(self):
+        self.assertEqual(pg.unknown_note(self.tok, "abc"), "")
+        note = pg.unknown_note(self.tok, "aé—b", what="what you typed")
+        self.assertIn("2 of the characters in what you typed", note)
+        self.assertIn("'é'", note)
+        self.assertTrue(note.endswith("."))
+        self.assertIn("starts from the first character", pg.unknown_note(self.tok, "ZZ"))
+
+
+INCLUDED = HERE.parent / "t/runs/2026-09-17/home-4080/models/model-r4"
+
+
+class TheCommandLine(unittest.TestCase):
+    def test_streamed_output_is_what_sample_returns(self):
+        if not (INCLUDED / "ckpt.pt").is_file() or (INCLUDED / "ckpt.pt").stat().st_size < 1000:
+            self.skipTest("the included model's weights are not in this checkout")
+        import subprocess
+        got = subprocess.run([sys.executable, str(HERE / "plain_generate.py"), "--out",
+                              str(INCLUDED), "--prompt", "task ", "--tokens", "6",
+                              "--temperature", "0"], capture_output=True, text=True,
+                             check=True)
+        model, tok, _ = pg.load_checkpoint(INCLUDED)
+        self.assertEqual(got.stdout, pg.sample(model, tok, "task ", 6, temperature=0) + "\n")
 
 
 def _plain_generate(model, ids, n):
