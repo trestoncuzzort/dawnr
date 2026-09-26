@@ -463,12 +463,50 @@ def trows_for_heads(trows: dict, rows: dict) -> dict:
     return _HEADS_CACHE[key]
 
 
+KERNELS = ["dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"]
+
+
+def record_grades(out: Path, table: Path, check_failed: Optional[Path] = None) -> dict:
+    """After grading: each accepted task's trust record gains the lifter's check verdict
+    (a task the check stage moved to check-failed/ failed it) and its seven-kernel row,
+    with `clean_in` (how many columns read verified / refuted) and the columns that did
+    not. Rewrites <out>.meta/trust.jsonl in place; returns the counts."""
+    import loop_locallm
+    meta = out.with_name(out.name + ".meta")
+    rows = loop_locallm.table_rows(table)
+    failed = {p.name for p in check_failed.glob("*.json")} if check_failed and check_failed.exists() else set()
+    recs = [json.loads(l) for l in (meta / "trust.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    counts = Counter()
+    for r in recs:
+        if r["task_file"] in failed:
+            r["lifter_check"] = "failed (the lifter's own Dafny lemmas or differential run)"
+            r["kernels"] = "not graded"
+            counts["lifter check failed"] += 1
+            continue
+        r["lifter_check"] = "passed"
+        cells = rows.get(r["name"])
+        if cells is None:
+            r["kernels"] = "no row in the table"
+            counts["no row"] += 1
+            continue
+        clean = [k for k, c in zip(KERNELS, cells) if c == loop_locallm.CLEAN]
+        r["kernels"] = dict(zip(KERNELS, cells))
+        r["clean_in"] = len(clean)
+        r["not_clean"] = [k for k in KERNELS if k not in clean]
+        counts[f"clean in {len(clean)}"] += 1
+    (meta / "trust.jsonl").write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in recs), encoding="utf-8")
+    return dict(counts)
+
+
 def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--language", required=True, choices=sorted(LANGS))
-    ap.add_argument("--vericoding", required=True, help="a checkout of vericoding-benchmark")
+    ap.add_argument("--language", choices=sorted(LANGS))
+    ap.add_argument("--vericoding", help="a checkout of vericoding-benchmark")
+    ap.add_argument("--record-grades", metavar="TABLE",
+                    help="after grading: write each accepted task's lifter check and kernel row into its trust record")
+    ap.add_argument("--check-failed", help="the check stage's check-failed/ directory (with --record-grades)")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--split", required=True)
+    ap.add_argument("--split")
     ap.add_argument("--pool", default="v5")
     ap.add_argument("--jobs", type=int, default=2, help="lifter jobs (each runs dafny)")
     ap.add_argument("--native-jobs", type=int, default=2, help="equivalence checks at once (each runs a prover)")
@@ -479,7 +517,14 @@ def parse_args(argv=None):
 
 
 def main(argv=None) -> int:
-    census = build(parse_args(argv))
+    args = parse_args(argv)
+    if args.record_grades:
+        print(json.dumps(record_grades(Path(args.out), Path(args.record_grades),
+                                       Path(args.check_failed) if args.check_failed else None), indent=1))
+        return 0
+    if not (args.language and args.vericoding and args.split):
+        raise SystemExit("--language, --vericoding and --split are required for a lift")
+    census = build(args)
     print(json.dumps({k: census[k] for k in ("language", "vericoded_files", "counts", "native_verdicts", "accepted",
                                               "heads")}, indent=1))
     return 0
