@@ -211,6 +211,17 @@ class FrontEnd(unittest.TestCase):
         self.assertNotIn("decreases", out.dafny)
         self.assertIn("variant-inferred-by-dafny", out.rewrites)
 
+    def test_loop_under_guard_becomes_early_return(self):
+        body = ("if (0u < n) {\n size_type i = 0u;\n /*@ loop invariant 0 <= i <= n; loop variant n - i; */\n"
+                " while (i < n) { if (a[i] == 0) { return i; } i++; }\n}\nreturn n;")
+        out = self.lift("gi", "requires \\valid_read(a + (0..n-1));\nassigns \\nothing;\nensures \\result <= n;",
+                        "size_type gi(const value_type* a, size_type n)", body)
+        lines = [x.strip() for x in out.dafny.splitlines()]
+        start = lines.index("{")
+        self.assertEqual(lines[start + 1:start + 4], ["if !(0 < |a|) {", "return |a|;", "}"])
+        self.assertEqual(lines[-2], "return |a|;")      # the fall-through path keeps its return
+        self.assertIn("guard-inverted-early-return", out.rewrites)
+
     # -- logic definitions
     def test_recursive_logic_function_is_a_guarded_spec_fun(self):
         out = L.translate(self.c.fn("count", COUNT_H, COUNT_C), self.c.root)

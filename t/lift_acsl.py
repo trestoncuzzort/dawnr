@@ -2140,8 +2140,25 @@ class Translator:
 
     # ------------------------------------------------------------ statements
     def block(self, stmts: list, depth: int) -> list[str]:
+        """`if (c) { ...loop...; return x; } return y;` is written `if !c { return y; }`
+        followed by the branch: the same two paths in the same order, but the loop no
+        longer sits under a conditional, which two of the seven lowerings (rocq,
+        fstar) do not lower yet (measured on this corpus's max_element, 2026-09-26)."""
+        stmts = [s for s in flatten(stmts) if s != ("skip",)]
         out = []
-        for st in stmts:
+        ind = "  " * depth
+        for k, st in enumerate(stmts):
+            if st[0] == "if" and not st[3] and k == len(stmts) - 2 and stmts[k + 1][0] == "return" \
+                    and has_loop(st[2]):
+                # the branch either always returns, or falls through to the same return
+                out.append(f"{ind}if !{self.cx(st[1], True)} {{")
+                out += self.stmt(stmts[k + 1], depth + 1)
+                out.append(f"{ind}}}")
+                out += self.block(st[2], depth)
+                if not always_returns(st[2]):
+                    out += self.stmt(stmts[k + 1], depth)
+                self.rewrites.append("guard-inverted-early-return")
+                break
             out += self.stmt(st, depth)
         return out
 
@@ -2427,6 +2444,38 @@ class Translator:
                 for x in s:
                     go(x)
         go(body)
+
+
+def flatten(stmts: list) -> list:
+    """Nested `{ ... }` blocks spliced into their parent (names are unique per function)."""
+    out = []
+    for s in stmts:
+        if s and s[0] == "block":
+            out += flatten(s[1])
+        else:
+            out.append(s)
+    return out
+
+
+def always_returns(stmts: list) -> bool:
+    body = [s for s in flatten(stmts) if s != ("skip",)]
+    if not body:
+        return False
+    last = body[-1]
+    if last[0] == "return":
+        return True
+    if last[0] == "if":
+        return always_returns(last[2]) and always_returns(last[3])
+    return False
+
+
+def has_loop(stmts) -> bool:
+    for s in flatten(stmts):
+        if s[0] in ("while", "for", "do"):
+            return True
+        if s[0] == "if" and (has_loop(s[2]) or has_loop(s[3])):
+            return True
+    return False
 
 
 def code_only(body):
