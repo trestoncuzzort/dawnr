@@ -134,6 +134,15 @@ def main() -> int:
         print("\nREFUSED: no tasks in t/tasks/, nothing was verified. "
               "AGREEMENT.md not written.")
         return 2
+    # The committed table takes all seven kernels: a run that grades every
+    # task with one kernel ABSENT would write a table with a missing column,
+    # which the corpus builder's clean_rows then reads as "not clean" for
+    # every task (the same guard run_par.py applies since 2026-09-25).
+    import run_par
+    refusal = run_par.committed_kernel_refusal(HERE / "AGREEMENT.md", cols, False)
+    if refusal:
+        print(f"\n{refusal}")
+        return 2
 
     lines = [f"# t cross-kernel agreement, "
              f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%MZ')}",

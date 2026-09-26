@@ -385,7 +385,11 @@ def run_items(items: list[dict], present, outdir: Path, jobs, flake_n: int):
     jobs = jobs or max(1, min(n_cells, 8))
     ctx = mp_context()
     if pending or pending_single:
-        with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx) as ex:
+        # the same worker environment run_par gives its pool: gnatprove at one
+        # prover per call once more than one cell runs at a time (A8; a 24-cell
+        # sweep at -j8 drew more threads than the lab has cores)
+        with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx, initializer=run_par._worker_env,
+                                 initargs=(run_par.spark_jobs_env(jobs),)) as ex:
             futs = [ex.submit(_cell, b, n, s, str(outdir), flake_n)
                    for b, n, s in pending]
             futs += [ex.submit(_cell_single, b, n, s, str(outdir), flake_n, tl)

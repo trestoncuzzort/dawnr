@@ -306,6 +306,13 @@ def _verify_dir(args, path: Path) -> int:
     table_path = Path(args.table) if args.table else HERE / "AGREEMENT.md"
 
     tasks = tasks_io.load_dir(path)
+    # `t verify <dir>` writes t/AGREEMENT.md by default, the same accident as
+    # a3c6f955 (a one-directory run replaced the committed matrix): the
+    # committed table takes exactly the committed tasks and all seven kernels
+    refusal = run_par.committed_task_refusal(table_path, tasks, False)
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return 2
     cols, present = run_par.probe_backends()
     if args.kernels:
         wanted = set(args.kernels.split(","))
@@ -316,6 +323,10 @@ def _verify_dir(args, path: Path) -> int:
             return 2
         cols = [c for c in cols if c[0] in wanted]
         present = [p for p in present if p[0] in wanted]
+    refusal = run_par.committed_kernel_refusal(table_path, cols, False)
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return 2
 
     flake_n = args.flake if args.flake is not None else 3
     jobs_arg = args.jobs

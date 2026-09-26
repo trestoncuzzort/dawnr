@@ -79,7 +79,7 @@ interpreter with uv and call it explicitly:
 
 ```bash
 uv python install 3.12.10
-~/.local/bin/python3.12 run_par.py
+~/.local/bin/python3.12 run_par.py --table "$TMPDIR/AGREEMENT-mac.md"
 ```
 
 Everything here is standard library, so there is no virtualenv to make and
@@ -106,7 +106,7 @@ piece that cannot be regenerated is the hand-lifted `inventory/` seeds.
 
 ```bash
 cd t
-~/.local/bin/python3.12 run_par.py          # 7 kernels x 11 tasks, about 8 min
+~/.local/bin/python3.12 run_par.py --table "$TMPDIR/AGREEMENT-mac.md"          # 7 kernels x 11 tasks, about 8 min
 python3 test_lifter.py                      # the lifter's fast suite
 python3 lift_gate.py                        # the MBPP-DFY fidelity gate
 ```

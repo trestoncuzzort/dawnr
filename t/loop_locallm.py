@@ -235,7 +235,10 @@ def cmd_corpus(a) -> int:
     pool = se.pool(a.pool)
     docs, n_sft, n_lift, n_committed = [], 0, 0, 0
     evil = held_out(a.split)      # ids that must not appear anywhere below
-    gate = Gate(evil)
+    # the dev split that picks the stopping step (t/r12-dev-ids.json) is
+    # refused the same way, or the step would be chosen on trained-on problems
+    dev = loop_filter.r12_dev_ids(split_path=a.split)
+    gate = Gate(evil | dev)
     if a.base:
         # an existing corpus (e.g. t/runs/2026-09-16/loop-data/corpus.txt, which
         # already holds the lifted and committed tasks) under the new answers
@@ -324,6 +327,8 @@ def cmd_corpus(a) -> int:
     if evil:
         print(f"held-out filter: {len(evil)} ids from {a.split}, {len(gate.held)} document(s) excluded"
               + (f": {', '.join(gate.held)}" if gate.held else ""))
+    if dev:
+        print(f"dev-split filter: {len(dev)} ids from t/r12-dev-ids.json refused as training data (counted above)")
     print(f"decontamination filter: {len(gate.decontaminated)} document(s) excluded"
           + (f": {', '.join(gate.decontaminated)}" if gate.decontaminated else ""))
     return 0

@@ -255,6 +255,14 @@ def run_default() -> int:
     r0_pos, r0_skip = round0_positives(pool)
     lf_pos, lf_skip = lifted_positives(pool)
     positives = r0_pos + lf_pos
+    # A2: a train id with a same-task held-out twin (t/decontamination-2026-09-21.json)
+    # never enters a pool file; the corpus builder and preflight refuse it too
+    import loop_filter
+    listed = loop_filter.decontamination().exclude_train_ids
+    for p in positives:
+        if int(p["task_id"]) in listed:
+            r0_skip.append((p["task_id"], p["name"], p["source"], "decontamination: same-task held-out twin"))
+    positives = [p for p in positives if int(p["task_id"]) not in listed]
     skipped = r0_skip + lf_skip
 
     pairs = []

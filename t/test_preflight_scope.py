@@ -32,7 +32,7 @@ def answer_set(root: Path, name: str, complete: bool = True) -> Path:
 @contextmanager
 def harmless_main_checks():
     names = (
-        "check_kernels", "check_prompt", "check_grammar", "check_tokenizer", "check_split", "check_data",
+        "check_lab_quiet", "check_kernels", "check_prompt", "check_grammar", "check_tokenizer", "check_split", "check_data",
         "check_agreement_covers_tasks", "check_spec_agreement", "check_keys", "check_space", "check_evaluator",
     )
     with mock.patch.multiple(preflight, **{name: mock.DEFAULT for name in names}) as checks:
