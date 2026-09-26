@@ -91,19 +91,28 @@ class TransformTests(unittest.TestCase):
         for total in sums:
             self.assertAlmostEqual(total / 6000 / len(doc), 1 / 3, delta=0.02)
 
-    def test_t_split_round_trips_and_its_units_are_whole_clauses(self):
-        units = [T_DOC[a:b] for a, b in fim.t_units(T_DOC)]
-        self.assertIn("requires len(a) >= 0", units)
-        self.assertIn("ensures index < len(a)", units)
-        self.assertIn("invariant 0 <= index and index <= len(a)", units)
-        self.assertIn("index := index + 1;", units)
-        self.assertNotIn("{", units)
+    def test_t_units_follow_the_ast_fim_taxonomy(self):
+        units = {(T_DOC[a:b], kind) for a, b, kind in fim.t_units(T_DOC)}
+        self.assertIn(("requires len(a) >= 0", "clause"), units)
+        self.assertIn(("len(a) >= 0", "expression"), units)
+        self.assertIn(("ensures index < len(a)", "clause"), units)
+        self.assertIn(("invariant 0 <= index and index <= len(a)", "invariant"), units)
+        self.assertIn(("decreases len(a) - index", "invariant"), units)
+        self.assertIn(("index := index + 1;", "statement"), units)
+        self.assertIn(("index + 1", "expression"), units)
+        self.assertIn(("index < len(a)", "expression"), units)          # the loop condition
+        self.assertIn(("{\n    index := index + 1;\n  }", "block"), units)
+        self.assertIn((T_DOC[T_DOC.index("{"):], "block"), units)       # the whole body
+        self.assertEqual({k for _, k in units}, set(fim.T_UNIT_KINDS))
+
+    def test_t_split_round_trips_and_is_mostly_whole_units(self):
+        units = {T_DOC[a:b] for a, b, _ in fim.t_units(T_DOC)}
         rng, whole = random.Random(2), 0
         for _ in range(400):
             p, m, s = fim.split(T_DOC, rng, "t")
             self.assertEqual(p + m + s, T_DOC)
             whole += m in units
-        self.assertGreater(whole, 150)      # about half are whole units, the rest character spans
+        self.assertGreater(whole, 330)      # 90% whole units, the rest character spans
 
     def test_psm_and_spm_layouts_are_the_papers(self):
         pre, suf, mid, eot = (FIMCHAR.sentinel_id(s) for s in fim.SENTINELS)
