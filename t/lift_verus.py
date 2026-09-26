@@ -252,8 +252,9 @@ class Parser:
         self.item_start: Optional[int] = None
 
     def text(self, a: int, b: int) -> str:
-        """Tokens a..b-1 as source text (whitespace normalised, comments gone)."""
-        return " ".join(t.text for t in self.toks[a:b])
+        """Tokens a..b-1 as source text (whitespace normalised, comments gone; an inner
+        attribute's `#![` kept glued, which rustc's parser requires)."""
+        return re.sub(r"# ! \[", "#![", " ".join(t.text for t in self.toks[a:b]))
 
     # token helpers
     def peek(self, k: int = 0) -> Tok:
