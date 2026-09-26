@@ -102,9 +102,25 @@ def _token_stop(tok, prompt_ids: list, stop):
     return token_stop
 
 
+def cache_by_default(device, prompt_tokens: int, block_size: int) -> bool:
+    """Whether sample() decodes on the KV cache when its caller does not say.
+
+    Only where it measured faster (FINDINGS-kv-cache-2026-09-19.md). CPU with a
+    prompt shorter than the context window: on; the 2026-09-26 section measured
+    1.1 to 14 times faster at every product shape, 128 and 400 new tokens, 1 and
+    4 threads. CPU with a prompt that already fills the window: off; there every
+    step rebuilds the whole window either way, and the cached path, which also
+    keeps keys it then discards, measured 0.93 to 1.06 times, up to 7 percent
+    slower on the Medium shape. CUDA: off; the 2026-09-19 runs measured 0.92 to
+    1.21 times at core-small. Apple's MPS and every other backend: off,
+    unchanged and not measured.
+    """
+    return torch.device(device).type == "cpu" and prompt_tokens < block_size
+
+
 def sample(model, tok, prompt: str, tokens: int = 400,
            temperature: float = 0.8, top_k: int = 40, device: str | None = None,
-           use_cache: bool = False, *, stop=None, generator=None) -> str:
+           use_cache: bool | None = None, *, stop=None, generator=None) -> str:
     """Prompt in, text out. Shared so the GUI and the CLI cannot drift apart.
 
     An empty prompt, or one made entirely of characters absent from this model's
@@ -119,10 +135,17 @@ def sample(model, tok, prompt: str, tokens: int = 400,
     and tested rather than hidden: under byte-level BPE the last kept token can
     split a multi-byte character, and the text then ends in U+FFFD where the
     unstopped text has the character; the extracted reply never includes it.
+
+    ``use_cache=None`` follows what was measured (cache_by_default): cached on
+    CPU when the prompt is shorter than the context window, uncached otherwise
+    and on CUDA and MPS. True or False is obeyed on any device; cached and
+    uncached greedy output is tested identical, inside the window and past it.
     """
     if device is None:
         device = next(model.parameters()).device
     ids = tok.encode(prompt) or [0]
+    if use_cache is None:
+        use_cache = cache_by_default(device, len(ids), model.config.block_size)
     idx = torch.tensor([ids], dtype=torch.long, device=device)
     model.eval()
     out = model.generate(idx, tokens, temperature=temperature, top_k=top_k, use_cache=use_cache,
