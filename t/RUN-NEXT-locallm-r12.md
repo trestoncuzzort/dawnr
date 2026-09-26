@@ -110,6 +110,24 @@ ratio of ~0.4 is where it moved nothing, receipt cb3d9202395a), LoRA (receipt
 1b7c0e940167), NEFTune (gains come with 2.8x longer answers), a bigger core
 before it is re-pretrained with tuned weight decay (receipt 5d66d7599d7f).
 
+The training command, one per seed, after the T4 build of `continue_from_checkpoint.py`
+(schema 2: the holdout follows `--split-seed` and a hash of each document, not `--seed`):
+
+    ~/.venv-vllm/bin/python locallm/continue_from_checkpoint.py \
+        --init <core> --data t/out/loop/corpus-r12-headed.txt --split t/out/loop/split-v5.json \
+        --out t/out/locallm-r12-s<seed> --steps 300 --lr 3e-5 --block-size 512 \
+        --doc-batches --keep-every 50 --dropout 0.1 --split-seed 1337 --seed <seed> --deterministic
+
+`--split-seed 1337` is the same for every arm; the trainer refuses a holdout
+under 8% of the characters (the hash split's size varies with the split seed:
+6.1% to 12.4% on r8 across eight seeds), so if 1337 falls short on the final
+corpus the next registered split seed is used and recorded. To reproduce a run
+from before schema 2, pass `--split-by order --split-seed <its --seed>`.
+`--deterministic` gave bit-identical 10-step runs on the lab CPU (29 of 29
+tensors equal, metrics equal); on the GPU it is unmeasured until r12 trains
+one seed twice and compares tensors. `--keep-every 50` at 300 steps writes six
+fp32 copies of the ~93M core, about 370 MB each, per seed.
+
 ## D. Sampling and selection: a pilot first
 
 Keep the greedy column exactly as today. Add a pilot on 20 held-out problems:
@@ -146,7 +164,7 @@ e5060fc9ac04)
 | 2 | `bash -lc 'python3 t/preflight.py --split t/out/loop/split-v5.json --strict'` on the lab | AUTOMATED | + A1, A2, A3 |
 | 3 | predictions registered | MANUAL | MANUAL |
 | 4 | corpus: excluded ids logged, example count equals input rows, no held-out id by any name, decontamination applied, `head_align` unparsed 0 | MANUAL | AUTOMATED (A1, A2) |
-| 5 | train: run.json `complete`, corpus sha matches, split seed recorded | MANUAL | AUTOMATED (A7) |
+| 5 | train: run.json `complete`, `schema` 2, corpus sha matches, `identities.split_seed` present and `identities.split.by` = `hash`, `identities.reproducibility.use_deterministic_algorithms` true, `identities.batches.kind` = `documents` with its cut counts | MANUAL | AUTOMATED (A7) |
 | 6 | generate: 232 records per arm, one set of options | MANUAL | AUTOMATED (A4, A6) |
 | 7 | grade: `--no-cache` for any regrade, table rows equal tasks | MANUAL | partly (A4) |
 | 8 | spec check on one machine, no "NOT CHECKED" | MANUAL | MANUAL |
