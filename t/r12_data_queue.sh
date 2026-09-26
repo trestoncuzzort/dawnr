@@ -665,6 +665,13 @@ check_or_refuse() { local rc; done_step "$@"; rc=$?; [ "$rc" -eq 3 ] && refuse "
 take_locks() {
   mkdir -p "$RD"
   mkdir "$RD/.lock" 2>/dev/null || refuse "another queue holds $RD/.lock here"
+  # Under T_LAB=local the grading machine's lock IS this lock (one directory), so a
+  # second mkdir would always fail and read as another queue (found 2026-09-26, on
+  # the first local run). One lock, one release.
+  if lab_is_local; then
+    trap 'rmdir "$RD/.lock" 2>/dev/null' EXIT
+    return 0
+  fi
   lab "mkdir -p $RD && mkdir $RD/.lock" 2>/dev/null || { rmdir "$RD/.lock"; refuse "another queue holds $RD/.lock on the lab"; }
   trap 'rmdir "$RD/.lock" 2>/dev/null; remote "rmdir ~/$REPO/$RD/.lock" 2>/dev/null' EXIT
 }
