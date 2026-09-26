@@ -33,18 +33,28 @@ likelihood term and never as plain DPO:
 
 | file | what |
 |---|---|
-| `t/negatives_from_spec_disagreements.py` | pairs `{task_id, prompt, chosen, rejected, provenance}` from the disagreeing verdict rows, through the r12 gates |
-| `t/test_negatives_from_spec_disagreements.py` | 7 tests, no torch: the pair, each refusal by name, the two contradictions that stop the build |
+| `t/negatives_from_spec_disagreements.py` | pairs `{task_id, prompt, chosen, rejected, provenance}` from the disagreeing verdict rows, through the r12 gates; a duplicate pair (the same program under a second tag) refused by name |
+| `t/test_negatives_from_spec_disagreements.py` | 8 tests, no torch: the pair, each refusal by name, the duplicate, the two contradictions that stop the build |
 | `locallm/data.py` | `PairBatches`: one pair per row, the head masked, the same bytes as the corpus document for the positive |
-| `locallm/continue_from_checkpoint.py` | `--pairs`, `--pref-loss {none,dpop}`, `--pref-beta`, `--pref-lambda`, `--pair-batch-size`; a reference frozen from `--init`; every setting in `run.json` |
-| `locallm/test_r12_preference.py` | 13 tests on the lab CPU: layout, the loss, bit identity under `none`, the DPOP property, the gates, resume |
+| `locallm/continue_from_checkpoint.py` | `--pairs`, `--pref-loss {none,dpop}`, `--pref-beta`, `--pref-lambda`, `--pair-batch-size`; a reference frozen from `--init`; the pair pass without dropout; every pair's chosen side checked against `--data`; every setting in `run.json` |
+| `locallm/test_r12_preference.py` | 15 tests on the lab CPU: layout, the loss, bit identity under `none`, the DPOP property at dropout 0 and 0.1, the gates, the corpus check, resume |
 
 The prompt of a pair is `loop_locallm.problem_head` for the problem, so the
 pair's chosen side is byte for byte the corpus document the language-model
 loss trains on (`t/loop_locallm.py corpus` writes `head + program`). The
 chosen side is the pool file's raw fenced block, as the corpus builder takes
 it; the rejected side is the program `spec_check` stored beside its verdict,
-re-parsed and re-hashed against that verdict before use.
+re-parsed and re-hashed against that verdict before use. Since the review of
+2026-09-25 the trainer enforces the identity instead of assuming it: `load_pairs`
+refuses, by line, a pair whose `prompt + chosen` is not a substring of the
+`--data` text, naming whether the head or the program is missing (a corpus
+built with `--examples` against pairs built without, or pairs from another
+pool file). DPO's own recipe fits the reference on the preferred completions
+"to mitigate the distribution shift" (Rafailov et al., Section 4,
+ar5iv.labs.arxiv.org/html/2305.18290); here the likelihood term is the corpus
+loss, so the corpus has to hold the winners. Checked on the lab: all three
+pairs' `prompt + chosen` occur in `corpus-r8.txt` (and in `corpus-r8-headed.txt`);
+`run.json` records `pairs.chosen_in_corpus: true`.
 
 ## The data, measured on the lab
 
@@ -63,14 +73,23 @@ sha256 e50457ea8da0.
 | **pairs written** | **3** |
 | refused: held-out (the answer is to a held-out problem) | 74 |
 | refused: pool-mismatch (verdict under pool v3, the split is v5) | 4 |
-| refused: dev-split, same-task, names-refused-id, no-positive, positive-not-spec-checked, identical-programs | 0 each |
+| refused: dev-split, same-task, names-refused-id, no-positive, positive-not-spec-checked, identical-programs, duplicate | 0 each |
 
 Disagreeing rows by tag: locallm-r7b-greedy 66, locallm-smoke 6, prover-train
 2, qwen3.8-27b-fp8-v3 2, and one each from locallm-r9-seed42, phi4-mini-v3,
 qwen235-heldout, qwen235-heldout-p5, qwen3.8-27b-fp8-v3-s2. The 74 held-out
-refusals are 66 + 6 + 1 + 1 of those: every locallm arm ever spec-checked was
-generated on the held-out split, so its disagreements name problems no
-training row may name. They are refused by key in the report, not dropped.
+refusals are locallm-r7b-greedy 66, locallm-smoke 6, qwen3.8-27b-fp8-v3 1
+(mbpp_179) and qwen3.8-27b-fp8-v3-s2 1 (mbpp_908). The 4 pool-mismatch
+refusals (verdicts under pool v3: locallm-r9-seed42 541, phi4-mini-v3 20,
+qwen235-heldout and qwen235-heldout-p5 both 355) also name held-out ids; the
+pool check runs first, so they are counted there. 78 of the 81 disagreeing
+rows name held-out problems, which no training row may name; the three that
+do not are the three pairs. (Re-derived from the verdict file and split-v5 on
+2026-09-25 after a review found the first version of this sentence attributed
+the 74 to the locallm arms alone.) Every refusal is by key in the report, not
+dropped, and a disagreeing program graded again under a second tag (355
+above, once its pool is v5) is refused as `duplicate` with the key that first
+wrote the pair, so the counts add up: disagreeing = pairs + refusals.
 
 The three pairs:
 
@@ -103,32 +122,74 @@ for the same problem exists. That is an estimate, not a count.
 
 Two-layer, width-32 model, character tokenizer, 8 synthetic pairs whose
 sides differ by one character and share the rest (Smaug's low-edit-distance
-case), the init first fitted to the corpus for 300 steps (Smaug and RPO both
-measure after supervised fitting; from a random init the corpus loss lifted
-both sides, chosen +9.1 and rejected +5.1 nats in 30 steps, and only the
-margin separated them).
+case). Since the review of 2026-09-25 the fixture's corpus holds every pair's
+chosen document, laid out as `t/loop_locallm.py corpus` writes it, as the
+r12 corpus holds the real positives; the init is first fitted to that corpus
+for 300 steps (Smaug and RPO both measure after supervised fitting; from a
+random init the corpus loss lifted both sides, chosen +9.1 and rejected
++5.1 nats in 30 steps, and only the margin separated them). The numbers of
+the first version of this note were measured on a fixture whose chosen
+programs were foreign to the corpus; they are replaced below.
 
 - `--pairs` with `--pref-loss none`: all 29 weight tensors and every metrics
   row equal a run without `--pairs`; `run.json` records the pairs file, its
-  sha256, the loss name, beta, lambda, the batch size and the reference's
-  checkpoint hash, with `scored: false`.
-- `--pref-loss dpop`, beta 0.3, lambda 50, lr 1e-3, 30 steps, corpus loss on:
-  every chosen side ended above its reference (+10.9 to +11.7 nats, mean
-  -143.5 against -154.7), every rejected side below (mean -169.5 against
-  -154.9); reward accuracy 1.0, margin positive, `pairs_chosen_below_reference`
-  0.0 at steps 10, 20 and 30.
+  sha256, the loss name, beta, lambda, the batch size, the pair pass's
+  dropout (0.0), `chosen_in_corpus` and the reference's checkpoint hash,
+  with `scored: false`.
+- `--pref-loss dpop`, beta 0.3, lambda 50, lr 1e-3, 30 steps, corpus loss
+  on, `--dropout 0` (the trainer's default): every chosen side ended above
+  its reference (+2.5 to +3.1 nats, mean -8.46 against -11.25), every
+  rejected side far below (-40.4 to -42.7, mean -69.9 against -28.1); reward
+  accuracy 1.0, margin positive, hinge 0 at every logged step,
+  `pairs_chosen_below_reference` 0.0 and `pairs_chosen_deficit` 0.0.
+- The same under `--dropout 0.1`, the r12 recipe's setting, which the pilot
+  arm copies: chosen -0.09 to +1.25 (mean -10.77 against -11.25), rejected
+  -25.4 to -27.8 (mean -55.2 against -28.1), reward accuracy 1.0; the hinge
+  fired at one of three logged steps (0.048). The control with the same seed
+  and `--pref-loss none` shows what the term is holding against: under
+  dropout the corpus loss alone pulled every chosen side 6.7 to 8.0 nats
+  BELOW its reference in those 30 steps (and 7.0 to 8.9 on a second seed), so
+  DPOP ends +7.7 to +8.1 above the control on the chosen side and -22.3 to
+  -23.6 below it on the rejected side. One pair 0.09 below its reference is the
+  hinge's slack, not a failure: the hinge sits inside the log-sigmoid under
+  beta, and at a margin of 28 nats and lambda 50 the term does not bite
+  until the deficit nears margin / lambda, 0.5 nats. At 60 steps every chosen
+  side is above its reference (+0.03 to +0.70) and every rejected side 36 to
+  39 below. Second seed at 30 steps: chosen +0.18 to +0.87, rejected -38 to
+  -41. The test asserts the per-pair slack bound, the means, and the two
+  control comparisons.
 - Preference loss alone, same fitted init, the trainer's optimizer and clip:
-  DPOP (lambda 50) chosen minimum +14.0 above reference, rejected maximum
-  -23.4 below; plain DPO (lambda 0) chosen minimum +20.1, rejected maximum
-  -22.1. **Smaug's failure did not reproduce at width 32**: plain DPO did
-  not lower the chosen side here, so this test shows the hinge does no harm
-  and the wiring is right; it does not show the hinge mattering. On the
-  93M core with real pairs that is an open measurement (`pairs_chosen_below_reference`
-  in `metrics.jsonl` is the number to watch).
+  DPOP (lambda 50) chosen minimum +3.5 above reference, rejected maximum
+  -48.1 below; plain DPO (lambda 0) took every chosen side DOWN, minimum
+  -84.5, with the rejected side at -121.9. **Smaug's failure reproduces at
+  width 32 once the chosen side is a fitted corpus document one edit away
+  from the rejected one**; in the first fixture (chosen programs foreign to
+  the corpus) plain DPO left the chosen side at +20 and the note said the
+  test could not show the hinge mattering. It does now, and the test asserts
+  plain DPO's fall as well as DPOP's hold.
 - A pairs file naming a held-out id, a dev id or a same-task source is
-  refused by line before torch is imported; `--pref-loss dpop` without
-  `--pairs` is refused; a resumed run keeps the reference values it started
-  with and refuses a changed lambda.
+  refused by line before torch is imported; a pair whose head or chosen
+  program is not in `--data` is refused by line and named; `--pref-loss dpop`
+  without `--pairs` is refused; a resumed run keeps the reference values it
+  started with and refuses a changed lambda.
+
+**Dropout, found in review.** The first version scored the reference once
+in eval mode and ran the policy's pair pass in train mode. With the
+trainer's default `--dropout 0` that is the same network; under the recipe's
+`--dropout 0.1` the policy's log-probabilities sat below the reference's by
+the dropout deficit on every step, the hinge fired on that noise, and its
+gradient lifted the REJECTED side 6.0 to 8.7 nats above its reference while
+`pairs_chosen_below_reference` read 0.0 and reward accuracy 1.0 (the
+reviewer's probe on the old fixture): both pilot criteria as first written
+said success for a run doing the opposite of what it was for. TRL's
+DPOTrainer disables dropout in the model and the reference model for the
+whole run by default (`DPOConfig.disable_dropout`,
+raw.githubusercontent.com/huggingface/trl/main/trl/trainer/dpo_config.py).
+Here only the pair pass runs in eval mode (`pair_forward`): dropout off,
+nothing drawn from the generator, autograd unaffected; the corpus loss keeps
+the recipe's dropout and `--pref-loss none` stays bit-identical. `run.json`
+records `pairs.dropout: 0.0` beside the recipe's `dropout`, and the property
+test now runs at both settings.
 - Existing tests of the two files touched: `test_r12_continue`,
   `test_r12_doc_batches`, `test_r12_split`, `test_r12_decode`, `test_release`
   (65, one skipped as before) and `test_bpe`, `test_checkpoint`,
@@ -164,12 +225,20 @@ support it, in order:
    `t/out/spec-disagree.json`: at least 30 pairs over at least 15 problems,
    or the term cannot be a preference over attractors.
 2. A pilot on one seed of the r12 recipe, identical but for
-   `--pairs t/out/loop/pairs-negatives-2026-09-25.jsonl --pref-loss dpop`,
-   judged the way section C chooses the stopping step: tests passed on the
-   dev split (`t/r12-dev-ids.json`) at every kept step, decoded greedily,
-   and the dev proven-but-wrong count beside it. In `metrics.jsonl`,
-   `pairs_chosen_below_reference` stays 0 and `pairs_reward_accuracy` rises
-   above the 0.5 a reference-equal model starts at.
+   `--pairs t/out/loop/pairs-negatives-2026-09-25.jsonl --pref-loss dpop`
+   (the recipe's `--dropout 0.1` included; the pairs rebuilt from the
+   corpus's own pool file, or the trainer refuses them), judged the way
+   section C chooses the stopping step: tests passed on the dev split
+   (`t/r12-dev-ids.json`) at every kept step, decoded greedily, and the dev
+   proven-but-wrong count beside it. In `metrics.jsonl`, all of:
+   `pairs_rejected_logp` below `pairs_rejected_ref_logp` (the rejected side
+   falls; before the dropout fix it rose while every other number read
+   well), `pairs_chosen_logp` at or above `pairs_chosen_ref_logp`,
+   `pairs_chosen_deficit` under `pairs_margin / (beta * lambda)` (the
+   hinge's slack), and `pairs_reward_accuracy` above the 0.5 a
+   reference-equal model starts at. `pairs_chosen_below_reference` is
+   watched, not a criterion on its own: one pair a tenth of a nat under its
+   reference at a 28-nat margin is the hinge's slack.
 3. The prediction, registered before the pilot in the r12 predictions file:
    dev tests passed not below the no-pairs arm, and dev proven-but-wrong
    lower. Either number going the other way ends it, as round 2 ended plain DPO.
