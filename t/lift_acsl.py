@@ -175,7 +175,14 @@ def scan(text: str, file: str = "", line0: int = 1, annot_mode: bool = False) ->
             i = j
             continue
         if c == '"' or c == "'":
-            raise AcslRefusal("string-literal", "string or character literal", f"{file}:{line}")
+            # kept as a token: refused where a lifted function uses one, not in the
+            # rest of the unit (an SV-COMP harness's reach_error has one)
+            j = i + 1
+            while j < n and text[j] != c:
+                j += 2 if text[j] == "\\" else 1
+            toks.append(Tok("str", text[i:j + 1], file, line))
+            i = j + 1
+            continue
         m = ID_RE.match(text, i)
         if m:
             toks.append(Tok("id", m.group(0), file, line))
@@ -386,6 +393,9 @@ C_TYPES = {
     ("long",): ("long", True), ("long", "int"): ("long", True),
     ("unsigned", "long"): ("long", False), ("char",): ("char", True), ("unsigned", "char"): ("char", False),
     ("void",): ("void", None),
+    ("long", "long"): ("long", True), ("long", "long", "int"): ("long", True),
+    ("unsigned", "long", "long"): ("long", False), ("unsigned", "long", "long", "int"): ("long", False),
+    ("signed", "char"): ("char", True),
 }
 
 
@@ -465,6 +475,7 @@ class Func:
     body: Optional[list]         # statements, None for a prototype
     contract: Optional[Contract]
     where: str = ""
+    error: Optional[AcslRefusal] = None    # the body did not parse; refused only if it is lifted
 
 
 # Statements (tuples keep them light):
@@ -730,6 +741,8 @@ class Parser:
 
     def primary(self) -> E:
         t = self.next()
+        if t.kind == "str":
+            raise AcslRefusal("string-literal", t.text[:20], t.at())
         if t.kind == "num":
             return E("int", (num_value(t.text),), t.line)
         if t.kind == "op" and t.text == "(":
@@ -981,6 +994,7 @@ class Program:
         self.logic: dict[tuple[str, int], LogicDef] = {}
         self.structs: set[str] = set()
         self.global_errors: list[AcslRefusal] = []
+        self.decl_errors: list[AcslRefusal] = []
         self._parse()
 
     def _annot_parser(self, tok: Tok) -> Parser:
@@ -1055,41 +1069,93 @@ class Program:
                 p.expect(";")
                 self.structs.add(name)
                 continue
-            if p.at_type():
-                ret = p.ctype()
-                name_tok = p.ident()
-                if not p.is_("("):
-                    # a global variable
-                    while not p.is_(";"):
-                        p.next()
-                    p.next()
+            if p.at_type() or t.text == "_Bool":
+                start = p.i
+                try:
+                    pending = self._function(p, pending)
+                except AcslRefusal as r:
+                    self._skip_decl(p, start)
+                    self.decl_errors.append(r)
                     pending = None
-                    self.funcs.setdefault("<globals>", Func("<globals>", ret, [], None, None, name_tok.at()))
-                    continue
-                p.expect("(")
-                params = []
-                if p.is_("void") and p.is_(")", 1):
-                    p.next()
-                while not p.is_(")"):
-                    ty = p.ctype()
-                    pname = p.ident().text if p.peek().kind == "id" else f"_{len(params)}"
-                    if p.is_("["):
-                        raise AcslRefusal("array-parameter", pname, p.peek().at())
-                    params.append((ty, pname))
-                    if not p.accept(","):
-                        break
-                p.expect(")")
-                if pending is not None:
-                    self.contracts[name_tok.text] = pending
-                    pending = None
-                if p.accept(";"):
-                    self.funcs.setdefault(name_tok.text, Func(name_tok.text, ret, params, None, None, name_tok.at()))
-                    continue
-                body = self._block(p)
-                self.funcs[name_tok.text] = Func(name_tok.text, ret, params, body,
-                                                 self.contracts.get(name_tok.text), name_tok.at())
                 continue
-            raise AcslRefusal("source-unparseable", f"top level {t.text!r}", t.at())
+            if t.text == ";":
+                p.next()
+                continue
+            start = p.i
+            self._skip_decl(p, start)
+            self.decl_errors.append(AcslRefusal("source-unparseable", f"top level {t.text!r}", t.at()))
+
+    def _skip_decl(self, p: Parser, start: int) -> None:
+        """Past one top-level declaration: to its `;`, or past its balanced `{...}`."""
+        p.i = start
+        depth = 0
+        while p.peek().kind != "eof":
+            t = p.next()
+            if t.text == "{" and t.kind == "op":
+                depth += 1
+            elif t.text == "}" and t.kind == "op":
+                depth -= 1
+                if depth == 0:
+                    if p.is_(";"):
+                        p.next()
+                    return
+            elif t.text == ";" and t.kind == "op" and depth == 0:
+                return
+
+    def _function(self, p: Parser, pending):
+        """One function declaration or definition; returns the contract still pending."""
+        if p.accept("_Bool"):
+            ret = CType("bool", name="_Bool")
+        else:
+            ret = p.ctype()
+        name_tok = p.ident()
+        if not p.is_("("):
+            # a global variable
+            while not p.is_(";"):
+                p.next()
+            p.next()
+            self.funcs.setdefault("<globals>", Func("<globals>", ret, [], None, None, name_tok.at()))
+            return None
+        p.expect("(")
+        params = []
+        if p.is_("void") and p.is_(")", 1):
+            p.next()
+        while not p.is_(")"):
+            ty = p.ctype()
+            pname = p.ident().text if p.peek().kind == "id" else f"_{len(params)}"
+            if p.is_("["):
+                raise AcslRefusal("array-parameter", pname, p.peek().at())
+            params.append((ty, pname))
+            if not p.accept(","):
+                break
+        p.expect(")")
+        if pending is not None:
+            self.contracts[name_tok.text] = pending
+            pending = None
+        while p.peek().kind == "id" and p.peek().text == "__attribute__":
+            p.next()
+            depth = 0
+            while True:
+                tk = p.next()
+                if tk.text == "(":
+                    depth += 1
+                elif tk.text == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+        if p.accept(";"):
+            self.funcs.setdefault(name_tok.text, Func(name_tok.text, ret, params, None, None, name_tok.at()))
+            return None
+        start = p.i
+        try:
+            body = self._block(p)
+            err = None
+        except AcslRefusal as r:
+            self._skip_decl(p, start)
+            body, err = [], r
+        self.funcs[name_tok.text] = Func(name_tok.text, ret, params, body,
+                                         self.contracts.get(name_tok.text), name_tok.at(), err)
+        return None
 
     # -- statements
     def _block(self, p: Parser) -> list:
@@ -1472,6 +1538,8 @@ class Translator:
         f = self.prog.funcs.get(self.fname)
         if f is None or f.body is None:
             raise AcslRefusal("no-function", f"no definition of {self.fname}")
+        if f.error is not None:
+            raise f.error
         c = self.prog.contracts.get(self.fname) or f.contract
         if c is None:
             raise AcslRefusal("no-contract", self.fname, f.where)
