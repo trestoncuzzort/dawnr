@@ -11,12 +11,13 @@ split between what this covers and what still needs torch.
 WHY THIS IS POSSIBLE AT ALL. These models are small enough that the arithmetic
 is not the problem. A decode step with a key/value cache costs about one
 multiply-accumulate per parameter, so the 10.9M-parameter round-4 checkpoint
-costs ~13.0M multiply-accumulates per token at full context. Measured on this
-machine, plain CPython does ~48M of them per second through
-`sum(map(mul, row, x))` over `array('f')` rows, and the module below measures
-199 ms per token on that checkpoint and 93 ms on the 4.9M one. That is slow and
-it is not nothing: a 200-token answer in 51 seconds, from a stick, on a computer
-with no machine-learning software on it.
+costs ~13.0M multiply-accumulates per token at full context. Plain CPython does
+~48M of them per second through `sum(map(mul, row, x))` over `array('f')` rows,
+and about twice that through math.sumprod on Python 3.12+ (see _dot below):
+102-117 ms per token on that checkpoint and 47-56 ms on the 4.9M one, measured
+2026-09-26 (SHIPPING.md, section 2). That is slow and it is not nothing: a
+200-token answer in 24 seconds, from a stick, on a computer with no
+machine-learning software on it.
 
 WHERE THE FORMAT CAME FROM. Not guesswork.
 docs.pytorch.org/docs/2.14/notes/serialization.html: since PyTorch 1.6.0
@@ -353,7 +354,7 @@ class PlainGPT:
 
     Without the cache each step would re-read the whole prefix, which is the
     context length times the work for the same answer. The cache is the
-    difference between 199 ms and tens of seconds per token, so unlike
+    difference between about 110 ms and tens of seconds per token, so unlike
     model.py's opt-in `use_cache` it is not optional here.
     """
 
