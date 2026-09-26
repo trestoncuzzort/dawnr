@@ -75,3 +75,90 @@ r9 92M core in fp32, held-out ids 3 and 39, a 1,200-token budget:
 
 No GPU was used: every card had under 8 GB free, and a k=64 batch of r9 peaks
 near 14 GB with the torch.cat cache (use --rows-per-batch on a small card).
+
+## The CPU, 2026-09-26
+
+### Written before measurement
+
+The GPU null above rests on one card, and most people who use this product have
+no GPU. `checkpoint.sample`, which the window (studio.py, home.py) and
+generate.py call, decodes uncached by default on every device.
+(`checkpoint.sample_batch` always decodes on the cache, through `sample_many`.)
+This section measures the two paths on a CPU at the product's own shapes, with
+random weights, the `gpt` core, fp32, batch 1 and greedy decoding:
+
+| shape | layers | heads | width | context |
+|---|---:|---:|---:|---:|
+| Small (studio.py) | 2 | 4 | 128 | 128 |
+| Medium (studio.py) | 4 | 4 | 256 | 128 |
+| Large (studio.py) | 6 | 8 | 512 | 256 |
+| included model (model-r4) | 6 | 6 | 384 | 512 |
+
+Each shape runs with an 82-entry character vocabulary and an 8,192-entry BPE
+vocabulary, at prefixes of 32, 128 and 512 tokens and 128 new tokens, at 1 and
+4 torch threads. Two further rows: the window's own request, a 32-token prompt
+and 400 new tokens (home.py and studio.py ask for 400 by default), on the
+character vocabulary; and the 2026-09-19 GPU shape (core-small: 8 layers, width
+512, context 2048, vocabulary 8192, prefix 512, `gpt` core) as a cross-check.
+
+Which runs are inside the window matters. The cache saves work only while the
+prefix and the tokens generated so far fit the context. At prefix 512 every
+product shape starts with a full window, and at prefix 128 so do Small and
+Medium: from the first token the cached path rebuilds the whole window on every
+step, which is the uncached path's work plus keeping the keys. Prefix 32 on
+Small and Medium fills the window after 96 tokens and rebuilds for the last 32.
+The 400-token request stays inside the window only on the included model.
+
+Method: `bench_decode.py --device cpu --architecture gpt --threads N --order
+alternate --warmup 1 --repeats 5` (3 repeats for the 400-token rows), under
+`nice -n 10` with `CUDA_VISIBLE_DEVICES=""` and `OMP_NUM_THREADS=N`. Uncached
+and cached runs alternate, A B A B, so both see the same load; the machine is
+shared with a grading queue, and the one-minute load average is recorded beside
+every run.
+
+Noise and the threshold. For each configuration the noise is the larger of the
+two variants' relative range, (max - min) / median, over its repeats. Cached
+counts as faster when the median speedup exceeds 1 + noise and every paired
+repeat is faster; as slower when the median speedup is below 1 - noise; and
+otherwise as within noise.
+
+Predictions, each with what falsifies it:
+
+1. Inside the window (prefix 32 on every shape, prefix 128 on Large and the
+   included model) the cache is faster beyond noise at both thread counts and
+   both vocabularies. Any such configuration that is not falsifies it. The one
+   most at risk is Small at prefix 32: a smoke run of the bench at width 16 and
+   one layer, not a product shape, ran 0.96 times cached, so at a small enough
+   width the cache's fixed cost per step can exceed what it saves.
+2. The included model at prefix 128 on one thread is at least 5 times faster
+   cached. The arithmetic: uncached, each token runs the body over about 192
+   positions, about 4 GFLOP; cached, over one position, 21 MFLOP, plus reading
+   43 MB of weights. Less than 5 times falsifies it.
+3. Past the window (prefix 512 everywhere, prefix 128 on Small and Medium) the
+   cache is within noise of uncached. Slower beyond noise falsifies it and
+   blocks the flip; faster beyond noise falsifies it too, and would mean the
+   uncached path does work this reading has missed.
+4. Inside the window the speedup is smaller at 4 threads than at 1: the
+   uncached forward is matrix work that threads divide, the cached step is a
+   string of small products that they barely help. Falsified if most in-window
+   configurations gain more at 4 threads.
+5. Cached and uncached greedy output is identical in every configuration. Any
+   difference falsifies it.
+6. The window's 400-token request is at least 5 times faster cached on the
+   included model at one thread, and under 2 times on Small, Medium and Large,
+   whose windows fill after 96, 96 and 224 tokens and rebuild for the rest.
+
+The decision, fixed now: `checkpoint.sample` decodes with the cache by default
+on CPU if prediction 1 holds at prefix 128 and no configuration is slower
+beyond noise. CUDA stays uncached, as measured on 2026-09-19. MPS stays as it
+is, not measured: the one MPS number to hand (Llama 3.2 1B, 15 to 62 tokens
+per second, rasbt/LLMs-from-scratch ch05/07_gpt_to_llama, "Pro tip 3") is for
+a model about 100 times the included one, and the same author found the cache's
+advantage gone on CUDA at 124M, so on a GPU the size decides it.
+
+Prior art: rasbt/LLMs-from-scratch ch04/03_kv-cache measured a 124M GPT on a
+Mac Mini M4 CPU at 27 tokens per second uncached and 144 cached (200 tokens),
+and notes that "the speed advantages disappear on CUDA devices as this is a
+tiny model". Its uncached baseline projects logits at every position; this
+one's projects only the last (`only_last=True`), so any gain here comes from
+the transformer body alone.
