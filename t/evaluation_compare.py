@@ -33,6 +33,10 @@ from pathlib import Path
 
 
 OUTCOME_SCHEMA_VERSION = 1
+# score_heldout.py --outcomes wrote schema 1 (clean, spec_agrees) first and writes
+# schema 2 now (tests_pass, recited, answered_count, partial added; nothing
+# removed), so both are read. The comparison report keeps its own version above.
+SUPPORTED_OUTCOME_SCHEMAS = (1, 2)
 
 
 def _nonnegative_int(value: object, label: str) -> int:
@@ -167,11 +171,11 @@ def seed_sign_test(local_seed_clean_counts: Sequence[int], fixed_phi_clean_count
 
 def _boolean_outcomes_from_export(export: Mapping[object, object], panel: str, tag: str,
                                   field: str) -> dict[int, bool]:
-    """Read one complete per-task Boolean map from score_heldout's schema-v1 JSON."""
-    if export.get("schema_version") != OUTCOME_SCHEMA_VERSION:
+    """Read one complete per-task Boolean map from score_heldout's outcome JSON (schema 1 or 2)."""
+    if export.get("schema_version") not in SUPPORTED_OUTCOME_SCHEMAS:
         raise ValueError(
             f"unsupported outcome schema {export.get('schema_version')!r}; "
-            f"want {OUTCOME_SCHEMA_VERSION}"
+            f"want one of {SUPPORTED_OUTCOME_SCHEMAS}"
         )
     panels = export.get("panels")
     if not isinstance(panels, Mapping) or panel not in panels:
@@ -216,6 +220,11 @@ def spec_agrees_outcomes_from_export(export: Mapping[object, object], panel: str
     return _boolean_outcomes_from_export(export, panel, tag, "spec_agrees")
 
 
+def tests_pass_outcomes_from_export(export: Mapping[object, object], panel: str, tag: str) -> dict[int, bool]:
+    """Read the per-task tests-pass map (schema 2), the r12 plan's primary number on the clean panel."""
+    return _boolean_outcomes_from_export(export, panel, tag, "tests_pass")
+
+
 def _load_boolean_outcomes(path: Path, panel: str, tag: str, field: str) -> dict[int, bool]:
     try:
         export = json.loads(path.read_text(encoding="utf-8"))
@@ -234,6 +243,11 @@ def load_clean_outcomes(path: Path, panel: str, tag: str) -> dict[int, bool]:
 def load_spec_agrees_outcomes(path: Path, panel: str, tag: str) -> dict[int, bool]:
     """Load the task-specific current-spec-agreement map from ``--outcomes``."""
     return _load_boolean_outcomes(path, panel, tag, "spec_agrees")
+
+
+def load_tests_pass_outcomes(path: Path, panel: str, tag: str) -> dict[int, bool]:
+    """Load the per-task tests-pass map from a schema-2 ``--outcomes`` export."""
+    return _load_boolean_outcomes(path, panel, tag, "tests_pass")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

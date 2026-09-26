@@ -1,20 +1,38 @@
 #!/usr/bin/env python3
 """Score held-out answer sets on both the full and decontaminated panels.
 
-    python3 t/score_heldout.py [--split SPLIT.json] [--outcomes OUTCOMES.json] TAG [TAG ...]
+    python3 t/score_heldout.py [--split SPLIT.json] [--outcomes OUTCOMES.json] [--allow-partial] TAG [TAG ...]
 
 ``TAG`` is a directory under ``t/out/spec-experiment/`` with ``raw/``,
 ``extract.json``, ``tests.json``, and ``kernels.md``. The Markdown table keeps
 its established columns and emits one row for all split evaluation IDs and one
 for the clean panel after registered same-task training overlaps are removed.
 
-``--outcomes`` additionally writes schema-v1 JSON for paired comparison: each
+Two refusals guard every number in the table (r12 blockers A4 and A6):
+
+* A set that answers fewer held-out problems than the split names is refused
+  by name, with the missing ids, unless ``--allow-partial`` says the caller
+  knows it is scoring a partial set. Answers are counted as eval ids that have
+  a ``raw/<id>.json``, never as raw files: a pool-wide set holds 649 files and
+  answers 232, and one 27B set held 368 files and answered 161 of 232.
+* A set whose records were decoded under different settings is refused. The
+  key is the model plus every option except the free-text ``note``, with
+  numbers compared as numbers (``--temperature 0`` is stored as ``0.0``). The
+  digest is deliberately not part of it: one adapter was decoded on two
+  machines with two torch builds, which is the same model.
+
+``--outcomes`` additionally writes schema-2 JSON for paired comparison: each
 ``all-N`` and ``clean-N`` panel records its sorted task IDs and, for every tag,
-complete task-id -> Boolean ``clean`` and ``spec_agrees`` maps plus their
-matching counts. ``spec_agrees`` is true only for a clean answer with
-current-task agreement evidence. Missing, malformed, untested, or incompletely graded answers are explicitly
-``false`` rather than omitted, so a comparison cannot quietly change its paired
-population. The human-readable table remains on standard output.
+complete task-id -> Boolean ``clean``, ``spec_agrees`` and ``tests_pass`` maps
+plus their matching counts, ``recited`` (a clean answer that is a training
+document, names erased) when ``--corpus`` names that tag's corpus, and the
+``answered_count`` with a ``partial`` flag. ``spec_agrees`` is true only for a
+clean answer with current-task agreement evidence. Missing, malformed,
+untested, or incompletely graded answers are explicitly ``false`` rather than
+omitted, so a comparison cannot quietly change its paired population. The
+human-readable table remains on standard output. Schema 1 (clean and
+spec_agrees only) is what ``t/evaluation_compare.py`` first read; it still
+reads both.
 
 A clean answer passes the problem's tests and is ``verified / refuted`` in all
 seven named kernels; partial kernel tables cannot contribute clean answers.
@@ -36,6 +54,9 @@ import spec_experiment as se                                    # noqa: E402
 CLEAN = "verified / refuted"
 KERNELS = {"dafny", "verus", "spark", "framac", "lean", "rocq", "fstar"}
 FAILING_TESTS = {"fail", "signature", "requires-excluded", "undefined"}
+OUTCOME_SCHEMA_VERSION = 2
+# Free text in a record's options: a rerun's reason, never a decoding setting.
+DECODING_FREE_TEXT = ("note",)
 
 
 def clean_eval_ids(eval_ids: set[int]) -> set[int]:
@@ -101,11 +122,102 @@ def corpus_keys(path: Path) -> dict:
     return keys
 
 
+def _canonical(value):
+    """Numbers compare as numbers: ``--temperature 0`` is stored as ``0.0`` by one
+    generator and as ``0`` by another, and both mean the same decoding."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, dict):
+        return {k: _canonical(v) for k, v in sorted(value.items())}
+    if isinstance(value, list):
+        return [_canonical(v) for v in value]
+    return value
+
+
+def decoding_key(record: dict) -> str:
+    """The settings a record was decoded under, as one comparable string.
+
+    PCheck (Xu et al., OSDI'16, usenix.org/conference/osdi16/technical-sessions/presentation/xu)
+    shows that a setting nobody checks where its used value is observable stays
+    a latent error until the damage shows; here the observable value is the
+    options block every record carries. The key is the model plus every option
+    except free text, which is wider than the five names the r12 plan listed
+    on purpose: a survey of the 84 answer sets on 2026-09-21 found the only
+    mixed set (deepseek-coder-v2-16b-v4-s1) differing in num_ctx and
+    num_predict, names an ollama generator uses and the five-name rule would
+    never have compared. The digest is left out: student-r6-v3 carries torch
+    2.13 on 125 records and 2.11 on 107 around one adapter, which is one model.
+    """
+    options = record.get("options") if isinstance(record.get("options"), dict) else {}
+    settings = {k: v for k, v in options.items() if k not in DECODING_FREE_TEXT}
+    return json.dumps({"model": record.get("model"), "options": _canonical(settings)}, sort_keys=True)
+
+
+def _differing_settings(records: list[dict]) -> list[str]:
+    names = set()
+    for r in records:
+        options = r.get("options") if isinstance(r.get("options"), dict) else {}
+        names.update(k for k in options if k not in DECODING_FREE_TEXT)
+    differ = []
+    if len({json.dumps(_canonical(r.get("model"))) for r in records}) > 1:
+        differ.append("model")
+    for name in sorted(names):
+        values = {json.dumps(_canonical((r.get("options") or {}).get(name)), sort_keys=True) for r in records}
+        if len(values) > 1:
+            differ.append(name)
+    return differ
+
+
+def answered_records(tag: str, d: Path, eval_ids: set[int]) -> dict[int, dict]:
+    """The raw record of every eval id that has one; an unreadable record is refused by name."""
+    records = {}
+    for tid in sorted(eval_ids):
+        path = d / "raw" / f"{tid}.json"
+        if not path.exists():
+            continue
+        try:
+            records[tid] = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            raise SystemExit(f"{tag}: raw/{path.name} is not a readable record ({e}); "
+                             "a truncated file is a killed generator, not an answer")
+        if not isinstance(records[tid], dict):
+            raise SystemExit(f"{tag}: raw/{path.name} is not a record object")
+    return records
+
+
+def refuse_mixed_decoding(tag: str, records: dict[int, dict]) -> None:
+    """A6: every record of a set must have been decoded under one setting."""
+    by_key: dict[str, list[int]] = {}
+    for tid, r in records.items():
+        by_key.setdefault(decoding_key(r), []).append(tid)
+    if len(by_key) <= 1:
+        return
+    combos = sorted(by_key.items(), key=lambda kv: -len(kv[1]))
+    differ = _differing_settings([records[ids[0]] for _k, ids in combos])
+    shown = "; ".join(f"{len(ids)} records at {k}" for k, ids in combos[:3])
+    raise SystemExit(f"{tag}: records were decoded under {len(by_key)} different settings, differing in "
+                     f"{', '.join(differ) or 'an option'} ({shown}); one set, one setting, or it is not one row")
+
+
 def score(tag: str, eval_ids: set[int], corpus: dict | None = None,
           clean_outcomes: dict[int, bool] | None = None,
-          spec_agrees_outcomes: dict[int, bool] | None = None) -> dict:
+          spec_agrees_outcomes: dict[int, bool] | None = None,
+          allow_partial: bool = False,
+          tests_pass_outcomes: dict[int, bool] | None = None,
+          recited_outcomes: dict[int, bool] | None = None) -> dict:
     d = se.outdir(tag)
-    raw = {int(p.stem) for p in (d / "raw").glob("*.json") if p.stem.isdigit()}
+    records = answered_records(tag, d, eval_ids)
+    # A4, in the shape of Deequ's hasSize/isComplete constraints checked before data is consumed
+    # (github.com/awslabs/deequ): the count that matters is eval ids with a record, not files.
+    missing = sorted(set(eval_ids) - set(records))
+    if missing and not allow_partial:
+        raise SystemExit(f"{tag}: {len(records)} of {len(eval_ids)} held-out problems have a raw answer; "
+                         f"missing {len(missing)}: {missing[:10]}{' ...' if len(missing) > 10 else ''}; "
+                         "pass --allow-partial to score it as a partial set")
+    refuse_mixed_decoding(tag, records)
+    raw = set(records)
     ext = json.loads((d / "extract.json").read_text(encoding="utf-8")) if (d / "extract.json").exists() else {}
     tests = json.loads((d / "tests.json").read_text(encoding="utf-8")) if (d / "tests.json").exists() else {}
     cols, cells = (se.parse_kernel_table(d / "kernels.md") if (d / "kernels.md").exists() else ([], {}))
@@ -124,12 +236,10 @@ def score(tag: str, eval_ids: set[int], corpus: dict | None = None,
          "clean, novel": 0 if corpus is not None else "-"}
     if corpus is not None:
         from loop_filter import key
-    if clean_outcomes is not None:
-        clean_outcomes.clear()
-        clean_outcomes.update({tid: False for tid in eval_ids})
-    if spec_agrees_outcomes is not None:
-        spec_agrees_outcomes.clear()
-        spec_agrees_outcomes.update({tid: False for tid in eval_ids})
+    for outcomes in (clean_outcomes, spec_agrees_outcomes, tests_pass_outcomes, recited_outcomes):
+        if outcomes is not None:
+            outcomes.clear()
+            outcomes.update({tid: False for tid in eval_ids})
     for tid in eval_ids:
         if tid in raw:
             r["answered"] += 1
@@ -139,6 +249,8 @@ def score(tag: str, eval_ids: set[int], corpus: dict | None = None,
         t = tests.get(str(tid), {})
         passed = t.get("overall") == "pass"
         r["tests pass"] += passed
+        if tests_pass_outcomes is not None:
+            tests_pass_outcomes[tid] = bool(passed)
         row = cells.get(t.get("name") or e.get("name") or "")
         if not row:
             continue
@@ -160,7 +272,10 @@ def score(tag: str, eval_ids: set[int], corpus: dict | None = None,
             spec_agrees_outcomes[tid] = spec_agrees
         if corpus is not None and is_clean:
             task = json.loads((d / "tasks" / f"{name}.json").read_text(encoding="utf-8"))
-            r["clean, recited" if key(task) in corpus else "clean, novel"] += 1
+            recited = key(task) in corpus
+            r["clean, recited" if recited else "clean, novel"] += 1
+            if recited_outcomes is not None:
+                recited_outcomes[tid] = recited
     # The gate this project loses at, as one number: of the answers that pass their own tests, how many the
     # seven can prove. Round 6's student converts 3 of 9 where Phi-4-mini converts 3 of 6 and a proof-trained
     # 7B converts 6 of 10, and that difference is the whole story of where the loop is stuck -- it belongs in
@@ -177,7 +292,11 @@ def main() -> int:
                     help="the corpus TAG's model was trained on; splits its clean answers into "
                          "recited and novel (repeatable, one per tag)")
     ap.add_argument("--outcomes", type=Path, metavar="PATH",
-                    help="write schema-v1 per-panel Boolean clean outcomes for paired comparison")
+                    help="write schema-2 per-panel Boolean outcomes (clean, spec_agrees, tests_pass, "
+                         "recited with --corpus) for paired comparison by t/compare_arms.py")
+    ap.add_argument("--allow-partial", action="store_true",
+                    help="score a set that answers fewer held-out problems than the split names; "
+                         "without this such a set is refused by name")
     ap.add_argument("tags", nargs="+")
     a = ap.parse_args()
     eval_ids = {int(i) for i in json.loads(a.split.read_text(encoding="utf-8"))["eval_ids"]}
@@ -207,20 +326,29 @@ def main() -> int:
     for tag in a.tags:
         training_corpus = parsed[corpora[tag]] if tag in corpora else None
         for panel_name, suffix, ids in panel_specs:
-            clean_map = {} if a.outcomes is not None else None
-            spec_agrees_map = {} if a.outcomes is not None else None
-            r = score(tag, ids, training_corpus, clean_map, spec_agrees_map)
+            export = a.outcomes is not None
+            maps = {name: ({} if export else None)
+                    for name in ("clean", "spec_agrees", "tests_pass", "recited")}
+            if training_corpus is None:
+                maps["recited"] = None
+            r = score(tag, ids, training_corpus, maps["clean"], maps["spec_agrees"],
+                      allow_partial=a.allow_partial, tests_pass_outcomes=maps["tests_pass"],
+                      recited_outcomes=maps["recited"])
             r["tag"] = f"{tag}{suffix}"
             print("| " + " | ".join(str(r[h]) for h in heads) + " |")
-            if clean_map is not None and spec_agrees_map is not None:
-                panels[panel_name]["tags"][tag] = {
-                    "clean": {str(tid): clean_map[tid] for tid in sorted(clean_map)},
-                    "clean_count": r["clean"],
-                    "spec_agrees": {str(tid): spec_agrees_map[tid] for tid in sorted(spec_agrees_map)},
-                    "spec_agrees_count": r["clean, spec checked"],
-                }
+            if export:
+                entry = {"answered_count": r["answered"], "partial": r["answered"] < len(ids)}
+                for name, count in (("clean", "clean"), ("spec_agrees", "clean, spec checked"),
+                                    ("tests_pass", "tests pass"), ("recited", "clean, recited")):
+                    if maps[name] is None:
+                        continue
+                    entry[name] = {str(tid): maps[name][tid] for tid in sorted(maps[name])}
+                    entry[f"{name}_count"] = r[count]
+                panels[panel_name]["tags"][tag] = entry
     if a.outcomes is not None:
-        outcome_export = {"schema_version": 1, "panels": panels}
+        outcome_export = {"schema_version": OUTCOME_SCHEMA_VERSION, "split": str(a.split),
+                          "overlap_ids": sorted(eval_ids - clean_ids), "allow_partial": a.allow_partial,
+                          "panels": panels}
         a.outcomes.write_text(json.dumps(outcome_export, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return 0
 
