@@ -837,6 +837,23 @@ def load_relabel_rows(path: Path, train_ids: set[int], eval_ids: set[int], pool:
     return rows
 
 
+def cap_relabel_rows(rows: list[dict], cap: int) -> tuple[list[dict], int]:
+    """At most `cap` relabeled rows per target problem, in file order (the file
+    is deterministic), so three problems cannot carry a third of the rows: the
+    2026-09-25 run put 33 of 118 rows on three problems, and CodeIt
+    (arXiv:2402.04858) reports that mixing relabeled data uniformly with the real
+    solutions fell from 49 to 38 of 400. cap 0 keeps every row."""
+    if cap <= 0:
+        return list(rows), 0
+    kept, per_problem = [], {}
+    for row in rows:
+        tid = int(row["task_id"])
+        per_problem[tid] = per_problem.get(tid, 0) + 1
+        if per_problem[tid] <= cap:
+            kept.append(row)
+    return kept, len(rows) - len(kept)
+
+
 def append_relabel_rows(sft: list[dict], rows: list[dict]) -> dict:
     """Relabel rows join the SFT set with their source kept; one already a positive is counted, not doubled."""
     present = {(s["task_id"], s["chosen"]) for s in sft}
@@ -1137,6 +1154,11 @@ def run_from_samples(args) -> int:
     relabel_path = getattr(args, "relabel_rows", None)
     if relabel_path:
         relabel_rows = load_relabel_rows(Path(relabel_path), train_ids, eval_ids, pool, pool_name, args.split)
+        cap = getattr(args, "relabel_cap", 3)            # the CLI default, for callers that build args themselves
+        relabel_rows, capped = cap_relabel_rows(relabel_rows, cap)
+        if capped:
+            print(f"relabel: {capped} row(s) beyond --relabel-cap {cap} per problem left out "
+                  f"(CodeIt fell from 49 to 38 of 400 when relabeled rows were mixed uniformly with real ones)")
         relabel_counts = {"path": str(relabel_path), **append_relabel_rows(sft, relabel_rows)}
     # A row's prompt is the recorded messages in that answer's raw/<id>.json, and an answer graded on the lab
     # workstation has its raw file there, not here. Five such rows went into sft-r5 on 2026-09-18 with a null
@@ -1198,6 +1220,9 @@ def main() -> int:
     ap.add_argument("--include", default=None,
                      help="prior pairs to revalidate against current evidence, prompts, "
                           "train IDs and admissible negatives before deduplicating")
+    ap.add_argument("--relabel-cap", type=int, default=3, metavar="N",
+                    help="at most N relabeled rows per target problem, in file order (0: no cap); the "
+                         "2026-09-25 run put 33 of 118 rows on three problems")
     ap.add_argument("--relabel-rows", default=None, metavar="PATH",
                      help="t/relabel.py's rows (verified-but-wrong programs relabeled with the train "
                           "problem they solve), appended to sft-<suffix>.jsonl with source 'relabel' kept; "

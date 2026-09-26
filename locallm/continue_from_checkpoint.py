@@ -256,6 +256,8 @@ def refuse_unless_trainable(text: str, label: str, eval_ids, split, dev_ids=froz
     if dev:
         reasons.append(f"contains dev-split ids: {loop_filter.held_out_detail(dev)}")
     raise ValueError(f"cannot train: {label}: " + "; ".join(reasons))
+
+
 def load_pairs(path, eval_ids, dev_ids, split_path, corpus_text=None, corpus_path=None) -> list[dict]:
     """The preference pairs, refused by line when one names a held-out id, a dev id or a same-task source.
 

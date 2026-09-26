@@ -104,12 +104,18 @@ def corpus_keys(path: Path) -> dict:
     corpus whose task count the split does not account for: a recited answer
     missed that way would be reported as novel, which is the wrong direction.
     """
-    from loop_filter import key, strip_head
+    from loop_filter import is_spec_document, key, strip_head
     import surface
     text = path.read_text(encoding="utf-8")
     keys: dict = {}
+    spec_documents = 0
     for block in re.split(r"\n\s*\n\s*\n", text):
         if not block.strip():
+            continue
+        if is_spec_document(block):
+            # a `Spec:` document (corpus --spec-docs, 2026-09-25) holds a declaration
+            # and its clauses, no program: nothing a reply could recite as a program
+            spec_documents += 1
             continue
         try:
             task = surface.parse(strip_head(block.strip() + "\n"))
@@ -117,8 +123,9 @@ def corpus_keys(path: Path) -> dict:
             raise SystemExit(f"{path}: a corpus document does not parse ({e}): {block[:80]!r}")
         keys.setdefault(key(task), []).append(task.get("name"))
     documents, tasks = sum(map(len, keys.values())), len(re.findall(r"(?m)^task ", text))
-    if documents != tasks:
-        raise SystemExit(f"{path}: {tasks} tasks but {documents} documents read; the split merged some")
+    if documents + spec_documents != tasks:
+        raise SystemExit(f"{path}: {tasks} tasks but {documents} program documents and {spec_documents} "
+                         f"spec documents read; the split merged some")
     return keys
 
 

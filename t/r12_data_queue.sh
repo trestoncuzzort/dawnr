@@ -561,7 +561,12 @@ for p in sorted((se.HERE / "out" / "lifted-tasks").glob("*.json")) + sorted((se.
     tid = loop_filter.problem_id(p.stem)
     if tid is not None:
         named.add(tid)
-listed = set(policy.get("exclude_future_train_ids", [])) | set(policy.get("overlap_ids", []))
+# the merged policy: the hand list plus the behavioural duplicates of 2026-09-25
+# (loop_filter.decontamination reads both); dev ids 199, 372 and 955 were on
+# the merged list and off the hand list when only the hand list was read
+merged = loop_filter.decontamination()
+listed = set(merged.exclude_train_ids) | set(merged.overlap_eval_ids)
+behavioural = Path("t/decontamination-behavioural-2026-09-25.json")
 eligible = [t for t in sorted(with_tests) if t not in positives and t not in pending and t not in named and t not in listed]
 def rank(t): return hashlib.sha256(f"{a.salt}:{t}".encode("utf-8")).hexdigest()
 ordered = sorted(eligible, key=rank)
@@ -578,7 +583,9 @@ out = {"schema": 1, "about": "MBPP train-split problems for choosing the r12 fin
                 f"ordered by sha256('{a.salt}:' + id); the first {a.n} are the dev ids"],
        "salt": a.salt, "n": a.n, "pool": a.pool,
        "inputs": {"split": a.split, "split_sha256": fsha(a.split), "decontamination": a.decontam,
-                  "decontamination_sha256": fsha(a.decontam)},
+                  "decontamination_sha256": fsha(a.decontam),
+                  "decontamination_behavioural": str(behavioural) if behavioural.exists() else None,
+                  "decontamination_behavioural_sha256": fsha(behavioural) if behavioural.exists() else None},
        "counts": {"mbpp_train": len(train), "with_tests": len(with_tests), "positives": len(positives & with_tests),
                   "pending": len(pending & with_tests), "named_in_training": len(named & with_tests),
                   "listed": len(listed & with_tests), "eligible": len(eligible)},
@@ -763,12 +770,17 @@ step_build() {
   # the r8 recipe's tag glob (t/steps.json) plus this queue's sources; R12_BUILD_TAGS overrides the v5 list
   local V5=${R12_BUILD_TAGS:-'$(ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* qwen3-coder-30b-* deepseek-coder-v2-16b-* 2>/dev/null) student-r4-train locallm-r4-train qwen235-train qwen235-train-p4 prover-train2 qwen2.5-coder-1.5b-r0hf qwen2.5-coder-1.5b-r0hf-v3 qwen2.5-coder-1.5b-r1-samp-s1 qwen3.8-27b-fp8-np1024'}
   local V6='qwen235-v6new-r12 qwen235-v6new-p4'
-  if ! check_or_refuse build-r12 t/out/loop/split-v5.json t/decontamination-2026-09-21.json; then
+  # the relabeled rows (t/relabel.py, 2026-09-25) join the r12 pool file when their file is on the lab,
+  # capped per problem; the file is one of the sentinel's inputs, so a regenerated one rebuilds the pool
+  local RELABEL=t/out/loop/relabel-2026-09-25.jsonl RELABEL_ARGS="" RELABEL_INPUT=""
+  if lab "test -f $RELABEL"; then RELABEL_ARGS="--relabel-rows $RELABEL --relabel-cap 3"; RELABEL_INPUT=$RELABEL
+  else echo "== build-r12: no $RELABEL on the lab; the pool gets no relabeled rows"; fi
+  if ! check_or_refuse build-r12 t/out/loop/split-v5.json t/decontamination-2026-09-21.json t/decontamination-behavioural-2026-09-25.json $RELABEL_INPUT; then
     admit
     lab "cd $SE && for t in $V5; do [ -f \$t/kernels.md ] || { echo missing table: \$t; exit 3; }; done" || refuse "a v5 build tag has no table"
-    lab "cd $SE && TAGS=\"$V5\" && cd ~/$REPO && nice -n 19 python3 t/loop_dataset.py --from-samples \$TAGS --split t/out/loop/split-v5.json --min-kernels 7 --out-suffix r12 && wc -l t/out/loop/sft-r12.jsonl t/out/loop/pairs-r12.jsonl" \
+    lab "cd $SE && TAGS=\"$V5\" && cd ~/$REPO && nice -n 19 python3 t/loop_dataset.py --from-samples \$TAGS --split t/out/loop/split-v5.json --min-kernels 7 --out-suffix r12 $RELABEL_ARGS && wc -l t/out/loop/sft-r12.jsonl t/out/loop/pairs-r12.jsonl" \
       || refuse "loop_dataset (r12) failed"
-    mark_step build-r12 t/out/loop/split-v5.json t/decontamination-2026-09-21.json t/out/loop/sft-r12.jsonl
+    mark_step build-r12 t/out/loop/split-v5.json t/decontamination-2026-09-21.json t/decontamination-behavioural-2026-09-25.json $RELABEL_INPUT t/out/loop/sft-r12.jsonl
   fi
   if ! check_or_refuse build-r12v6 t/out/loop/split-v6.json; then
     admit
