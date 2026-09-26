@@ -85,6 +85,19 @@ T_DIVMOD_ACSL = (
 
 FRAMAC = shutil.which("frama-c") or os.path.expanduser("~/.opam/default/bin/frama-c")
 PROVERS = ("alt-ergo,z3", "alt-ergo")     # the second only when why3 does not know the z3 on PATH
+# One z3 reached 8.5 GB on the 14.6 GB desktop (2026-09-26): every prover this module
+# starts runs in a memory-capped scope where systemd-run exists. T_PROVER_MEMCAP=0
+# turns it off (the lab), any other value replaces the 3G cap.
+MEMCAP = os.environ.get("T_PROVER_MEMCAP", "3G")
+
+
+def capped(cmd: list) -> list:
+    """cmd under `systemd-run --user --scope -p MemoryMax=...` when available (the
+    memory limit applies to the whole process tree, provers included:
+    https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html)."""
+    if MEMCAP in ("", "0") or not shutil.which("systemd-run"):
+        return cmd
+    return ["systemd-run", "--user", "--scope", "-q", "-p", f"MemoryMax={MEMCAP}", "--"] + cmd
 
 
 # ------------------------------------------------------------ t -> ACSL --
@@ -505,7 +518,7 @@ def run_wp(side: dict, built: dict, root: Path, work: Path, par: int = 2, timeou
                "-wp", "-wp-prop", ",".join(names), "-wp-prover", provers, "-wp-timeout", str(timeout),
                "-wp-par", str(par), "-wp-cache", "none", "-wp-report-json", str(rj)]
         try:
-            p = subprocess.run(cmd, capture_output=True, text=True, timeout=60 + timeout * len(names) * 3)
+            p = subprocess.run(capped(cmd), capture_output=True, text=True, timeout=60 + timeout * len(names) * 3)
             log = p.stdout + p.stderr
         except subprocess.TimeoutExpired as e:
             log = f"TIMEOUT {e}"
