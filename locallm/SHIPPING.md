@@ -174,10 +174,43 @@ claim a speedup after rollover". `test_kv_cache.py` exercises the crossing
 directly at `block_size=8` with 14 new tokens. Under torch the refill is one
 batched forward and reads as a slowdown; in an interpreter it is a wall.
 
-So `plain_generate.sample` **stops at the window by default** and reports that
-it stopped, rather than returning short text that reads like a model running out
-of things to say; `--past-context` is there for anyone who means it. Sliding the
-window was rejected for the reason that findings file already gives.
+Until 2026-09-26 `plain_generate.sample` therefore **stopped at the window by
+default**. It now **refills the window instead**, which removes the wall at the
+price of some context:
+
+* **What it does.** When the window is full, the next token first clears the
+  cache and re-reads the last K tokens from position 0 (K is half the window
+  unless `--keep` says otherwise), then decoding carries on until the window is
+  full again. Nothing is slid and no stale state survives: every kept token is
+  recomputed, which is why the objection in the findings file does not apply.
+  One refill costs K steps and buys `block_size − K` new tokens, so past the
+  window a token costs about twice what it costs inside it.
+* **What it changes.** Right after a refill a token sees K earlier tokens; just
+  before the next refill it sees `block_size − 1`. Torch's sampler always shows
+  it `block_size − 1`. So **past the window the text is not torch's text**, and
+  the command line says so on stderr each time it refilled. Inside the window
+  nothing changed.
+* **Torch's behaviour is still there.** `--exact-window` (`exact_window=True`)
+  keeps `block_size − 1` tokens at every refill, which is torch's uncached crop
+  token for token and the mode `test_plain_generate.py` checks against a
+  from-scratch forward over the last `block_size` tokens. It is still a wall:
+  measured 2026-09-26 with the `sumprod` arithmetic on `filter-loop/clean/r0`,
+  10 tokens past the window added 43.3 s, **4.3 s per token** (7.4 s before).
+  `--stop-at-window` restores the old default of stopping.
+* **Measured.** A 400-character request on `filter-loop/clean/r0` (context 128,
+  prompt `function to `, greedy) took **25.1 s** end to end, load included, with
+  5 refills of 64 tokens and a 44 MiB peak; the same request in the exact mode
+  would spend about 4.3 s on each of its 284 tokens past the window, some 20
+  minutes. The text past the window stays well-formed `t`.
+* A prompt longer than the window is cut to its last `block_size` tokens before
+  it is read. That is the state the exact window reaches token by token anyway,
+  so it changes no output and removes the same wall from long prompts.
+
+Sliding the cache without recomputing — the cheap truncation in
+rasbt/LLMs-from-scratch's KV-cache chapter
+(github.com/rasbt/LLMs-from-scratch/blob/main/ch04/03_kv-cache/README.md, "Tip 2")
+— stays rejected: with learned positions it runs off the end of the position
+table, which that chapter's own code asserts against.
 
 ### Prior art this rests on
 
@@ -380,10 +413,11 @@ Three levers, in order of how much they buy and how much they cost.
    second `_matvec` would likely give one to two orders of magnitude, at the cost
    of a per-platform wheel and a second code path that can silently disagree with
    the first. Not measured, and deliberately not written.
-3. **Stay inside the context window**, which `generate` now does by default.
-   Crossing it costs a full re-prefill on every token — 7.4 s each on a ctx-128
-   arm, 110 s each on round 4 — so this is the largest single factor available
-   and it costs nothing.
+3. **Do not pay a whole window per token past the window.** `generate` now
+   refills half a window at a time (§2), which costs about twice the in-window
+   rate; the exact mode, torch's behaviour, still costs a full re-read on every
+   token (4.3 s each on a ctx-128 arm with `sumprod`, 110 s on round 4 before
+   it). Done 2026-09-26, and it was the largest single factor available.
 
 ## 6. What actually arrives, in its own words
 
