@@ -51,6 +51,17 @@ BODY SHAPE by one rule, identically for every task:
               split, grind loses the existential-invariant preservation of
               seq_max in cutsat case explosions.
 
+  METHODS    (SPEC.md "Methods (v1)", 2026-09-26): each method is lowered
+              first, as a task of its own through the same shape dispatch
+              (its `{m}_t` def and `{m}_t_spec` theorem), then made
+              irreducible and handed to grind by `grind_pattern`; a call
+              site owes the callee's requires as a definedness obligation
+              and knows only `{m}_t_spec`. See `emit_methods`. Abstains:
+              a call to a method whose def takes `hpre` (self-recursive
+              with requires, or a domain-guarded loop), a method with no
+              params, a method needing a helper lemma the task does not
+              emit.
+
 DEFINEDNESS IS NOT SILENTLY TOTALIZED. `at` is lowered to the total
 `s[i.toNat]!` for computation, and the SPEC.md definedness obligations are
 emitted as separate _wf theorems, one per non-trivially-defined clause /
@@ -2535,6 +2546,7 @@ seq at all. Each needs its own measurement, not this one."""
 from __future__ import annotations
 
 import itertools
+import re
 import sys
 from pathlib import Path
 
@@ -2935,6 +2947,13 @@ class Lower:
                                       for p in task["params"]}
         self.types[self.ret] = self.rett
         self.sfuns = {f["name"]: f for f in task.get("spec_funs", [])}
+        # SPEC.md "Methods (v1)" (2026-09-26): the methods this body may
+        # call (for a method's own Lower, the EARLIER methods only; its
+        # self-call is `self.name`'s RECURSIVE path). Empty for every task
+        # without methods, and nothing below reads it then.
+        self.methods = {m["name"]: m for m in task.get("methods", [])}
+        self._method_fns: list[str] = []
+        self._method_hpre: set[str] = set()
         self.used: set[str] = {self.name}
         _collect_names(task, self.used)
         _collect_names(body, self.used)
@@ -3192,6 +3211,8 @@ class Lower:
             f = e["call"]["fun"]
             if f == self.name:
                 return self.rett
+            if f in self.methods:
+                return self.methods[f]["returns"][0]["type"]
             return self.sfuns[f]["result"]
         op = e["op"]
         if op == "+":
@@ -3411,6 +3432,20 @@ class Lower:
                 pre = " (by first | omega | grind)" if self.task.get(
                     "requires") else ""
                 return f"({self.name}_t {args}{pre})"
+            if c["fun"] in self.methods:
+                # SPEC.md "Methods (v1)": the callee's own `{m}_t`,
+                # irreducible past its own spec theorem (see
+                # `emit_methods`), so the caller sees only the
+                # grind_pattern'd `{m}_t_spec`. A callee whose function
+                # takes its `requires` as a proof argument would need
+                # that proof built inside this term from the path
+                # context; not built, so abstain by name.
+                if c["fun"] in self._method_hpre:
+                    raise NotImplementedError(
+                        "a call to a method whose lean function takes its "
+                        "requires as a proof argument (self-recursive, or "
+                        "a domain-guarded loop) is not lowered for lean")
+                return f"({c['fun']}_t {args})"
             return f"({c['fun']}_s {args})"
         if "forall" in e or "exists" in e:
             raise NotImplementedError(
@@ -3699,8 +3734,21 @@ class Lower:
                              f"→ {db})")
             return self._conj(parts)
         if "call" in e:
-            return self._conj([self.dcond(a, env, types)
-                               for a in e["call"]["args"]])
+            parts = [self.dcond(a, env, types) for a in e["call"]["args"]]
+            m = self.methods.get(e["call"]["fun"])
+            if m is not None and e["call"]["fun"] != self.name:
+                # SPEC.md "Methods (v1)": a call whose callee `requires`
+                # is false at the arguments is undefined, so the caller
+                # owes the callee's requires at the arguments exactly
+                # where it owes every other definedness obligation
+                # (Dafny's call rule: the precondition is checked at the
+                # call site, under the path context there).
+                menv = {p["name"]: self.term(a, env, types)
+                        for p, a in zip(m["params"], e["call"]["args"])}
+                mtypes = {p["name"]: p["type"] for p in m["params"]}
+                parts += [self.prop(r, menv, mtypes)
+                          for r in m.get("requires", [])]
+            return self._conj(parts)
         op = e["op"]
         if op == "at":
             s, i = e["args"]
@@ -6574,34 +6622,9 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if self.strlib:
             strlib_thms = [(n, "string library lemma") for n in STRLIB_LEMMAS]
         sf_src, sf_thms = self.emit_sfuns()
+        m_src, m_thms = self.emit_methods(seq_src, strlib_src)
         wf_src, wf_thms, wf_k = self.emit_clause_wfs()
-        body = self.body
-        n_while = sum(1 for s in body if "while" in s)
-        n_all = _count_whiles(body)
-        # NESTED AND MULTIPLE LOOPS (2026-09-18, ROADMAP WS-20 move 1):
-        # this `raise` was the whole of the move. The test is by COUNT,
-        # not by the old `deep_while` scan, because that scan looked only
-        # inside the body's non-`while` statements and so never saw a loop
-        # nested inside the top-level one at all -- has_duplicate reached
-        # `sym`'s own `while` case instead, and abstained there. Exactly
-        # one loop, at the top level, still goes to `lower_loop` unchanged.
-        if n_all > 1 or (n_all == 1 and n_while == 0):
-            if self._self_calls(body):
-                raise NotImplementedError(
-                    "a loop combined with self-recursion is not lowered "
-                    "for lean")
-            main = self.lower_loops_general(wf_k)
-        elif n_while == 1:
-            if self._self_calls(body):
-                raise NotImplementedError(
-                    "a loop combined with self-recursion is not lowered "
-                    "for lean")
-            main = self.lower_loop(wf_k)
-        elif self._self_calls(body):
-            main = self.lower_rec()
-        else:
-            main = self.lower_simple()
-        src, thms = main
+        src, thms = self._lower_shape(wf_k)
         # VACUITY SMOKE (2026-09-11, ROADMAP 13.4/fz_p_vac_unsat,
         # fz_p_vac_range): dafny's --warn-contradictory-assumptions,
         # verus's "vacuous" status, spark's VC_INCONSISTENT_PRE and
@@ -6639,8 +6662,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         db_src, db_thms = self.emit_divisor_bound()
         prints = "\n".join(
             f"#print axioms {t}" for t, _ in
-            db_thms + seq_thms + strlib_thms + sf_thms + wf_thms + thms
-            + smoke_thms)
+            db_thms + seq_thms + strlib_thms + sf_thms + m_thms + wf_thms
+            + thms + smoke_thms)
         parts = [header]
         if db_src.strip():
             parts.append(db_src)
@@ -6650,6 +6673,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             parts.append(strlib_src)
         if sf_src.strip():
             parts.append(sf_src)
+        if m_src.strip():
+            parts.append(m_src)
         if wf_src.strip():
             parts.append(wf_src)
         parts.append(src)
@@ -6657,6 +6682,130 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             parts.append(smoke_src)
         parts.append(prints + "\n")
         return "\n".join(parts)
+
+    # SPEC.md "Methods (v1)" (2026-09-26). Dafny's modular rule ("each
+    # method is considered by itself, using only the specifications of
+    # other methods") in the encoding the RECURSIVE shape already uses
+    # for a self-call: the callee is its own function plus its own spec
+    # theorem, proved in this file by the SAME shape dispatch a task gets
+    # (a method IS a task: params, one return, requires, ensures, body),
+    # and a caller gets the callee's `ensures` about the result only
+    # through that theorem. Opacity is what makes it modular, not a
+    # bonus: no caller script names `{m}_t` for unfolding, so grind reads
+    # `inc_t x` as an atom (measured, t/methods_probe/opaque_callee.t:
+    # the caller's `r == x + 1` fails from `b > a` alone, with or without
+    # the attribute below), and right after its spec theorem each plain
+    # `{m}_t` is also marked `@[irreducible]` so no definitional-unfolding
+    # tactic (decide, rfl, dsimp) in a caller can reach its body either
+    # (measured: `decide` on `¬ oc_t 3 = 3 + 1` then gets stuck at the
+    # `inc_t 3` atom instead of evaluating it). And a
+    # `grind_pattern {m}_t_spec => {m}_t params` hands grind the contract
+    # as an E-matching lemma whose `requires` premise grind must itself
+    # discharge (the Lean reference, "Subtypes": a value with an attached
+    # proof obligation; here stated as a hypothesis-in, property-out
+    # theorem rather than a returned subtype so the function stays the
+    # plain computational `{m}_t` every existing shape emits). The
+    # callee's requires AT THE ARGUMENTS is owed by the caller through
+    # `dcond` (a call outside its requires is undefined, SPEC.md), so it
+    # lands in the caller's own definedness theorems under the path
+    # context. Certificates still evaluate the real call: `unfold`/`simp
+    # [{m}_t]` ignore irreducibility, so each method's function names
+    # join `cert_fns` (a twin's refutation is about what it computes;
+    # verification is the only thing held to the contract).
+    def emit_methods(self, seq_src: str, strlib_src: str
+                     ) -> tuple[str, list]:
+        if not self.methods:
+            return "", []
+        out, thms = [], []
+        done: list = []
+        own = lambda s: set(re.findall(  # noqa: E731
+            r"^(?:theorem|def)\s+(\S+)", s, re.M))
+        for m in self.task.get("methods", []):
+            pseudo = {"name": m["name"], "params": m["params"],
+                      "returns": m["returns"],
+                      "requires": m.get("requires", []),
+                      "ensures": m["ensures"], "body": m["body"],
+                      "spec_funs": self.task.get("spec_funs", []),
+                      "methods": list(done)}
+            if "decreases" in m:
+                pseudo["decreases"] = m["decreases"]
+            sub = Lower(pseudo, m["body"])
+            sub.used |= self.used
+            sub._method_hpre = set(self._method_hpre)
+            # the file's helper lemmas are emitted once, from the task's
+            # own flags; a method whose own scripts would cite a helper
+            # the task's block does not declare abstains here rather
+            # than emit a reference to nothing.
+            if not own(sub.emit_seq_helpers()) <= own(seq_src) or \
+                    not own(sub.emit_strlib_helpers()) <= own(strlib_src):
+                raise NotImplementedError(
+                    f"method {m['name']!r} needs a helper lemma the "
+                    f"task's own lowering does not emit, for lean")
+            if not m["params"]:
+                raise NotImplementedError(
+                    "a method with no parameters is not lowered for lean")
+            db_src, db_thms = sub.emit_divisor_bound()
+            wf_src, wf_thms, wf_k = sub.emit_clause_wfs()
+            src, sthms = sub._lower_shape(wf_k)
+            name = f"{m['name']}_t"
+            pnames = " ".join(p["name"] for p in m["params"])
+            hpre = re.search(rf"^def {re.escape(name)} .*\(hpre :", src,
+                             re.M) is not None
+            block = [f"-- method {m['name']!r}: verified on its own "
+                     f"contract; callers see only {name}_spec."]
+            for s in (db_src, wf_src, src):
+                if s.strip():
+                    block.append(s)
+            # a well-founded-recursive def is already irreducible, and Lean
+            # rejects re-setting it (measured: "failed to set
+            # `[irreducible]`, `cnt_t` is not currently
+            # `[semireducible]`"), so the attribute is emitted only for a
+            # structurally plain def.
+            dm = re.search(rf"^def {re.escape(name)} (?:.|\n)*?(?:\n\n|\Z)",
+                           src, re.M)
+            if dm is None or "termination_by" not in dm.group(0):
+                block.append(f"attribute [irreducible] {name}\n")
+            if hpre:
+                self._method_hpre.add(m["name"])
+            else:
+                block.append(f"grind_pattern {name}_spec => "
+                             f"{name} {pnames}\n")
+            out.append("\n".join(block))
+            thms += db_thms + wf_thms + sthms
+            self._method_fns += [n for n in re.findall(
+                r"^def\s+(\S+)", src, re.M)]
+            self.used |= sub.used
+            done.append(m)
+        return "\n".join(out), thms
+
+    def _lower_shape(self, wf_k: int) -> tuple[str, list]:
+        body = self.body
+        n_while = sum(1 for s in body if "while" in s)
+        n_all = _count_whiles(body)
+        # NESTED AND MULTIPLE LOOPS (2026-09-18, ROADMAP WS-20 move 1):
+        # this `raise` was the whole of the move. The test is by COUNT,
+        # not by the old `deep_while` scan, because that scan looked only
+        # inside the body's non-`while` statements and so never saw a loop
+        # nested inside the top-level one at all -- has_duplicate reached
+        # `sym`'s own `while` case instead, and abstained there. Exactly
+        # one loop, at the top level, still goes to `lower_loop` unchanged.
+        if n_all > 1 or (n_all == 1 and n_while == 0):
+            if self._self_calls(body):
+                raise NotImplementedError(
+                    "a loop combined with self-recursion is not lowered "
+                    "for lean")
+            main = self.lower_loops_general(wf_k)
+        elif n_while == 1:
+            if self._self_calls(body):
+                raise NotImplementedError(
+                    "a loop combined with self-recursion is not lowered "
+                    "for lean")
+            main = self.lower_loop(wf_k)
+        elif self._self_calls(body):
+            main = self.lower_rec()
+        else:
+            main = self.lower_simple()
+        return main
 
     # SIMPLE: v0 straight-line + if bodies, and de-recursed twins.
     def lower_simple(self) -> tuple[str, list]:
@@ -8967,7 +9116,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             return None      # nothing was undefined along this ground path
         self.cert_funs = interp.funs_of(self.task, self.body)
         fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
-        self.cert_fns = ", ".join(fns)
+        self.cert_fns = ", ".join(fns + self._method_fns)
         venv = {p["name"]: self._unshow(w[p["name"]], p["type"])
                 for p in params}
         parts = [(self.prop(r, tenv, types),
@@ -9009,7 +9158,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             return None      # _expr has no definedness obligation of its own
         self.cert_funs = interp.funs_of(self.task, self.body)
         fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
-        self.cert_fns = ", ".join(fns)
+        self.cert_fns = ", ".join(fns + self._method_fns)
         venv = {p["name"]: self._unshow(w[p["name"]], p["type"])
                 for p in params}
         parts = [(self.prop(r, tenv, types),
@@ -9074,7 +9223,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             return None
         self.cert_funs = interp.funs_of(self.task, body)
         fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
-        self.cert_fns = ", ".join(fns)
+        self.cert_fns = ", ".join(fns + self._method_fns)
         pvenv = {p["name"]: self._unshow(w[p["name"]], p["type"])
                 for p in params}
         ptenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
@@ -9154,7 +9303,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             fns += list(self._nl_fn_names)
         elif any("while" in s for s in self.body):
             fns.append(f"{self.name}_t_loop")
-        self.cert_fns = ", ".join(fns)
+        self.cert_fns = ", ".join(fns + self._method_fns)
         params = self.task["params"]
         types = dict(self.types)
         tenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
@@ -9411,7 +9560,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         self.cert_funs = interp.funs_of(self.task, body)
         fns = [f"{self.name}_t", f"{self.name}_t_loop"] \
             + [f"{f}_s" for f in self.sfuns]
-        self.cert_fns = ", ".join(fns)
+        self.cert_fns = ", ".join(fns + self._method_fns)
         params = [p["name"] for p in self.task["params"]]
         names = params + state
         if any(n not in w for n in names):
