@@ -43,7 +43,13 @@ def load_checkpoint(out_dir: str | Path, device: str | None = None):
     caller can report WHICH directory it looked in rather than failing silently.
     """
     out = Path(out_dir)
-    ckpt, tokf = out / "ckpt.pt", out / "tokenizer.json"
+    if out.is_file():
+        # a kept weights-only checkpoint (ckpt-step-N.pt, written by
+        # continue_from_checkpoint --keep-every) decodes with the tokenizer
+        # beside it, so a dev-split stopping step can be chosen by decoding
+        ckpt, tokf = out, out.parent / "tokenizer.json"
+    else:
+        ckpt, tokf = out / "ckpt.pt", out / "tokenizer.json"
     missing = [str(p) for p in (ckpt, tokf) if not p.exists()]
     if missing:
         raise FileNotFoundError(

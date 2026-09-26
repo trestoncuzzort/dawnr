@@ -55,3 +55,23 @@ above remain within the window and do not claim a speedup after rollover.
 
 What is gained is an independently checked incremental inference API, exact
 window semantics, and measurements that prevent enabling a slower default.
+
+## Batch above one, measured 2026-09-25
+
+`GPT.sample_many` decodes k samples of one prompt as one batch on the cache
+(t/pilot_sampling.py drives it). Lab CPU, 8 threads, niced, on a shared box, the
+r9 92M core in fp32, held-out ids 3 and 39, a 1,200-token budget:
+
+- greedy k=1 without the stop rule: 1,200 tokens in 9.0 s. With it: id 3 stops
+  at 129 tokens in 0.86 s (10.5x less); id 39's greedy reply never closes and
+  runs the whole budget (9.09 s). The stop check costs 1.6 percent.
+- T=0.8: k=1 140 tokens/s; k=4 342-358 tokens/s (all four rows stopped); k=16
+  663 tokens/s on id 3 (16 of 16 stopped) and 298 tokens/s on id 39 (15 of 16;
+  one row ran alone to the budget). T=0.4, k=4, id 39: 2 of 4 rows ran to the
+  budget.
+- Against the predictions of 2026-09-21: "at most 420 tokens on average with the
+  stop" was false here (mean 664); "k=16 at least 4x k=1" held for id 3 (4.7x)
+  and failed for id 39 (2.1x) because of one straggler row.
+
+No GPU was used: every card had under 8 GB free, and a k=64 batch of r9 peaks
+near 14 GB with the torch.cat cache (use --rows-per-batch on a small card).

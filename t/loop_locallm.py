@@ -424,7 +424,9 @@ def cmd_generate(a) -> int:
     d = se.outdir(a.tag)
     model, tok, _ = checkpoint.load_checkpoint(a.model)
     params = sum(p.numel() for p in model.parameters())
-    ckpt = Path(a.model) / "ckpt.pt"
+    # --model may name a kept weights-only file (ckpt-step-N.pt beside the
+    # rolling checkpoint, --keep-every) as well as a run directory
+    ckpt = Path(a.model) if Path(a.model).is_file() else Path(a.model) / "ckpt.pt"
     if not ckpt.is_file():
         print(f"generate: {ckpt} is not a file, so the checkpoint cannot be hashed into the records",
               file=sys.stderr)
@@ -499,7 +501,12 @@ def cmd_generate(a) -> int:
                   "messages": [{"role": "user", "content": head}],
                   "reply": "```t\n" + body.strip() + "\n```",
                   "done_reason": "stop" if stopped else "length"}
-        path.write_text(json.dumps(record, indent=1), encoding="utf-8")
+        # written whole or not at all: a worker killed mid-write used to leave a
+        # truncated record, which the resume check now refuses by name
+        # (os.replace is atomic on POSIX, docs.python.org/3/library/os.html#os.replace)
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(record, indent=1), encoding="utf-8")
+        os.replace(tmp, path)
         if (i + 1) % 25 == 0:
             print(f"generate: {i + 1} of {len(todo)}", flush=True)
     unanswered = [tid for tid in ids if not (d / "raw" / f"{tid}.json").exists()]
