@@ -44,6 +44,7 @@ import copy
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import time
@@ -57,6 +58,17 @@ import names
 VERUS_BIN = Path(os.environ.get("T_VERUS", Path.home() / ".local/verus/verus-x86-linux/verus"))
 RLIMIT = 30
 LIFT_PREFIX = "t_lift_"
+
+
+def memory_capped(cmd: list) -> list:
+    """`cmd` under a per-prover memory cap when T_PROVER_MEMORY_MAX is set (e.g. 3G):
+    a transient systemd scope, whose MemoryMax the kernel enforces on the whole process
+    tree (systemd.resource-control(5), freedesktop.org/software/systemd/man/latest/
+    systemd.resource-control.html). A 14.6 GB desktop lost a run to one z3 at 8.5 GB."""
+    cap = os.environ.get("T_PROVER_MEMORY_MAX")
+    if cap and shutil.which("systemd-run"):
+        return ["systemd-run", "--user", "--scope", "--quiet", "-p", f"MemoryMax={cap}", "--"] + cmd
+    return cmd
 
 
 class NoHarness(Exception):
@@ -159,6 +171,8 @@ class Views:
             return f"({expr_text} as int)"
         if k == "bool":
             return expr_text
+        if k == "pair":
+            return "(" + ", ".join(self.view(f"{expr_text}.{i}", vt.parts[i]) for i in (0, 1)) + ")"
         if k == "seq":
             base = expr_text if vt.text.startswith("Seq") else f"{expr_text}@"
             if vt.elem.kind in ("int", "nat") and vt.elem.text == "int":
@@ -361,10 +375,11 @@ def _map_bridges(fn: lift_verus.ExecFn, views: "Views", with_result: bool) -> st
 
 # ------------------------------------------------------------------ build --
 
-def build(source_text: str, task: dict, rename_map: dict) -> tuple[str, list[str]]:
+def build(source_text: str, task: dict, rename_map: dict, target: Optional[str] = None,
+          lemma: bool = False) -> tuple[str, list[str]]:
     """(harness text, lemma names) for one lifted task and the Verus file it came from.
     `rename_map` is the lifter sidecar's (dafny name -> {"t_name": ...})."""
-    r = lift_verus.render(source_text)
+    r = lift_verus.render(source_text, target=target, lemma=lemma)
     if r.file is None or r.target is None or r.refusal is not None:
         raise NoHarness("the source does not render")
     vf, fn = r.file, r.file.exec_fns[r.target]
@@ -451,8 +466,8 @@ def run(text: str, workdir: Path, stem: str, timeout_s: float = 120.0) -> dict:
     path.write_text(text, encoding="utf-8")
     started = time.monotonic()
     try:
-        p = subprocess.run([str(VERUS_BIN), "--output-json", "--no-cheating", "--rlimit", str(RLIMIT),
-                            str(path)], capture_output=True, text=True, timeout=timeout_s)
+        p = subprocess.run(memory_capped([str(VERUS_BIN), "--output-json", "--no-cheating", "--rlimit", str(RLIMIT),
+                            str(path)]), capture_output=True, text=True, timeout=timeout_s)
     except subprocess.TimeoutExpired:
         return {"verdict": "error", "seconds": round(time.monotonic() - started, 1), "message": "timeout"}
     except OSError as e:
@@ -486,9 +501,9 @@ def run(text: str, workdir: Path, stem: str, timeout_s: float = 120.0) -> dict:
 
 
 def check(source_path: Path, task: dict, rename_map: dict, workdir: Path, stem: str,
-          timeout_s: float = 120.0) -> dict:
+          timeout_s: float = 120.0, target: Optional[str] = None, lemma: bool = False) -> dict:
     try:
-        text, lemmas = build(source_path.read_text(encoding="utf-8"), task, rename_map)
+        text, lemmas = build(source_path.read_text(encoding="utf-8"), task, rename_map, target, lemma)
     except NoHarness as e:
         return {"verdict": "no-harness", "message": str(e)}
     except (lift_verus.VerusRefusal, KeyError, ValueError, NotImplementedError) as e:
