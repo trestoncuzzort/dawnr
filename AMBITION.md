@@ -121,7 +121,14 @@ its line changes here.
   are being graded.
 - **Denoising training.** Corrupt spans of each training document and train
   the model to restore them, so each document teaches many ways instead of
-  being memorised one way (the T5 and BART objectives). *State:* being built.
+  being memorised one way (fill in the middle, arXiv:2207.14255). *State:*
+  measured on a small model trained from scratch on the 302 proved documents
+  (3 seeds per arm): best held-out loss 1.221 nats per character with
+  whole-document rows, 0.694 with random windows, **0.571 with fill in the
+  middle** (`locallm/FINDINGS-denoising-2026-09-26.md`). The larger finding:
+  most of the memorisation came from every training row starting at its
+  document's head, which r12's recipe does; that is being re-measured on the
+  r12 path before r12 trains.
 - **Stop before memorising, keep the best.** Training stops when validation
   stops improving by more than run-to-run noise and keeps the best weights,
   not the last. *State:* in the product (`locallm/train.py`, the studio).
