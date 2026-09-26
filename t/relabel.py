@@ -134,9 +134,31 @@ def target_name(tid: int, entry: dict) -> str:
     return name if fuzz_lower.NAME_RE.match(name) else task_prefix(tid)
 
 
+def type_key(t) -> str:
+    """One hashable name per t type, folded the way problem_signature folds kinds.
+
+    Answer-set tasks carry plain names ("int", "seq", "bool"); the Dafny lifter
+    (t/lifter.py) writes compound types as small dicts: {"seq": "seq"} for a
+    sequence of sequences and {"pair": [a, b]} for two returns. A nested sequence is
+    a t `seq` parameter on both sides (problem_signature folds seq-of-seq into seq);
+    a pair has no pool kind at all (pool problems pass and expect int, bool, seq and
+    seq-of-seq only, counted 2026-09-26), so its key matches no problem, which is
+    the truth: such a program cannot pass a pool problem's points.
+    """
+    if isinstance(t, str):
+        return t
+    if isinstance(t, dict) and len(t) == 1:
+        (kind, inner), = t.items()
+        if kind == "seq":
+            return "seq"
+        inner = inner if isinstance(inner, list) else [inner]
+        return f"{kind}(" + ",".join(type_key(x) for x in inner) + ")"
+    return repr(t)
+
+
 def task_signature(task: dict) -> tuple[tuple[str, ...], str]:
-    """The parameter types and the return type a program declares."""
-    return (tuple(p["type"] for p in task["params"]), task["returns"][0]["type"])
+    """The parameter types and the return type a program declares, as hashable names."""
+    return (tuple(type_key(p["type"]) for p in task["params"]), type_key(task["returns"][0]["type"]))
 
 
 def problem_signature(entry: dict) -> tuple[tuple[str, ...], str] | None:

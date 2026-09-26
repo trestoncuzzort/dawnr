@@ -166,6 +166,13 @@ keys, fewer entries in the two solution lists.
 | APPS | `codeparrot/apps` | MIT |
 | MBPP | `google-research-datasets/mbpp` | CC-BY-4.0 |
 | HumanEval | `openai/openai_humaneval` | MIT |
+| vericoding-benchmark (2026-09-26, lifted into t by `t/lift_corpora.py`; the checkout and its lifts stay under `t/out`) | `github.com/Beneficial-AI-Foundation/vericoding-benchmark` | MIT |
+| HumanEval-Dafny (2026-09-26, the same) | `github.com/JetBrains-Research/HumanEval-Dafny` | Apache-2.0 |
+
+Considered on 2026-09-26 and not taken: `metareflection/dafny-disco` (HuggingFace, 81,342
+synthetic Dafny programs) is CC-BY-SA-4.0, whose share-alike term this repository's
+research-use licence cannot carry, so nothing from it enters the tree; ATLAS
+(arXiv:2512.10173) releases no data.
 
 Licences are as declared on HuggingFace and have **not** been independently reviewed. Note
 separately that problem *statements* from Codeforces, AtCoder, CodeChef and Aizu carry the
