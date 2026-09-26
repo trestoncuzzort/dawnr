@@ -340,29 +340,40 @@ def cmd_corpus(a) -> int:
     # (https://ar5iv.labs.arxiv.org/html/2308.06259, receipt d493bc19d38e):
     # curated instruction-output pairs keep improving with quantity, uncurated
     # ones do not; the curation is the extractor's, recorded in each row.
-    heads = load_heads(Path(a.heads)) if getattr(a, "heads", "") else {}
+    heads_paths = heads_paths_of(a)
+    heads: dict[str, dict] = {}
+    for path in heads_paths:
+        for name, row in load_heads(path).items():
+            if name in heads:
+                raise SystemExit(f"--heads {path} gives {name} a head that an earlier --heads file already gave; "
+                                 f"one document takes one head")
+            heads[name] = row
     if heads and not a.lifted:
         raise SystemExit("--heads prefixes lifted and committed documents and --lifted was not given; "
                          "there is no document to prefix")
     headed: dict[str, str] = {}      # name -> source, every head that reached a document
+    lifted_counts: list[tuple[str, int]] = []
     if a.lifted:
-        keep = clean_rows(LIFTED_TABLE)
-        lifted = sorted(LIFTED_DIR.glob("*.json"))
-        if not lifted:
-            raise SystemExit(f"--lifted asked for the lifted tasks and {LIFTED_DIR} holds none; a corpus "
-                             f"with 0 lifted documents is not the corpus this flag names")
-        for f in lifted:
-            task = json.loads(f.read_text(encoding="utf-8"))
-            if task.get("name") in keep:
-                doc = surface.print_task(task).strip() + "\n"
-                row = heads.get(task.get("name"))
-                if row is not None:
-                    doc = sourced_head(task, row, a.examples) + doc
-                if gate.admit(doc, [task.get("name")]):
-                    docs.append(doc)
-                    n_lift += 1
+        for directory, table in lifted_sets_of(a):
+            keep = clean_rows(table)
+            lifted = sorted(directory.glob("*.json"))
+            if not lifted:
+                raise SystemExit(f"--lifted asked for the lifted tasks and {directory} holds none; a corpus "
+                                 f"with 0 lifted documents is not the corpus this flag names")
+            before = n_lift
+            for f in lifted:
+                task = json.loads(f.read_text(encoding="utf-8"))
+                if task.get("name") in keep:
+                    doc = surface.print_task(task).strip() + "\n"
+                    row = heads.get(task.get("name"))
                     if row is not None:
-                        headed[task["name"]] = row["source"]
+                        doc = sourced_head(task, row, a.examples) + doc
+                    if gate.admit(doc, [task.get("name")]):
+                        docs.append(doc)
+                        n_lift += 1
+                        if row is not None:
+                            headed[task["name"]] = row["source"]
+            lifted_counts.append((f"{directory.name} ({table.name})", n_lift - before))
         rows, missing = agreement_gap(AGREEMENT, COMMITTED_DIR)
         if missing:
             raise SystemExit(f"{AGREEMENT.name} has rows for {len(rows)} task(s) and {COMMITTED_DIR.name}/ holds "
@@ -389,7 +400,8 @@ def cmd_corpus(a) -> int:
         # held-out, dev or same-task id), and either is said, never skipped.
         unmatched = sorted(set(heads) - set(headed))
         if unmatched:
-            raise SystemExit(f"{len(unmatched)} head(s) in {a.heads} match no lifted or committed document "
+            raise SystemExit(f"{len(unmatched)} head(s) in {', '.join(map(str, heads_paths))} match no lifted "
+                             f"or committed document "
                              f"(not a clean row, or refused by the gates): {unmatched[:5]}"
                              + (" ..." if len(unmatched) > 5 else ""))
     if spec_docs and n_spec == 0:
@@ -429,11 +441,44 @@ def cmd_corpus(a) -> int:
         print(f"dev-split filter: {len(dev)} ids from t/r12-dev-ids.json refused as training data (counted above)")
     print(f"decontamination filter: {len(gate.decontaminated)} document(s) excluded"
           + (f": {', '.join(gate.decontaminated)}" if gate.decontaminated else ""))
+    if len(lifted_counts) > 1:
+        print("lifted, per set: " + ", ".join(f"{n} from {label}" for label, n in lifted_counts))
     if heads:
         by_source = sorted(collections.Counter(headed.values()).items())
-        print(f"heads: {len(headed)} document(s) prefixed from {a.heads} ("
+        print(f"heads: {len(headed)} document(s) prefixed from {', '.join(map(str, heads_paths))} ("
               + ", ".join(f"{source} {n}" for source, n in by_source) + ")")
     return 0
+
+
+def heads_paths_of(a) -> list[Path]:
+    """Every --heads file. The flag repeats (one heads file per lift); a single string,
+    as a Namespace built by a caller or an older test gives it, is one file."""
+    raw = getattr(a, "heads", "") or []
+    raw = raw if isinstance(raw, list) else [raw]
+    return [Path(p) for p in raw if p]
+
+
+def lifted_sets_of(a) -> list[tuple[Path, Path]]:
+    """The lifted sets --lifted reads: the 785-program lift of the MBPP-DFY and
+    DafnyBench sources (LIFTED_DIR with its coverage table LIFTED_TABLE), then every
+    --lifted-set DIR=TABLE in the order given (2026-09-26: the vericoding-benchmark
+    and HumanEval-Dafny lift). A set's table decides which of its tasks are clean in
+    all seven, exactly as LIFTED_TABLE does for the first. The option repeats
+    (argparse action='append', docs.python.org/3/library/argparse.html); a value
+    that is not DIR=TABLE, or names a missing directory or table, is refused."""
+    sets = [(LIFTED_DIR, LIFTED_TABLE)]
+    for spec in getattr(a, "lifted_set", None) or []:
+        directory, sep, table = str(spec).partition("=")
+        if not sep or not directory or not table:
+            raise SystemExit(f"--lifted-set {spec!r}: expected DIR=TABLE, a lifted-tasks directory and the "
+                             f"run_par table that graded it")
+        d, t = Path(directory), Path(table)
+        if not d.is_dir():
+            raise SystemExit(f"--lifted-set {spec!r}: no directory {d}")
+        if not t.is_file():
+            raise SystemExit(f"--lifted-set {spec!r}: no table {t}; grade the set first (t/r12_data_queue.sh)")
+        sets.append((d, t))
+    return sets
 
 
 def load_heads(path: Path) -> dict[str, dict]:
@@ -686,10 +731,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--split", type=Path, required=True,
                    help="the evaluation split whose eval_ids are excluded from every source; "
                         "a corpus build without this boundary is refused")
-    p.add_argument("--heads", default="",
-                   help="heads.jsonl from t/heads_from_sources.py: sourced English for the lifted and "
-                        "committed documents, applied through the same gates; a head that matches no "
-                        "document is an error")
+    p.add_argument("--heads", action="append", default=[], metavar="HEADS.jsonl",
+                   help="heads.jsonl from t/heads_from_sources.py or t/lift_corpora.py: sourced English for the "
+                        "lifted and committed documents, applied through the same gates; repeat for each lift; "
+                        "a head that matches no document, or a name headed twice, is an error")
+    p.add_argument("--lifted-set", action="append", default=[], metavar="DIR=TABLE",
+                   help="with --lifted, another lifted-tasks directory and the run_par table that graded it "
+                        "(its clean-in-all-seven rows are kept); repeat for each lift")
     p = sub.add_parser("train")
     p.add_argument("--corpus", default=str(OUT / "corpus.txt"))
     p.add_argument("--model", default=str(OUT / "model"))

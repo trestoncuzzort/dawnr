@@ -408,3 +408,90 @@ class CorpusHeadsTests(Fixture):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CorpusLiftedSetsTests(CorpusHeadsTests):
+    """`corpus --lifted --lifted-set DIR=TABLE --heads A --heads B` (2026-09-26): a
+    second lift joins the corpus through its own table and the same gates, and each
+    lift brings its own heads file."""
+
+    def second_set(self, names):
+        """A second lifted directory and its table, as t/lift_corpora.py and the
+        queue's grading step leave them."""
+        directory = self.dir / "lifted-2"
+        directory.mkdir(exist_ok=True)
+        for name in names:
+            task = surface.parse(TASK.format(name=name))
+            (directory / f"{name}.json").write_text(json.dumps(task), encoding="utf-8")
+        cells = " | ".join([loop_locallm.CLEAN] * 7)
+        table = self.dir / "COVERAGE-2.md"
+        table.write_text("| task | dafny | verus | spark | framac | lean | rocq | fstar |\n"
+                         "|---|---|---|---|---|---|---|---|\n"
+                         + "".join(f"| {n} | {cells} |\n" for n in names[:1]), encoding="utf-8")
+        return directory, table
+
+    def corpus_sets(self, sets, heads=()):
+        out = self.dir / "corpus.txt"
+        said = io.StringIO()
+        with mock.patch.object(loop_locallm, "LIFTED_DIR", self.lifted), \
+             mock.patch.object(loop_locallm, "LIFTED_TABLE", self.table()), \
+             mock.patch.object(loop_locallm, "COMMITTED_DIR", self.committed), \
+             mock.patch.object(loop_locallm, "AGREEMENT", self.agreement), \
+             mock.patch.object(loop_locallm.se, "pool", lambda version: self.pool), \
+             contextlib.redirect_stdout(said):
+            code = loop_locallm.cmd_corpus(argparse.Namespace(
+                pool="v5", split=self.split, base="", sft=[], lifted=True, out=str(out), examples=False,
+                heads=[str(h) for h in heads], lifted_set=list(sets)))
+        return code, said.getvalue(), out.read_text(encoding="utf-8") if out.exists() else ""
+
+    def test_a_second_set_adds_its_clean_rows_only(self):
+        self.lift("Clover_zzz", "Zzz", "clover_zzz__zzz")
+        directory, table = self.second_set(["vericoding_one__f", "vericoding_two__g"])
+        code, said, text = self.corpus_sets([f"{directory}={table}"])
+        self.assertEqual(code, 0, said)
+        self.assertIn("task clover_zzz__zzz(", text)
+        self.assertIn("task vericoding_one__f(", text)          # clean in its own table
+        self.assertNotIn("task vericoding_two__g(", text)       # not in its table: not clean
+        self.assertIn("lifted, per set: 1 from lifted (COVERAGE.md), 1 from lifted-2 (COVERAGE-2.md)", said)
+
+    def test_each_lift_brings_its_own_heads_file(self):
+        self.lift("Clover_zzz", "Zzz", "clover_zzz__zzz")
+        directory, table = self.second_set(["vericoding_one__f"])
+        first = self.dir / "heads-1.jsonl"
+        first.write_text(json.dumps(self.row("clover_zzz__zzz")) + "\n", encoding="utf-8")
+        second = self.dir / "heads-2.jsonl"
+        second.write_text(json.dumps(self.row("vericoding_one__f", "Return the input, verbatim.",
+                                              source="vericoding/apps")) + "\n", encoding="utf-8")
+        code, said, text = self.corpus_sets([f"{directory}={table}"], heads=[first, second])
+        self.assertEqual(code, 0, said)
+        self.assertIn("Problem: Return the input.\nSignature: clover_zzz__zzz(int) -> int\n", text)
+        self.assertIn("Problem: Return the input, verbatim.\nSignature: vericoding_one__f(int) -> int\n", text)
+        self.assertIn("heads: 2 document(s) prefixed from", said)
+
+    def test_a_name_headed_in_two_files_is_refused(self):
+        self.lift("Clover_zzz", "Zzz", "clover_zzz__zzz")
+        first = self.dir / "heads-1.jsonl"
+        first.write_text(json.dumps(self.row("clover_zzz__zzz")) + "\n", encoding="utf-8")
+        second = self.dir / "heads-2.jsonl"
+        second.write_text(json.dumps(self.row("clover_zzz__zzz", "Another statement.")) + "\n", encoding="utf-8")
+        with self.assertRaises(SystemExit) as caught:
+            self.corpus_sets([], heads=[first, second])
+        self.assertIn("already gave", str(caught.exception))
+
+    def test_a_bad_set_is_refused_by_name(self):
+        self.lift("Clover_zzz", "Zzz", "clover_zzz__zzz")
+        directory, table = self.second_set(["vericoding_one__f"])
+        for spec, phrase in ((str(directory), "expected DIR=TABLE"),
+                             (f"{self.dir / 'absent'}={table}", "no directory"),
+                             (f"{directory}={self.dir / 'absent.md'}", "no table")):
+            with self.subTest(spec=spec):
+                with self.assertRaises(SystemExit) as caught:
+                    self.corpus_sets([spec])
+                self.assertIn(phrase, str(caught.exception))
+
+    def test_the_command_line_repeats_both_options(self):
+        a = loop_locallm.build_parser().parse_args(
+            ["corpus", "--split", "s.json", "--lifted", "--lifted-set", "a=b", "--lifted-set", "c=d",
+             "--heads", "h1.jsonl", "--heads", "h2.jsonl"])
+        self.assertEqual(a.lifted_set, ["a=b", "c=d"])
+        self.assertEqual(a.heads, ["h1.jsonl", "h2.jsonl"])
