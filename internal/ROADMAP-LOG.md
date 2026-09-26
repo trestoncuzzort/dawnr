@@ -2599,6 +2599,17 @@ Measured on the way:
 - Two `--deterministic` 10-step CPU runs are bit-identical (29 of 29 tensors);
   GPU bit-identity is unmeasured.
 
+The data build of 2026-09-25/26, seven reviewed tracks on the same branch:
+behavioural decontamination found 77 train problems whose reference behaves like
+a held-out one (61 new against the hand list of 21); relabeling recovered 118
+verified programs for 40 train problems they actually solve; 49 head-less lifted
+documents took an English head from a source that exists (MBPP's text curated by
+its tests, Clover's docstrings); a specification document per positive; weight
+decay on matrices only with the 16-epoch sweep prepared; hint-stripped twins;
+spec-disagreement negatives with a DPOP loss, off until there are 30 pairs.
+A5 gained its real cause: gnatprove's why3server gives each z3 its own process
+group, so the cell's session is killed now, not only its group.
+
 DONE WHEN: the predictions file exists with `seeds: N`; ten seeds train with
 `--deterministic --doc-batches --split-seed`; `t/compare_arms.py --prereg`
 prints a verdict on tests passed over the clean 200; the README carries the row.

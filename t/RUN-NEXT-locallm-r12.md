@@ -227,3 +227,24 @@ file is written; the lab's GPUs hold another user's servers (6-8 GB free per
 card), so the 875M capacity run does not fit until they clear, and the 92M
 continuation does.
 
+## Data build status, 2026-09-26
+
+Seven tracks (branch `r12-blockers`, commits 98bbc41b to c16b73a4 and 8ca1c161), each
+implemented in a worktree and passed by an adversarial review; the GPU was
+never used, nothing concerns any outside model.
+
+| track | landed | measured |
+|---|---|---|
+| behavioural decontamination (B, data-growth 2) | `t/behavioural_decontam.py`, `t/decontamination-behavioural-2026-09-25.json`, merged into `loop_filter.decontamination()` | 77 train ids are behavioural duplicates of a held-out problem (16 rediscover the hand list, 61 new: 13 MBPP, 3 HumanEval, 37 APPS, 8 stdin); 85 minimal pairs kept; 49 held-out ids have a twin; 51 references never ran (named) |
+| relabel (B.1) | `t/relabel.py`, `loop_dataset.py --relabel-rows --relabel-cap` | 118 rows on 40 train problems from the verified-but-wrong population, 33 of them on three problems, hence the cap of 3 |
+| spec documents (data-growth 4) | `corpus --spec-docs`, `Spec:` as a head line everywhere | one spec document per positive; the copy check and the recitation key skip them |
+| English heads (B.2) | `t/heads_from_sources.py`, `corpus --heads` | 49 of the 222 head-less documents have a sourced head: MBPP text curated by MBPP's own tests, Clover's human docstrings, 2 DafnyBench comments; 16 MBPP-DFY lifts have no test points and keep none |
+| core re-pretraining prep (training-lit 5, 6) | `make_optimizer(weight_decay)` on matrices only, `--weight-decay`, `R12_SWEEP`, `--replay-data/--replay-frac`, source validation loss in run.json | the sweep's three arms are in `internal/PRETRAIN-R12-2026-09-25.md`; a waiter on the lab launches each onto an idle card |
+| hint-stripped twins (RESEARCH-NEXT 4) | `t/twin_hints.py` | the census ran; the 196-cell kernel sample waits for the queue (orphaned provers held the gate); found that gnatprove's z3s escape the process group, fixed in `verifiers.run_tree` by killing the session |
+| negatives and DPOP (data-growth 5) | `t/negatives_from_spec_disagreements.py`, `continue_from_checkpoint.py --pairs --pref-loss dpop` | 3 pairs today; off by default until the queue's spec checks yield 30 pairs over 15 problems |
+
+The dev split was regenerated under the merged policy (30 listed ids, 169
+eligible, 100 chosen). `t/r12_data_queue.sh all` runs on the lab's CPUs: the
+teacher answers graded in chunks with `--no-cache`, then spec checks, the r12
+pool files (with the relabeled rows), and the twelve r11 baseline arms.
+
