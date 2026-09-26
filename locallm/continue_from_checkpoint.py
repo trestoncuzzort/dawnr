@@ -51,6 +51,15 @@ Since the r12 build (schema 2):
   DPOTrainer disables dropout in both models by default), and every pair's
   chosen side must be a document of --data, head and program byte for byte
   (load_pairs), or the run refuses by line.
+* `--fim-rate R` re-cuts R of the training documents every epoch into
+  fill-in-the-middle form (fim.py; Bavarian et al., arXiv:2207.14255), per
+  document under `--doc-batches` and as a re-transformed stream on the
+  windows path. Validation and the reported train loss stay left to right. An
+  --init whose tokenizer has no FIM sentinels gets them appended, each new
+  embedding row set to the mean of the existing rows (Hewitt, "Initializing
+  New Word Embeddings for Pretrained Language Models": small random rows can
+  take the softmax over when the trained logits are large and negative); the
+  extended tokenizer is what the run writes beside its checkpoints.
 """
 import argparse
 from dataclasses import asdict
@@ -77,7 +86,7 @@ RESUME_KEYS = ("init_ckpt_sha256", "corpus_sha256", "evaluation_split_sha256", "
 RESUME_PATHS = (("split", "by"), ("batches", "kind"), ("reproducibility", "requested"),
                 ("replay", "sha256"), ("replay", "frac"), ("source_validation", "sha256"),
                 ("pairs", "sha256"), ("pairs", "loss"), ("pairs", "beta"), ("pairs", "lambda"),
-                ("pairs", "batch_size"))
+                ("pairs", "batch_size"), ("fim", "rate"), ("fim", "spm_rate"), ("fim", "span"))
 PREF_LOSSES = ("none", "dpop")
 
 
@@ -100,6 +109,26 @@ def load_core(init_dir, device, dropout, torch_module, gpt, config_type):
     model = gpt(config)
     model.load_state_dict(checkpoint["model"])
     return model.to(device), config, checkpoint.get("tokenizer_fingerprint")
+
+
+def add_fim_sentinels(model, config, tokenizer, torch_module, sentinels):
+    """Append FIM sentinel rows to a tied embedding, each the mean of the existing rows.
+
+    Mean initialization is Hewitt's recommendation for expanding a trained
+    vocabulary: it bounds how far the expanded model's next-token
+    distribution moves from the original before any new token is seen, where
+    small random rows can take most of the probability. The old rows are
+    copied exactly, so ordinary ids embed as before.
+    """
+    old = model.lm_head.weight.data
+    grown = torch_module.cat([old, old.mean(dim=0, keepdim=True).repeat(len(sentinels), 1)])
+    head = torch_module.nn.Linear(old.shape[1], grown.shape[0], bias=False).to(old.device)
+    head.weight.data.copy_(grown)
+    model.lm_head = head
+    model.transformer.wte.weight = model.lm_head.weight
+    config.vocab_size = grown.shape[0]
+    model.config.vocab_size = grown.shape[0]
+    return tokenizer.with_sentinels(sentinels)
 
 
 def configure_determinism(requested: bool, torch_module) -> dict:
@@ -477,9 +506,18 @@ def main():
     parser.add_argument("--pref-lambda", type=float, default=50.0,
                         help="DPOP lambda on the chosen side's hinge (Smaug's default 50)")
     parser.add_argument("--pair-batch-size", type=int, default=4, help="pairs per step under --pref-loss dpop")
+    parser.add_argument("--fim-rate", type=float, default=0.0,
+                        help="share of training documents re-cut each epoch into fill-in-the-middle form "
+                             "(arXiv:2207.14255); 0, the default, trains exactly as before")
+    parser.add_argument("--fim-spm-rate", type=float, default=0.5,
+                        help="of the FIM documents, the share in SPM order (the paper's joint training: 0.5)")
+    parser.add_argument("--fim-span", choices=("char", "t"), default="char",
+                        help="char: two uniform character cuts; t: a whole t clause or statement half the time")
     parser.add_argument("--device", default=None)
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
+    if not 0 <= args.fim_rate <= 1 or not 0 <= args.fim_spm_rate <= 1:
+        parser.error("--fim-rate and --fim-spm-rate must lie in [0, 1]")
     if (args.replay_data is None) != (args.replay_frac is None):
         parser.error("--replay-data and --replay-frac go together")
     if args.replay_data is not None and args.source_validation is None:
@@ -517,8 +555,9 @@ def main():
                                corpus_text=data_text, corpus_path=args.data)
 
     import torch
-    from data import (Corpus, DocumentBatches, IGNORE_INDEX, PairBatches, SPLIT_CLOSE_ENOUGH, _SPLIT_EPS,
-                      load_tokenizer, tokenizer_fingerprint)
+    from data import (Corpus, DocumentBatches, FIMWindows, IGNORE_INDEX, PairBatches, SPLIT_CLOSE_ENOUGH,
+                      _SPLIT_EPS, load_tokenizer, tokenizer_fingerprint)
+    import fim
     from model import GPT, GPTConfig
     import train as core_train
 
@@ -536,6 +575,13 @@ def main():
         raise ValueError("initialization checkpoint and its tokenizer disagree")
     if tokenizer.vocab_size != config.vocab_size:
         raise ValueError("tokenizer and embedding table disagree on vocabulary size")
+    # The tokenizer this run writes out: the init's own, unless FIM had to add sentinels.
+    sentinels_added = args.fim_rate > 0 and not fim.has_sentinels(tokenizer)
+    if sentinels_added:
+        if getattr(tokenizer, "sentinels", ()):
+            raise ValueError(f"the init tokenizer carries other sentinels {tokenizer.sentinels}; "
+                             f"FIM needs exactly {fim.SENTINELS}")
+        tokenizer = add_fim_sentinels(model, config, tokenizer, torch, fim.SENTINELS)
     corpus = Corpus(data_text, tokenizer, device, val_frac=args.val_frac, grouped=True,
                     seed=args.split_seed, split_by=args.split_by)
 
@@ -556,7 +602,9 @@ def main():
         if not corpus.val_docs:
             raise SystemExit(f"no validation documents at --split-seed {args.split_seed} and --val-frac "
                              f"{args.val_frac}; nothing to evaluate on")
-        train_rows = DocumentBatches(corpus.train_docs, tokenizer, args.block_size, args.seed, device)
+        train_rows = DocumentBatches(corpus.train_docs, tokenizer, args.block_size, args.seed, device,
+                                     fim_rate=args.fim_rate, fim_spm_rate=args.fim_spm_rate,
+                                     fim_span=args.fim_span)
         val_rows = DocumentBatches(corpus.val_docs, tokenizer, args.block_size, args.seed, device)
         batches = {"kind": "documents", **train_rows.record(),
                    "validation": {k: v for k, v in val_rows.record().items()
@@ -568,6 +616,16 @@ def main():
             raise ValueError("corpus is smaller than one training window")
         train_rows = val_rows = None
         batches = {"kind": "windows", "order_seed": args.seed, "block_size": args.block_size}
+    fim_windows = None
+    if args.fim_rate > 0 and not args.doc_batches:
+        fim_windows = FIMWindows(corpus.train_docs, tokenizer, args.seed, args.fim_rate, device,
+                                 args.fim_spm_rate, args.fim_span)
+    fim_record = None
+    if args.fim_rate > 0:
+        fim_record = {"rate": args.fim_rate, "spm_rate": args.fim_spm_rate, "span": args.fim_span,
+                      "sentinels": list(fim.SENTINELS), "sentinels_added": sentinels_added,
+                      "applied": "per document" if args.doc_batches else "windows over a re-transformed stream",
+                      "evaluation": "untransformed"}
     # The source corpus, for replay rows and for the forgetting measurement.
     # Replay rows are full windows while document rows are padded, so the share
     # of the loss the replay rows carry is larger than their share of the rows
@@ -638,7 +696,7 @@ def main():
                   "block_size": args.block_size, "lr": args.lr, "warmup": args.warmup,
                   "dropout": args.dropout, "keep_every": args.keep_every,
                   "replay": replay_record, "source_validation": source_record,
-                  "seed": args.seed, "pairs": pairs_record}
+                  "seed": args.seed, "pairs": pairs_record, "fim": fim_record}
     state_path, start, kept = args.out / "state.pt", 0, []
     if args.resume and state_path.exists():
         state = torch.load(state_path, map_location=device, weights_only=False)
@@ -666,7 +724,10 @@ def main():
         {"schema": SCHEMA, "status": "running", "device": device,
          "identities": identities, "kept": kept}, indent=2, sort_keys=True) + "\n")
     # Copied now rather than at the end, so a kept step is loadable while the run is still going.
-    shutil.copyfile(tokenizer_source, args.out / "tokenizer.json")
+    if sentinels_added:
+        tokenizer.save(args.out / "tokenizer.json")
+    else:
+        shutil.copyfile(tokenizer_source, args.out / "tokenizer.json")
     autocast = (torch.autocast(device_type="cuda", dtype=torch.bfloat16)
                 if core_train.wants_bf16(device) else torch.autocast("cpu", enabled=False))
 
@@ -700,6 +761,8 @@ def main():
         while step < args.steps:
             if args.doc_batches:
                 inputs, targets = train_rows.get_batch(step, target_batch)
+            elif fim_windows is not None:
+                inputs, targets = fim_windows.get_batch(target_batch, args.block_size)
             else:
                 inputs, targets = corpus.get_batch("train", target_batch, args.block_size)
             if rows:

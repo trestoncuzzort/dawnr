@@ -224,13 +224,16 @@ class CharTokens:
     encode and decode over the same list. Kept to CharTokenizer's interface.
     """
 
-    def __init__(self, chars):
+    def __init__(self, chars, sentinels=()):
         self.chars = list(chars)
+        # Sentinel ids (fill-in-the-middle; see data.CharTokenizer) follow the
+        # characters and are never produced by encode(); decode names them.
+        self.sentinels = tuple(sentinels)
         self._index = {c: i for i, c in enumerate(self.chars)}
 
     @property
     def vocab_size(self) -> int:
-        return len(self.chars)
+        return len(self.chars) + len(self.sentinels)
 
     def encode(self, text: str):
         # Drops what this model never saw, exactly as data.CharTokenizer.encode
@@ -257,11 +260,15 @@ class CharTokens:
         return unknown
 
     def decode(self, ids) -> str:
-        return "".join(self.chars[int(i)] for i in ids)
+        n = len(self.chars)
+        return "".join(self.chars[int(i)] if int(i) < n else self.sentinels[int(i) - n] for i in ids)
 
     @classmethod
     def load(cls, path):
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        if isinstance(payload, dict) and payload.get("format") == "locallm-char-tokenizer" \
+                and payload.get("version") == 1:
+            return cls(payload["chars"], payload.get("sentinels", ()))
         if not (isinstance(payload, list) and all(isinstance(c, str) for c in payload)):
             raise _Refused(
                 f"{path} is a byte-BPE tokenizer, which needs the `tokenizers` "
