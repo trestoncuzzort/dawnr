@@ -1,6 +1,8 @@
 """Relabeling verified-but-wrong programs: the population, the gates, the one-target rule, the rows."""
+import copy
 import io
 import json
+import random
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -12,6 +14,7 @@ import loop_dataset as dataset
 import loop_filter
 import relabel
 import spec_check
+import spec_experiment as se
 import surface
 
 # fixture ids: MBPP-shaped (below the HumanEval base) and outside every real list
@@ -49,6 +52,26 @@ def fixture_pool(with_twin=True):
 
 def task(text):
     return surface.parse("t 0\n" + text.strip() + "\n")
+
+
+TRAIN_TENS = 1009
+
+
+def tens_entry():
+    # triples, with examples at 10, 0 and 30: draws shaped like them reach 0..20, 0..2 and 0..60
+    return entry(TRAIN_TENS, "tens", "def tens(a):\n    return a * 3\n", [((10,), 30), ((0,), 0), ((30,), 90)],
+                 "Write a function to triple a multiple of ten.")
+
+
+# passes dbl's three points, its ensures holds of every reference output, and the body computes a
+# different function above 3: only executing it on the draws catches that (review of 2026-09-25,
+# mbpp_577 last_Digit_Factorial: `ensures r == 0 or ... or r == 7` admitted a body returning n)
+WEAK = ("fail", "task mbpp_2011__weak(a: int) returns (r: int)\n  ensures r >= 0\n"
+                "{ if a <= 3 { r := a * 2; } else { r := a; } }")
+# right on every draw inside its precondition, and the precondition admits one draw in ten
+NARROW = ("fail", "task mbpp_2012__tens(a: int) returns (r: int)\n"
+                  "  requires a == 0 or a == 10 or a == 20 or a == 30 or a == 40 or a == 50 or a == 60\n"
+                  "  ensures r == a * 3\n{ r := a * 3; }")
 
 
 PROGRAMS = {
@@ -212,6 +235,8 @@ class RelabelTests(unittest.TestCase):
                          ("arm", HELD_OUT, 1, 2))
         self.assertEqual((prov["targets_passed_tests"], prov["points"], prov["draws"], prov["shapes"],
                           prov["pool"]), (1, 3, 60, 3, "v5"))
+        self.assertEqual((prov["executed"], prov["executed_excluded"], prov["executed_reference_raised"],
+                          prov["executed_total"], prov["executed_fraction"]), (60, 0, 0, 60, 1.0))
         self.assertEqual(prov["task_sha256"], spec_check.task_sha256(foo["qualifying"][0]["task"]))
         # the row names the held-out source only as an integer: no alias anywhere in it
         check = loop_filter.validate_training_data(json.dumps(row), {HELD_OUT}, names=[row["task"]],
@@ -254,6 +279,75 @@ class RelabelTests(unittest.TestCase):
         ok = relabel.qualify(honest, pool[1008], 1008, 50, 1)
         self.assertEqual((ok["status"], ok["shapes"], ok["draws"]), ("qualifies", 3, 150))
 
+    def test_a_weak_specification_that_hides_a_different_function_is_caught_by_executing_the_program(self):
+        """The specification check alone (check_task) agrees with the reference on every draw, because
+        `r >= 0` is true of every doubled value; the program still returns a, not 2a, above 3."""
+        pool = fixture_pool(with_twin=False)
+        weak = task(WEAK[1])
+        spec_only = spec_check.check_task(se.rename_task(copy.deepcopy(weak), "mbpp_1002__dbl"), pool[TRAIN_DBL],
+                                          20, random.Random(1))
+        self.assertEqual(spec_only["status"], "agrees")                # the old gate let it through
+        out = relabel.qualify(weak, pool[TRAIN_DBL], TRAIN_DBL, 20, 1)
+        self.assertEqual(out["status"], "exec-fail")
+        self.assertEqual(out["shape"], 1)                              # draws shaped like 3 reach 4..6
+        w = out["witness"]
+        self.assertEqual((w["args"], w["reference_said"], w["program_said"]), (w["args"], 2 * w["args"][0], w["args"][0]))
+        self.assertGreater(w["args"][0], 3)
+        honest = relabel.qualify(task(PROGRAMS["mbpp_2002__bar"][1]), pool[TRAIN_DBL], TRAIN_DBL, 20, 1)
+        self.assertEqual(honest["status"], "qualifies")
+        self.assertEqual((honest["executed"], honest["executed_excluded"], honest["executed_reference_raised"],
+                          honest["executed_total"]), (60, 0, 0, 60))
+        # through relabel_program the verdict is a refusal with its own name, not a silent no-target
+        found = relabel.distinct_programs([{"tag": "arm", "name": "mbpp_2011__weak", "task": weak,
+                                            "source_id": 2011, "tests": "fail"}])
+        index = relabel.target_index(pool, train_ids(), gates())
+        outcome = relabel.relabel_program(found[0], relabel.targets_for(found[0], index, gates()), pool, 20, 1)
+        self.assertEqual((outcome["kind"], outcome["tally"]), ("no-target", {"tests-fail": 1, "exec-fail": 1}))
+
+    def test_a_program_the_reference_cannot_run_on_any_draw_is_refused_not_admitted_on_its_points(self):
+        pool = fixture_pool(with_twin=False)
+        pool[TRAIN_DBL]["rec"]["code"] = "def dbl(a):\n    raise ValueError(a)\n"
+        out = relabel.qualify(task(PROGRAMS["mbpp_2002__bar"][1]), pool[TRAIN_DBL], TRAIN_DBL, 20, 1)
+        self.assertEqual(out["status"], "spec-no valid draws")         # check_task refuses first
+        pool[TRAIN_DBL]["rec"]["code"] = "def dbl(a):\n    return a * 2\n"
+        with patch.object(spec_check, "check_task", return_value={"status": "agrees", "draws": 5}):
+            pool[TRAIN_DBL]["rec"]["code"] = "def dbl(a):\n    raise ValueError(a)\n"
+            out = relabel.qualify(task(PROGRAMS["mbpp_2002__bar"][1]), pool[TRAIN_DBL], TRAIN_DBL, 20, 1)
+        self.assertEqual(out["status"], "exec-no valid draws")
+        self.assertEqual(out["executed_reference_raised"], 60)
+
+    def test_a_narrow_precondition_is_recorded_not_refused(self):
+        pool = fixture_pool(with_twin=False)
+        pool[TRAIN_TENS] = tens_entry()
+        out = relabel.qualify(task(NARROW[1]), pool[TRAIN_TENS], TRAIN_TENS, 50, 1)
+        self.assertEqual(out["status"], "qualifies")
+        self.assertEqual(out["executed"] + out["executed_excluded"], out["executed_total"])
+        self.assertEqual(out["executed_total"], 150)
+        self.assertLess(out["executed_fraction"], 0.25)
+        self.assertGreater(out["executed"], 0)
+
+    def test_a_candidate_the_oracles_cannot_decide_blocks_admission_elsewhere(self):
+        """foo (a + 2) qualifies for inc; the twin's reference raises on every draw, so the twin's pair is
+        undecided, not refused: foo passed every one of the twin's points and may solve it too, and one
+        target plus one undecided candidate is not "exactly one target". The lab run of 2026-09-26 found
+        the case for real: eight Fibonacci programs qualified for mbpp_960 and exceeded the interpreter's
+        budget on the larger draws of mbpp_873 and he_55, which they also solve at every point."""
+        pool = fixture_pool(with_twin=True)
+        pool[TRAIN_INC_TWIN]["rec"]["code"] = "def plus_two(a):\n    raise ValueError(a)\n"
+        out = self.outcomes(pool)
+        foo = out["mbpp_2001__foo"]
+        self.assertEqual(foo["kind"], "undecided")
+        self.assertEqual(foo["tally"], {"qualifies": 1, "spec-no valid draws": 1, "tests-fail": 1})
+        self.assertEqual([r["task_id"] for r in foo["undecided"]], [TRAIN_INC_TWIN])
+        self.assertEqual(out["mbpp_2002__bar"]["kind"], "admitted")
+        self.assertEqual(out["mbpp_2002__bar"]["undecided"], [])
+        # the budget is an undecided verdict too, and a refused pair (a disagreement) is not
+        for status, expect in (("exec-budget", True), ("exec-no valid draws", True), ("spec-reference did not finish", True),
+                               ("exec-fail", False), ("exec-crash", False), ("exec-undefined", False),
+                               ("spec-disagrees", False), ("spec-contradicts-example", False), ("tests-fail", False),
+                               ("signature", False), ("qualifies", False)):
+            self.assertEqual(relabel.undecided(status), expect, status)
+
     def test_verdicts_do_not_depend_on_visiting_order(self):
         pool = fixture_pool(with_twin=False)
         a = self.outcomes(pool)
@@ -267,15 +361,18 @@ class RelabelTests(unittest.TestCase):
 class MainTests(unittest.TestCase):
     def test_main_writes_rows_duplicates_and_report(self):
         pool = fixture_pool(with_twin=True)
+        pool[TRAIN_TENS] = tens_entry()
+        programs = {**PROGRAMS, "mbpp_2011__weak": WEAK, "mbpp_2012__tens": NARROW}
         with tempfile.TemporaryDirectory() as tmp:
             here = Path(tmp)
-            write_tag(here / "sets", "arm")
+            write_tag(here / "sets", "arm", programs)
+            write_tag(here / "sets", "cmp-arm", {"mbpp_2002__bar": PROGRAMS["mbpp_2002__bar"]})
             split = here / "split.json"
-            split.write_text(json.dumps({"pool": "v5", "pool_size": len(pool), "train_ids": sorted(train_ids()),
-                                         "eval_ids": [HELD_OUT]}))
+            split.write_text(json.dumps({"pool": "v5", "pool_size": len(pool),
+                                         "train_ids": sorted(train_ids() | {TRAIN_TENS}), "eval_ids": [HELD_OUT]}))
             out, report = here / "loop" / "relabel-x.jsonl", here / "REPORT.md"
-            argv = ["--split", str(split), "--out", str(out), "--root", str(here / "sets"), "--n", "20",
-                    "--report", str(report)]
+            argv = ["--split", str(split), "--out", str(out), "--root", str(here / "sets"), "--n", "50",
+                    "--report", str(report), "--exclude-tags", "cmp-*"]
             with patch.object(relabel.se, "pool", return_value=pool), \
                     patch.object(loop_filter, "decontamination", return_value=LISTED_POLICY), \
                     patch.object(loop_filter, "r12_dev_ids", return_value=frozenset({DEV})), \
@@ -284,22 +381,40 @@ class MainTests(unittest.TestCase):
                 rows = [json.loads(line) for line in out.read_text().splitlines()]
                 dups = [json.loads(line) for line in (here / "loop" / "relabel-duplicates-x.jsonl").read_text().splitlines()]
                 text = report.read_text()
+                # a pattern that excludes nothing that exists is a typo, and is refused
+                with self.assertRaisesRegex(SystemExit, "--exclude-tags"):
+                    relabel.main(argv[:-1] + ["nothing-*"])
                 # a pool that shrank is refused, not silently searched
                 split.write_text(json.dumps({"pool": "v5", "pool_size": len(pool) + 5,
                                              "train_ids": sorted(train_ids()), "eval_ids": [HELD_OUT]}))
                 with self.assertRaisesRegex(SystemExit, "pool"):
                     relabel.main(argv)
         self.assertEqual([(r["task_id"], r["task"]) for r in rows],
-                         [(TRAIN_DBL, "mbpp_1002__dbl"), (TRAIN_ADD, "mbpp_1003__add")])
+                         [(TRAIN_DBL, "mbpp_1002__dbl"), (TRAIN_ADD, "mbpp_1003__add"), (TRAIN_TENS, "mbpp_1009__tens")])
+        self.assertTrue(all(r["relabel"]["executed"] > 0 for r in rows))
         self.assertEqual([d["problem_ids"] for d in dups], [[TRAIN_INC, TRAIN_INC_TWIN]])
-        self.assertIn("| **programs admitted (exactly one target)** | **2** |", text)
+        self.assertIn("| **programs admitted (exactly one target)** | **3** |", text)
         self.assertIn("| programs with two or more targets (duplicate pairs, not admitted) | 1 |", text)
-        self.assertIn("| wrong-but-proven rows | 5 |", text)
+        self.assertIn("| programs with one target and a candidate the oracles could not decide (not admitted) | 0 |", text)
+        self.assertIn("| wrong-but-proven rows | 7 |", text)
+        self.assertIn("| exec-fail | 1 |", text)
         self.assertIn("`arm/mbpp_2007__gone`", text)
         self.assertIn("## The 10 largest per-signature groups", text)
         self.assertIn("38/400", text)
         self.assertIn("| candidates refused: their own points cannot reject a lazy program | 0 |", text)
         self.assertIn("## What was learned", text)
+        # the source ids 2002, 2006 and 2012 are in neither half of the split: said so, not called train
+        self.assertIn("| not in the split (neither a train nor an eval id) | 3 |", text)
+        self.assertNotIn("| train |", text)
+        # the narrow row is listed with its counts, and admitted
+        self.assertIn("### Admitted rows whose draws mostly fell outside the program's precondition", text)
+        self.assertIn(f"| {TRAIN_TENS} | `mbpp_1009__tens` | arm |", text)
+        self.assertIn("filter_too_much", text)
+        # one positive per problem on the samples path, every distinct program here: said in the report
+        self.assertIn("one positive per (task_id, source, task)", text)
+        # the excluded set is named, and absent from the per-set table
+        self.assertIn("excluded by `--exclude-tags cmp-*`: cmp-arm", text)
+        self.assertNotIn("| cmp-arm |", text)
         self.assertNotIn(str(Path.home()), text)
 
 
@@ -358,7 +473,7 @@ class RelabelRowsInputTests(unittest.TestCase):
         row = relabel_row()
         sft = [{"prompt": ["p"], "chosen": "x", "source": "samples", "task_id": 1, "task": "mbpp_1__f"}]
         counts = dataset.append_relabel_rows(sft, [row, row])
-        self.assertEqual(counts, {"read": 2, "appended": 1, "already_positive": 1})
+        self.assertEqual(counts, {"read": 2, "appended": 1, "already_positive": 1, "per_problem": {1: 1}})
         self.assertEqual([s["source"] for s in sft], ["relabel", "samples"])
         self.assertEqual(sft[0]["relabel"]["pool"], "v5")
         same = dict(sft[1], source="relabel", chosen=row["chosen"])
@@ -413,6 +528,8 @@ class RelabelRowsInputTests(unittest.TestCase):
         self.assertEqual([(r["task_id"], r["source"]) for r in sft], [(1, "samples"), (3, "relabel")])
         self.assertEqual([p["task_id"] for p in pairs], [1])
         self.assertIn("appended 1 to `sft-fixture.jsonl` with `source: relabel` kept", report)
+        self.assertIn("one positive per (task_id, source, task)", report)
+        self.assertIn("1 relabeled row(s) on 1 problem(s); the most loaded: 3 (1)", report)
         self.assertIn("--relabel-rows", report)
 
 
