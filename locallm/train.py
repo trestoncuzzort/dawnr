@@ -19,7 +19,8 @@ import baselines
 import ingest  # the ONLY way this file reads a user's text
 import runlog
 from model import GPT, GPTConfig
-from data import Corpus, build_tokenizer, tokenizer_fingerprint
+from data import (Corpus, build_tokenizer, split_health, split_verdict,
+                  tokenizer_fingerprint)
 
 
 # Explicit scaling recipes; old commands keep the original small GPT defaults.
@@ -228,6 +229,275 @@ def estimate_loss(model, corpus, batch_size, block_size, iters=20):
     return out
 
 
+# WHEN TO STOP, FROM THIS PROJECT'S OWN MEASUREMENTS.
+#
+# MIN_DELTA is the seed noise floor of FINDINGS-how-long-to-train.md: the spread
+# (max minus min) of final validation loss across identical runs that differ only
+# in their random seed, 0.0022-0.0116 over eight arms. 0.005 is taken from the
+# 80,000-step arm (0.0052), the step count that finding names as this model's
+# ceiling, and it is the bar the doubling that bought nothing (80k->160k,
+# +0.0028) was judged against. The stopper therefore agrees with that verdict:
+# anything that needs a value above 0.0028 and at or below 0.0052. The largest
+# spreads (0.0112, 0.0116) come from the 500- and 1,500-step arms, where every
+# check improves by 20 times that and any threshold below 0.01 behaves the same.
+# Measured on the character tokenizer; for BPE the same number is stricter per
+# character, which errs toward training longer, not shorter.
+#
+# PATIENCE counts CHECKS, not steps (Lightning's EarlyStopping does the same).
+# The window therefore depends on how often the run evaluates: the window has
+# eval_interval * patience steps. The studio evaluates 25 times a run, so 5
+# checks is the last fifth of the planned length.
+EARLY_STOP_MIN_DELTA = 0.005
+EARLY_STOP_PATIENCE = 5
+
+
+def cpu_state_copy(model) -> dict:
+    """A CPU copy of the model's weights that later training cannot change.
+
+    Tied tensors stay tied: GPT shares its embedding with its output head, so
+    state_dict() lists that one tensor under two names, and copying it twice
+    would double the largest matrix of a character model for nothing. A copy is
+    keyed by the storage it came from, so both names get the one copy.
+    """
+    out, seen = {}, {}
+    for name, t in model.state_dict().items():
+        key = (t.data_ptr(), t.dtype, tuple(t.shape), tuple(t.stride()))
+        if key not in seen:
+            seen[key] = t.detach().to("cpu", copy=True)
+        out[name] = seen[key]
+    return out
+
+
+def state_bytes(state: dict) -> int:
+    """Bytes a state copy really holds, counting a shared tensor once."""
+    seen = {}
+    for t in state.values():
+        seen[t.data_ptr()] = t.numel() * t.element_size()
+    return sum(seen.values())
+
+
+class EarlyStopper:
+    """Stop when validation stops improving, and keep the best weights.
+
+    The ALGORITHM is Lightning's EarlyStopping._evaluate_stopping_criteria
+    (github.com/Lightning-AI/pytorch-lightning, src/lightning/pytorch/callbacks/
+    early_stopping.py; Apache-2.0, algorithm taken, no code or dependency):
+
+      1. a validation loss that is not a finite number stops at once;
+      2. one above `divergence_threshold` (when set) stops at once;
+      3. an improvement is `val + min_delta < reference`, so a change of EXACTLY
+         min_delta is not one; the reference moves only on an improvement;
+      4. otherwise `wait_count` grows, and reaching `patience` stops.
+
+    WHICH WEIGHTS ARE KEPT is Lightning's ModelCheckpoint(monitor, mode="min",
+    save_top_k=1) rather than the stopper: the strict lowest validation loss
+    seen, with no min_delta, and a non-finite value never qualifies. The two
+    differ on purpose. Patience asks "is it still learning, beyond noise?";
+    the saved model asks "which weights scored best?", and a check that beat
+    the reference by less than noise is still the best measured.
+
+    keep_best=False is for a split that is not a fair test (leakage, or a
+    corpus that cannot be split): there is nothing to choose weights by, so the
+    copy held is the latest check whose loss was a number, used only if a later
+    one is not.
+
+    The state is Lightning's resume contract (state_dict / load_state_dict).
+    Neither locallm trainer resumes, so every run here starts fresh; the state
+    is written into the checkpoint so a trainer that does resume can restore it.
+    """
+
+    def __init__(self, min_delta: float = EARLY_STOP_MIN_DELTA,
+                 patience: int = EARLY_STOP_PATIENCE,
+                 divergence_threshold: float | None = None,
+                 stop_early: bool = True, keep_best: bool = True):
+        if not (min_delta >= 0 and math.isfinite(min_delta)):
+            raise ValueError(f"min_delta must be a finite number >= 0, got {min_delta}")
+        if int(patience) != patience or patience < 1:
+            raise ValueError(f"patience must be a whole number of checks >= 1, got {patience}")
+        self.min_delta = float(min_delta)
+        self.patience = int(patience)
+        self.divergence_threshold = divergence_threshold
+        self.stop_early = stop_early
+        self.keep_best = keep_best
+        self.reference = math.inf       # Lightning's best_score
+        self.reference_step = None
+        self.wait_count = 0
+        self.best_val = math.inf        # what the saved weights scored
+        self.best_train = None
+        self.best_step = None
+        self.best_state = None          # CPU copy of those weights
+        self.last_val = None
+        self.last_step = None
+        self.checks = 0
+        self.stopped_step = None
+        self.reason = None              # patience, non_finite, divergence,
+                                        # non_finite_train, finished, user
+
+    # ------------------------------------------------------------ checks
+    def observe(self, step: int, val: float, model=None, train: float | None = None) -> bool:
+        """Record one check without deciding anything. True if it is finite."""
+        self.checks += 1
+        self.last_val, self.last_step = val, step
+        if not math.isfinite(val):
+            return False
+        if (val < self.best_val) if self.keep_best else True:
+            self.best_val, self.best_train, self.best_step = val, train, step
+            if model is not None:
+                self.best_state = cpu_state_copy(model)
+        return True
+
+    def update(self, step: int, val: float, model=None, train: float | None = None) -> bool:
+        """Record one check and return True when training should stop."""
+        if not self.observe(step, val, model, train):
+            return self._stop(step, "non_finite")
+        if not self.stop_early:
+            return False
+        if self.divergence_threshold is not None and val > self.divergence_threshold:
+            return self._stop(step, "divergence")
+        if val + self.min_delta < self.reference:
+            self.reference, self.reference_step, self.wait_count = val, step, 0
+            return False
+        self.wait_count += 1
+        if self.wait_count >= self.patience:
+            return self._stop(step, "patience")
+        return False
+
+    def training_loss_broke(self, step: int, loss: float) -> bool:
+        """A training step's own loss was not a number: stop before it is
+        applied. True when it broke, so a loop can `if ...: break`."""
+        if math.isfinite(loss):
+            return False
+        self.last_val = loss
+        return self._stop(step, "non_finite_train")
+
+    def finish(self, step: int, reason: str) -> None:
+        """The loop ended for a reason of its own: planned length, or Stop."""
+        if self.reason is None:
+            self._stop(step, reason)
+
+    def _stop(self, step: int, reason: str) -> bool:
+        self.stopped_step, self.reason = step, reason
+        return True
+
+    # ------------------------------------------------------------ weights
+    def restore(self, model) -> bool:
+        """Put the kept weights back into `model` when they are not the ones
+        it holds now. True if it changed anything."""
+        if self.best_state is None:
+            return False
+        if self.best_step == self.stopped_step and self.reason in ("finished", "user"):
+            return False                  # the kept weights ARE the last ones
+        model.load_state_dict(self.best_state)
+        return True
+
+    # ------------------------------------------------------------ words
+    def summary(self) -> str:
+        """What happened, in one sentence a person can read."""
+        n, m, p = self.stopped_step, self.best_step, self.patience
+        kept = ("saved the weights from step " f"{m}" if m is not None
+                else "no check had a usable score, so the weights are the last ones")
+        if self.reason == "patience":
+            return (f"stopped at step {n}: validation had not improved by more than "
+                    f"run-to-run noise ({self.min_delta:g}) for {p} checks; {kept}")
+        if self.reason == "non_finite":
+            return (f"stopped at step {n}: the validation loss stopped being a number "
+                    f"({self.last_val}), so training had broken down; {kept}")
+        if self.reason == "non_finite_train":
+            return (f"stopped at step {n}: the training loss stopped being a number "
+                    f"({self.last_val}), so training had broken down; {kept}")
+        if self.reason == "divergence":
+            return (f"stopped at step {n}: validation reached {self.last_val:.4f}, past "
+                    f"the divergence limit {self.divergence_threshold:g}; {kept}")
+        if self.reason == "user":
+            head = f"stopped at step {n} because Stop was pressed"
+        else:
+            head = f"ran the planned {n} steps"
+        if not self.keep_best:
+            if m is not None and m != n:
+                return f"{head}; {kept}, the last check whose loss was a number"
+            return (f"{head}; kept the last weights, because this text has no fair "
+                    f"held-out part to choose the best ones by")
+        if m == n:
+            return f"{head}; saved the weights from step {m}, which scored best"
+        return f"{head}; {kept}, which scored best (the last check was worse)"
+
+    def record(self) -> dict:
+        """The facts, for the checkpoint and the run log: plain types only, so
+        torch.load(weights_only=True) reads them back."""
+        f = lambda v: None if v is None or not math.isfinite(v) else float(v)  # noqa: E731
+        return {
+            "weights": "best validation" if self.keep_best else "last",
+            "saved_step": self.best_step, "saved_val_loss": f(self.best_val),
+            "saved_train_loss": f(self.best_train) if self.best_train is not None else None,
+            "stopped_step": self.stopped_step, "stop_reason": self.reason,
+            "why": self.summary(),
+            "last_check_step": self.last_step,
+            "last_check_val_loss": f(self.last_val) if self.last_val is not None else None,
+            "checks": self.checks,
+            "early_stopping": self.state_dict(),
+        }
+
+    def state_dict(self) -> dict:
+        """Lightning's resume keys, plus what this class adds. No weights."""
+        f = lambda v: None if v is None or not math.isfinite(v) else float(v)  # noqa: E731
+        return {"wait_count": self.wait_count, "patience": self.patience,
+                "min_delta": self.min_delta, "best_score": f(self.reference),
+                "best_score_step": self.reference_step,
+                "divergence_threshold": self.divergence_threshold,
+                "stop_early": self.stop_early, "keep_best": self.keep_best,
+                "stopped_step": self.stopped_step, "stopping_reason": self.reason}
+
+    def load_state_dict(self, state: dict) -> None:
+        self.wait_count = state["wait_count"]
+        self.patience = state["patience"]
+        self.min_delta = state["min_delta"]
+        self.reference = math.inf if state["best_score"] is None else state["best_score"]
+        self.reference_step = state.get("best_score_step")
+        self.divergence_threshold = state.get("divergence_threshold")
+        self.stop_early = state.get("stop_early", True)
+        self.keep_best = state.get("keep_best", True)
+        self.stopped_step = state.get("stopped_step")
+        self.reason = state.get("stopping_reason")
+
+
+def end_of_run(stopper: EarlyStopper, model, corpus, batch_size: int, block_size: int,
+               step: int, reason: str | None) -> dict:
+    """Close a run the same way in both trainers; return the saved weights' losses.
+
+    `reason` is None when the stopper itself ended the loop, else "finished" or
+    "user". The weights in hand after the last update were never scored inside
+    the loop (it scores before each update), so they are scored here and take
+    part in the choice like any other check. Then the kept weights go back into
+    `model`, so what is saved, sampled and logged is one and the same model.
+    """
+    if reason is not None:
+        L = estimate_loss(model, corpus, batch_size, block_size)
+        stopper.observe(step, L["val"], model, train=L["train"])
+        stopper.finish(step, reason)
+        if not stopper.keep_best and math.isfinite(L["val"]):
+            return L                      # the last weights, as they are
+    stopper.restore(model)
+    if stopper.best_step is None:
+        return estimate_loss(model, corpus, batch_size, block_size)
+    return {"train": stopper.best_train, "val": stopper.best_val}
+
+
+def split_is_fair(text: str, leak: dict) -> str | None:
+    """Why this run's validation split cannot choose weights, or None if it can.
+
+    The studio's rule, in one place for the command line: a leakage verdict other
+    than CLEAN means validation also measures memorised text, and a split_verdict
+    means too little (or nothing) was held back. Either way the lowest validation
+    loss is not evidence of anything, so early stopping stands down.
+    """
+    if leak.get("verdict") != "CLEAN":
+        return f"the leakage scan says {leak.get('verdict')}"
+    verdict = split_verdict(split_health(text))
+    if verdict is not None:
+        return f"the split cannot hold back a fair test ({verdict})"
+    return None
+
+
 def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True, help="path to a .txt corpus (yours)")
@@ -251,7 +521,21 @@ def parse_args(argv=None):
                     help="learning rate; default = auto_lr(n_embd), width-scaled")
     ap.add_argument("--eval-interval", type=int, default=250)
     ap.add_argument("--seed", type=int, default=1337)
+    ap.add_argument("--early-stop", action=argparse.BooleanOptionalAction, default=True,
+                    help="stop once validation stops improving by more than --min-delta "
+                         "for --patience checks (default on); --no-early-stop runs every "
+                         "step. Either way the saved weights are the best-validation ones.")
+    ap.add_argument("--min-delta", type=float, default=EARLY_STOP_MIN_DELTA,
+                    help="smallest drop in validation loss (nats) that counts as "
+                         "improving; default is the measured seed noise floor")
+    ap.add_argument("--patience", type=int, default=EARLY_STOP_PATIENCE,
+                    help="checks (not steps) without such a drop before stopping")
+    ap.add_argument("--divergence-threshold", type=float, default=None,
+                    help="stop at once if validation loss rises above this many nats "
+                         "(off by default)")
     args = ap.parse_args(argv)
+    if args.patience < 1 or not args.min_delta >= 0:
+        ap.error("--patience must be at least 1 and --min-delta at least 0")
     defaults = MODEL_PRESETS.get(args.preset, dict(n_layer=4, n_head=4, n_embd=256, block_size=128))
     for key, value in defaults.items():
         if getattr(args, key) is None:
@@ -337,9 +621,29 @@ def main():
     amp = (lambda: torch.autocast(device, dtype=torch.bfloat16)) if use_bf16 \
         else (lambda: contextlib.nullcontext())
 
+    # Whether validation can choose weights is decided BEFORE training, so the
+    # leakage scan that used to run after it runs here and its row is reused
+    # in the run log below.
+    leak = _leak_of(text)
+    unfair = split_is_fair(text, leak)
+    stopper = EarlyStopper(args.min_delta, args.patience, args.divergence_threshold,
+                           stop_early=args.early_stop and unfair is None,
+                           keep_best=unfair is None)
+    if unfair:
+        print(f"early stopping: off, and the last weights are kept: {unfair}, so "
+              f"validation cannot say which weights are best.")
+    elif args.early_stop:
+        print(f"early stopping: on (stops after {args.patience} checks without a "
+              f"drop of more than {args.min_delta:g} in val; this trainer never "
+              f"resumes, so it starts fresh). The best-validation weights are saved.")
+    else:
+        print("early stopping: off (--no-early-stop); the best-validation weights "
+              "are still the ones saved.")
+
     Path(args.out).mkdir(parents=True, exist_ok=True)
     warmup = max(10, args.steps // 20)
     t0 = time.time()
+    ended = "finished"
     for step in range(args.steps):
         lr = cosine_lr(step, warmup, args.steps, args.lr, args.lr / 10)
         for g in opt.param_groups:
@@ -348,23 +652,39 @@ def main():
             L = estimate_loss(model, corpus, args.batch_size, args.block_size)
             print(f"step {step:5d} | train {L['train']:.4f} | val {L['val']:.4f} | "
                   f"lr {lr:.2e} | {time.time() - t0:.0f}s")
+            if stopper.update(step, L["val"], model, train=L["train"]):
+                ended = None
+                break
         x, y = corpus.get_batch("train", args.batch_size, args.block_size)
         with amp():
             _, loss = model(x, y)
+        # On the CPU reading the loss costs nothing, so a non-finite one stops
+        # the run before it is applied. On a graphics card .item() makes every
+        # step wait for the card, so there the check is the next evaluation's,
+        # which a broken model fails.
+        if device == "cpu" and stopper.training_loss_broke(step, loss.item()):
+            ended = None
+            break
         opt.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step()
+    else:
+        step = args.steps
 
+    wall = time.time() - t0
+    final = end_of_run(stopper, model, corpus, args.batch_size, args.block_size,
+                       step, ended)
+    print(f"\n{stopper.summary()}")
     torch.save({"model": model.state_dict(), "config": cfg.__dict__,
-                "tokenizer_fingerprint": tokenizer_fingerprint(tok)}, Path(args.out) / "ckpt.pt")
+                "tokenizer_fingerprint": tokenizer_fingerprint(tok),
+                "training": stopper.record()}, Path(args.out) / "ckpt.pt")
     tok.save(Path(args.out) / "tokenizer.json")
-    print(f"\nsaved model + tokenizer to {args.out}/")
+    print(f"saved model + tokenizer to {args.out}/")
 
     # Append this run to the shared log. A checkpoint folder tells you nothing
     # about what produced it a week later; the log does.
-    wall = time.time() - t0
-    final = estimate_loss(model, corpus, args.batch_size, args.block_size)
+    steps_run = stopper.stopped_step or args.steps
 
     # What a lookup table scores on the SAME held-out text. Without this, a loss
     # can only be compared to uniform guessing, which anything beats — see
@@ -404,10 +724,11 @@ def main():
                           "gradient_checkpointing": args.gradient_checkpointing},
                   metrics={"train_loss": final["train"], "val_loss": final["val"],
                            "wall_s": wall,
-                           "ms_per_step": wall / max(args.steps, 1) * 1000,
+                           "ms_per_step": wall / max(steps_run, 1) * 1000,
                            "params": model.num_params(), "total_params": model.total_params()},
+                  training=stopper.record(),
                   baselines=base,
-                  leakage=_leak_of(text))
+                  leakage=leak)
     print(f"recorded to {runlog.LOG.name}  (python runlog.py to review)")
 
     ctx = torch.zeros((1, 1), dtype=torch.long, device=device)

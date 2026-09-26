@@ -82,7 +82,8 @@ from model import GPT, GPTConfig  # noqa: E402
 from data import (CharTokenizer, Corpus, documents, group_split,  # noqa: E402
                   split_health, split_verdict, tokenizer_fingerprint)
 from leakage import scan as leakage_scan  # noqa: E402
-from train import (auto_lr, cosine_lr, enable_fast_math,  # noqa: E402
+from train import (EARLY_STOP_MIN_DELTA, EARLY_STOP_PATIENCE,  # noqa: E402
+                   EarlyStopper, auto_lr, cosine_lr, enable_fast_math, end_of_run,
                    estimate_loss, make_optimizer, pick_device, wants_bf16)
 
 BENCH = HERE / "bench_device_result.json"
@@ -835,9 +836,31 @@ class TrainWorker(threading.Thread):
         t0 = time.time()
         tokens_per_step = c["batch_size"] * c["block_size"]
 
+        # WHEN TO STOP, AND WHICH WEIGHTS TO KEEP: train.EarlyStopper, the same
+        # rule the command line uses. It stands down when the orange line is not
+        # a fair test, because then nothing can say which weights are best.
+        # cfg keys are optional so a caller that predates them (home.py) gets
+        # the defaults; "early_stop": False runs the full length.
+        stopper = EarlyStopper(c.get("min_delta", EARLY_STOP_MIN_DELTA),
+                               c.get("patience", EARLY_STOP_PATIENCE),
+                               stop_early=c.get("early_stop", True) and self.val_ok,
+                               keep_best=self.val_ok)
+        if stopper.stop_early:
+            self.log(f"It will stop by itself once the text it hasn't seen stops "
+                     f"getting easier for it: {stopper.patience} checks in a row with "
+                     f"no gain bigger than the difference between two identical runs. "
+                     f"The best version it reaches is the one kept.")
+        elif self.val_ok:
+            self.log("It will train for the full length. The best version it "
+                     "reaches is the one kept.")
+        else:
+            self.log("It will train for the full length and keep the last version, "
+                     "because without a fair test nothing can say which was best.")
+        ended = "finished"
+
         for step in range(steps):
             if self.stop.is_set():
-                self.log(f"\nStopped at step {step}. What it learned so far is kept.")
+                ended = "user"
                 break
 
             lr = cosine_lr(step, warmup, steps, c["lr"], c["lr"] / 10)
@@ -852,6 +875,9 @@ class TrainWorker(threading.Thread):
                     "step": step, "train": L["train"], "val": L["val"], "lr": lr,
                     "elapsed": el, "remaining": el / max(frac, 1e-9) - el,
                     "tok_s": tokens_per_step * (step + 1) / max(el, 1e-9)}))
+                if stopper.update(step, L["val"], model, train=L["train"]):
+                    ended = None
+                    break
 
             x, y = corpus.get_batch("train", c["batch_size"], c["block_size"])
             if use_bf16:
@@ -859,23 +885,38 @@ class TrainWorker(threading.Thread):
                     _, loss = model(x, y)
             else:
                 _, loss = model(x, y)
+            # Free on the CPU; on a graphics card it would stall every step, so
+            # there the next check catches a broken model instead.
+            if device == "cpu" and stopper.training_loss_broke(step, loss.item()):
+                ended = None
+                break
             opt.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
+        else:
+            step = steps
+
+        # The last weights are scored and compete like any other check, then
+        # the kept ones go back into the model, so the saved file, the model
+        # you can write with right away and the logged numbers are one model.
+        wall = time.time() - t0
+        final = end_of_run(stopper, model, corpus, c["batch_size"], c["block_size"],
+                           step, ended)
+        why = stopper.summary()
+        self.log(f"\n{why[0].upper()}{why[1:]}.")
 
         out = Path(c["out"])
         out.mkdir(parents=True, exist_ok=True)
         torch.save({"model": model.state_dict(), "config": cfg.__dict__,
-                    "tokenizer_fingerprint": tokenizer_fingerprint(tok)}, out / "ckpt.pt")
+                    "tokenizer_fingerprint": tokenizer_fingerprint(tok),
+                    "training": stopper.record()}, out / "ckpt.pt")
         tok.save(out / "tokenizer.json")
         self.log(f"Saved your model to the '{out.name}' folder. It will still be "
                  f"there next time you open this.")
 
         # Every GUI run lands in the same append-only log as every CLI run, so a
         # week of experimenting leaves a reviewable trail.
-        wall = time.time() - t0
-        final = estimate_loss(model, corpus, c["batch_size"], c["block_size"])
 
         # The comparison that makes the loss mean something. Only shown when the
         # holdout is eligible: if the same text sits on both sides of the split,
@@ -906,8 +947,9 @@ class TrainWorker(threading.Thread):
                                                 "steps", "lr", "dropout", "seed")},
                       metrics={"train_loss": final["train"], "val_loss": final["val"],
                                "wall_s": wall,
-                               "ms_per_step": wall / max(c["steps"], 1) * 1000,
+                               "ms_per_step": wall / max(stopper.stopped_step or c["steps"], 1) * 1000,
                                "params": model.num_params()},
+                      training=stopper.record(),
                       baselines=base,
                       # The scan's own row, not a two-field copy of it: the
                       # verdict is the worst of three signals and this used to
@@ -917,7 +959,8 @@ class TrainWorker(threading.Thread):
                       leakage=rep.record())
         self.q.put(("done", {"model": model, "tok": tok, "device": device,
                              "elapsed": time.time() - t0,
-                             "train": final["train"], "vocab": tok.vocab_size}))
+                             "train": final["train"], "vocab": tok.vocab_size,
+                             "training": stopper.record()}))
 
 
 class Studio(ttk.Frame):
@@ -2019,8 +2062,11 @@ class Studio(ttk.Frame):
                     self.b_stop.config(state="disabled")
                     self.b_gen.config(state="normal")
                     self._headline(payload["train"], prefix="Done. ")
+                    early = (payload.get("training") or {}).get("stop_reason") in (
+                        "patience", "divergence", "non_finite", "non_finite_train")
                     self._set_status(
-                        f"Finished in {human_time(payload['elapsed'])}. "
+                        f"{'Stopped early' if early else 'Finished'} in "
+                        f"{human_time(payload['elapsed'])} (the panel says why). "
                         f"Press “Write something” to see what it learned.")
                 elif kind == "corpus":
                     for line in payload.splitlines():
