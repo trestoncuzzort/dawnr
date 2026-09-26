@@ -1256,6 +1256,7 @@ AGREEMENT (verified/refuted in both columns, all five).
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -3755,10 +3756,51 @@ def _verus_closure_carry_assert(c: dict) -> str:
     )
 
 
+def _mentions_call(e, names) -> bool:
+    """True iff Expr `e` calls any function named in `names` (SPEC.md
+    "Methods (v1)": the method names). A method is a `proof fn` here, so a
+    call to one may appear only as a statement's whole right-hand side,
+    never inside a spec-position expression (a `requires`, an `assert`,
+    a `by (nonlinear_arith)` premise) -- and substituting a call's value
+    into one would also hand the caller the callee's body, which the
+    modular call rule forbids. Always False when `names` is empty, which
+    is every task without methods."""
+    return any(_calls(e, n) for n in names)
+
+
+def _loop_self_calls(body: list, name: str) -> bool:
+    """True iff some `while` under `body` calls `name` (its cond, its
+    invariants, its decreases or its body, at any depth)."""
+    for s in body:
+        if "while" in s and _body_calls([s], name):
+            return True
+        if "if" in s and (_loop_self_calls(s["if"]["then"], name)
+                          or _loop_self_calls(s["if"].get("else") or [], name)):
+            return True
+    return False
+
+
+def _method_pseudo_task(task: dict, m: dict) -> dict:
+    """One t method as the task-shaped dict `_V1` lowers: its own name,
+    params, return, contract and body, the task's spec_funs (a method body
+    and contract may call them). Mirrors lower_dafny.py's `_method_decl`."""
+    pseudo = {"name": m["name"], "params": m["params"],
+              "returns": m["returns"], "requires": m.get("requires", []),
+              "ensures": m["ensures"], "body": m["body"],
+              "spec_funs": task.get("spec_funs", [])}
+    if "decreases" in m:
+        pseudo["decreases"] = m["decreases"]
+    return pseudo
+
+
 class _V1:
-    def __init__(self, task: dict):
+    def __init__(self, task: dict, mnames: frozenset = frozenset()):
         self.task = task
         self.name = task["name"]
+        # SPEC.md "Methods (v1)": the names of the task's methods, each
+        # lowered to its own `proof fn` (see `emit`). Empty for every task
+        # without methods, so every guard reading it is a no-op there.
+        self.mnames = mnames
         self.helpers: list[str] = []   # loop helper proof fns
         self.wf: list[str] = []        # definedness (well-formedness) lemmas
         self.loop_ix = 0
@@ -3974,7 +4016,11 @@ class _V1:
                 self._assert_nested_eq(v["init"], scope, lines, ind)
                 vt = _vty(v["type"])
                 scope[v["name"]] = (vt, True)
-                self.local_inits[v["name"]] = v["init"]
+                # a method call's result is known only through the
+                # callee's ensures, so it is never recorded as a defining
+                # fact (`_ro_defining_facts` would restate it in a spec)
+                if not _mentions_call(v["init"], self.mnames):
+                    self.local_inits[v["name"]] = v["init"]
                 lines.append(f"{ind}let mut {v['name']}: {vt}"
                              f" = {expr(v['init'], vt)};")
                 if _uses_strlib(self.task):
@@ -4276,6 +4322,9 @@ class _V1:
         if nl:
             entry = {v: {"var": f"t_old_{v}"} for v in state}
             env = _sym(w["body"], entry)
+            if env is not None and any(_mentions_call(x, self.mnames)
+                                       for x in env.values()):
+                env = None   # a method result is not an equational value
             if env is not None:
                 old_lets = "".join(f"    let t_old_{v} = {v};\n"
                                    for v in state)
@@ -4502,6 +4551,83 @@ class _V1:
                             for p in f["params"]],
                            _spec_fn_domain_context(f), defined(f["body"]))
 
+        method_blocks, pseudos = self._methods()
+        main = self._main_fn(body)
+
+        strlib_blocks = [STRLIB_PRELUDE] if _uses_strlib(task) else []
+        rotate_blocks = ([ROTATE_PRELUDE]
+                         if _rotate_witnesses(task)
+                         or any(_rotate_witnesses(p) for p in pseudos)
+                         else [])
+        blocks = (strlib_blocks + rotate_blocks + spec_blocks + method_blocks
+                  + self.wf + self.helpers + [main])
+        src = ("use vstd::prelude::*;\n\nverus! {\n\n"
+               + "\n".join(blocks)
+               + "\n} // verus!\n\nfn main() {}\n")
+        if pseudos:
+            # every top-level name the file declares must be distinct: a
+            # method, a loop helper or a wf lemma spelled like another
+            # (e.g. a method `main`, or `t_lp_...` names overlapping)
+            # would make the file ill-formed or, worse, resolve a call to
+            # the wrong function. Abstain by name rather than guess.
+            fns = re.findall(r"^(?:proof |spec )?fn (\w+)", src, re.M)
+            dup = sorted({n for n in fns if fns.count(n) > 1})
+            if dup:
+                raise NotImplementedError(
+                    f"verus: methods: declared name collision {dup}")
+        return src
+
+    def _methods(self) -> tuple[list[str], list[dict]]:
+        """SPEC.md "Methods (v1)": each method is its own `proof fn`,
+        verified separately against its own requires/ensures (and
+        decreases when it self-calls), lowered by the SAME machinery as
+        the task body (its own `_V1`, so its loops become its own
+        `t_lp_<method>_k` helpers and its definedness lemmas its own
+        `t_wf_<method>_...`). A call statement `x = m(args);` is then a
+        plain Verus call of that proof fn, which Verus reasons about
+        through the callee's contract only (Verus guide, "Preconditions
+        and postconditions establish a modular verification protocol
+        between functions ... it can assume that octuple satisfies its
+        postconditions, without having to know anything about the body of
+        octuple"). Methods never see the twin: the task body is the only
+        thing a twin mutates. Returns ([] , []) for a task without
+        methods, so its output is byte-identical to before."""
+        methods = self.task.get("methods", [])
+        if not methods:
+            return [], []
+        blocks: list[str] = []
+        pseudos: list[dict] = []
+        for m in methods:
+            if len(m["returns"]) != 1:
+                raise NotImplementedError(
+                    f"verus: method {m['name']!r} must have exactly one return")
+            if _loop_self_calls(m["body"], m["name"]):
+                # a loop is a recursive helper proof fn here, so a
+                # self-call inside it makes the helper and the method
+                # mutually recursive under two unrelated measures; Verus
+                # then reports "could not prove termination" on a correct
+                # program (measured on a probe f(k) summing f(i) for
+                # i < k: 2 errors, both termination). Abstain instead.
+                raise NotImplementedError(
+                    f"verus: method {m['name']!r} self-calls inside a loop "
+                    f"(loop helper and method would be mutually recursive)")
+            pseudo = _method_pseudo_task(self.task, m)
+            mv = _V1(pseudo, self.mnames)
+            mmain = mv._main_fn(m["body"])
+            blocks += mv.wf + mv.helpers + [mmain]
+            pseudos.append(pseudo)
+        return blocks, pseudos
+
+    def _main_fn(self, body: list) -> str:
+        """The task's own `proof fn` (or one method's, `_methods`), with
+        its definedness lemmas and loop helpers accumulated on `self`."""
+        task = self.task
+        params = [(p["name"], _vty(p["type"])) for p in task["params"]]
+        rname = task["returns"][0]["name"]
+        rtype = _vty(task["returns"][0]["type"])
+        reqs = task.get("requires", [])
+        enss = task["ensures"]
+
         # requires clause k assumes clauses 1..k-1; ensures clause k assumes
         # all requires and ensures 1..k-1 (SPEC.md definedness)
         for j, rq in enumerate(reqs):
@@ -4578,7 +4704,8 @@ class _V1:
         # at all (the `any(...)` guard), so this costs nothing additive.
         if any(_has_nonlinear(en) for en in enss):
             final_env = _sym(body, {})
-            if final_env is not None and rname in final_env:
+            if (final_env is not None and rname in final_env
+                    and not _mentions_call(final_env[rname], self.mnames)):
                 main_lines += self._nonlinear_ensures_bridge(
                     final_env[rname], "    ")
 
@@ -4607,7 +4734,8 @@ class _V1:
         # level up; this reads the same fact.
         if _uses_strlib(task) and body is task.get("body"):
             final_env = _sym(body, {})
-            if final_env is not None and rname in final_env:
+            if (final_env is not None and rname in final_env
+                    and not _mentions_call(final_env[rname], self.mnames)):
                 main_lines += self._strlib_ground_bridge(
                     final_env[rname], "    ")
 
@@ -4625,14 +4753,7 @@ class _V1:
             + "\n".join(main_lines) + "\n"
             f"    {rname}\n"
             "}\n")
-
-        strlib_blocks = [STRLIB_PRELUDE] if _uses_strlib(task) else []
-        rotate_blocks = [ROTATE_PRELUDE] if _rotate_witnesses(task) else []
-        blocks = (strlib_blocks + rotate_blocks + spec_blocks + self.wf
-                  + self.helpers + [main])
-        return ("use vstd::prelude::*;\n\nverus! {\n\n"
-                + "\n".join(blocks)
-                + "\n} // verus!\n\nfn main() {}\n")
+        return main
 
 
 
@@ -5331,6 +5452,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     body = names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = names.remap_witness(witness, renames)
     if task.get("t", 0) == 0:
+        if task.get("methods"):
+            raise NotImplementedError("verus: methods are v1 only")
         # v0 used to emit bare literals to keep its output byte-identical to
         # an earlier baseline. That is unsound as an emission rule: Verus
         # types a literal expression by inference, and an expression built
@@ -5350,7 +5473,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     else:
         _SUFFIX_INT = True
         try:
-            src = _V1(task).emit(body)
+            src = _V1(task, frozenset(m["name"] for m in
+                                      task.get("methods", []))).emit(body)
         finally:
             _SUFFIX_INT = False
     if witness is not None:
