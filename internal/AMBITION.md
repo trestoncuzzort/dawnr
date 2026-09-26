@@ -138,6 +138,16 @@ its line changes here.
 - **Product, next:** the product installs the right PyTorch for the machine and brings
   its own Python; a sparse autoencoder to see whether the model learned
   concepts or memorised text.
+- **t grows as dawnr does.** t is not kept small and novel for its own sake:
+  where an established language already does something (Dafny first, then
+  Verus and SPARK), t copies that design and its semantics, and differs only
+  where checking in seven kernels or training a small model makes it better.
+  Features are added in the order of the documents they unlock (the lift
+  refuses 139 files for method calls, 123 for nested sequences, 108 for
+  datatypes, 88 for arrays). Data is admitted by recorded trust (clean in
+  seven, or six with the gap named) rather than all or nothing; only the
+  held-out boundary stays absolute. *State:* the track started with method
+  calls (`t/FEATURES-TRACK.md`).
 - **A checker as careful as the model.** The lift's equivalence check refused
   154 methods; 111 of those were the checker's own defects (compiler-internal
   names printed, characters compared with integers, a renaming that captured a
