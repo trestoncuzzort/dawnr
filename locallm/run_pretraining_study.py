@@ -32,7 +32,12 @@ CONFIG = {"preset": "core-medium", "tokenizer": "bpe", "vocab_size": 8192,
           "batch_size": 8, "grad_accum": 1, "dropout": 0.0, "lr": 0.0003, "weight_decay": 0.1,
           "warmup_steps": 50, "steps": 1000, "eval_every": 100, "eval_iters": 10,
           "save_every": 100, "log_every": 100, "cpu_threads": 4,
-          "gradient_checkpointing": False, "deterministic": True, "bf16": True}
+          "gradient_checkpointing": False, "deterministic": True, "bf16": True,
+          # A recorded --steps is a fixed schedule horizon (the cosine decay's
+          # target, the warmup fraction), so the study never cuts an arm short;
+          # early_stop stays off and these two are its argparse defaults, spelled
+          # out so a recorded command still says what it ran with.
+          "early_stop": False, "min_delta": 0.005, "patience": 5}
 
 # The r12 re-pretraining sweep for the small-data regime: one arm per entry, each
 # CONFIG with these keys changed, launched with torchrun on the gpt architecture
@@ -233,7 +238,8 @@ def completed_run(args, arm: dict, ledger: dict) -> dict:
     if record.get("tokens_per_step") != tokens_per_step or len(record.get("peak_allocated_bytes_by_rank", [])) != WORLD_SIZE or not all(value > 0 for value in record["peak_allocated_bytes_by_rank"]):
         raise ValueError(f"Arm {arm['id']} did not use the fixed four-GPU token budget")
     expected_training = {key: CONFIG[key] for key in ("steps", "batch_size", "grad_accum", "lr", "warmup_steps",
-                                                     "bf16", "deterministic", "cpu_threads")}
+                                                     "bf16", "deterministic", "cpu_threads",
+                                                     "early_stop", "min_delta", "patience")}
     expected_training.update(seed=arm["seed"], device="cuda")
     if identity.get("training") != expected_training or identity.get("world_size") != WORLD_SIZE:
         raise ValueError(f"Arm {arm['id']} training configuration changed")

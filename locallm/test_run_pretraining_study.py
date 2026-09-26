@@ -187,7 +187,7 @@ class StudyTests(unittest.TestCase):
                       "tokenizer_file_sha256": study.sha256(output / "tokenizer.json"), "tokenizer_fingerprint": "token"}
             ledger = {"inputs": inputs, "source_sha256": source}
             identity = {"world_size": 4,
-                        "training": {key: study.CONFIG[key] for key in ("steps", "batch_size", "grad_accum", "lr", "warmup_steps", "bf16", "deterministic", "cpu_threads")},
+                        "training": {key: study.CONFIG[key] for key in ("steps", "batch_size", "grad_accum", "lr", "warmup_steps", "bf16", "deterministic", "cpu_threads", "early_stop", "min_delta", "patience")},
                         "model": {key: study.CONFIG[key] for key in ("vocab_size", "block_size", "n_layer", "n_head", "n_embd", "dropout", "gradient_checkpointing")},
                         "data": {"split_mode": "explicit", "train_sha256": "train", "val_sha256": "validation"},
                         "tokenizer_fingerprint": "token", "evaluation": {"iters": 10, "seed": 12345, "loss_units": "nats/token"},
