@@ -222,3 +222,9 @@ Each reads its `prereg_*.json` for arms and seeds, writes `exp_*_result.json`, a
 Both use the same corpus, the same split, the same architecture, and the same training loop `train.py` uses — including the bf16 autocast and the cosine schedule with warmup — so the arms are comparable to a real run and to each other.
 
 Each arm is its **own run with its own schedule**, not one long run sampled at checkpoints. The schedule decays to `lr/10` at the declared endpoint, so a 160k run at step 20k sits at a different learning rate than a 20k run at its end. Sampling one long run would compare arms that never existed.
+
+---
+
+## Note, 2026-09-26: the app now has a stopping rule
+
+Section 10's "it currently has no idea and would happily run all night" is no longer true of `train.py` or the studio. Both stop once validation has not dropped by more than 0.005 for 5 checks in a row, and both save the best-validation weights, not the last. The 0.005 comes from this finding: the 80,000-step arm's seed spread was 0.0052, and the 80k→160k doubling (+0.0028) was judged against it. With that threshold the stopper agrees with the verdict above that the doubling bought nothing. The rule is Lightning's `EarlyStopping`, and which weights are kept follows its `ModelCheckpoint`. The numbers above were measured before the rule existed, on separate fixed-length runs, and they are unchanged. Where the rule stops a Thorough run on this corpus has not been measured yet.
