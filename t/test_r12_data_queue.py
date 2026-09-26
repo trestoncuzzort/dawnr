@@ -292,5 +292,43 @@ class DevIdsFileTests(unittest.TestCase):
             self.assertEqual(run("verify_dev", str(good), "--dev", str(self.path)).returncode, 0)
 
 
+class LetLiftStepTests(unittest.TestCase):
+    """lift-2026-09-26-let: the stems the 2026-09-26 lift refused as let-expressions,
+    through t/lift_corpora.py's gates again (2026-09-26)."""
+
+    def test_its_programs_parse_and_the_step_is_dispatched(self):
+        for name in ("refused_stems", "lift_corpora_only"):
+            compile(program(name), name, "exec")
+        text = QUEUE.read_text(encoding="utf-8")
+        self.assertIn("lift-2026-09-26-let) step_lift_2026_09_26_let ;;", text)
+        body = text.split("step_lift_2026_09_26_let() {", 1)[1].split("\n}\n", 1)[0]
+        # the queue runs under set -u and only t/grade_lab.sh sets REMOTE_EV
+        self.assertNotIn("$REMOTE_EV", body)
+        self.assertIn("${REMOTE_EV:-", body)
+        for helper in ("store ", "fetch ", "lab ", "default_work_dir"):
+            self.assertIn(helper, body)
+        self.assertNotIn("rsync", body)
+        self.assertNotIn("ssh", body)
+
+    def test_refused_stems_lists_the_files_refused_for_one_reason(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            records = Path(tmp) / "lift"
+            records.mkdir()
+            for stem, reason in (("vericoding_DA0002", "let-expression"), ("vericoding_DA0001", "let-expression"),
+                                 ("vericoding_DA0003", "higher-order"), ("humaneval_dafny_004_x", None)):
+                refusal = {"reason": reason, "token": "var", "line": 3, "stage": "parse"} if reason else None
+                (records / f"{stem}.outcome.json").write_text(json.dumps(
+                    {"methods": [], "parse_refusal": refusal, "resolve_refusal": None, "source_path": stem}))
+            out = Path(tmp) / "stems.txt"
+            r = run("refused_stems", str(records), "let-expression", "--out", str(out))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(out.read_text().split(), ["vericoding_DA0001", "vericoding_DA0002"])
+
+    def test_lift_corpora_only_refuses_without_a_stem_list(self):
+        r = run("lift_corpora_only", "--out", "x", "--split", "y")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("--only-stems is required", r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

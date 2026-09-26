@@ -13,6 +13,7 @@
 #   bash t/r12_data_queue.sh r11                    the twelve r11 baseline arms, extracted, tested and graded (heldout)
 #   bash t/r12_data_queue.sh lift-2026-09-26        the 2026-09-26 corpus lifts: lifter checks on the lab, then the seven kernels (not in `all`)
 #   bash t/r12_data_queue.sh lift-2026-09-26-recovered  its twin refusals that drawn inputs cleared (t/lift_corpora.py --recover-twins), graded the same way (not in `all`)
+#   bash t/r12_data_queue.sh lift-2026-09-26-let    the files that lift refused as let-expressions, lifted again through its gates, checked, graded (not in `all`)
 #   bash t/r12_data_queue.sh all                    everything above, in that order
 #   bash t/r12_data_queue.sh _py NAME               print one embedded program (the tests read them so)
 #
@@ -671,6 +672,50 @@ if kept == 0:
     print("REFUSED: no lifted task passed the check stage"); sys.exit(3)
 PY
 ;;
+refused_stems) cat <<'PY'
+# The staged stems a lifter run refused, at the file level, for one reason: read from its
+# own per-file records (t/lifter.py writes <stem>.outcome.json), one stem per line to --out.
+import argparse, json
+from pathlib import Path
+ap = argparse.ArgumentParser()
+ap.add_argument("records"); ap.add_argument("reason"); ap.add_argument("--out", required=True)
+a = ap.parse_args()
+stems = sorted(p.name[:-len(".outcome.json")] for p in Path(a.records).glob("*.outcome.json")
+               if (json.loads(p.read_text(encoding="utf-8")).get("parse_refusal") or {}).get("reason") == a.reason)
+Path(a.out).write_text("".join(s + "\n" for s in stems), encoding="utf-8")
+print(f"{len(stems)} file(s) refused {a.reason} in {a.records}")
+PY
+;;
+lift_corpora_only) cat <<'PY'
+# t/lift_corpora.py over the staged stems --only-stems lists, its dated report written beside
+# its census: write_report names t/LIFT-<date>.md by the date alone, so a second lift on the
+# day of a committed one would overwrite that report. The census gains what substituting
+# let expressions copied (t/lift_let.py), summed over the lifter's sidecars.
+import json, sys
+from pathlib import Path
+sys.path.insert(0, "t")
+import lift_corpora
+args = lift_corpora.parse_args(sys.argv[1:])
+if not args.only_stems:
+    sys.exit("lift_corpora_only: --only-stems is required")
+census = lift_corpora.build(args)
+out = Path(args.out)
+meta = out.with_name(out.name + ".meta")
+subs = [json.loads(p.read_text(encoding="utf-8")).get("let_substitution") for p in (meta / "lift").glob("*.lift.json")]
+subs = [s for s in subs if s]
+if subs:
+    ratios = sorted(s["nodes_after"] / s["nodes_before"] for s in subs if s.get("nodes_before"))
+    census["let_substitution"] = {
+        "tasks": len(subs), "lets": sum(s["lets"] for s in subs), "max_uses": max(s["max_uses"] for s in subs),
+        "nodes_before": sum(s["nodes_before"] for s in subs), "nodes_after": sum(s["nodes_after"] for s in subs),
+        "growth_median": round(ratios[len(ratios) // 2], 3) if ratios else None,
+        "growth_max": round(ratios[-1], 3) if ratios else None}
+    (meta / "lift-census.json").write_text(json.dumps(census, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+lift_corpora.HERE = meta   # build() is done; only write_report reads it now
+print(lift_corpora.write_report(out))
+print(json.dumps({k: census[k] for k in ("staged_files", "lifter_verdicts", "accepted", "heads", "refused")}, indent=1))
+PY
+;;
 status) cat <<'PY'
 import json, sys
 from pathlib import Path
@@ -962,6 +1007,51 @@ step_lift_2026_09_26_recovered() {
   echo "next: read $TABLE; copy it to t/COVERAGE-lifted-2026-09-26-recovered.md and give the corpus builder --lifted-set $D=t/COVERAGE-lifted-2026-09-26-recovered.md --heads $M/heads.jsonl"
 }
 
+# The files the 2026-09-26 lift refused as let-expressions (432 of 1,886, its largest
+# refusal, t/LIFT-2026-09-26.md), lifted again now that the lifter substitutes a let away
+# (t/lift_let.py), into their own directory through the same gates, then checked and graded
+# as step_lift_2026_09_26 does. The stems come from that lift's own records; t/lift_corpora.py
+# runs here, in the checkout this is run from (its pool loader needs the full pool, which a
+# worktree does not have), and its dated report goes beside its census, never over the
+# committed one. $REMOTE_EV is t/grade_lab.sh's and unset here (set -u), hence its default.
+# Not part of `all`.
+step_lift_2026_09_26_let() {
+  local S=t/out/lifted-tasks-2026-09-26.meta L1=t/out/L1 rc
+  local D=t/out/lifted-tasks-2026-09-26-let M=t/out/lifted-tasks-2026-09-26-let.meta
+  local TABLE=t/out/COVERAGE-lifted-2026-09-26-let.md
+  [ -d "$S/lift" ] || refuse "no $S/lift here: its records name the files the 2026-09-26 lift refused"
+  { [ -d "$L1/vericoding-benchmark" ] && [ -d "$L1/HumanEval-Dafny" ]; } || refuse "no corpora checkouts under $L1 to stage from"
+  if check_or_refuse lift-2026-09-26-let "$M/lift-census.json" "$TABLE"; then echo "== lift-2026-09-26-let: graded already"; return 0; fi
+  admit
+  mkdir -p "$M"
+  local_py refused_stems "$S/lift" let-expression --out "$M/let-stems.txt" || refuse "lift-2026-09-26-let: cannot read $S/lift"
+  [ -s "$M/let-stems.txt" ] || refuse "lift-2026-09-26-let: $S/lift names no file refused let-expression"
+  echo "== lift-2026-09-26-let: $(wc -l < "$M/let-stems.txt") files through t/lift_corpora.py's gates, here, 4 jobs, niced"
+  _py lift_corpora_only | nice -n 19 python3 - --vericoding "$L1/vericoding-benchmark" --humaneval-dafny "$L1/HumanEval-Dafny" \
+      --out "$D" --split t/out/loop/split-v5.json --pool v5 --jobs 4 --only-stems "$M/let-stems.txt" \
+    || refuse "lift-2026-09-26-let: t/lift_corpora.py refused"
+  { [ -d "$M/staged" ] && [ -f "$M/lift-census.json" ]; } || refuse "lift-2026-09-26-let: no $M/staged or census after the lift"
+  store -a --delete "$D/" "$LAB:~/$REPO/$D/" || refuse "cannot stage the lifted tasks on the lab"
+  store -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the lifted sources on the lab"
+  store -a "$M/lift-census.json" "$LAB:~/$REPO/$M/lift-census.json" || refuse "cannot stage the census on the lab"
+  echo "== lift-2026-09-26-let: the lifter's check stage on the grading machine (dafny), 4 jobs, niced"
+  # dafny's differential run compiles C#; a dotnet installed under ~/.dotnet is not on a login PATH
+  lab "PATH=\$HOME/.dotnet:\$PATH DOTNET_ROOT=\$HOME/.dotnet DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 nice -n 19 python3 t/lifter.py --dir $M/staged --out $M/lift-checked --jobs 4 --timeout 120" \
+    || refuse "lift-2026-09-26-let: the lifter's check stage failed"
+  lab_py lift_check_filter "$D" "$M/lift-checked" --failed "$M/check-failed" || refuse "lift-2026-09-26-let: the check filter refused"
+  admit --grading
+  [ "${CELLS:-0}" -ge 1 ] || refuse "lift-2026-09-26-let: no grading cell admitted"
+  echo "== lift-2026-09-26-let: grading with $CELLS cells, T_SPARK_JOBS=1"
+  lab "T_WATCH=\$HOME/${REMOTE_EV:-.cache/t-watch/home-grade.jsonl} T_SPARK_JOBS=1 bash -lc 'python3 t/run_par.py --jobs $CELLS --tasks $D --out $(default_work_dir)/lift-2026-09-26-let --table $TABLE'"
+  rc=$?
+  # run_par: 0 full agreement, 1 a finding with the table written, 2 a refusal with nothing written
+  [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ] || refuse "lift-2026-09-26-let: run_par exited $rc, no table"
+  fetch -a "$LAB:~/$REPO/$TABLE" "$TABLE" || refuse "lift-2026-09-26-let: cannot fetch the table"
+  fetch -a "$LAB:~/$REPO/$M/check-failed/" "$M/check-failed/" 2>/dev/null
+  mark_step lift-2026-09-26-let "$M/lift-census.json" "$TABLE"
+  echo "next: read $TABLE and the report in $M; copy it to t/COVERAGE-lifted-2026-09-26-let.md and give the corpus builder --lifted-set $D=t/COVERAGE-lifted-2026-09-26-let.md --heads $M/heads.jsonl"
+}
+
 step_dev_ids() {
   admit
   lab_py dev_ids --split t/out/loop/split-v5.json --decontam t/decontamination-2026-09-21.json --n 100 --salt r12-dev --out "$RD/r12-dev-ids.json" \
@@ -1006,6 +1096,7 @@ main() {
                   r11)        step_r11 ;;
                   lift-2026-09-26) step_lift_2026_09_26 ;;
                   lift-2026-09-26-recovered) step_lift_2026_09_26_recovered ;;
+                  lift-2026-09-26-let) step_lift_2026_09_26_let ;;
                   all)        step_p4_extract; step_train; step_p4; step_prover2; step_v6new; step_spec; step_build; step_dev_ids; step_r11 ;;
                   *)          refuse "unknown command '$1'" ;;
                 esac ;;

@@ -173,6 +173,25 @@ def humaneval_description(text: str) -> str | None:
     return " ".join(match.group(1).split()) or None
 
 
+def restrict_staged(staged: Path, stems_file: Path) -> int:
+    """--only-stems: keep only the staged .dfy files whose stem the file lists (one per
+    line; blank lines and '#' comments ignored, as rsync's --files-from reads its list,
+    download.samba.org/pub/rsync/rsync.1). A listed stem the staging did not produce is
+    refused, never skipped: a list naming files the corpora lack is the wrong list, not
+    a smaller run. Returns how many staged files remain."""
+    wanted = {line.strip() for line in stems_file.read_text(encoding="utf-8").splitlines()
+              if line.strip() and not line.strip().startswith("#")}
+    present = {p.stem: p for p in staged.glob("*.dfy")}
+    missing = sorted(wanted - set(present))
+    if missing:
+        raise SystemExit(f"--only-stems names {len(missing)} stem(s) the staging did not produce: "
+                         + ", ".join(missing[:5]))
+    for stem, path in present.items():
+        if stem not in wanted:
+            path.unlink()
+    return len(wanted)
+
+
 # ----------------------------------------------------------------- lifting --
 
 def run_lifter(staged: Path, out: Path, jobs: int, with_check: bool) -> dict:
@@ -386,6 +405,8 @@ def build(args) -> dict:
         shutil.rmtree(staged)
     vericoding_rows = stage_vericoding(Path(args.vericoding), staged) if args.vericoding else {}
     humaneval_texts = stage_humaneval_dafny(Path(args.humaneval_dafny), staged) if args.humaneval_dafny else {}
+    if getattr(args, "only_stems", None):
+        restrict_staged(staged, Path(args.only_stems))
     staged_count = len(list(staged.glob("*.dfy")))
     if staged_count == 0:
         raise SystemExit("nothing staged: give --vericoding and/or --humaneval-dafny")
@@ -706,7 +727,7 @@ def recover_twins(args) -> dict:
     return new_census
 
 
-def main(argv: list[str] | None = None) -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--vericoding", help="a checkout of vericoding-benchmark")
     ap.add_argument("--humaneval-dafny", help="a checkout of HumanEval-Dafny")
@@ -721,7 +742,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--recover-twins", action="store_true",
                     help="re-decide the twin refusals of the lift in --out on drawn inputs; the lift is only read")
     ap.add_argument("--recovered", help="where --recover-twins writes (default: <out>-recovered, and its .meta)")
-    args = ap.parse_args(argv)
+    ap.add_argument("--only-stems", default=None,
+                    help="a file of staged stems, one per line: lift only those (e.g. the files an earlier "
+                         "run refused for one reason); a listed stem the staging lacks is refused")
+    return ap.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     if args.report_only:
         print(write_report(Path(args.out)))
         return 0
