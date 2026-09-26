@@ -16,7 +16,7 @@ The earlier 232-task MBPP comparison is still useful history, but it is not a
 win. The best scratch-trained locallm arm and Phi-4-mini each reached 3 clean
 answers. A later contamination audit found that every clean locallm answer was
 in the 32 problems whose function had effectively appeared in its training
-material. On the remaining 200 problems, locallm had 0 clean answers and Phi
+material. Nine seeds of the same recipe, run as the r11 baseline, passed 0 of those 200 problems' tests in eight seeds and 2 in one. On the remaining 200 problems, locallm had 0 clean answers and Phi
 had 2. The audit changed the project from trying to defend a tie to building a
 fresh comparison that can survive scrutiny.
 

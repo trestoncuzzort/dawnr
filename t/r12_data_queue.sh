@@ -803,6 +803,16 @@ step_r11() {
   local T n
   for T in $R11_TAGS; do
     if check_or_refuse "r11-$T" "$SE/$T/kernels.md" "$SE/$T/tests.json"; then echo "== $T: graded already"; continue; fi
+    # The desktop already holds complete tables for every r11 arm (graded through
+    # grade_lab.sh heldout on 2026-09-21 and scored 2026-09-26: 232 raw answers,
+    # one row per well-formed task); those are the record unless R12_R11_REGRADE=1
+    # asks for a fresh --no-cache grade on the lab.
+    if [ "${R12_R11_REGRADE:-0}" != 1 ] && [ -s "$SE/$T/kernels.md" ] && [ -s "$SE/$T/tests.json" ] \
+       && [ "$(ls "$SE/$T/raw" 2>/dev/null | wc -l)" -eq 232 ] \
+       && [ "$(ls "$SE/$T/tasks" 2>/dev/null | wc -l)" -eq "$(grep -cE '^\| (mbpp|he|apps)' "$SE/$T/kernels.md")" ]; then
+      echo "== $T: the desktop table stands ($(grep -cE '^\| (mbpp|he|apps)' "$SE/$T/kernels.md") rows); R12_R11_REGRADE=1 regrades it"
+      continue
+    fi
     lab "test -f t/out/gen-$T.done" || refuse "$T: no generation sentinel t/out/gen-$T.done on the lab"
     mkdir -p "$SE/$T"
     rsync -a --delete "$LAB:~/$REPO/$SE/$T/raw/" "$SE/$T/raw/" || refuse "$T: cannot fetch the raw answers"

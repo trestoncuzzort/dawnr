@@ -23,6 +23,8 @@ every number here is comparable to every earlier one.
 | **locallm, round 9, core seed 7 (greedy)** | **ours** | 106 | 2 | **1** | 1/2 | 1 |
 | **locallm, round 9, core seed 42 (greedy)** | **ours** | 101 | 3 | **3** | 3/3 | **2** |
 | locallm, round 10 (r9's recipe, a reversed session's corpus; regraded 2026-09-21) | ours, provisional | 112 | 6 | **5** | 5/6 | **5** |
+| **locallm, round 11: nine seeds of round 9's recipe, trained and decoded on the lab 2026-09-21, graded 2026-09-21, scored 2026-09-26** | **ours** | 98-133 | 2-7 | **2-5** (mean 3.1) | 26 of 33 | spec not yet checked |
+| locallm, round 11, the same-seed rerun and two uniform soups | ours | 110-120 | 2-4 | **2-3** | 8 of 10 | spec not yet checked |
 | Phi-4-mini, 3.8B | baseline | 12 | 6 | **3** | 50% | 2 |
 | Qwen2.5-Coder-1.5B, untrained | baseline | 39 | 13 | **3** | 23% | 2 |
 | Qwen3.8-27B-FP8, prompted | reference, far larger | 116 | 81 | **12** | 15% | 11 |
@@ -46,6 +48,8 @@ every corpus since round 7 under a Dafny dataset's name). Scored over the other
 | locallm, rounds 7, 7b greedy, 8 headed (headline), 8, 9, 9 seed 7 | 73-124 | **0 each** | 0 | 1-3 |
 | locallm, round 9 seed 42 | 81 | **1** (spec disagrees) | 1 | 2 |
 | locallm, round 10 (regraded) | 84 | **0** | 0 | 5 |
+| locallm, round 11, nine seeds | 83-111 | **0 in eight seeds, 2 in one** (mean 0.22) | 0 in eight, 1 in one | 2-5 |
+| locallm, round 11, rerun and two soups | 89-101 | **0, 0, 0** | 0, 0, 0 | 2, 3, 3 |
 | Phi-4-mini | 8 | 5 | **2** | 1 |
 | Qwen2.5-Coder-1.5B, untrained | 32 | 10 | **3** | 0 |
 | DeepSeek-Prover-V2-7B | 28 | 6 | **3** | 3 |
