@@ -71,21 +71,32 @@ you sort this out.
 
 | What you want | What it needs |
 |---|---|
-| talk to the model that came with this copy | Python alone |
-| open the window and read it | Python and Tk |
+| talk to the model that came with this copy, in a terminal | Python alone |
+| open the window, read it, and talk to that model there | Python and Tk |
 | train on your own text | Python, Tk and PyTorch |
 
 Talking to the included model needs only Python, because one file does it using
-nothing but what Python already ships with (`plain_generate.py`). From this
-folder:
+nothing but what Python already ships with (`plain_generate.py`). In the window,
+step 4's "Try the model that came with it" uses that file when PyTorch is not
+installed. From a terminal, in this folder:
 
     python3 plain_generate.py --out included-model --prompt "function to " --tokens 40
 
-**It is slow, and slow is not broken.** Measured here on the included model: it
-reads the model in under a tenth of a second, then writes one small piece of text
-every 0.3 seconds or so (274 ms each over 40 pieces, 258 ms each over 25 on the
-same machine). A short line therefore takes about ten seconds, and the text
-appears all at once when it is finished, so wait for it.
+**It is slow, and slow is not broken.** Measured on the included model: it reads
+the model in about a twentieth of a second, then writes about eight characters a
+second with Python 3.12 or newer (102–117 ms each) and about five with 3.10 or
+3.11. The text appears as it is written, in the window and in the terminal, so a
+line of a hundred characters fills in over about thirteen seconds; the window
+shows the pace your computer actually managed, and its Stop button ends a reply
+early.
+
+A reply can be longer than the model's memory (its context window, 512
+characters for the included model and 128 for the quickest ones trained in the
+window). Past that point it keeps the most recent half, re-reads it and carries
+on, so a long reply stays fast, but a character near the end is written from
+between half a window and a whole window of what came before it, not always the
+whole. `--exact-window` on the command line keeps the whole window every time,
+exactly as PyTorch does, at seconds per character past that point.
 
 **Training needs PyTorch**, which is a separate install:
 
@@ -94,9 +105,8 @@ appears all at once when it is finished, so wait for it.
 Read that as a warning, not just a command. **It is a large download, roughly
 2.5 GB**, which matters on a slow or metered connection far more than the install
 itself does. The repository's `SHIPPING.md` has the measured size for each system.
-Without PyTorch the window still opens and still explains itself, but the card
-that trains and the card that reads a model both say plainly that they cannot
-work yet.
+Without PyTorch the window still opens, still explains itself and still talks to
+the included model; the card that trains says plainly that it cannot work yet.
 
 ## The first time
 
