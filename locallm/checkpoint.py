@@ -190,7 +190,8 @@ def sample_batch(model, tok, prompt: str, num_samples: int, *, tokens: int,
     Temperature and top_k have no defaults on purpose: the headline arm of round 7
     was sampled at 0.5 because a default filled in silently
     (t/RUN-NEXT-locallm-r12.md, A6). Each row is a dict with ``text`` (prompt
-    included, like sample()), ``new_tokens``, ``stopped``, ``reply_tokens`` (the
+    included, like sample()), ``tokens`` (the new token ids, for a trainer that
+    scores them again, t/rl_grpo.py), ``new_tokens``, ``stopped``, ``reply_tokens`` (the
     tokens before the reply's end when ``stop`` found one, else all of them),
     ``logprob_sum`` and ``mean_logprob`` over those reply tokens, and
     ``mean_logprob_all`` over every new token. The mean over reply tokens is the
@@ -212,7 +213,7 @@ def sample_batch(model, tok, prompt: str, num_samples: int, *, tokens: int,
         cut = stop(text) if stop is not None else None
         reply_tokens = reply_token_count(tok, ids, row.tokens, cut) if cut is not None else len(row.tokens)
         kept = row.logprobs[:reply_tokens]
-        out.append({"text": text, "new_tokens": len(row.tokens), "stopped": row.stopped,
+        out.append({"text": text, "tokens": list(row.tokens), "new_tokens": len(row.tokens), "stopped": row.stopped,
                     "reply_tokens": reply_tokens, "logprob_sum": float(sum(kept)),
                     "mean_logprob": float(sum(kept)) / reply_tokens if reply_tokens else None,
                     "mean_logprob_all": row.mean_logprob})
