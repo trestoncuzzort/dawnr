@@ -78,11 +78,42 @@ already been run at least three times (r7, r9, r11) and lands at **0.08-0.11
 nats/token training loss against 0.6-1.1 held out**
 (`internal/PRETRAIN-R12-2026-09-25.md`, "Replay in the r12 fine-tune"; the
 same range as the denoising note's from-scratch pilot, 0.11 train / 0.68 held
-out, though that pilot used a different model and tokenizer). This is already
-the "whole-row arm clearly overfits" regime the task asks for, at the recipe
-r12 already runs, so no new budget was chosen for this check: **arm 1 is
-expected to reproduce that historical range**, and arms 2 and 3 use the same
-steps, learning rate and validation split.
+out, though that pilot used a different model and tokenizer). This was
+expected to already be the "whole-row arm clearly overfits" regime the task
+asks for, at the recipe r12 already runs, so no new budget was planned before
+the first run.
+
+**It was not.** All nine 300-step runs (below, kept rather than discarded)
+finished with their lowest validation loss AT the last step -- every arm, every
+seed, still improving at step 300, not yet overfit. The whole-rows arm's train
+loss at step 300 was 0.28, well above the 0.08-0.11 anchor. r7/r9/r11 evidently
+overfit faster than this run does at the same step count; the likely reason is
+that the anchor runs continued a different (and, per the checkpoint-keeping fix
+earlier in this session, in one case now-lost) core, not the wd0.8-lr1e-3
+step-11,200 core copied for this note -- a fresher core generalises longer
+before it starts reciting these 302 documents. Rather than force a false "the
+budget already overfits" claim, a single-seed probe (whole rows, seed 1337,
+1,500 steps, otherwise identical) was run to find where this core's fine-tune
+actually turns over:
+
+| step | train | val |
+|---:|---:|---:|
+| 300 | 0.155 | 0.606 |
+| 350 (best) | 0.125 | 0.599 |
+| 600 | 0.062 | 0.655 |
+| **900** | **0.045** | **0.696** |
+| 1,200 | 0.041 | 0.728 |
+| 1,500 | 0.040 | 0.741 |
+
+**The step budget is revised to 900** (train loss well below the anchor's
+0.11, held-out loss risen 16% off its own minimum, train down 64% from the
+best step's own 0.125): unambiguous overfitting, at a budget still cheap
+enough (three arms, three seeds, ~70 s each on the desktop's RTX 4080) to run
+before r12 trains. Every arm and seed below uses `--steps 900` with the same
+lr, validation split and every other setting already fixed above; the
+300-step numbers are reported too, since they were run and are informative in
+their own right (nothing at 300 steps had reached its held-out minimum, in
+any arm), but the decision rule below is applied to the 900-step numbers.
 
 ## Metrics
 
