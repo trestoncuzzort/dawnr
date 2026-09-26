@@ -1514,6 +1514,7 @@ Stdlib only, same reason as dataset_gate.py.
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -1879,6 +1880,20 @@ class Ctx:
         for sf in task.get("spec_funs", []):
             self.funs[ck(sf["name"])] = {"params": sf["params"],
                                           "result": sf["result"]}
+        # SPEC.md "Methods (v1)" (2026-09-26): every method is callable by
+        # name with its params and its one return's type, exactly like a
+        # spec_fun. `methods` names them so `exec_flow` can tell a method
+        # call (a whole assign/var-init right-hand side) from a spec_fun
+        # call, and `method_calls` records every call term it rendered, so
+        # the caller can refuse a lowering that dropped one (see
+        # `_method_calls_kept`). Both stay empty for a task with no
+        # methods, which changes nothing it emits.
+        self.methods: set[str] = set()
+        for m in task.get("methods", []):
+            self.funs[ck(m["name"])] = {"params": m["params"],
+                                         "result": m["returns"][0]["type"]}
+            self.methods.add(ck(m["name"]))
+        self.method_calls: list[str] = []
         self.funs[ck(task["name"])] = {"params": task["params"],
                                         "result": task["returns"][0]["type"]}
         self._used = _collect_names(task)
@@ -3187,6 +3202,38 @@ def _early_exit_witness_hint(cx: "Ctx", task: dict, defs: dict, fact_ast,
     return ""
 
 
+def _method_call(cx: Ctx, e: dict, env: dict, local: dict) -> str | None:
+    """SPEC.md "Methods (v1)" (2026-09-26): the rendered call term when `e`
+    is a method call (check_wf's method-call-position rule puts one only
+    here, as a whole assign/var-init right-hand side), else None.
+
+    The call is the plain application `(m a1 .. an)` of the method's own
+    `Pure` definition, `[@@"opaque_to_smt"]` (see `_method_src`), so F*'s
+    own rule for applying a Pure function is Dafny's call rule: the caller
+    owes `m`'s `requires` at the arguments and learns `m`'s `ensures` of
+    the result, and nothing of `m`'s body. The term is recorded so the
+    lowering can refuse a body whose call term never reaches the emitted
+    source (a result overwritten or declared in a branch and never read):
+    F* would then never check the callee's `requires` at that call."""
+    c = e.get("call") if isinstance(e, dict) else None
+    if c is None or c["fun"] not in cx.methods:
+        return None
+    term = cx.call(e, env, local)
+    cx.method_calls.append(term)
+    return term
+
+
+def _method_calls_kept(cx: Ctx, src: str) -> None:
+    """Refuse (NotImplementedError) when a recorded method call term is
+    absent from `src`, the definitions it was rendered for."""
+    for term in cx.method_calls:
+        if term not in src:
+            raise NotImplementedError(
+                "fstar lowering: a method call whose result is never read "
+                "would drop the callee's requires obligation (dead method "
+                "call), not lowered")
+
+
 def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
               wctx: dict | None = None, known: tuple = (),
               lb: "None | _NestedLoops" = None):
@@ -3219,13 +3266,15 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
         elif "assign" in s:
             v, e = s["assign"]
             t = local.get(v) or cx.tys[v]
-            env[v] = _render(cx, e, t, env, local)
+            env[v] = _method_call(cx, e, env, local) or \
+                _render(cx, e, t, env, local)
         elif "var" in s:
             d = s["var"]
             v = _ck(d["name"])
             assert v not in cx.tys and v not in local, f"redeclared {v}"
             local[v] = d["type"]
-            env[v] = _render(cx, d["init"], d["type"], env, local)
+            env[v] = _method_call(cx, d["init"], env, local) or \
+                _render(cx, d["init"], d["type"], env, local)
         elif "if" in s:
             c = s["if"]
             cb = cx.bx(c["cond"], env, local)
@@ -5314,6 +5363,98 @@ def _strlib_prelude_for(task: dict, body: list) -> str:
 _STRLIB_PRELUDE = "".join(_STRLIB_BLOCK_TEXT[b] for b in _STRLIB_BLOCK_ORDER)
 
 
+def _gen_body(cx: Ctx, task: dict, body: list) -> str:
+    """The task's (or a method's) own definition: `gen_fun` for a loop-free
+    body, `gen_loop` for one top-level loop, `gen_loop_chain` for more."""
+    name = task["name"]
+    # MULTIPLE SEQUENTIAL LOOPS (2026-09-12, ROADMAP 16.2 fstar item, the
+    # abstained shapes): `find_whiles` generalises `find_while` to any
+    # number of top-level, not-under-a-conditional while loops in a row --
+    # `segs` has exactly one entry for every previously-supported task
+    # (byte-identical prefix/while/suffix split, `gen_loop` unchanged
+    # below), and `len(segs) > 1` is the `gen_loop_chain` path.
+    # 2026-09-18 (ROADMAP WS-20 move 1): the chain is no longer capped at
+    # two loops, and neither path requires a flat body any more -- a loop
+    # at either end of this `if` may contain loops, which `_plain_loop`
+    # emits recursively. The only loop-placement shape still refused here
+    # is the one `find_whiles`/`_check_nestable` raise on: a loop under a
+    # conditional.
+    segs, suffix = find_whiles(body)
+    if segs and has_self_call(body, name):
+        raise NotImplementedError(
+            "fstar lowering: a body that both loops and self-recurses is "
+            "not lowered yet")
+    if len(segs) == 0:
+        return gen_fun(cx, task, body)
+    if len(segs) == 1:
+        return gen_loop(cx, task, segs[0][0], segs[0][1], suffix)
+    return gen_loop_chain(cx, task, segs, suffix)
+
+
+_OPAQUE = '[@@"opaque_to_smt"]\n'
+
+
+def _method_src(task: dict, m: dict, used: set) -> tuple[Ctx, str]:
+    """SPEC.md "Methods (v1)" (2026-09-26): one t method as its own F*
+    definition, proved against its own contract in this file, exactly as
+    a task is (Dafny reference: `_method_decl` in lower_dafny.py).
+
+    The method is lowered as a task of its own -- a pseudo-task carrying
+    its name, params, return, requires, ensures, decreases and body, plus
+    the task's spec_funs and methods -- through the same `gen_fun` /
+    `gen_loop` / `gen_loop_chain` dispatch, so its definition is a `let`
+    (`let rec` when it self-calls, with its `decreases`) typed
+    `Pure ret (requires ..) (ensures ..)`, and its loops become the same
+    recursive helpers a task's do.
+
+    MODULARITY. That definition is marked `[@@"opaque_to_smt"]`, which
+    tells F* not to encode it to the SMT solver (F* tutorial, "Understanding
+    how F* uses Z3", section "Marking definitions as opaque",
+    https://fstar-lang.org/tutorial/book/under_the_hood/uth_smt.html). A
+    caller then knows only what the `Pure` type states: it must prove the
+    `requires` at the arguments and gets the `ensures` of the result
+    (tutorial, "Primitive Effect Refinements"). MEASURED (F* 2026.08.30,
+    this pass): without the attribute, `let inc a : Pure int (requires
+    True) (ensures fun b -> b > a) = a + 1` let a caller prove
+    `inc x == x + 1` from the BODY (verified -- not modular); with it the
+    same caller fails (Error 19, "Failed to prove: inc x == x + 1"), while
+    nested calls, a call term used twice (F* records `inc x == _` for each
+    use) and an opaque `let rec` still verify from their contracts.
+    t/methods_probe/opaque_callee.t is that probe in t.
+
+    `used` is the task Ctx's own fresh-name set, shared (the same object),
+    so a helper a method's lowering names (`<m>_loop`, a quantifier
+    helper) never collides with one the task or another method names.
+    No `t_contract_obligation` is emitted for a method: the task's own
+    lemma already forces a solver query in every file."""
+    for p in m["params"] + m["returns"]:
+        t = p["type"]
+        if isinstance(t, dict) and "seq" not in t:
+            raise NotImplementedError(
+                "fstar lowering: a method with a pair-typed param or return "
+                "is not lowered yet")
+    pseudo = {"name": m["name"], "params": m["params"],
+              "returns": m["returns"], "requires": m.get("requires", []),
+              "ensures": m["ensures"], "body": m["body"],
+              "spec_funs": task.get("spec_funs", []),
+              "methods": task.get("methods", [])}
+    if "decreases" in m:
+        pseudo["decreases"] = m["decreases"]
+    mcx = Ctx(pseudo)
+    used |= mcx._used
+    mcx._used = used
+    src = _gen_body(mcx, pseudo, m["body"])
+    _method_calls_kept(mcx, "".join(mcx.extra_defs) + src)
+    heads = list(re.finditer(
+        rf"^let (rec )?{re.escape(m['name'])} ", src, re.MULTILINE))
+    if not heads:
+        raise NotImplementedError(
+            f"fstar lowering: method {m['name']!r}'s own definition was not "
+            f"found in its lowering, so it cannot be made opaque")
+    at = heads[-1].start()
+    return mcx, src[:at] + _OPAQUE + src[at:]
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # KEYWORD RENAME (2026-09-10, through the shared names.py pass since
     # 2026-09-11 -- see the note above `_needs_rename`): fix up every
@@ -5387,17 +5528,16 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # emits recursively. The only loop-placement shape still refused here
     # is the one `find_whiles`/`_check_nestable` raise on: a loop under a
     # conditional.
-    segs, suffix = find_whiles(r_body)
-    if segs and has_self_call(r_body, name):
-        raise NotImplementedError(
-            "fstar lowering: a body that both loops and self-recurses is "
-            "not lowered yet")
-    if len(segs) == 0:
-        body_src = gen_fun(cx, r_task, r_body)
-    elif len(segs) == 1:
-        body_src = gen_loop(cx, r_task, segs[0][0], segs[0][1], suffix)
-    else:
-        body_src = gen_loop_chain(cx, r_task, segs, suffix)
+    # SPEC.md "Methods (v1)": each method, in order, as its own opaque
+    # `Pure` definition ahead of the task (`_method_src`). No methods, no
+    # change: this loop is empty for every task without them.
+    for m in r_task.get("methods", []):
+        mcx, m_src = _method_src(r_task, m, cx._used)
+        parts.extend(mcx.extra_defs)
+        parts.append(m_src)
+    body_src = _gen_body(cx, r_task, r_body)
+    if cx.method_calls:
+        _method_calls_kept(cx, "".join(cx.extra_defs) + body_src)
     # QUANTIFIER-IN-COMPUTATIONAL-POSITION HELPERS (2026-09-12): whatever
     # `_quant_helper` appended to `cx.extra_defs` while rendering the body
     # above must be defined BEFORE that body uses it, so it is spliced in
