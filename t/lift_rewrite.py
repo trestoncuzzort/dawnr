@@ -48,6 +48,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import lift_let
 from lift_ast import (
     Assign, Binary, BlockStmt, BoolLit, BreakStmt, Call, Cast, Chain,
     CharLit, ClauseAdded, ClauseDropped, ContinueStmt, Decl, DecreasesClause,
@@ -1500,10 +1501,18 @@ class RewriteResult:
 
 def rewrite(module: Module, plan: Liftable, source_path: str,
             rprint_sha256: str) -> RewriteResult:
-    method = plan.method
-    closure = plan.closure
+    # Let expressions (2026-09-26): the plan carries the source's own method and
+    # closure (`classify`'s comment says why); everything below lifts them with
+    # every let substituted away, the same deterministic `lift_let.expand_scope`
+    # classify judged, and the sidecar records what the substitution copied.
+    lets = lift_let.expand_scope(plan.method, plan.closure)
+    method = lets.method
+    closure = lets.closure
     renamer = _Renamer()
     record = LiftRecord(source_path=source_path, method="", rprint_sha256=rprint_sha256)
+    record.let_substitution = lets.census()
+    for line in lets.lines:
+        record.rewrites.append(Rewrite(rule="let-substituted", line=line))
 
     t_method = renamer.fresh(method.name, record, "method")
     task_name = f"{_sanitize_stem(source_path)}__{t_method}"

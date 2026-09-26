@@ -60,7 +60,7 @@ from lift_ast import (
     BoolLit, BreakStmt, CalcStmt, Call, CallGraphSCC, CallStmt, Cardinality,
     Cast, Chain, CharLit, ContinueStmt, Comprehension, DecreasesClause,
     EnsuresClause, Expr, ExpectStmt, ForallStmt, ForStmt, Fresh, FunctionDecl,
-    Ident, Iff, IfCaseStmt, IfExpr, IfStmt, Implies, Index, IntLit, InvariantClause,
+    Ident, Iff, IfCaseStmt, IfExpr, IfStmt, Implies, Index, IntLit, InvariantClause, LetExpr,
     LabelStmt, LemmaDecl, Lhs, MapDisplay, Member, MethodDecl, Module,
     ModifiesClause, NaryBool, NewRhs, Node, Old, Param, PrintStmt,
     Quantifier, ReadsClause, RealLit, RequiresClause, Refusal, ReturnStmt,
@@ -631,18 +631,25 @@ class _Parser:
 
     def _check_hint_chain_semicolon(self) -> None:
         """A fully-parsed Expr followed immediately by ";" (measured in a
-        function body's "then"/"else" arm: "IntLemma(x); 3") is Dafny's
-        `StmtInExpr` form -- a hint statement (a lemma call, an `assert
-        ... by`, a `var` binding already caught at atom-start) sequenced
-        before the real result. No Expr production in section 3 is ever
-        legitimately followed by a bare ";" (a statement's own trailing
-        ";" is always consumed by the statement, never left for the Expr
-        that happens to be its last sub-part), so seeing one here is
-        unambiguous. Same family, same reason as the "var"-led let
-        expression; `lift_ast` has no node for either."""
+        function body's "then" arm: "IntLemma(x); 3") is Dafny's
+        statement-in-an-expression form (Reference Manual 9.31.6,
+        dafny.org/latest/DafnyRef/DafnyRef#sec-statement-in-an-expression)
+        -- a hint statement (a lemma call, an `assert ... by`) sequenced
+        before the real result. Called only where no ";" can close anything
+        else: a function body, an if-expression's "then" arm, a
+        parenthesised expression. NOT after an if-expression's "else" arm:
+        there the ";" is as likely the enclosing statement's own terminator
+        (`r := if a > 0 then a else 0;`), and reading it as a hint chain
+        refused 61 of the 2026-09-26 corpus files, none of which had one; a
+        real chain after an "else" arm still reaches the function-body check
+        once the if-expression returns. A let expression consumes its own
+        ";" (`_parse_let`), so it never reaches here. `lift_ast` has no node
+        for a statement inside an expression: refused by the construct's
+        own name, `stmt-in-expression` (until 2026-09-26 it borrowed
+        `let-expression`, which is now lifted)."""
         if self.at(";"):
-            raise LiftParseError(";", self.cur.line, "hint-chain expression",
-                                  reason="let-expression")
+            raise LiftParseError(";", self.cur.line, "statement in an expression",
+                                  reason="stmt-in-expression")
 
     def _skip_brace_matched_block(self) -> None:
         """Consume a `"{" ... "}"` block whose interior this module has
@@ -1540,6 +1547,72 @@ class _Parser:
         v = self.parse_expr()
         return (k, v)
 
+    def _parse_let(self, line: int) -> LetExpr:
+        """Dafny's let expression (Reference Manual 9.31.7, grammar
+        17.2.7.39, dafny.org/latest/DafnyRef/DafnyRef#sec-let-expression):
+        `["ghost"] "var" CasePattern {"," CasePattern} (":=" | ":-" |
+        {Attribute} ":|") Expression {"," Expression} ";" Expression`.
+
+        A CasePattern here is a binder, `Id [":" Type]` (rprint prints the
+        type it inferred: "var m: real := mean(numbers); ..."). A tuple
+        pattern ("var (a: int, b: int) := pos[i]; ...", 14 of the 432
+        let-refused files of 2026-09-26) or a datatype pattern ("var
+        SCons(u, v) := z; ...") binds through a destructor this AST has no
+        node for, so it is refused by name, `let-pattern`, here. Everything
+        else becomes a `LetExpr`; whether it lifts (":=" substitutes, ":|"
+        and ":-" are refused by name) is `lift_classify`'s decision, made
+        per method on its own closure, never for the whole file.
+
+        The body is a full `parse_expr()`: like a quantifier's, it extends
+        as far right as the text allows ("0 <= i ==> var x := s[i]; x > 0
+        && x < 9" binds x over the whole conjunction)."""
+        ghost = False
+        if self.at("ghost"):
+            self.advance()
+            ghost = True
+        self.expect("var")
+        binders: list[Param] = []
+        while True:
+            if self.at("(") or (self.cur.kind == "id"
+                                and self.tokens[self.pos + 1].text == "("):
+                raise LiftParseError(self.cur.text, self.cur.line,
+                                      "tuple or datatype pattern in a let expression",
+                                      reason="let-pattern")
+            bline = self.cur.line
+            name = self.expect_ident()
+            btype = None
+            # ":" then "-" is the let-or-fail operator ":-" (lexed as two
+            # tokens), never a type: no Type starts with "-".
+            if self.at(":") and self.tokens[self.pos + 1].text != "-":
+                self.advance()
+                btype = self.parse_type()
+            binders.append(Param(bline, name, btype, False))
+            if not self.at(","):
+                break
+            self.advance()
+        self._parse_attrs()  # `{:attr} :|`: recorded nowhere, like every attribute
+        if self.at(":="):
+            op = ":="
+            self.advance()
+        elif self.at(":|"):
+            op = ":|"
+            self.advance()
+        elif self.at(":") and self.tokens[self.pos + 1].text == "-":
+            op = ":-"
+            self.advance()
+            self.advance()
+        else:
+            raise LiftParseError(self.cur.text or "<eof>", self.cur.line,
+                                  f"expected ':=', ':|' or ':-' in a let expression, "
+                                  f"found {self.cur.text!r}")
+        rhs = [self.parse_expr()]
+        while self.at(","):
+            self.advance()
+            rhs.append(self.parse_expr())
+        self.expect(";")
+        body = self.parse_expr()
+        return LetExpr(line, ghost, tuple(binders), op, tuple(rhs), body)
+
     def _parse_atom(self) -> Expr:
         tok = self.cur
         line = tok.line
@@ -1561,13 +1634,19 @@ class _Parser:
             return Ident(line, "null")
         if tok.text == "var" or (tok.text == "ghost"
                                   and self.tokens[self.pos + 1].text == "var"):
-            # A let-expression ("var x := e; body", "ghost var t: T := e;
-            # if t == Nil then t else t.tail"): section 3's Expr has no
-            # let-binding production, and lift_ast has no Let node, so
-            # this is named directly rather than reporting whatever
-            # token the stray "body" expression happens to start with.
-            raise LiftParseError("var", line, "let expression",
-                                  reason="let-expression")
+            return self._parse_let(line)
+        if tok.text == ":" and self.tokens[self.pos + 1].text == "-":
+            # The bare let-or-fail form ":- E; body" (grammar 17.2.7.39's
+            # second alternative): no binder, a failure-compatible datatype
+            # on the right. Named for what it is.
+            raise LiftParseError(":-", line, "let-or-fail expression",
+                                  reason="let-or-fail")
+        if tok.text in ("assert", "assume", "expect", "reveal", "calc"):
+            # A statement before an expression ("assert x != 0; 10 / x",
+            # Reference Manual 9.31.6): these are keywords, never names, so
+            # the construct is known here, at its first token.
+            raise LiftParseError(tok.text, line, "statement in an expression",
+                                  reason="stmt-in-expression")
         if tok.kind == "int":
             self.advance()
             return IntLit(line, int(tok.text))
@@ -1624,8 +1703,10 @@ class _Parser:
             then_ = self.parse_expr()
             self._check_hint_chain_semicolon()
             self.expect("else")
+            # No hint-chain check after the "else" arm: a ";" there may be
+            # the enclosing statement's own terminator (see
+            # `_check_hint_chain_semicolon`).
             else_ = self.parse_expr()
-            self._check_hint_chain_semicolon()
             return IfExpr(line, cond, then_, else_)
         if tok.text in ("forall", "exists"):
             self.advance()
@@ -1758,6 +1839,7 @@ class _Parser:
                 self.advance()
                 return TupleExpr(line, ())
             elems = [self.parse_expr()]
+            self._check_hint_chain_semicolon()
             while self.at(","):
                 self.advance()
                 elems.append(self.parse_expr())
@@ -1973,6 +2055,13 @@ def _print_expr(e: Expr) -> str:
         return "(" + " ".join(parts) + ")"
     if isinstance(e, IfExpr):
         return f"(if {_print_expr(e.cond)} then {_print_expr(e.then)} else {_print_expr(e.else_)})"
+    if isinstance(e, LetExpr):
+        # Parenthesised like every compound: a let's body runs as far right
+        # as it can, so an unbracketed one would swallow what follows it.
+        g = "ghost " if e.ghost else ""
+        binders = ", ".join(_print_param(b) for b in e.binders)
+        rhs = ", ".join(_print_expr(r) for r in e.rhs)
+        return f"({g}var {binders} {e.op} {rhs}; {_print_expr(e.body)})"
     if isinstance(e, Quantifier):
         binders = ", ".join(_print_param(b) for b in e.binders)
         rng = f" | {_print_expr(e.range)}" if e.range is not None else ""

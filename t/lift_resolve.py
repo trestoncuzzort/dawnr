@@ -657,6 +657,37 @@ def _align_and_correct(rprint_specs: tuple, raw_specs: list, label: str,
     return tuple(new_specs), None
 
 
+def _drop_clause_semicolons(tokens: list) -> list:
+    """Every `;` token of the source text except those that close a let
+    expression. A let's `;` is the first one after its `var` at the same
+    bracket depth (its right-hand sides are expressions, and an expression
+    holds no bare `;` of its own), so each `var` opens a pending let at the
+    current depth and the next `;` at that depth closes it and is kept; a
+    bracket that closes below a pending let's depth ends it. A statement
+    `var` in the method body keeps its `;` too, harmlessly: no statement is
+    parsed from this text, only clauses and loop headers."""
+    out = []
+    pending: list[int] = []
+    depth = 0
+    for tok in tokens:
+        text = tok.text
+        if text in ("(", "[", "{"):
+            depth += 1
+        elif text in (")", "]", "}"):
+            depth -= 1
+            while pending and pending[-1] > depth:
+                pending.pop()
+        elif text == "var":
+            pending.append(depth)
+        elif text == ";":
+            if pending and pending[-1] == depth:
+                pending.pop()
+                out.append(tok)
+            continue
+        out.append(tok)
+    return out
+
+
 def check_against_source(dfy_path: Path, method: MethodDecl) -> tuple[list[str], Optional[Refusal]]:
     """Correct `method` (a `lift_parse.parse(rprint_text)`-derived
     `MethodDecl`, mutated IN PLACE, its body's `WhileStmt`/`ForStmt` loop
@@ -696,12 +727,14 @@ def check_against_source(dfy_path: Path, method: MethodDecl) -> tuple[list[str],
     # the instant the next token is not a clause keyword, so an
     # un-skipped `;` silently truncated the clause list to whatever came
     # before it (measured: task_644's own `ensures` on the very next
-    # line was never reached). A bare `;` never appears anywhere else in
-    # the span this module ever tokenises (generics, formal/return
-    # parameter lists, clause expressions, loop headers -- none of
-    # Dafny's own grammar admits one there), so dropping every one
-    # before any of this section's own parsing runs is safe.
-    tokens = [t for t in tokens if t.text != ";"]
+    # line was never reached). Outside a let expression a bare `;` never
+    # appears in the span this module tokenises (generics, formal/return
+    # parameter lists, clause expressions, loop headers), so those are
+    # dropped before any of this section's own parsing runs; the `;` that
+    # closes a let (`ensures var m := mean(s); r == m`, grammar 17.2.7.39,
+    # dafny.org/latest/DafnyRef/DafnyRef#sec-let-expression) is part of
+    # the clause and is kept (2026-09-26, `_drop_clause_semicolons`).
+    tokens = _drop_clause_semicolons(tokens)
 
     idx = _source_find_method_header(tokens, method.name)
     if idx is None:

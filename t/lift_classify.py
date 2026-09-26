@@ -67,13 +67,14 @@ import re
 from dataclasses import dataclass, field
 from typing import Iterator, Optional
 
+import lift_let
 from lift_ast import (
     Assign, AssignSuchThat, AssertStmt, AssertByStmt, AssumeStmt, Binary,
     BlockStmt, BoolLit, BreakStmt, Call, CallStmt, CalcStmt, Cardinality,
     Cast, Chain, CharLit, ContinueStmt, Decl, DecreasesClause, EnsuresClause, Expr,
     ExpectStmt, ForStmt, ForallStmt, FunctionDecl, Fresh, Iff, IfCaseStmt,
     IfExpr, IfStmt, Implies, Index, Ident, IntLit, InvariantClause,
-    LabelStmt, LemmaDecl, Lhs, MapDisplay, Member, MethodDecl,
+    LabelStmt, LemmaDecl, LetExpr, Lhs, MapDisplay, Member, MethodDecl,
     ModifiesClause, Module, NaryBool, NewRhs, Node, Old, Param, PrintStmt,
     Quantifier, ReadsClause, Refusal, RequiresClause, RevealStmt,
     ReturnStmt, Rewrite, SeqDisplay, SeqUpdate, SetDisplay, SkippedDecl,
@@ -1957,6 +1958,38 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     rewrites: list[Rewrite] = []
 
     closure = _closure(module, method)
+
+    # -- let expressions (2026-09-26, `lift_let`): every rule below reads the
+    # method and closure with their lets substituted away, the tree
+    # `lift_rewrite.rewrite` will lift, so a type, a quantifier bound or a
+    # call is seen where the substitution puts it. The plan still carries the
+    # SOURCE's own method and closure: `lift_check` compares each source
+    # clause, lets and all, against its lift, which makes Dafny prove every
+    # substitution, as it proves every other rewrite. A let that cannot be
+    # substituted is an issue here like any other construct, first by line. The
+    # closure is the source's (a call only in a let's unused right-hand side
+    # still has its function lifted, and printed for the checker). --
+    source_method, source_closure = method, closure
+    method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
+    lets = lift_let.expand_scope(method, closure, method_names)
+    issues += lets.issues
+    # A binder is a local whose type the substitution erases: one t cannot carry
+    # (real, set, map, a tuple, a datatype, ...) is refused by that type's name, as
+    # a parameter's is, wherever the body reads it. Not the three a substitution
+    # makes harmless: `seq<nat>`/`nat` bounds are facts dafny proved of the value,
+    # not assumptions, and an array-typed binder is an alias the read-only-array
+    # rule then sees through. An unused binder's value is never read at all.
+    for root in [source_method] + list(source_closure):
+        for n in walk(root):
+            if isinstance(n, LetExpr) and n.op == ":=":
+                for b in n.binders:
+                    bad = _type_issue(b.type) if b.type is not None else None
+                    if bad not in (None, "nat-seq-elements", "array") and lift_let.binder_uses(n, b.name):
+                        issues.append((n.line, bad, b.name))
+    for line in lets.lines:
+        rewrites.append(Rewrite(rule="let-substituted", line=line))
+    method, closure = lets.method, lets.closure
+
     scope_roots: list[Node] = [method] + list(closure)
 
     # -- bodyless method/function (section 5): a `body is None` node is
@@ -2339,7 +2372,8 @@ def classify(module: Module, method: MethodDecl) -> "Refusal | Liftable":
     rewrites += _plan_rewrites(module, method, closure, ret_param, array_params,
                                 mutated_param_name, array_mutation)
 
-    return Liftable(method=method, closure=closure, rewrites=rewrites, pair_returns=pair_returns)
+    return Liftable(method=source_method, closure=source_closure, rewrites=rewrites,
+                    pair_returns=pair_returns)
 
 
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,
