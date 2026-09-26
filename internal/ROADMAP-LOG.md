@@ -2558,6 +2558,52 @@ DONE WHEN: the operator's call; the roadmap assumes the 1.0 tag is the moment.
 
 **The em-dash debt paid in prose, 2026-09-11 (6e87c3d).** Every em-dash in prose in ROADMAP.md (54), README.md, t/GRADER.md, run_par.py, run_all.py, test_lift_report.py and boundary_probe.py was rewritten sentence by sentence (a comma, a colon, parentheses, or two sentences); the two table generators print a comma in their title from the next run; the committed generated tables keep their old title until regenerated (AGREEMENT.md was, the same day). The independent check found one rewrite that unbalanced a parenthesis in the WS-7 table; fixed before the commit. Out of scope by name: forge/, locallm/, tup/ scripts and receipts (bytes handed back as committed).
 
+### WS-23: the r12 build
+
+The measurement of 2026-09-21 (every clean locallm answer sat on the 32
+held-out problems its corpus already answered; 0 of the other 200 in nine of
+ten arms) turned the next run into a build: nine defects that had each
+corrupted a published number, fixed and tested before anything trains, then the
+recipe and the sampling pilot (`t/RUN-NEXT-locallm-r12.md`). The build was
+planned as a workflow of seven tracks with adversarial review; the tracks were
+forced into plan mode and produced designs and reviews, not code, before the
+usage limit; the designs were executed with the reviews' corrections and landed
+on the branch `r12-blockers` (the build status at the end of the plan lists
+every row with its commit and its test).
+
+Measured on the way:
+- The committed proof table, regraded (35 tasks, 242 cells, 12 at a time on the
+  lab): the same 31 clean of 35 as before the one-row accident; the four that are
+  not carry 3 timeout cells, and a timeout is not a verdict. The plan's
+  "43-task matrix" had counted the 8 kernel-summary rows.
+- The reply-boundary stop cuts a closing reply from the 1,200-token budget to
+  about 130 tokens (10.5x) and costs 1.6 percent per step; a reply that never
+  closes saves nothing (r9 on held-out 39). k=16 samples of one prompt decode
+  4.7x faster than k=1 when every row closes, 2.1x when one row runs to the
+  budget.
+- Hashing each document's own text moves 0 documents across the holdout when
+  the corpus changes; the old order split moved 45-51 of 295 at the same seed.
+  The hash holdout's size varies with the split seed (6.1-12.4 percent of
+  characters on r8); a run below the floor is refused by name.
+- The old gaming check scored the first two points as the shown examples; the
+  prompt shows the pair `discriminative()` picks, different on 54 of 232. On an
+  answer that passes exactly the shown pair everywhere, the old check flagged
+  178 of 232; the new one 232.
+- Two generators on one tag tore 15 raw records (a shorter record over the head
+  of a longer one); every one re-serialises byte-exactly and was repaired;
+  records are now written to a temporary name and moved into place under a
+  per-tag lock.
+- The v5/v6 pools cannot supply a fresh confirmation panel: 4,030 of their
+  4,035 problems have been opened by some model's output. CodeContests train
+  has 1,675 rows that pass the one-function, 32-hidden-test rule.
+- Two `--deterministic` 10-step CPU runs are bit-identical (29 of 29 tensors);
+  GPU bit-identity is unmeasured.
+
+DONE WHEN: the predictions file exists with `seeds: N`; ten seeds train with
+`--deterministic --doc-batches --split-seed`; `t/compare_arms.py --prereg`
+prints a verdict on tests passed over the clean 200; the README carries the row.
+UNBLOCKS: WS-22 (a comparison that can be trusted), the confirmation panel.
+
 ### Decisions for the operator
 
 Each is assumed as stated until answered; answering otherwise changes what

@@ -27,20 +27,33 @@ The historical tables, caveats, and raw definitions live in
 
 ## What is being built now
 
-The current lab track compares a pinned
-[Phi-4-mini-instruct](https://huggingface.co/microsoft/Phi-4-mini-instruct)
-baseline with a LocalLLM LoRA adapter. Both sides run through vLLM with the
-same frozen request plan, chat rendering, decoder settings, token cap, and
-grader. The adapter training path, managed vLLM runners, source manifests, and
-paired-result checks are in place. They are infrastructure, not evidence of a
-win.
+The next run is **r12**, and it trains locallm the way this project defines
+it: from random weights, on the proved corpus, with no borrowed base. Nine
+defects that had each corrupted an earlier number are fixed and tested before
+anything trains ([`t/RUN-NEXT-locallm-r12.md`](t/RUN-NEXT-locallm-r12.md),
+section A and the build status at its end): held-out problems that hid in the
+corpus under a Dafny dataset's names, the 32 same-task overlaps, a committed
+proof table overwritten by a one-task run, partial answer sets scored as whole,
+mixed decoding settings, a validation split that moved with the corpus,
+orphaned provers, oversubscribed SPARK jobs, and a gaming check that read the
+wrong examples. The recipe changes (whole-document training rows, a split seed
+of its own, deterministic algorithms, kept checkpoints, a stopping step chosen
+on a dev split the model never trains on) and the sampling pilot with its
+examples-only selector are in place. Ten seeds per recipe, one pre-registered
+look, and an exact paired test (`t/compare_arms.py`) decide the result; the
+number to move is tests passed on the 200 held-out problems that no training
+document answers.
 
-The new v7 panel is being assembled from source-qualified CodeContests tasks.
-Before any task can be selected, the pipeline removes exact prompt collisions,
-checks historic exposure against v1 through v6, and retires any development
-panel before another is chosen. Prompts, replies, hidden tests, and adapter
-files stay in the lab. Public receipts contain hashes, counts, and the settings
-needed to audit a run without publishing the benchmark material.
+A lab worktree from 2026-09-22 holds a comparison rig for a pinned BF16
+[Phi-4-mini-instruct](https://huggingface.co/microsoft/Phi-4-mini-instruct)
+served through vLLM, a fresh 200-task panel drawn from CodeContests (the v1-v6
+pools are used up: 4,030 of their 4,035 problems have been opened by some
+model's output), and an exposure ledger that retires any panel opened for
+development. Its one trained artifact is a QLoRA adapter on top of Phi, which
+is not locallm and is not this project's result; the panel and the ledger are
+what r12's confirmation step will use after the pre-registered look. Prompts,
+replies, hidden tests and adapters stay in the lab; public receipts carry
+hashes, counts and settings.
 
 The evaluation design takes the same basic lesson as
 [lm-evaluation-harness](https://github.com/EleutherAI/lm-evaluation-harness)
@@ -49,8 +62,9 @@ setup and enough evidence for someone else to inspect the comparison.
 
 ## What will count as a win
 
-The detailed preregistration lives with the active Phi experiment branch. A
-claim that LocalLLM beats Phi requires all of the following:
+A Phi claim has its own preregistration, drafted in the lab worktree of
+2026-09-22 and landing with r12's confirmation step. It requires all of the
+following:
 
 - A fresh, previously unopened 200-task confirmation panel that is disjoint
   from training and development exposure.

@@ -175,7 +175,7 @@ e5060fc9ac04)
 
 | step | check | AUTOMATED / MANUAL today | after A |
 |---|---|---|---|
-| 0 | lab quiet: nothing of ours stopped, no orphan provers, `frozen.pids` empty, load under the core count, no fleet during grading | MANUAL | AUTOMATED (A5) |
+| 0 | lab quiet: nothing of ours stopped, no orphan provers, `frozen.pids` empty, load under the core count, no fleet during grading | MANUAL | AUTOMATED (A5): `t/stall_check.py`, run by preflight here and on the lab, and by `grade_lab.sh` before a grade |
 | 1 | desktop and lab at one commit | warns only | refuse |
 | 2 | `bash -lc 'python3 t/preflight.py --split t/out/loop/split-v5.json --strict'` on the lab | AUTOMATED | + A1, A2, A3 |
 | 3 | predictions registered | MANUAL | MANUAL |
@@ -190,3 +190,40 @@ e5060fc9ac04)
 
 Registered separately, before training, in `t/PREDICT-...-r12.md`. The number
 that matters: **tests pass on the clean 200, today 0 in nine of ten arms.**
+
+## Build status, 2026-09-25
+
+Branch `r12-blockers`, from main 54448b01. Every blocker in section A landed
+with a test that fails on the old code; the run itself has not started. The
+build was planned as a workflow on 2026-09-21 that produced the designs and the
+adversarial reviews but no code before the usage limit; the designs were
+executed on 2026-09-25 with the reviews' corrections folded in.
+
+| # | landed as | proof |
+|---|---|---|
+| A1 | 2c5609ec, 78de5547 | `t/test_r12_problem_id.py`: the two real leaked lifts are refused by the builder, preflight and the trainer |
+| A2 | 2c5609ec, 78de5547, 5f0ad873 | the builder drops the 37 documents and 21 ids; the scorer reports the clean 200; the pool builder drops the 21 |
+| A3 | 7090ec28, c9101f04, fa1bedda, 5f0ad873 | the 35 tasks regraded on the lab (242 cells): the same 31 clean as before; run_par, cli.py and run_all.py refuse the committed table from a partial run; preflight check 13 |
+| A4 | c9101f04, ab2542d3, 522dc9ea | generate exits non-zero on an unanswered id; the scorer refuses a partial set; the fleet's sentinel needs every eval id |
+| A5 | dd35848c, a41e402c, 5f0ad873 | the prover's process group is killed on every exit path; `t/stall_check.py`; the cpu-yield watcher resumes what it froze when it exits (outside the repository, both machines) |
+| A6 | c9101f04, ab2542d3, 41c5f0ac | `--temperature` required; a resume refuses a changed configuration; the scorer refuses mixed decoding; options name the stop rule and the per-problem seeding |
+| A7 | 4b1a84f0, 8b9b004b, 53d0fc26 | holdout by document hash under `--split-seed`; order mode pinned byte-identical by golden hashes; `--deterministic` recorded either way; `preflight --run-json` |
+| A8 | fa1bedda, 5f0ad873, c1f24626 | `T_SPARK_JOBS=1` in every parallel sweep: run_par, conformance, grade_lab matrix |
+| A9 | a530691a | example_holdout scores the pair the prompt printed; the constructed failure reads 232 of 232 |
+
+Section B: `t/r12_data_queue.sh`, `t/r12-dev-ids.json` (100 of 174 eligible,
+rule in `t/DATA-r12.md`), the light steps ran (qwen235-train-p4 extracted and
+tested: 662 tasks, 483 pass; the 15 torn qwen235-v6new records repaired
+byte-exactly into qwen235-v6new-r12); no grading yet. Section C: `--doc-batches`,
+`--keep-every`, `--split-seed`, `--deterministic` exist; GPU bit-identity is
+unmeasured. Section D: `t/pilot_sampling.py` and `t/select_candidates.py`
+exist; only the 2-id smoke ran (numbers in
+`locallm/FINDINGS-kv-cache-2026-09-19.md`); the 20-id pilot has not.
+Section E: `t/compare_arms.py` with the verdict rule; the predictions file
+needs a `seeds: N` line. Section F: steps 0, 2, 4, 5, 6 and 9 are automated.
+
+Open before training: the lab checkout moves to this branch; the predictions
+file is written; the lab's GPUs hold another user's servers (6-8 GB free per
+card), so the 875M capacity run does not fit until they clear, and the 92M
+continuation does.
+
