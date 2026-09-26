@@ -2,7 +2,7 @@
 """t/relabel.py -- relabel verified-but-wrong programs with the train problem they actually solve (2026-09-25).
 
     python3 t/relabel.py --split t/out/loop/split-v5.json --out t/out/loop/relabel-2026-09-25.jsonl \\
-        [--root t/out/spec-experiment] [--tags TAG ...] [--n 100] [--seed 1] \\
+        [--root t/out/spec-experiment] [--tags TAG ...] [--exclude-tags GLOB ...] [--n 100] [--seed 1] \\
         [--report t/RELABEL-2026-09-25.md] [--duplicates t/out/loop/relabel-duplicates-2026-09-25.jsonl]
 
 The population this reads is the one `score_heldout.py` calls "wrong but proven": a
@@ -33,12 +33,37 @@ specification and a synthetic goal has no English. So for every distinct program
      random draws shaped like EACH of the candidate's stated examples in turn
      (spec_check.check_task, status "agrees" with draws > 0 for every shape) and hold
      at the stated examples themselves (spec_check.check_points);
-  4. it is admitted for the candidate only when EXACTLY ONE candidate qualifies. Two
-     qualifying candidates mean two problem statements solved by one program with one
-     specification, which is a semantic duplicate pair (Soft Contamination,
-     https://arxiv.org/html/2602.12413v1, receipt d826e08043c0: finetuning on semantic
-     duplicates moved scores as much as exact duplicates did); the pair goes to the
-     --duplicates file for the decontamination track and nothing is admitted.
+  4. the program itself is EXECUTED on --n draws per stated example shape and its
+     output must equal the reference's on every draw inside its own precondition
+     (spec_experiment.run_point with the reference's output as the expected value).
+     CodeIt relabels by the realized output of running the program, never by what
+     the program claims (https://arxiv.org/html/2402.04858, Fig. 1 and Sec. 2.2:
+     "we execute the program, and add the program, inputs and realized outputs to
+     the buffer"), and the review of 2026-09-25 found why that matters here: a body
+     returning n for n < 8 under `ensures r == 0 or ... or r == 7` passed step 3 for
+     mbpp_577 last_Digit_Factorial (the reference's 1,1,2,6,4,0,0,0 all satisfy the
+     ensures) and was admitted, 163 of its 600 in-precondition draws wrong. A draw
+     the precondition excludes or the reference raises on counts for neither side;
+     the executed, excluded and raised counts and the executed fraction are recorded
+     in the row, and the report lists rows whose executed fraction is under a
+     quarter, after Hypothesis's HealthCheck.filter_too_much
+     (https://hypothesis.readthedocs.io/en/latest/reference/api.html: a test that
+     filters out nearly every generated input is reported, as a warning and not a
+     failure, because a narrow precondition can be a legitimate one);
+  5. it is admitted for the candidate only when EXACTLY ONE candidate qualifies and no
+     other candidate is UNDECIDED. Two qualifying candidates mean two problem statements
+     solved by one program with one specification, which is a semantic duplicate pair
+     (Soft Contamination, https://arxiv.org/html/2602.12413v1, receipt d826e08043c0:
+     finetuning on semantic duplicates moved scores as much as exact duplicates did); the
+     pair goes to the --duplicates file for the decontamination track and nothing is
+     admitted. An undecided candidate is one the program passed every point of while
+     neither oracle could reach a verdict (the reference raised on every draw, returned
+     no t value or did not finish, or the program exceeded the interpreter's budget on
+     a draw): it may be a duplicate too, so the program is not admitted anywhere. The
+     lab run of 2026-09-26 found the case: eight Fibonacci programs qualified for
+     mbpp_960 and exceeded the budget on the larger draws of mbpp_873 and he_55, which
+     they solve at every point; with undecided pairs merely dropped they would have
+     been admitted for 960 as its "only" target.
 
 Programs are deduplicated by loop_filter.key (name, gate and version erased) before any
 of this, so an attractor recited by fifteen arms is tested once and its provenance
@@ -64,9 +89,11 @@ from __future__ import annotations
 import argparse
 import copy
 import datetime
+import fnmatch
 import hashlib
 import json
 import random
+import signal
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
@@ -330,8 +357,92 @@ def qualify(task: dict, entry: dict, tid: int, n: int, seed: int) -> dict:
     if examples.get("over_constrained") is True:
         out["status"] = "spec-refuses-every-example"
         return out
-    out.update(status=QUALIFIES, draws=total, shapes=len(points), task=renamed, task_sha256=sha, weak=weak)
+    # The specification agreeing with the reference is not the program agreeing with it: the
+    # program is now run on draws of the same shapes and its output compared with the reference's
+    # (https://arxiv.org/html/2402.04858, hindsight relabeling by realized output). Review of
+    # 2026-09-25: one admitted row of 123 computed a different function behind a weak ensures.
+    executed = execute_against_reference(renamed, entry, tid, n, seed, sha)
+    if executed["status"] != "exec-ok":
+        out.update(executed)
+        return out
+    executed.pop("status")
+    out.update(status=QUALIFIES, draws=total, shapes=len(points), task=renamed, task_sha256=sha, weak=weak,
+               **executed)
     return out
+
+
+NARROW = 0.25          # executed fraction under which a row is listed as narrow (recorded, never refused)
+# a pair that passed every point and was then refused by an oracle's verdict, as opposed to one an oracle
+# could not reach a verdict on (undecided: the reference would not run, gave no t value, did not finish,
+# or the program ran out of budget); an undecided candidate blocks admission elsewhere
+DECIDED_AGAINST = frozenset({"spec-disagrees", "spec-contradicts-example", "spec-refuses-every-example",
+                             "exec-fail", "exec-crash", "exec-undefined"})
+
+
+def undecided(status: str) -> bool:
+    """Passed every point of the candidate, and neither oracle reached a verdict."""
+    return (status.startswith("spec-") or status.startswith("exec-")) and status not in DECIDED_AGAINST
+
+
+def execute_against_reference(renamed: dict, entry: dict, tid: int, n: int, seed: int, sha: str) -> dict:
+    """The program's realized output against the reference's, on n draws per stated example shape.
+
+    CodeIt (https://arxiv.org/html/2402.04858, Sec. 2.2) relabels a program with the
+    outputs it REALIZES when run, never with what it declares; here the target is an
+    existing problem, so the realized output must equal the problem's reference on
+    every draw inside the program's own precondition. check_task's draws are internal
+    to it, so a second stream is drawn from the same key with ":exec" appended, with
+    the same shapes (each stated example in turn). A draw the precondition excludes,
+    or the reference raises on, counts for neither side, as in check_task; a draw the
+    reference cannot answer in a t value, or does not finish, refuses the pair the way
+    check_task does. Any verdict other than pass or requires-excluded (fail, crash,
+    undefined, budget) is a disagreement and refuses the pair with a witness.
+    """
+    fn = spec_check.reference(entry["rec"], entry["fn"])
+    if fn is None:
+        return {"status": "exec-no reference"}
+    points = entry.get("points") or []
+    tally: Counter = Counter()
+    for shape, point in enumerate(points):
+        kinds = [k for k, _v in point["args"]]
+        examples = [v for _k, v in point["args"]]
+        rkind = point["expected"][0]
+        rnd = random.Random(f"{seed}:{sha}:{tid}:{shape}:exec")
+        for _ in range(n):
+            args = [spec_check.draw(k, rnd, ex) for k, ex in zip(kinds, examples)]
+            if any(a is None for a in args):
+                return {"status": f"exec-cannot draw {kinds}", "shape": shape}
+            signal.signal(signal.SIGALRM, spec_check._alarm)
+            signal.alarm(5)
+            try:
+                out = fn(*[list(a) if isinstance(a, list) else a for a in args])
+            except spec_check.Timeout:
+                return {"status": "exec-reference did not finish", "shape": shape}
+            except Exception:                                   # noqa: BLE001 -- the reference refused the input
+                tally["reference-raised"] += 1
+                continue
+            finally:
+                signal.alarm(0)
+            try:
+                expected = spec_check.to_t(out)
+            except TypeError:
+                return {"status": "exec-reference result has no t value", "shape": shape}
+            got = se.run_point(renamed, {"args": list(zip(kinds, args)), "expected": (rkind, expected)})
+            verdict = got["verdict"]
+            if verdict == "pass":
+                tally["pass"] += 1
+            elif verdict == "requires-excluded":
+                tally["requires-excluded"] += 1
+            else:
+                return {"status": f"exec-{verdict}", "shape": shape,
+                        "witness": {"args": args, "reference_said": out, "program_said": got.get("got"),
+                                    "why": got.get("why")}}
+    counts = {"executed": tally["pass"], "executed_excluded": tally["requires-excluded"],
+              "executed_reference_raised": tally["reference-raised"], "executed_total": n * len(points)}
+    if counts["executed"] <= 0:
+        return {"status": "exec-no valid draws", **counts}
+    counts["executed_fraction"] = round(counts["executed"] / counts["executed_total"], 3)
+    return {"status": "exec-ok", **counts}
 
 
 def relabel_program(program: dict, targets: list[int], pool: dict, n: int, seed: int) -> dict:
@@ -339,11 +450,15 @@ def relabel_program(program: dict, targets: list[int], pool: dict, n: int, seed:
     results = [qualify(program["task"], pool[tid], tid, n, seed) for tid in targets]
     tally = Counter(r["status"] for r in results)
     qualifying = [r for r in results if r["status"] == QUALIFIES]
-    outcome = {"program": program, "targets_tried": len(targets), "tally": tally, "qualifying": qualifying}
-    if len(qualifying) == 1:
-        outcome["kind"] = "admitted"
-    elif len(qualifying) > 1:
+    open_ = [r for r in results if undecided(r["status"])]
+    outcome = {"program": program, "targets_tried": len(targets), "tally": tally, "qualifying": qualifying,
+               "undecided": open_}
+    if len(qualifying) > 1:
         outcome["kind"] = "ambiguous"
+    elif len(qualifying) == 1 and not open_:
+        outcome["kind"] = "admitted"
+    elif len(qualifying) == 1:
+        outcome["kind"] = "undecided"        # one target, and a candidate that may be a second: not admitted
     else:
         outcome["kind"] = "no-target"
     return outcome
@@ -365,6 +480,9 @@ def pool_row(outcome: dict, pool: dict, pool_name: str, n: int, seed: int, promp
             "targets_passed_tests": sum(v for k, v in outcome["tally"].items()
                                         if k == QUALIFIES or k.startswith("spec-")),
             "points": hit["points"], "draws": hit["draws"], "shapes": hit["shapes"], "weak": hit["weak"],
+            "executed": hit["executed"], "executed_excluded": hit["executed_excluded"],
+            "executed_reference_raised": hit["executed_reference_raised"],
+            "executed_total": hit["executed_total"], "executed_fraction": hit["executed_fraction"],
             "task_sha256": hit["task_sha256"], "pool": pool_name, "n": n, "seed": seed,
         },
     }
@@ -378,7 +496,8 @@ def duplicate_row(outcome: dict, pool_name: str) -> dict:
         "program_sha256": spec_check.task_sha256(program["task"]),
         "tag": program["tag"], "from_problem_id": program["source_id"],
         "copies": len(program["copies"]),
-        "evidence": [{"task_id": r["task_id"], "points": r["points"], "draws": r["draws"]}
+        "evidence": [{"task_id": r["task_id"], "points": r["points"], "draws": r["draws"],
+                      "executed": r["executed"], "executed_fraction": r["executed_fraction"]}
                      for r in sorted(outcome["qualifying"], key=lambda r: r["task_id"])],
     }
 
@@ -394,14 +513,34 @@ def _shown(path) -> str:
         return str(p).replace(str(Path.home()), "~")
 
 
+def origin_of(source_id, gates: Gates, train_ids: set[int]) -> str:
+    """What the problem a program was written for is to this split, by name.
+
+    Review of 2026-09-25: every source id that was not gated was labelled "train", and four of
+    the seven so labelled were pool-v6 stdin ids that are in neither half of split-v5.
+    """
+    if source_id is None:
+        return "unknown"
+    why = gates.forbids(source_id)
+    if why:
+        return why
+    if source_id in train_ids:
+        return "train"
+    return "not in the split (neither a train nor an eval id)"
+
+
 def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: int, tags: list[str],
                  per_set: dict, programs: list[dict], distinct: list[dict], outcomes: list[dict],
                  index: dict, gates: Gates, out_path: Path, dup_path: Path,
-                 lazy: dict[int, list[str]] | None = None, pool: dict | None = None) -> None:
+                 lazy: dict[int, list[str]] | None = None, pool: dict | None = None,
+                 train_ids: set[int] | None = None, excluded_tags: list[str] | None = None) -> None:
     lazy = lazy or {}
     pool = pool or {}
+    train_ids = set(train_ids or ())
+    excluded_tags = list(excluded_tags or ())
     admitted = [o for o in outcomes if o["kind"] == "admitted"]
     ambiguous = [o for o in outcomes if o["kind"] == "ambiguous"]
+    open_ = [o for o in outcomes if o["kind"] == "undecided"]
     no_target = [o for o in outcomes if o["kind"] == "no-target"]
     pair_tally: Counter = Counter()
     for o in outcomes:
@@ -433,11 +572,7 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
         if o["kind"] in ("admitted", "ambiguous"):
             by_sig[sig][o["kind"]] += 1
     # where the admitted programs were written for
-    origin: Counter = Counter()
-    for o in admitted:
-        src = o["program"]["source_id"]
-        origin[gates.forbids(src) if src is not None and gates.forbids(src) else
-               ("train" if src is not None else "unknown")] += 1
+    origin: Counter = Counter(origin_of(o["program"]["source_id"], gates, train_ids) for o in admitted)
 
     def sig_text(sig: tuple) -> str:
         return f"({', '.join(sig[0])}) -> {sig[1]}"
@@ -450,15 +585,19 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
              f"{datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%MZ')} over "
              f"{len(tags)} answer sets under {', '.join('`' + _shown(r) + '`' for r in args.root)}, "
              f"pool {pool_name} ({pool_size} problems), "
-             f"rows written to `{_shown(out_path)}`, duplicate pairs to `{_shown(dup_path)}`.")
+             f"rows written to `{_shown(out_path)}`, duplicate pairs to `{_shown(dup_path)}`."
+             + (f" Answer sets present but excluded by `--exclude-tags {' '.join(args.exclude_tags)}`: "
+                f"{', '.join(excluded_tags)}." if excluded_tags else ""))
     L.append("")
     L.append("A program is **wrong but proven** when its kernels.md row reads `verified / refuted` in all seven "
              "columns and tests.json says it fails its own problem's tests (the population "
              "`score_heldout.py` counts). Each distinct program (name, gate and version erased, "
              "`loop_filter.key`) is run on every same-signature train problem's points through the tests "
              "stage's interpreter, then its specification is checked against that problem's reference "
-             "solution on random draws and at the problem's stated examples. It is admitted for a problem "
-             "only when exactly one problem qualifies; held-out, listed and dev ids are never candidates.")
+             "solution on random draws and at the problem's stated examples, and the program itself is "
+             "run on draws of the same shapes and must return what the reference returns on every draw "
+             "inside its precondition. It is admitted for a problem only when exactly one problem "
+             "qualifies; held-out, listed and dev ids are never candidates.")
     L.append("")
     L.append("## Totals")
     L.append("")
@@ -479,9 +618,15 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
     L.append(f"| (program, candidate) pairs tried | {sum(o['targets_tried'] for o in outcomes)} |")
     L.append(f"| pairs that passed every point | "
              f"{sum(v for k, v in pair_tally.items() if k == QUALIFIES or k.startswith('spec-'))} |")
-    L.append(f"| pairs that qualified (points, draws and examples) | {pair_tally.get(QUALIFIES, 0)} |")
+    L.append(f"| pairs whose specification agreed with the reference (draws and examples) | "
+             f"{sum(v for k, v in pair_tally.items() if k == QUALIFIES or k.startswith('exec-'))} |")
+    L.append(f"| pairs whose program disagreed with the reference when executed | "
+             f"{sum(v for k, v in pair_tally.items() if k.startswith('exec-'))} |")
+    L.append(f"| pairs that qualified (points, specification, execution) | {pair_tally.get(QUALIFIES, 0)} |")
     L.append(f"| **programs admitted (exactly one target)** | **{len(admitted)}** |")
     L.append(f"| programs with two or more targets (duplicate pairs, not admitted) | {len(ambiguous)} |")
+    L.append(f"| programs with one target and a candidate the oracles could not decide (not admitted) | "
+             f"{len(open_)} |")
     L.append(f"| programs with no target | {len(no_target)} |")
     L.append(f"| distinct target problems | {len(by_target)} |")
     L.append("")
@@ -491,6 +636,22 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
     L.append("|---|---:|")
     for status, count in sorted(pair_tally.items(), key=lambda kv: (-kv[1], kv[0])):
         L.append(f"| {status} | {count} |")
+    L.append("")
+    L.append("A `spec-` or `exec-` status other than a disagreement (`spec-disagrees`, "
+             "`spec-contradicts-example`, `spec-refuses-every-example`, `exec-fail`, `exec-crash`, "
+             "`exec-undefined`) is a pair the program passed every point of while neither oracle reached a "
+             "verdict: the reference raised on every draw, returned no t value or did not finish, or the "
+             "program exceeded the interpreter's budget on a draw. Such a candidate may be a second target, "
+             "so a program with one qualifying target and an undecided candidate is not admitted "
+             f"({len(open_)} above).")
+    if open_:
+        L.append("")
+        L.append("| program from | qualifies for | undecided on |")
+        L.append("|---|---|---|")
+        for o in open_:
+            L.append(f"| {o['program']['tag']} (problem {o['program']['source_id']}) | "
+                     f"{o['qualifying'][0]['task_id']} | "
+                     + ", ".join(f"{r['task_id']} ({r['status']})" for r in o["undecided"]) + " |")
     L.append("")
     if lazy:
         L.append("### Train problems that can never be a target: their points cannot reject a lazy program")
@@ -533,6 +694,11 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
     L.append("|---|---:|")
     for label, count in sorted(origin.items()):
         L.append(f"| {label} | {count} |")
+    L.append("")
+    L.append("A source problem \"not in the split\" is one the answer set was written for under a later "
+             "pool (a stdin problem of pool v6, say) that split-" + pool_name + " never assigned to either "
+             "half; the program is still relabeled onto a train problem of this split, and its origin is "
+             "recorded as an integer only.")
     L.append("")
     L.append("## Per answer set")
     L.append("")
@@ -579,9 +745,33 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
     L.append(f"{len(low)} admitted row(s) agree with the reference on fewer than 10 draws"
              + (": " + ", ".join(f"{o['qualifying'][0]['task_id']} ({o['qualifying'][0]['draws']})" for o in low)
                 if low else "")
-             + ". The gate is the one every positive passes (spec_check status `agrees`, draws > 0); the count "
-               "is here so a builder can weight by it.")
+             + ". The gate is the one every positive passes (spec_check status `agrees`, draws > 0, and the "
+               "executed program returning the reference's value on every draw inside its precondition); "
+               "the count is here so a builder can weight by it.")
     L.append("")
+    narrow = sorted((o for o in admitted if o["qualifying"][0]["executed_fraction"] < NARROW),
+                    key=lambda o: (o["qualifying"][0]["executed_fraction"], o["qualifying"][0]["task_id"]))
+    L.append("### Admitted rows whose draws mostly fell outside the program's precondition")
+    L.append("")
+    L.append(f"Hypothesis reports a property test that filters out nearly every generated input "
+             f"(`HealthCheck.filter_too_much`, https://hypothesis.readthedocs.io/en/latest/reference/api.html) "
+             f"as a warning, not a failure, and this table does the same: {len(narrow)} admitted row(s) had "
+             f"fewer than {NARROW:.0%} of their {args.n}-per-shape draws executed, the rest excluded by the "
+             "program's `requires` or raised on by the reference. Such a row is right wherever it was run, and "
+             "its precondition may narrow the problem to the cases where a recitation is the answer (`r := n` "
+             "under `requires forall i in [0, n) . a[i] == b[i]`, review of 2026-09-25); the counts are in every "
+             "row's provenance (`executed`, `executed_excluded`, `executed_reference_raised`, "
+             "`executed_fraction`) for a builder that weights.")
+    L.append("")
+    if narrow:
+        L.append("| target | task | from answer set | executed | excluded by requires | reference raised | "
+                 "of draws |")
+        L.append("|---:|---|---|---:|---:|---:|---:|")
+        for o in narrow:
+            h = o["qualifying"][0]
+            L.append(f"| {h['task_id']} | `{h['name']}` | {o['program']['tag']} | {h['executed']} | "
+                     f"{h['executed_excluded']} | {h['executed_reference_raised']} | {h['executed_total']} |")
+        L.append("")
     L.append("## The 10 largest per-signature groups")
     L.append("")
     L.append("| signature | distinct programs | copies | same-signature train candidates | admitted | "
@@ -613,13 +803,21 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
              "them stops the build, it is not dropped). The corpus builder then writes each one under the "
              "target problem's own `Problem:`/`Signature:` head.")
     L.append("")
-    L.append("Nothing weights them yet. CodeIt's learning stage samples real solutions more often than "
-             "relabeled ones (priority proportional to the share of demonstration outputs the program got "
-             "right); its ablation A3, uniform sampling over the same buffer, fell from 49/400 to 38/400 on "
-             "policy performance, \"indicating that the policy indeed forgets important experiences\" "
+    loaded = sorted(by_target.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    top = ", ".join(f"{tid} ({len(rows)})" for tid, rows in loaded[:3])
+    L.append("They are not one per problem. `loop_dataset.py --from-samples` keeps one positive per "
+             "(task_id, source, task) from the sampled answers, while every distinct relabeled program is "
+             f"appended: the {len(admitted)} rows land on {len(by_target)} problems, the most loaded being "
+             f"{top if top else 'none'}, so a problem with many attractor recitations relabeled onto it "
+             "outweighs a problem with one real solution unless the builder weights or caps.")
+    L.append("")
+    L.append("Nothing weights or caps them yet. CodeIt's learning stage samples real solutions more often "
+             "than relabeled ones (priority proportional to the share of demonstration outputs the program "
+             "got right); its ablation A3, uniform sampling over the same buffer, fell from 49/400 to 38/400 "
+             "on policy performance, \"indicating that the policy indeed forgets important experiences\" "
              "(https://arxiv.org/html/2402.04858, Table 2). The source field is what a later builder needs "
-             "to weight real positives higher; until one does, a relabeled row counts exactly as much as a "
-             "real one in the corpus.")
+             "to weight real positives higher or cap a problem's relabeled rows; until one does, a relabeled "
+             "row counts exactly as much as a real one in the corpus.")
     L.append("")
     L.append("## What was learned")
     L.append("")
@@ -630,18 +828,27 @@ def write_report(path: Path, args, split_path: Path, pool_name: str, pool_size: 
     L.append(f"- {len(admitted)} of {len(distinct)} distinct programs solve exactly one train problem "
              f"({100 * len(admitted) / max(1, len(distinct)):.0f} percent), over {len(by_target)} target "
              f"problems; {len(ambiguous)} solve two or more (the same function under several problem "
-             f"statements) and {len(no_target)} solve none.")
+             f"statements), {len(open_)} solve one and pass every point of a candidate the oracles could not "
+             f"decide, and {len(no_target)} solve none.")
+    exec_refused = sum(v for k, v in pair_tally.items() if k.startswith("exec-"))
     L.append(f"- Of {sum(o['targets_tried'] for o in outcomes)} (program, candidate) pairs, "
              f"{pair_tally.get('tests-fail', 0) + pair_tally.get('signature', 0)} fail the candidate's points, "
              f"{pair_tally.get('spec-disagrees', 0)} pass every point and then disagree with the reference on "
-             "a draw: a program that passes three assertions is not yet a program that computes the function, "
-             "and the reference check is not decorative.")
+             f"a draw, and {exec_refused} pass every point with a specification the reference satisfies and "
+             "then return something else when run: a program that passes three assertions is not yet a "
+             "program that computes the function, a specification the right answer satisfies is not yet a "
+             "specification only the right answer satisfies, and neither check is decorative.")
     L.append(f"- {len(lazy)} train candidates were refused because a lazy program answers every recorded "
              "point; a relabel onto them would have been a row about nothing.")
-    L.append("- Two instruments were too weak on the first two runs and were tightened before any row was "
-             "used: a target whose points a lazy program answers admitted `r := n` for the nth digit, and "
-             "draws shaped like the first example alone admitted a lookup table for happy numbers. Both are "
-             "properties of the evidence, not of the programs, and both are now refused by name.")
+    L.append("- Four instruments were too weak on the first runs and were tightened before any row was "
+             "used: a target whose points a lazy program answers admitted `r := n` for the nth digit, "
+             "draws shaped like the first example alone admitted a lookup table for happy numbers, a "
+             "specification check without an execution check admitted a body returning n for the last "
+             "digit of n factorial behind `ensures r == 0 or ... or r == 7`, and dropping a pair the "
+             "oracles could not decide admitted eight Fibonacci programs for mbpp_960 alone after they "
+             "exceeded the interpreter's budget on the larger draws of mbpp_873 and he_55, which they also "
+             "solve at every point. All are properties of the evidence, not of the programs, and all are "
+             "now refused by name.")
     L.append("")
     L.append("## What this differs from CodeIt in, and why")
     L.append("")
@@ -704,6 +911,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="directories of graded answer sets, read only (repeatable: the sets are graded "
                          "on two machines)")
     ap.add_argument("--tags", nargs="*", default=None, help="answer sets to read (default: every graded one)")
+    ap.add_argument("--exclude-tags", nargs="*", default=[], metavar="GLOB",
+                    help="answer sets NOT to read, by shell pattern (a comparison arm whose programs the "
+                         "operator does not want as training positives, say); a pattern matching no graded "
+                         "set is refused as a typo, and the excluded sets are named in the report")
     ap.add_argument("--n", type=int, default=100, help="random draws per (program, candidate) spec check")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--prompt-version", default="v5", choices=se.PROMPT_VERSIONS)
@@ -729,8 +940,17 @@ def main(argv: list[str] | None = None) -> int:
     index = target_index(pool, train_ids, gates, frozenset(lazy))
     sets = graded_sets(args.root)
     tags = args.tags if args.tags is not None else sorted(sets)
+    excluded = []
+    for pattern in args.exclude_tags:
+        hits = [t for t in sorted(sets) if fnmatch.fnmatchcase(t, pattern)]
+        if not hits:
+            raise SystemExit(f"--exclude-tags {pattern!r} matches no graded answer set under "
+                             f"{', '.join(map(str, args.root))}; a pattern that excludes nothing is a typo")
+        excluded += [t for t in hits if t not in excluded]
+    tags = [t for t in tags if t not in excluded]
     if not tags:
-        raise SystemExit(f"no graded answer set under {', '.join(map(str, args.root))}")
+        raise SystemExit(f"no graded answer set under {', '.join(map(str, args.root))}"
+                         + (f" once {', '.join(excluded)} are excluded" if excluded else ""))
     programs, per_set = [], {}
     for tag in tags:
         d = sets.get(tag)
@@ -774,10 +994,11 @@ def main(argv: list[str] | None = None) -> int:
     dup_path.parent.mkdir(parents=True, exist_ok=True)
     dup_path.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in dups), encoding="utf-8")
     write_report(args.report, args, args.split, pool_name, len(pool), tags, per_set, programs, distinct,
-                 outcomes, index, gates, args.out, dup_path, lazy, pool)
+                 outcomes, index, gates, args.out, dup_path, lazy, pool, train_ids, excluded)
     kinds = Counter(o["kind"] for o in outcomes)
     print(f"admitted {kinds.get('admitted', 0)} rows over {len({r['task_id'] for r in rows})} target problems; "
-          f"{kinds.get('ambiguous', 0)} duplicate pairs; {kinds.get('no-target', 0)} programs with no target")
+          f"{kinds.get('ambiguous', 0)} duplicate pairs; {kinds.get('undecided', 0)} with one target and an "
+          f"undecided candidate; {kinds.get('no-target', 0)} programs with no target")
     print(f"wrote {args.out}, {dup_path}, {args.report}")
     return 0
 

@@ -840,7 +840,7 @@ def load_relabel_rows(path: Path, train_ids: set[int], eval_ids: set[int], pool:
 def append_relabel_rows(sft: list[dict], rows: list[dict]) -> dict:
     """Relabel rows join the SFT set with their source kept; one already a positive is counted, not doubled."""
     present = {(s["task_id"], s["chosen"]) for s in sft}
-    counts = {"read": len(rows), "appended": 0, "already_positive": 0}
+    counts: dict = {"read": len(rows), "appended": 0, "already_positive": 0, "per_problem": {}}
     for row in rows:
         if (row["task_id"], row["chosen"]) in present:
             counts["already_positive"] += 1
@@ -849,6 +849,9 @@ def append_relabel_rows(sft: list[dict], rows: list[dict]) -> dict:
         sft.append({"prompt": row["prompt"], "chosen": row["chosen"], "source": RELABEL_SOURCE,
                     "task_id": row["task_id"], "task": row["task"], "relabel": row["relabel"]})
         counts["appended"] += 1
+        # every distinct relabeled program is appended, where the samples path above keeps one positive
+        # per (task_id, source, task): the per-problem count is what a builder that caps needs to see
+        counts["per_problem"][row["task_id"]] = counts["per_problem"].get(row["task_id"], 0) + 1
     sft.sort(key=lambda s: (s["task_id"], s["source"], s["task"]))
     return counts
 
@@ -980,12 +983,19 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
     if relabel is not None:
         L("## Relabeled rows (`--relabel-rows`)")
         L("")
+        per_problem = relabel.get("per_problem") or {}
+        loaded = sorted(per_problem.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
         L(f"Read {relabel['read']} row(s) from `{relabel['path']}`; appended {relabel['appended']} to "
           f"`sft-{suffix}.jsonl` with `source: relabel` kept; {relabel['already_positive']} already a "
-          "positive under the same problem (counted, not doubled). No pairs are built from them. "
-          "Nothing weights them yet: CodeIt's uniform mixing fell from 49/400 to 38/400 "
+          "positive under the same problem (counted, not doubled). No pairs are built from them.")
+        L("")
+        L("They are not one per problem: the samples path keeps one positive per (task_id, source, task) "
+          "while every distinct relabeled program is appended, so "
+          f"{relabel['appended']} relabeled row(s) on {len(per_problem)} problem(s); the most loaded: "
+          + (", ".join(f"{tid} ({n})" for tid, n in loaded) if loaded else "none")
+          + ". Nothing weights or caps them yet: CodeIt's uniform mixing fell from 49/400 to 38/400 "
           "(https://arxiv.org/html/2402.04858, Table 2), and the source field is what a builder needs to "
-          "weight real positives higher.")
+          "weight real positives higher or cap a problem's relabeled rows before a model trains on them.")
         L("")
     L("## Regenerating this dataset")
     L("")
