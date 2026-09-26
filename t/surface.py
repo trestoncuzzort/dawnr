@@ -578,15 +578,20 @@ class Parser:
         task["requires"] = requires
         task["ensures"] = ensures
 
-        funs, helpers = [], []
-        while self.at("kw", "spec") or self.at_inline_fun():
+        funs, helpers, methods = [], [], []
+        while self.at("kw", "spec") or self.at_inline_fun() or self.at_method():
             if self.at("kw", "spec"):
                 funs.append(self.spec_fun())
+            elif self.at_method():
+                methods.append(self.method())
             else:
                 helpers.append(self.inline_fun())
         self.production = "Task"           # spec_fun() left it on "SpecFun"
+        self.ret_name = rname              # method() rebinds it for its own body
         if funs:
             task["spec_funs"] = funs
+        if methods:
+            task["methods"] = methods
         if dec is not None:
             task["decreases"] = dec
         task["body"] = self.block()
@@ -608,6 +613,51 @@ class Parser:
         return (self.at("id", "inline") and self.i + 1 < len(self.toks)
                 and self.toks[self.i + 1].kind == "kw"
                 and self.toks[self.i + 1].text == "fun")
+
+    def at_method(self) -> bool:
+        # Contextual, as `inline` is: `method` followed by a name. SPEC.md
+        # "Methods (v1)"; the notation is Dafny's method declaration
+        # (reference manual 6.3) restricted to one return.
+        return (self.at("id", "method") and self.i + 1 < len(self.toks)
+                and self.toks[self.i + 1].kind == "id")
+
+    def method(self) -> dict:
+        start = self.tok
+        self.production = "Method"
+        self.eat("id", "method")
+        m = {"name": self.name("Method"), "params": self.params("Method")}
+        self.production = "Method"
+        self.eat("kw", "returns")
+        self.eat("sym", "(")
+        rtok = self.tok
+        rname = self.name("Method")
+        self.eat("sym", ":")
+        rtype = self.ptype()
+        self.production = "Method"
+        self.eat("sym", ")")
+        m["returns"] = [self.mark(rtok, {"name": rname, "type": rtype})]
+        requires, ensures, dec = [], [], None
+        while self.tok.kind == "kw" and self.tok.text in (
+                "requires", "ensures", "decreases"):
+            wtok = self.eat("kw")
+            e = self.expr()
+            self.production = "Method"
+            if wtok.text == "requires":
+                requires.append(e)
+            elif wtok.text == "ensures":
+                ensures.append(e)
+            else:
+                if dec is not None:
+                    self.err(wtok, "a method has at most one decreases")
+                dec = e
+        m["requires"] = requires
+        m["ensures"] = ensures
+        if dec is not None:
+            m["decreases"] = dec
+        self.ret_name = rname
+        m["body"] = self.block()
+        self.production = "Method"
+        return self.mark(start, m)
 
     def inline_fun(self) -> dict:
         start = self.tok
@@ -1354,7 +1404,8 @@ def print_task(task: dict) -> str:
         if k not in t:
             raise SurfaceError("task is missing required field %r" % k)
     unknown = set(t) - {"t", "name", "params", "returns", "requires",
-                        "ensures", "gate", "spec_funs", "decreases", "body"}
+                        "ensures", "gate", "spec_funs", "methods",
+                        "decreases", "body"}
     if unknown:
         raise SurfaceError("task carries fields t does not define: %s"
                            % " ".join(sorted(unknown)))
@@ -1386,6 +1437,24 @@ def print_task(task: dict) -> str:
                                               fn["result"]))
         lines.append("  decreases %s" % pexpr(fn["decreases"]))
         lines.append("= %s" % pexpr(fn["body"]))
+    for m in t.get("methods", []):
+        if len(m["returns"]) != 1:
+            raise SurfaceError("a method returns exactly one value")
+        mps = ", ".join("%s: %s" % (_ident(p["name"]), _print_type(p["type"]))
+                        for p in m["params"])
+        mr = m["returns"][0]
+        lines.append("method %s(%s) returns (%s: %s)"
+                     % (_ident(m["name"]), mps, _ident(mr["name"]),
+                        _print_type(mr["type"])))
+        for e in m["requires"]:
+            lines.append("  requires %s" % pexpr(e))
+        for e in m["ensures"]:
+            lines.append("  ensures %s" % pexpr(e))
+        if "decreases" in m:
+            lines.append("  decreases %s" % pexpr(m["decreases"]))
+        lines.append("{")
+        lines += pstmts(m["body"], "  ")
+        lines.append("}")
     lines.append("{")
     lines += pstmts(t["body"], "  ")
     lines.append("}")
