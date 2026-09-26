@@ -19,8 +19,9 @@ import baselines
 import ingest  # the ONLY way this file reads a user's text
 import runlog
 from model import GPT, GPTConfig
-from data import (Corpus, build_tokenizer, split_health, split_verdict,
+from data import (Corpus, FIMWindows, build_tokenizer, split_health, split_verdict,
                   tokenizer_fingerprint)
+import fim
 
 
 # Explicit scaling recipes; old commands keep the original small GPT defaults.
@@ -530,10 +531,21 @@ def parse_args(argv=None):
                          "improving; default is the measured seed noise floor")
     ap.add_argument("--patience", type=int, default=EARLY_STOP_PATIENCE,
                     help="checks (not steps) without such a drop before stopping")
+    ap.add_argument("--fim-rate", type=float, default=0.0,
+                    help="fill-in-the-middle: the share of training documents re-cut each epoch into "
+                         "<PRE> prefix <SUF> suffix <MID> middle <EOT> (arXiv:2207.14255). 0 (the "
+                         "default) leaves training exactly as before; validation is always untransformed")
+    ap.add_argument("--fim-spm-rate", type=float, default=0.5,
+                    help="of the FIM documents, the share in SPM order (the paper's joint training uses 0.5)")
+    ap.add_argument("--fim-span", choices=fim.SPANS, default="char",
+                    help="char: two uniform character cuts (the paper). t: a whole t clause or statement "
+                         "half the time, a character span otherwise")
     ap.add_argument("--divergence-threshold", type=float, default=None,
                     help="stop at once if validation loss rises above this many nats "
                          "(off by default)")
     args = ap.parse_args(argv)
+    if not 0 <= args.fim_rate <= 1 or not 0 <= args.fim_spm_rate <= 1:
+        ap.error("--fim-rate and --fim-spm-rate must lie in [0, 1]")
     if args.patience < 1 or not args.min_delta >= 0:
         ap.error("--patience must be at least 1 and --min-delta at least 0")
     defaults = MODEL_PRESETS.get(args.preset, dict(n_layer=4, n_head=4, n_embd=256, block_size=128))
@@ -598,7 +610,19 @@ def main():
         raise SystemExit(got.say.why)
     text = got.text
     tok = build_tokenizer(text, kind=args.tokenizer, vocab_size=args.vocab_size)
+    if args.fim_rate > 0:
+        tok = tok.with_sentinels(fim.SENTINELS)
     corpus = Corpus(text, tok, device)
+    # Training batches under FIM come from the re-transformed stream; every
+    # loss this script reports still reads Corpus's untransformed text.
+    fim_windows = None
+    if args.fim_rate > 0:
+        if corpus.train_docs is None:
+            raise SystemExit("--fim-rate needs the grouped document split")
+        fim_windows = FIMWindows(corpus.train_docs, tok, args.seed, args.fim_rate, device,
+                                 args.fim_spm_rate, args.fim_span)
+        print(f"fill-in-the-middle: rate {args.fim_rate:g}, SPM share {args.fim_spm_rate:g}, "
+              f"spans {args.fim_span}; validation stays left to right")
     # Name the encoding that actually worked. Reading a cp1252 or UTF-16 file
     # successfully is not the same event as reading a UTF-8 one, and a run log
     # that cannot tell them apart cannot explain a surprising vocabulary later.
@@ -655,7 +679,10 @@ def main():
             if stopper.update(step, L["val"], model, train=L["train"]):
                 ended = None
                 break
-        x, y = corpus.get_batch("train", args.batch_size, args.block_size)
+        if fim_windows is None:
+            x, y = corpus.get_batch("train", args.batch_size, args.block_size)
+        else:
+            x, y = fim_windows.get_batch(args.batch_size, args.block_size)
         with amp():
             _, loss = model(x, y)
         # On the CPU reading the loss costs nothing, so a non-finite one stops
@@ -721,7 +748,8 @@ def main():
                           "seed": args.seed, "architecture": args.architecture,
                           "preset": args.preset, "tokenizer": args.tokenizer,
                           "vocab_size": tok.vocab_size,
-                          "gradient_checkpointing": args.gradient_checkpointing},
+                          "gradient_checkpointing": args.gradient_checkpointing,
+                          **({"fim": fim_windows.record()} if fim_windows else {})},
                   metrics={"train_loss": final["train"], "val_loss": final["val"],
                            "wall_s": wall,
                            "ms_per_step": wall / max(steps_run, 1) * 1000,
