@@ -61,6 +61,22 @@ A cached table and a fresh one are the same bytes: nothing about the cache
 reaches AGREEMENT.md. The run's SUMMARY LINE is where the cache shows, and
 it always names the hits and the kernel runs, so a reader can tell a
 cached table from a fresh one without reading this file.
+
+THE COMMITTED-TABLE GUARD (2026-09-25, r12 blocker A3). A run that writes
+t/AGREEMENT.md must grade exactly the committed t/tasks/*.t, unchanged, in
+all seven kernels. A strict subset of tasks or of kernels is refused unless
+--allow-subset-table says the overwrite is meant; a changed or foreign task
+file is refused outright (a table of other tasks belongs under --table).
+Commit a3c6f955 is the reason: `--tasks t/nested --jobs 7` with no --table
+replaced the 35-row matrix with one row, and the corpus builder that reads
+the table lost every committed task without a word. Refused before any
+kernel is probed or run; see committed_task_refusal.
+
+THE SPARK JOB CAP (2026-09-25, r12 blocker A8). With more than one cell in
+flight, every pool worker gets T_SPARK_JOBS=1 unless the parent set the
+variable, so gnatprove runs one prover per call and a sweep is 6 x jobs
+provers rather than 48 x jobs. About 20 jobs is the limit on 120 threads
+(6 x 20 = 120); grade_lab.sh passes the variable itself and is unchanged.
 """
 from __future__ import annotations
 
@@ -98,6 +114,139 @@ BACKENDS = [
 # The committed matrix. A run writing THIS file never reads the cache; see
 # the module docstring, and the refusal in main().
 COMMITTED_TABLE = HERE / "AGREEMENT.md"
+# The committed corpus the matrix stands for: every t/tasks/*.t, all seven
+# kernels. A run that writes COMMITTED_TABLE must cover exactly these
+# (committed_task_refusal, committed_kernel_refusal below).
+COMMITTED_TASKS = HERE / "tasks"
+ALL_KERNELS = tuple(b for b, _lmod, _suffix in BACKENDS)
+
+
+def _is_committed(table: Path) -> bool:
+    """Resolved-path comparison, so `AGREEMENT.md`, `./AGREEMENT.md`,
+    `t/AGREEMENT.md` and a symlink to it are one answer (cache_decision
+    has always compared this way)."""
+    try:
+        return Path(table).resolve() == Path(COMMITTED_TABLE).resolve()
+    except OSError:
+        return Path(table) == Path(COMMITTED_TABLE)
+
+
+def _digests(paths) -> dict[str, str]:
+    """file name -> sha256 of the bytes, for a list of task files."""
+    out = {}
+    for p in paths:
+        p = Path(p)
+        out[p.name] = hashlib.sha256(p.read_bytes()).hexdigest()
+    return out
+
+
+# ---------------------------------------------- the committed-table guard --
+# 2026-09-20, commit a3c6f955: `python3 t/run_par.py --tasks t/nested --jobs 7`
+# (the reproduction command in t/nested/README.md) had no --table, so this
+# driver wrote its default, the committed t/AGREEMENT.md, and the 35-row
+# matrix became a one-row table. The corpus builder reads that table
+# (loop_locallm.clean_rows needs all seven cells `verified / refuted`), so
+# the next corpus silently lost every committed task (r12 blocker A3).
+#
+# Jest solves the same class of accident -- a filtered run must not prune
+# the committed results file -- by marking the snapshots of the tests it
+# did not execute as checked, so `removeUncheckedKeys` deletes nothing a
+# partial run did not see (jest-circus, legacy-code-todo-rewrite/
+# jestAdapter.ts, _addSnapshotData; fetched 2026-09-25 from
+# raw.githubusercontent.com/jestjs/jest/main/packages/jest-circus/src/
+# legacy-code-todo-rewrite/jestAdapter.ts). Its file is keyed per test, so
+# a partial run merges into it. AGREEMENT.md is not: one timestamp, one
+# Backends block, one verdict-basis line and one sole-blocker section
+# describe the whole run, and rows from two runs under one header would
+# claim a single measurement that never happened. So the committed table
+# is refused rather than merged: a strict subset needs
+# --allow-subset-table, and changed bytes or a foreign task have no
+# override at all (write elsewhere with --table). The refusal happens
+# before any kernel is probed or run.
+def committed_task_refusal(table: Path, tasks, allow_subset: bool) -> str | None:
+    """None when `tasks` may be written to `table`, else the refusal text.
+    Only the committed table is guarded; any other path is always fine."""
+    if not _is_committed(table):
+        return None
+    committed = _digests(sorted(Path(COMMITTED_TASKS).glob("*.t")))
+    run = _digests(tasks)
+    foreign = sorted(n for n in run if n not in committed)
+    changed = sorted(n for n in run if n in committed and run[n] != committed[n])
+    if foreign or changed:
+        what = []
+        if changed:
+            what.append(f"{len(changed)} task file(s) differ from t/tasks: {', '.join(changed[:5])}"
+                        + (" ..." if len(changed) > 5 else ""))
+        if foreign:
+            what.append(f"{len(foreign)} task file(s) are not committed: {', '.join(foreign[:5])}"
+                        + (" ..." if len(foreign) > 5 else ""))
+        return ("REFUSED: t/AGREEMENT.md is the matrix of the committed tasks, and this run's "
+                + "; ".join(what) + ". A table of other tasks belongs elsewhere: pass "
+                "--table <file>. Nothing was written.")
+    missing = sorted(n for n in committed if n not in run)
+    if missing and not allow_subset:
+        return (f"REFUSED: this run grades {len(run)} of {len(committed)} committed tasks, a "
+                f"strict subset; writing t/AGREEMENT.md would delete the other {len(missing)} "
+                f"row(s) (a3c6f955 did exactly this with `--tasks t/nested` and no --table). "
+                f"Pass --table <file> for a table of this subset, or --allow-subset-table to "
+                f"overwrite the committed table on purpose. Nothing was written.")
+    return None
+
+
+def committed_kernel_refusal(table: Path, cols, allow_subset: bool) -> str | None:
+    """None when the columns `cols` ([(kernel, version_or_ABSENT), ...],
+    after any --kernels filter) may be written to `table`, else the refusal.
+    The committed table needs all seven present: a --kernels subset or an
+    ABSENT kernel would leave columns out, and clean_rows reads a missing
+    column as "no agreement" for every task."""
+    if not _is_committed(table) or allow_subset:
+        return None
+    named = {b for b, _v in cols}
+    absent = sorted(b for b, v in cols if str(v).startswith("ABSENT"))
+    left_out = sorted(b for b in ALL_KERNELS if b not in named)
+    if not absent and not left_out:
+        return None
+    what = []
+    if left_out:
+        what.append(f"kernel column(s) left out by --kernels: {', '.join(left_out)}")
+    if absent:
+        what.append(f"kernel(s) absent on this machine: {', '.join(absent)}")
+    return ("REFUSED: t/AGREEMENT.md needs all seven kernel columns, and this run has "
+            + "; ".join(what) + ". Pass --table <file> for a partial table, or "
+            "--allow-subset-table to overwrite the committed table on purpose. "
+            "Nothing was written.")
+
+
+# ------------------------------------------------------ the SPARK job cap --
+# spark.py runs gnatprove with -j (JOBS_CAP 8), measured verdict-neutral and
+# a pure scheduling knob there. A cell is already six concurrent kernel
+# calls (verifiers.cell_pair), so a sweep of N cells is N x 6 x 8 prover
+# processes: on 2026-09-20 a 24-job sweep reached a load of 351 on 120
+# threads, and the wall backstops then fire on cells that would prove alone
+# (r12 blocker A8). joblib caps the inner thread count of every pool worker
+# through the worker's environment, "unless the variable is already present
+# in the parent process environment" (joblib/_parallel_backends.py,
+# _prepare_worker_env; fetched 2026-09-25 from raw.githubusercontent.com/
+# joblib/joblib/main/joblib/_parallel_backends.py). Same shape here: the
+# workers get T_SPARK_JOBS=1 (spark.py's own comment names 1 as the setting
+# for a parallel sweep, and cpu // (6 x jobs) is 1 for any sweep of ten or
+# more jobs on 120 threads); a parent that set the variable is obeyed; the
+# parent's own environment is never touched.
+def spark_jobs_env(cells_in_flight: int, environ=None) -> dict[str, str]:
+    """The environment the pool workers get on top of the parent's: {} when
+    one cell runs at a time or T_SPARK_JOBS is already set (blank counts as
+    unset, which is how spark.py reads it), else T_SPARK_JOBS=1."""
+    environ = os.environ if environ is None else environ
+    if cells_in_flight > 1 and not str(environ.get("T_SPARK_JOBS", "")).strip():
+        return {"T_SPARK_JOBS": "1"}
+    return {}
+
+
+def _worker_env(env: dict) -> None:
+    """ProcessPoolExecutor initializer: runs once in each worker, so the
+    variables land in the workers and nowhere else. Module-level, so it
+    pickles under spawn. conformance.py's pool passes the same pair."""
+    os.environ.update(env)
 
 # What a cache entry is allowed to stand for. VERIFIED, REFUTED, VACUOUS,
 # MALFORMED and UNPROVED are functions of the source, the kernel, the
@@ -430,7 +579,15 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3,
     # Linux via T_MP_START=spawn against the full matrix.
     ctx = mp_context()
     keymap = {(b, n): k for b, n, _s, _o, _c, k in pending}
-    with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx) as ex:
+    # A8: the cells actually in flight decide the cap, so a two-cell run at
+    # --jobs 64 and a sixty-cell run at --jobs 2 are both read correctly.
+    worker_env = spark_jobs_env(min(jobs, len(pending)))
+    if worker_env:
+        print(f"  {min(jobs, len(pending))} cells in flight x 6 kernel calls each: workers get "
+              f"T_SPARK_JOBS=1 (gnatprove one prover per call; set T_SPARK_JOBS to override)",
+              flush=True)
+    with ProcessPoolExecutor(max_workers=jobs, mp_context=ctx,
+                             initializer=_worker_env, initargs=(worker_env,)) as ex:
         futs = {ex.submit(_run_cell, b, n, s, o, flake_n, c): (b, n, o)
                 for b, n, s, o, c, _k in pending}
         for fut in as_completed(futs):
@@ -575,7 +732,7 @@ def cache_summary(stats: dict, cache_dir) -> str:
     return "; ".join(parts)
 
 
-def main() -> int:
+def main(argv=None) -> int:
     # Mutual exclusion is the lock file taken in __main__ (verifiers.
     # acquire_run_lock), on every platform. A /proc scan used to sit here
     # as an extra Linux-only check, matching any process whose argv held
@@ -590,17 +747,24 @@ def main() -> int:
     # The three paths below default to the committed layout, so a bare run
     # is byte-identical to before; a sweep over another corpus (ROADMAP 12.5,
     # the lifted DafnyBench tasks, 2026-09-06) passes all three so it never
-    # touches t/tasks, t/out or t/AGREEMENT.md.
-    ap.add_argument("--tasks", type=Path, default=HERE / "tasks",
+    # touches t/tasks, t/out or t/AGREEMENT.md. --tasks and --table resolve
+    # to COMMITTED_TASKS / COMMITTED_TABLE at call time, not at import, so
+    # t/test_run_par_guards.py can point both at a sandbox.
+    ap.add_argument("--tasks", type=Path, default=None,
                     help="directory of task .t (or, unconverted, .json) "
                          "files (default t/tasks)")
     ap.add_argument("--out", type=Path, default=HERE / "out",
                     help="directory for lowered sources and kernel logs (default t/out)")
-    ap.add_argument("--table", type=Path, default=HERE / "AGREEMENT.md",
+    ap.add_argument("--table", type=Path, default=None,
                     help="where the agreement table is written (default t/AGREEMENT.md)")
     ap.add_argument("--kernels", default="",
                     help="comma-separated subset of the seven kernels to grade "
                          "(default all); the table shows only these columns")
+    ap.add_argument("--allow-subset-table", action="store_true",
+                    help="overwrite the committed t/AGREEMENT.md on purpose from a "
+                         "strict subset of t/tasks or of the seven kernels (it is "
+                         "refused otherwise, since a3c6f955); changed or foreign "
+                         "task files are never allowed there")
     # The verdict cache (module docstring). Default: ON for any other table,
     # OFF for the committed t/AGREEMENT.md, and asking for it there is
     # refused below rather than quietly honoured.
@@ -614,15 +778,25 @@ def main() -> int:
                     help="where cached verdicts live (default t/out/cache, "
                          "shared with t/tlib.py's editor cache; content-keyed, "
                          "so it is correct across --out directories)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
+    if args.tasks is None:
+        args.tasks = Path(COMMITTED_TASKS)
+    if args.table is None:
+        args.table = Path(COMMITTED_TABLE)
     jobs_arg = args.jobs
     cache_dir, refusal = cache_decision(args.table, args.cache, args.cache_dir)
     if refusal:
         print(refusal)
         return 2
+    tasks = tasks_io.load_dir(args.tasks)
+    # A3: the committed table is refused for a partial, changed or foreign
+    # task set BEFORE anything is created, probed or run.
+    refusal = committed_task_refusal(args.table, tasks, args.allow_subset_table)
+    if refusal:
+        print(refusal)
+        return 2
     harness.OUT = args.out
     harness.OUT.mkdir(parents=True, exist_ok=True)
-    tasks = tasks_io.load_dir(args.tasks)
     # Rows are keyed by the task's own name, which is what every cell and
     # every output file uses; on the committed corpus the file stem is the
     # same string, on a lifted corpus it is not (Clover_abs.Abs.json holds
@@ -633,6 +807,12 @@ def main() -> int:
         keep = {k.strip() for k in args.kernels.split(",") if k.strip()}
         cols = [(b, v) for b, v in cols if b in keep]
         present = [p for p in present if p[0] in keep]
+    # A3, the column half: a --kernels subset or an ABSENT kernel would write
+    # the committed table with a column missing. Refused before any kernel runs.
+    refusal = committed_kernel_refusal(args.table, cols, args.allow_subset_table)
+    if refusal:
+        print(refusal)
+        return 2
     stats: dict = {}
     rows, wits, all_ok = lower_and_dispatch(
         tasks, present, jobs_arg,
