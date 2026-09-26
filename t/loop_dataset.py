@@ -760,6 +760,99 @@ def load_pairs_jsonl(path: Path) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------ --relabel-rows --
+#
+# t/relabel.py's rows: verified-but-wrong programs relabeled with the train problem
+# they actually solve (CodeIt, https://arxiv.org/html/2402.04858: hindsight
+# relabeling took a 220M model from 24/400 to 49/400, and uniform mixing of the
+# relabeled data with the real solutions fell back to 38/400, so the source is
+# kept on every row for a later builder to weight). The rows join the positives
+# through the same refusals as everything else here: a row for a held-out id under
+# any alias, a listed same-task id, or a dev-split id stops the build by name.
+RELABEL_SOURCE = "relabel"
+
+
+def load_relabel_rows(path: Path, train_ids: set[int], eval_ids: set[int], pool: dict,
+                      pool_name: str, split_path: str | Path | None) -> list[dict]:
+    """Every row of a relabel pool file, or a refusal naming the first row that is not admissible."""
+    import loop_filter
+    policy = loop_filter.decontamination()
+    dev = loop_filter.r12_dev_ids(split_path=split_path)
+    gated = (("held-out", set(eval_ids)), ("listed same-task", set(policy.exclude_train_ids)), ("dev-split", set(dev)))
+    rows = []
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        raise SystemExit(f"cannot read --relabel-rows {path}: {error}")
+    for number, line in enumerate(lines, 1):
+        where = f"{path.name}:{number}"
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise SystemExit(f"{where}: not a JSON row ({error})")
+        if not isinstance(row, dict) or row.get("source") != RELABEL_SOURCE:
+            raise SystemExit(f"{where}: not a relabel row (source must be {RELABEL_SOURCE!r})")
+        tid = row.get("task_id")
+        if type(tid) is not int:
+            raise SystemExit(f"{where}: task_id must be an integer, got {tid!r}")
+        for label, ids in gated:
+            if tid in ids:
+                raise SystemExit(f"{where}: relabel row for task_id={tid} names a {label} problem; refused")
+        if tid not in train_ids:
+            raise SystemExit(f"{where}: task_id={tid} is not a train-split id")
+        if tid not in pool:
+            raise SystemExit(f"{where}: task_id={tid} is not in pool {pool_name}")
+        provenance = row.get("relabel")
+        if not isinstance(provenance, dict):
+            raise SystemExit(f"{where}: no relabel provenance block")
+        if provenance.get("pool") != pool_name:
+            raise SystemExit(f"{where}: row was relabeled under pool {provenance.get('pool')!r}, this build is "
+                             f"{pool_name}; regenerate it under the same pool")
+        name, chosen, prompt = row.get("task"), row.get("chosen"), row.get("prompt")
+        if not isinstance(name, str) or loop_filter.problem_id(name) != tid:
+            raise SystemExit(f"{where}: task name {name!r} does not name problem {tid}")
+        if not prompt:
+            raise SystemExit(f"{where}: no prompt")
+        m = re.search(r"```t\n(.*?)```", chosen or "", re.S)
+        if m is None:
+            raise SystemExit(f"{where}: chosen has no fenced t block")
+        try:
+            task = surface.parse(m.group(1))
+        except Exception as error:                                # noqa: BLE001 -- name it, whatever broke
+            raise SystemExit(f"{where}: chosen does not parse ({error})")
+        if task.get("name") != name:
+            raise SystemExit(f"{where}: chosen declares task {task.get('name')!r}, row says {name!r}")
+        if provenance.get("task_sha256") != spec_check.task_sha256(task):
+            raise SystemExit(f"{where}: provenance task_sha256 does not match the chosen program")
+        # the whole row, provenance included: a held-out alias anywhere is refused, as preflight refuses it
+        held = loop_filter.validate_training_data(json.dumps(row, sort_keys=True), set(eval_ids) | set(dev),
+                                                  names=[name], task_ids=[tid], policy=policy)
+        if not held.ok:
+            detail = (loop_filter.held_out_detail(held.held_out) if held.held_out
+                      else loop_filter.same_task_detail(held))
+            raise SystemExit(f"{where}: refused, {detail}")
+        rows.append(row)
+    return rows
+
+
+def append_relabel_rows(sft: list[dict], rows: list[dict]) -> dict:
+    """Relabel rows join the SFT set with their source kept; one already a positive is counted, not doubled."""
+    present = {(s["task_id"], s["chosen"]) for s in sft}
+    counts = {"read": len(rows), "appended": 0, "already_positive": 0}
+    for row in rows:
+        if (row["task_id"], row["chosen"]) in present:
+            counts["already_positive"] += 1
+            continue
+        present.add((row["task_id"], row["chosen"]))
+        sft.append({"prompt": row["prompt"], "chosen": row["chosen"], "source": RELABEL_SOURCE,
+                    "task_id": row["task_id"], "task": row["task"], "relabel": row["relabel"]})
+        counts["appended"] += 1
+    sft.sort(key=lambda s: (s["task_id"], s["source"], s["task"]))
+    return counts
+
+
 def pair_sort_key(p: dict):
     return (p.get("task_id"), p.get("source", ""), p.get("task", ""),
             p.get("operator") or p.get("kind") or "", p.get("rejected", ""))
@@ -770,7 +863,8 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
                           pairs: list[dict], include_pairs: list[dict], sft: list[dict],
                           no_samples_train: list[int], no_positive_train: list[int],
                           no_negatives_train: list[tuple], gate_rejections: dict,
-                          include_accepted: list[dict], include_rejections: Counter) -> None:
+                          include_accepted: list[dict], include_rejections: Counter,
+                          relabel: dict | None = None) -> None:
     suffix = args.out_suffix
     lines = []
     L = lines.append
@@ -883,6 +977,16 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
             L(f"- {tid} `{name}` (sample {k})")
         L("")
 
+    if relabel is not None:
+        L("## Relabeled rows (`--relabel-rows`)")
+        L("")
+        L(f"Read {relabel['read']} row(s) from `{relabel['path']}`; appended {relabel['appended']} to "
+          f"`sft-{suffix}.jsonl` with `source: relabel` kept; {relabel['already_positive']} already a "
+          "positive under the same problem (counted, not doubled). No pairs are built from them. "
+          "Nothing weights them yet: CodeIt's uniform mixing fell from 49/400 to 38/400 "
+          "(https://arxiv.org/html/2402.04858, Table 2), and the source field is what a builder needs to "
+          "weight real positives higher.")
+        L("")
     L("## Regenerating this dataset")
     L("")
     L("```")
@@ -890,6 +994,8 @@ def _write_dataset_r2_md(args, tags: list[str], split: dict, pool: dict, passk: 
            + f" --split {args.split} --min-kernels {args.min_kernels} --out-suffix {suffix}")
     if args.include:
         cmd += f" --include {args.include}"
+    if getattr(args, "relabel_rows", None):
+        cmd += f" --relabel-rows {args.relabel_rows}"
     L(cmd)
     L("```")
     L("")
@@ -1017,6 +1123,11 @@ def run_from_samples(args) -> int:
                               "source": p.get("source"), "task_id": p.get("task_id"),
                               "task": p.get("task")}
     sft = sorted(sft_seen.values(), key=lambda s: (s["task_id"], s["source"], s["task"]))
+    relabel_counts = None
+    relabel_path = getattr(args, "relabel_rows", None)
+    if relabel_path:
+        relabel_rows = load_relabel_rows(Path(relabel_path), train_ids, eval_ids, pool, pool_name, args.split)
+        relabel_counts = {"path": str(relabel_path), **append_relabel_rows(sft, relabel_rows)}
     # A row's prompt is the recorded messages in that answer's raw/<id>.json, and an answer graded on the lab
     # workstation has its raw file there, not here. Five such rows went into sft-r5 on 2026-09-18 with a null
     # prompt and killed the student's training three minutes in, inside a chat template, saying only "None has
@@ -1040,10 +1151,13 @@ def run_from_samples(args) -> int:
     _write_dataset_r2_md(args, tags, split, pool, passk, hist, kind_tally, op_tally,
                           merged, pairs, include_pairs, sft, no_samples_train,
                           no_positive_train, no_negatives_train, gate_rejections,
-                          include_accepted, include_rejections)
+                          include_accepted, include_rejections, relabel_counts)
 
     print(f"train: {passk['train']['problems']} problems, "
           f"{passk['train']['positive']} with a positive")
+    if relabel_counts is not None:
+        print(f"relabel rows: {relabel_counts['read']} read, {relabel_counts['appended']} appended with source "
+              f"kept, {relabel_counts['already_positive']} already a positive")
     print(f"eval:  {passk['eval']['problems']} problems, "
           f"{passk['eval']['positive']} with a positive")
     print(f"samples pairs: {len(pairs)}  include accepted/read: {len(include_accepted)}/{len(include_pairs)}  "
@@ -1074,7 +1188,13 @@ def main() -> int:
     ap.add_argument("--include", default=None,
                      help="prior pairs to revalidate against current evidence, prompts, "
                           "train IDs and admissible negatives before deduplicating")
+    ap.add_argument("--relabel-rows", default=None, metavar="PATH",
+                     help="t/relabel.py's rows (verified-but-wrong programs relabeled with the train "
+                          "problem they solve), appended to sft-<suffix>.jsonl with source 'relabel' kept; "
+                          "a row for a held-out, listed or dev-split id stops the build by name")
     args = ap.parse_args()
+    if args.relabel_rows and not args.from_samples:
+        ap.error("--relabel-rows joins a --from-samples build; the legacy round-1 build takes no relabel rows")
     if args.from_samples:
         return run_from_samples(args)
     return run_default()
