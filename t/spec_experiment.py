@@ -74,6 +74,7 @@ new `PROMPT_VERSIONS` member).
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -861,11 +862,59 @@ def model_digest(host: str, model: str) -> str:
         return "unknown"
 
 
+# Two generators answered qwen235-v6new at the same time on 2026-09-20 and 15
+# of its raw records came out torn: a whole shorter record with the tail of a
+# longer one for the same problem after it (t/DATA-r12.md). Path.write_text
+# opens with O_TRUNC and renames nothing, so when both had opened raw/<id>.json
+# the second writer landed over the first. Two rules close that: a record is
+# written to a temp file in the same directory and renamed into place, which is
+# an atomic operation on POSIX when both paths share a filesystem
+# (docs.python.org/3/library/os.html#os.replace); and one advisory lock per tag
+# (docs.python.org/3/library/fcntl.html, flock LOCK_EX | LOCK_NB) makes a
+# second generator on the same tag refuse to start instead of interleaving.
+LOCK_NAME = ".generate.lock"
+
+
+def write_record(path: Path, record: dict) -> None:
+    """Write one raw record whole: a reader sees the old file or the new one, never a cut."""
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(record, indent=1), encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def tag_lock(d: Path):
+    """The held lock file for one tag's raw/, or None when another generator holds it.
+
+    The caller keeps the returned file open for as long as it writes; closing
+    it releases the lock. flock is per open file description, so a second open
+    of the same file in the same process is refused too, which is what the
+    test relies on."""
+    fh = open(d / "raw" / LOCK_NAME, "a+")
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        fh.close()
+        return None
+    return fh
+
+
 # 2026-09-15: --jobs N asks N problems at once (a vLLM server batches them;
 # ollama would serialize them). Records are per problem, written whole, and
 # identical in shape to a sequential run; temperature 0 with a fixed seed.
 def cmd_generate(args) -> int:
     d = outdir(args.tag or args.model)
+    lock_fh = tag_lock(d)
+    if lock_fh is None:
+        print(f"generate: another generator holds {d / 'raw' / LOCK_NAME}; refusing to write "
+              f"the same answer set twice at once (2026-09-20 tore 15 records that way)", file=sys.stderr)
+        return 2
+    try:
+        return _generate(args, d)
+    finally:
+        lock_fh.close()
+
+
+def _generate(args, d: Path) -> int:
     P = pool(args.pool)
     ids = [i for i in sorted(P) if i >= getattr(args, "min_id", 0)]
     # 2026-09-18: two machines answer the same pool, each taking its own half, so the work is split rather than
@@ -911,7 +960,7 @@ def cmd_generate(args) -> int:
                   "reply_tokens": resp.get("eval_count"),
                   "eval_s": round((resp.get("eval_duration") or 0) / 1e9, 3),
                   "wall_s": round(wall, 3), "done_reason": resp.get("done_reason")}
-        (d / "raw" / f"{tid}.json").write_text(json.dumps(record, indent=1), encoding="utf-8")
+        write_record(d / "raw" / f"{tid}.json", record)
         with lock:
             state["asked"] += 1
             state["done"] += 1
@@ -972,11 +1021,34 @@ def rename_task(task: dict, new: str) -> dict:
 
 
 def cmd_extract(args) -> int:
-    d = outdir(args.model)
-    P = pool(args.pool)
-    results = {}
-    for rec_path in sorted((d / "raw").glob("*.json"), key=lambda p: int(p.stem)):
-        rec = json.loads(rec_path.read_text(encoding="utf-8"))
+    return extract_tag(outdir(args.model))
+
+
+def extract_tag(d: Path) -> int:
+    """Extract every raw record of one answer set into tasks/ and extract.json.
+
+    Every record is parsed before any task is written. On 2026-09-20 the walk
+    below crashed at the first torn record of qwen235-v6new, leaving 121 tasks
+    on disk and no extract.json; the grade that followed took those 121 as the
+    whole set. A raw file that does not parse (json.JSONDecodeError, "Extra
+    data", docs.python.org/3/library/json.html) now refuses the extraction by
+    name, and a task file left by an earlier extraction that this one did not
+    produce is removed, so tasks/ is exactly what extract.json describes."""
+    raw_paths = sorted((d / "raw").glob("*.json"), key=lambda p: int(p.stem))
+    records, torn = [], []
+    for rec_path in raw_paths:
+        try:
+            records.append(json.loads(rec_path.read_text(encoding="utf-8")))
+        except ValueError as e:
+            torn.append(f"{rec_path.name}: {str(e)[:120]}")
+    if torn:
+        print(f"extract: {len(torn)} of {len(raw_paths)} raw records do not parse; nothing written. "
+              f"Repair or move them aside first (t/DATA-r12.md has the procedure):", file=sys.stderr)
+        for line in torn:
+            print("  " + line, file=sys.stderr)
+        return 2
+    results, written = {}, set()
+    for rec in records:
         tid = rec["task_id"]
         entry = {"task_id": tid, "fn": rec["fn"], "reply_tokens": rec.get("reply_tokens"),
                  "done_reason": rec.get("done_reason")}
@@ -1023,12 +1095,17 @@ def cmd_extract(args) -> int:
         entry["loops"] = _count(task["body"], "while")
         entry["selfcall"] = fuzz_lower._self_calls(task["body"], name)
         (d / "tasks" / f"{name}.json").write_text(json.dumps(task, indent=1), encoding="utf-8")
+        written.add(f"{name}.json")
         results[tid] = entry
+    stale = sorted(p for p in (d / "tasks").glob("*.json") if p.name not in written)
+    for p in stale:
+        p.unlink()
     (d / "extract.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
     stages = {}
     for e in results.values():
         stages[e["stage"]] = stages.get(e["stage"], 0) + 1
-    print(f"extract: {len(results)} replies; " + ", ".join(f"{k} {v}" for k, v in sorted(stages.items())))
+    print(f"extract: {len(results)} replies; " + ", ".join(f"{k} {v}" for k, v in sorted(stages.items()))
+          + (f"; removed {len(stale)} stale task file(s) from an earlier extraction" if stale else ""))
     return 0
 
 

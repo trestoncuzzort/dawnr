@@ -146,28 +146,73 @@ fi
 WAIT_N=no
 [ "${BASH_VERSINFO[0]}" -gt 4 ] && WAIT_N=yes
 [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 3 ] && WAIT_N=yes
+# `wait -n -p VAR` (bash 5.1) names the job whose status came back, which is what lets
+# par() below say WHICH set failed and still wait for the rest by pid.
+WAIT_NP=no
+[ "${BASH_VERSINFO[0]}" -gt 5 ] && WAIT_NP=yes
+[ "${BASH_VERSINFO[0]}" -eq 5 ] && [ "${BASH_VERSINFO[1]}" -ge 1 ] && WAIT_NP=yes
+
+lab_quiet() {  # t/stall_check.py on the grading machine: nothing of ours stopped, no orphan prover
+  # The check runs where the processes are. A missing checker is a refusal, not a pass: on
+  # 2026-09-20 the cpu-yield watcher froze the grader and exited without resuming it, and 26
+  # orphan z3s ran for a day, while every log line read normally (t/RUN-NEXT-locallm-r12.md, A5).
+  # The r12 build adds t/stall_check.py; until the grading machine has it, grading is refused
+  # by name rather than started blind.
+  local out rc
+  out=$($SSH "$LAB" "cd ~/tup && if [ -f t/stall_check.py ]; then python3 t/stall_check.py; else echo 'REFUSED: t/stall_check.py is missing on the grading machine (the r12 build adds it; pull there first)'; exit 3; fi" 2>&1); rc=$?
+  if [ "$rc" -ne 0 ]; then
+    echo "== the grading machine is not quiet (stall_check exit $rc):"
+    printf '   %s\n' "$out"
+    return 1
+  fi
+  return 0
+}
 
 par() {   # grade several answer sets at once, SETS of them, each with its share of the cells
-  local n=0 t
+  # Every set's exit status is collected and the worst one is returned. Until 2026-09-25 this
+  # ended in a bare `wait`, whose "return status is zero" whatever the jobs did, and the
+  # throttle's `wait -n || wait` reaped a failure without recording it, so `tags` and `pending`
+  # exited 0 after a failed set (gnu.org/software/bash/manual/html_node/Job-Control-Builtins.html).
+  local pids=() running=0 failed=0 t rc done_pid p keep
   for t in "$@"; do
     grade "$t" grade-in &
-    n=$((n + 1))
-    if [ "$n" -ge "$SETS" ]; then
-      if [ "$WAIT_N" = yes ]; then wait -n 2>/dev/null || wait; n=$((n - 1))
-      else wait; n=0; fi   # bash 3.2 has no wait -n: one batch of SETS at a time, never more
+    pids+=("$!"); running=$((running + 1))
+    if [ "$running" -ge "$SETS" ]; then
+      if [ "$WAIT_NP" = yes ]; then
+        wait -n -p done_pid "${pids[@]}"; rc=$?
+        [ "$rc" -ne 0 ] && { failed=1; echo "== a set failed (pid ${done_pid:-?}, status $rc)"; }
+        keep=(); for p in "${pids[@]}"; do [ "$p" = "${done_pid:-}" ] || keep+=("$p"); done; pids=("${keep[@]}")
+        running=$((running - 1))
+      elif [ "$WAIT_N" = yes ]; then
+        wait -n; rc=$?                 # bash 4.3-5.0: the status, but not which job; grade() names it itself
+        [ "$rc" -ne 0 ] && { failed=1; echo "== a set failed (status $rc)"; }
+        running=$((running - 1))
+      else                             # bash 3.2 has no wait -n: one batch of SETS at a time, each waited by pid
+        for p in "${pids[@]}"; do wait "$p" || failed=1; done; pids=(); running=0
+      fi
     fi
   done
-  wait
+  if [ "$WAIT_NP" = yes ] || [ "$WAIT_N" = no ]; then
+    for p in "${pids[@]}"; do wait "$p" || failed=1; done
+  else
+    while [ "$running" -gt 0 ]; do wait -n; rc=$?; [ "$rc" -ne 0 ] && failed=1; running=$((running - 1)); done
+  fi
+  [ "$failed" -ne 0 ] && echo "== at least one answer set was NOT graded; no table from it is trustworthy"
+  return "$failed"
 }
 
 grade() {  # tag, folder name inside the tag
-  local T=$1 SUB=$2 D=$SE/$1
+  local T=$1 SUB=$2 D=$SE/$1 rc
   [ -d "$D/$SUB" ] || { echo "== $T: no $SUB/ yet, skipped"; return 0; }
   [ -s "$D/kernels.md" ] && { echo "== $T: already graded"; return 0; }
   mkdir "$D/.grading" 2>/dev/null || { echo "== $T: being graded elsewhere, skipped"; return 0; }
   trap "rmdir '$D/.grading' 2>/dev/null; kill %1 2>/dev/null" EXIT
+  lab_quiet || { rmdir "$D/.grading" 2>/dev/null; return 2; }
   echo "== $T: $(ls "$D/$SUB" | wc -l) tasks to the lab workstation"
-  $SSH "$LAB" "mkdir -p $WORK/$T" && rsync -a --delete "$D/$SUB/" "$LAB:$WORK/$T/$SUB/" || return 1
+  # A table left in $WORK by an earlier run must not come back as this run's: it is removed
+  # before run_par starts, and copied back only when run_par exits 0 and wrote it.
+  $SSH "$LAB" "mkdir -p $WORK/$T && rm -f $WORK/$T/kernels.md" && rsync -a --delete "$D/$SUB/" "$LAB:$WORK/$T/$SUB/" \
+    || { rmdir "$D/.grading" 2>/dev/null; return 1; }
   # T_LAB_RUN_PAR passes flags through to the driver. It is empty by default, so
   # every existing caller grades exactly as before. --no-cache is why it exists:
   # run_par.py caches by default for a table written outside the committed path,
@@ -182,8 +227,14 @@ grade() {  # tag, folder name inside the tag
   # is that a run's budget has to cover its subprocesses, and spark.py's own comment names -j1 as
   # what a lab sweep should set. It leaves every verdict byte-identical (spark.py, MEASURED); only
   # wall clock changes. An explicit T_SPARK_JOBS in the environment still wins.
-  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md ${T_LAB_RUN_PAR:-}'"
-  rsync -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" || return 1
+  $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md ${T_LAB_RUN_PAR:-}'"; rc=$?
+  if [ "$rc" -ne 0 ]; then
+    echo "== $T: run_par exited $rc on the grading machine; no table copied back"
+    rmdir "$D/.grading" 2>/dev/null
+    return 1
+  fi
+  rsync -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" \
+    || { echo "== $T: run_par exited 0 but left no $WORK/$T/kernels.md"; rmdir "$D/.grading" 2>/dev/null; return 1; }
   echo "== $T: kernels.md back"
   rmdir "$D/.grading" 2>/dev/null
 }
@@ -209,7 +260,11 @@ case "${1:-seeds}" in
            echo "== ${#pend[@]} answer sets to grade: ${pend[*]}"; par "${pend[@]}" ;;
   tags)    shift; par "$@" ;;
   matrix)  echo "== committed-tasks: $(ls t/tasks/*.t | wc -l) tasks to the lab workstation"
-           $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV bash -lc 'python3 t/run_par.py --jobs $JOBS --out $WORK/matrix --table $WORK/AGREEMENT-lab.md'"
+           lab_quiet || exit 2
+           # the same T_SPARK_JOBS=1 as grade(): the committed matrix graded at -j8 inside
+           # every SPARK cell is the table that carried the timeout cells of 2026-09-21
+           $SSH "$LAB" "cd ~/tup && rm -f $WORK/AGREEMENT-lab.md && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $JOBS --out $WORK/matrix --table $WORK/AGREEMENT-lab.md'" \
+             || { echo "== matrix: run_par failed on the grading machine; no table copied back"; exit 1; }
            rsync -a "$LAB:$WORK/AGREEMENT-lab.md" t/out/AGREEMENT-lab.md && tail -12 t/out/AGREEMENT-lab.md ;;
   seeds)   par $(for S in 1 2 3 4 5 6 7 8; do echo qwen2.5-coder-14b-v3-s$S; done) ;;
   heldout) shift 2>/dev/null || true
@@ -224,8 +279,26 @@ case "${1:-seeds}" in
            [ ${#heldout[@]} -eq 0 ] && heldout=(phi4-mini-v3 qwen15b-base-v3 student-r4-v3 locallm-r4)
            for T in "${heldout[@]}"; do
              [ -d "$SE/$T/raw" ] || { echo "== $T: no answers yet, skipped"; continue; }
-             [ -n "$(ls "$SE/$T/tasks"/*.json 2>/dev/null)" ] || { python3 t/spec_experiment.py extract --model $T --pool v3 &&
-                                        python3 t/spec_experiment.py tests --model $T --pool v3; } || exit 1
+             # The pool comes from the raw records themselves. This line hard-coded --pool v3,
+             # which is right for the held-out arms and wrong for every train-side tag (pool v5
+             # or v6) that was ever passed here; one set must name exactly one pool.
+             POOL=$(python3 - "$SE/$T/raw" <<'PY'
+import glob, json, os, sys
+seen = set()
+for f in glob.glob(os.path.join(sys.argv[1], "*.json")):
+    try:
+        seen.add(str(json.load(open(f, encoding="utf-8")).get("pool_version")))
+    except ValueError:
+        seen.add("torn:" + os.path.basename(f))
+print(",".join(sorted(seen)))
+PY
+)
+             case "$POOL" in
+               v[0-9]|v[0-9][0-9]) ;;
+               *) echo "== $T: the raw records name pool '$POOL'; one pool per answer set is required, refusing to extract"; exit 1 ;;
+             esac
+             [ -n "$(ls "$SE/$T/tasks"/*.json 2>/dev/null)" ] || { python3 t/spec_experiment.py extract --model $T --pool $POOL &&
+                                        python3 t/spec_experiment.py tests --model $T --pool $POOL; } || exit 1
              grade $T tasks || exit 1
            done ;;
 esac
