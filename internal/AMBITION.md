@@ -134,7 +134,10 @@ its line changes here.
   not the last. *State:* in the product (`locallm/train.py`, the studio).
 - **Weight decay against memorisation in pretraining.** A three-arm sweep of
   the core's pretraining (`internal/PRETRAIN-R12-2026-09-25.md`). *State:*
-  one arm done, two running.
+  done. Best: weight decay 0.8 at lr 1e-3, validation 1.166 at step 7,400,
+  after which it memorises its pretraining corpus too (train 0.60, validation
+  1.29 by the end); the control at lr 3e-3 diverged. The best state was not
+  kept, so the pretraining trainer is getting best-checkpoint keeping.
 - **Runs anywhere with nothing installed.** The window talks to a model with
   no PyTorch, streaming, 1.8 times faster than before, and past the context
   window without the per-token wall; sampling on a CPU uses the cache (about
