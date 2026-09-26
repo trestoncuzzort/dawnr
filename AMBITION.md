@@ -139,8 +139,9 @@ its line changes here.
   its own Python; a sparse autoencoder to see whether the model learned
   concepts or memorised text.
 - **t grows as dawnr does.** t is not kept small and novel for its own sake:
-  where an established language already does something (Dafny first, then
-  Verus and SPARK), t copies that design and its semantics, and differs only
+  it takes whatever it needs from any language or data source (Dafny, Verus,
+  SPARK, Rust, Python, Haskell, OCaml, Lean, TLA+, anything), copies the best
+  existing design and its semantics without apology, cites it, and differs only
   where checking in seven kernels or training a small model makes it better.
   Features are added in the order of the documents they unlock (the lift
   refuses 139 files for method calls, 123 for nested sequences, 108 for
