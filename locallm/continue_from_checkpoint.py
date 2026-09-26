@@ -25,6 +25,16 @@ Since the r12 build (schema 2):
   instead of random windows; `--keep-every N` writes weights-only copies of the
   model every N steps for a later stopping-step choice on a dev split (LIMA,
   arXiv:2305.11206, picks its epoch on a dev set rather than by perplexity).
+* `--replay-data <source train.txt> --replay-frac F` draws F of every batch's
+  rows from the source corpus the core was pretrained on, as random block-size
+  windows exactly as pretraining drew them, on the windows path and under
+  `--doc-batches` alike (Ibrahim et al., arXiv:2403.08763: 5% replay for a
+  weak distribution shift, 25% for a strong one; MiniCPM, arXiv:2404.06395,
+  Table 1: fine-tune data mixed into the decay phase took MBPP 24.4 -> 30.3).
+  `--source-validation <validation.txt>` (the file beside --replay-data by
+  default) has the source corpus's loss measured on fixed windows before and
+  after the fine-tune and written to run.json as `source_losses`, so a run
+  with no replay measures what it forgot.
 """
 import argparse
 from dataclasses import asdict
@@ -48,7 +58,8 @@ import loop_filter
 SCHEMA = 2
 CUBLAS_WORKSPACE = ":4096:8"
 RESUME_KEYS = ("init_ckpt_sha256", "corpus_sha256", "evaluation_split_sha256", "seed", "split_seed")
-RESUME_PATHS = (("split", "by"), ("batches", "kind"), ("reproducibility", "requested"))
+RESUME_PATHS = (("split", "by"), ("batches", "kind"), ("reproducibility", "requested"),
+                ("replay", "sha256"), ("replay", "frac"), ("source_validation", "sha256"))
 
 
 def file_sha256(path):
@@ -125,6 +136,109 @@ def nested(mapping, path):
     return mapping
 
 
+def replay_rows(batch_size: int, frac: float) -> int:
+    """Rows of every batch drawn from the source corpus: round(frac * batch).
+
+    Ibrahim et al. (arXiv:2403.08763) replay 5% of the previous data under a
+    weak distribution shift and 25% under a strong one, and report that the
+    differences between fractions show early, so the fraction is a flag. It
+    is exact per batch rather than a sampling probability, so the composition
+    of every step is known. A fraction that leaves no replay row, or no target
+    row, is refused by name rather than rounded into a run that replays nothing.
+    """
+    if not 0 < frac < 1:
+        raise ValueError(f"--replay-frac must be strictly between 0 and 1, got {frac}")
+    rows = int(round(frac * batch_size))
+    if rows < 1 or rows >= batch_size:
+        raise ValueError(f"--replay-frac {frac} of a batch of {batch_size} is {rows} rows; every batch "
+                         f"needs at least one replay row and one target row, so raise --batch-size "
+                         f"or move --replay-frac")
+    return rows
+
+
+def mix_batch(target, replay):
+    """The rows one step trains on: the target rows, then the replay rows.
+
+    The loss is a token mean over the whole batch, so the order does not
+    matter to training; it is fixed so a recorded batch can be read back.
+    """
+    import torch
+    (tx, ty), (rx, ry) = target, replay
+    if tx.shape[1:] != rx.shape[1:] or ty.shape[1:] != ry.shape[1:]:
+        raise ValueError(f"target rows are {tuple(tx.shape[1:])} wide and replay rows "
+                         f"{tuple(rx.shape[1:])}; both must be one block")
+    return torch.cat([tx, rx]), torch.cat([ty, ry])
+
+
+class SourceWindows:
+    """Block-size windows of one token sequence, cut as data.Corpus.get_batch
+    cuts them, so a replay row is what pretraining showed the core.
+
+    Kept apart from Corpus because the source corpus arrives already split
+    (train.txt beside validation.txt) and a run may need only its validation
+    half, to measure forgetting with no replay at all. Tokenised through
+    data.cached_encode, so LOCALLM_TOKEN_CACHE spares the ~77 s the
+    149M-character train split costs to encode (data.py's own measurement).
+    """
+
+    def __init__(self, tokenizer, text: str, device: str, what: str, torch_module):
+        from data import cached_encode
+        self.torch = torch_module
+        self.ids = torch_module.tensor(cached_encode(tokenizer, text, what), dtype=torch_module.int32).to(device)
+
+    def __len__(self) -> int:
+        return int(self.ids.numel())
+
+    def get_batch(self, batch_size: int, block_size: int, generator=None):
+        hi = len(self) - block_size
+        if hi < 1:
+            raise ValueError(f"the source text holds {len(self)} tokens but block_size is {block_size}")
+        torch = self.torch
+        ix = torch.randint(hi, (batch_size,), device=self.ids.device, generator=generator)
+        window = ix[:, None] + torch.arange(block_size + 1, device=self.ids.device)
+        chunk = self.ids[window].long()
+        return chunk[:, :-1].contiguous(), chunk[:, 1:].contiguous()
+
+
+def source_losses(model, sources: dict, batch_size: int, block_size: int, iters: int, torch_module) -> dict:
+    """Mean loss over fixed windows of each source split: the same windows on
+    every call (train.EVAL_SEED, as train.estimate_loss does), so before and
+    after are two measurements of one quantity, not two samples."""
+    import train as core_train
+    was_training = model.training
+    model.eval()
+    out = {}
+    with torch_module.no_grad():
+        for name, windows in sources.items():
+            generator = torch_module.Generator(device=windows.ids.device.type).manual_seed(core_train.EVAL_SEED)
+            total = 0.0
+            for _ in range(iters):
+                x, y = windows.get_batch(batch_size, block_size, generator=generator)
+                _, loss = model(x, y)
+                total += float(loss)
+            out[name] = total / iters
+    if was_training:
+        model.train()
+    return out
+
+
+def refuse_unless_trainable(text: str, label: str, eval_ids, split, dev_ids=frozenset()) -> None:
+    """Refuse, by name, text that names a held-out id under any alias, a
+    same-task exclusion, or a dev-split id; nothing is dropped quietly."""
+    validation = loop_filter.validate_training_data(text, eval_ids)
+    dev = loop_filter.held_out_ids_in(text, set(dev_ids))
+    if validation.ok and not dev:
+        return
+    reasons = []
+    if validation.held_out:
+        reasons.append(f"contains held-out ids from {split}: {loop_filter.held_out_detail(validation.held_out)}")
+    if validation.same_task_names or validation.same_task_ids:
+        reasons.append(loop_filter.same_task_detail(validation))
+    if dev:
+        reasons.append(f"contains dev-split ids: {loop_filter.held_out_detail(dev)}")
+    raise ValueError(f"cannot train: {label}: " + "; ".join(reasons))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--init", type=Path, required=True, help="checkpoint directory to continue")
@@ -162,24 +276,46 @@ def main():
                         help="one whole document per training row, padded, instead of random windows")
     parser.add_argument("--keep-every", type=int, default=0,
                         help="write a weights-only ckpt-step-N.pt every N steps (0: off)")
+    parser.add_argument("--replay-data", type=Path,
+                        help="the source corpus train.txt the core was pretrained on; --replay-frac of every "
+                             "batch is drawn from it as block-size windows (Ibrahim et al., arXiv:2403.08763)")
+    parser.add_argument("--replay-frac", type=float,
+                        help="share of each batch's rows that come from --replay-data, exact per batch; "
+                             "0.25 is the strong-shift figure")
+    parser.add_argument("--source-validation", type=Path,
+                        help="the source corpus validation.txt whose loss is recorded before and after the "
+                             "fine-tune (run.json source_losses); the file beside --replay-data by default, "
+                             "and on its own it measures forgetting without replay")
     parser.add_argument("--device", default=None)
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
+    if (args.replay_data is None) != (args.replay_frac is None):
+        parser.error("--replay-data and --replay-frac go together")
+    if args.replay_data is not None and args.source_validation is None:
+        args.source_validation = args.replay_data.with_name("validation.txt")
 
     try:
         eval_ids = {int(task_id) for task_id in json.loads(args.split.read_text(encoding="utf-8"))["eval_ids"]}
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
         raise ValueError(f"cannot read evaluation split {args.split}") from error
     data_text = args.data.read_text(encoding="utf-8")
-    validation = loop_filter.validate_training_data(data_text, eval_ids)
-    if not validation.ok:
-        reasons = []
-        if validation.held_out:
-            reasons.append(f"contains held-out ids from {args.split}: "
-                           f"{loop_filter.held_out_detail(validation.held_out)}")
-        if validation.same_task_names or validation.same_task_ids:
-            reasons.append(loop_filter.same_task_detail(validation))
-        raise ValueError(f"cannot train: {args.data}: " + "; ".join(reasons))
+    refuse_unless_trainable(data_text, str(args.data), eval_ids, args.split)
+    # Replay rows are training data, so the source text passes the gates --data
+    # passes, plus the dev split, before torch loads. The validation text is
+    # only ever scored.
+    replay_text = source_text = None
+    rows = 0
+    if args.source_validation is not None:
+        if not args.source_validation.is_file():
+            raise ValueError(f"no source validation text at {args.source_validation}; pass "
+                             f"--source-validation <validation.txt> (the file beside --replay-data is the default)")
+        source_text = args.source_validation.read_text(encoding="utf-8")
+    if args.replay_data is not None:
+        replay_text = args.replay_data.read_text(encoding="utf-8")
+        refuse_unless_trainable(replay_text, f"replay data {args.replay_data}", eval_ids, args.split,
+                                loop_filter.r12_dev_ids(split_path=args.split))
+        rows = replay_rows(args.batch_size, args.replay_frac)
+    target_batch = args.batch_size - rows
 
     import torch
     from data import (Corpus, DocumentBatches, IGNORE_INDEX, SPLIT_CLOSE_ENOUGH, _SPLIT_EPS,
@@ -233,6 +369,29 @@ def main():
             raise ValueError("corpus is smaller than one training window")
         train_rows = val_rows = None
         batches = {"kind": "windows", "order_seed": args.seed, "block_size": args.block_size}
+    # The source corpus, for replay rows and for the forgetting measurement.
+    # Replay rows are full windows while document rows are padded, so the share
+    # of the loss the replay rows carry is larger than their share of the rows
+    # under --doc-batches; the record states the estimate rather than the flag.
+    source, replay_record, source_record = {}, None, None
+    if source_text is not None:
+        source["val"] = SourceWindows(tokenizer, source_text, device, "source-validation", torch)
+        if len(source["val"]) <= args.block_size:
+            raise ValueError(f"the source validation text holds {len(source['val'])} tokens, not one window")
+        source_record = {"data": str(args.source_validation), "sha256": file_sha256(args.source_validation),
+                         "tokens": len(source["val"]), "block_size": args.block_size,
+                         "eval_iters": args.eval_iters, "windows": args.eval_iters * args.batch_size,
+                         "eval_seed": core_train.EVAL_SEED}
+    if replay_text is not None:
+        source["train"] = SourceWindows(tokenizer, replay_text, device, "source-train", torch)
+        if len(source["train"]) <= args.block_size:
+            raise ValueError(f"the replay data holds {len(source['train'])} tokens, not one window")
+        mean_target = train_rows.target_tokens / train_rows.documents if args.doc_batches else args.block_size
+        share = rows * args.block_size / (rows * args.block_size + target_batch * mean_target)
+        replay_record = {"data": str(args.replay_data), "sha256": file_sha256(args.replay_data),
+                         "frac": args.replay_frac, "rows_per_batch": rows, "target_rows_per_batch": target_batch,
+                         "row_share": rows / args.batch_size, "token_share_estimate": share,
+                         "kind": "windows", "block_size": args.block_size, "train_tokens": len(source["train"])}
     optimizer = core_train.make_optimizer(model, args.lr)
     identities = {"init": str(args.init), "init_ckpt_sha256": file_sha256(args.init / "ckpt.pt"),
                   "tokenizer_file_sha256": file_sha256(tokenizer_source),
@@ -253,6 +412,7 @@ def main():
                   "steps": args.steps, "batch_size": args.batch_size,
                   "block_size": args.block_size, "lr": args.lr, "warmup": args.warmup,
                   "dropout": args.dropout, "keep_every": args.keep_every,
+                  "replay": replay_record, "source_validation": source_record,
                   "seed": args.seed}
     state_path, start, kept = args.out / "state.pt", 0, []
     if args.resume and state_path.exists():
@@ -297,14 +457,18 @@ def main():
 
     metrics = (args.out / "metrics.jsonl").open("a")
     initial = evaluate()
+    source_before = (source_losses(model, source, args.batch_size, args.block_size, args.eval_iters, torch)
+                     if source else None)
     started, step, losses = time.monotonic(), start, dict(initial)
     model.train()
     try:
         while step < args.steps:
             if args.doc_batches:
-                inputs, targets = train_rows.get_batch(step, args.batch_size)
+                inputs, targets = train_rows.get_batch(step, target_batch)
             else:
-                inputs, targets = corpus.get_batch("train", args.batch_size, args.block_size)
+                inputs, targets = corpus.get_batch("train", target_batch, args.block_size)
+            if rows:
+                inputs, targets = mix_batch((inputs, targets), source["train"].get_batch(rows, args.block_size))
             lr = core_train.cosine_lr(step, args.warmup, args.steps, args.lr, args.lr / 10)
             for group in optimizer.param_groups:
                 group["lr"] = lr
@@ -326,7 +490,7 @@ def main():
                           "eval": "documents" if args.doc_batches else "windows",
                           "seconds": time.monotonic() - started}
                 if args.doc_batches:
-                    record["epoch"] = step // train_rows.batches_per_epoch(args.batch_size)
+                    record["epoch"] = step // train_rows.batches_per_epoch(target_batch)
                 metrics.write(json.dumps(record, sort_keys=True) + "\n")
                 metrics.flush()
                 print(json.dumps(record), flush=True)
@@ -346,17 +510,25 @@ def main():
     torch.save({"model": model.state_dict(), "config": asdict(config),
                 "tokenizer_fingerprint": identities["tokenizer_fingerprint"]},
                args.out / "ckpt.pt")
+    train_seconds = time.monotonic() - started
+    source_after = (source_losses(model, source, args.batch_size, args.block_size, args.eval_iters, torch)
+                    if source else None)
     report = {"schema": SCHEMA, "status": "complete", "device": device,
               "identities": identities, "initial_losses": initial, "final_losses": losses,
-              "kept": kept, "steps_run": step - start, "train_seconds": time.monotonic() - started,
+              "kept": kept, "steps_run": step - start, "train_seconds": train_seconds,
               "peak_allocated_bytes": (torch.cuda.max_memory_allocated()
                                        if device.startswith("cuda") else 0)}
+    if source:
+        report["source_losses"] = {"before": source_before, "after": source_after}
     (args.out / "run.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"out": str(args.out), "parameters": identities["parameters"],
                       "train_tokens": identities["corpus_train_tokens"],
                       "split": {"by": corpus.split_by, "seed": args.split_seed,
                                 "val_documents": len(corpus.val_docs), "val_char_share": round(val_share, 4)},
                       "batches": batches["kind"], "deterministic": reproducibility["use_deterministic_algorithms"],
+                      "replay": None if replay_record is None else
+                      {k: replay_record[k] for k in ("rows_per_batch", "target_rows_per_batch", "token_share_estimate")},
+                      "source": report.get("source_losses"),
                       "initial": initial, "final": losses,
                       "seconds": round(report["train_seconds"], 1)}))
 

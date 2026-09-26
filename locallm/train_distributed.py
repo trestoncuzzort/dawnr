@@ -28,7 +28,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from data import CharTokenizer, Corpus, build_tokenizer, load_tokenizer, tokenizer_fingerprint
 from model import GPT, GPTConfig
-from train import MODEL_PRESETS, auto_lr, cosine_lr, enable_fast_math, make_optimizer
+from train import BETAS, MODEL_PRESETS, auto_lr, cosine_lr, decay_split, enable_fast_math, make_optimizer
 
 HERE = Path(__file__).resolve().parent
 SCHEMA = 2
@@ -54,6 +54,9 @@ def parse_args(argv=None):
     parser.add_argument("--batch-size", type=int, default=1, help="microbatch size per rank")
     parser.add_argument("--grad-accum", type=int, default=4)
     parser.add_argument("--lr", type=float)
+    parser.add_argument("--weight-decay", type=float, default=0.1,
+                        help="AdamW decay on tensors with 2 or more dimensions only (train.decay_groups); "
+                             "0.1 is what every recorded run used, the r12 sweep runs 0.8")
     parser.add_argument("--warmup-steps", type=int)
     parser.add_argument("--seed", type=int, default=1337, help="model initialization/dropout and batch streams")
     parser.add_argument("--split-seed", type=int, default=1337, help="fixed document split and tokenizer training split")
@@ -79,8 +82,9 @@ def parse_args(argv=None):
     positive = ("steps", "batch_size", "grad_accum", "eval_every", "eval_iters", "save_every", "cpu_threads")
     if any(getattr(args, name) < 1 for name in positive):
         parser.error("steps, batch sizes, intervals, eval-iters and cpu-threads must be positive")
-    if not 0 < args.val_frac < 1 or args.lr <= 0 or args.warmup_steps < 0 or args.log_every < 0:
-        parser.error("invalid validation fraction, learning rate or warm-up")
+    if (not 0 < args.val_frac < 1 or args.lr <= 0 or args.weight_decay < 0 or args.warmup_steps < 0
+            or args.log_every < 0):
+        parser.error("invalid validation fraction, learning rate, weight decay or warm-up")
     if args.stop_after is not None and not 0 < args.stop_after <= args.steps:
         parser.error("--stop-after must be within the unchanged --steps horizon")
     return args
@@ -109,6 +113,12 @@ def training_identity(args, cfg: GPTConfig, corpus: Corpus, text: str, token_has
             "training": {name: getattr(args, name) for name in
                          ("steps", "batch_size", "grad_accum", "lr", "warmup_steps", "seed", "bf16", "device",
                           "deterministic", "cpu_threads")},
+            # Its own key rather than a "training" entry, so run_pretraining_study's
+            # check of the recorded training keys and every ledger written before
+            # r12 still read the same; a resume with another decay is refused here.
+            "optimizer": {"kind": "AdamW", "betas": list(BETAS), "weight_decay": args.weight_decay,
+                          "decay": "tensors with 2 or more dimensions, as nanoGPT configure_optimizers "
+                                   "(raw.githubusercontent.com/karpathy/nanoGPT/master/model.py)"},
             "evaluation": {"iters": args.eval_iters, "seed": EVAL_SEED, "loss_units": "nats/token"},
             "runtime": {"python": platform.python_version(), "torch": str(torch.__version__),
                         "cuda": torch.version.cuda, "cudnn": torch.backends.cudnn.version(),
@@ -294,7 +304,7 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
     # modest graph traversal cost buys exact continuation on the same GPU stack.
     wrapped = DDP(model, device_ids=[local_rank] if device.type == "cuda" else None,
                   broadcast_buffers=False, find_unused_parameters=args.deterministic)
-    optimizer = make_optimizer(model, args.lr)
+    optimizer = make_optimizer(model, args.lr, args.weight_decay)
     generator = torch.Generator(device="cpu").manual_seed(args.seed + 1000003 * rank)
     # Distinct dropout streams after identical model initialization/broadcast.
     torch.manual_seed(args.seed + rank)
@@ -321,7 +331,8 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
                 "evaluation_interval": args.eval_every,
                 "tokenizer_file_sha256": hashlib.sha256((out / "tokenizer.json").read_bytes()).hexdigest(),
                 "data_device": "cpu", "train_tokens": len(corpus.train), "val_tokens": len(corpus.val),
-                "parameters": model.total_params(), "effective_batch_size": world * args.batch_size * args.grad_accum,
+                "parameters": model.total_params(), "optimizer_groups": decay_split(model),
+                "effective_batch_size": world * args.batch_size * args.grad_accum,
                 "tokens_per_step": world * args.batch_size * args.grad_accum * args.block_size,
                 "torch_version": str(torch.__version__), "resumed_from_step": completed,
                 "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}

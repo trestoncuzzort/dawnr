@@ -29,10 +29,34 @@ MIN_FREE_MIB = 13 * 1024  # Measured modern reservation 11.90 GiB, plus >1 GiB h
 SEEDS = (1337, 7, 42)
 CONFIG = {"preset": "core-medium", "tokenizer": "bpe", "vocab_size": 8192,
           "block_size": 2048, "n_layer": 12, "n_head": 12, "n_embd": 768,
-          "batch_size": 8, "grad_accum": 1, "dropout": 0.0, "lr": 0.0003,
+          "batch_size": 8, "grad_accum": 1, "dropout": 0.0, "lr": 0.0003, "weight_decay": 0.1,
           "warmup_steps": 50, "steps": 1000, "eval_every": 100, "eval_iters": 10,
           "save_every": 100, "log_every": 100, "cpu_threads": 4,
           "gradient_checkpointing": False, "deterministic": True, "bf16": True}
+
+# The r12 re-pretraining sweep for the small-data regime: one arm per entry, each
+# CONFIG with these keys changed, launched with torchrun on the gpt architecture
+# (the core every locallm round continues from). The exact commands are in
+# internal/PRETRAIN-R12-2026-09-25.md and test_r12_pretrain_prep.py checks them
+# against these entries. Kim et al. (arXiv:2509.14786, Figure 3) tuned a 150M
+# model on 200M tokens to lr 3e-3, 16 epochs and weight decay 0.8, thirty times
+# the 0.1 that CONFIG and every recorded study ran with; SmolLM2's 135M and 360M
+# trained at lr 3e-3 (arXiv:2502.02737, section 6); repeated data keeps most of
+# its value well past the four epochs Muennighoff et al. call free
+# (arXiv:2305.16264). 11,200 steps x 65,536 tokens is 734M tokens: 15.0 passes
+# over the 48,798,892-token train split the core saw (the research note's
+# "46M tokens, 16 epochs" was rounded; the recorded 4,000-step core made 5.4
+# passes). The control keeps the standard decay at the tuned learning rate, so
+# the only difference between it and the second arm is the decay; lr 1e-3 is
+# what train.auto_lr gives this width. Dropout stays at CONFIG's 0.0 so the
+# sweep changes one regulariser: the training-lit report (item 4) records Xue
+# et al. (arXiv:2305.13230) seeing decay on top of dropout diverge under
+# repeated data, which is the confound to avoid.
+R12_SWEEP_STEPS = 11200
+R12_SWEEP = tuple({"id": name, "architecture": "gpt", "lr": lr, "weight_decay": decay,
+                   "steps": R12_SWEEP_STEPS, "warmup_steps": R12_SWEEP_STEPS // 20}
+                  for name, lr, decay in (("wd0.8-lr1e-3", 1e-3, 0.8), ("wd0.8-lr3e-3", 3e-3, 0.8),
+                                          ("wd0.1-lr3e-3-control", 3e-3, 0.1)))
 
 
 def utc_now():
