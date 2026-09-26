@@ -2,7 +2,27 @@
 
 The operator's goals, in the operator's terms, with the measured state beside
 each one so the gap is always visible. This file is the target. `ROADMAP.md` is
-the route, and every number here links to the run that produced it.
+the route, and every number here links to the run that produced it. The ideas
+being worked toward are kept at the end of this file, stated plainly, with
+where each one stands.
+
+## The north star: a model you could trust on a spaceship
+
+A model trained so well that it could do its job on a spaceship: no network,
+no one to ask, small hardware, and a mistake that cannot be taken back. That
+sets the bar for everything below.
+
+- **It runs where it is.** Trained and run on one machine, on ordinary
+  hardware, with nothing uploaded and no service behind it.
+- **It does not guess silently.** What it writes is a program with a
+  specification, checked by proof before anyone relies on it; what cannot be
+  checked is refused, not passed along.
+- **It learned, not memorised.** It is judged on problems no training document
+  answers, and a model that recites its training text has not met the bar.
+- **Every claim about it carries its evidence.** A number without the run that
+  produced it does not count.
+
+Beating Phi-4-mini (section 1) is a milestone on the way, not the destination.
 
 ## 1. Beat Phi-4-mini. Not tie it. Beat it.
 
@@ -82,9 +102,42 @@ is to retire all three with measurements rather than argument**, and to keep
 publishing the failures beside the wins, because a repository that corrects its
 own published claims is worth more than one that never had to.
 
-The twins are the artifact most likely to outlive the score: 426 verified
-programs, each paired with a near-miss, the input that separates them, and
-seven independent refutations. Nothing comparable has been found published.
+The twins are the artifact most likely to outlive the score: 426 pairs over
+**213** verified programs answering 90 problems, each paired with a near-miss,
+the input that separates them, and seven independent refutations
+(`t/twins/README.md`). Nothing comparable has been found published.
+
+## The ideas being worked toward
+
+Plainly stated, with where each one stands. When one lands or is abandoned,
+its line changes here.
+
+- **More verified documents, because data is the limit.** A fine-tune on the
+  old ~300-document corpus reached 0.11 nats per token on its training text
+  against 0.68 on held-out text: it memorised. Released corpora of verified
+  Dafny programs are lifted into t, proved equivalent to their sources and
+  graded in all seven kernels. *State:* the first lift added 108 documents;
+  the proved corpus went from 194 to 302 (`t/LIFT-2026-09-26.md`). More lifts
+  are being graded.
+- **Denoising training.** Corrupt spans of each training document and train
+  the model to restore them, so each document teaches many ways instead of
+  being memorised one way (the T5 and BART objectives). *State:* being built.
+- **Stop before memorising, keep the best.** Training stops when validation
+  stops improving by more than run-to-run noise and keeps the best weights,
+  not the last. *State:* in the product (`locallm/train.py`, the studio).
+- **Weight decay against memorisation in pretraining.** A three-arm sweep of
+  the core's pretraining (`internal/PRETRAIN-R12-2026-09-25.md`). *State:*
+  one arm done, two running.
+- **Runs anywhere with nothing installed.** The window talks to a model with
+  no PyTorch, streaming, 1.8 times faster than before, and past the context
+  window without the per-token wall; sampling on a CPU uses the cache (about
+  14 times faster on the included model). *State:* in the product.
+- **Reads only what it can read correctly.** Ingest refuses files that would
+  arrive as garbage (legacy non-Latin encodings) instead of training on them.
+  *State:* in the product; wrong Latin code pages are the known gap.
+- **Next:** the product installs the right PyTorch for the machine and brings
+  its own Python; a sparse autoencoder to see whether the model learned
+  concepts or memorised text.
 
 ---
 
