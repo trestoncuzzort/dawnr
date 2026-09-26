@@ -2539,8 +2539,21 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
             if first_bad is None:
                 first_bad = name
             continue
-        oc = entries[-1][1]
-        mapped = _DAFNY_OUTCOME.get(oc, Outcome.TOOL_ERROR)
+        # 2026-09-26: the WORST of the symbol's blocks, never the last
+        # one printed. dafny prints a lemma's `(well-formedness)` and
+        # `(correctness)` blocks in completion order, which varies run to
+        # run; taking the last read `verified` for an L_ens whose
+        # correctness block said Errors whenever the well-formedness block
+        # happened to print second (measured: humaneval_dafny_038
+        # encode_cyclic, vericoding DD0648 RemoveChars and DD0680
+        # ReplaceBlanksWithChar, every lemma recorded `verified` in a file
+        # dafny finished with 2 errors).
+        mapped = Outcome.VERIFIED
+        for _kind, oc in entries:
+            m = _DAFNY_OUTCOME.get(oc, Outcome.TOOL_ERROR)
+            if m != Outcome.VERIFIED:
+                mapped = m
+                break
         verdicts[name] = mapped
         if mapped != Outcome.VERIFIED:
             all_ok = False
@@ -2551,7 +2564,24 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
     if lowered_name is not None:
         entries = by_name.get(lowered_name)
         if entries:
-            lowered_verdict = _DAFNY_OUTCOME.get(entries[-1][1], Outcome.TOOL_ERROR)
+            lowered_verdict = Outcome.VERIFIED
+            for _kind, oc in entries:
+                m = _DAFNY_OUTCOME.get(oc, Outcome.TOOL_ERROR)
+                if m != Outcome.VERIFIED:
+                    lowered_verdict = m
+                    break
+
+    # A failing symbol that is neither a named lemma nor the lowered
+    # method (a closure `_src` function's own well-formedness, say) is
+    # recorded under its own name and block kind, so the sidecar never
+    # reads all-verified for a file dafny did not verify.
+    for sym, kind, outcome in blocks:
+        if sym in lemma_names or sym == lowered_name or outcome == "Correct":
+            continue
+        verdicts[f"{sym} ({kind})"] = _DAFNY_OUTCOME.get(outcome, Outcome.TOOL_ERROR)
+        all_ok = False
+        if first_bad is None:
+            first_bad = sym
 
     fin = _FINISH_RE.search(out)
     if fin is None:
@@ -2579,6 +2609,7 @@ def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
                 # no lemma is bad and the lowered method isn't the (sole)
                 # culprit either -- still an unattributed error.
                 first_bad = "unattributed-error"
+                verdicts["unattributed-error"] = Outcome.UNPROVED
                 all_ok = False
             # else: every error in the file belongs to the lowered task's
             # own kernel proof -- reported via `lowered_verdict`, not here.
