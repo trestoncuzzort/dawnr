@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -38,6 +39,17 @@ import lift_lean
 import lower_lean
 
 LEAN_BIN = Path(os.environ.get("T_LEAN_BIN", Path.home() / ".elan/bin/lean"))
+
+
+def memory_capped(cmd: list) -> list:
+    """`cmd` under a per-prover memory cap when T_PROVER_MEMORY_MAX is set (e.g. 3G):
+    a transient systemd scope, whose MemoryMax the kernel enforces on the whole process
+    tree (systemd.resource-control(5), freedesktop.org/software/systemd/man/latest/
+    systemd.resource-control.html). A 14.6 GB desktop lost a run to one z3 at 8.5 GB."""
+    cap = os.environ.get("T_PROVER_MEMORY_MAX")
+    if cap and shutil.which("systemd-run"):
+        return ["systemd-run", "--user", "--scope", "--quiet", "-p", f"MemoryMax={cap}", "--"] + cmd
+    return cmd
 
 
 class NoHarness(Exception):
@@ -215,7 +227,7 @@ def run(text: str, workdir: Path, stem: str, timeout_s: float = 180.0) -> dict:
     path.write_text(text, encoding="utf-8")
     started = time.monotonic()
     try:
-        p = subprocess.run([str(LEAN_BIN), str(path)], capture_output=True, text=True, timeout=timeout_s)
+        p = subprocess.run(memory_capped([str(LEAN_BIN), str(path)]), capture_output=True, text=True, timeout=timeout_s)
     except subprocess.TimeoutExpired:
         return {"verdict": "error", "seconds": round(time.monotonic() - started, 1), "message": "timeout"}
     except OSError as e:

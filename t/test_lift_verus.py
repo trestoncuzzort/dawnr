@@ -56,8 +56,18 @@ class Types(unittest.TestCase):
     def test_float_refused(self):
         self.assertEqual(refusal("fn f(a: Vec<f32>) -> (r: f32)\n    ensures true,"), "float")
 
-    def test_tuple_return_refused(self):
-        self.assertEqual(refusal("fn f(a: i8) -> (r: (i8, i8))\n    ensures r.0 == a,"), "tuple")
+    def test_pair_return_is_two_returns(self):
+        r = render("fn f(a: i8) -> (r: (i8, i8))\n    ensures r.0 == a, r.1 == a + 1,", "{\n    (a, a + 1)\n}")
+        self.assertIn("returns (r_0: int, r_1: int)", r.dafny)
+        self.assertIn("ensures (r_0 == a)", r.dafny)
+        self.assertIn("r_0 := a;", r.dafny)
+        self.assertIn("r_1 := (a + 1);", r.dafny)
+
+    def test_tuple_param_refused(self):
+        self.assertEqual(refusal("fn f(a: (i8, i8)) -> (r: i8)\n    ensures r == a.0,"), "tuple")
+
+    def test_vec_of_pairs_refused(self):
+        self.assertEqual(refusal("fn f(a: Vec<(i8, i8)>) -> (r: i8)\n    ensures true,"), "tuple")
 
     def test_mut_ref_refused(self):
         self.assertEqual(refusal("fn f(a: &mut Vec<i32>)\n    ensures a.len() == old(a).len(),", "{\n}"),
@@ -241,6 +251,14 @@ class FileLevel(unittest.TestCase):
                     "{\n    n\n}")
         self.assertEqual(lv.target_name(text), "f")
 
+    def test_value_returning_proof_fn_is_a_target(self):
+        text = ("use vstd::prelude::*;\nverus! {\n// <vc-spec>\nproof fn abs(x: int) -> (y: int)\n"
+                "    ensures x >= 0 ==> x == y, x < 0 ==> x + y == 0,\n// </vc-spec>\n// <vc-code>\n"
+                "{\n    if x >= 0 { x } else { -x }\n}\n// </vc-code>\n}\nfn main() {}\n")
+        r = lv.render(text)
+        self.assertIsNone(r.refusal, r.refusal)
+        self.assertIn("method abs(x: int) returns (y: int)", r.dafny)
+
     def test_no_ensures_refused(self):
         self.assertEqual(refusal("fn f(n: i8) -> (r: i8)", "{\n    n\n}"), "zero-ensures")
 
@@ -251,6 +269,34 @@ class FileLevel(unittest.TestCase):
         self.assertEqual(fn.requires_src, ["a . len ( ) > 0"])
         self.assertEqual(fn.ensures_src, ["r == a [ 0 ]"])
         self.assertEqual([p.type_src for p in fn.params], ["Vec < i8 >"])
+
+
+class Corpus(unittest.TestCase):
+    TEXT = ("use vstd::prelude::*;\nverus! {\nspec fn sq(x: int) -> int { x * x }\n"
+            "fn f(x: u8) -> (r: u8)\n    requires x < 10,\n    ensures r == x,\n{\n    x\n}\n"
+            "proof fn lemma_sq(x: int)\n    requires x > 0,\n    ensures sq(x) > 0,\n{\n}\n"
+            "proof fn lemma_generic<A>(s: Seq<A>)\n    ensures s.len() >= 0,\n{\n}\n"
+            "#[verifier::external_body]\nfn g(x: u8) -> (r: u8)\n    ensures r == x,\n{\n    x\n}\n"
+            "impl Foo { fn nope(&self) {} }\n"
+            "}\n")
+
+    def test_targets(self):
+        self.assertEqual(lv.targets(self.TEXT), ["f", "g"])
+        self.assertEqual(lv.targets(self.TEXT, lemmas=True), ["f", "g", "lemma_sq", "lemma_generic"])
+
+    def test_lemma_as_task(self):
+        r = lv.render(self.TEXT, target="lemma_sq", lemma=True)
+        self.assertIsNone(r.refusal, r.refusal)
+        self.assertIn("method lemma_sq(x: int) returns (ok: bool)", r.dafny)
+        self.assertIn("ensures (sq(x) > 0)", r.dafny)
+        self.assertIn("ok := true;", r.dafny)
+
+    def test_generic_lemma_refused(self):
+        self.assertEqual(lv.render(self.TEXT, target="lemma_generic", lemma=True).refusal[0], "generics")
+
+    def test_holes_judged_per_function(self):
+        self.assertIsNone(lv.render(self.TEXT, target="f").refusal)
+        self.assertEqual(lv.render(self.TEXT, target="g").refusal[0], "trust-hole")
 
 
 class Harness(unittest.TestCase):
