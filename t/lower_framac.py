@@ -4663,6 +4663,25 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
                 f": ({cexpr(i['else'], env, funs, task_name, _div_style)}))")
     if "call" in e:
         c = e["call"]
+        _m = funs.get(c["fun"])
+        if _m is not None and _m.get("is_method"):
+            # SPEC.md "Methods (v1)": a call to a method is a call to its
+            # own C function `{m}_t`, which WP reasons about through that
+            # function's ACSL contract only (see `_method_call_lines`).
+            # `stmts()` lowers every method call itself; this branch is
+            # reached only from the certificate replay, which then skips
+            # (its `_cev` has no ground value for a call).
+            if _m["result"] == "seq":
+                raise NotImplementedError(
+                    "method call with a seq result in C value position")
+            parts = []
+            for p, a in zip(_m["params"], c["args"], strict=True):
+                if p["type"] == "seq":
+                    s = seq_var(a, env)
+                    parts += [s, f"{s}_n"]
+                else:
+                    parts.append(cexpr(a, env, funs, task_name, _div_style))
+            return f"{c['fun']}_t({', '.join(parts)})"
         if c["fun"] != task_name:
             # FRAMAC-CLOSURE, added 2026-09-14 (sweep r25's five sole-
             # framac-blocker rows, 412/426/436/554/629: each calls a
@@ -6481,6 +6500,222 @@ def _seq_eq_hoist(e, ctx: Ctx, indent: str, funs: dict, task_name: str):
     return lines, walk(e)
 
 
+# ------------------------------------------------------------- methods ----
+#
+# SPEC.md "Methods (v1)" (2026-09-26). Each method is its own C function
+# `{m}_t` with its own ACSL contract, lowered by `lower()` itself on a
+# task-shaped view of the method (`_lower_method`), so its body, loops,
+# seqs and definedness asserts get exactly the machinery a task gets, and
+# emitted before the task's function in the same file. A call
+# `x := m(e1, ..., en)` is a plain C call. WP proves a call through the
+# callee's contract (ACSL reference manual, "Simple function contracts":
+# "The caller of the function must guarantee that it is called in a state
+# where the property P1 && P2 && ... holds"; the callee "returns a state
+# where the property E1 && E2 && ... holds"; locations outside its
+# `assigns` are unchanged), never through its body, which is Dafny's
+# modular call rule. `t/methods_probe/opaque_callee.t` is the probe: a
+# caller needing more than the callee's `ensures` must not verify.
+#
+# A seq argument is passed as its (pointer, length) pair. A seq RESULT is
+# written into a caller-provided buffer, the same encoding a seq-returning
+# task already uses for its own return: the callee's contract states the
+# buffer's size (`requires v_n == E`, E over the callee's params) and, in
+# its CAPACITY/tracked mode, returns the result's logical length as the C
+# function's value. The caller's buffer is either its own return buffer or
+# a WORKSPACE buffer for a seq local `var w: seq := m(...)`: a further
+# caller-provided parameter pair `int *w, int w_n` of the enclosing
+# function, `\valid`, separated from every other buffer, sized by
+# `requires w_n == E[args]` and listed in its `assigns` (`_method_scratch`).
+# The local's length is then `w_n`, so the call site asserts the callee's
+# returned length equals it -- a proof obligation discharged only from the
+# callee's `ensures`, never assumed. Every shape outside this raises
+# NotImplementedError by name.
+
+_MCALL_CTR = [0]
+
+
+def _is_method_call(e, funs: dict) -> bool:
+    return (isinstance(e, dict) and "call" in e
+            and bool(funs.get(e["call"]["fun"], {}).get("is_method")))
+
+
+def _method_call_lines(target: str, e: dict, ctx: Ctx, indent: str,
+                       task_name: str, declare: bool) -> list:
+    """The C for `target := m(args)` (or `var target := m(args)` when
+    `declare`); see the section note above."""
+    c = e["call"]
+    info = ctx.funs[c["fun"]]
+    mi = info["info"]
+    out = at_asserts(e, ctx, indent, ctx.funs, task_name)
+    args = []
+    for p, a in zip(info["params"], c["args"], strict=True):
+        if p["type"] == "seq":
+            if "var" not in a or ctx.env.get(a["var"]) != "seq":
+                raise NotImplementedError(
+                    "method call: a seq argument must be a bare seq "
+                    "variable (its buffer and length are passed as a "
+                    "pointer, length pair)")
+            v = a["var"]
+            args += [v, ctx.seq_len.get(v, f"{v}_n")]
+        else:
+            args.append(cexpr(a, ctx.env, ctx.funs, task_name))
+    fn = f"{c['fun']}_t"
+    if info["result"] != "seq":
+        call = f"{fn}({', '.join(args)})"
+        out.append(f"{indent}int {target} = {call};" if declare
+                   else f"{indent}{target} = {call};")
+        return out
+    args += [target, f"{target}_n"]
+    call = f"{fn}({', '.join(args)})"
+    if mi["capacity"]:
+        if target in ctx.seq_len:
+            out.append(f"{indent}{ctx.seq_len[target]} = {call};")
+        else:
+            tmp = f"__mlen{_MCALL_CTR[0]}"
+            _MCALL_CTR[0] += 1
+            out.append(f"{indent}int {tmp} = {call};")
+            out.append(f"{indent}/*@ assert {tmp} == {target}_n; */")
+    else:
+        out.append(f"{indent}{call};")
+        if target in ctx.seq_len:
+            out.append(f"{indent}{ctx.seq_len[target]} = {target}_n;")
+    return out
+
+
+def _ensures_states_len(m: dict) -> bool:
+    """Whether a seq-returning method's `ensures` states its result's
+    length (`len(ret) == E`, top level or an `and` conjunct). A callee in
+    EXACT mode (void C function, result length = the buffer size its own
+    `requires` pins) tells its caller that length through the buffer
+    itself, so the call is lowered only when the contract says it too."""
+    ret = m["returns"][0]["name"]
+
+    def conj(e):
+        if isinstance(e, dict) and e.get("op") == "and":
+            return [x for a in e["args"] for x in conj(a)]
+        return [e]
+    for e in m["ensures"]:
+        for c in conj(e):
+            if (isinstance(c, dict) and c.get("op") == "=="
+                    and any(isinstance(a, dict) and a.get("op") == "len"
+                            and a["args"][0].get("var") == ret
+                            for a in c["args"])):
+                return True
+    return False
+
+
+def _t_vars(e, out: set) -> set:
+    if isinstance(e, dict):
+        if "var" in e and isinstance(e["var"], str):
+            out.add(e["var"])
+        for v in e.values():
+            _t_vars(v, out)
+    elif isinstance(e, list):
+        for v in e:
+            _t_vars(v, out)
+    return out
+
+
+def _method_scratch(task: dict, body: list, funs: dict, used: set) -> list:
+    """The WORKSPACE buffers (see the section note) `body` needs, as
+    `[(name, size_expr)]` in declaration order, `size_expr` a t Expr over
+    the function's own params and earlier workspace buffers. Also the one
+    place every method call in `body` is checked against the shapes this
+    lowering supports; each other shape raises by name."""
+    ret = task["returns"][0]["name"]
+    params = {p["name"] for p in task["params"]}
+    scratch: list = []
+    names: set = set()
+
+    def check_callee(e):
+        info = funs[e["call"]["fun"]]
+        mi = info["info"]
+        if mi["scratch"]:
+            raise NotImplementedError(
+                f"method call to {e['call']['fun']!r}, which itself needs "
+                f"a workspace buffer (a seq local set by a method call): "
+                f"passing workspace through a call is not implemented")
+        if info["result"] == "seq" and not mi["capacity"] \
+                and not mi["len_stated"]:
+            raise NotImplementedError(
+                f"seq-returning method {e['call']['fun']!r} whose ensures "
+                f"does not state its result's length: its C buffer size "
+                f"would tell the caller more than its contract does")
+        return info
+
+    def walk(stmts_, in_loop):
+        for s in stmts_:
+            if "assign" in s:
+                n, e = s["assign"]
+                if n in names:
+                    raise NotImplementedError(
+                        f"seq local {n!r} set by a method call is assigned "
+                        f"again: its workspace buffer is written once")
+                if _is_method_call(e, funs):
+                    info = check_callee(e)
+                    if info["result"] == "seq" and n != ret:
+                        raise NotImplementedError(
+                            f"method call assigning seq {n!r}, which is "
+                            f"neither the return nor a fresh `var`: no "
+                            f"buffer to receive the result")
+            elif "var" in s:
+                v = s["var"]
+                if not _is_method_call(v["init"], funs):
+                    continue
+                info = check_callee(v["init"])
+                if v["type"] != "seq":
+                    continue
+                if in_loop:
+                    raise NotImplementedError(
+                        f"seq local {v['name']!r} set by a method call "
+                        f"inside a loop: its workspace buffer would be "
+                        f"rewritten each iteration, not implemented")
+                if f"{v['name']}_n" in used:
+                    raise NotImplementedError(
+                        f"name {v['name']}_n collides with the "
+                        f"workspace length parameter for {v['name']}")
+                mi = info["info"]
+                sub = {p["name"]: a for p, a in
+                       zip(info["params"], v["init"]["call"]["args"])}
+                size = subst(mi["len_expr"], sub)
+                bad = _t_vars(size, set()) - params - names
+                if bad:
+                    raise NotImplementedError(
+                        f"workspace for seq local {v['name']!r}: its size "
+                        f"{sorted(bad)} is not a function of the params "
+                        f"alone, so no `requires` can state it")
+                scratch.append((v["name"], size))
+                names.add(v["name"])
+            elif "if" in s:
+                walk(s["if"]["then"], in_loop)
+                walk(s["if"]["else"], in_loop)
+            elif "while" in s:
+                walk(s["while"]["body"], True)
+    walk(body, False)
+    return scratch
+
+
+def _lower_method(task: dict, m: dict, earlier: list, info: dict) -> str:
+    """One method as its own contract + C function, lowered by `lower()`
+    on a task-shaped view of it (its self-calls then take the task
+    self-call path, `decreases` included), with the earlier methods
+    callable. Records what its callers need in `info[m["name"]]`."""
+    for p in m["params"] + m["returns"]:
+        if p["type"] not in ("int", "bool", "seq"):
+            raise NotImplementedError(
+                f"method {m['name']!r}: a {p['type']!r}-typed parameter or "
+                f"return is not implemented for methods (int, bool and "
+                f"flat seq only)")
+    pseudo = {"name": m["name"], "params": m["params"],
+              "returns": m["returns"], "requires": m.get("requires", []),
+              "ensures": m["ensures"], "body": m["body"],
+              "spec_funs": task.get("spec_funs", []),
+              "methods": earlier}
+    if "decreases" in m:
+        pseudo["decreases"] = m["decreases"]
+    return lower(pseudo, pseudo["body"], None, _unit=info)
+
+
 def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
           _prefix: dict | None = None) -> list:
     # THE FRAME-FACT GAP, framac column (2026-09-12, ROADMAP 16.2): a
@@ -6528,6 +6763,10 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             name, e = s["assign"]
             assert name in ctx.env, f"assign to undeclared {name}"
             prefix.pop(name, None)
+            if _is_method_call(e, ctx.funs):
+                out += _method_call_lines(name, e, ctx, indent, task_name,
+                                          declare=False)
+                continue
             if is_nested_seq_type(ctx.env[name]):
                 # NAMED REFUSAL, added 2026-09-10 (SPEC.md "Nested
                 # sequences"): the only seq<seq>-typed names `ctx.env` can
@@ -6652,6 +6891,17 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
                 out.append(f"{indent}return {name};")
         elif "var" in s:
             v = s["var"]
+            if _is_method_call(v["init"], ctx.funs):
+                # SPEC.md "Methods (v1)": never a `prefix` fact (a C call
+                # has no ACSL rendering), and a seq-typed local is a
+                # WORKSPACE buffer `lower()` already added to the
+                # function's own parameters (`_method_scratch`), so
+                # nothing is declared for it here.
+                out += _method_call_lines(v["name"], v["init"], ctx, indent,
+                                          task_name,
+                                          declare=v["type"] != "seq")
+                ctx = ctx.bind(v["name"], v["type"])
+                continue
             if v["type"] == "seq":
                 slice_alias = _slice_alias_base(v["init"], ctx.env)
                 if slice_alias is None:
@@ -7724,6 +7974,78 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
     raise ValueError(f"t has no operator {op!r}")
 
 
+_CERT_CALL_CTR = [0]
+
+
+def _rename_t(x, m: dict):
+    """`x` (a t statement list or expression) with every variable name in
+    `m` renamed: references, assignment/return targets and `var`
+    declarations alike."""
+    if isinstance(x, list):
+        return [_rename_t(v, m) for v in x]
+    if not isinstance(x, dict):
+        return x
+    out = {}
+    for k, v in x.items():
+        if k == "var" and isinstance(v, str):
+            out[k] = m.get(v, v)
+        elif k == "var" and isinstance(v, dict):
+            out[k] = {**_rename_t(v, m), "name": m.get(v["name"], v["name"])}
+        elif k in ("assign", "return") and isinstance(v, list):
+            out[k] = [m.get(v[0], v[0]), _rename_t(v[1], m)]
+        else:
+            out[k] = _rename_t(v, m)
+    return out
+
+
+def _cert_method_call(target: str, e: dict, ctx: Ctx, st: dict, name: str,
+                      out: list, count: list) -> None:
+    """SPEC.md "Methods (v1)", the certificate side: a method call in the
+    twin body is replayed CONCRETELY, by value (SPEC's execution rule, the
+    interpreter's `funs_of`), as the callee's own body run straight-line
+    on fresh locals `t_cert_call{k}_{x}` with one assert per branch
+    decision, exactly as the twin body itself is replayed. This proves
+    what the call computes at the witness, which is what a refutation is
+    about; it is not the modular call rule, which governs the real
+    program's proof (`stmts()`), not a concrete run. int/bool params and
+    result only; anything else skips the certificate."""
+    info = ctx.funs[e["call"]["fun"]]
+    m = info["def"]
+    if any(p["type"] not in ("int", "bool") for p in m["params"] + m["returns"]):
+        raise _CertSkip("method call with a seq/pair value in the replay")
+    k = _CERT_CALL_CTR[0]
+    _CERT_CALL_CTR[0] += 1
+    pre = f"t_cert_call{k}_"
+    _, dec = assigned_names(m["body"])
+    own = [p["name"] for p in m["params"]] + [m["returns"][0]["name"]] + dec
+    if len(set(own)) != len(own):
+        raise _CertSkip("method locals shadow one another")
+    ren = {x: pre + x for x in own}
+    env2 = {ren[p["name"]]: p["type"] for p in m["params"]}
+    env2[ren[m["returns"][0]["name"]]] = m["returns"][0]["type"]
+    st2 = {}
+    ind = "  "
+    for x in own:
+        out.append(f"{ind}int {ren[x]};")
+    for p, a in zip(m["params"], e["call"]["args"], strict=True):
+        out += at_asserts(a, ctx, ind)
+        dm: list = []
+        rhs = _cert_cexpr(a, ctx, st, ctx.funs, name, dm, ind)
+        out += dm
+        out.append(f"{ind}{ren[p['name']]} = {rhs};")
+        st2[ren[p["name"]]] = _cev(a, st)
+    for r in m.get("requires", []):
+        if not _cev(_rename_t(r, ren), st2):
+            raise _CertSkip("callee requires false at the witness")
+    ctx2 = Ctx(env2, ctx.funs, ret=None, label="Here")
+    _cert_stmts(_rename_t(m["body"], ren), ctx2, st2, m["name"], out, count)
+    rv = ren[m["returns"][0]["name"]]
+    if rv not in st2:
+        raise _CertSkip("callee result unassigned in the replay")
+    out.append(f"{ind}{target} = {rv};")
+    st[target] = st2[rv]
+
+
 def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
                 out: list, count: list) -> tuple:
     """Branch-free replay of `body` at state `st`: straight-line C plus one
@@ -7745,7 +8067,14 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
         count[0] += 1
         if count[0] > MAX_CERT_STMTS:
             raise _CertSkip("replay exceeds the statement cap")
-        if "assign" in s:
+        if "assign" in s and _is_method_call(s["assign"][1], ctx.funs):
+            n, e = s["assign"]
+            _cert_method_call(n, e, ctx, st, name, out, count)
+        elif "var" in s and _is_method_call(s["var"]["init"], ctx.funs):
+            v = s["var"]
+            ctx = ctx.bind(v["name"], v["type"])
+            _cert_method_call(v["name"], v["init"], ctx, st, name, out, count)
+        elif "assign" in s:
             n, e = s["assign"]
             out += at_asserts(e, ctx, ind)
             dm_asserts: list = []
@@ -8303,7 +8632,12 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
             else:
                 raise ValueError(f"undef-certificate: statement {s!r} "
                                  "not walked (return)")
-            ob = defs_t(e)
+            # SPEC.md "Methods (v1)": a method call's own arguments are
+            # its definedness obligation here (a false callee `requires`
+            # is undefined too, but raises `interp.Undef` below and so
+            # skips the certificate rather than being certified).
+            ob = (_t_and([defs_t(a) for a in e["call"]["args"]])
+                  if _is_method_call(e, funs) else defs_t(e))
             if ob is not None and not interp.ev(ob, env_py, ifuns, st):
                 return ob, ctx
             val = interp.ev(e, env_py, ifuns, st)
@@ -8874,7 +9208,13 @@ def _always_returns(body: list) -> bool:
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call
 # sites pass it; when it is certifiable, the emitted file carries the
 # refutation certificate (see the section above).
-def lower(task: dict, body: list, witness: dict | None = None) -> str:
+def lower(task: dict, body: list, witness: dict | None = None,
+          _unit: dict | None = None) -> str:
+    """`_unit` is internal (SPEC.md "Methods (v1)", `_lower_method`):
+    when given, `task` is an already-sanitized task-shaped view of one
+    method, only its contract and C function are returned, and what its
+    callers need is recorded in `_unit[task["name"]]`; `_unit` also holds
+    the earlier methods' records."""
     # FRAMAC-NESTED, 2026-09-12: `_SEQ_EQ_CTR` names the temps the
     # extensional seq equality loop above declares (`__seq_eq0`,
     # `__seq_eq1`, ...) uniquely WITHIN one call to `lower()`; reset here
@@ -8884,6 +9224,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # would make two different calls' emitted names needlessly depend on
     # how many equality loops a PRIOR, unrelated call happened to emit.
     _SEQ_EQ_CTR[0] = 0
+    _MCALL_CTR[0] = 0
+    _CERT_CALL_CTR[0] = 0
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a C/ACSL reserved word, before anything below ever
     # sees the task -- see names.py's module docstring (imported as
@@ -8901,8 +9243,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # 0;` for a param named `int`, well-formed C nowhere. See
     # `remap_witness`'s own docstring.
     twin_body = body if body is not task.get("body") else None
-    task, renames = t_names.sanitize(task, t_names.KEYWORDS["framac"],
-                                     uppercase_ok=True)
+    if _unit is None:
+        task, renames = t_names.sanitize(task, t_names.KEYWORDS["framac"],
+                                         uppercase_ok=True)
+    else:
+        renames = {}                   # the enclosing task's, already done
     # the twin body renamed under the same mapping, kept a separate
     # object from task["body"] (2026-09-11, names.rename_body's note)
     body = t_names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
@@ -8992,6 +9337,39 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             "executable": (
                 not any(p["type"] == "seq" for p in f["params"])
                 and not self_calls(f["body"], f["name"], []))}
+    # SPEC.md "Methods (v1)": each method (only the earlier ones, when this
+    # call is itself lowering a method) is callable as its own C function
+    # `{m}_t`; see the methods section above `stmts()`.
+    method_info = _unit if _unit is not None else {}
+    method_texts = []
+    if _unit is None and task.get("methods"):
+        taken: set = set()
+
+        def _collect(x):
+            if isinstance(x, dict):
+                for k, v in x.items():
+                    if k in ("var", "name", "fun") and isinstance(v, str):
+                        taken.add(v)
+                    _collect(v)
+            elif isinstance(x, list):
+                for v in x:
+                    _collect(v)
+        _collect(task)
+        taken |= {f"{f['name']}_c" for f in task.get("spec_funs", [])}
+        taken |= {f"{name}_t", CERT_FN, CERT_GOAL}
+        for k, m in enumerate(task["methods"]):
+            if f"{m['name']}_t" in taken:
+                raise NotImplementedError(
+                    f"method {m['name']!r}: its C function name "
+                    f"{m['name']}_t collides with a name already in use")
+            method_texts.append(_lower_method(task, m, task["methods"][:k],
+                                              method_info))
+    for m in task.get("methods", []):
+        funs[m["name"]] = {"params": m["params"],
+                           "result": m["returns"][0]["type"],
+                           "labeled": False, "is_task": False,
+                           "is_method": True, "executable": False,
+                           "info": method_info[m["name"]], "def": m}
     funs[name] = {"params": task["params"], "result": rett,
                   "labeled": False, "is_task": True}
 
@@ -9087,6 +9465,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # the emitted C that is precisely what it now is.
         k = p["type"]["pair"].index("seq")
         seqs.append(f"{p['name']}_{'fst' if k == 0 else 'snd'}")
+    # SPEC.md "Methods (v1)": workspace buffers for seq locals set by a
+    # method call (see the methods section above `stmts()`); empty, and
+    # every clause below byte-identical, for a body with no such call.
+    scratch = (_method_scratch(task, body, funs, used)
+               if task.get("methods") else [])
 
     # PAIRS (SPEC.md "Pairs", 2026-09-10): a pair-typed RETURN's struct
     # type must be declared before anything in the file uses it (the
@@ -9409,6 +9792,13 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         clauses.append(f"  requires \\valid({ret}_off + (0 .. {ret}_n));")
         clauses.append(f"  requires \\valid({ret}_data + "
                        f"(0 .. {ret_data} - 1));")
+    if scratch:
+        scratch_ctx = Ctx({**env, **{w: "seq" for w, _ in scratch}}, funs,
+                          ret=None, label="Here")
+    for w, size in scratch:
+        clauses.append(f"  requires \\valid({w} + (0 .. {w}_n - 1));")
+        clauses.append(f"  requires {w}_n == {term(size, scratch_ctx)};")
+        all_seqs.append(w)
     for k, a in enumerate(all_seqs):
         for b in all_seqs[k + 1:]:
             # No two seq buffers may alias: swap's copy-then-write and
@@ -9458,15 +9848,18 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # PARAM stays `\valid_read`-only and every scalar param/local is
         # a plain C local, never aliased into `ret`'s memory
         # (`\separated`, above).
-        clauses.append(f"  assigns {ret}[0 .. {ret}_n - 1];")
+        asg = [f"{ret}[0 .. {ret}_n - 1]"]
     elif nested_return_rows is not None:
         # FRAMAC-NESTED, added 2026-09-14: the return's own two buffers
         # only, the same "only the return buffer's own elements" rule
         # above, over both the offsets array and the data array.
-        clauses.append(f"  assigns {ret}_off[0 .. {ret}_n], "
-                       f"{ret}_data[0 .. {ret_data} - 1];")
+        asg = [f"{ret}_off[0 .. {ret}_n], {ret}_data[0 .. {ret_data} - 1]"]
     else:
-        clauses.append("  assigns \\nothing;")
+        asg = []
+    # SPEC.md "Methods (v1)": a workspace buffer is written too.
+    asg += [f"{w}[0 .. {w}_n - 1]" for w, _ in scratch]
+    clauses.append(f"  assigns {', '.join(asg)};" if asg
+                   else "  assigns \\nothing;")
     for e in task["ensures"]:
         d = defs(e, post_ctx)
         body_p = pred(e, post_ctx)
@@ -9526,6 +9919,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # PARAMETER, appended as OUTPUT parameters exactly the way a
         # plain seq return appends `int *{ret}, int {ret}_n` above.
         cparams += [f"int *{ret}_data", f"int *{ret}_off", f"int {ret}_n"]
+    for w, _ in scratch:
+        cparams += [f"int *{w}", f"int {w}_n"]
 
     if nested_return_rows is not None:
         # FRAMAC-NESTED, added 2026-09-14: the whole function body IS
@@ -9613,7 +10008,30 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
                   "void" if rett == "seq" and not capacity_mode
                   else "void" if nested_return_rows is not None
                   else "int")
+    fn_text = ("/*@\n" + "\n".join(clauses) + "\n*/\n"
+               + f"{cfun_ret_ty} {name}_t({', '.join(cparams)}) {{\n"
+               + ret_decl
+               + "\n".join(body_lines) + "\n"
+               + tail + "}\n")
+    if _unit is not None:
+        # SPEC.md "Methods (v1)": what a caller of this method needs --
+        # whether the C function returns the seq result's length
+        # (CAPACITY/tracked mode) or is void, the result buffer's size as
+        # a t Expr over this method's params (its `requires {ret}_n ==`),
+        # whether it takes workspace buffers, and whether its ensures
+        # states the result's length.
+        _unit[name] = {"capacity": capacity_mode, "len_expr": ret_len_expr,
+                       "scratch": bool(scratch),
+                       "len_stated": (rett == "seq"
+                                      and _ensures_states_len(task))}
+        return fn_text
     rc = t_names.rename_comment(renames)
+    if method_texts:
+        return ("\n".join(header) + ("\n" if header else "")
+                + "".join(method_texts)
+                + fn_text
+                + (cert or "")
+                + (f"\n// {rc}\n" if rc else ""))
     return ("\n".join(header) + ("\n" if header else "")
             + "/*@\n" + "\n".join(clauses) + "\n*/\n"
             + f"{cfun_ret_ty} {name}_t({', '.join(cparams)}) {{\n"
