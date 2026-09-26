@@ -273,7 +273,7 @@ class Harness(unittest.TestCase):
         self.assertIn("proof fn t_eq_requires(a: Vec < i8 >)", text)
         self.assertIn("t_lift_pre(t_view_i8(a@))", text)
         self.assertIn("t_lift_post(t_view_i8(a@), (r as int))", text)
-        self.assertIn("broadcast use t_view_i8_len, t_view_i8_index, t_view_i8_eq;", text)
+        self.assertIn("broadcast use t_view_i8_len, t_view_i8_index, t_view_i8_eq, t_view_i8_sub, t_view_i8_add, t_view_i8_push;", text)
         # the source's own closure map is bridged to the view by extensionality
         self.assertTrue(re.search(r"assert\(a @ \. map \( \| i : int , x : i8 \| x as int \) =~= t_view_i8\(a@\)\);",
                                   text))
