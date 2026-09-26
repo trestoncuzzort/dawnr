@@ -118,6 +118,26 @@ The training command, one per seed, after the T4 build of `continue_from_checkpo
         --out t/out/locallm-r12-s<seed> --steps 300 --lr 3e-5 --block-size 512 \
         --doc-batches --keep-every 50 --dropout 0.1 --split-seed 1337 --seed <seed> --deterministic
 
+Then, for each seed, the stopping step, before anything is generated on the
+held-out split:
+
+    python3 t/pick_stopping_step.py --run t/out/locallm-r12-s<seed> \
+        --split t/out/loop/split-v5.json --dev-ids t/r12-dev-ids.json --install
+
+It decodes every kept step (`ckpt-step-50.pt` ... `ckpt-step-300.pt`) on the 100
+dev problems through `loop_locallm.py generate` (greedy, the same prompt and stop
+rule as the held-out run; answer sets `locallm-r12-s<seed>-dev-step<N>`), runs each
+problem's own assertions in the t interpreter and nothing else, and picks the
+earliest step with the most problems passing every assertion, assertions as the
+tie-break (`t/DATA-r12.md` section 4). `selection.json` beside the run records
+every step's numbers; `--install` copies the chosen step over `ckpt.pt` (the
+rolling final checkpoint stays as `ckpt-final.pt`, the step is written into
+`run.json`), so the generate command below is unchanged. Validation loss is not
+consulted: on r11 seed 1 it stopped moving by step 100-150 (0.73, 0.70, 0.68 at
+steps 100, 150, 300) while the train loss fell from 0.40 to 0.11, and on r7 it
+rose after step 150. Report the chosen step and the dev curve beside each arm's
+score; the curve is the overfitting measurement r12 has and earlier rounds did not.
+
 `--split-seed 1337` is the same for every arm; the trainer refuses a holdout
 under 8% of the characters (the hash split's size varies with the split seed:
 6.1% to 12.4% on r8 across eight seeds), so if 1337 falls short on the final
