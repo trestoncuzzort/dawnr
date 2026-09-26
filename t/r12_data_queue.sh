@@ -14,6 +14,8 @@
 #   bash t/r12_data_queue.sh lift-2026-09-26        the 2026-09-26 corpus lifts: lifter checks on the lab, then the seven kernels (not in `all`)
 #   bash t/r12_data_queue.sh lift-2026-09-26-recovered  its twin refusals that drawn inputs cleared (t/lift_corpora.py --recover-twins), graded the same way (not in `all`)
 #   bash t/r12_data_queue.sh lift-2026-09-26-let    the files that lift refused as let-expressions, lifted again through its gates, checked, graded (not in `all`)
+#   bash t/r12_data_queue.sh lift-vericoding-verus  vericoding's verified Verus solutions lifted (t/lift_vericoding.py), checked, graded (not in `all`)
+#   bash t/r12_data_queue.sh lift-vericoding-lean   its Lean solutions the same way, after the Verus track (not in `all`)
 #   bash t/r12_data_queue.sh all                    everything above, in that order
 #   bash t/r12_data_queue.sh _py NAME               print one embedded program (the tests read them so)
 #
@@ -1054,6 +1056,48 @@ step_lift_2026_09_26_let() {
   echo "next: read $TABLE and the report in $M; copy it to t/COVERAGE-lifted-2026-09-26-let.md and give the corpus builder --lifted-set $D=t/COVERAGE-lifted-2026-09-26-let.md --heads $M/heads.jsonl"
 }
 
+# vericoding-benchmark's verified Verus and Lean solutions (vericoded/V*, L*), lifted by
+# t/lift_vericoding.py: each rendered to Dafny by its front end (t/lift_verus.py,
+# t/lift_lean.py), lifted by t/lifter.py, its lifted contract proved equivalent to the
+# source contract in the source's own prover, weak specifications refused, then the same
+# gates as the Dafny lift. Deduplicated by source problem id against the three Dafny lifts
+# (and the Lean track against the Verus one). The lift runs here, where the whole pool is;
+# the lifter's Dafny check stage and the seven kernels run on the grading machine, as for
+# step_lift_2026_09_26. Report: t/LIFT-VERICODING-VERUS-LEAN.md. Not part of `all`.
+step_lift_vericoding() {
+  local LANG_=$1 L1=t/out/L1 rc
+  local D=t/out/lifted-tasks-vericoding-$LANG_ M=t/out/lifted-tasks-vericoding-$LANG_.meta
+  local TABLE=t/out/COVERAGE-lifted-vericoding-$LANG_.md
+  local DEDUPE="--dedupe-against t/out/lifted-tasks-2026-09-26 --dedupe-against t/out/lifted-tasks-2026-09-26-let --dedupe-against t/out/lifted-tasks-2026-09-26-recovered"
+  [ "$LANG_" = lean ] && DEDUPE="$DEDUPE --dedupe-against t/out/lifted-tasks-vericoding-verus"
+  [ -d "$L1/vericoding-benchmark/vericoded" ] || refuse "no vericoding-benchmark checkout under $L1"
+  if check_or_refuse "lift-vericoding-$LANG_" "$M/lift-census.json" "$TABLE"; then echo "== lift-vericoding-$LANG_: graded already"; return 0; fi
+  admit
+  if [ ! -f "$M/lift-census.json" ]; then
+    echo "== lift-vericoding-$LANG_: front end, lifter, native equivalence and gates, here, 2 jobs, niced"
+    nice -n 19 python3 t/lift_vericoding.py --language "$LANG_" --vericoding "$L1/vericoding-benchmark" --out "$D" \
+        --split t/out/loop/split-v5.json --pool v5 --jobs 2 --native-jobs 2 $DEDUPE \
+      || refuse "lift-vericoding-$LANG_: t/lift_vericoding.py refused"
+  fi
+  store -a --delete "$D/" "$LAB:~/$REPO/$D/" || refuse "cannot stage the lifted tasks on the lab"
+  store -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the rendered sources on the lab"
+  store -a "$M/lift-census.json" "$LAB:~/$REPO/$M/lift-census.json" || refuse "cannot stage the census on the lab"
+  echo "== lift-vericoding-$LANG_: the lifter's check stage on the grading machine (dafny), 8 jobs, niced"
+  lab "PATH=\$HOME/.dotnet:\$PATH DOTNET_ROOT=\$HOME/.dotnet DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 nice -n 19 python3 t/lifter.py --dir $M/staged --out $M/lift-checked --jobs 8 --timeout 120" \
+    || refuse "lift-vericoding-$LANG_: the lifter's check stage failed"
+  lab_py lift_check_filter "$D" "$M/lift-checked" --failed "$M/check-failed" || refuse "lift-vericoding-$LANG_: the check filter refused"
+  admit --grading
+  [ "${CELLS:-0}" -ge 1 ] || refuse "lift-vericoding-$LANG_: no grading cell admitted"
+  echo "== lift-vericoding-$LANG_: grading with $CELLS cells, T_SPARK_JOBS=1"
+  lab "T_WATCH=\$HOME/${REMOTE_EV:-.cache/t-watch/home-grade.jsonl} T_SPARK_JOBS=1 bash -lc 'python3 t/run_par.py --jobs $CELLS --tasks $D --out $(default_work_dir)/lift-vericoding-$LANG_ --table $TABLE'"
+  rc=$?
+  [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ] || refuse "lift-vericoding-$LANG_: run_par exited $rc, no table"
+  fetch -a "$LAB:~/$REPO/$TABLE" "$TABLE" || refuse "lift-vericoding-$LANG_: cannot fetch the table"
+  fetch -a "$LAB:~/$REPO/$M/check-failed/" "$M/check-failed/" 2>/dev/null
+  mark_step "lift-vericoding-$LANG_" "$M/lift-census.json" "$TABLE"
+  echo "next: read $TABLE; copy it to t/COVERAGE-lifted-vericoding-$LANG_.md and give the corpus builder --lifted-set $D=t/COVERAGE-lifted-vericoding-$LANG_.md --heads $M/heads.jsonl"
+}
+
 step_dev_ids() {
   admit
   lab_py dev_ids --split t/out/loop/split-v5.json --decontam t/decontamination-2026-09-21.json --n 100 --salt r12-dev --out "$RD/r12-dev-ids.json" \
@@ -1099,6 +1143,8 @@ main() {
                   lift-2026-09-26) step_lift_2026_09_26 ;;
                   lift-2026-09-26-recovered) step_lift_2026_09_26_recovered ;;
                   lift-2026-09-26-let) step_lift_2026_09_26_let ;;
+                  lift-vericoding-verus) step_lift_vericoding verus ;;
+                  lift-vericoding-lean) step_lift_vericoding lean ;;
                   all)        step_p4_extract; step_train; step_p4; step_prover2; step_v6new; step_spec; step_build; step_dev_ids; step_r11 ;;
                   *)          refuse "unknown command '$1'" ;;
                 esac ;;
