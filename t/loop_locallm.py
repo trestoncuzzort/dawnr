@@ -26,6 +26,7 @@ generate; corpus is standard library.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -43,6 +44,19 @@ import surface                                                  # noqa: E402
 
 OUT = HERE / "out" / "loop-locallm"
 CLEAN = "verified / refuted"
+# The boundary an answer ends at: the next head this project writes. A corpus
+# whose documents begin with a head teaches the model to emit that head between
+# documents (2026-09-19, when a Signature: corpus left two programs in one reply
+# and 216 of 232 answers unparseable). One constant, because the stop rule in
+# locallm/model.py has to stop at exactly the boundary this file cuts at.
+REPLY_BOUNDARY = re.compile(r"\n\s*\n(?=Problem: |Signature: |t \d)")
+AGREEMENT = HERE / "AGREEMENT.md"
+COMMITTED_DIR = HERE / "tasks"
+LIFTED_DIR = HERE / "out" / "lifted-tasks"
+LIFTED_TABLE = HERE / "COVERAGE-lifted-785.md"
+# What a resumed raw record must agree with this invocation on: the decoding
+# options below, plus the model, its checkpoint hash, the pool and the prompt.
+RESUME_OPTIONS = ("temperature", "top_k", "max_new_tokens", "seed", "tokenizer")
 
 
 def signature(entry: dict) -> str:
@@ -145,13 +159,47 @@ def mbpp_id(name: str) -> int | None:
     return task_id if task_id is not None and task_id < se.HUMANEVAL_BASE else None
 
 
-def clean_rows(table: Path) -> set[str]:
-    rows = set()
+def table_rows(table: Path) -> dict[str, list[str]]:
+    """Every task row of a seven-kernel table: name -> its seven cells."""
+    rows = {}
     for line in table.read_text(encoding="utf-8").splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) == 8 and cells[0] != "task" and all(c == CLEAN for c in cells[1:]):
-            rows.add(cells[0])
+        if len(cells) == 8 and cells[0] != "task" and not set(cells[0]) <= set("-: "):
+            rows[cells[0]] = cells[1:]
     return rows
+
+
+def clean_rows(table: Path) -> set[str]:
+    return {name for name, cells in table_rows(table).items() if all(c == CLEAN for c in cells)}
+
+
+def committed_task_names(directory: Path | None = None) -> list[str]:
+    """The name each committed task declares, read the way the builder reads it.
+
+    A file that does not parse is a refusal by name, not a task that silently
+    contributes nothing.
+    """
+    names = []
+    for f in sorted((COMMITTED_DIR if directory is None else directory).glob("*.t")):
+        try:
+            names.append(surface.parse_file(str(f))["name"])
+        except Exception as e:                                   # noqa: BLE001 -- name the file, whatever broke
+            raise SystemExit(f"cannot read committed task {f.name}: {e}")
+    return names
+
+
+def agreement_gap(table: Path | None = None, directory: Path | None = None) -> tuple[dict[str, list[str]], list[str]]:
+    """The table's task rows, and the committed tasks that have no row.
+
+    A derived table has to cover every row of its source before anything reads
+    it (Deequ's hasSize/isComplete, github.com/awslabs/deequ). On 2026-09-20 a
+    one-task run_par.py sweep overwrote t/AGREEMENT.md, and the corpus builder
+    then kept 1 of 35 committed tasks without a word.
+    """
+    table = AGREEMENT if table is None else table
+    rows = table_rows(table) if table.exists() else {}
+    missing = [name for name in committed_task_names(directory) if name not in rows]
+    return rows, missing
 
 
 # The corpus builder drops unsafe documents; preflight and continuation use the
@@ -171,39 +219,61 @@ def cmd_corpus(a) -> int:
         # Signature: belongs here for the same reason it belongs in the answer
         # splitter below: a corpus whose documents start with a head must be
         # split at every head this project writes, or two documents become one.
-        for d in re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", text):
+        for d in REPLY_BOUNDARY.split(text):
             if not d.strip():
                 continue
             # the base corpus was built by an older run that may not have filtered
             if gate.admit(d, loop_filter.task_names(d)):
                 docs.append(d.strip() + "\n")
+    # An SFT row that reaches no document is an incomplete input, named rather
+    # than dropped: under --pool v5, 27 of 87 sft-r6 rows used to vanish with
+    # exit 0 (review of 2026-09-21). Deequ's isComplete, github.com/awslabs/deequ.
+    unusable = []
     for sft in a.sft:
-        for line in Path(sft).read_text(encoding="utf-8").splitlines():
-            r = json.loads(line)
-            m = re.search(r"```t\n(.*?)```", r["chosen"], re.S)
-            entry = pool.get(r["task_id"]) or pool.get(int(r["task_id"]))
+        for number, line in enumerate(Path(sft).read_text(encoding="utf-8").splitlines(), 1):
             try:
+                r = json.loads(line)
                 task_id = int(r["task_id"])
-            except (TypeError, ValueError):
-                task_id = None
+                chosen = r["chosen"]
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as e:
+                raise SystemExit(f"{sft}:{number}: not an SFT row with an integer task_id and a chosen answer: {e}")
+            m = re.search(r"```t\n(.*?)```", chosen, re.S)
+            entry = pool.get(task_id) or pool.get(str(task_id))
             body = m.group(1) if m else ""
-            if not gate.admit(body, [r.get("task")] + loop_filter.task_names(body),
-                              {task_id} if task_id is not None else set()):
+            if not gate.admit(body, [r.get("task")] + loop_filter.task_names(body), {task_id}):
                 continue
-            if m and entry:
+            if m is None:
+                unusable.append(f"{Path(sft).name}:{number} task_id={task_id} has no fenced t block")
+            elif entry is None:
+                unusable.append(f"{Path(sft).name}:{number} task_id={task_id} is not in pool {a.pool}")
+            else:
                 docs.append(problem_head(entry, a.examples) + m.group(1).strip() + "\n")
                 n_sft += 1
+    if unusable:
+        raise SystemExit(f"{len(unusable)} SFT row(s) reach no document; the corpus would not equal its "
+                         f"inputs: {unusable[:5]}" + (" ..." if len(unusable) > 5 else ""))
     if a.lifted:
-        keep = clean_rows(HERE / "COVERAGE-lifted-785.md")
-        for f in sorted((HERE / "out" / "lifted-tasks").glob("*.json")):
+        keep = clean_rows(LIFTED_TABLE)
+        lifted = sorted(LIFTED_DIR.glob("*.json"))
+        if not lifted:
+            raise SystemExit(f"--lifted asked for the lifted tasks and {LIFTED_DIR} holds none; a corpus "
+                             f"with 0 lifted documents is not the corpus this flag names")
+        for f in lifted:
             task = json.loads(f.read_text(encoding="utf-8"))
             if task.get("name") in keep:
                 doc = surface.print_task(task).strip() + "\n"
                 if gate.admit(doc, [task.get("name")]):
                     docs.append(doc)
                     n_lift += 1
-        keep = clean_rows(HERE / "AGREEMENT.md")
-        for f in sorted((HERE / "tasks").glob("*.t")):
+        rows, missing = agreement_gap(AGREEMENT, COMMITTED_DIR)
+        if missing:
+            raise SystemExit(f"{AGREEMENT.name} has rows for {len(rows)} task(s) and {COMMITTED_DIR.name}/ holds "
+                             f"{len(rows) + len(missing)}; no row for {missing[:5]}"
+                             + (" ..." if len(missing) > 5 else "")
+                             + ". Regrade the committed tasks (bash t/grade_lab.sh matrix) and copy "
+                             "t/out/AGREEMENT-lab.md over the table before building a corpus from it")
+        keep = clean_rows(AGREEMENT)
+        for f in sorted(COMMITTED_DIR.glob("*.t")):
             task = surface.parse_file(str(f))
             if task.get("name") in keep:
                 doc = surface.print_task(task).strip() + "\n"
@@ -253,36 +323,131 @@ def cmd_train(a) -> int:
     return r.returncode
 
 
+def file_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def resume_conflicts(record: dict, expected: dict) -> list[str]:
+    """Everything an existing raw record disagrees with this invocation on, as `field: recorded -> now`.
+
+    A tag holds one decoding configuration and one model, or its numbers mean
+    nothing (blocker A6: a dropped flag sampled the headline arm at 0.5 while
+    its neighbours decoded greedily). Recorded parameters are compared with the
+    current invocation before an output is reused, as Snakemake's
+    --list-params-changes does
+    (snakemake.readthedocs.io/en/stable/project_info/faq.html); we refuse
+    instead of rerunning, since mixing is the defect. A record without a
+    checkpoint hash predates the hash and is a difference: two checkpoints
+    trained in place at one path are two models with one name.
+    """
+    out = []
+    options = record.get("options") if isinstance(record.get("options"), dict) else {}
+    for key in RESUME_OPTIONS:
+        if options.get(key) != expected["options"][key]:
+            out.append(f"options.{key}: {options.get(key)!r} -> {expected['options'][key]!r}")
+    for key in ("model", "checkpoint_sha256", "pool_version"):
+        if record.get(key) != expected[key]:
+            if key == "model" and _same_model_path(record.get(key), expected[key]):
+                continue
+            out.append(f"{key}: {record.get(key)!r} -> {expected[key]!r}")
+    messages = record.get("messages") or [{}]
+    prompt = messages[0].get("content") if isinstance(messages[0], dict) else None
+    if prompt != expected["prompt"]:
+        out.append("prompt: the recorded head differs from the one this invocation builds "
+                   "(a different --examples, pool or problem text)")
+    return out
+
+
+def _same_model_path(recorded, now) -> bool:
+    """`locallm:<path>` strings naming one directory by two spellings."""
+    prefix = "locallm:"
+    if not (isinstance(recorded, str) and isinstance(now, str)
+            and recorded.startswith(prefix) and now.startswith(prefix)):
+        return False
+    try:
+        return Path(recorded[len(prefix):]).resolve() == Path(now[len(prefix):]).resolve()
+    except OSError:
+        return False
+
+
 def cmd_generate(a) -> int:
     import torch
     sys.path.insert(0, str(LOCALLM))
     import checkpoint
     split = json.loads(Path(a.split).read_text(encoding="utf-8"))
-    pool = se.pool(split.get("pool", "v1"))
+    pool_version = split.get("pool", "v1")
+    pool = se.pool(pool_version)
     # which problems to answer: the split's held-out ids by default, or the ones named in --ids-file, so the
     # model can answer TRAINING problems and have its own failures graded and fed back (2026-09-17)
     which = "train_ids" if getattr(a, "train", False) else "eval_ids"
     ids = sorted(int(i) for i in split[which])
     if getattr(a, "ids_file", ""):
         ids = sorted(int(x) for x in Path(a.ids_file).read_text().split())
+    # Every requested id must be answerable before anything is generated
+    # (PCheck, Xu et al. OSDI'16: check a setting where it is read, not where
+    # it is used, so the error is not latent). An id the pool lacks used to be
+    # skipped with exit 0, and the set then graded as whole (blocker A4).
+    entries = {tid: pool.get(tid) or pool.get(str(tid)) for tid in ids}
+    missing = [tid for tid, entry in entries.items() if entry is None]
+    if missing:
+        print(f"generate: {len(missing)} of {len(ids)} requested ids are not in pool {pool_version}: "
+              f"{missing[:10]}" + (" ..." if len(missing) > 10 else ""), file=sys.stderr)
+        return 1
     d = se.outdir(a.tag)
     model, tok, _ = checkpoint.load_checkpoint(a.model)
     params = sum(p.numel() for p in model.parameters())
-    torch.manual_seed(a.seed)
-    for i, tid in enumerate(ids):
-        entry = pool.get(tid) or pool.get(str(tid))
+    ckpt = Path(a.model) / "ckpt.pt"
+    if not ckpt.is_file():
+        print(f"generate: {ckpt} is not a file, so the checkpoint cannot be hashed into the records",
+              file=sys.stderr)
+        return 1
+    checkpoint_sha256 = file_sha256(ckpt)
+    options = {"temperature": a.temperature, "top_k": a.top_k, "max_new_tokens": a.tokens,
+               "tokenizer": type(tok).__name__, "seed": a.seed}
+    conflicts, resumed = [], []
+    for tid in ids:
         path = d / "raw" / f"{tid}.json"
-        if entry is None or path.exists():
+        if not path.exists():
             continue
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            conflicts.append(f"{tid}: raw record unreadable ({e}); a kill mid-write leaves one, delete it by hand")
+            continue
+        expected = {"model": f"locallm:{a.model}", "checkpoint_sha256": checkpoint_sha256,
+                    "pool_version": pool_version, "prompt": problem_head(entries[tid], a.examples),
+                    "options": options}
+        found = resume_conflicts(record, expected)
+        conflicts.extend(f"{tid}: {c}" for c in found)
+        if not found:
+            resumed.append(tid)
+    if conflicts:
+        print(f"generate: refusing to resume into {d}: {len(conflicts)} difference(s) between the recorded "
+              f"answers and this invocation, so the tag would mix two configurations:", file=sys.stderr)
+        for c in conflicts[:20]:
+            print(f"  {c}", file=sys.stderr)
+        if len(conflicts) > 20:
+            print(f"  ... and {len(conflicts) - 20} more", file=sys.stderr)
+        return 2
+    # torch is seeded once per process, so a sampled (T > 0) answer depends on
+    # which ids this process answered before it: a resume or another sharding
+    # draws differently. Per-id seeding would change what every old sampled
+    # run means, so this stays as it is and is recorded here (2026-09-21).
+    torch.manual_seed(a.seed)
+    todo = [tid for tid in ids if tid not in resumed]
+    for i, tid in enumerate(todo):
+        entry = entries[tid]
+        path = d / "raw" / f"{tid}.json"
         head = problem_head(entry, a.examples)
         text = checkpoint.sample(model, tok, head, a.tokens, temperature=a.temperature,
                                  top_k=a.top_k, use_cache=a.use_cache)
         body = text[len(head):] if text.startswith(head) else text
-        # A corpus whose documents begin with a head teaches the model to emit that
-        # head between documents, so the boundary the answer ends at must know
-        # about every head this project writes -- 2026-09-19, when a Signature:
-        # corpus left two programs in one reply and 216 of 232 answers unparseable.
-        body = re.split(r"\n\s*\n(?=Problem: |Signature: |t \d)", body, maxsplit=1)[0]
+        # cut at the next head this project writes; see REPLY_BOUNDARY
+        body = REPLY_BOUNDARY.split(body, maxsplit=1)[0]
         # A corpus whose documents START with a head teaches the model to start
         # its answer with one. Measured 2026-09-20: trained on the examples
         # corpus, every one of 24 replies opened with `Example:` lines before
@@ -292,19 +457,24 @@ def cmd_generate(a) -> int:
         # stripper, now the extractor's input.
         body = loop_filter.strip_head(body)
         record = {"task_id": tid, "fn": entry["fn"], "model": f"locallm:{a.model}", "digest": f"{params} params",
-                  "pool_version": split.get("pool", "v1"), "prompt_version": "locallm-head",
-                  "options": {"temperature": a.temperature, "top_k": a.top_k, "max_new_tokens": a.tokens,
-                              "tokenizer": type(tok).__name__, "seed": a.seed},
+                  "checkpoint_sha256": checkpoint_sha256,
+                  "pool_version": pool_version, "prompt_version": "locallm-head",
+                  "options": dict(options),
                   "messages": [{"role": "user", "content": head}],
                   "reply": "```t\n" + body.strip() + "\n```", "done_reason": "length"}
         path.write_text(json.dumps(record, indent=1), encoding="utf-8")
         if (i + 1) % 25 == 0:
-            print(f"generate: {i + 1} of {len(ids)}", flush=True)
-    print(f"generate: {len(ids)} held-out problems answered into {d}")
+            print(f"generate: {i + 1} of {len(todo)}", flush=True)
+    unanswered = [tid for tid in ids if not (d / "raw" / f"{tid}.json").exists()]
+    if unanswered:
+        print(f"generate: {len(unanswered)} of {len(ids)} requested ids have no answer: {unanswered[:10]}",
+              file=sys.stderr)
+        return 1
+    print(f"generate: {len(ids)} problems into {d}: {len(todo)} answered now, {len(resumed)} resumed")
     return 0
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("corpus")
@@ -341,7 +511,11 @@ def main() -> int:
     p.add_argument("--split", default=str(HERE / "out" / "loop" / "split-v3.json"))
     p.add_argument("--tokens", "--chars", dest="tokens", type=int, default=1200,
                    help="maximum new tokens; --chars is the historical character-tokenizer alias")
-    p.add_argument("--temperature", type=float, default=0.5)
+    # No default on purpose: the headline arm was sampled at a silent 0.5 while
+    # its neighbours decoded greedily, and nothing said so (blocker A6). Every
+    # recipe names its temperature, or it is refused here at parse time.
+    p.add_argument("--temperature", type=float, required=True,
+                   help="0 decodes greedily; every other value samples. Required, no default.")
     p.add_argument("--top-k", type=int, default=20)
     p.add_argument("--seed", type=int, default=1)
     p.add_argument("--examples", action="store_true",
@@ -351,7 +525,11 @@ def main() -> int:
                         "verified it produces identical output and its registered speed prediction "
                         "failed on a different benchmark; it has never been measured on this path, "
                         "so register a prediction before quoting a speedup")
-    a = ap.parse_args()
+    return ap
+
+
+def main(argv: list[str] | None = None) -> int:
+    a = build_parser().parse_args(argv)
     return {"corpus": cmd_corpus, "train": cmd_train, "generate": cmd_generate}[a.cmd](a)
 
 
