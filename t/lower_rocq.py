@@ -5030,7 +5030,7 @@ def _ck(name: str) -> str:
 class Ctx:
     """Expression lowering context for one task."""
 
-    def __init__(self, task: dict):
+    def __init__(self, task: dict, concrete: bool = False):
         self.task = task
         self.tys: dict[str, str] = {}
         for p in task["params"]:
@@ -5048,6 +5048,39 @@ class Ctx:
         # args are appended. Defaults set by the shapes.
         self.callpre: dict[str, str] = {
             f: f"sf_{f}" for f in self.sfres if f != task["name"]}
+        # SPEC.md "Methods (v1)": the methods this unit (the task, or one
+        # method lowered as a pseudo-task by `_method_unit`) calls
+        # directly. In the proof file (`concrete` False) each is a
+        # UNIVERSALLY QUANTIFIED function binder `t_m_<m>` (plus
+        # `t_m_<m>_len` for a seq return), prepended to `param_binders`,
+        # with its contract `t_mspec_<m> t_m_<m>` prepended to `len_hyps`:
+        # nothing can unfold a bound variable, so the caller's proof sees
+        # exactly the callee's requires/ensures and never its body (Dafny's
+        # modular call rule). In a refutation certificate (`concrete`
+        # True) a call names the callee's own concrete Definition instead,
+        # since the certificate grounds the twin PROGRAM by evaluation.
+        # Empty for every task without methods (byte-identical).
+        self.concrete = concrete
+        self.mdeps: list[dict] = []
+        self.mret: dict[str, object] = {}
+        self.callpre_len: dict[str, str] = {}
+        allm = {m["name"]: m for m in task.get("methods", [])}
+        if allm:
+            called = _called_methods(task["body"], set(allm))
+            for mname, m in allm.items():
+                if mname == task["name"]:
+                    continue
+                self.sfres[mname] = m["returns"][0]["type"]
+                self.sfparams[mname] = m["params"]
+                self.mret[mname] = m["returns"][0]["type"]
+                if concrete:
+                    self.callpre[mname] = f"{mname}_t"
+                    self.callpre_len[mname] = f"{mname}_t_len"
+                else:
+                    self.callpre[mname] = f"t_m_{mname}"
+                    self.callpre_len[mname] = f"t_m_{mname}_len"
+                if not concrete and mname in called:
+                    self.mdeps.append(m)
 
     def ty(self, e: dict, local: dict[str, str]) -> str:
         if "int" in e:
@@ -5185,6 +5218,15 @@ class Ctx:
             fn_e, ln_e = self.seq_fn(c["else"], env, local)
             return (f"(if {cb} then {fn_t} else {fn_e})",
                     f"(if {cb} then {ln_t} else {ln_e})")
+        if "call" in e and e["call"]["fun"] in self.mret:
+            # SPEC.md "Methods (v1)": a seq-returning method is two
+            # functions of the same arguments, its function half and its
+            # length half (`callpre`/`callpre_len`), the same split a seq
+            # return of the task itself gets (`{name}_t`/`{name}_t_len`).
+            fn = self.call(e, env, local)
+            f = e["call"]["fun"]
+            ln = "(" + self.callpre_len[f] + fn[1 + len(self.callpre[f]):]
+            return fn, ln
         op = e.get("op")
         if op == "at":
             # SPEC.md "Nested sequences (v1)": s[i] on a NESTED s is a
@@ -5809,6 +5851,18 @@ class Ctx:
         if "call" in e:
             for a in e["call"]["args"]:
                 self.defs(a, ctx, binders, acc, env, local)
+            f = e["call"]["fun"]
+            if f in self.mret and not self.concrete:
+                # SPEC.md "Methods (v1)": the caller owes the callee's
+                # requires at the arguments, on the path that reaches the
+                # call, as one more obligation lemma in this same calculus
+                # (Dafny's call rule: the precondition is checked at the
+                # call site). The callee's ensures is NOT assumed here by
+                # hand: the contract hypothesis in `len_hyps` is
+                # instantiated by `t_minst` inside `t_dis`.
+                req = _mreq_at(self, f, e["call"]["args"], env, local)
+                if req is not None:
+                    acc.append((list(binders), list(ctx), req))
             return
         op = e["op"]
         if op == "at":
@@ -6193,6 +6247,12 @@ def param_binders(cx: Ctx) -> tuple[str, str]:
     uses a pair PARAM yet (both divmod_pair and min_max only return one),
     so this arm is measured only by construction."""
     bs, args = [], []
+    # SPEC.md "Methods (v1)": the callee function binders come first
+    # (`Ctx.mdeps`, empty for every task without methods).
+    for m in cx.mdeps:
+        mb, ma = _mfun_binders(m, f"t_m_{m['name']}")
+        bs.append(mb)
+        args.append(ma)
     for p in cx.task["params"]:
         v = p["name"]
         if p["type"] == "seq":
@@ -6217,7 +6277,11 @@ def param_binders(cx: Ctx) -> tuple[str, str]:
 
 
 def len_hyps(cx: Ctx) -> list[str]:
-    return [f"(0 <= {p['name']}_len)" for p in cx.task["params"]
+    # SPEC.md "Methods (v1)": each callee's contract, over its binder(s),
+    # ahead of the length facts (`Ctx.mdeps`, empty without methods).
+    return [f"(t_mspec_{m['name']} {_mfun_binders(m, 't_m_' + m['name'])[1]})"
+            for m in cx.mdeps] + [
+            f"(0 <= {p['name']}_len)" for p in cx.task["params"]
             if p["type"] == "seq"
             or (isinstance(p["type"], dict) and "seq" in p["type"])]
 
@@ -7112,6 +7176,381 @@ def lens_arrows(cx: Ctx) -> str:
     return "".join(f"  {h} ->\n" for h in len_hyps(cx))
 
 
+# --------------------------------------------------------------------------
+# METHODS (v1), 2026-09-26 (SPEC.md "Methods (v1)"; the Dafny lowering's
+# `_method_decl` is the reference). Dafny verifies each method separately
+# and, at a call `x := m(args)`, lets the caller prove m's requires at the
+# arguments and then know ONLY m's ensures of x. Rocq has no call rule, so
+# the rule is built out of binders:
+#
+#   * every method m becomes its own unit, lowered by the same generators a
+#     task uses (gen_plain / gen_loop / gen_loops / gen_rec) as a
+#     pseudo-task, giving `m_t` and its theorem `m_t_spec`;
+#   * `Definition t_mspec_m (t_mf : <m's type>) : Prop := forall args,
+#     requires -> ensures(t_mf args)` states m's contract of an ARBITRARY
+#     function;
+#   * a unit that calls m takes m as a universally quantified function
+#     binder `t_m_m` (param_binders) together with the hypothesis
+#     `t_mspec_m t_m_m` (len_hyps). A bound variable has no body, so no
+#     tactic, conversion or kernel step can see m's implementation from
+#     inside the caller: the caller proves its obligations from the
+#     contract alone, exactly Dafny's modular reading.
+#     `t_minst` (run first inside t_dis/t_side) instantiates the contract
+#     hypothesis at every application `t_m_m a1 .. an` it finds;
+#   * the callee's requires at the arguments is one more obligation lemma
+#     (`Ctx.defs`'s call arm), under the path conditions of the call;
+#   * `m_t_closed : t_mspec_m (m_t <closed callees>)` instantiates each
+#     unit with the concrete callees and their closed contracts, and the
+#     task's `<name>_t_closed` states the composed program's theorem.
+#
+# `Opaque m_t` was the rejected alternative: the reference manual
+# (proofs/writing-proofs/equality.html, "Opaque") says it only marks a
+# constant "changeably opaque" for tactics, while conversion (hence exact /
+# reflexivity / vm_compute) may still unfold it, so a caller's proof could
+# pass by computing the callee's body; the Section `Variable`/`Hypothesis`
+# route is sound but those tokens are banned by the adapter. A refutation
+# certificate (a twin) instead evaluates the twin PROGRAM, so there
+# (`Ctx(concrete=True)`) a call names the callee's concrete Definition.
+# --------------------------------------------------------------------------
+
+
+def _called_methods(node, names: set) -> set:
+    out: set = set()
+
+    def walk(n):
+        if isinstance(n, dict):
+            c = n.get("call")
+            if isinstance(c, dict) and c.get("fun") in names:
+                out.add(c["fun"])
+            for v in n.values():
+                walk(v)
+        elif isinstance(n, list):
+            for v in n:
+                walk(v)
+    walk(node)
+    return out
+
+
+def _mparam_ty(t) -> list[str]:
+    if t == "int":
+        return ["Z"]
+    if t == "bool":
+        return ["bool"]
+    if t == "seq":
+        return ["(Z -> Z)", "Z"]
+    raise NotImplementedError(
+        "rocq lowering: method-pair-or-nested-type: a method whose parameter "
+        "or return is a pair or a nested sequence is not lowered yet")
+
+
+def _mfun_binders(m: dict, fname: str) -> tuple[str, str]:
+    """(binder text, argument text) for a function standing for method m:
+    one binder for an int/bool return, two (function half, length half)
+    for a seq return."""
+    if not m["params"]:
+        raise NotImplementedError(
+            "rocq lowering: method-no-params: a parameterless method is not "
+            "lowered yet")
+    dom = []
+    for p in m["params"]:
+        dom += _mparam_ty(p["type"])
+    rt = m["returns"][0]["type"]
+    arrow = " -> ".join(dom)
+    if rt == "seq":
+        return (f"({fname} : {arrow} -> Z -> Z) ({fname}_len : {arrow} -> Z)",
+                f"{fname} {fname}_len")
+    return f"({fname} : {arrow} -> {_mparam_ty(rt)[0]})", fname
+
+
+def _mpseudo(task: dict, idx: int) -> dict:
+    """Method number idx as a task of its own (the Dafny lowering's
+    `_method_decl` pseudo-task), seeing the spec_funs and the EARLIER
+    methods only (check_wf's method-order rule). A seq return also
+    promises `len(ret) >= 0`: a fact about this file's function+length
+    model (every param gets it as `len_hyps`), proved by the method's own
+    theorem like every other ensures, so callers can rely on it."""
+    ms = task["methods"]
+    m = ms[idx]
+    ens = list(m["ensures"])
+    r = m["returns"][0]
+    if r["type"] == "seq":
+        ens.append({"op": ">=", "args": [
+            {"op": "len", "args": [{"var": r["name"]}]}, {"int": 0}]})
+    pseudo = {"t": 1, "name": m["name"], "params": m["params"],
+              "returns": m["returns"], "requires": m.get("requires", []),
+              "ensures": ens, "body": m["body"],
+              "spec_funs": task.get("spec_funs", []),
+              "methods": ms[:idx]}
+    if "decreases" in m:
+        pseudo["decreases"] = m["decreases"]
+    return pseudo
+
+
+def _mcallee_env(cx: Ctx, f: str, args: list, env: dict, local: dict):
+    """(callee Ctx, env binding the callee's params to the argument terms)."""
+    ms = {m["name"]: (i, m) for i, m in enumerate(cx.task["methods"])}
+    i, m = ms[f]
+    mcx = Ctx(_mpseudo(cx.task, i), concrete=True)
+    menv: dict = {}
+    for formal, a in zip(m["params"], args, strict=True):
+        v = formal["name"]
+        if formal["type"] == "seq":
+            menv[v], menv[v + "_len"] = cx.seq_fn(a, env, local)
+        elif formal["type"] == "bool":
+            menv[v] = cx.bx(a, env, local)
+        else:
+            _mparam_ty(formal["type"])
+            menv[v] = cx.zx(a, env, local)
+    return mcx, m, menv
+
+
+def _qvars(e, out: set) -> set:
+    if isinstance(e, dict):
+        for k in ("forall", "exists"):
+            if k in e:
+                out.add(e[k]["var"])
+        for v in e.values():
+            _qvars(v, out)
+    elif isinstance(e, list):
+        for v in e:
+            _qvars(v, out)
+    return out
+
+
+def _mreq_at(cx: Ctx, f: str, args: list, env: dict, local: dict):
+    """The callee's requires, conjoined, at the call's argument terms, or
+    None when it has none."""
+    mcx, m, menv = _mcallee_env(cx, f, args, env, local)
+    reqs = m.get("requires", [])
+    if not reqs:
+        return None
+    import re
+    bound = _qvars(reqs, set())
+    for v in bound:
+        if any(re.search(rf"\b{re.escape(v)}\b", t) for t in menv.values()):
+            raise NotImplementedError(
+                "rocq lowering: method-requires-capture: a callee requires "
+                f"quantifies over {v!r}, a name its call-site argument uses")
+    return "(" + " /\\ ".join(mcx.prop(e, menv) for e in reqs) + ")"
+
+
+_MPOSE = r"""Definition t_mc {A : Type} (x : A) : Prop := True.
+Ltac t_mpose key pf :=
+  lazymatch goal with
+  | _ : t_mc key |- _ => fail
+  | _ =>
+      let Hm := fresh "t_Hm" in
+      pose proof pf as Hm; assert (t_mc key) by exact I;
+      repeat match type of Hm with
+             | ?P -> _ => specialize (Hm ltac:(solve [ assumption | lia ]))
+             end
+  end.
+"""
+
+
+def _mspec_text(task: dict) -> str:
+    """t_mc / t_mpose, one `t_mspec_<m>` contract Definition and one
+    `t_mi_<m>` instantiation tactic per method, and `t_minst`."""
+    out = [_MPOSE]
+    names = []
+    for i, m in enumerate(task["methods"]):
+        pcx = Ctx(_mpseudo(task, i), concrete=True)
+        mname = m["name"]
+        fb, fa = _mfun_binders(m, "t_mf")
+        pb, pargs = param_binders(pcx)
+        ret = m["returns"][0]["name"]
+        if m["returns"][0]["type"] == "seq":
+            ens = ensures_text(pcx, {ret: f"(t_mf {pargs})",
+                                     ret + "_len": f"(t_mf_len {pargs})"})
+        else:
+            ens = ensures_text(pcx, f"(t_mf {pargs})")
+        out.append(f"Definition t_mspec_{mname} {fb} : Prop :=\n"
+                   f"  forall {pb},\n{lens_arrows(pcx)}"
+                   f"{requires_arrows(pcx)}  {ens}.\n")
+        n = len(pargs.split())
+        xs = " ".join(f"?t_x{k}" for k in range(n))
+        xa = " ".join(f"t_x{k}" for k in range(n))
+        heads = ["?t_f", "?t_f ?t_g"][m["returns"][0]["type"] == "seq"]
+        arms = [f"  | H : t_mspec_{mname} {heads} |- context [?t_f {xs}] =>\n"
+                f"      t_mpose (t_f {xa}) (H {xa})\n",
+                f"  | H : t_mspec_{mname} {heads}, _ : context [?t_f {xs}] |- _ =>\n"
+                f"      t_mpose (t_f {xa}) (H {xa})\n"]
+        if m["returns"][0]["type"] == "seq":
+            arms += [a.replace(f"context [?t_f {xs}]", f"context [?t_g {xs}]")
+                     for a in arms]
+        # `?t_f` twice in one arm is a non-linear pattern: the application
+        # must be headed by the very function the contract is about
+        out.append(f"Ltac t_mi_{mname} := repeat match goal with\n"
+                   + "".join(arms) + "  end.\n")
+        # once every contract is instantiated, each call result becomes an
+        # opaque local (`set` + `clearbody`): the engine's E-matching
+        # instantiates forall-facts at VARIABLE-headed applications only
+        # (a seq result `t_m_rev s s_len k` is not one), and forgetting
+        # what a call is can only weaken the context, never unsoundly
+        # strengthen it.
+        ab = "let t_v := fresh \"t_mv\" in set (t_v := t_f {xa}) in *; clearbody t_v"
+        aarms = [f"  | H : t_mspec_{mname} {heads} |- context [?t_f {xs}] =>\n"
+                 f"      {ab.format(xa=xa)}\n",
+                 f"  | H : t_mspec_{mname} {heads}, _ : context [?t_f {xs}] |- _ =>\n"
+                 f"      {ab.format(xa=xa)}\n"]
+        if m["returns"][0]["type"] == "seq":
+            aarms += [a.replace(f"context [?t_f {xs}]", f"context [?t_g {xs}]")
+                       .replace(f"(t_v := t_f {xa})", f"(t_v := t_g {xa})")
+                      for a in aarms]
+        out.append(f"Ltac t_ma_{mname} := repeat match goal with\n"
+                   + "".join(aarms) + "  end.\n")
+        names.append(f"t_mi_{mname}")
+    names += [n.replace("t_mi_", "t_ma_") for n in names]
+    out.append("Ltac t_minst := " + "; ".join(names) + ".\n")
+    return "\n".join(out)
+
+
+def _post_sf_methods(text: str) -> str:
+    """The prelude's t_dis/t_side (and their _ext forms) with `t_minst`
+    run first, so every obligation, loop step and theorem in a methods
+    file sees its callees' contracts instantiated at the calls it contains."""
+    for t in ("t_dis", "t_side", "t_dis_ext", "t_side_ext"):
+        old = f"Ltac {t} := first ["
+        assert old in text, old
+        text = text.replace(old, f"Ltac {t} := t_minst; first [")
+    return text
+
+
+def _mconc(task: dict, mname: str) -> tuple[str, str, str]:
+    """(function term, length term, closed-contract proof term) of the
+    COMPOSED method mname: its unit applied to its callees' composed
+    terms. The length term is '' for a non-seq return."""
+    ms = task["methods"]
+    i = [m["name"] for m in ms].index(mname)
+    pcx = Ctx(_mpseudo(task, i))
+    args = []
+    for d in pcx.mdeps:
+        f, ln, _ = _mconc(task, d["name"])
+        args += [f] + ([ln] if ln else [])
+    a = (" " + " ".join(args)) if args else ""
+    fn = f"({mname}_t{a})"
+    ln = f"({mname}_t_len{a})" if ms[i]["returns"][0]["type"] == "seq" else ""
+    return fn, ln, f"{mname}_t_closed"
+
+
+def _closed_tac(cx: Ctx) -> str:
+    alts = ["assumption"] + [f"exact {m['name']}_t_closed" for m in cx.mdeps]
+    return "first [ " + " | ".join(alts) + " ]"
+
+
+def _unit_code(cx: Ctx, body: list, counter: list) -> list[str]:
+    """lower_v1's own per-unit dispatch (definedness of the unit's own
+    requires/ensures, then the matching generator), for a method."""
+    task = cx.task
+    name = task["name"]
+    ret = task["returns"][0]["name"]
+    ret_t = task["returns"][0]["type"]
+    general = False
+    prefix = w = suffix = None
+    try:
+        prefix, w, suffix = find_while(body)
+    except _GeneralLoops:
+        general = True
+    selfrec = has_self_call(body, name)
+    if (w is not None or general) and selfrec:
+        raise NotImplementedError(
+            "rocq lowering: a body that both loops and self-recurses is not "
+            "lowered yet")
+    parts = []
+    req_obls, ens_obls = spec_def_obls(cx)
+    parts.append(emit_def_lemmas(cx, name, req_obls, counter=counter))
+    if ret_t == "seq":
+        rb = f"({ret} : {rty(ret_t)}) ({ret}_len : Z)"
+    else:
+        rb = f"({ret} : {rty(ret_t)})"
+    parts.append(emit_def_lemmas(cx, name, ens_obls, extra_binders=rb,
+                                 counter=counter))
+    if general:
+        parts.append(gen_loops(cx, body, counter))
+    elif w is not None:
+        parts.append(gen_loop(cx, prefix, w, suffix, counter))
+    elif selfrec:
+        if cx.mdeps:
+            # gen_rec's fuel induction closes its goals with its own
+            # `repeat first [...]` chain, not t_dis, so t_minst never runs
+            # there: a callee's contract would be in scope but unused.
+            raise NotImplementedError(
+                "rocq lowering: method-rec-calls: a self-recursive unit that "
+                "also calls another method is not lowered yet")
+        parts.append(gen_rec(cx, body))
+    else:
+        parts.append(gen_plain(cx, body, counter))
+    return parts
+
+
+def _method_units(task: dict) -> str:
+    """Every method as its own unit, in declaration order, each followed by
+    its closed contract `m_t_closed : t_mspec_m <composed m>`."""
+    out = []
+    for i, m in enumerate(task["methods"]):
+        pseudo = _mpseudo(task, i)
+        mcx = Ctx(pseudo)
+        out += _unit_code(mcx, pseudo["body"], [0])
+        fn, ln, _ = _mconc(task, m["name"])
+        out.append(f"Lemma {m['name']}_t_closed : t_mspec_{m['name']} "
+                   f"{fn}{(' ' + ln) if ln else ''}.\n"
+                   f"Proof.\n  unfold t_mspec_{m['name']}. intros.\n"
+                   f"  apply {m['name']}_t_spec; {_closed_tac(mcx)}.\nQed.\n")
+    return "\n".join(p for p in out if p)
+
+
+def _task_closed(task: dict, cx: Ctx) -> str:
+    """`<name>_t_closed`: the task's theorem for the composed program (its
+    unit applied to every callee's composed term)."""
+    name = task["name"]
+    pcx = Ctx(task, concrete=True)
+    pb, pargs = param_binders(pcx)
+    args = []
+    for d in cx.mdeps:
+        f, ln, _ = _mconc(task, d["name"])
+        args += [f] + ([ln] if ln else [])
+    a = " ".join(args + ([pargs] if pargs else []))
+    ret = task["returns"][0]["name"]
+    if task["returns"][0]["type"] == "seq":
+        ens = ensures_text(pcx, {ret: f"({name}_t {a})",
+                                 ret + "_len": f"({name}_t_len {a})"})
+    else:
+        ens = ensures_text(pcx, f"({name}_t {a})")
+    fa = f"forall {pb},\n" if pb else ""
+    return (f"Theorem {name}_t_closed :\n  {fa}{lens_arrows(pcx)}"
+            f"{requires_arrows(pcx)}  {ens}.\n"
+            f"Proof.\n  intros.\n  apply {name}_t_spec; {_closed_tac(cx)}.\n"
+            f"Qed.\n")
+
+
+def _mconcrete_defs(task: dict) -> str:
+    """Every method's concrete Definition(s), no lemmas: what a refutation
+    certificate needs to evaluate the twin program (calls name `m_t`)."""
+    out = []
+    for i, _m in enumerate(task["methods"]):
+        pseudo = _mpseudo(task, i)
+        mcx = Ctx(pseudo, concrete=True)
+        body = pseudo["body"]
+        general = False
+        prefix = w = suffix = None
+        try:
+            prefix, w, suffix = find_while(body)
+        except _GeneralLoops:
+            general = True
+        if general:
+            d = _loops_def(mcx, pseudo, body)
+        elif w is not None:
+            d, _ = _loop_def(mcx, pseudo, prefix, w, suffix)
+        elif has_self_call(body, pseudo["name"]):
+            d = _rec_def(mcx, pseudo, body)
+        else:
+            d = _plain_def(mcx, pseudo, body)
+        if d is None:
+            return None
+        out.append(d)
+    return "\n".join(out)
+
+
 def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
     # SPEC.md "Pairs (v1)": validate every pair type in the task FIRST,
     # unconditionally, before `_try_cert_v1`'s own try/except (which would
@@ -7148,10 +7587,24 @@ def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
         raise NotImplementedError(
             "rocq lowering: a body that both loops and self-recurses is not "
             "lowered yet")
+    if selfrec and cx.mdeps:
+        # SPEC.md "Methods (v1)": the same gap `_unit_code` names for a
+        # method (gen_rec never runs t_minst). Empty mdeps without methods.
+        raise NotImplementedError(
+            "rocq lowering: method-rec-calls: a self-recursive unit that "
+            "also calls another method is not lowered yet")
 
     parts = [header(task, body)]
     parts.append(emit_spec_funs(cx))
-    parts.append(_post_sf_for(task) + "\n")
+    if task.get("methods"):
+        # SPEC.md "Methods (v1)": contracts, the instantiation tactic,
+        # the t_minst-first prelude, then every method's own unit (the
+        # section above `lower_v1`). Absent for every task without one.
+        parts.append(_mspec_text(task))
+        parts.append(_post_sf_methods(_post_sf_for(task)) + "\n")
+        parts.append(_method_units(task))
+    else:
+        parts.append(_post_sf_for(task) + "\n")
 
     counter = [0]
     parts.append(emit_sf_def_lemmas(cx, counter))
@@ -7177,6 +7630,8 @@ def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
         parts.append(gen_rec(cx, body))
     else:
         parts.append(gen_plain(cx, body, counter))
+    if task.get("methods"):
+        parts.append(_task_closed(task, cx))
 
     parts.append(f"\nPrint Assumptions {name}_t_spec.\n")
     return "\n".join(p for p in parts if p)
@@ -10620,7 +11075,22 @@ def _try_cert_v1(task: dict, body: list, witness: dict):
         wk = witness.get("_kind")
         if wk not in ("value", "exit", "preservation", "undefined"):
             return None
-        cx = Ctx(task)
+        # SPEC.md "Methods (v1)": a certificate evaluates the twin
+        # PROGRAM, so its calls name the methods' concrete Definitions
+        # (`concrete`, a no-op for a task without methods).
+        cx = Ctx(task, concrete=True)
+        mdefs = ""
+        if task.get("methods"):
+            # a value witness grounds the whole twin program by evaluation,
+            # an undefined one certifies one bound by lia on literals; an
+            # invariant-drop certificate reasons about a loop symbolically,
+            # where a call would need its contract: not built (the twin
+            # then reads UNPROVED, a lost flip, never a faked one).
+            if wk not in ("value", "undefined"):
+                return None
+            mdefs = _mconcrete_defs(task)
+            if mdefs is None:
+                return None
         # 2026-09-18 (ROADMAP WS-20 move 1): a nested / multi-loop body
         # reaches here as `_GeneralLoops`, and its VALUE witness gets the
         # general path's own Fixpoints + Definition (`_loops_def`) -- all
@@ -10661,7 +11131,7 @@ def _try_cert_v1(task: dict, body: list, witness: dict):
         if chunk is None:
             return None
         post_sf = _post_sf_for(task)
-        parts = [header(task, body), emit_spec_funs(cx), post_sf + "\n", T_FEED, chunk,
+        parts = [header(task, body), emit_spec_funs(cx), post_sf + "\n", mdefs, T_FEED, chunk,
                  f"\nPrint Assumptions {CERT_NAME}.\n"]
         return "\n".join(p for p in parts if p)
     except Exception:                                       # noqa: BLE001
