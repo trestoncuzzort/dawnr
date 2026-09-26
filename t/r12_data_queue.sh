@@ -886,21 +886,21 @@ step_lift_2026_09_26() {
   [ -d "$D" ] && [ -d "$M/staged" ] && [ -f "$M/lift-census.json" ] || refuse "no $D with $M/staged here: run python3 t/lift_corpora.py first"
   if check_or_refuse lift-2026-09-26 "$M/lift-census.json"; then echo "== lift-2026-09-26: graded already"; return 0; fi
   admit
-  rsync -a --delete "$D/" "$LAB:~/$REPO/$D/" || refuse "cannot stage the lifted tasks on the lab"
-  rsync -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the lifted sources on the lab"
-  rsync -a "$M/lift-census.json" "$LAB:~/$REPO/$M/lift-census.json" || refuse "cannot stage the census on the lab"
+  store -a --delete "$D/" "$LAB:~/$REPO/$D/" || refuse "cannot stage the lifted tasks on the lab"
+  store -a --delete "$M/staged/" "$LAB:~/$REPO/$M/staged/" || refuse "cannot stage the lifted sources on the lab"
+  store -a "$M/lift-census.json" "$LAB:~/$REPO/$M/lift-census.json" || refuse "cannot stage the census on the lab"
   echo "== lift-2026-09-26: the lifter's check stage on the grading machine (dafny), 4 jobs, niced"
   lab "nice -n 19 python3 t/lifter.py --dir $M/staged --out $M/lift-checked --jobs 4 --timeout 120" || refuse "the lifter's check stage failed"
   lab_py lift_check_filter "$D" "$M/lift-checked" --failed "$M/check-failed" || refuse "lift-2026-09-26: the check filter refused"
   admit --grading
   [ "${CELLS:-0}" -ge 1 ] || refuse "lift-2026-09-26: no grading cell admitted"
   echo "== lift-2026-09-26: grading with $CELLS cells, T_SPARK_JOBS=1"
-  lab "T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=1 bash -lc 'python3 t/run_par.py --jobs $CELLS --tasks $D --out /dev/shm/tup-grade/lift-2026-09-26 --table $TABLE'"
+  lab "T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=1 bash -lc 'python3 t/run_par.py --jobs $CELLS --tasks $D --out $(default_work_dir)/lift-2026-09-26 --table $TABLE'"
   rc=$?
   # run_par: 0 full agreement, 1 a finding with the table written, 2 a refusal with nothing written
   [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ] || refuse "lift-2026-09-26: run_par exited $rc, no table"
-  rsync -a "$LAB:~/$REPO/$TABLE" "$TABLE" || refuse "lift-2026-09-26: cannot fetch the table"
-  rsync -a "$LAB:~/$REPO/$M/check-failed/" "$M/check-failed/" 2>/dev/null
+  fetch -a "$LAB:~/$REPO/$TABLE" "$TABLE" || refuse "lift-2026-09-26: cannot fetch the table"
+  fetch -a "$LAB:~/$REPO/$M/check-failed/" "$M/check-failed/" 2>/dev/null
   mark_step lift-2026-09-26 "$M/lift-census.json" "$TABLE"
   echo "next: read $TABLE; copy it to t/COVERAGE-lifted-2026-09-26.md and give the corpus builder --lifted-dir $D --lifted-table t/COVERAGE-lifted-2026-09-26.md --heads $M/heads.jsonl"
 }
