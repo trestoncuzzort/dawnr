@@ -31,14 +31,12 @@ ABS = """method Abs(x: int) returns (y: int)
   }
 }
 """
-LEMMA_USER = """lemma Helper(n: int)
-  ensures n + 0 == n
-{
-}
-method Same(x: int) returns (y: int)
+# A program the lifter refuses by name. It was a lemma user until
+# 2026-09-26, when the lemma-name fix (t/FEATURES-TRACK.md) made a lemma call
+# the drop decision 8 always said it was; a `real` stays out of t's fragment.
+REFUSED_USER = """method Same(x: real) returns (y: real)
   ensures y == x
 {
-  Helper(x);
   y := x;
 }
 """
@@ -61,7 +59,7 @@ class LiftCorporaTests(unittest.TestCase):
         (v / "vericoded").mkdir(parents=True)
         (v / "jsonl").mkdir()
         (v / "vericoded" / "DX0001_vericoded.dfy").write_text(ABS)
-        (v / "vericoded" / "DX0002_vericoded.dfy").write_text(LEMMA_USER)
+        (v / "vericoded" / "DX0002_vericoded.dfy").write_text(REFUSED_USER)
         (v / "jsonl" / "dafny_tasks.jsonl").write_text(
             json.dumps({"id": "DX0001", "source": "apps", "source-id": "apps_test_9",
                         "vc-description": "Return the absolute\nvalue of x."}) + "\n"
@@ -85,7 +83,7 @@ class LiftCorporaTests(unittest.TestCase):
             census = lift_corpora.build(args)
         return out, census
 
-    def test_the_lifted_tasks_carry_their_source_english_and_the_lemma_user_is_refused_by_name(self):
+    def test_the_lifted_tasks_carry_their_source_english_and_the_refused_program_is_named(self):
         out, census = self.run_build(fake_pool([point(5, 6), point(-3, -2)]))       # Abs fails these: no twin
         meta = out.with_name(out.name + ".meta")
         tasks = sorted(p.name for p in out.glob("*.json"))
@@ -100,7 +98,7 @@ class LiftCorporaTests(unittest.TestCase):
         self.assertEqual(set(heads[0]), {"name", "problem", "examples", "source", "curation", "origin"})
         self.assertEqual(census["accepted"], 2)
         self.assertEqual(census["refused"], 0)
-        self.assertIn("classify:calls-other-method", census["lifter_refusals"])
+        self.assertIn("classify:real", census["lifter_refusals"])
         self.assertFalse(census["lifter_checks_run"])
 
     def test_a_program_that_passes_every_point_of_a_held_out_problem_is_refused_as_its_twin(self):
@@ -153,7 +151,7 @@ class LiftCorporaTests(unittest.TestCase):
         self.assertTrue(path.name.startswith("LIFT-20"), path.name)
         self.assertIn("| vericoding/apps | MIT", text)
         self.assertIn("| humaneval-dafny | Apache-2.0", text)
-        self.assertIn("classify:calls-other-method", text)
+        self.assertIn("classify:real", text)
         self.assertIn("NO: the machine that lifted has no dafny", text)
         self.assertIn("bash t/r12_data_queue.sh lift-2026-09-26", text)
 

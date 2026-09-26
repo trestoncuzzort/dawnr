@@ -1772,6 +1772,30 @@ method Caller(x: int) returns (r: int)
           "calls-other-method (not just a bare call statement)")
 
 
+def test_lemma_call_is_dropped_not_refused() -> None:
+    """Decision 8 drops a call of a lemma. Until 2026-09-26 the parser kept
+    no lemma name, `_closure` never found the lemma, and the call read as
+    `calls-other-method` (113 of that reason's 139 refusals in the
+    2026-09-26 lift). A lemma call must classify, and the rewrite plan must
+    record `lemma-call-dropped`."""
+    src = """
+lemma Helper(n: int)
+  ensures n + 0 == n
+{
+}
+
+method Same(x: int) returns (y: int)
+  ensures y == x
+{
+  Helper(x);
+  y := x;
+}
+"""
+    v = _classify_one(src, "Same")
+    assert not isinstance(v, C.Refusal), f"lemma call refused: {v}"
+    print("test_lemma_call_is_dropped_not_refused: `Helper(x);` of a lemma classifies")
+
+
 def test_null_refuses_heap() -> None:
     """A bare `null` literal (the shim, like lift_parse.py, has no
     dedicated NullLit node -- it is a plain Ident named "null") is
@@ -3504,6 +3528,7 @@ UNIT_TESTS = [
     test_function_reads_non_array_still_refuses,
     test_decreases_tuple_projection_and_guess_sum, test_multi_method_one_task_each,
     test_set_refused_before_rewrite, test_calls_other_method_in_assignment,
+    test_lemma_call_is_dropped_not_refused,
     test_null_refuses_heap, test_bodyless_method_refused,
     test_method_level_decreases_neither_projects_nor_sums,
     test_predicate_result_is_bool,
