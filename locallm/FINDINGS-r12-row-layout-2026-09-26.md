@@ -87,7 +87,10 @@ steps, learning rate and validation split.
 ## Metrics
 
 - **best val**: the lowest validation loss (nats/token) at any of the
-  `--keep-every`-recorded steps, and its step.
+  `metrics.jsonl` evaluation rows, and its step. `--eval-every 20 --log-every
+  20` (equal, so every logged row is a fresh evaluation rather than a stale
+  value between less-frequent logging and more-frequent evaluation, which is
+  how the script's defaults, 50 and 25, would otherwise interleave).
 - **final val / final train**: the last step's validation and training loss.
 - **gap**: final val minus final train.
 - **noise**: for each metric, the larger of the three seeds' ranges (max
