@@ -228,13 +228,17 @@ grade() {  # tag, folder name inside the tag
   # what a lab sweep should set. It leaves every verdict byte-identical (spark.py, MEASURED); only
   # wall clock changes. An explicit T_SPARK_JOBS in the environment still wins.
   $SSH "$LAB" "cd ~/tup && T_WATCH=\$HOME/$REMOTE_EV T_SPARK_JOBS=${T_SPARK_JOBS:-1} bash -lc 'python3 t/run_par.py --jobs $((JOBS / SETS)) --tasks $WORK/$T/$SUB --out $WORK/$T/kernels --table $WORK/$T/kernels.md ${T_LAB_RUN_PAR:-}'"; rc=$?
-  if [ "$rc" -ne 0 ]; then
+  # run_par exits 0 on full agreement and 1 on a finding: a DISAGREEMENT is a verdict and the
+  # table is written either way (t/run_par.py main returns 0 if all_ok else 1); 2 is a refusal
+  # before any cell ran and nothing was written. The first queue run (2026-09-25) discarded a
+  # finished 247-cell table because 1 was read as "no table".
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
     echo "== $T: run_par exited $rc on the grading machine; no table copied back"
     rmdir "$D/.grading" 2>/dev/null
     return 1
   fi
   rsync -a "$LAB:$WORK/$T/kernels.md" "$D/kernels.md" \
-    || { echo "== $T: run_par exited 0 but left no $WORK/$T/kernels.md"; rmdir "$D/.grading" 2>/dev/null; return 1; }
+    || { echo "== $T: run_par exited $rc but left no $WORK/$T/kernels.md"; rmdir "$D/.grading" 2>/dev/null; return 1; }
   echo "== $T: kernels.md back"
   rmdir "$D/.grading" 2>/dev/null
 }
