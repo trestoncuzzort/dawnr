@@ -9,8 +9,9 @@ The short version, and it is not the expected one:
 
 1. **Generation needs no torch at all.** It is now implemented and measured:
    [`plain_generate.py`](plain_generate.py), 26 KB of standard library, reads a
-   `ckpt.pt` and writes text at 181–245 ms per token on the round-4 checkpoint,
-   on a machine with neither torch nor numpy installed. One copy of that file
+   `ckpt.pt` and writes text at 102–117 ms per token on the round-4 checkpoint
+   under Python 3.12 or later (186–210 ms on 3.10 and 3.11, §2), on a machine
+   with neither torch nor numpy installed. One copy of that file
    plus one copy of the weights serves Linux, macOS and Windows.
 2. **Training needs the platform's own torch.** Not because of an engineering
    gap — because plain Python turns the studio's shortest fallback run into
@@ -108,15 +109,42 @@ expression with `zip`, 47.7M for `sum(map(mul, …))`. 13.0M ÷ 47.7M predicts
 1536-wide MLP rows amortize per-row call overhead better than the 384-wide
 benchmark did.
 
-Measured end to end, greedy decoding, no torch and no numpy importable on this
-machine:
+**Python 3.12 and later go about 1.8 times faster than that.** Since 2026-09-26
+every dot product goes through `math.sumprod` when the interpreter has it
+(added in 3.12; docs.python.org/3/library/math.html#math.sumprod), which is one
+C loop that builds no Python float per product, and each attention head keeps
+its values as one column per dimension, so the weighted sum over time is a dot
+product too instead of a Python double loop. Python 3.10 and 3.11 keep the old
+arithmetic, bit for bit.
 
-| checkpoint | parameters | context | ms per token | 200 tokens asked | peak process RSS |
-|---|---:|---:|---:|---|---:|
-| `filter-loop/clean/r0` | 3,213,312 | 128 | 58 → 67 | 7.4 s, clamped to 119 (see below) | — |
-| `heldout-locallm-r0` | 4,891,136 | 512 | 87–93 | 18.7 s, 0 rebuilds | 73 MiB |
-| **`home-4080/models/model-r4`** | **10,875,648** | **512** | **181 → 245** | **51 s, 0 rebuilds** | **154 MiB** |
-| `loop-locallm/model-r5` | 25,530,368 | 512 | 441 → 451 | 94.3 s, 0 rebuilds | — |
+Re-measured 2026-09-26 on a 24-core desktop, CPython 3.14.4, greedy decoding
+from the prompt `function to `, one process per run, the old file and the new
+alternated A B A B per checkpoint, niced, load average 1.6–5.5 over the runs.
+"ms per token" is the median of the first ten generated tokens → the median of
+the last ten; the time column is the prompt plus 200 new tokens, excluding the
+load:
+
+| checkpoint | parameters | context | ms per token, old | ms per token, new | 200 tokens asked, old → new | peak process RSS |
+|---|---:|---:|---:|---:|---|---:|
+| `filter-loop/clean/r0` | 3,213,312 | 128 | 54–56 → 61–63 | 30–31 → 33–34 | 7.3–7.5 s → 4.1–4.3 s (119 tokens: the window; see below) | 48 MiB |
+| `heldout-locallm-r0` | 4,891,136 | 512 | 85 → 101–102 | 47 → 54–56 | 19.5–19.9 s → 11.0–11.1 s | 65–67 MiB |
+| **`home-4080/models/model-r4`** | **10,875,648** | **512** | **186–189 → 208–210** | **102–107 → 114–117** | **41.7–42.1 s → 23.5–23.6 s** | **106–110 MiB** |
+| `loop-locallm/model-r5` | 25,530,368 | 512 | 436–449 → 500–502 | 241–251 → 262 | 99.5–99.8 s → 54.7–56.5 s | 216 MiB |
+
+That is 1.75–1.79 times on the whole run for every checkpoint. The same A B A B
+on model-r4 under a Python 3.10.21 went 39.0 s → 37.3–37.8 s: the old arithmetic
+with the column layout, a little faster, never slower. (3.10 beat 3.14 on the old
+code, 39.0 s against 41.9: `sum` of floats became compensated summation in 3.12,
+which costs.) The earlier row of this table, 181 → 245 ms and 51 s for round 4,
+was measured on 2026-09-20 on another machine and is superseded.
+
+**Greedy output did not change.** `sumprod` accumulates in extended precision, so
+its last bit can differ from the old sum's, and a greedy choice between two
+near-equal logits could flip. Checked on model-r4, 200 greedy tokens after each of
+five prompts (the two in §6, `function to `, `task `, `Once upon a time`), old code
+against new under 3.14: the tokens are identical for all five, the largest logit
+difference is 9.8e-15, and the closest decision any of them made had its top two
+logits 0.046 apart. Under 3.10 the logits are bit-identical over 200 tokens.
 
 All twelve checkpoints in this tree load and decode. Growth with context is mild
 because attention is only 18% of the work at the far end of a 512 window.
