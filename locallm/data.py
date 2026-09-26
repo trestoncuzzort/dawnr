@@ -805,3 +805,116 @@ class DocumentBatches:
                 "blank_line_documents": len(self.blank_line_documents),
                 "block_size": self.block_size, "end": self.end, "pad_id": self.pad_id,
                 "ignore_index": IGNORE_INDEX, "order_seed": self.seed}
+
+
+class PairBatches:
+    """One preference pair per row: the head is masked, the program is scored.
+
+    A pair is {prompt, chosen, rejected}: the prompt is the Problem/Signature
+    head the corpus builder writes for the problem, chosen a verified,
+    spec-agreeing program for it, rejected a program the seven kernels also
+    verified whose specification disagrees with the problem's reference
+    (t/negatives_from_spec_disagreements.py). Each side becomes the row
+    `prompt + completion + DOC_END`, the same bytes DocumentBatches makes of
+    the corpus document `head + program`, so the language-model loss and the
+    preference loss see one and the same sequence for a positive.
+
+    Tokenization and masking follow the DPO reference implementation
+    (github.com/eric-mitchell/direct-preference-optimization, trainers.py
+    _get_batch_logps): the prompt and the completion are encoded separately
+    and concatenated, the targets over the prompt are the ignore index, and a
+    sequence's log-probability is the SUM over its unmasked targets.
+    IGNORE_INDEX is -1 here because model.GPT's cross-entropy ignores -1,
+    where theirs ignores -100.
+
+    A pair that does not fit the block is refused by name, never cut: a
+    truncated chosen side against a full rejected side is not the comparison
+    the pair records. The row order draws from this object's own generator,
+    as DocumentBatches does, so a run that loads pairs but trains no
+    preference loss draws exactly the batches it would have drawn without them.
+    """
+
+    def __init__(self, pairs, tokenizer, block_size: int, seed: int, device: str = "cpu",
+                 end: str = DOC_END, pad_id: int = 0):
+        pairs = list(pairs)
+        if block_size < 1:
+            raise ValueError(f"block_size must be positive, not {block_size}")
+        if not pairs:
+            raise ValueError("no pairs to batch")
+        end_ids = tokenizer.encode(end)
+        if not end_ids or tokenizer.decode(end_ids) != end:
+            raise ValueError(f"the tokenizer cannot encode the document end marker {end!r}")
+        self.block_size, self.seed, self.device = block_size, seed, device
+        self.end, self.pad_id = end, pad_id
+        self.pairs = len(pairs)
+        self.prompt_tokens = self.chosen_tokens = self.rejected_tokens = self.longest_tokens = 0
+        self.dropped_characters = 0          # characters a CharTokenizer silently drops; 0 for BPE
+        rows = {"chosen": ([], []), "rejected": ([], [])}
+        for i, pair in enumerate(pairs):
+            prompt = pair.get("prompt")
+            if not isinstance(prompt, str) or not prompt.strip():
+                raise ValueError(f"pair {i} has no prompt; the head is what the completion is scored against")
+            prompt_ids = tokenizer.encode(prompt)
+            if not prompt_ids:
+                raise ValueError(f"pair {i}: the prompt encodes to no tokens: {prompt[:40]!r}")
+            self.prompt_tokens += len(prompt_ids)
+            for side in ("chosen", "rejected"):
+                text = pair.get(side)
+                if not isinstance(text, str) or not text.strip():
+                    raise ValueError(f"pair {i} has an empty {side} side")
+                body = text.strip("\r\n") + end
+                if isinstance(tokenizer, CharTokenizer):
+                    self.dropped_characters += sum(tokenizer.unknown_characters(prompt + body).values())
+                ids = prompt_ids + tokenizer.encode(body)
+                if len(ids) == len(prompt_ids):
+                    raise ValueError(f"pair {i}: the {side} side encodes to no tokens")
+                self.longest_tokens = max(self.longest_tokens, len(ids))
+                if len(ids) > block_size + 1:
+                    raise ValueError(f"pair {i} (task_id {pair.get('task_id')}): the {side} side is {len(ids)} "
+                                     f"tokens with its prompt, over the block of {block_size}; raise --block-size, "
+                                     f"a cut pair is not the pair that was recorded")
+                pad = block_size - (len(ids) - 1)
+                # target t is ids[t + 1]; the completion begins at ids[len(prompt_ids)]
+                x = ids[:-1] + [pad_id] * pad
+                y = [IGNORE_INDEX] * (len(prompt_ids) - 1) + ids[len(prompt_ids):] + [IGNORE_INDEX] * pad
+                rows[side][0].append(x)
+                rows[side][1].append(y)
+                if side == "chosen":
+                    self.chosen_tokens += len(ids) - len(prompt_ids)
+                else:
+                    self.rejected_tokens += len(ids) - len(prompt_ids)
+        self.x_chosen = torch.tensor(rows["chosen"][0], dtype=torch.long).to(device)
+        self.y_chosen = torch.tensor(rows["chosen"][1], dtype=torch.long).to(device)
+        self.x_rejected = torch.tensor(rows["rejected"][0], dtype=torch.long).to(device)
+        self.y_rejected = torch.tensor(rows["rejected"][1], dtype=torch.long).to(device)
+        self._generator = torch.Generator().manual_seed(seed)
+        self._orders: list[list[int]] = []
+
+    def order(self, epoch: int) -> list[int]:
+        """The pair order of one epoch; drawn once and cached, as DocumentBatches.order."""
+        while len(self._orders) <= epoch:
+            self._orders.append(torch.randperm(self.pairs, generator=self._generator).tolist())
+        return self._orders[epoch]
+
+    def batches_per_epoch(self, batch_size: int) -> int:
+        return math.ceil(self.pairs / batch_size)
+
+    def get_batch(self, step: int, batch_size: int):
+        """The pair indices of this step and their four tensors: x/y chosen, x/y rejected."""
+        epoch, k = divmod(step, self.batches_per_epoch(batch_size))
+        idx = self.order(epoch)[k * batch_size:(k + 1) * batch_size]
+        ix = torch.tensor(idx, dtype=torch.long, device=self.x_chosen.device)
+        return ix, self.x_chosen[ix], self.y_chosen[ix], self.x_rejected[ix], self.y_rejected[ix]
+
+    def in_order(self, batch_size: int):
+        """Fixed sequential batches, for scoring every pair exactly once."""
+        for start in range(0, self.pairs, batch_size):
+            ix = torch.arange(start, min(start + batch_size, self.pairs), device=self.x_chosen.device)
+            yield ix, self.x_chosen[ix], self.y_chosen[ix], self.x_rejected[ix], self.y_rejected[ix]
+
+    def record(self) -> dict:
+        return {"pairs": self.pairs, "prompt_tokens": self.prompt_tokens,
+                "chosen_tokens": self.chosen_tokens, "rejected_tokens": self.rejected_tokens,
+                "longest_tokens": self.longest_tokens, "dropped_characters": self.dropped_characters,
+                "block_size": self.block_size, "end": self.end, "pad_id": self.pad_id,
+                "ignore_index": IGNORE_INDEX, "order_seed": self.seed}

@@ -35,6 +35,18 @@ Since the r12 build (schema 2):
   default) has the source corpus's loss measured on fixed windows before and
   after the fine-tune and written to run.json as `source_losses`, so a run
   with no replay measures what it forgot.
+* `--pairs FILE --pref-loss dpop` adds a preference term against the recited
+  attractors (t/negatives_from_spec_disagreements.py) to the language-model
+  loss: DPO-Positive, Smaug Eq. 3 (arXiv:2402.13228), which keeps a hinge on
+  the chosen side's log-probability inside the DPO log-sigmoid so the
+  preferred program cannot be pushed below its value under the reference. The
+  reference is a frozen copy of --init, scored once at the start. Plain DPO is
+  not offered: on pairs that share most tokens it lowers the preferred
+  completion (Smaug: -1.82 against -0.26 under DPOP for the tokens after the
+  edit; Iterative RPO, arXiv:2404.19733: 61.8 against 73.1 without and with a
+  likelihood term; this project's round 2 on twins: reward accuracy 1.0 and
+  tests passing 5 to 3). With `--pref-loss none` the pairs are gated and
+  recorded and the run is bit-identical to one without them.
 """
 import argparse
 from dataclasses import asdict
@@ -59,7 +71,10 @@ SCHEMA = 2
 CUBLAS_WORKSPACE = ":4096:8"
 RESUME_KEYS = ("init_ckpt_sha256", "corpus_sha256", "evaluation_split_sha256", "seed", "split_seed")
 RESUME_PATHS = (("split", "by"), ("batches", "kind"), ("reproducibility", "requested"),
-                ("replay", "sha256"), ("replay", "frac"), ("source_validation", "sha256"))
+                ("replay", "sha256"), ("replay", "frac"), ("source_validation", "sha256"),
+                ("pairs", "sha256"), ("pairs", "loss"), ("pairs", "beta"), ("pairs", "lambda"),
+                ("pairs", "batch_size"))
+PREF_LOSSES = ("none", "dpop")
 
 
 def file_sha256(path):
@@ -237,6 +252,115 @@ def refuse_unless_trainable(text: str, label: str, eval_ids, split, dev_ids=froz
     if dev:
         reasons.append(f"contains dev-split ids: {loop_filter.held_out_detail(dev)}")
     raise ValueError(f"cannot train: {label}: " + "; ".join(reasons))
+def load_pairs(path, eval_ids, dev_ids, split_path) -> list[dict]:
+    """The preference pairs, refused by line when one names a held-out id, a dev id or a same-task source.
+
+    The same gates the corpus passes through (loop_filter.validate_training_data
+    over the prompt and both programs, plus the row's own task_id), with the dev
+    split added: a pair that names a dev problem would teach the problem the
+    stopping step is chosen on.
+    """
+    rows = []
+    refused = set(eval_ids) | set(dev_ids)
+    for number, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError(f"cannot train: {path}:{number}: not JSON: {error}") from error
+        task_id = row.get("task_id") if isinstance(row, dict) else None
+        if isinstance(task_id, bool) or not isinstance(task_id, int):
+            raise ValueError(f"cannot train: {path}:{number}: a pair needs an integer task_id")
+        for key in ("prompt", "chosen", "rejected"):
+            if not isinstance(row.get(key), str) or not row[key].strip():
+                raise ValueError(f"cannot train: {path}:{number}: a pair needs a non-empty {key}")
+        if row["chosen"].strip() == row["rejected"].strip():
+            raise ValueError(f"cannot train: {path}:{number}: chosen and rejected are the same text")
+        text = row["prompt"] + row["chosen"] + "\n" + row["rejected"]
+        check = loop_filter.validate_training_data(text, refused, task_ids=[task_id])
+        if not check.ok:
+            reasons = []
+            if check.held_out:
+                reasons.append(f"names held-out or dev ids of {split_path}: "
+                               f"{loop_filter.held_out_detail(check.held_out)}")
+            if check.same_task_names or check.same_task_ids:
+                reasons.append(loop_filter.same_task_detail(check))
+            raise ValueError(f"cannot train: {path}:{number}: " + "; ".join(reasons))
+        rows.append(row)
+    if not rows:
+        raise ValueError(f"cannot train: {path} holds no pairs")
+    return rows
+
+
+def sequence_logps(logits, targets, torch_module, ignore_index: int):
+    """Per row, the sum of the log-probabilities of the targets where they are not ignored, in fp32.
+
+    The DPO reference's _get_batch_logps
+    (github.com/eric-mitchell/direct-preference-optimization, trainers.py):
+    gather log_softmax at each label and sum over the unmasked labels; the
+    prompt and the padding are masked. Our rows are already shifted by one
+    (data.PairBatches), so no shift happens here.
+    """
+    logp = torch_module.log_softmax(logits.float(), dim=-1)
+    mask = targets != ignore_index
+    per_token = logp.gather(2, targets.clamp(min=0).unsqueeze(2)).squeeze(2)
+    return (per_token * mask).sum(-1)
+
+
+def dpop_loss(policy_chosen, policy_rejected, reference_chosen, reference_rejected,
+              beta: float, lam: float, torch_module):
+    """DPO-Positive, Smaug Eq. 3 (arXiv:2402.13228, ar5iv.labs.arxiv.org/html/2402.13228).
+
+    -log sigma(beta * (log pi/pi_ref(chosen) - log pi/pi_ref(rejected)
+                       - lambda * max(0, log pi_ref(chosen) - log pi(chosen))))
+
+    The hinge sits INSIDE the log-sigmoid, under beta, as the paper writes it
+    (its defaults: beta 0.3, lambda 50). It is zero while the chosen side is at
+    or above its reference and grows as it falls below, which is what stops
+    the DPO gradient from lowering every token after the edit (their Section
+    3). The reward accuracy and margin are the DPO reference's, from the
+    implicit rewards beta * (log pi - log pi_ref).
+    """
+    ratio_chosen = policy_chosen - reference_chosen
+    ratio_rejected = policy_rejected - reference_rejected
+    hinge = torch_module.clamp(reference_chosen - policy_chosen, min=0.0)
+    logits = beta * (ratio_chosen - ratio_rejected - lam * hinge)
+    losses = -torch_module.nn.functional.logsigmoid(logits)
+    with torch_module.no_grad():
+        detail = {"reward_accuracy": float((ratio_chosen > ratio_rejected).float().mean()),
+                  "margin": float((beta * (ratio_chosen - ratio_rejected)).mean()),
+                  "hinge": float(hinge.mean())}
+    return losses.mean(), detail
+
+
+def pair_logps(model, rows, batch_size, torch_module, ignore_index: int):
+    """log p(chosen) and log p(rejected) for every pair in order, without gradients, in eval mode."""
+    was_training = model.training
+    model.eval()
+    chosen, rejected = [], []
+    with torch_module.no_grad():
+        for _ix, xc, yc, xr, yr in rows.in_order(batch_size):
+            logits, _ = model(torch_module.cat([xc, xr]))
+            logps = sequence_logps(logits, torch_module.cat([yc, yr]), torch_module, ignore_index)
+            chosen.append(logps[:len(xc)])
+            rejected.append(logps[len(xc):])
+    if was_training:
+        model.train()
+    return torch_module.cat(chosen), torch_module.cat(rejected)
+
+
+def pair_summary(model, rows, reference, batch_size, beta, torch_module, ignore_index: int) -> dict:
+    """The pair statistics one evaluation records: mean log-probabilities against the reference, accuracy, margin."""
+    chosen, rejected = pair_logps(model, rows, batch_size, torch_module, ignore_index)
+    reference_chosen, reference_rejected = reference
+    ratio_chosen, ratio_rejected = chosen - reference_chosen, rejected - reference_rejected
+    return {"pairs_chosen_logp": float(chosen.mean()), "pairs_rejected_logp": float(rejected.mean()),
+            "pairs_chosen_ref_logp": float(reference_chosen.mean()),
+            "pairs_rejected_ref_logp": float(reference_rejected.mean()),
+            "pairs_reward_accuracy": float((ratio_chosen > ratio_rejected).float().mean()),
+            "pairs_margin": float((beta * (ratio_chosen - ratio_rejected)).mean()),
+            "pairs_chosen_below_reference": float((chosen < reference_chosen).float().mean())}
 
 
 def main():
@@ -286,6 +410,16 @@ def main():
                         help="the source corpus validation.txt whose loss is recorded before and after the "
                              "fine-tune (run.json source_losses); the file beside --replay-data by default, "
                              "and on its own it measures forgetting without replay")
+    parser.add_argument("--pairs", type=Path, default=None,
+                        help="preference pairs jsonl {task_id, prompt, chosen, rejected} "
+                             "(t/negatives_from_spec_disagreements.py); gated like --data and recorded")
+    parser.add_argument("--pref-loss", choices=PREF_LOSSES, default="none",
+                        help="dpop: add DPO-Positive on --pairs to the language-model loss; none: pairs are "
+                             "loaded, gated and recorded only, and the run equals one without --pairs")
+    parser.add_argument("--pref-beta", type=float, default=0.3, help="DPOP beta (Smaug's default 0.3)")
+    parser.add_argument("--pref-lambda", type=float, default=50.0,
+                        help="DPOP lambda on the chosen side's hinge (Smaug's default 50)")
+    parser.add_argument("--pair-batch-size", type=int, default=4, help="pairs per step under --pref-loss dpop")
     parser.add_argument("--device", default=None)
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
@@ -316,9 +450,16 @@ def main():
                                 loop_filter.r12_dev_ids(split_path=args.split))
         rows = replay_rows(args.batch_size, args.replay_frac)
     target_batch = args.batch_size - rows
+    if args.pref_loss != "none" and args.pairs is None:
+        raise ValueError(f"--pref-loss {args.pref_loss} needs --pairs; there is nothing to prefer")
+    if args.pref_loss != "none" and (args.pref_beta <= 0 or args.pref_lambda < 0 or args.pair_batch_size < 1):
+        raise ValueError("--pref-beta must be positive, --pref-lambda non-negative, --pair-batch-size at least 1")
+    pair_rows = None
+    if args.pairs is not None:
+        pair_rows = load_pairs(args.pairs, eval_ids, loop_filter.r12_dev_ids(split_path=args.split), args.split)
 
     import torch
-    from data import (Corpus, DocumentBatches, IGNORE_INDEX, SPLIT_CLOSE_ENOUGH, _SPLIT_EPS,
+    from data import (Corpus, DocumentBatches, IGNORE_INDEX, PairBatches, SPLIT_CLOSE_ENOUGH, _SPLIT_EPS,
                       load_tokenizer, tokenizer_fingerprint)
     from model import GPT, GPTConfig
     import train as core_train
@@ -392,8 +533,29 @@ def main():
                          "frac": args.replay_frac, "rows_per_batch": rows, "target_rows_per_batch": target_batch,
                          "row_share": rows / args.batch_size, "token_share_estimate": share,
                          "kind": "windows", "block_size": args.block_size, "train_tokens": len(source["train"])}
+    # The pairs and, under dpop, the reference log-probabilities from a frozen
+    # copy of --init, scored once (the pair set is tens of rows and the
+    # reference is deterministic in eval mode, so it is not re-run every step
+    # as the DPO reference trainer does). Under --pref-loss none nothing here
+    # touches the model or the global generator: PairBatches draws its order
+    # from its own generator, and the reference copy is not loaded at all
+    # (GPT() initializes from the global stream before its weights are replaced).
+    pairs_rows = pairs_reference = pairs_record = None
+    init_sha256 = file_sha256(args.init / "ckpt.pt")
+    if pair_rows is not None:
+        pairs_rows = PairBatches(pair_rows, tokenizer, args.block_size, args.seed, device)
+        pairs_record = {"file": str(args.pairs), "sha256": file_sha256(args.pairs), "loss": args.pref_loss,
+                        "beta": args.pref_beta, "lambda": args.pref_lambda, "batch_size": args.pair_batch_size,
+                        "reference": {"init": str(args.init), "init_ckpt_sha256": init_sha256,
+                                      "scored": args.pref_loss == "dpop"},
+                        **pairs_rows.record()}
+        if args.pref_loss == "dpop":
+            reference_model, _, _ = load_core(args.init, device, 0.0, torch, GPT, GPTConfig)
+            pairs_reference = pair_logps(reference_model, pairs_rows, args.pair_batch_size, torch, IGNORE_INDEX)
+            del reference_model
+        print(json.dumps({"pairs": pairs_record}), flush=True)
     optimizer = core_train.make_optimizer(model, args.lr)
-    identities = {"init": str(args.init), "init_ckpt_sha256": file_sha256(args.init / "ckpt.pt"),
+    identities = {"init": str(args.init), "init_ckpt_sha256": init_sha256,
                   "tokenizer_file_sha256": file_sha256(tokenizer_source),
                   "tokenizer_fingerprint": tokenizer_fingerprint(tokenizer),
                   "corpus": str(args.data), "corpus_sha256": file_sha256(args.data),
@@ -413,7 +575,7 @@ def main():
                   "block_size": args.block_size, "lr": args.lr, "warmup": args.warmup,
                   "dropout": args.dropout, "keep_every": args.keep_every,
                   "replay": replay_record, "source_validation": source_record,
-                  "seed": args.seed}
+                  "seed": args.seed, "pairs": pairs_record}
     state_path, start, kept = args.out / "state.pt", 0, []
     if args.resume and state_path.exists():
         state = torch.load(state_path, map_location=device, weights_only=False)
@@ -433,6 +595,9 @@ def main():
         # run that restored only the CPU stream replayed its batch sequence.
         if device.startswith("cuda") and state.get("cuda_rng") is not None:
             torch.cuda.set_rng_state_all(state["cuda_rng"])
+        if pairs_reference is not None and state.get("pairs_reference") is not None:
+            # the values the run started with, so a resumed run continues against the same reference
+            pairs_reference = tuple(t.to(device) for t in state["pairs_reference"])
         start, kept = state["step"], list(state.get("kept", []))
     (args.out / "run.json").write_text(json.dumps(
         {"schema": SCHEMA, "status": "running", "device": device,
@@ -444,15 +609,22 @@ def main():
 
     def evaluate() -> dict:
         if args.doc_batches:
-            return {"train": document_loss(model, train_rows, args.batch_size, torch, IGNORE_INDEX),
-                    "val": document_loss(model, val_rows, args.batch_size, torch, IGNORE_INDEX)}
-        return core_train.estimate_loss(model, corpus, args.batch_size, args.block_size, args.eval_iters)
+            out = {"train": document_loss(model, train_rows, args.batch_size, torch, IGNORE_INDEX),
+                   "val": document_loss(model, val_rows, args.batch_size, torch, IGNORE_INDEX)}
+        else:
+            out = dict(core_train.estimate_loss(model, corpus, args.batch_size, args.block_size, args.eval_iters))
+        if pairs_reference is not None:
+            out.update(pair_summary(model, pairs_rows, pairs_reference, args.pair_batch_size, args.pref_beta,
+                                    torch, IGNORE_INDEX))
+        return out
 
     def save_state(step):
         torch.save({"schema": SCHEMA, "model": model.state_dict(),
                     "optimizer": optimizer.state_dict(), "step": step,
                     "identities": identities, "rng": torch.get_rng_state(),
                     "cuda_rng": torch.cuda.get_rng_state_all() if device.startswith("cuda") else None,
+                    "pairs_reference": (tuple(t.detach().cpu() for t in pairs_reference)
+                                        if pairs_reference is not None else None),
                     "kept": kept}, state_path)
 
     metrics = (args.out / "metrics.jsonl").open("a")
@@ -472,8 +644,21 @@ def main():
             lr = core_train.cosine_lr(step, args.warmup, args.steps, args.lr, args.lr / 10)
             for group in optimizer.param_groups:
                 group["lr"] = lr
+            preference = None
             with autocast:
                 _, loss = model(inputs, targets)
+                lm_loss = loss
+                if pairs_reference is not None:
+                    # the language-model loss on the corpus is the likelihood
+                    # term (Iterative RPO's NLL on the winners, arXiv:2404.19733);
+                    # the DPOP hinge keeps the chosen side at its reference or above
+                    ix, xc, yc, xr, yr = pairs_rows.get_batch(step, args.pair_batch_size)
+                    pair_logits, _ = model(torch.cat([xc, xr]))
+                    logps = sequence_logps(pair_logits, torch.cat([yc, yr]), torch, IGNORE_INDEX)
+                    pref_loss, preference = dpop_loss(logps[:len(xc)], logps[len(xc):],
+                                                      pairs_reference[0][ix], pairs_reference[1][ix],
+                                                      args.pref_beta, args.pref_lambda, torch)
+                    loss = lm_loss + pref_loss
             if not torch.isfinite(loss):
                 raise RuntimeError(f"non-finite loss at step {step}")
             optimizer.zero_grad(set_to_none=True)
@@ -491,6 +676,10 @@ def main():
                           "seconds": time.monotonic() - started}
                 if args.doc_batches:
                     record["epoch"] = step // train_rows.batches_per_epoch(target_batch)
+                if preference is not None:
+                    record.update({"lm_step_loss": float(lm_loss.detach()), "pref_step_loss": float(pref_loss.detach()),
+                                   "pref_reward_accuracy": preference["reward_accuracy"],
+                                   "pref_margin": preference["margin"], "pref_hinge": preference["hinge"]})
                 metrics.write(json.dumps(record, sort_keys=True) + "\n")
                 metrics.flush()
                 print(json.dumps(record), flush=True)
@@ -520,6 +709,13 @@ def main():
                                        if device.startswith("cuda") else 0)}
     if source:
         report["source_losses"] = {"before": source_before, "after": source_after}
+    if pairs_reference is not None:
+        # every pair's final and reference log-probabilities, so the DPOP
+        # property (no chosen side below its reference) can be read per pair
+        final_chosen, final_rejected = pair_logps(model, pairs_rows, args.pair_batch_size, torch, IGNORE_INDEX)
+        report["pairs_final"] = {"chosen_logp": final_chosen.tolist(), "rejected_logp": final_rejected.tolist(),
+                                 "chosen_ref_logp": pairs_reference[0].tolist(),
+                                 "rejected_ref_logp": pairs_reference[1].tolist()}
     (args.out / "run.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"out": str(args.out), "parameters": identities["parameters"],
                       "train_tokens": identities["corpus_train_tokens"],
@@ -529,6 +725,8 @@ def main():
                       "replay": None if replay_record is None else
                       {k: replay_record[k] for k in ("rows_per_batch", "target_rows_per_batch", "token_share_estimate")},
                       "source": report.get("source_losses"),
+                      "pairs": ({"file": pairs_record["file"], "pairs": pairs_record["pairs"],
+                                 "loss": pairs_record["loss"]} if pairs_record else None),
                       "initial": initial, "final": losses,
                       "seconds": round(report["train_seconds"], 1)}))
 
