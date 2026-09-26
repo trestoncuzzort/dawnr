@@ -671,7 +671,11 @@ class _Parser:
         start = self.cur.start if not modifiers else self.tokens[self.pos - len(modifiers)].start
         self.advance()  # lemma
         self._parse_attrs()
-        self.expect_ident()  # name (not separately retained; text below has it)
+        # The name is kept: decision 8 drops a call of a lemma in the
+        # method's closure, and `_closure` finds lemmas by name. Without
+        # it every lemma call read as `calls-other-method` (113 of the 139
+        # such refusals of the 2026-09-26 lift, t/FEATURES-TRACK.md).
+        name = self.expect_ident()
         self._parse_type_params()
         self.expect("(")
         self._parse_params()
@@ -697,7 +701,7 @@ class _Parser:
             end = self.tokens[self.pos - 1].end
         keyword = _combine_keyword(modifiers, "lemma")
         text = self._source[start:end]
-        return LemmaDecl(line, keyword=keyword, text=text)
+        return LemmaDecl(line, name=name, keyword=keyword, text=text)
 
     def _skip_clause_label(self) -> None:
         """A `requires`/`ensures`/`invariant`/`assert` clause may open
