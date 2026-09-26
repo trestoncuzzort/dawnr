@@ -4,6 +4,7 @@ Runs without torch or the real pools: the pool is a five-entry stand-in patched
 over spec_experiment.pool; the split, verdicts, positives, dev ids and
 decontamination policy are written into a temporary directory.
 """
+import argparse
 import hashlib
 import io
 import json
@@ -104,6 +105,13 @@ class Fixture:
                 "--decontamination", str(self.decon), *extra]
 
 
+def build_args(fx: Fixture, examples: bool = False) -> argparse.Namespace:
+    """The namespace neg.build reads, as neg.main's parser would fill it from fx.argv()."""
+    return argparse.Namespace(split=str(fx.split), pool_file=[str(fx.pool_file)], spec_disagree=str(fx.disagree),
+                              out=str(fx.out), report=str(fx.report), examples=examples,
+                              dev_ids=str(fx.dev), decontamination=str(fx.decon))
+
+
 class NegativesTests(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -179,6 +187,28 @@ class NegativesTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as caught:
             neg.main(self.fx.argv())
         self.assertIn("pool", str(caught.exception))
+
+    def test_the_same_pair_under_a_second_tag_is_refused_as_a_duplicate_by_name(self):
+        # the same disagreeing program graded again under another tag (as
+        # qwen235-heldout and qwen235-heldout-p5 both carry mbpp_355)
+        self.fx.results["student2/mbpp_8__double"] = verdict(TRAIN_ID, NEGATIVE, "disagrees")
+        self.fx.programs["student2/mbpp_8__double"] = NEGATIVE
+        self.fx.write_disagree()
+        out = self.run_main()
+        pairs = self.pairs()
+        self.assertEqual([p["task_id"] for p in pairs], [TRAIN_ID])
+        self.assertEqual(pairs[0]["provenance"]["negative"]["key"], "student/mbpp_8__double")
+        self.assertIn("refused duplicate: student2/mbpp_8__double against sft.jsonl:1 "
+                      "(the same pair was written from student/mbpp_8__double)", out)
+        self.assertIn("1 written from 7 disagreeing rows", out)
+        self.assertIn("duplicate 1", out)
+        report = self.fx.report.read_text()
+        self.assertIn("| refused: duplicate | 1 |", report)
+        self.assertIn("## Refused: duplicate (1)", report)
+        # every disagreeing row is a pair or a named refusal
+        counts = neg.build(build_args(self.fx))[1]["counts"]
+        self.assertEqual(counts["disagreeing"],
+                         counts["pairs"] + sum(counts["refused:" + reason] for reason in neg.REFUSALS))
 
     def test_examples_go_into_the_head_when_asked(self):
         self.run_main("--examples")

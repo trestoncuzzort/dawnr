@@ -26,9 +26,12 @@ Every candidate goes through the r12 gates and a refusal is NAMED, never a
 silent drop: a held-out id under any alias (loop_filter.problem_id), the
 same-task exclusions (t/decontamination-2026-09-21.json), the dev split
 (t/r12-dev-ids.json), a pool other than the split's, a program whose hash no
-longer matches its verdict, a positive that no verdict row says agrees. A pool
-file positive that a verdict row says DISAGREES is a contradiction between the
-inputs and stops the build. Measured on 2026-09-25 against sft-r8 and the
+longer matches its verdict, a positive that no verdict row says agrees, and a
+pair already written from another verdict key (the same disagreeing program
+recurs under two tags: qwen235-heldout and qwen235-heldout-p5 both carry
+mbpp_355), refused as "duplicate" with that key named. A pool file positive
+that a verdict row says DISAGREES is a contradiction between the inputs and
+stops the build. Measured on 2026-09-25 against sft-r8 and the
 spec-disagree.json of 2026-09-21: 81 disagreeing rows, 74 name held-out ids,
 4 are pool v3, 3 pairs (t/NEGATIVES-2026-09-25.md).
 
@@ -57,7 +60,7 @@ import surface                                                  # noqa: E402
 
 FENCE = re.compile(r"```t\n(.*?)```", re.S)
 REFUSALS = ("pool-mismatch", "held-out", "dev-split", "same-task", "names-refused-id",
-            "no-positive", "positive-not-spec-checked", "identical-programs")
+            "no-positive", "positive-not-spec-checked", "identical-programs", "duplicate")
 
 
 def file_sha256(path: Path) -> str:
@@ -164,7 +167,7 @@ def build(args) -> tuple[list[dict], dict]:
     refused: dict[str, list[str]] = {reason: [] for reason in REFUSALS}
     by_tag: Counter = Counter()
     pairs: list[dict] = []
-    seen: set[tuple] = set()
+    seen: dict[tuple, str] = {}         # (task_id, positive, negative) -> the verdict key that wrote it
     for key in sorted(results):
         verdict = results[key]
         if not isinstance(verdict, dict) or verdict.get("status") != "disagrees":
@@ -228,8 +231,16 @@ def build(args) -> tuple[list[dict], dict]:
                 continue
             identity = (task_id, pos["program"], program)
             if identity in seen:
+                # The same disagreeing program graded under a second tag is
+                # the same pair; it is refused by name so the report's counts
+                # add up, not skipped. No prior art names this case: the DPO
+                # reference implementation's preference_datasets.py
+                # (github.com/eric-mitchell/direct-preference-optimization)
+                # appends every pair it is given without an identity check.
+                refused["duplicate"].append(f"{key} against {pos['pool_file']}:{pos['line']} (the same pair "
+                                            f"was written from {seen[identity]})")
                 continue
-            seen.add(identity)
+            seen[identity] = key
             agree_key = sorted(agreeing)[0]
             pairs.append(OrderedDict([
                 ("task_id", task_id), ("prompt", head), ("chosen", pos["program"]), ("rejected", program),

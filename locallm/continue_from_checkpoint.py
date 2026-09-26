@@ -46,7 +46,11 @@ Since the r12 build (schema 2):
   edit; Iterative RPO, arXiv:2404.19733: 61.8 against 73.1 without and with a
   likelihood term; this project's round 2 on twins: reward accuracy 1.0 and
   tests passing 5 to 3). With `--pref-loss none` the pairs are gated and
-  recorded and the run is bit-identical to one without them.
+  recorded and the run is bit-identical to one without them. The pair pass
+  runs without dropout, as the reference was scored (pair_forward; TRL's
+  DPOTrainer disables dropout in both models by default), and every pair's
+  chosen side must be a document of --data, head and program byte for byte
+  (load_pairs), or the run refuses by line.
 """
 import argparse
 from dataclasses import asdict
@@ -252,13 +256,22 @@ def refuse_unless_trainable(text: str, label: str, eval_ids, split, dev_ids=froz
     if dev:
         reasons.append(f"contains dev-split ids: {loop_filter.held_out_detail(dev)}")
     raise ValueError(f"cannot train: {label}: " + "; ".join(reasons))
-def load_pairs(path, eval_ids, dev_ids, split_path) -> list[dict]:
+def load_pairs(path, eval_ids, dev_ids, split_path, corpus_text=None, corpus_path=None) -> list[dict]:
     """The preference pairs, refused by line when one names a held-out id, a dev id or a same-task source.
 
     The same gates the corpus passes through (loop_filter.validate_training_data
     over the prompt and both programs, plus the row's own task_id), with the dev
     split added: a pair that names a dev problem would teach the problem the
     stopping step is chosen on.
+
+    With `corpus_text`, each pair's prompt + chosen must occur in it exactly as
+    t/loop_locallm.py corpus writes a document (head + program): the likelihood
+    term on the winner is the language-model loss on that corpus, and DPO's own
+    recipe fits the reference on the preferred completions "to mitigate the
+    distribution shift" (Rafailov et al., Section 4,
+    ar5iv.labs.arxiv.org/html/2305.18290). A head written with --examples
+    against a corpus built without, or a chosen program the corpus does not
+    hold, is refused by line and named, never trained on.
     """
     rows = []
     refused = set(eval_ids) | set(dev_ids)
@@ -287,6 +300,12 @@ def load_pairs(path, eval_ids, dev_ids, split_path) -> list[dict]:
             if check.same_task_names or check.same_task_ids:
                 reasons.append(loop_filter.same_task_detail(check))
             raise ValueError(f"cannot train: {path}:{number}: " + "; ".join(reasons))
+        if corpus_text is not None and row["prompt"] + row["chosen"].strip("\r\n") not in corpus_text:
+            part = "head" if row["prompt"] not in corpus_text else "chosen program"
+            raise ValueError(f"cannot train: {path}:{number}: task_id {task_id}: the pair's {part} is not in "
+                             f"{corpus_path}; a chosen side must be a corpus document byte for byte, head and "
+                             f"program (the corpus and the pairs must be built from the same pool files and "
+                             f"agree on --examples)")
         rows.append(row)
     if not rows:
         raise ValueError(f"cannot train: {path} holds no pairs")
@@ -350,6 +369,35 @@ def pair_logps(model, rows, batch_size, torch_module, ignore_index: int):
     return torch_module.cat(chosen), torch_module.cat(rejected)
 
 
+def pair_forward(model, xc, yc, xr, yr, torch_module, ignore_index: int):
+    """The policy's log p(chosen) and log p(rejected) for one pair batch: with gradients, without dropout.
+
+    The reference is scored once in eval mode (pair_logps), so the policy's
+    side of every ratio is scored the same way. With dropout on in this pass,
+    log p_theta sat below log p_ref by the dropout deficit on every step, the
+    DPOP hinge fired on that noise, and its gradient lifted the REJECTED side
+    above its reference (+6.0 to +8.7 nats on the width-32 test fixture under
+    --dropout 0.1, review of 2026-09-25) while pairs_chosen_below_reference
+    still read 0. TRL's DPOTrainer disables dropout in the model and the
+    reference model for the whole run by default (DPOConfig.disable_dropout,
+    raw.githubusercontent.com/huggingface/trl/main/trl/trainer/dpo_config.py);
+    here only the pair pass runs in eval mode, so the language-model loss
+    keeps the recipe's --dropout and a run under --pref-loss none is
+    unchanged. Eval mode turns dropout off and draws nothing from the
+    generator; autograd is unaffected (gradient checkpointing, which model.GPT
+    applies only while training, is off for this pass).
+    """
+    was_training = model.training
+    model.eval()
+    try:
+        logits, _ = model(torch_module.cat([xc, xr]))
+        logps = sequence_logps(logits, torch_module.cat([yc, yr]), torch_module, ignore_index)
+    finally:
+        if was_training:
+            model.train()
+    return logps[:len(xc)], logps[len(xc):]
+
+
 def pair_summary(model, rows, reference, batch_size, beta, torch_module, ignore_index: int) -> dict:
     """The pair statistics one evaluation records: mean log-probabilities against the reference, accuracy, margin."""
     chosen, rejected = pair_logps(model, rows, batch_size, torch_module, ignore_index)
@@ -360,7 +408,14 @@ def pair_summary(model, rows, reference, batch_size, beta, torch_module, ignore_
             "pairs_rejected_ref_logp": float(reference_rejected.mean()),
             "pairs_reward_accuracy": float((ratio_chosen > ratio_rejected).float().mean()),
             "pairs_margin": float((beta * (ratio_chosen - ratio_rejected)).mean()),
-            "pairs_chosen_below_reference": float((chosen < reference_chosen).float().mean())}
+            "pairs_chosen_below_reference": float((chosen < reference_chosen).float().mean()),
+            # how far below, not only whether: the mean of the DPOP hinge over every
+            # pair in eval mode. The hinge sits inside the log-sigmoid under beta
+            # (Smaug Eq. 3), so once a pair's margin is large the term only bites
+            # when lambda * deficit approaches that margin; a deficit under
+            # margin / lambda is the hinge's slack, not a failure (measured
+            # 2026-09-25 under --dropout 0.1: one pair 0.09 below at a margin of 28)
+            "pairs_chosen_deficit": float(torch_module.clamp(reference_chosen - chosen, min=0.0).mean())}
 
 
 def main():
@@ -456,7 +511,8 @@ def main():
         raise ValueError("--pref-beta must be positive, --pref-lambda non-negative, --pair-batch-size at least 1")
     pair_rows = None
     if args.pairs is not None:
-        pair_rows = load_pairs(args.pairs, eval_ids, loop_filter.r12_dev_ids(split_path=args.split), args.split)
+        pair_rows = load_pairs(args.pairs, eval_ids, loop_filter.r12_dev_ids(split_path=args.split), args.split,
+                               corpus_text=data_text, corpus_path=args.data)
 
     import torch
     from data import (Corpus, DocumentBatches, IGNORE_INDEX, PairBatches, SPLIT_CLOSE_ENOUGH, _SPLIT_EPS,
@@ -546,6 +602,11 @@ def main():
         pairs_rows = PairBatches(pair_rows, tokenizer, args.block_size, args.seed, device)
         pairs_record = {"file": str(args.pairs), "sha256": file_sha256(args.pairs), "loss": args.pref_loss,
                         "beta": args.pref_beta, "lambda": args.pref_lambda, "batch_size": args.pair_batch_size,
+                        # the pair pass, policy and reference alike, runs without dropout (pair_forward);
+                        # the top-level "dropout" is the language-model pass's
+                        "dropout": 0.0,
+                        # load_pairs refused any pair whose head + chosen program is not a document of --data
+                        "chosen_in_corpus": True,
                         "reference": {"init": str(args.init), "init_ckpt_sha256": init_sha256,
                                       "scored": args.pref_loss == "dpop"},
                         **pairs_rows.record()}
@@ -653,9 +714,9 @@ def main():
                     # term (Iterative RPO's NLL on the winners, arXiv:2404.19733);
                     # the DPOP hinge keeps the chosen side at its reference or above
                     ix, xc, yc, xr, yr = pairs_rows.get_batch(step, args.pair_batch_size)
-                    pair_logits, _ = model(torch.cat([xc, xr]))
-                    logps = sequence_logps(pair_logits, torch.cat([yc, yr]), torch, IGNORE_INDEX)
-                    pref_loss, preference = dpop_loss(logps[:len(xc)], logps[len(xc):],
+                    # without dropout, as the reference was scored (pair_forward)
+                    policy_chosen, policy_rejected = pair_forward(model, xc, yc, xr, yr, torch, IGNORE_INDEX)
+                    pref_loss, preference = dpop_loss(policy_chosen, policy_rejected,
                                                       pairs_reference[0][ix], pairs_reference[1][ix],
                                                       args.pref_beta, args.pref_lambda, torch)
                     loss = lm_loss + pref_loss
