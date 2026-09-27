@@ -239,6 +239,15 @@ def test_a_parameterless_lemma_is_called_with_unit_in_fstar() -> None:
     assert "= two ()" in src and "SMTPat" not in src.split("let two")[1].split("let ")[0]
 
 
+def test_verus_proves_a_nonlinear_step_from_its_path_facts() -> None:
+    src = _lower("lower_verus", _pr("false_nonlinear_step"))
+    step = src[src.index("assert(((a * b) == (1int))) by (nonlinear_arith)"):]
+    step = step[:step.index(";")]
+    # the premises are the lemma's requires and the guard, nothing else
+    assert "(((0int) <= a) && ((0int) <= b))," in step
+    assert "(a == (0int))," in step
+
+
 def test_no_kernel_axiomatizes_a_lemma() -> None:
     banned = {"lower_dafny": [r"\{:axiom\}", r"\bassume\b"],
               "lower_verus": [r"admit\(", r"assume\("],
