@@ -19,7 +19,7 @@ What was copied, from where (each fetched and read on 2026-09-26):
 |---|---|---|
 | hooks | Claude Code's hooks (code.claude.com/docs/en/hooks): `PreToolUse`, `PostToolUse`, `Stop`; matcher groups; command handlers that read JSON on stdin; exit 2 blocks; `permissionDecision` with deny over ask over allow; `updatedInput`, `additionalContext`, `updatedToolOutput`; `Stop` with `decision: block` and `stop_hook_active` | a hook can tighten a decision but never loosen the operator's deny or offline mode; handlers run in order, not in parallel; one extra handler type, `builtin`, for the harness's own checker |
 | skills | the Agent Skills specification (agentskills.io/specification) and Claude Code's skills: a folder with `SKILL.md`, front matter `name` and `description`, progressive disclosure (the index at start, the body when used, other files when asked for) | `allowed-tools`, front-matter hooks and `!`-command context injection are not taken: each would let a file change what the harness permits or runs |
-| MCP | the specification at modelcontextprotocol.io, revision 2026-07-28 (per-request `_meta`, `server/discover`, no handshake) with the stdio fallback to the 2025-11-25-and-earlier `initialize` handshake | stdio only; tools only (no resources, prompts, sampling or elicitation); the official Python SDK is an async framework with third-party dependencies, so the client and server here are small standard-library ones |
+| MCP | the specification at modelcontextprotocol.io, revision 2026-07-28 (per-request `_meta`, `server/discover`, no handshake) with the stdio fallback to the 2025-11-25-and-earlier `initialize` handshake | stdio only; tools, resources and prompts (no sampling or elicitation); the official Python SDK is an async framework with third-party dependencies, so the client and server here are small standard-library ones |
 | the trust model | OWASP LLM01:2025 and its prompt-injection cheat sheet (segregate and mark external content, least privilege, human approval for risky actions); spotlighting (Hines et al., arXiv:2403.14720: give the model a continuous signal of where text came from); Beurer-Kellner et al., arXiv:2506.08837 (once an agent has read untrusted input, that input must not be able to trigger consequential actions) | the provenance signal is a special token no text can produce, not a text transformation |
 | internet | Python's `urllib`; SearXNG's search API (docs.searxng.org/dev/search_api.html) as the one concrete keyless search backend | off by default; the backend is pluggable and none is configured by default |
 
@@ -198,24 +198,42 @@ later request carries `_meta` with the version, client info and (empty)
 capabilities; any other error, or no answer within the probe timeout, means a
 legacy server, and the client falls back to `initialize` (2025-11-25, accepting
 2025-06-18, 2025-03-26, 2024-11-05) and `notifications/initialized`. It then
-pages through `tools/list` (bounded pages and tools) and calls `tools/call`,
-turning the content blocks into text (non-text blocks are named, not
-returned), `isError` into an error answer, and an `input_required` result
-into a refusal (dawnr has no elicitation). Every request has a timeout, after
-which the client sends `notifications/cancelled`; a request a legacy server
-sends the client is answered "method not found", since the client declares no
-capabilities; shutdown closes stdin, waits, then terminates and kills.
+pages through `tools/list`, `resources/list` and `prompts/list` (each bounded
+three ways: a page count, an item count, and a total wall-clock budget across
+every page -- one request's worth by default, so a server that always answers
+just inside its own per-request timeout cannot hold up the whole listing for
+page-count times timeout) and calls `tools/call` or `resources/read`, turning
+the content blocks (or, for a resource, the text or base64 `blob` contents;
+a blob is reported by size and type, never decoded into the model's context)
+into text (non-text blocks are named, not returned), `isError` into an error
+answer, and an `input_required` result into a refusal (dawnr has no
+elicitation). Every request has a timeout, after which the client sends
+`notifications/cancelled`; a request a legacy server sends the client is
+answered "method not found", since the client declares no capabilities;
+shutdown closes stdin, waits, then terminates and kills, and never raises even
+if a stuck process outlives all three (a caller cleaning up a connection must
+be able to treat that as something that cannot fail).
 
 **Registration.** A configured server's tools enter the registry as
 `mcp__<server>__<tool>` under the server's configured permission (ask by
-default) with untrusted output. A server counts as reaching the network
+default) with untrusted output. If the server also answers `resources/list`
+or `prompts/list` (tried once at registration; a server's own claim about its
+capabilities is not trusted for this any more than for permissions), it
+additionally gets `mcp__<server>__resources_list`, `...resources_read` and
+`...prompts_list`: query tools, not one registry entry per resource, since a
+resource is named by an open-ended URI rather than drawn from a small fixed
+menu the way tools are. A server counts as reaching the network
 unless the operator marks it `"network": false`, and while the harness is
 offline such a server is not even started. A server's tool descriptions,
 annotations and instructions are untrusted text: they are never used for
 permissions, and
 descriptions are hidden from the index (name and argument names only) unless
 the operator sets `"describe": true` for that server, which stops a server
-from writing instructions into the index (tool poisoning).
+from writing instructions into the index (tool poisoning); the three query
+tools above are harness-authored (never the server's words) and always
+show, since there is nothing of the server's in them to poison the index
+with -- only what they *return*, once called, carries the server's own text,
+same as any other mcp__ tool's result.
 
 **`"network": false` is the operator's claim about that server, not a fact
 the harness checks.** The harness never inspects what a server's process
