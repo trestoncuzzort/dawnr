@@ -580,10 +580,16 @@ class ParamStateProductBridgeTest(unittest.TestCase):
         src = lower_lean.lower(task, task["body"], witness=None)
         spec = src.split("theorem first_even_t_loop_spec", 1)[1].split(
             "theorem first_even_t_spec", 1)[0]
-        # the pre-existing plain closer is still the FIRST alternative
-        # tried at the recursive-apply site.
-        self.assertIn("apply first_even_t_loop_spec <;> (first | grind |",
-                      spec.replace("\n", " "), spec)
+        # 2026-09-26: first_even's `hinv2` is quantified, so the ground-
+        # instantiation script (`_inst_script`) now goes first, behind
+        # `assumption`, and the plain closer runs inside it once the
+        # quantified hypotheses are instantiated and cleared; no product
+        # bridge is emitted on this path.
+        flat = spec.replace("\n", " ")
+        self.assertIn("apply first_even_t_loop_spec <;> (first | assumption"
+                      " | ((repeat' apply And.intro) <;>", flat, spec)
+        self.assertIn("(try clear hinv2); (first | grind |", flat, spec)
+        self.assertNotIn("Int.mul_nonneg", spec, spec)
 
 
 class ParamStateProductBridgeKernelTest(unittest.TestCase):
