@@ -478,3 +478,46 @@ spread needs about 24 seeds a side to show at 80% power.
   separates them); and SCoRe's multi-turn RL through `engine.py`, with the
   proof engine as the reward, which is the port `DAWNR-PIPELINE.md` names
   next. Any rerun of this comparison needs about 24 seeds a side.
+
+## Follow-up 2026-09-27: the specification check, built and measured
+
+The tool's hole named above is closed: `t_tool.spec_changed` (`test_t_tool.py`)
+compares a draft's declaration, requires, ensures and spec funs against the
+specification the prompt actually gave (`t_tool.spec_header_from_context`,
+read back out of the conversation, not re-derived), by normalized AST
+equality — the same up to one consistent renaming of the task's own name,
+its parameters, its return, a spec fun's own parameters and a quantifier's
+bound variable, and up to reordering the requires list and, separately, the
+ensures list, since each is a set of conditions, not a sequence. Anything
+else differing is `call`'s new `specification: spec changed: <why>` line,
+checked before the examples run (`checker.failing`/`redacted_verdict` updated
+to match); a context with no formal specification in it (a "Problem:"
+prompt, plain chat) is untouched, byte for byte.
+
+**Measured** (`measure_spec_repair.py`, on this run's own saved
+`conversations.jsonl` and `work/drafts.jsonl`, nothing re-generated or
+re-graded): of the 285 drafts this file counted as passing every example
+without being the proved program, 254 are of a "spec" prompt (the other 31
+are "Problem:" prompts, which state no formal specification for this check
+to compare against). Of those 254, **15 (9 distinct problems) now read
+"specification: spec changed"** — a dropped or reworded `ensures` conjunct,
+a dropped or added `requires`, an added parameter, or a redefined spec fun,
+each read from the verdict's own line, not eyeballed. Of the 239 not
+flagged, 238 are byte-identical reproductions of the prompt's own
+specification (the draft's mistake is entirely in its body, which this
+check does not touch — an unrelated, already-known gap: a body can satisfy
+one or two given examples without being correct in general) and 1 differs
+only by a quantifier bound variable renamed between two clauses (`i_v` ->
+`i_v2`), which the renaming rule this file asked for correctly does not
+flag.
+
+That 15 is well under this file's own informal "101" above. That figure
+carries no script name (unusual in this repository, AGENTS.md rule 1), and
+given 238 of 239 non-flagged drafts match the prompt's specification
+byte-for-byte, a per-draft automated comparison could not have produced 101
+by comparing against the prompt's own text either; it most likely came from
+a rougher pass that could not tell a harmless rename from a real change,
+which is exactly the distinction this checker exists to make. 15 of 285, not
+101, is the number this repository should now cite for this hole, and the
+measurement script that produced it is `measure_spec_repair.py`, kept for
+the next repair run to reuse.

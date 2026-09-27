@@ -83,7 +83,7 @@ def failing(verdict: str) -> list[str]:
     bad = []
     for line in verdict.splitlines():
         line = line.strip()
-        if line.startswith(("parses: no", "well formed: no")):
+        if line.startswith(("parses: no", "well formed: no", "specification: spec changed")):
             bad.append(line)
         elif line.startswith("example ") and not line.endswith(": pass"):
             bad.append(line)
@@ -120,10 +120,12 @@ def redacted_verdict(program: str, context: str = "") -> tuple[bool, str]:
 
     Unlike check() (the `t` tool's own answer to the model's own program), nothing this returns is drawn
     from the program's or a page's own text: only a fixed vocabulary -- "parses: yes/no", "well formed:
-    yes/no", "examples: passed k of n", and, on a failure, an error class from a small closed set (a Python
-    exception's class name -- chosen by dawnr's own parser code, never by the input -- or check_wf's SPEC
-    rule keys, or one of t_tool.run's own verdict tags: "arity", "undefined", "budget", "crash",
-    "requires-excluded", or "fail" for a value mismatch). Before this fix the hook quoted the program's own
+    yes/no", "specification: no" (t_tool.spec_changed found a change; never t_tool.py's own reason string,
+    which quotes the specification's clauses), "examples: passed k of n", and, on a failure, an error class
+    from a small closed set (a Python exception's class name -- chosen by dawnr's own parser code, never by
+    the input -- or check_wf's SPEC rule keys, or one of t_tool.run's own verdict tags: "arity", "undefined",
+    "budget", "crash", "requires-excluded", "fail" for a value mismatch, or "spec-changed" for
+    spec_changed()). Before this fix the hook quoted the program's own
     parse/well-formedness error text (t_tool.py's `_short`, up to MAX_WHY=160 characters) into its note, and
     ToolResult.spans() rendered every note as trusted (see tools.py, runtime.py): an attacker who controls a
     fetched page or an MCP result could put an identifier or token of their choice into a program, and that
@@ -148,6 +150,14 @@ def redacted_verdict(program: str, context: str = "") -> tuple[bool, str]:
     if errs:
         return False, f"parses: yes\nwell formed: no: class={_wf_classes(errs)}"
     lines = ["parses: yes", "well formed: yes"]
+    header = t_tool.spec_header_from_context(context)
+    if header is not None:
+        prompt_task = t_tool.parse_spec_header(header)
+        # spec_changed's own reason string names the program's own parameter, type and spec-fun names, so
+        # it is exactly what this function must never return: only the fixed tag "class=spec-changed" says
+        # a change was found, never why.
+        if prompt_task is not None and t_tool.spec_changed(prompt_task, task) is not None:
+            return False, "parses: yes\nwell formed: yes\nspecification: no: class=spec-changed"
     examples = t_tool.parse_examples(context)
     if not examples:
         return True, "\n".join(lines)
