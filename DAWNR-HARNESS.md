@@ -389,5 +389,13 @@ resolve from the file's folder, `${PYTHON}` is the running interpreter):
 Tests: `python -m unittest locallm/test_harness.py` (standard library only:
 registry, policy, hooks, the checker hook, skills, MCP both ways against real
 subprocesses in both eras, the web tools against a local HTTP server; passes
-on Python 3.10 and 3.14) and `locallm/test_harness_chat.py` (the tokens, the
-mask and the engine; needs torch, skips without it).
+on Python 3.10 and 3.14), `locallm/test_harness_adversarial.py` (also
+standard library only, `random` for property-style fuzzing: hostile MCP tool
+names, descriptions and schemas; oversized and malformed JSON-RPC on the
+wire; skill path traversal and symlinks; hook configurations with bad
+commands; web redirects into every private and reserved range, huge bodies,
+slow drips and wrong content types; injection text in every field that
+reaches the model, resources and prompts included -- every case ends refused
+or marked untrusted, never a crash, never unmarked) and
+`locallm/test_harness_chat.py` (the tokens, the mask and the engine; needs
+torch, skips without it).
