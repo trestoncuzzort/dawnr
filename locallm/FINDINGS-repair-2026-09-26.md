@@ -521,3 +521,57 @@ which is exactly the distinction this checker exists to make. 15 of 285, not
 101, is the number this repository should now cite for this hole, and the
 measurement script that produced it is `measure_spec_repair.py`, kept for
 the next repair run to reuse.
+
+## Follow-up 2026-09-27 (correction): a lemma or method the draft added was refused, not compared
+
+The check the previous section describes had its own gap: `spec_changed`
+treated the mere PRESENCE of a lemma or method on either side — the prompt's
+or the draft's — as itself an unverifiable difference ("a lemma differs (not
+compared)" / "a method differs (not compared)"), before ever looking at what
+changed. A correct draft that kept the prompt's own
+declaration/requires/ensures/spec funs unchanged but added a helper lemma —
+SPEC.md's "Lemmas (v1)", the language's own documented proof technique for
+exactly the inductive and nonlinear facts a kernel cannot see on its own
+(`t/lemmas/*.t`) — was refused as "specification: spec changed" before its
+examples ever ran, and `checker.redacted_verdict()` would have blocked that
+same correct final answer with `class=spec-changed`.
+
+**Fix** (`t_tool.py`, new `_member_changed`): only what the PROMPT's own
+specification fixes is compared. A lemma or method the draft adds under a
+name the prompt never used is not looked at at all — the Dafny reference
+manual (dafny.org/latest/DafnyRef/DafnyRef, section 6.3.3 "Lemmas", the same
+source SPEC.md's "Lemmas (v1)" already cites) is explicit that a lemma is
+erased at compile time and a call transmits only its ensures, so it is proof
+scaffolding, never part of what the task computes or requires, and a method
+the draft adds only promises something extra nobody asked for -- promising
+more is not the failure mode this file's opening section named; dropping or
+weakening a promise the PROMPT made is. A lemma or method the PROMPT itself
+declares (still never seen in a "spec" prompt across this corpus or the
+repair run below, but part of the contract like any other declared name
+whenever it is) is compared like a nested task instead: its own name
+exactly, its params, (a method's) return type, requires and ensures, up to
+renaming its own params/return and reordering its own clause lists -- never
+its body, exactly as the top-level task's own body is never compared here
+either. Removing or altering a prompt-declared lemma or method still reads
+"specification: spec changed".
+
+**Regression tests** (`test_t_tool.py`,
+`SpecChangedAllowedLemmaAndMethodAdditions`, and additions to
+`SpecChangedCaughtChanges` and `EndToEnd`): a draft adding a helper lemma or
+method is allowed, including alongside a prompt-declared lemma the draft
+keeps unchanged; a draft that alters or removes a prompt-declared lemma or
+method (`t/lemmas/pow2_pos.t`, `t/methods/clamp_sum.t`'s `clamp`, used as the
+prompt-declared fixtures) still fails; every existing case above still
+holds -- 37 of 37 in this file, and the full standard-library and cpu-torch
+suites this repository's `tests.yml` defines all still pass.
+
+**Re-measured** (`measure_spec_repair.py`, the same `~/scratch/dawnr-repair/`,
+nothing re-generated or re-graded): the count above **does not move -- still
+15 of 285 (9 distinct problems)**, byte-for-byte the same 15 drafts for the
+same reasons. Neither `conversations.jsonl` nor `work/drafts.jsonl` contains
+a single lemma or method declaration (checked directly, not inferred), so
+this particular gap never actually fired on this run -- its cost was
+prospective, not yet measured: a correct repair that had reached for the
+language's own documented proof technique would have been wrongly refused,
+not a repair this run happened to produce. The fix is still correct to make
+now, before a run that does produce one.
