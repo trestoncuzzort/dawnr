@@ -89,7 +89,18 @@ import unittest
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-import home  # noqa: E402
+try:
+    import home  # noqa: E402
+except ModuleNotFoundError as exc:
+    # tkinter is an optional stdlib package: absent from a stock python3 on
+    # many Linux installs (see test_launchers.py) and from some CI Pythons.
+    # Abstain by name rather than let import fail the whole module.
+    if exc.name != "tkinter":
+        raise
+    home = None
+    _HOME_IMPORT_ERROR = str(exc)
+else:
+    _HOME_IMPORT_ERROR = None
 import look  # noqa: E402
 
 SOURCE = (HERE / "home.py").read_text(encoding="utf-8")
@@ -115,6 +126,7 @@ LENGTHS = {
 }
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class TheFixtures(unittest.TestCase):
     def test_the_fixtures_match_studio(self):
         """The three size names and the three length names are still studio's.
@@ -131,6 +143,7 @@ class TheFixtures(unittest.TestCase):
                           f"{name}'s wall-clock target moved")
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class Geometry(unittest.TestCase):
     def test_a_rounded_rectangle_is_twelve_control_points(self):
         """Four corners of three points each, which is what the smoothed-polygon
@@ -175,6 +188,7 @@ class Geometry(unittest.TestCase):
             self.assertIsInstance(v, int, f"{box} still has a half pixel in it")
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class TheSlider(unittest.TestCase):
     def test_every_combination_is_reachable(self):
         stops = home.effort_stops(SIZES, LENGTHS)
@@ -216,6 +230,7 @@ class TheSlider(unittest.TestCase):
         self.assertEqual(home.stop_index(stops, "Enormous", "Normal", 4), 4)
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class Steps(unittest.TestCase):
     def test_a_measured_machine_gets_the_length_it_asked_for(self):
         """19.18 ms/step is the Small/cpu row of bench_device_result.json."""
@@ -246,6 +261,7 @@ class Steps(unittest.TestCase):
         self.assertAlmostEqual(thorough / normal, 3.0, delta=0.1)
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class WhatItSays(unittest.TestCase):
     def test_a_measured_machine_states_the_time(self):
         say = home.say_effort("Small", "Quickest.", 408_448, 3100, "4 minutes")
@@ -308,6 +324,7 @@ class WhatItSays(unittest.TestCase):
         self.assertIn("fingerprint", say.why, "the reason is shown, not swallowed")
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class OnTheDisk(unittest.TestCase):
     def _model(self, folder: pathlib.Path, name: str, both: bool = True):
         d = folder / name
@@ -348,6 +365,7 @@ class OnTheDisk(unittest.TestCase):
         self.assertEqual(home.trained_models(pathlib.Path("/nonexistent-xyz")), [])
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class LookingAtText(unittest.TestCase):
     """measure_text, with the data.py and leakage.py calls injected.
 
@@ -503,6 +521,7 @@ class OffThread:
         return self.q.get_nowait()
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class ReadingIsIngestsJob(unittest.TestCase):
     """Every read of somebody's own file goes through ingest, off the Tk thread.
 
@@ -585,6 +604,7 @@ class ReadingIsIngestsJob(unittest.TestCase):
         self.assertEqual(sorted(vars(worker)), ["q", "studio", "tools"])
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class TalkingWithNothingInstalled(unittest.TestCase):
     """Step 4's writing thread, run here with no display and no torch.
 
@@ -676,6 +696,7 @@ class TalkingWithNothingInstalled(unittest.TestCase):
                          "no pace claimed when nothing was written")
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class WhatStepThreeAllows(unittest.TestCase):
     """The gate that actually stops a bad file, as opposed to a greyed button."""
 
@@ -703,6 +724,7 @@ class WhatStepThreeAllows(unittest.TestCase):
         self.assertIn("folder", say.why)
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class WhichEncodingWorked(unittest.TestCase):
     def test_plain_utf8_is_not_worth_saying(self):
         self.assertEqual(home.encoding_note("utf-8"), "")
@@ -727,6 +749,7 @@ class WhichEncodingWorked(unittest.TestCase):
         self.assertIn("UTF-16", facts)
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class AMalformedJudgement(unittest.TestCase):
     """as_say, which exists because _drain's only `except` is queue.Empty."""
 
@@ -744,6 +767,7 @@ class AMalformedJudgement(unittest.TestCase):
         self.assertIn(say.tone, look.PALETTES["light"])
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class TheAlphabet(unittest.TestCase):
     """say_vocab, said while step 2 can still be changed."""
 
@@ -775,6 +799,7 @@ class TheAlphabet(unittest.TestCase):
             worst = here
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class TheDiscipline(unittest.TestCase):
     """The operator's four rules for this page, checked against the source.
 

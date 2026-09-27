@@ -21,6 +21,7 @@ import random
 import subprocess
 import sys
 import tempfile
+import unittest
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 os.environ.setdefault("OMP_NUM_THREADS", "4")
@@ -216,7 +217,15 @@ def _load_and_score(out: pathlib.Path, corpus, batch_size, block_size):
 def test_a_real_studio_run_stops_and_saves_the_best_weights():
     import queue
     import threading
-    import studio
+    try:
+        import studio
+    except ModuleNotFoundError as exc:
+        # tkinter is an optional stdlib package, absent on a stock python3
+        # (see test_launchers.py) and on some CI Pythons. The command-line
+        # path below covers the same stopping logic without it.
+        if exc.name != "tkinter":
+            raise
+        raise unittest.SkipTest(str(exc))
     from data import CharTokenizer, Corpus
     with tempfile.TemporaryDirectory() as d:
         d = pathlib.Path(d)
