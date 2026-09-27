@@ -211,11 +211,14 @@ a harness, the way an agent runtime wraps a language model:
 
 | dawnr needs | the idea | where it stands |
 |---|---|---|
-| to act through tools | a tool-calling engine: the model emits a call, the runtime executes it, the result returns into the context | **started**: the chat engine runs the t interpreter mid-answer |
-| to reach other systems | the Model Context Protocol (MCP): dawnr as an MCP client using any MCP server's tools and resources, and as an MCP server so other agents can use its checker | not started |
-| to reach the internet | search and fetch as tools | not started |
-| to know how to do specialised tasks | skills: packaged instructions and scripts loaded only when a task needs them | not started |
-| to enforce rules no matter what the model says | hooks: deterministic scripts the runtime runs before and after tool calls; the proof check is dawnr's first hook | not started |
+| to act through tools | a tool-calling engine: the model emits a call, the runtime executes it, the result returns into the context | **built, untrained**: a tool registry with a permission per tool (allow, ask, deny) and a call syntax in the chat format; the t interpreter is its first tool (`DAWNR-HARNESS.md`) |
+| to reach other systems | the Model Context Protocol (MCP): dawnr as an MCP client using any MCP server's tools and resources, and as an MCP server so other agents can use its checker | **built** (tools only): a standard-library stdio client for both protocol eras and dawnr's checker as a server, tested against each other |
+| to reach the internet | search and fetch as tools | **built, off by default**: fetch and search behind the policy, untrusted and marked; search needs an operator-chosen backend |
+| to know how to do specialised tasks | skills: packaged instructions and scripts loaded only when a task needs them | **built**: the Agent Skills folder format, an index line per skill, loading on demand; the first skill is `t-repair` |
+| to enforce rules no matter what the model says | hooks: deterministic scripts the runtime runs before and after tool calls; the proof check is dawnr's first hook | **built**: Claude Code's hook contract; the checker checks every t program from outside and blocks a failing final answer once |
+
+None of the harness is learned yet: today's checkpoints can use only the t
+tool. `DAWNR-HARNESS.md` section 8 lists the conversations each piece needs.
 
 The rule that keeps this compatible with the north star: **the network is a
 tool, never a dependency.** dawnr works fully offline; when a network, MCP
