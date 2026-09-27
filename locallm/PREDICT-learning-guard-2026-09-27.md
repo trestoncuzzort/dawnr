@@ -42,3 +42,10 @@ first.
 ada's first sleep of arm A seed 1 was not stopped (it ran its 30 steps, passing
 8, 7 and 7 of 8), so 10 of those 11 sleeps were stopped, not 11. The
 predictions themselves are unchanged.
+
+**Second note, before arm C started.** Arm C runs with one change committed
+after this note: `sleep.py` accumulates a batch over 5,120 padded tokens in
+parts weighted by supervised tokens (commit "sleep.py: a batch over 5120 padded
+tokens is accumulated in parts"), because arm B's first attempt ran out of the
+4.5 GB budget. The step it computes is the same batch's step (the test checks
+three AdamW steps agree to 1e-5); arm A seed 1 ran before it, arm A seed 2 after.
