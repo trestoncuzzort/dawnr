@@ -278,10 +278,46 @@ def report(runs: Path, out: Path | None = None) -> int:
     summary = table_summary(table)
     summary["_means"] = means(summary)
     summary["_decisions"] = decisions(table, summary)
+    summary["_cross_machine"] = cross_machine(runs)
     print(json.dumps(summary, indent=2))
     if out is not None:
         out.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return 0
+
+
+def read_rows(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def compare_rows(a: list[dict], b: list[dict]) -> dict:
+    """Two evaluations of one checkpoint on the same items, row by row (the addendum's X1): how many rows
+    answer the same program, make the same calls, and judge the same on every boolean the rows record."""
+    n = min(len(a), len(b))
+    same = Counter()
+    for x, y in zip(a[:n], b[:n]):
+        key = (x.get("id"), x.get("task_id"), x.get("source"))
+        if key != (y.get("id"), y.get("task_id"), y.get("source")):
+            raise ValueError(f"row {sum(same.values())}: the two files ask different items ({key})")
+        same["program"] += norm(x.get("program")) == norm(y.get("program"))
+        same["calls"] += x.get("calls") == y.get("calls")
+        flags = [k for k, v in x.items() if isinstance(v, bool)]
+        same["every_judgement"] += all(x[k] == y.get(k) for k in flags)
+    return {"rows": n, **{f"same_{k}": v for k, v in same.items()},
+            "same_program_rate": round(same["program"] / n, 4) if n else None}
+
+
+def cross_machine(runs: Path) -> dict:
+    """Every pair of evaluations of one checkpoint on two machines that the runs directory holds."""
+    pairs = {"tool_eval": ("tool-eval.rows.jsonl", "tool-eval-lab.rows.jsonl"),
+             "chat_eval": ("chat-eval.rows.jsonl", "chat-eval-lab.rows.jsonl"),
+             "tool_eval_desktop_stopped": ("tool-eval.desktop-killed-504of706.rows.jsonl", "tool-eval.rows.jsonl")}
+    out = {}
+    for d in sorted(p for p in runs.glob("*-s*") if p.is_dir()):
+        for kind, (first, second) in pairs.items():
+            if (d / first).is_file() and (d / second).is_file():
+                out[f"{d.name} {kind}"] = {"desktop": first, "lab": second,
+                                           **compare_rows(read_rows(d / first), read_rows(d / second))}
+    return out
 
 
 def decisions(table, summary) -> dict:
