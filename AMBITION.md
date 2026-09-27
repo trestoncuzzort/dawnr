@@ -224,6 +224,22 @@ servers or skills are present it may use them, and everything that comes back
 from outside is untrusted data, checked before it is relied on and never
 followed as an instruction.
 
+### dawnr grows with the person using it
+
+The operator's words: an expansive assistant that learns like a child from
+every session, with a personality that grows per person, in control of the
+machine it runs on, not only a doctorate in proofs. The same rule governs all
+of it: nothing is trusted without evidence, and the person stays in control.
+
+| dawnr needs | the idea | where it stands |
+|---|---|---|
+| to remember the person across sessions | long-term memory per person: what happened (episodes), what is true about them (facts and preferences), recalled into each new session; they can read, correct, export and erase it | being built |
+| to learn from every session | per-person learning between sessions: feedback and corrections become training data; a small per-person adapter is updated while the shared model stays fixed; replay against forgetting; measured so a person's model gets better at their tasks without getting worse at everything else | being built |
+| a personality that grows per person | a persona per person (tone, detail, interests, how they like to work) learned from interactions, visible and editable | being built |
+| to know things it was not trained on | retrieval over the proved corpus, the person's own files and fetched pages, cited | being built |
+| to act on the machine, in control | a planning loop over tools (files, shell, processes) through the harness: every action under the owner's allow / ask / deny permissions, logged, reversible where possible; dawnr never grants itself permissions | being built |
+| to hear and speak | speech in and out, trained here | design and data first |
+
 **The order**, trustworthy core first and breadth after, because a system that
 talks and sees before it reasons well is confident and wrong, the opposite of
 the north star:
