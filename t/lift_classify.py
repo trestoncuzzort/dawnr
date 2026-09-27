@@ -79,7 +79,7 @@ from lift_ast import (
     Quantifier, ReadsClause, Refusal, RequiresClause, RevealStmt,
     ReturnStmt, Rewrite, SeqDisplay, SeqUpdate, SetDisplay, SkippedDecl,
     Slice, Spec, Star, Stmt, StringLit, TupleExpr, Type, TypeTest, Unary,
-    VarDeclStmt, WhileCaseStmt, WhileStmt, Comprehension,
+    VarDeclStmt, WhileCaseStmt, WhileStmt, Comprehension, RealLit,
 )
 
 
@@ -263,11 +263,27 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
                 return None  # row 43: `seq<seq<char>>`, a row of code points
             if leaf.kind in ("seq", "string"):
                 return "nested-seq-deep"  # a string is itself a seq: three levels
-            return "nested-seq-other"
+            # Row 46 (2026-09-27): the row's own element names the refusal,
+            # `seq<seq<real>>` as `seq<real>` does one level down.
+            return _seq_element_issue(leaf) or "nested-seq-other"
         if row is not None and row.kind == "bool":
             return "seq-of-bool"
         if row is not None and row.kind == "string":
             return None  # row 43: `seq<string>`, the same nested seq
+        # Row 46 (2026-09-27, t/FEATURES-TRACK.md, nested-seq-other): the
+        # 2026-09-27 census of the 143 methods this branch used to fold
+        # into `nested-seq-other` is dominated by element types t has no
+        # value for at all -- `seq<real>` (the numpy-shaped vericoding
+        # files), `seq<bv32>`, `seq<(int, int)>`, `seq<T>` under a type
+        # parameter, `seq<Datatype>` -- none of them a seq-NESTING question.
+        # Each now refuses under the element's own name (`seq-of-real`,
+        # `seq-of-bitvector`, `seq-of-pair`, `seq-of-datatype`, `seq-of-
+        # set`, `seq-of-map`), so the census can rank them with `real`,
+        # `bitvector`, `datatype` and `set` where they belong; only a
+        # shape none of those names fits stays `nested-seq-other`.
+        named = _seq_element_issue(row)
+        if named is not None:
+            return named
         if row is not None and row.kind == "array":
             # `seq<array<int>>`: row 22's array-as-seq-value machinery is
             # built around exactly one top-level array per method (a
@@ -325,6 +341,34 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
     return "type-decl"
 
 
+def _seq_element_issue(el: Optional[Type]) -> Optional[str]:
+    """Row 46 (2026-09-27): the refusal name for a seq whose ELEMENT type
+    `el` t has no value for -- the element's own kind, `seq-of-<kind>` --
+    or `None` when this function has no sharper name than the caller's
+    (`nested-seq-other`)."""
+    if el is None:
+        return None
+    if el.kind == "bool":
+        return "seq-of-bool"    # `seq<seq<bool>>`: the row's own name, one level down
+    if el.kind == "real":
+        return "seq-of-real"
+    if el.kind == "bv":
+        return "seq-of-bitvector"
+    if el.kind == "tuple":
+        return "seq-of-pair"    # t has no seq of pairs (SPEC.md "Pairs": "Not in v1")
+    if el.kind in ("set", "iset"):
+        return "seq-of-set"
+    if el.kind in ("map", "imap"):
+        return "seq-of-map"
+    if el.kind == "id":
+        # a datatype, a type synonym or a method's own type parameter; all
+        # read as `id` here, none is a t value
+        return "seq-of-datatype"
+    if el.kind == "object":
+        return "seq-of-object"
+    return None
+
+
 def _tuple_issue(t: Type) -> Optional[str]:
     """Row 44 (2026-09-27, t/FEATURES-TRACK.md, tuples): a Dafny tuple type
     `(T1, T2)` is t's pair (SPEC.md "Pairs (v1)") when it has exactly two
@@ -336,6 +380,66 @@ def _tuple_issue(t: Type) -> Optional[str]:
         return "tuple-arity"
     if any(_pair_component_issue(a) is not None for a in t.args):
         return "tuple-component"
+    return None
+
+
+def _id_type_gap(module, ty: Optional[Type]) -> Optional[str]:
+    """Row 48: an `id` type that is not one of the file's datatypes is
+    named by the declaration that introduces it (`class`, `trait`, `type`,
+    `newtype`: the SkippedDecl's own gap name), or `opaque-type` when the
+    file declares nothing by that name (an import or a Dafny built-in)."""
+    if ty is None or ty.kind != "id" or ty.args:
+        return None
+    for d in module.decls:
+        if isinstance(d, SkippedDecl):
+            words = d.text.split()
+            if len(words) >= 2 and words[1] == ty.name:
+                return d.gap_name
+    return "opaque-type"
+
+
+_DATATYPE_KIND_ORDER = ("recursive", "generic", "real", "sum", "record", "enum")
+
+
+def _datatype_kind(module) -> Optional[str]:
+    """Row 48 (2026-09-27): the shape a member access on this file's
+    datatypes needs, read from every skipped `datatype`/`codatatype`
+    declaration's token text. Per declaration: `recursive` when a
+    constructor's fields mention the type's own name, `generic` when the
+    type takes parameters, `real` when a field is real-valued, `enum` when
+    every constructor is nullary, `record` for one constructor with fields,
+    `sum` otherwise. A file with several datatypes is named by the hardest
+    kind present (the order above), since the member is not resolved to its
+    type here; None when the file declares no datatype (the member belongs
+    to a class, map or module import instead)."""
+    kinds: set[str] = set()
+    for d in module.decls:
+        if not (isinstance(d, SkippedDecl) and d.keyword.split()[-1] in ("datatype", "codatatype")):
+            continue
+        words = d.text.split()
+        if "=" not in words:
+            continue
+        eq = words.index("=")
+        head, body = words[1:eq], words[eq + 1:]
+        name = head[0] if head else ""
+        generic = "<" in head
+        ctors = " ".join(body).split(" | ")
+        fields = [c[c.index("("):] for c in ctors if "(" in c]
+        if any(re.search(r"\b" + re.escape(name) + r"\b", f) for f in fields if name):
+            kinds.add("recursive")
+        elif generic:
+            kinds.add("generic")
+        elif any(re.search(r"\breal\b", f) for f in fields):
+            kinds.add("real")
+        elif not fields:
+            kinds.add("enum")
+        elif len(ctors) == 1:
+            kinds.add("record")
+        else:
+            kinds.add("sum")
+    for k in _DATATYPE_KIND_ORDER:
+        if k in kinds:
+            return k
     return None
 
 
@@ -492,6 +596,14 @@ def expr_kind(e: Expr, lookup) -> Optional[str]:
                 return rk
         return "int"
     if isinstance(e, Cardinality):
+        return "int"
+    if isinstance(e, Cast) and e.type.kind in ("int", "nat", "char"):
+        # Row 46 (2026-09-27): `e as char` / `e as int` is an int-kinded
+        # expression (a char is its code point, row 28); whether the cast
+        # itself is safe is the cast pass's own question (`int-as-char-
+        # lifted` or `char-cast-unbounded`), asked at the same node. Before
+        # this the kind was unknown, so a display `[(n % 10 + 48) as char]`
+        # refused `nested-seq-other`, a name that said nothing about it.
         return "int"
     if isinstance(e, TupleExpr):
         return "pair" if len(e.elems) == 2 else None  # row 44: a pair literal
@@ -679,6 +791,12 @@ def _seq_literal_issue(n: SeqDisplay, env: dict) -> Optional[str]:
         k = expr_kind(el, env.get)
         if k in ("int", "seq"):
             continue
+        if k == "bool":
+            return "seq-of-bool"     # row 46: `[i % 3 == 0]`, a bool element
+        if isinstance(el, RealLit):
+            return "seq-of-real"     # row 46: `[1.0]`
+        if isinstance(el, TupleExpr):
+            return "seq-of-pair"     # row 46: `[(a, b)]`
         return "nested-seq-other"
     return None
 
@@ -2322,6 +2440,18 @@ class Liftable:
     # `callees` carry the rest of the call graph; `lift_rewrite.rewrite` lifts
     # them callees-first into the task's `methods`.
     callees: tuple = ()
+    # Row 45 (2026-09-27, t/FEATURES-TRACK.md, return default): the dafny
+    # name of the single out-parameter section 4.7's SYNTACTIC check could
+    # not see assigned on every path (`_assigns_ret_all_paths`), `None`
+    # when it could. `lift_rewrite.rewrite` opens such a body with the
+    # return's type default and logs `return-default-init`; `lift_check`
+    # then verifies the SOURCE method under dafny's own definite-assignment
+    # rule (a semantic check, not a syntactic one -- measured on dafny
+    # 4.11.0: a `while true { .. r := i; return; .. }` body and an if-case
+    # both pass it while this syntactic check refuses them) and refuses
+    # `return-default-unverified` when dafny does not accept it, so the
+    # default is only ever kept where dafny proved it is never observed.
+    ret_default: Optional[str] = None
 
 
 def _first(issues: list[tuple[int, str, str]]) -> tuple[int, str, str]:
@@ -2353,6 +2483,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # still has its function lifted, and printed for the checker). --
     source_method, source_closure = method, closure
     method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
+    datatype_kind = _datatype_kind(module)  # row 48: names datatype-typed binders/params/returns/members
     lets = lift_let.expand_scope(method, closure, method_names)
     issues += lets.issues
     # A binder is a local whose type the substitution erases: one t cannot carry
@@ -2366,6 +2497,9 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             if isinstance(n, LetExpr) and n.op == ":=":
                 for b in n.binders:
                     bad = _type_issue(b.type) if b.type is not None else None
+                    if bad == "datatype":  # row 48
+                        bad = (f"datatype-{datatype_kind}" if datatype_kind is not None
+                               else _id_type_gap(module, b.type) or bad)
                     if bad not in (None, "nat-seq-elements", "array") and lift_let.binder_uses(n, b.name):
                         issues.append((n.line, bad, b.name))
     for line in lets.lines:
@@ -2422,7 +2556,35 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     pair_returns: Optional[tuple[Param, Param]] = None
     if len(method.returns) == 0:
         if array_mutation is None or array_mutation.kind != "modifies-param":
-            issues.append((method.line, "zero-returns", method.name or "?"))
+            # Row 47 (2026-09-27, t/FEATURES-TRACK.md, zero-returns): a
+            # method with no out-parameter is a t task only through
+            # decision 22's modifies-param shape (SPEC.md "Sequences as
+            # values": "a method whose effect is its array is a task whose
+            # return is a seq"). The 2026-09-27 census read 39 such
+            # methods refused `zero-returns`, and the name said nothing
+            # about 35 of them: `find_array_mutation` had already named
+            # the shape it could not map (`multi-array-mutation`, two
+            # arrays written in one body, the DJ family's `a[i] := 0` plus
+            # `sum[0] := total`) on a LATER line, which this method-line
+            # issue then hid, or the method's `modifies` clause is real
+            # but every write happens inside a callee (BubbleSort's
+            # `Swap(a, j, j+1)`), which the shape detector never sees.
+            # Now: a named mutation issue stands alone; a `modifies` with
+            # no index assignment refuses `array-mutation` under the token
+            # `modifies-via-call` (the method calls other methods) or
+            # `modifies-no-index-assign`; and a method with no return and
+            # no `modifies` is, in t's vocabulary, a lemma about its
+            # parameters (SPEC.md "Lemmas (v1)": "Dafny's lemma ... with no
+            # return"), which t states only inside a task that calls it,
+            # so it refuses `lemma-shaped`.
+            if mutation_issue is not None:
+                pass
+            elif any(isinstance(sp, ModifiesClause) for sp in method.specs):
+                via_call = any(isinstance(n, CallStmt) for n in walk(method))
+                issues.append((method.line, "array-mutation",
+                               "modifies-via-call" if via_call else "modifies-no-index-assign"))
+            else:
+                issues.append((method.line, "lemma-shaped", method.name or "?"))
     elif len(method.returns) == 2:
         ret_a, ret_b = method.returns
         bad_a = _pair_component_issue(ret_a.type)
@@ -2480,6 +2642,9 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             continue
         reason = _type_issue(p.type)
         if reason is not None:
+            if reason == "datatype":  # row 48
+                reason = (f"datatype-{datatype_kind}" if datatype_kind is not None
+                          else _id_type_gap(module, p.type) or reason)
             issues.append((p.line, reason, p.name))
 
     if ret_param is not None:
@@ -2510,6 +2675,9 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             pass  # decision 22: an allocated array return is a seq return
         else:
             reason = _type_issue(rt)
+            if reason == "datatype":  # row 48
+                reason = (f"datatype-{datatype_kind}" if datatype_kind is not None
+                          else _id_type_gap(module, rt) or reason)
             if reason is not None and not (rt is not None and rt.kind == "nat"):
                 issues.append((ret_param.line, reason, ret_param.name))
 
@@ -2547,7 +2715,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     for root in scope_roots:
         for n in walk(root):
             _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids,
-                                  tuple_names)
+                                  tuple_names, datatype_kind)
 
     # -- sequences: literal, concat, slice (rows 25-27, 2026-09-09) ------
     # `SeqDisplay`/`Slice`/a `+` on seqs used to be unconditional
@@ -2664,21 +2832,38 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                     issues.append((n.line, "as-cast", "as"))
 
     # -- definite assignment of the return, every path (section 4.7) -----
+    # Row 45 (2026-09-27): no longer a refusal on its own. Dafny checks
+    # definite assignment of an out-parameter SEMANTICALLY (a Boogie
+    # obligation, "out-parameter 'r' ... might be uninitialized at this
+    # return point"; Reference Manual 5.3.1.2, auto-initialization and
+    # definite assignment), so a method this syntactic walk cannot see
+    # assigning `r` on every path (an assignment inside `while true`,
+    # under a `break`, in an if-case) may still be accepted by dafny, and
+    # one dafny rejects is caught by `lift_check`'s own `verify-source`
+    # step (refused `return-default-unverified`). The one return type
+    # with no t default is `char` (dafny's own default is 'D'; t has no
+    # char value to name it by), refused `return-default-char`.
+    ret_default: Optional[str] = None
     if ret_param is not None and method.body is not None:
         if not _assigns_ret_all_paths(method.body, ret_param.name):
-            issues.append((method.line, "return-not-assigned-on-all-paths",
-                            ret_param.name))
+            if ret_param.type is not None and ret_param.type.kind == "char":
+                issues.append((method.line, "return-default-char", ret_param.name))
+            else:
+                ret_default = ret_param.name
     # Row 29: the SAME check, once per out-parameter -- `_assigns_ret_
     # all_paths` already treats a `return e1, e2;` (any non-empty
     # ReturnStmt.values) as assigning whichever single `ret_name` it is
     # asked about, so calling it twice (once per component name) is
     # correct with no change to the helper itself.
+    # Row 45: a pair component already opens the body with decision 13's
+    # `default-init` (see `lift_rewrite.rewrite`), so an unassigned one
+    # needs only the same `verify-source` gate; `ret_default` names the
+    # first such component so the rewrite logs `return-default-init`.
     if pair_returns is not None and method.body is not None:
         ret_a, ret_b = pair_returns
-        if not _assigns_ret_all_paths(method.body, ret_a.name):
-            issues.append((method.line, "return-not-assigned-on-all-paths", ret_a.name))
-        if not _assigns_ret_all_paths(method.body, ret_b.name):
-            issues.append((method.line, "return-not-assigned-on-all-paths", ret_b.name))
+        for comp in (ret_a, ret_b):
+            if not _assigns_ret_all_paths(method.body, comp.name) and ret_default is None:
+                ret_default = comp.name
 
     # -- self-recursion shape (section 4.5's `r := M(args)` row) ---------
     issues += _self_call_positions(method)
@@ -2815,14 +3000,16 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     for cname, _cplan in callee_plans:
         rewrites.append(Rewrite(rule="method-lifted", line=_cplan.method.line))
     return Liftable(method=source_method, closure=source_closure, rewrites=rewrites,
-                    pair_returns=pair_returns, callees=tuple(callee_plans))
+                    pair_returns=pair_returns, callees=tuple(callee_plans),
+                    ret_default=ret_default)
 
 
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,
                            closure_names: set[str],
                            method_names: set[str] = frozenset(),
                            accepted_ids: frozenset[int] = frozenset(),
-                           tuple_names: frozenset = frozenset()) -> None:
+                           tuple_names: frozenset = frozenset(),
+                           datatype_kind: Optional[str] = None) -> None:
     """One generic pass catching every section-5 row that is a plain
     "does this construct appear anywhere" test. Rows needing context
     (self-recursion shape, tail returns, quantifier bounds, decreases,
@@ -2910,10 +3097,31 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         issues.append((n.line, "as-cast", "is"))
     elif isinstance(n, Member) and n.name != "Length":
         # Row 44: `.0`/`.1` on a name declared with an accepted tuple type
-        # is a pair projection; any other member is a datatype's.
-        if not (n.name in ("0", "1") and isinstance(n.base, Ident)
-                and n.base.name in tuple_names):
-            issues.append((n.line, "datatype", n.name))
+        # is a pair projection. Row 48 (2026-09-27) names everything else
+        # by what it is (measured on the 78 methods the old blanket
+        # `datatype` covered: 42 of them touched no datatype at all):
+        # `.0`/`.1` on an indexed element is a seq of pairs (row 46's
+        # name), on any other expression a tuple projection t's pair does
+        # not reach yet; `Length0`/`Length1` are array2's; `Floor` is
+        # real's; a `Ctor?` discriminator or a field on a file that
+        # declares datatypes is named by the datatype's shape; a member on
+        # a file with no datatype is a class, map or module member.
+        if n.name in ("0", "1"):
+            if not (isinstance(n.base, Ident) and n.base.name in tuple_names):
+                if isinstance(n.base, Index):
+                    issues.append((n.line, "seq-of-pair", n.name))
+                else:
+                    issues.append((n.line, "tuple-projection", n.name))
+        elif n.name in ("Length0", "Length1"):
+            issues.append((n.line, "array2", n.name))
+        elif n.name == "Floor":
+            issues.append((n.line, "real", n.name))
+        elif datatype_kind is None:
+            issues.append((n.line, "member-access", n.name))
+        elif n.name.endswith("?"):
+            issues.append((n.line, f"datatype-{datatype_kind}", "discriminator " + n.name))
+        else:
+            issues.append((n.line, f"datatype-{datatype_kind}", "field " + n.name))
     elif isinstance(n, VarDeclStmt) and n.ghost:
         issues.append((n.line, "ghost-local", "ghost var"))
     elif isinstance(n, CallStmt):

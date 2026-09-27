@@ -1529,7 +1529,12 @@ import lower_verus                               # noqa: E402
 import names                                     # noqa: E402
 from verifiers import fstar as fstar_backend     # noqa: E402
 
-TY = {"int": "int", "bool": "bool", "seq": "Seq.seq int"}
+TY = {"int": "int", "bool": "bool", "seq": "Seq.seq int",
+      # SPEC.md "Finite sets" (2026-09-27): ulib's own FStar.FiniteSet.Base
+      # (`FSet` below), with FStar.FiniteSet.Ambient's squashed facts in
+      # scope; see the FINITE SETS note by `_uses_sets`.
+      "set": "FSet.set int"}
+_EFFECT = "Pure"   # "Ghost" for a task that uses sets; see _uses_sets
 CMP = {"<": "<", "<=": "<=", ">": ">", ">=": ">="}
 ARITH = {"+": "+", "-": "-", "*": "*", "div": "/", "mod": "%"}
 
@@ -1946,6 +1951,8 @@ class Ctx:
             # shared across every kernel; this file only ever renders
             # what it produces, never builds one).
             return {"seq": "seq"}
+        if "_set" in e:
+            return "set"   # SPEC.md "Finite sets" (2026-09-27): a ground set witness
         if "var" in e:
             return local.get(e["var"]) or self.tys[e["var"]]
         if "forall" in e or "exists" in e:
@@ -2026,7 +2033,9 @@ class Ctx:
             return "seq"
         if op in ("count", "find"):
             return "int"
-        if op in ARITH or op in ("neg", "len"):
+        if op in ("set", "union", "inter", "diff"):
+            return "set"   # SPEC.md "Finite sets" (2026-09-27)
+        if op in ARITH or op in ("neg", "len", "card"):
             return "int"
         return "bool"
 
@@ -2267,6 +2276,53 @@ class Ctx:
         raise NotImplementedError(
             f"nested seq position holds non-variable {e!r}")
 
+    def stx(self, e: dict, env: dict, local: dict) -> str:
+        """Set-valued term, `FSet.set int` (SPEC.md "Finite sets",
+        2026-09-27): `sx`'s structural counterpart at the set type. A
+        variable through `env`; a ground `_set` witness node (the
+        certificate's, lower_verus.py's shared `_tlit`) or a display
+        `{e1, ..., en}` as nested `FSet.insert` over `FSet.emptyset`
+        (ulib's own constructors; `singleton` is not used so a one-element
+        display and the general case are one spelling); `union(s, {e})`
+        as `FSet.insert e s` and `diff(s, {e})` as `FSet.remove e s`, the
+        same sets by extensionality, spelled the way the Ambient facts
+        state cardinality (measured: `cardinality (union acc (insert e
+        emptyset)) <= cardinality acc + 1` is the ONE law of the nine set
+        probes F* left unproved, while `cardinality (insert e acc)` closes
+        under `insert_member_cardinality_fact`/`insert_nonmember_
+        cardinality_fact`); `union`/`inter`/`diff` otherwise as ulib's
+        `union`/`intersection`/`difference`; an `ite` by branches. Anything
+        else abstains by name."""
+        if "var" in e:
+            return env.get(e["var"], e["var"])
+        if "_set" in e:
+            return self._set_display([{"int": int(v)} for v in e["_set"]], env, local)
+        if "ite" in e:
+            c = e["ite"]
+            return (f"(if {self.bx(c['cond'], env, local)} "
+                    f"then {self.stx(c['then'], env, local)} "
+                    f"else {self.stx(c['else'], env, local)})")
+        op = e.get("op")
+        if op == "set":
+            return self._set_display(e["args"], env, local)
+        if op in ("union", "diff"):
+            a, b = e["args"]
+            if b.get("op") == "set" and len(b.get("args", [])) == 1:
+                fn = "FSet.insert" if op == "union" else "FSet.remove"
+                return f"({fn} {self.zx(b['args'][0], env, local)} {self.stx(a, env, local)})"
+            fn = "FSet.union" if op == "union" else "FSet.difference"
+            return f"({fn} {self.stx(a, env, local)} {self.stx(b, env, local)})"
+        if op == "inter":
+            a, b = e["args"]
+            return f"(FSet.intersection {self.stx(a, env, local)} {self.stx(b, env, local)})"
+        raise NotImplementedError(f"fstar lowering: set position holds {e!r}")
+
+    def _set_display(self, args: list, env: dict, local: dict) -> str:
+        if not args:
+            return "(FSet.emptyset #int)"
+        head, *rest = args
+        return f"(FSet.insert {self.zx(head, env, local)} {self._set_display(rest, env, local)})"
+
     def _literal(self, args: list, env: dict, local: dict, elem=None,
                  empty: str = "(Seq.createL #int [])") -> str:
         """`[e1, ..., en]` (SPEC.md "Sequences: literals, concatenation,
@@ -2375,6 +2431,11 @@ class Ctx:
         if op == "at":
             return (f"(Seq.index {self.sx(e['args'][0], env, local)} "
                     f"{self.zx(e['args'][1], env, local)})")
+        if op == "card":
+            # SPEC.md "Finite sets" (2026-09-27): `FSet.cardinality` is a
+            # GTot nat, which is why a task that uses sets is lowered in the
+            # Ghost effect (`_EFFECT`); a nat is an int by subtyping.
+            return f"(FSet.cardinality {self.stx(e['args'][0], env, local)})"
         if op == "neg":
             return f"(- {self.zx(e['args'][0], env, local)})"
         if op in ("fst", "snd"):
@@ -2524,6 +2585,23 @@ class Ctx:
         if op in CMP:
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {CMP[op]} {b})"
+        if op == "in":
+            # SPEC.md "Finite sets" (2026-09-27): `FSet.mem` is a Tot bool.
+            x, st = e["args"]
+            return f"(FSet.mem {self.zx(x, env, local)} {self.stx(st, env, local)})"
+        if op in ("==", "!=") and self.ty(e["args"][0], local) == "set":
+            # SPEC.md "Finite sets": extensional equality in a computational
+            # position. `FSet.equal` is a prop and `FSet.set` is not an
+            # eqtype (a set is a refined function), so the bool is the
+            # ghost decision of that prop, `strong_excluded_middle`, which
+            # is what the Ghost effect (`_EFFECT`) buys this file; the
+            # Ambient `equal_fact`/`equal_extensionality_fact` connect it
+            # to membership and to `==` (measured: `r == (cardinality
+            # (difference a b) = 0 && cardinality (difference b a) = 0)`
+            # verifies with no assist).
+            a, b = (self.stx(x, env, local) for x in e["args"])
+            core = f"(FStar.IndefiniteDescription.strong_excluded_middle (FSet.equal {a} {b}))"
+            return core if op == "==" else f"(not {core})"
         if op in ("==", "!="):
             t = self.ty(e["args"][0], local)
             if t == "seq":
@@ -2747,7 +2825,7 @@ class Ctx:
             step = f"(if {pred_bx} then {hname}{fargs} {hivar} ({kvar} + 1) else false)"
         self.extra_defs.append(
             f"let rec {hname}{binder} ({hivar}:int) ({kvar}:int)\n"
-            f"  : Pure bool\n"
+            f"  : {_EFFECT} bool\n"
             f"    (requires {req})\n"
             f"    (ensures (fun r -> {ens_formula}))\n"
             f"    (decreases ({hivar} - {kvar}))\n"
@@ -2816,6 +2894,15 @@ class Ctx:
         if op == "implies":
             a, b = (self.prop(x, env, local) for x in e["args"])
             return f"({a} ==> {b})"
+        if op == "in":
+            # SPEC.md "Finite sets" (2026-09-27): a bool term, coerced to a
+            # proposition the way every CMP term below already is.
+            x, st = e["args"]
+            return f"(FSet.mem {self.zx(x, env, local)} {self.stx(st, env, local)})"
+        if op in ("==", "!=") and self.ty(e["args"][0], local) == "set":
+            a, b = (self.stx(x, env, local) for x in e["args"])
+            core = f"(FSet.equal {a} {b})"
+            return core if op == "==" else f"(~ {core})"
         if op in ("==", "!="):
             t0 = self.ty(e["args"][0], local)
             if t0 == "bool":
@@ -3028,6 +3115,8 @@ def _render(cx: "Ctx", e: dict, t, env: dict, local: dict) -> str:
         return cx.bx(e, env, local)
     if t == "seq":
         return cx.sx(e, env, local)
+    if t == "set":
+        return cx.stx(e, env, local)   # SPEC.md "Finite sets" (2026-09-27)
     if isinstance(t, dict):
         if "seq" in t:
             return cx.nx(e, env, local)
@@ -3053,6 +3142,8 @@ def _dummy(t) -> str:
         return "false"
     if t == "seq":
         return "(Seq.createL #int [])"
+    if t == "set":
+        return "(FSet.emptyset #int)"   # SPEC.md "Finite sets" (2026-09-27)
     if isinstance(t, dict):
         if "seq" in t:
             return "(Seq.createL #(Seq.seq int) [])"
@@ -3548,6 +3639,12 @@ def _conj(parts: list[str]) -> str:
 
 
 def emit_spec_fun(cx: Ctx, sf: dict) -> str:
+    if _uses_sets(sf):
+        # SPEC.md "Finite sets": a spec_fun is a `Tot` function here and
+        # `FSet.cardinality` is GTot; no set-typed spec_fun param or result
+        # exists in v1, so this is a display or `card` inside a body --
+        # abstained by name rather than lowered into an ill-typed term.
+        raise NotImplementedError("fstar lowering: set operation inside a spec_fun body")
     local = {p["name"]: p["type"] for p in sf["params"]}
     for n in local:
         _ck(n)
@@ -3966,7 +4063,7 @@ def gen_fun(cx: Ctx, task: dict, body: list) -> str:
         assert "decreases" in task, "self-recursive task without decreases"
         dec = f"\n    (decreases {cx.zx(task['decreases'], {}, {})})"
     return (f"let {'rec ' if selfrec else ''}{name} {pb}\n"
-            f"  : Pure {_pty(ret_t)}\n"
+            f"  : {_EFFECT} {_pty(ret_t)}\n"
             f"    (requires {req})\n"
             f"    (ensures {ens}){dec}\n"
             f"= {expr}\n")
@@ -4442,7 +4539,7 @@ def _plain_loop(cx: "Ctx", task: dict, w: dict, env: dict, local: dict,
     then = nest.wrap(f"{lname} {pargs}{fargs} {step}", "       ")
     defs = list(nest.defs)
     defs.append(f"let rec {lname} {pb}{fb} {sb}\n"
-                f"  : Pure {state_ty}\n"
+                f"  : {_EFFECT} {state_ty}\n"
                 f"    (requires {_conj(reqs + invs)})\n"
                 f"    (ensures {loop_ens})\n"
                 f"    (decreases {dec})\n"
@@ -4527,7 +4624,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
     # docstring entry dated 2026-09-14 for the verified/refuted verdicts.
     if pre_rc == "true":
         return (f"let {name} {pb}\n"
-                f"  : Pure {_pty(ret_t)}\n"
+                f"  : {_EFFECT} {_pty(ret_t)}\n"
                 f"    (requires {req})\n"
                 f"    (ensures {ens})\n"
                 f"= {pre_rv}\n")
@@ -4765,7 +4862,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
             entry_body = f"if {pre_rc} then {pre_rv} else (\n  {entry_body})"
         return (f"{nest_defs}"
                 f"let rec {lname} {pb}{fb} {sb}\n"
-                f"  : Pure {state_ty}\n"
+                f"  : {_EFFECT} {state_ty}\n"
                 f"    (requires {_conj(reqs + invs)})\n"
                 f"    (ensures {loop_ens})\n"
                 f"    (decreases {dec})\n"
@@ -4774,7 +4871,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
                 f"  else {state_out}\n"
                 f"\n"
                 f"let {name} {pb}\n"
-                f"  : Pure {_pty(ret_t)}\n"
+                f"  : {_EFFECT} {_pty(ret_t)}\n"
                 f"    (requires {req})\n"
                 f"    (ensures {ens})\n"
                 f"= {entry_body}\n")
@@ -4844,7 +4941,7 @@ def gen_loop(cx: Ctx, task: dict, prefix: list, w: dict,
             f"  else {else_branch}\n"
             f"\n"
             f"let {name} {pb}\n"
-            f"  : Pure {_pty(ret_t)}\n"
+            f"  : {_EFFECT} {_pty(ret_t)}\n"
             f"    (requires {req})\n"
             f"    (ensures {ens})\n"
             f"= {entry_body}\n")
@@ -4956,7 +5053,7 @@ def gen_loop_chain(cx: Ctx, task: dict, segs: list, suffix: list) -> str:
     entry_body = "\n  ".join(calls) + f"\n  {result}"
     return ("\n".join(defs) + "\n"
             f"let {name} {pb}\n"
-            f"  : Pure {_pty(ret_t)}\n"
+            f"  : {_EFFECT} {_pty(ret_t)}\n"
             f"    (requires {req})\n"
             f"    (ensures {ens})\n"
             f"= {entry_body}\n")
@@ -5256,6 +5353,22 @@ _STR_OPS = frozenset({
     "replace", "lower", "upper", "isdigit", "isalpha", "isupper",
     "islower", "startswith", "endswith",
 })
+
+
+_SET_OPS_F = {"set", "in", "card", "union", "inter", "diff"}
+
+
+def _uses_sets(obj) -> bool:
+    """True iff `obj` mentions the set type or one of its six operations
+    anywhere (SPEC.md "Finite sets", 2026-09-27), by `_uses_strlib`'s own
+    generic walk."""
+    if isinstance(obj, dict):
+        if obj.get("op") in _SET_OPS_F or obj.get("type") == "set":
+            return True
+        return any(_uses_sets(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_uses_sets(v) for v in obj)
+    return obj == "set"
 
 
 def _uses_strlib(obj) -> bool:
@@ -5664,6 +5777,23 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     name = r_task["name"]
     mod = name[0].upper() + name[1:]
     parts = [f"module {mod}\n", "module Seq = FStar.Seq\n"]
+    global _EFFECT
+    _EFFECT = "Ghost" if _uses_sets(task) else "Pure"
+    if _EFFECT == "Ghost":
+        # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): ulib's
+        # FStar.FiniteSet.Base is the kernel's own finite set (`set int`,
+        # `mem`, `cardinality`, `insert`, `union`, `intersection`,
+        # `difference`, `equal`), and FStar.FiniteSet.Ambient puts its
+        # stated facts (Dafny's set axioms, transcribed, the file says so
+        # itself) in the SMT context on `open`. `cardinality` is GTot and
+        # `equal` a prop, so a task that uses sets is lowered in the Ghost
+        # effect throughout (`_EFFECT`): the same requires/ensures grammar,
+        # the contract lemma unchanged, and every set-free task's file
+        # byte-identical to before. Measured (Fs1.fst, this session): the
+        # nine set probes' laws all verify in Ghost with `()` except the
+        # union-with-a-singleton bound, which `stx` spells as `insert`.
+        parts.append("module FSet = FStar.FiniteSet.Base\n")
+        parts.append("open FStar.FiniteSet.Ambient\n")
     # THE STRING LIBRARY (2026-09-11, per-member since 2026-09-12): the
     # prelude is emitted only when the task actually needs it -- SPEC.md
     # "The string library (v1)"'s own AGREEMENT.md commitment is BYTE-

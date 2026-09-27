@@ -4903,6 +4903,200 @@ def _uses_strlib(obj) -> bool:
         return any(_uses_strlib(v) for v in obj)
     return False
 
+_SET_OPS_R = {"set", "in", "card", "union", "inter", "diff"}
+
+
+def _uses_sets(obj) -> bool:
+    """True iff `obj` mentions t's set type or one of its six operations
+    anywhere (SPEC.md "Finite sets", 2026-09-27), by `_uses_strlib`'s own
+    generic walk; a set-free task's file is byte-identical to before."""
+    if isinstance(obj, dict):
+        if obj.get("op") in _SET_OPS_R or obj.get("type") == "set":
+            return True
+        return any(_uses_sets(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_uses_sets(v) for v in obj)
+    return obj == "set"
+
+
+# FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"). The kernel's own
+# finite set is Stdlib 9.2's `MSetList.Make Z_as_OT` (a sorted duplicate-
+# free list of Z, so `S.add`, `S.union`, `S.inter`, `S.diff`, `S.mem`,
+# `S.equal` and `S.cardinal` all COMPUTE, which is what a ground
+# certificate's `vm_compute` needs), with `MSetProperties.Properties` for
+# the cardinality laws. Measured before this lowering was written
+# (rq1.v, this session, coqc 9.2): inclusion-exclusion is
+# `P.union_inter_cardinal`, the difference law `P.diff_inter_cardinal`,
+# a display's cardinality `P.add_cardinal_1/2` under `P.In_dec`, and set
+# equality against two empty differences closes from `S.equal_spec`,
+# `P.cardinal_inv_1` (a zero cardinal is `S.Empty`) and `S.diff_spec`.
+# The arms below hand the engine exactly those facts, each once (the
+# cardinality of a `union`/`diff`/`add`/`remove` term is rewritten or
+# posed with a `t_have` guard so `repeat` cannot refire), and membership
+# through the `*_spec` iffs; `Z.of_nat` cardinals are lia atoms with
+# zify's own `0 <=` fact.
+_SET_DEFS = r"""(* ============================================================
+   FINITE SETS (v1), 2026-09-27: SPEC.md "Finite sets" over Stdlib's MSets.
+   ============================================================ *)
+Module S := MSetList.Make Z_as_OT.
+Module P := MSetProperties.Properties S.
+
+Lemma t_mem_true : forall x s, S.mem x s = true <-> S.In x s.
+Proof. intros; apply S.mem_spec. Qed.
+Lemma t_mem_false : forall x s, S.mem x s = false <-> ~ S.In x s.
+Proof. intros x s. rewrite <- S.mem_spec. destruct (S.mem x s); intuition congruence. Qed.
+Lemma t_equal_true : forall a b, S.equal a b = true <-> S.Equal a b.
+Proof. intros; apply S.equal_spec. Qed.
+Lemma t_equal_false : forall a b, S.equal a b = false <-> ~ S.Equal a b.
+Proof. intros a b. rewrite <- S.equal_spec. destruct (S.equal a b); intuition congruence. Qed.
+Lemma t_card_zero : forall s, Z.of_nat (S.cardinal s) = 0 -> forall x, ~ S.In x s.
+Proof. intros s H x. apply P.cardinal_inv_1. lia. Qed.
+
+(* negative membership, pushed through each constructor (membership is
+   decidable, P.In_dec, so the intersection case is classical-free) *)
+Lemma t_not_in_add : forall x y s, ~ S.In x (S.add y s) <-> (x <> y /\ ~ S.In x s).
+Proof. intros. rewrite S.add_spec. tauto. Qed.
+Lemma t_not_in_union : forall x a b, ~ S.In x (S.union a b) <-> (~ S.In x a /\ ~ S.In x b).
+Proof. intros. rewrite S.union_spec. tauto. Qed.
+Lemma t_not_in_inter : forall x a b, ~ S.In x (S.inter a b) <-> (~ S.In x a \/ ~ S.In x b).
+Proof. intros. rewrite S.inter_spec. destruct (P.In_dec x a); destruct (P.In_dec x b); tauto. Qed.
+Lemma t_not_in_diff : forall x a b, ~ S.In x (S.diff a b) <-> (~ S.In x a \/ S.In x b).
+Proof. intros. rewrite S.diff_spec. destruct (P.In_dec x a); destruct (P.In_dec x b); tauto. Qed.
+Lemma t_not_in_remove : forall x y s, ~ S.In x (S.remove y s) <-> (x = y \/ ~ S.In x s).
+Proof. intros. rewrite S.remove_spec. destruct (P.In_dec x s); destruct (Z.eq_dec x y); tauto. Qed.
+Lemma t_not_in_empty : forall x, ~ S.In x S.empty.
+Proof. intros x H. apply S.empty_spec in H. exact H. Qed.
+(* a zero cardinality IS emptiness, both ways (P.cardinal_Empty) *)
+Lemma t_card_zero_iff : forall s, Z.of_nat (S.cardinal s) = 0 <-> (forall x, ~ S.In x s).
+Proof. intros s. split.
+  - intros H x. apply P.cardinal_inv_1. lia.
+  - intros H. assert (S.Empty s) by exact H. apply P.cardinal_Empty in H0. lia. Qed.
+
+(* cardinality facts, posed once per term (t_have guards the repeat) *)
+Ltac t_set_union_card a b :=
+  let T := constr:((S.cardinal (S.union a b) + S.cardinal (S.inter a b) = S.cardinal a + S.cardinal b)%nat) in
+  tryif t_have T then fail else pose proof (P.union_inter_cardinal a b).
+Ltac t_set_diff_card a b :=
+  let T := constr:((S.cardinal (S.diff a b) + S.cardinal (S.inter a b) = S.cardinal a)%nat) in
+  tryif t_have T then fail else pose proof (P.diff_inter_cardinal a b).
+(* `add_cardinal_1/2` and `remove_cardinal_1/2` take their set and element
+   implicitly from the membership proof (measured: passing them explicitly
+   is a type error, "expected S.In ?x ?s"); `remove_cardinal_1` states
+   `S (cardinal (remove x s)) = cardinal s`, an `S` on the left that never
+   appears verbatim in a goal, so it is posed for lia rather than
+   rewritten. *)
+Ltac t_set_add_card x s :=
+  destruct (P.In_dec x s) as [t_hin | t_hout];
+  [ rewrite (P.add_cardinal_1 t_hin) in * | rewrite (P.add_cardinal_2 t_hout) in * ].
+Ltac t_set_remove_card x s :=
+  destruct (P.In_dec x s) as [t_hin | t_hout];
+  [ let T := constr:((S (S.cardinal (S.remove x s)) = S.cardinal s)%nat) in
+    tryif t_have T then fail else pose proof (P.remove_cardinal_1 t_hin)
+  | rewrite (P.remove_cardinal_2 t_hout) in * ].
+(* `remember .. in *` replaces EVERY occurrence, goal and hypotheses, so a
+   hypothesis-position match cannot refire on the boolean it just split
+   (a plain `destruct .. eqn:` rewrites the goal alone -- measured to loop
+   on the set-equality probe's twin). *)
+Ltac t_set_mem_case x s :=
+  let b := fresh "t_b" in let E := fresh "t_mem" in
+  remember (S.mem x s) as b eqn:E in *;
+  destruct b; symmetry in E; [ apply t_mem_true in E | apply t_mem_false in E ].
+Ltac t_set_equal_case a b :=
+  let c := fresh "t_c" in let E := fresh "t_eq" in
+  remember (S.equal a b) as c eqn:E in *;
+  destruct c; symmetry in E; [ apply t_equal_true in E | apply t_equal_false in E ].
+(* GROUND SET ATOMS, for the twin value certificate only (2026-09-27): once
+   `_value_cert` has replaced the applied twin by its literal set, every set
+   atom left is closed (`S.In 3 (S.add 3 S.empty)`, `S.cardinal S.empty`),
+   and `S.mem`/`S.cardinal` on an MSetList literal compute under vm_compute.
+   Each membership atom is decided and rewritten to True/False through the
+   iff, each cardinality replaced by its computed integer, so `t_dis` sees
+   only propositional and Z structure. `repeat` terminates because every
+   arm removes the atom it matched. *)
+Lemma t_prop_true (P : Prop) : P -> (P <-> True).
+Proof. tauto. Qed.
+Lemma t_prop_false (P : Prop) : ~ P -> (P <-> False).
+Proof. tauto. Qed.
+Ltac t_set_ground :=
+  repeat match goal with
+  | |- context [S.In ?x ?s] =>
+      first [ let H := fresh "t_gin" in
+              assert (H : S.In x s) by (apply S.mem_spec; vm_compute; reflexivity);
+              rewrite (t_prop_true _ H); clear H
+            | let H := fresh "t_gin" in
+              assert (H : ~ S.In x s) by (rewrite <- S.mem_spec; vm_compute; discriminate);
+              rewrite (t_prop_false _ H); clear H ]
+  | |- context [Z.of_nat (S.cardinal ?s)] =>
+      let c := eval vm_compute in (Z.of_nat (S.cardinal s)) in
+      replace (Z.of_nat (S.cardinal s)) with c by (vm_compute; reflexivity)
+  end.
+"""
+
+_SET_GOAL_ARMS = r"""  (* FINITE SETS (v1), 2026-09-27: goal-position arms, see _SET_DEFS *)
+  | |- context [S.mem ?x ?s] => t_set_mem_case x s
+  | |- context [S.equal ?a ?b] => t_set_equal_case a b
+  | |- context [S.cardinal (S.union ?a ?b)] => t_set_union_card a b
+  | |- context [S.cardinal (S.diff ?a ?b)] => t_set_diff_card a b
+  | |- context [S.cardinal (S.add ?x ?s)] => t_set_add_card x s
+  | |- context [S.cardinal (S.remove ?x ?s)] => t_set_remove_card x s
+  | |- context [S.cardinal S.empty] => rewrite P.empty_cardinal in *
+  | |- S.In ?x (S.add ?y ?s) => apply S.add_spec
+  | |- S.In ?x (S.union ?a ?b) => apply S.union_spec
+  | |- S.In ?x (S.inter ?a ?b) => apply S.inter_spec
+  | |- S.In ?x (S.diff ?a ?b) => apply S.diff_spec
+  | |- S.In ?x (S.remove ?y ?s) => apply S.remove_spec
+  | |- S.In ?x S.empty => exfalso
+  | |- S.Equal ?a ?b => unfold S.Equal
+  | |- context [Z.of_nat (S.cardinal ?s) = 0] => rewrite (t_card_zero_iff s)
+"""
+
+_SET_HYP_ARMS = r"""  (* FINITE SETS (v1), 2026-09-27: hypothesis-position arms *)
+  | H : context [S.mem ?x ?s] |- _ => t_set_mem_case x s
+  | H : context [S.equal ?a ?b] |- _ => t_set_equal_case a b
+  | H : context [S.cardinal (S.union ?a ?b)] |- _ => t_set_union_card a b
+  | H : context [S.cardinal (S.diff ?a ?b)] |- _ => t_set_diff_card a b
+  | H : context [S.cardinal (S.add ?x ?s)] |- _ => t_set_add_card x s
+  | H : context [S.cardinal (S.remove ?x ?s)] |- _ => t_set_remove_card x s
+  | H : context [S.cardinal S.empty] |- _ => rewrite P.empty_cardinal in *
+  | H : S.In ?x (S.add ?y ?s) |- _ => apply S.add_spec in H
+  | H : S.In ?x (S.union ?a ?b) |- _ => apply S.union_spec in H
+  | H : S.In ?x (S.inter ?a ?b) |- _ => apply S.inter_spec in H
+  | H : S.In ?x (S.diff ?a ?b) |- _ => apply S.diff_spec in H
+  | H : S.In ?x (S.remove ?y ?s) |- _ => apply S.remove_spec in H
+  | H : S.In ?x S.empty |- _ => apply S.empty_spec in H
+  | H : ~ S.In ?x (S.add ?y ?s) |- _ => apply t_not_in_add in H
+  | H : ~ S.In ?x (S.union ?a ?b) |- _ => apply t_not_in_union in H
+  | H : ~ S.In ?x (S.inter ?a ?b) |- _ => apply t_not_in_inter in H
+  | H : ~ S.In ?x (S.diff ?a ?b) |- _ => apply t_not_in_diff in H
+  | H : ~ S.In ?x (S.remove ?y ?s) |- _ => apply t_not_in_remove in H
+  | H : ~ S.In ?x S.empty |- _ => clear H
+  | H : S.Equal ?a ?b |- _ => unfold S.Equal in H
+  | H : Z.of_nat (S.cardinal ?s) = 0, H2 : S.In ?x ?s |- _ => exfalso; exact (t_card_zero s H x H2)
+  | H : context [Z.of_nat (S.cardinal ?s) = 0] |- _ => rewrite (t_card_zero_iff s) in H
+  (* an unfolded S.Equal, instantiated at every element some hypothesis
+     puts in one side, each instance ONCE: the guard is the prelude's own
+     persistent `t_done` marker (PRELUDE_CORE_1), never the instance itself,
+     which the membership arms rewrite or destruct away (measured: a
+     `t_have` on the bare instance refired forever, both cells of the
+     set-equality probe at the 180 s wall); a negated S.Equal is refuted by
+     building the equivalence, its two directions left to those arms *)
+  | HE : forall y : S.elt, S.In y ?a <-> S.In y ?b, HI : S.In ?x ?a |- _ =>
+      tryif t_have (t_done (S.In x b)) then fail
+      else (pose proof (t_done_intro (S.In x b)); pose proof (proj1 (HE x) HI))
+  | HE : forall y : S.elt, S.In y ?a <-> S.In y ?b, HI : S.In ?x ?b |- _ =>
+      tryif t_have (t_done (S.In x a)) then fail
+      else (pose proof (t_done_intro (S.In x a)); pose proof (proj2 (HE x) HI))
+  | HD : forall y : S.elt, ~ S.In y ?s, HI : S.In ?x ?s |- _ => exfalso; exact (HD x HI)
+  | HD : forall y : S.elt, ~ S.In y (S.diff ?a ?b), HI : S.In ?x ?a |- _ =>
+      tryif t_have (t_done (S.In x (S.diff a b))) then fail
+      else (pose proof (t_done_intro (S.In x (S.diff a b))); pose proof (HD x))
+  | HD : forall y : S.elt, ~ S.In y (S.diff ?a ?b), HI : S.In ?x ?b |- _ =>
+      tryif t_have (t_done (S.In x (S.diff a b))) then fail
+      else (pose proof (t_done_intro (S.In x (S.diff a b))); pose proof (HD x))
+  | H : ~ S.Equal ?a ?b |- _ => exfalso; apply H; clear H; unfold S.Equal; intro; split; intro
+"""
+
+
 def header(task: dict | None = None, body: list | None = None) -> str:
     # List/ListNotations (2026-09-11, "The string library (v1)"): the
     # string members are proved over Coq's own `list Z`/`list (list Z)`
@@ -4911,18 +5105,26 @@ def header(task: dict | None = None, body: list | None = None) -> str:
     # unconditionally (`import` costs nothing a non-string task pays for
     # in proof search) even though the module itself is now gated.
     strlib = (task is not None and _uses_strlib(task)) or (body is not None and _uses_strlib(body))
+    sets = (task is not None and _uses_sets(task)) or (body is not None and _uses_sets(body))
     parts = ["From Stdlib Require Import ZArith Bool Lia List.\n"
-             "Import ListNotations.\n"
+             + ("From Stdlib Require Import MSets MSetList OrdersEx.\n" if sets else "")
+             + "Import ListNotations.\n"
              "Open Scope Z_scope.\n\n",
              PRELUDE_CORE_1]
     if strlib:
         parts.append(_STRLIB_DEFS)
+    if sets:
+        parts.append(_SET_DEFS)
     parts.append(PRELUDE_CORE_2)
     if strlib:
         parts.append(_STRLIB_GOAL_ARMS)
+    if sets:
+        parts.append(_SET_GOAL_ARMS)
     parts.append(PRELUDE_CORE_3)
     if strlib:
         parts.append(_STRLIB_HYP_ARMS)
+    if sets:
+        parts.append(_SET_HYP_ARMS)
     parts.append(PRELUDE_CORE_4)
     parts.append("\n")
     return "".join(parts)
@@ -5338,6 +5540,8 @@ class Ctx:
             return "int"
         if "bool" in e:
             return "bool"
+        if "_set" in e:
+            return "set"   # SPEC.md "Finite sets": a ground set witness node
         if "var" in e:
             return local.get(e["var"]) or self.tys[e["var"]]
         if "forall" in e or "exists" in e:
@@ -5435,6 +5639,10 @@ class Ctx:
         if op in ("fst", "snd"):
             t = self.ty(e["args"][0], local)
             return t["pair"][0 if op == "fst" else 1]
+        if op in ("set", "union", "inter", "diff"):
+            return "set"    # SPEC.md "Finite sets" (2026-09-27)
+        if op == "card":
+            return "int"
         return "bool"
 
     # -- rendering helpers ------------------------------------------------
@@ -5774,6 +5982,45 @@ class Ctx:
             return f"({op} {inner})"
         raise ValueError(f"t v1 -> rocq: not a pair expression: {op!r}")
 
+    def stx(self, e: dict, env: dict, local: dict) -> str:
+        """The Coq TERM for a set-VALUED expression (SPEC.md "Finite sets",
+        2026-09-27): `px`'s counterpart at the set type, one Coq slot of
+        type `S.t` (Stdlib's `MSetList.Make Z_as_OT`, see _SET_DEFS). A
+        `var` through env; an `ite` by branches; the display `{e1, ..,
+        en}` as nested `S.add` over `S.empty`; `union(s, {e})` as `S.add e
+        s` and `diff(s, {e})` as `S.remove e s` (the same sets, spelled
+        the way `P.add_cardinal_1/2` and `P.remove_cardinal_1/2` state
+        cardinality); `union`/`inter`/`diff` as `S.union`/`S.inter`/
+        `S.diff`; a ground `_set` witness node (lower_verus.py's shared
+        `_tlit`) as its display."""
+        if "var" in e:
+            v = e["var"]
+            return env.get(v, v)
+        if "_set" in e:
+            return _set_lit(e["_set"])
+        if "ite" in e:
+            c = e["ite"]
+            cb = self.bx(c["cond"], env, local)
+            return (f"(if {cb} then {self.stx(c['then'], env, local)} "
+                    f"else {self.stx(c['else'], env, local)})")
+        op = e.get("op")
+        if op == "set":
+            term = "S.empty"
+            for a in reversed(e.get("args", [])):
+                term = f"(S.add {self.zx(a, env, local)} {term})"
+            return term
+        if op in ("union", "diff"):
+            a, b = e["args"]
+            if b.get("op") == "set" and len(b.get("args", [])) == 1:
+                fn = "S.add" if op == "union" else "S.remove"
+                return f"({fn} {self.zx(b['args'][0], env, local)} {self.stx(a, env, local)})"
+            fn = "S.union" if op == "union" else "S.diff"
+            return f"({fn} {self.stx(a, env, local)} {self.stx(b, env, local)})"
+        if op == "inter":
+            a, b = e["args"]
+            return f"(S.inter {self.stx(a, env, local)} {self.stx(b, env, local)})"
+        raise ValueError(f"t v1 -> rocq: not a set expression: {op!r}")
+
     def call(self, e: dict, env: dict, local: dict) -> str:
         c = e["call"]
         f, args = c["fun"], c["args"]
@@ -5789,6 +6036,10 @@ class Ctx:
         return "(" + " ".join(parts) + ")"
 
     def zx(self, e: dict, env: dict, local: dict) -> str:
+        if e.get("op") == "card":
+            # SPEC.md "Finite sets" (2026-09-27): `S.cardinal` is a nat; t's
+            # card is an int, `Z.of_nat` (lia's zify reads it).
+            return f"(Z.of_nat (S.cardinal {self.stx(e['args'][0], env, local)}))"
         if "int" in e:
             n = e["int"]
             return f"({n})" if n < 0 else str(n)
@@ -5841,6 +6092,16 @@ class Ctx:
         raise ValueError(f"t v1 -> rocq: not an int expression: {op!r}")
 
     def bx(self, e: dict, env: dict, local: dict) -> str:
+        if e.get("op") == "in":
+            # SPEC.md "Finite sets" (2026-09-27): `S.mem`, a bool.
+            x, st = e["args"]
+            return f"(S.mem {self.zx(x, env, local)} {self.stx(st, env, local)})"
+        if (e.get("op") in ("==", "!=") and len(e.get("args", [])) == 2
+                and self.ty(e["args"][0], local) == "set"):
+            # extensional equality as MSet's own decidable `S.equal`
+            a, b = (self.stx(x, env, local) for x in e["args"])
+            core = f"(S.equal {a} {b})"
+            return core if e["op"] == "==" else f"(negb {core})"
         if "bool" in e:
             return "true" if e["bool"] else "false"
         if "var" in e:
@@ -5958,6 +6219,15 @@ class Ctx:
 
     def prop(self, e: dict, env: dict, local: dict | None = None) -> str:
         local = local or {}
+        if e.get("op") == "in":
+            # SPEC.md "Finite sets" (2026-09-27): membership as `S.In`.
+            x, st = e["args"]
+            return f"(S.In {self.zx(x, env, local)} {self.stx(st, env, local)})"
+        if (e.get("op") in ("==", "!=") and len(e.get("args", [])) == 2
+                and self.ty(e["args"][0], local) == "set"):
+            a, b = (self.stx(x, env, local) for x in e["args"])
+            core = f"(S.Equal {a} {b})"
+            return core if e["op"] == "==" else f"(~ {core})"
         if "bool" in e:
             return "True" if e["bool"] else "False"
         if "var" in e:
@@ -6372,6 +6642,9 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
                 # single-slot rule int/bool already have.
                 raw = cx.px(e, env, local)
                 env[v] = raw if done == "false" else f"(if {done} then {env[v]} else {raw})"
+            elif t == "set":
+                raw = cx.stx(e, env, local)   # SPEC.md "Finite sets" (2026-09-27)
+                env[v] = raw if done == "false" else f"(if {done} then {env[v]} else {raw})"
             else:
                 raw = (cx.bx(e, env, local) if t == "bool"
                       else cx.zx(e, env, local))
@@ -6398,6 +6671,9 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
                                    else f"(if {done} then {old_ln} else {ln})")
             elif isinstance(t, dict):
                 raw = cx.px(e, env, local)
+                env[v] = raw if done == "false" else f"(if {done} then {env[v]} else {raw})"
+            elif t == "set":
+                raw = cx.stx(e, env, local)   # SPEC.md "Finite sets" (2026-09-27)
                 env[v] = raw if done == "false" else f"(if {done} then {env[v]} else {raw})"
             else:
                 raw = (cx.bx(e, env, local) if t == "bool"
@@ -6437,6 +6713,8 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
                 env[v + "_len"] = ln
             elif isinstance(d["type"], dict):
                 env[v] = cx.px(d["init"], env, local)
+            elif d["type"] == "set":
+                env[v] = cx.stx(d["init"], env, local)   # SPEC.md "Finite sets"
             else:
                 env[v] = (cx.bx(d["init"], env, local) if d["type"] == "bool"
                           else cx.zx(d["init"], env, local))
@@ -6542,6 +6820,9 @@ def param_binders(cx: Ctx) -> tuple[str, str]:
             args.append(v)
         elif isinstance(p["type"], dict):
             bs.append(f"({v} : {pair_ty(p['type'])})")
+            args.append(v)
+        elif p["type"] == "set":
+            bs.append(f"({v} : S.t)")   # SPEC.md "Finite sets" (2026-09-27)
             args.append(v)
         else:
             bs.append(f"({v} : Z)")
@@ -6653,6 +6934,8 @@ def default_term(t) -> str:
     if isinstance(t, dict):
         t1, t2 = t["pair"]
         return f"({default_term(t1)}, {default_term(t2)})"
+    if t == "set":
+        return "S.empty"   # SPEC.md "Finite sets" (2026-09-27)
     return "false" if t == "bool" else "0"
 
 
@@ -6678,6 +6961,8 @@ def rty(t) -> str:
         return "bool"
     if t == "seq":
         return "Z -> Z"
+    if t == "set":
+        return "S.t"   # SPEC.md "Finite sets" (2026-09-27): MSetList over Z, one slot
     return "Z"
 
 
@@ -10019,9 +10304,20 @@ def _glit(v, ty) -> str:
     if isinstance(ty, dict):
         t1, t2 = ty["pair"]
         return f"({_glit(v[0], t1)}, {_glit(v[1], t2)})"
+    if ty == "set":
+        return _set_lit(v)   # SPEC.md "Finite sets" (2026-09-27)
     if ty == "bool":
         return "true" if v else "false"
     return _zlit(v)
+
+
+def _set_lit(v) -> str:
+    """A ground set (a witness's sorted list, or a frozenset) as nested
+    `S.add` over `S.empty`, the same spelling `Ctx.stx` gives a display."""
+    term = "S.empty"
+    for x in reversed(sorted(v)):
+        term = f"(S.add {_zlit(x)} {term})"
+    return term
 
 
 def _to_interp_value(v, ty):
@@ -10041,6 +10337,8 @@ def _to_interp_value(v, ty):
     if isinstance(ty, dict):
         t1, t2 = ty["pair"]
         return interp.Pair(_to_interp_value(v[0], t1), _to_interp_value(v[1], t2))
+    if ty == "set":
+        return frozenset(v)   # SPEC.md "Finite sets": interp's own set value
     return v
 
 
@@ -11103,7 +11401,14 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
         if tv == "no value":
             # the lowered twin returns the type's default on that path
             tv = False if ret_t == "bool" else 0
-        if not isinstance(tv, (int, bool)):
+        if ret_t == "set":
+            # SPEC.md "Finite sets" (2026-09-27): a set-valued twin result
+            # arrives as its sorted list (interp._j); `_glit` renders it as
+            # nested `S.add` and `_to_interp_value` reads it back as the
+            # frozenset interp evaluates on.
+            if not isinstance(tv, list):
+                return None
+        elif not isinstance(tv, (int, bool)):
             return None
     env_py[ret] = _to_interp_value(tv, ret_t)
     if not _falsified_conjunct(task, body, env_py):
@@ -11132,7 +11437,25 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
     env_lit = dict(env_txt)
     env_lit[ret] = retlit
     lines = []
-    if any(ret in _fv(e, set()) for e in task["ensures"]):
+    if ret_t == "set" and any(ret in _fv(e, set()) for e in task["ensures"]):
+        # SPEC.md "Finite sets (v1)", 2026-09-27: an MSetList value is a
+        # record carrying a sortedness proof, so two computations of the
+        # same set are NOT Leibniz-equal (measured: `cbv; reflexivity`
+        # fails on set_toggle's twin). The certificate states extensional
+        # equality `S.Equal applied literal` instead, proved by computing
+        # `S.equal` (S.equal_spec), then pushes it through the two places a
+        # set can sit in an ensures -- under `S.cardinal` (P.Equal_cardinal)
+        # and as the set of an `S.In` (the Equal instance at that element)
+        # -- and `t_set_ground` decides the closed atoms that remain.
+        lines.append(f"  assert (t_out : S.Equal {applied} {retlit}).\n")
+        lines.append("  { apply S.equal_spec. vm_compute. reflexivity. }\n")
+        lines.append("  repeat match goal with\n"
+                     f"  | |- context [S.cardinal {applied}] => "
+                     "rewrite (P.Equal_cardinal t_out)\n"
+                     f"  | |- context [S.In ?x {applied}] => rewrite (t_out x)\n"
+                     "  end.\n")
+        lines.append("  t_set_ground.\n")
+    elif any(ret in _fv(e, set()) for e in task["ensures"]):
         lines.append(f"  assert (t_out : {applied} = {retlit}) "
                      f"by (cbv; reflexivity).\n")
         lines.append("  rewrite t_out.\n")

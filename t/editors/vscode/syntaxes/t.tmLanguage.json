@@ -54,7 +54,7 @@
       ]
     },
     "types": {
-      "comment": "int, bool, seq (SYNTAX.md 'Literals'), seq<seq> (SYNTAX.md 'Nested sequences (v1)'), and a pair type (int, int)/(bool, seq) (SYNTAX.md 'Pairs (v1)') -- the pair form is plain grouping punctuation, no distinct type token of its own.",
+      "comment": "int, bool, seq (SYNTAX.md 'Literals'), seq<seq> (SYNTAX.md 'Nested sequences (v1)'), set (SYNTAX.md 'Finite sets (v1)'), and a pair type (int, int)/(bool, seq) (SYNTAX.md 'Pairs (v1)') -- the pair form is plain grouping punctuation, no distinct type token of its own.",
         "patterns": [
         {
           "name": "storage.type.nested-seq.t",
@@ -62,7 +62,7 @@
         },
         {
           "name": "storage.type.t",
-          "match": "\\b(int|bool|seq)\\b"
+          "match": "\\b(int|bool|seq|set)\\b"
         }
       ]
     },
@@ -95,7 +95,7 @@
         },
         {
           "name": "keyword.other.builtin.t",
-          "match": "\\b(len|tostr)\\b"
+          "match": "\\b(len|tostr|card|union|inter|diff)\\b"
         },
         {
           "name": "constant.language.boolean.t",
