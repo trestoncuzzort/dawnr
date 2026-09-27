@@ -1,4 +1,15 @@
-"""test_ci_workflow.py: a locallm suite that needs torch actually gets run by the workflow that
+"""
+SCOPE, stated plainly after three review rounds (2026-09-27): this test runs the
+cpu-torch job's shell in a sandbox with the test runners stubbed, so it catches a
+suite that is named but never executed (a comment, a dead branch, a skipped step,
+a heredoc, an uncalled function). It is NOT GitHub Actions: it does not parse YAML
+the way Actions does (a tab-indented key Actions would reject is executed here),
+it credits any argv token of a runner call (so `--ignore X` and `--collect-only X`
+still read as wired), and a run: step could write the stub's log directly. The
+guard that actually proves the suite runs is the CI job itself on GitHub
+(.github/workflows/tests.yml, cpu-torch), whose real pytest output is the
+evidence. This file is a cheap local tripwire, not that proof.
+test_ci_workflow.py: a locallm suite that needs torch actually gets run by the workflow that
 installs it.
 
 The exact gap this file exists to catch: locallm/test_dawnr_api.py (30 tests, including every
