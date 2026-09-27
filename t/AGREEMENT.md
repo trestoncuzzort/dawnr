@@ -1,4 +1,4 @@
-# t cross-kernel agreement, 2026-09-27 19:46Z
+# t cross-kernel agreement, 2026-09-27 22:33Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
 
@@ -34,6 +34,8 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | reverse | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | row_max_len | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | seq_max | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| set_collect | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted | verified / refuted |
+| set_toggle | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted | verified / refuted |
 | split_join | verified / refuted | verified / refuted | timeout / refuted | abstain / abstain | verified / refuted | verified / refuted | unproved / refuted |
 | sum_upto | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | swap | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -58,11 +60,11 @@ Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `ab
 
 | kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
 |---|---|---|---|
-| framac | 2 | 2 | double_all, swap_rows |
+| framac | 2 | 4 | double_all, swap_rows |
 | dafny | 0 | 0 | (none) |
 | verus | 0 | 1 | (none) |
-| spark | 0 | 2 | (none) |
-| lean | 0 | 1 | (none) |
+| spark | 0 | 4 | (none) |
+| lean | 0 | 3 | (none) |
 | rocq | 0 | 0 | (none) |
 | fstar | 0 | 2 | (none) |
 
