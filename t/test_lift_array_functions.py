@@ -223,6 +223,42 @@ def test_nat_array_lemma_param_gets_element_clause() -> None:
     assert any("forall" in r for r in lemma["requires"]), lemma["requires"]
 
 
+MUTATED_TO_PREDICATE = """
+predicate AllZero(a: array<int>, lo: int, hi: int)
+  requires 0 <= lo <= hi <= a.Length
+  reads a
+{
+  forall k :: lo <= k < hi ==> a[k] == 0
+}
+
+method Clear(a: array<int>)
+  modifies a
+  ensures AllZero(a, 0, a.Length)
+{
+  var i := 0;
+  while i < a.Length
+    invariant 0 <= i <= a.Length
+    invariant AllZero(a, 0, i)
+    decreases a.Length - i
+  {
+    a[i] := 0;
+    i := i + 1;
+  }
+}
+"""
+
+
+def test_mutated_array_passed_to_a_predicate() -> None:
+    """The in-place shape (2026-09-27): decision 22's mutated array read by
+    a closure predicate in an invariant is no alias (a function reads the
+    value at the point of evaluation, the threaded seq); it used to refuse
+    `array`/`aliased` (insertionSort, sorting of the 2026-09-26 lift)."""
+    rr, _m, _v = _lift_one(MUTATED_TO_PREDICATE, "Clear")
+    assert rr.task["returns"][0]["type"] == "seq"
+    assert any(f["name"].lower().startswith("allzero") for f in rr.task["spec_funs"])
+    print("test_mutated_array_passed_to_a_predicate: ok")
+
+
 def _check_end_to_end(src: str, method_name: str) -> None:
     rr, method, plan = _lift_one(src, method_name)
     with tempfile.TemporaryDirectory() as d:
@@ -235,7 +271,8 @@ def test_check_stage(slow: bool) -> None:
     if not slow:
         print("test_check_stage: skipped (pass --slow)")
         return
-    for src, m in ((LEMMA_READS, "SumElems"), (READONLY_CALLEE, "Has"), (MUTATED_TO_LEMMA, "Zero")):
+    for src, m in ((LEMMA_READS, "SumElems"), (READONLY_CALLEE, "Has"), (MUTATED_TO_LEMMA, "Zero"),
+                   (MUTATED_TO_PREDICATE, "Clear")):
         _check_end_to_end(src, m)
         print(f"test_check_stage: {m} ok")
 
@@ -246,6 +283,7 @@ def run(slow: bool = False) -> None:
     test_mutated_array_passed_to_a_lemma()
     test_array_passed_to_a_writing_method_stays_refused()
     test_nat_array_lemma_param_gets_element_clause()
+    test_mutated_array_passed_to_a_predicate()
     test_check_stage(slow)
     print("test_lift_array_functions: ok")
 
