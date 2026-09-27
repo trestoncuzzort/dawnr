@@ -89,6 +89,9 @@ class Tool:
     consequential: bool = False
     origin: str = "builtin"
     show_description: bool = True    # False: the index shows the name and argument names only
+    # per call, from the arguments: (allow|ask|deny, why); may tighten the policy's decision, never loosen it
+    # (the agent's command allowlist and roots, DAWNR-AGENT.md)
+    decide_call: Callable[[dict], tuple[str, str]] | None = None
 
     def __post_init__(self):
         if not NAME.match(self.name or ""):
@@ -162,8 +165,20 @@ class Policy:
             if decision not in PERMISSIONS:
                 raise ValueError(f"permission rule {pattern!r}: {decision!r} is not one of {PERMISSIONS}")
 
-    def decide(self, tool: Tool, session: Session | None = None) -> tuple[str, str]:
-        """(allow|ask|deny, why)."""
+    def decide(self, tool: Tool, session: Session | None = None, arguments: dict | None = None) -> tuple[str, str]:
+        """(allow|ask|deny, why). Given the call's arguments, the tool's own decide_call may tighten it."""
+        decision, why = self._decide(tool, session)
+        if arguments is None or tool.decide_call is None or decision == "deny":
+            return decision, why
+        try:
+            own, own_why = tool.decide_call(arguments)
+        except Exception as e:                                     # noqa: BLE001  (a broken rule refuses)
+            own, own_why = "deny", f"{tool.name}'s own rule failed: {type(e).__name__}"
+        if own not in PERMISSIONS:
+            own, own_why = "deny", f"{tool.name}'s own rule answered {own!r}"
+        return (own, own_why) if _RANK[own] > _RANK[decision] else (decision, why)
+
+    def _decide(self, tool: Tool, session: Session | None = None) -> tuple[str, str]:
         if self.offline and tool.network:
             return "deny", "offline: the harness is offline and this tool reaches the network"
         if tool.name in self.rules:

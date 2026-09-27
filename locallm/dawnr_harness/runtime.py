@@ -86,7 +86,7 @@ class Harness:
         if errs:
             self._log(session, name, arguments, "invalid", "; ".join(errs))
             return ToolResult(f"{name}: " + "; ".join(errs), is_error=True, source="harness")
-        decision, why = self.policy.decide(tool, session)
+        decision, why = self.policy.decide(tool, session, arguments)
         if decision == "deny":
             self._log(session, name, arguments, "deny", why, permission=decision)
             return ToolResult(f"denied: {why}", is_error=True, source="harness")
@@ -112,6 +112,11 @@ class Harness:
                     return ToolResult(f"{name}: a hook rewrote the input into an invalid one: " + "; ".join(errs),
                                       is_error=True, source="harness")
                 arguments = pre.updated_input
+                if tool.decide_call is not None:        # a rewritten input meets the tool's own rule again
+                    again, again_why = self.policy.decide(tool, session, arguments)
+                    if again == "deny":
+                        self._log(session, name, arguments, "deny", f"hook input: {again_why}", permission=again)
+                        return ToolResult(f"denied: {again_why}", is_error=True, source="harness")
             # a note about an untrusted tool's own input (its arguments) is untrusted too: an attacker who gets
             # the model to echo a page's text into a call's arguments must not get an unmarked span out of it
             (untrusted_notes if tool.trust == "untrusted" else notes).extend(pre.contexts)
@@ -258,7 +263,7 @@ class Harness:
 # ------------------------------------------------------------ configuration --
 
 CONFIG_KEYS = {"offline", "permissions", "taint_escalates", "hooks", "skills", "web", "mcp_servers", "audit",
-              "retrieval"}
+              "retrieval", "agent"}
 
 
 def _expand(value: str, env: dict) -> str:
@@ -269,9 +274,11 @@ def build_harness(config: dict | str | Path | None = None, *, approver: Approver
                   connect_mcp: bool = True) -> Harness:
     """The harness an operator's configuration describes. No configuration: the t tool, the checker hook, offline."""
     base = Path.cwd()
+    config_path = None
     if isinstance(config, (str, Path)):
         path = Path(config)
         base = path.resolve().parent
+        config_path = path.resolve()
         config = json.loads(path.read_text(encoding="utf-8"))
     config = dict(config or {})
     unknown = set(config) - CONFIG_KEYS
@@ -347,4 +354,9 @@ def build_harness(config: dict | str | Path | None = None, *, approver: Approver
             continue
         harness.clients.append(client)
         harness.problems += [f"mcp server {server}: skipped {s}" for s in skipped]
+
+    if config.get("agent") is not None:
+        # acting on the machine: roots, commands, processes, the plan tool (locallm/dawnr_agent, DAWNR-AGENT.md)
+        from dawnr_agent.config import register_agent
+        register_agent(harness, config["agent"], base=base, config=config, config_path=config_path)
     return harness
