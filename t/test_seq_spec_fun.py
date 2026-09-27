@@ -8,9 +8,13 @@ the committed task, six lowerings emit text for the fixtures (real and
 twin) and Frama-C abstains by name, and every committed task's lowering is
 unchanged by the construct (t/tasks, t/lemmas, t/nested: the same text
 before and after, per kernel, real and twin, checked against the file's
-own no-seq-spec_fun tasks).
+own no-seq-spec_fun tasks). Since the 2026-09-27 review: the dafny and F*
+refutation certificates ladder every seq-valued spec_fun call and every
+ground seq operator around it (lower_dafny.py, certificate step 3), checked
+on the review's two seeded spec_fun faults as text here and, with
+`--slow`, as the two kernels' own verdicts.
 
-Run: python3 t/test_seq_spec_fun.py   (or pytest)
+Run: python3 t/test_seq_spec_fun.py [--slow]   (or pytest)
 """
 from __future__ import annotations
 
@@ -31,7 +35,11 @@ import tlib         # noqa: E402
 
 KERNELS = [b for b, _, _ in tlib.BACKENDS]
 FIXTURES = ("fz_p_sf_seq_len", "fz_p_sf_seq_at", "fz_p_sf_seq_build",
-            "fz_p_sf_seq_false")
+            "fz_p_sf_seq_false", "fz_p_sf_seq_swap", "fz_p_sf_seq_slice_off")
+# a straight-line body with no `if`, no invariant and no mutable index: no
+# twin, exactly the ladder's stated rule; graded on the (refuted) real side
+# alone (fz_p_sf_seq_slice_off's body slices, so it draws `off-by-one`)
+NO_TWIN = ("fz_p_sf_seq_false",)
 
 
 def _committed() -> dict:
@@ -100,10 +108,7 @@ def test_twin_ladder_finds_a_witness() -> None:
     assert w is not None and w.get("s") == [], w
     for name, p in _probes().items():
         tb, op, w = harness.twin_for(p)
-        if name == "fz_p_sf_seq_false":
-            # a straight-line body with no `if` and no invariant: no twin,
-            # exactly the ladder's stated rule; the probe is graded on its
-            # (refuted) real side alone
+        if name in NO_TWIN:
             assert tb is None, (name, op)
         else:
             assert tb is not None, (name, op, w)
@@ -171,15 +176,98 @@ def test_committed_tasks_lower_as_before() -> None:
     print(f"test_committed_tasks_lower_as_before: ok ({n} lowerings)")
 
 
-def run() -> None:
+def _seeded(name: str) -> tuple[dict, dict]:
+    """One of the review's seeded spec_fun faults as a probe (fuzz_lower.py,
+    `fz_p_sf_seq_swap` / `fz_p_sf_seq_slice_off`) with the interpreter's
+    real witness, the conformance suite's own no-twin path."""
+    p = _probes()[name]
+    w = harness.real_witness(p)
+    assert w is not None and w.get("s") == [0, 1], (name, w)
+    return p, w
+
+
+def test_certificate_seq_rungs() -> None:
+    """The 2026-09-27 review's finding: a bug seeded in a seq-valued
+    spec_fun's own body read unproved in dafny and F* (not refuted, not
+    verified) because the certificate left the recursive call for the
+    kernel to unfold past its default fuel, and a literal against a ground
+    append for it to relate with no index term to trigger on. Now both
+    certificates carry a rung per seq-valued call the formula reaches,
+    callees first, and one per ground seq operator around it
+    (lower_dafny.seq_ladder). Text-level; the verdicts are `--slow`."""
+    import lower_dafny  # noqa: E402
+    import lower_fstar  # noqa: E402
+    p, w = _seeded("fz_p_sf_seq_swap")
+    dfy = lower_dafny.lower(p, p["body"], witness=w)
+    fst = lower_fstar.lower(p, p["body"], witness=w)
+    for rung in ("  var t_v0: seq<int> := [];", "  var t_v2: seq<int> := [2, 0];",
+                 "  assert dbl(s, 0) == t_v0;", "  assert dbl(s, 1) == t_v1;",
+                 "  assert dbl(s, 2) == t_v2;"):
+        assert rung in dfy, (rung, dfy)
+    assert dfy.index("dbl(s, 0)") < dfy.index("dbl(s, 1)") < dfy.index("dbl(s, 2)")
+    for rung in ("  assert (Seq.equal (dbl (Seq.createL #int [0; 1]) 0) (Seq.createL #int []));",
+                 "  assert (Seq.equal (dbl (Seq.createL #int [0; 1]) 2) (Seq.createL #int [2; 0]));"):
+        assert rung in fst, (rung, fst)
+    assert fst.index("[0; 1]) 0)") < fst.index("[0; 1]) 1)") < fst.index("[0; 1]) 2)")
+    assert fst.index("assert (Seq.equal (dbl") < fst.index("  assert_norm (")
+    p, w = _seeded("fz_p_sf_seq_slice_off")
+    dfy = lower_dafny.lower(p, p["body"], witness=w)
+    fst = lower_fstar.lower(p, p["body"], witness=w)
+    assert "  assert tl(s) == t_v0;" in dfy and "  assert (tl(s) + [s[0]]) == t_v1;" in dfy, dfy
+    assert dfy.index("assert tl(s) ==") < dfy.index("assert (tl(s) + [s[0]])")
+    assert ("  assert (Seq.equal (tl (Seq.createL #int [0; 1])) (Seq.createL #int [0]));"
+            in fst), fst
+    assert ("  assert (Seq.equal (Seq.append (tl (Seq.createL #int [0; 1])) "
+            "(Seq.create 1 (Seq.index (Seq.createL #int [0; 1]) 0))) "
+            "(Seq.createL #int [0; 0]));" in fst), fst
+    # a certificate with no seq-valued call in its formula carries no rung:
+    # double_all's own twin (an undefined-kind witness at s = [])
+    dfy = tlib.lower(_committed(), "dafny", twin_body=True)
+    assert "t_refutation_certificate" in dfy and "t_v0" not in dfy, dfy
+    fst = tlib.lower(_committed(), "fstar", twin_body=True)
+    assert "t_refutation_certificate" in fst and "Seq.equal (dbl" not in fst, fst
+    print("test_certificate_seq_rungs: ok")
+
+
+def test_kernels_refute_the_seeded_faults(slow: bool) -> None:
+    """dafny and F* on the two seeded faults' real side: refuted, each
+    through its own certificate run (verifiers/dafny.py, verifiers/fstar.py
+    mint REFUTED only from the targeted certificate run)."""
+    if not slow:
+        print("test_kernels_refute_the_seeded_faults: skipped (pass --slow)")
+        return
+    import tempfile  # noqa: E402
+    import lower_dafny  # noqa: E402
+    import lower_fstar  # noqa: E402
+    from verifiers import dafny as dafny_backend  # noqa: E402
+    from verifiers import fstar as fstar_backend  # noqa: E402
+    if not (dafny_backend.DAFNY and fstar_backend.FSTAR):
+        print("test_kernels_refute_the_seeded_faults: skipped (a kernel is absent)")
+        return
+    with tempfile.TemporaryDirectory() as d:
+        for name in ("fz_p_sf_seq_swap", "fz_p_sf_seq_slice_off"):
+            p, w = _seeded(name)
+            for backend, lower, suffix in ((dafny_backend, lower_dafny, "dfy"),
+                                           (fstar_backend, lower_fstar, "fst")):
+                path = os.path.join(d, f"{name}.{suffix}")
+                with open(path, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(lower.lower(p, p["body"], witness=w))
+                r = backend.verify(__import__("pathlib").Path(path))
+                assert r.outcome == "refuted", (name, suffix, r.outcome, r.extras)
+    print("test_kernels_refute_the_seeded_faults: ok")
+
+
+def run(slow: bool = False) -> None:
     test_notation_roundtrip()
     test_check_wf_accepts_seq_and_refuses_the_rest()
     test_interp_evaluates_a_seq_valued_call()
     test_twin_ladder_finds_a_witness()
     test_six_kernels_lower_and_framac_abstains()
     test_committed_tasks_lower_as_before()
+    test_certificate_seq_rungs()
+    test_kernels_refute_the_seeded_faults(slow)
     print("test_seq_spec_fun: ok")
 
 
 if __name__ == "__main__":
-    run()
+    run("--slow" in sys.argv[1:])
