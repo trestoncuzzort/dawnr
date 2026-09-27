@@ -138,6 +138,7 @@ RULES: dict[str, str] = {
     "loop-decreases": "a loop requires a decreases measure (Gate 2)",
     "loop-invariant-bool": "each loop invariant must be bool (Gate 2)",
     "spec-fun-body-type": "a spec_fun's body type must match its declared result (Gate 3)",
+    "spec-fun-result": "a spec_fun's result is int, bool or seq (Gate 3; Seq-valued spec_funs)",
     "spec-fun-decreases-int": "a spec_fun's decreases must be int (Gate 3)",
     "strlib-arity": "each string-library member has a fixed arity (The string library)",
     "strlib-types": "each string-library member's argument types must "
@@ -259,6 +260,9 @@ NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
 BASE_TYPES = ("int", "bool", "seq")     # every T1, T2 a pair may hold
+# SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a spec_fun's result is
+# one of these three; a nested seq or a pair result is not in v1.
+SPEC_FUN_RESULTS = ("int", "bool", "seq")
 
 
 def _valid_type(t) -> bool:
@@ -607,9 +611,17 @@ def check_wf(task: dict, positions: dict | None = None,
         earlier = dict(expression_funs or {})
         earlier.update({g["name"]: g for g in task["spec_funs"][:i]})
         earlier[f["name"]] = f              # self-recursion is allowed
+        if f["result"] not in SPEC_FUN_RESULTS:
+            # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): int, bool
+            # or the elementary seq; a nested seq or a pair result is
+            # refused here by name (v1 does not have them), where before
+            # this rule an unlisted result only failed the body-type
+            # check below under a misleading message.
+            _e(errs, f, f"spec_fun {f['name']} result must be int, bool or "
+                        f"seq, not {f['result']!r}", "spec-fun-result")
         if _ty(f["decreases"], fenv, earlier, ver, errs, set()) != "int":
             _e(errs, f, f"spec_fun {f['name']} decreases is not int", "spec-fun-decreases-int")
-        if _ty(f["body"], fenv, earlier, ver, errs, set()) != f["result"]:
+        if _ty(f["body"], fenv, earlier, ver, errs, set(), f["result"]) != f["result"]:
             _e(errs, f, f"spec_fun {f['name']} body type != result", "spec-fun-body-type")
     for e in task.get("requires", []):
         if _ty(e, penv, funs, ver, errs, set()) != "bool":

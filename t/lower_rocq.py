@@ -5478,6 +5478,19 @@ class Ctx:
             f = e["call"]["fun"]
             ln = "(" + self.callpre_len[f] + fn[1 + len(self.callpre[f]):]
             return fn, ln
+        if "call" in e:
+            # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a seq-
+            # valued spec_fun is ONE Coq value, the `((Z -> Z) * Z)`
+            # (function, length) pair `emit_spec_funs` builds for it (a
+            # fuel Fixpoint can return a product exactly as it returns Z;
+            # a seq COMPONENT of a pair already has this shape,
+            # `pair_comp_ty`), so a call's own (fn, len) is its `fst`/
+            # `snd` -- the same read-back `fst`/`snd`'s own case below
+            # does for a projected seq. `_has_seq_sf` gates the `cbn [fst
+            # snd]` step that makes the pair literal reduce after
+            # `t_eqs` unfolds the call.
+            term = self.call(e, env, local)
+            return f"(fst {term})", f"(snd {term})"
         op = e.get("op")
         if op == "at":
             # SPEC.md "Nested sequences (v1)": s[i] on a NESTED s is a
@@ -6827,6 +6840,22 @@ def _has_pair(task: dict) -> bool:
     return walk(task["body"])
 
 
+def _has_seq_sf(task: dict) -> bool:
+    """True iff `task` declares a spec_fun whose result is a seq (SPEC.md
+    "Seq-valued spec_funs (v1)", 2026-09-27). Such a spec_fun is ONE Coq
+    value here, the model's own `((Z -> Z) * Z)` (function, length) pair
+    -- the same shape a seq COMPONENT of a pair already has
+    (`pair_comp_ty`'s "seq" case) -- and a call of it is read back by
+    `seq_fn` as `fst (sf_f ...)`/`snd (sf_f ...)`. Once `t_eqs` rewrites
+    `sf_f ...` to its body, a literal `(fn, len)` sits under that `fst`/
+    `snd`, the exact "LOOSE fst/snd" shape PRELUDE's own dated note names
+    for pairs, so this joins `_has_pair`/`_has_nested` at the four
+    `pair_line` gates (all three want the identical `cbn [fst snd]` line).
+    A task with no seq-valued spec_fun (every task before 2026-09-27)
+    reads False and emits byte-identical proof text."""
+    return any(sf.get("result") == "seq" for sf in task.get("spec_funs", []))
+
+
 def _expr_has_nested(e) -> bool:
     """True iff an inline nested-seq LITERAL appears anywhere inside
     expression `e` (SPEC.md "Nested sequences (v1)" residual, 2026-09-10):
@@ -7118,8 +7147,15 @@ def emit_spec_funs(cx: Ctx) -> str:
     counter = [0]
     for sf in task.get("spec_funs", []):
         f = sf["name"]
-        res = rty(sf["result"])
-        default = "false" if sf["result"] == "bool" else "0"
+        # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a seq result
+        # is the model's own (function, length) pair, one Coq value
+        # (`_has_seq_sf`'s note); out of fuel it is the empty seq
+        # `(t_fill 0, 0)`, the same "any value, never reached below the
+        # measure" role `0`/`false` play for int/bool.
+        seq_res = sf["result"] == "seq"
+        res = "((Z -> Z) * Z)" if seq_res else rty(sf["result"])
+        default = ("(t_fill 0, 0)" if seq_res
+                   else "false" if sf["result"] == "bool" else "0")
         # binders for the spec_fun's own params
         bs, args = [], []
         sf_tys = {}
@@ -7144,12 +7180,17 @@ def emit_spec_funs(cx: Ctx) -> str:
         saved_tys = dict(cx.tys)
         cx.tys.update(sf_tys)
         saved_pre = dict(cx.callpre)
+        def _sf_body() -> str:
+            if seq_res:
+                fn_b, ln_b = cx.seq_fn(sf["body"], {}, {})
+                return f"({fn_b}, {ln_b})"
+            if sf["result"] == "bool":
+                return cx.bx(sf["body"], {}, {})
+            return cx.zx(sf["body"], {}, {})
         cx.callpre[f] = f"sf_{f}_fuel fu"
-        body_fuel = (cx.bx(sf["body"], {}, {}) if sf["result"] == "bool"
-                     else cx.zx(sf["body"], {}, {}))
+        body_fuel = _sf_body()
         cx.callpre[f] = f"sf_{f}"
-        body_plain = (cx.bx(sf["body"], {}, {}) if sf["result"] == "bool"
-                      else cx.zx(sf["body"], {}, {}))
+        body_plain = _sf_body()
         measure = cx.zx(sf["decreases"], {}, {})
         sf_lens = [f"(0 <= {p['name']}_len)" for p in sf["params"]
                    if p["type"] == "seq"]
@@ -7162,6 +7203,17 @@ def emit_spec_funs(cx: Ctx) -> str:
         for binders, hyps, concl in obls:
             cx._sf_obls.append((f, btxt, sf_lens, binders, hyps, concl))
 
+        # 2026-09-27 (t/FEATURES-SEQFUN-2026-09-27.md, the seven-kernel
+        # grading of the lifted tasks): a `decreases` that is an `ite`
+        # (the lifter's totalised measure `if n <= 0 then 0 else n`)
+        # spliced under `( .. < fuel)%nat` has its literals read in nat
+        # scope, "The term n has type Z while it is expected to have type
+        # nat" (vericoding DT0631 Multiply's repeatString, DH0026's
+        # concatenate: MALFORMED). An `ite` measure is restated in Z scope
+        # there; a measure with no `ite` (every committed task) is
+        # spliced exactly as before.
+        measure_nat = (f"({measure})%Z" if "'ite'" in repr(sf["decreases"])
+                       else measure)
         chunks.append(f"""Fixpoint sf_{f}_fuel (fuel : nat) {btxt} : {res} :=
   match fuel with
   | O => {default}
@@ -7173,7 +7225,7 @@ Definition sf_{f} {btxt} : {res} :=
 
 Lemma sf_{f}_fuel_irrel :
   forall (fuel fuel' : nat) {btxt},
-  (Z.to_nat {measure} < fuel)%nat -> (Z.to_nat {measure} < fuel')%nat ->
+  (Z.to_nat {measure_nat} < fuel)%nat -> (Z.to_nat {measure_nat} < fuel')%nat ->
   sf_{f}_fuel fuel {atxt} = sf_{f}_fuel fuel' {atxt}.
 Proof.
   induction fuel as [|fu IH]; intros fuel' {atxt} Hf Hf'; [ lia | ].
@@ -7205,6 +7257,18 @@ Qed.
 
     if eqs:
         eq_tac = " ".join(f"try rewrite {e};" for e in eqs)
+        # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a seq-valued
+        # spec_fun's equation rewrites `sf_f ..` to a literal `(fn, len)`
+        # pair, and every read of it sits under `fst`/`snd` (`seq_fn`'s
+        # own call case), so the unfold is one `cbn [fst snd]` short of
+        # exposing the branch `t_sweep` can split. MEASURED before this
+        # line (the desktop, fz_p_sf_seq_at's `0 <= 0 < snd (sf_tl s
+        # s_len)` under `s_len >= 2`): unproved, the `if` never reached.
+        # Gated on `_has_seq_sf`, so a task without one emits the exact
+        # text it did before.
+        seq_sf_norm = " cbn [fst snd];" if _has_seq_sf(task) else ""
+        seq_sf_norm_h = " cbn [fst snd] in * |-;" if _has_seq_sf(task) else ""
+        eq_tac = eq_tac + seq_sf_norm
         # t_eqs unfolds a spec_fun equation in the GOAL (needed when the
         # goal's own application is the one recursion's own step exposes,
         # e.g. count_matches: the loop's forward step lands on count(s,x,
@@ -7220,7 +7284,7 @@ Qed.
         # rather than combined: a rewrite that helps one shape is dead
         # weight, never harm, on the other, since `first` restores the
         # goal between alternatives (measured on digit_sum, 2026-09-08).
-        eq_tac_h = " ".join(f"try rewrite {e} in * |-;" for e in eqs)
+        eq_tac_h = " ".join(f"try rewrite {e} in * |-;" for e in eqs) + seq_sf_norm_h
         # 2026-09-10 (COVERAGE-lifted-785.md's twelfth sweep, computeSum):
         # a bare `rewrite sf_X_eq` leaves the recursive step's own
         # argument ARITHMETIC unnormalized (`sf_sum (i + 1)` rewrites to
@@ -7252,12 +7316,36 @@ Qed.
         norm_names = [f"sf_{sf['name']}" for sf in task.get("spec_funs", [])
                       if len(sf["params"]) == 1
                       and sf["params"][0]["type"] == "int"]
+        norm_pats = [(n, "?x") for n in norm_names]
+        # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): the same
+        # argument normalisation for a SEQ-VALUED spec_fun with exactly one
+        # int param and any number of seq params (double_all's `dbl(s,
+        # n)`): the loop's forward step lands on `sf_dbl s s_len (i + 1 -
+        # 1)` under `fst`/`snd`, never syntactically the invariant's
+        # `sf_dbl s s_len i`, and `t_sat1`'s merge rule does not reach a
+        # global constant's argument (computeSum's own gap, above). Each
+        # seq param binds its (function, length) pair with two wildcards
+        # so only the int argument is normalised. MEASURED on the desktop
+        # before this line: double_all's `double_all_loop_spec` ran past
+        # 900 s in rocq; with this arm hand-inserted, 1.8 s. Gated on the
+        # result type, so a task without a seq-valued spec_fun emits the
+        # exact text it did before.
+        for sf in task.get("spec_funs", []):
+            if sf.get("result") != "seq":
+                continue
+            ints = [p for p in sf["params"] if p["type"] == "int"]
+            if len(ints) != 1 or any(p["type"] not in ("int", "seq")
+                                     for p in sf["params"]):
+                continue
+            pat = " ".join("?x" if p["type"] == "int" else f"?s{i}_f ?s{i}_n"
+                           for i, p in enumerate(sf["params"]))
+            norm_pats.append((f"sf_{sf['name']}", pat))
         norm = " ".join(
-            f"repeat match goal with |- context [{n} ?x] => "
-            f"progress ring_simplify x end;" for n in norm_names)
+            f"repeat match goal with |- context [{n} {pat}] => "
+            f"progress ring_simplify x end;" for n, pat in norm_pats)
         norm_h = " ".join(
-            f"repeat match goal with H : context [{n} ?x] |- _ => "
-            f"progress ring_simplify x in H end;" for n in norm_names)
+            f"repeat match goal with H : context [{n} {pat}] |- _ => "
+            f"progress ring_simplify x in H end;" for n, pat in norm_pats)
         # THE GROUND-FACT SUBSTITUTION FIX itself (2026-09-10, above): one
         # match arm per bool-result spec_fun, keyed on its own Coq constant
         # name, propagating a literal `sf_{f} <args> = true` (or `= false`)
@@ -8312,7 +8400,8 @@ def gen_plain(cx: Ctx, body: list, counter: list) -> str:
         # PAIRS (v1) built `cbn [fst snd]` for; `_has_nested` joins
         # `_has_pair` at this gate (both want the identical line).
         pair_line = ("  cbn [fst snd].\n"
-                    if _has_pair(task) or _has_nested(task) else "")
+                    if _has_pair(task) or _has_nested(task)
+                    or _has_seq_sf(task) else "")
         # Nested sequences (v1) residual (2026-09-10): `forall {pb},` with
         # an EMPTY `pb` (a param-less task, `nested_lit`'s own shape) is
         # "forall ," -- a Coq syntax error, MALFORMED (MEASURED, this
@@ -8373,7 +8462,8 @@ Qed.
     # `_has_nested` (SPEC.md "Nested sequences (v1)") joins the same gate:
     # both features want the identical `cbn [fst snd]` line.
     pair_line = ("  cbn [fst snd].\n"
-                if _has_pair(task) or _has_nested(task) else "")
+                if _has_pair(task) or _has_nested(task)
+                or _has_seq_sf(task) else "")
     # SPEC.md "Pairs (v1)": destruct every pair-typed PARAM right after
     # `intros.`, before `unfold` (`_pair_param_destruct`'s own dated note,
     # 2026-09-10, `eq_params`: an opaque param's `fst`/`snd` never reduces
@@ -8422,7 +8512,8 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     # (m is never reassigned); harmless when the pattern is absent, `cbn`
     # over an empty target set is a no-op.
     pair_line = ("  cbn [fst snd].\n"
-                if _has_pair(task) or _has_nested(task) else "")
+                if _has_pair(task) or _has_nested(task)
+                or _has_seq_sf(task) else "")
 
     # prefix symbolic execution (definedness under requires)
     local: dict[str, str] = {}
@@ -9753,7 +9844,8 @@ def gen_loops(cx: Ctx, body: list, counter: list) -> str:
     reqs_intro = " ".join(f"Hreq{k+1}"
                           for k in range(len(task.get("requires", []))))
     pair_line = ("  cbn [fst snd].\n"
-                 if _has_pair(task) or _has_nested(task) else "")
+                 if _has_pair(task) or _has_nested(task)
+                or _has_seq_sf(task) else "")
     pdestr = _pair_param_destruct(task)
     exit_bools: list = []
     for c in calls:
@@ -10210,6 +10302,27 @@ def _call_asserts(cx, task, body, asts, env_py, env_render, in_hyp=None):
             continue
         k += 1
         rt = cx.sfres[cnode["call"]["fun"]]
+        if rt == "seq":
+            # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): the call's
+            # value is a tuple and its term a (function, length) pair,
+            # which has no literal `_glit` can spell (a function is not
+            # compared by `reflexivity`). Ground the two reads the file
+            # makes of it instead: the length, `snd`, and each element,
+            # `fst .. j` for `0 <= j < len`, every one a closed Z
+            # computation `cbv; reflexivity` settles. MEASURED before this
+            # arm (the desktop, fz_p_sf_seq_len's collapse-if twin at
+            # `s = []`): `_glit` raised on the tuple, `_try_cert_v1`
+            # swallowed it, no certificate, the cell read verified /
+            # unproved; with it, refuted.
+            vals = list(val)
+            lines.append(f"  assert (t_c{k} : (snd ({term})) = {_zlit(len(vals))}) "
+                         f"by (cbv; reflexivity).\n")
+            lines.append(f"  try rewrite t_c{k}{where}.\n")
+            for j, ev in enumerate(vals):
+                lines.append(f"  assert (t_c{k}_{j} : ((fst ({term})) {j}) = {_zlit(ev)}) "
+                             f"by (cbv; reflexivity).\n")
+                lines.append(f"  try rewrite t_c{k}_{j}{where}.\n")
+            continue
         lines.append(f"  assert (t_c{k} : {term} = {_glit(val, rt)}) "
                      f"by (cbv; reflexivity).\n")
         lines.append(f"  try rewrite t_c{k}{where}.\n")
