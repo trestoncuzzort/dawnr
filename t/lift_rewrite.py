@@ -1746,7 +1746,7 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     task_name = f"{_sanitize_stem(source_path)}__{t_method}"
     record.method = t_method
 
-    array_mutation, _array_mutation_issue = find_array_mutation(method, closure)
+    array_mutation, _array_mutation_issue = find_array_mutation(method, closure, module)
     mutated_param_name = (array_mutation.name if array_mutation is not None
                            and array_mutation.kind == "modifies-param" else None)
     # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): `classify` already
@@ -2329,7 +2329,9 @@ def _lift_one_lemma(d, parts, renamer: _Renamer, fn_names: dict, lemma_map: dict
         ty = _t_json_type(p.type)
         if ty not in ("int", "bool", "seq"):
             return None
-        if p.type.kind == "array":
+        if p.type.kind == "array" and not (len(p.type.args) == 1
+                                           and p.type.args[0].kind in ("int", "nat")
+                                           and not p.type.nullable):
             return None
         tname = renamer.fresh(p.name, record, "lemmaparam")
         scope.renames[p.name] = tname
@@ -2337,6 +2339,15 @@ def _lift_one_lemma(d, parts, renamer: _Renamer, fn_names: dict, lemma_map: dict
         params_out.append({"name": tname, "type": ty})
         if p.type.kind == "nat":
             requires_out.append(_ge0(tname))
+        if p.type.kind == "array" and p.type.args[0].kind == "nat":
+            # feature 4 (2026-09-27): an `array<nat>` lemma parameter is a seq
+            # whose elements are non-negative, the method-level
+            # `nat-elements-requires` clause stated on the lemma
+            k = renamer.fresh("k", record, "quantbind")
+            requires_out.append({"forall": {
+                "var": k, "lo": {"int": 0}, "hi": {"op": "len", "args": [{"var": tname}]},
+                "body": {"op": ">=", "args": [{"op": "at", "args": [{"var": tname}, {"var": k}]},
+                                              {"int": 0}]}}})
     t_name = renamer.fresh(d.name, record, "lemma")
     ensures_out, decreases = [], None
     for spec in parts.specs:

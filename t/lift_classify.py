@@ -1699,7 +1699,8 @@ def _closure_root_shadows(root: Node, method: MethodDecl, name: str) -> bool:
 
 
 def array_readonly_issue(param_name: str, method: MethodDecl,
-                          closure: tuple[Decl, ...]) -> Optional[str]:
+                          closure: tuple[Decl, ...], module: Optional[Module] = None,
+                          _stack: tuple = ()) -> Optional[str]:
     """None if `param_name` (an `array<int|nat>` parameter) satisfies the
     read-only condition everywhere in the method's closure; else the
     section-5 reason it fails with (`array-mutation` for a write,
@@ -1737,8 +1738,53 @@ def array_readonly_issue(param_name: str, method: MethodDecl,
     x)`): before this exemption, the bare `a`/`b` argument tripped this
     same escape check the reads-clause row above also had to widen, so
     fixing only the reads clause would have left these four refused
-    `array` instead."""
+    `array` instead.
+
+    t/FEATURES-TRACK.md feature 4 (2026-09-27, "arrays read by functions"),
+    with `module` given: two more calls are not escapes. A LEMMA call
+    (`SumRPrefix(v, i);`, vericoding DD0128; `UpdateMinCount(v, ...)`,
+    DD0130): a Dafny lemma is a ghost method with no `modifies` clause
+    (Reference Manual 6.3.3, "Lemmas": a lemma "cannot modify the heap"),
+    so an array it is handed is only read, and the lifter drops or lifts
+    the lemma on its own terms anyway (decision 8, row 38). A call of
+    another METHOD of the module whose own parameter at that position is
+    itself a read-only array by this same condition, recursively
+    (`search(v, elem)` calling `binarySearch(v, elem)`, DD0135): the callee
+    sees the same value the caller does and writes nothing through it (a
+    callee that writes it, or reaches a cycle, is still an escape; a
+    self-call passes the array to the very method being checked, whose
+    own reads are what this scan covers). Measured 2026-09-27 by
+    re-lifting the 86 staged files whose 88 methods the 2026-09-26 lift
+    refused `array` (rewrite stage, check skipped): 21 of the 88 pass this
+    condition now, 14 of them lift (query, queryFast x2, sumElemsB,
+    mCountMin, mPeekSum, binarySearchRec, barrier, SharedElements,
+    FilterOddNumbers, BinarySearchRecursive, Mcontained, BinarySearch,
+    BinarySearchLoop) and 7 are refused later by name; the 67 still
+    refused `array` are arrays of char/real/bool/bv32/T/arrays, array
+    results, and the in-place sorts (`aliased`), none of them this
+    condition's."""
     closure_fn_names = {d.name for d in closure if isinstance(d, FunctionDecl) and d.name}
+    lemma_names: set = set()
+    methods_by_name: dict = {}
+    if module is not None:
+        lemma_names = {d.name for d in module.decls if isinstance(d, LemmaDecl) and d.name}
+        methods_by_name = {d.name: d for d in module.decls
+                           if isinstance(d, MethodDecl) and d.name}
+
+    def _callee_reads_only(callee: MethodDecl, positions: list) -> bool:
+        if callee.name in _stack or callee.name == method.name:
+            return callee.name == method.name
+        for i in positions:
+            if i >= len(callee.params):
+                return False
+            cp = callee.params[i]
+            if cp.type is None or cp.type.kind != "array" or cp.type.nullable:
+                return False
+            if array_readonly_issue(cp.name, callee, _closure(module, callee), module,
+                                    _stack + (method.name,)) is not None:
+                return False
+        return True
+
     scope: list[Node] = [method] + list(closure)
     for root in scope:
         shadowed = _closure_root_shadows(root, method, param_name)
@@ -1754,24 +1800,44 @@ def array_readonly_issue(param_name: str, method: MethodDecl,
                 if shadowed:
                     continue
                 args = n.args
-                for a in args:
-                    if isinstance(a, Ident) and a.name == param_name:
-                        return "array"
+                positions = [i for i, a in enumerate(args)
+                             if isinstance(a, Ident) and a.name == param_name]
+                if not positions:
+                    continue
+                callee_name = (n.name if isinstance(n, CallStmt)
+                               else (n.fn.name if isinstance(n.fn, Ident) else None))
+                if callee_name in lemma_names:
+                    continue  # feature 4: a lemma reads, never writes
+                if callee_name in methods_by_name and _callee_reads_only(
+                        methods_by_name[callee_name], positions):
+                    continue  # feature 4: a read-only callee
+                return "array"
     return None
 
 
-def _array_passed_to_call(name: str, method: MethodDecl, closure: tuple[Decl, ...]) -> bool:
+def _array_passed_to_call(name: str, method: MethodDecl, closure: tuple[Decl, ...],
+                          module: Optional[Module] = None) -> bool:
     """True iff `name` appears as a bare argument to some call anywhere
     in the method's closure -- the aliasing half of `array_readonly
     _issue`, factored out so decision 22's mutated array can reuse it
     without also tripping that function's own array-mutation check
     (which the mutated array is EXPECTED to trip). Shadow-guarded the
-    same way and for the same reason as `array_readonly_issue`."""
+    same way and for the same reason as `array_readonly_issue`. With
+    `module` given (feature 4, 2026-09-27), a LEMMA call is not an alias:
+    a lemma reads the array and cannot write it (the sorts' own
+    permutation lemmas, `SortedLemma(a, ...)`, are what tripped this)."""
+    lemma_names: set = set()
+    if module is not None:
+        lemma_names = {d.name for d in module.decls if isinstance(d, LemmaDecl) and d.name}
     for root in [method] + list(closure):
         if _closure_root_shadows(root, method, name):
             continue
         for n in walk(root):
             if isinstance(n, (Call, CallStmt)):
+                callee_name = (n.name if isinstance(n, CallStmt)
+                               else (n.fn.name if isinstance(n.fn, Ident) else None))
+                if callee_name in lemma_names:
+                    continue
                 for a in n.args:
                     if isinstance(a, Ident) and a.name == name:
                         return True
@@ -1883,8 +1949,9 @@ def _alloc_bindings(method: MethodDecl) -> list[tuple[int, str, "NewRhs"]]:
     return out
 
 
-def find_array_mutation(method: MethodDecl, closure: tuple[Decl, ...]
-                         ) -> tuple[Optional[ArrayMutation], Optional[tuple[int, str, str]]]:
+def find_array_mutation(method: MethodDecl, closure: tuple[Decl, ...],
+                        module: Optional[Module] = None
+                        ) -> tuple[Optional[ArrayMutation], Optional[tuple[int, str, str]]]:
     """The method's ONE mutated/allocated array, per the shapes above.
     Returns `(mutation, None)` when found and well-shaped, `(None,
     None)` when the method has no array index-assignment and no `new
@@ -1968,7 +2035,7 @@ def find_array_mutation(method: MethodDecl, closure: tuple[Decl, ...]
         if len(mc.exprs) != 1 or not (isinstance(mc.exprs[0], Ident) and mc.exprs[0].name == name):
             return None, (mc.line, "array-mutation", "modifies-other")
 
-    if _array_passed_to_call(name, method, closure):
+    if _array_passed_to_call(name, method, closure, module):
         # Aliasing: the mutated array is also read through another name
         # (passed as an argument somewhere in the closure), which this
         # shim cannot verify the callee's effect on.
@@ -2182,7 +2249,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # that already returns something would need a SECOND return, which
     # t cannot express), so the zero-returns row below must see the
     # verdict first. --------------------------------------------------
-    array_mutation, mutation_issue = find_array_mutation(method, closure)
+    array_mutation, mutation_issue = find_array_mutation(method, closure, module)
     if mutation_issue is not None:
         issues.append(mutation_issue)
     if (array_mutation is not None and array_mutation.kind == "modifies-param"
@@ -2308,7 +2375,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     for p in array_params:
         if p.name == mutated_param_name:
             continue
-        bad = array_readonly_issue(p.name, method, closure)
+        bad = array_readonly_issue(p.name, method, closure, module)
         if bad is not None:
             issues.append((p.line, bad, p.name))
 
@@ -2806,7 +2873,7 @@ def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
                 issues.append((n.line, f"callee-refused:{verdict.reason}",
                                f"{name}:{verdict.token}"))
             continue
-        mutation, _ = find_array_mutation(callee, _closure(module, callee))
+        mutation, _ = find_array_mutation(callee, _closure(module, callee), module)
         if mutation is not None:
             issues.append((n.line, "method-call-array", name))
             continue
