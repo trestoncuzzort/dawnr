@@ -171,11 +171,25 @@ def check(program: str) -> tuple[dict | None, list[str]]:
 # variable (a t quantifier's bound variable is fresh and scoped to its own
 # body, SYNTAX.md's "Quantifiers", so shadowing never has to be considered),
 # and up to reordering the requires list and, separately, the ensures list
-# (each is a set of conditions, not a sequence). Lemmas and methods (SPEC.md
-# v1) are refused rather than compared: never seen in a "spec" prompt across
-# the 358-document corpus or the repair run's 281 (checked 2026-09-27), and
-# a lemma's or method's body is a statement block, not the pure expression
-# _alpha_eq below knows how to walk.
+# (each is a set of conditions, not a sequence). A lemma or method (SPEC.md
+# v1) the DRAFT adds under a name the prompt never used is not compared at
+# all: SPEC.md's "Lemmas (v1)" section, after the Dafny lemma it copies
+# (reference manual 6.3.3, dafny.org/latest/DafnyRef/DafnyRef), is explicit
+# that a lemma is erased at compile time and a call transmits only its
+# ensures, so it is proof scaffolding, never part of what the task computes
+# or requires, and a method the draft adds only promises something extra
+# nobody asked for -- promising more is not the failure mode
+# FINDINGS-repair-2026-09-26.md named; dropping or weakening a promise the
+# PROMPT made is. A lemma or method the prompt itself declares (never seen
+# in a "spec" prompt across the 358-document corpus or the repair run's 281,
+# checked 2026-09-27, but part of the contract like any other declared name
+# whenever it is) is compared like a nested task instead: its own name
+# exactly (as a spec fun's is -- a call names it directly, and no
+# caller-side renaming reaches it), its params, (a method's) return type,
+# requires and ensures, up to renaming its own params/return and reordering
+# its own requires list and ensures list -- never its body, a proof
+# skeleton or an implementation, exactly as the top-level task's own body is
+# never compared here either.
 
 def spec_header_from_context(context: str) -> str | None:
     """The specification header a "spec" prompt embeds (chat_data.SPEC_PROMPT
@@ -227,10 +241,12 @@ def _alpha_eq(a, b, env: dict[str, str]) -> bool:
     a `call`'s `fun`, a `lemma`'s `name`. That inventory also covers a local
     `var` declaration and an `assign`/`return` target, which never occur
     here because requires, ensures and a spec fun's body are all Expr, never
-    a statement block (SYNTAX.md's grammar; a lemma's or method's body is
-    the one exception, and spec_changed refuses rather than reaching here
-    for either). Every other shape (an `op`, a literal, a type) has no name
-    in it to rename, so it is compared by ordinary recursive equality --
+    a statement block (SYNTAX.md's grammar); a lemma's or method's own body
+    IS a statement block, but `_member_changed` below never passes one
+    here -- only its requires, ensures and decreases, which stay Expr just
+    as a task's own do. Every other shape (an `op`, a literal, a type) has
+    no name in it to rename, so it is compared by ordinary recursive
+    equality --
     which is also what makes an op tag or a literal that DIFFERS a real
     difference: nothing here ever treats "<" and "<=" as a renaming of one
     another."""
@@ -298,13 +314,59 @@ def _clauses_differ(prompt_list: list, draft_list: list, env: dict[str, str]) ->
     return None if match(0) else "changed (no reordering of the specification's clauses matches the draft's)"
 
 
+def _member_changed(kind: str, prompt_task: dict, draft_task: dict, key: str, has_return: bool) -> str | None:
+    """None when every entry of `prompt_task[key]` ("lemmas" or "methods",
+    named by `kind`) is still present in `draft_task[key]`, under the same
+    name (never renamed: a call names a lemma or method directly, exactly
+    as for a spec fun, so no bijection reaches it), with the same params,
+    (for a method, `has_return`) the same return type, and the same
+    requires/ensures/decreases up to renaming its own params and return and
+    reordering its own requires list and, separately, its own ensures list
+    -- never its body (see the section docstring above for why). An entry
+    `draft_task[key]` has under a name `prompt_task[key]` never used is an
+    addition and is not looked at here at all: that is the whole point of
+    this function, called only for lemmas and then only for methods, never
+    merged into one pass, so an added lemma can never be misread as a
+    missing method or vice versa. A short reason otherwise, naming `kind`
+    and the entry so a person or the model can tell which one."""
+    prompt_items = {m["name"]: m for m in prompt_task.get(key, [])}
+    draft_items = {m["name"]: m for m in draft_task.get(key, [])}
+    missing = sorted(set(prompt_items) - set(draft_items))
+    if missing:
+        return f"{kind} {missing[0]} removed"
+    for name, p in prompt_items.items():
+        d = draft_items[name]
+        pparams, dparams = p["params"], d["params"]
+        if len(pparams) != len(dparams) or any(x["type"] != y["type"] for x, y in zip(pparams, dparams)):
+            return f"{kind} {name} has a different signature"
+        child = {x["name"]: y["name"] for x, y in zip(pparams, dparams)}
+        if has_return:
+            pr, dr = p["returns"][0], d["returns"][0]
+            if pr["type"] != dr["type"]:
+                return f"{kind} {name} returns {dr['type']}, the specification says {pr['type']}"
+            child[pr["name"]] = dr["name"]
+        if len(child) != len(set(child.values())):
+            return f"{kind} {name}'s parameters do not rename it one-to-one from the specification's"
+        if ("decreases" in p) != ("decreases" in d) or \
+                ("decreases" in p and not _alpha_eq(p["decreases"], d["decreases"], child)):
+            return f"{kind} {name}'s decreases changed"
+        for clause in ("requires", "ensures"):
+            reason = _clauses_differ(p.get(clause, []), d.get(clause, []), child)
+            if reason is not None:
+                return f"{kind} {name} {clause} {reason}"
+    return None
+
+
 def spec_changed(prompt_task: dict, draft_task: dict) -> str | None:
     """None when `draft_task` keeps `prompt_task`'s declaration, requires,
-    ensures and spec funs (up to a consistent renaming and reordered
-    clauses; see the section docstring above); otherwise the short reason a
-    person or the model can read. Both must be tasks surface.parse itself
-    produced (e.g. via check() or parse_spec_header), never hand-built,
-    since this trusts their shape (each has "params", "returns", ...)."""
+    ensures, spec funs, and any lemma or method `prompt_task` itself
+    declares (up to a consistent renaming and reordered clauses; see the
+    section docstring above); otherwise the short reason a person or the
+    model can read. A lemma or method the draft adds under a name the
+    prompt never used is never by itself a reason. Both must be tasks
+    surface.parse itself produced (e.g. via check() or parse_spec_header),
+    never hand-built, since this trusts their shape (each has "params",
+    "returns", ...)."""
     pp, dp = prompt_task.get("params", []), draft_task.get("params", [])
     if len(pp) != len(dp):
         return f"{len(dp)} parameters for {len(pp)} in the specification"
@@ -314,10 +376,12 @@ def spec_changed(prompt_task: dict, draft_task: dict) -> str | None:
     pr, dr = prompt_task["returns"][0], draft_task["returns"][0]
     if pr["type"] != dr["type"]:
         return f"returns {dr['type']}, the specification says {pr['type']}"
-    if prompt_task.get("lemmas") or draft_task.get("lemmas"):
-        return "a lemma differs (not compared)"
-    if prompt_task.get("methods") or draft_task.get("methods"):
-        return "a method differs (not compared)"
+    reason = _member_changed("lemma", prompt_task, draft_task, "lemmas", has_return=False)
+    if reason is not None:
+        return reason
+    reason = _member_changed("method", prompt_task, draft_task, "methods", has_return=True)
+    if reason is not None:
+        return reason
 
     env = {prompt_task["name"]: draft_task["name"]}
     for a, b in zip(pp, dp):

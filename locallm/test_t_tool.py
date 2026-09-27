@@ -9,11 +9,14 @@ one or two) given examples, or a dropped or reweakened `ensures` conjunct,
 was invisible to it. t_tool.spec_changed closes that hole; this file is its
 contract: what must still be ALLOWED (renaming every declared name
 consistently -- the task's own, its parameters, its return, a spec fun's own
-parameters, a quantifier's bound variable -- and reordering the requires
-list and, separately, the ensures list, since each is a set of conditions,
-not a sequence) and what must be CAUGHT (anything else: a dropped, added or
-reworded clause, a different arity or type, a spec fun added, removed,
-renamed or redefined).
+parameters, a quantifier's bound variable -- reordering the requires list
+and, separately, the ensures list, since each is a set of conditions, not a
+sequence, and a lemma or method the draft ADDS under a name the prompt never
+used -- SPEC.md's "Lemmas (v1)", the language's own documented proof
+technique, t/lemmas/*.t) and what must be CAUGHT (anything else: a dropped,
+added or reworded clause, a different arity or type, a spec fun added,
+removed, renamed or redefined, or a lemma or method the PROMPT itself
+declared being removed or altered).
 
 No torch: t_tool.py and chat_data.py are both standard-library-only, and
 this file only needs them and dawnr_harness.checker.
@@ -79,6 +82,59 @@ spec fun power(n_v: int): int
 = if n_v >= 0 then if n_v == 0 then 1 else 2 * power(n_v - 1) else 0
 {
   y := 1;
+}
+"""
+
+# t/lemmas/pow2_pos.t verbatim: a real fixture whose PROMPT would, if one ever
+# spec-prompts a task like this, declare a lemma -- SPEC.md's "Lemmas (v1)",
+# the language's own documented proof technique for an inductive fact a
+# kernel cannot see on its own.
+LEMMA_POW2 = """t 1
+task pow2_pos(n: int) returns (r: int)
+  requires n >= 0
+  ensures r >= 1
+spec fun pow2(k: int): int
+  decreases k
+= if k <= 0 then 1 else 2 * pow2(k - 1)
+lemma pow2_ge1(k: int)
+  requires k >= 0
+  ensures pow2(k) >= 1
+  decreases k
+{
+  if k > 0 {
+    pow2_ge1(k - 1);
+  } else {
+  }
+}
+{
+  pow2_ge1(n);
+  var p: int := pow2(n);
+  r := p;
+}
+"""
+
+# t/methods/clamp_sum.t's own `clamp`, trimmed to one method: a PROMPT that
+# declares a method (SPEC.md "Methods (v1)").
+METHOD_CLAMP = """t 1
+task clamp_sum(a: int, b: int, hi: int) returns (r: int)
+  requires hi >= 0
+  ensures 0 <= r and r <= hi
+method clamp(x: int, h: int) returns (c: int)
+  requires h >= 0
+  ensures 0 <= c and c <= h
+{
+  if x < 0 {
+    c := 0;
+  } else {
+    if x > h {
+      c := h;
+    } else {
+      c := x;
+    }
+  }
+}
+{
+  r := clamp(a + b, hi);
 }
 """
 
@@ -157,6 +213,44 @@ class SpecChangedAllowedVariation(unittest.TestCase):
         self.assertIsNone(t_tool.spec_changed(task_of(POWER), task_of(renamed)))
 
 
+class SpecChangedAllowedLemmaAndMethodAdditions(unittest.TestCase):
+    """The reviewer's exact finding: spec_changed used to flag ANY lemma or
+    method present on either side, so a correct draft that keeps the given
+    specification unchanged but adds a helper lemma -- t/lemmas/*.t's own
+    documented proof technique -- was refused as "a lemma differs (not
+    compared)" before its examples ever ran. Only what the PROMPT itself
+    fixes is the specification; a lemma or method the draft adds under a new
+    name is not part of it."""
+
+    def test_draft_adds_a_helper_lemma_the_prompt_never_declared(self):
+        added = ABS.replace("  ensures x < 0 ==> x + y == 0\n",
+                             "  ensures x < 0 ==> x + y == 0\n"
+                             "lemma helper(k: int)\n  requires k >= 0\n  ensures k >= 0\n{\n}\n")
+        self.assertNotEqual(added, ABS)
+        self.assertIsNone(t_tool.spec_changed(task_of(ABS), task_of(added)))
+
+    def test_draft_adds_a_helper_method_the_prompt_never_declared(self):
+        added = ABS.replace("  ensures x < 0 ==> x + y == 0\n",
+                             "  ensures x < 0 ==> x + y == 0\n"
+                             "method double_it(k: int) returns (r: int)\n  ensures r == 2 * k\n{\n"
+                             "  r := 2 * k;\n}\n")
+        self.assertNotEqual(added, ABS)
+        self.assertIsNone(t_tool.spec_changed(task_of(ABS), task_of(added)))
+
+    def test_prompt_declared_lemma_kept_unchanged(self):
+        self.assertIsNone(t_tool.spec_changed(task_of(LEMMA_POW2), task_of(LEMMA_POW2)))
+
+    def test_prompt_declared_lemma_kept_plus_an_added_second_lemma(self):
+        added = LEMMA_POW2.replace(
+            "lemma pow2_ge1(k: int)",
+            "lemma extra_helper(k: int)\n  requires k >= 0\n  ensures k >= 0\n{\n}\nlemma pow2_ge1(k: int)")
+        self.assertNotEqual(added, LEMMA_POW2)
+        self.assertIsNone(t_tool.spec_changed(task_of(LEMMA_POW2), task_of(added)))
+
+    def test_prompt_declared_method_kept_unchanged(self):
+        self.assertIsNone(t_tool.spec_changed(task_of(METHOD_CLAMP), task_of(METHOD_CLAMP)))
+
+
 class SpecChangedCaughtChanges(unittest.TestCase):
     def assertChanged(self, prompt_program: str, draft_program: str, *substrings: str):
         reason = t_tool.spec_changed(task_of(prompt_program), task_of(draft_program))
@@ -216,6 +310,30 @@ class SpecChangedCaughtChanges(unittest.TestCase):
             "= if n_v >= 0 then if n_v == 0 then 1 else 2 * power(n_v - 1) else 0\n", "")
         self.assertChanged(POWER, removed, "power")
 
+    def test_prompt_declared_lemma_removed(self):
+        # the call must go too, or the draft would fail well-formedness (an undefined lemma call) on its
+        # own, for a reason unrelated to what this test isolates
+        removed = LEMMA_POW2.replace(
+            "lemma pow2_ge1(k: int)\n  requires k >= 0\n  ensures pow2(k) >= 1\n  decreases k\n{\n"
+            "  if k > 0 {\n    pow2_ge1(k - 1);\n  } else {\n  }\n}\n", "").replace("  pow2_ge1(n);\n", "")
+        self.assertChanged(LEMMA_POW2, removed, "lemma", "pow2_ge1")
+
+    def test_prompt_declared_lemma_altered(self):
+        altered = LEMMA_POW2.replace("ensures pow2(k) >= 1", "ensures pow2(k) >= 0")
+        self.assertChanged(LEMMA_POW2, altered, "lemma", "pow2_ge1")
+
+    def test_prompt_declared_method_removed(self):
+        removed = METHOD_CLAMP.replace(
+            "method clamp(x: int, h: int) returns (c: int)\n  requires h >= 0\n"
+            "  ensures 0 <= c and c <= h\n{\n  if x < 0 {\n    c := 0;\n  } else {\n"
+            "    if x > h {\n      c := h;\n    } else {\n      c := x;\n    }\n  }\n}\n", "").replace(
+            "  r := clamp(a + b, hi);\n", "  r := hi;\n")
+        self.assertChanged(METHOD_CLAMP, removed, "method", "clamp")
+
+    def test_prompt_declared_method_altered(self):
+        altered = METHOD_CLAMP.replace("ensures 0 <= c and c <= h\n{", "ensures 0 <= c and c <= h + 1\n{")
+        self.assertChanged(METHOD_CLAMP, altered, "method", "clamp")
+
 
 class EndToEnd(unittest.TestCase):
     """t_tool.call itself: silent when there is nothing to compare against or
@@ -262,6 +380,30 @@ class EndToEnd(unittest.TestCase):
         self.assertIn("class=spec-changed", verdict)
         self.assertNotIn("ensures", verdict)
         self.assertNotIn("abs_val", verdict)
+
+    def test_a_correct_draft_that_adds_a_helper_lemma_is_not_refused_before_its_examples_run(self):
+        # the reviewer's exact finding: spec_changed used to flag ANY lemma present on either side as
+        # "a lemma differs (not compared)" and t_tool.call reported that and returned before running a
+        # single example -- even though this draft keeps the prompt's specification unchanged and the
+        # added lemma is t/lemmas/*.t's own documented proof technique, not a change to what was asked.
+        added = ABS.replace("  ensures x < 0 ==> x + y == 0\n",
+                             "  ensures x < 0 ==> x + y == 0\n"
+                             "lemma helper(k: int)\n  requires k >= 0\n  ensures k >= 0\n{\n}\n")
+        ctx = spec_context(ABS, "Example: abs_val(3) == 3")
+        out = t_tool.call(added, ctx)
+        self.assertNotIn("specification", out)
+        self.assertIn("example 1: pass", out)
+
+    def test_redacted_verdict_does_not_block_a_correct_draft_that_adds_a_helper_lemma(self):
+        # the other half of the same finding: checker.redacted_verdict() ran spec_changed the same way, so
+        # it would have reported "class=spec-changed" and blocked this correct final answer.
+        added = ABS.replace("  ensures x < 0 ==> x + y == 0\n",
+                             "  ensures x < 0 ==> x + y == 0\n"
+                             "lemma helper(k: int)\n  requires k >= 0\n  ensures k >= 0\n{\n}\n")
+        ctx = spec_context(ABS, "Example: abs_val(3) == 3")
+        ok, verdict = checker.redacted_verdict(added, ctx)
+        self.assertTrue(ok)
+        self.assertNotIn("spec-changed", verdict)
 
 
 if __name__ == "__main__":
