@@ -15,26 +15,46 @@ lock -- "one GPU job at a time" (AGENTS.md): never two generations running toget
 
 WHAT A CLIENT-DECLARED TOOL IS, HERE. dawnr's chat format already has one call syntax for every
 tool, <|tool_start|> name {json} <|tool_end|> (DAWNR-HARNESS.md section 1), used today only by tools
-the OPERATOR configured (the t checker, skills, web, MCP servers). A client's OpenAI-style `tools`
-array is offered to the model the same way, through the same tokens and the same call syntax, as
-entries added into the harness's OWN registry for the lifetime of one request (removed again in a
-`finally`, since only one request runs at a time behind the lock, so there is never a moment when
-one request's tools are visible to another's). What differs from dawnr's own registry tools: the
-harness never gets to force a client tool's output back into the model's context. Each client tool's
-stub `fn` only records that a *validated* call happened (its arguments are checked against the JSON
-Schema the client supplied, the same schema check every registry tool gets,
-dawnr_harness.tools.validate, before `fn` ever runs) and generation stops the instant that call
-closes, before the harness would force anything back into the stream. The call is reported to the
-caller as `tool_calls`, exactly as OpenAI's own API stops generation for a function call rather than
-answering it itself. dawnr's OWN registry tools (the t checker, an operator's skills, web or MCP
-tools) are unaffected: they still run in-band under the harness's existing policy the moment their
-call closes, their output is forced back into the model's context as always, and none of that ever
-reaches the client -- an OpenAI-style caller did not ask for them and does not know their schemas, so
-only the model's own text becomes the response `content`. A client's tool RESULT (its `tool`-role
-message) is folded back into the conversation as a `tool_output` part marked `untrusted`
-(chat.render_conversation's existing "untrusted" flag, the same one a fetched web page's text gets;
-DAWNR-HARNESS.md section 7): computation this server did not run and cannot vouch for is exactly what
-"untrusted" means here, whether it came from a web page or from the other tool driving this API.
+the OPERATOR configured (the t checker, skills, web, MCP servers) through dawnr_harness.Registry --
+"only code the operator runs adds to it" (Registry's own docstring; DAWNR-HARNESS.md section 7: "only
+the configuration adds tools"). A client's OpenAI-style `tools` array never goes there: each one
+becomes a dawnr_harness.tools.Tool (the same JSON Schema check every registry tool gets,
+dawnr_harness.tools.validate, runs against its arguments), but these Tools live only in
+_ClientToolHarness, a stand-in for the harness that DawnrAPI.create/create_stream swaps in for
+exactly the one locked generation this request drives and swaps back out in a `finally` -- never
+added to the real registry, so no other request, and no operator-configured permission glob, hook
+matcher or MCP server, ever sees them, and dawnr's own registry tools reach the model through that
+same real harness underneath, untouched. The model's index (Harness.index, DAWNR-HARNESS.md section
+9) is therefore built from the real registry alone; a client's tools are announced in a second,
+separate block instead, and only as a fixed vocabulary -- each Tool is constructed with
+show_description=False, and the rendering below does not read `description` either, so a client's
+own free-text description (the one OpenAI field written to instruct the model: "used by the model to
+choose when and how to call it") never reaches the prompt at all, names and argument names only. This
+is the same mechanism as a "Tool Poisoning Attack" (Invariant Labs, 2025-04-01, invariantlabs.ai/blog/
+mcp-security-notification-tool-poisoning-attacks, fetched -- research receipt 1ec678c7aa0f): "MCP's
+security model assumes that tool descriptions are trustworthy and benign", so a party other than the
+operator supplying one (there, a malicious MCP server; here, an anonymous API client) can embed an
+instruction the model reads as trustworthy. This
+is deliberately not a smaller dose of the harness's own untrusted-output marking
+(<|output_start|><|untrusted|> ... <|output_end|>, DAWNR-HARNESS.md section 7): that span exists only
+inside an ASSISTANT turn (chat.render_conversation raises if a USER message's content is anything but
+a plain string), and the index is text glued onto the first user turn, the only place a tool list has
+ever been shown -- there is no untrusted span to put a client's prose in there, so none of it is let
+through, full stop, rather than let through and marked. A validated call still stops generation the
+instant it closes, before anything would be forced back: run_turn watches `record`, and
+_ClientToolHarness.call appends to it directly -- a client Tool's `fn` is never called (there is
+nothing for it to do; the overlay's name-based dispatch replaces it entirely) and exists only to
+satisfy the dataclass, raising if anything ever reaches it. The call is reported to the caller as
+`tool_calls`, exactly as OpenAI's own API stops generation for a function call rather than answering
+it itself -- a client tool is never run by dawnr, only ever handed back to the caller that declared
+it. dawnr's OWN registry tools (the t checker, an operator's skills, web or MCP tools) are unaffected:
+a call to one of their names still goes through the real Harness.call in full -- policy, hooks, the
+audit log -- and its output is forced back into the model's context as always; a client-declared name
+never reaches any of that. A client's tool RESULT (its `tool`-role message) is folded back into the
+conversation as a `tool_output` part marked `untrusted` (chat.render_conversation's existing
+"untrusted" flag, the same one a fetched web page's text gets; DAWNR-HARNESS.md section 7):
+computation this server did not run and cannot vouch for is exactly what "untrusted" means here,
+whether it came from a web page or from the other tool driving this API.
 
 DEVIATIONS FROM THE REFERENCE (recorded on the research receipt too):
 * No `function_call`/`function` role (deprecated in OpenAI's own spec); `n` must be 1 (dawnr answers
@@ -79,7 +99,8 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import chat  # noqa: E402
-from dawnr_harness.tools import Tool, ToolResult, format_call  # noqa: E402
+from dawnr_harness.tools import (CallError, Tool, ToolResult, format_call, one_line,  # noqa: E402
+                                 parse_call, validate)
 from engine import Engine, reply_parts  # noqa: E402
 
 SERVER_NAME = "dawnr-api"
@@ -89,6 +110,10 @@ DEFAULT_MAX_TOKENS = 512
 MAX_TOKENS_CAP = 4096
 MAX_REQUEST_BYTES = 1 << 20         # 1 MiB: ample for a chat request, small enough to bound memory
 MAX_MESSAGES = 200
+MAX_CLIENT_TOOLS = 64               # bounds the per-request overlay's size; matches mcp_client.py's own default
+MAX_CLIENT_ARG_NAME = 64            # a JSON Schema property key is not limited to dawnr_harness.tools.NAME's
+                                     # character set the way a tool's own name is (Tool.__post_init__), so this
+                                     # bounds it too -- see _client_tool_line
 DEFAULT_TIMEOUT = 120.0             # seconds, wall clock, per reply
 DEFAULT_LOCK_TIMEOUT = 300.0        # seconds waiting for another request's generation to finish
 
@@ -242,12 +267,28 @@ def render_for_continuation(tokenizer, conversation: dict) -> list[int]:
 
 # ---------------------------------------------------------------------------- client-declared tools --
 
-def parse_client_tools(tools_field, tool_choice, reserved_names: set[str], record: list) -> dict[str, Tool]:
-    """The request's OpenAI-shaped `tools` as registry Tool entries, keyed by name. Each one's `fn`
-    only appends (name, arguments) to `record` once its arguments pass the client's own JSON Schema
-    (dawnr_harness.tools.validate, run by the harness before `fn` is ever called) -- the caller
-    (run_turn) watches `record` grow to know a call happened and to answer with it, never letting the
-    harness force anything back into the model's context for it (the module docstring)."""
+def _client_tool_never_runs(args, ctx):
+    """The `fn` every client Tool carries, to satisfy the dawnr_harness.tools.Tool dataclass (which
+    requires one) -- never actually called. A client tool's call is handled entirely by
+    _ClientToolHarness.call, which validates and records it by NAME, without going through
+    dawnr_harness.runtime.Harness.call and so without ever invoking a Tool's `fn` (the module
+    docstring: "a client tool is never run by dawnr"). This raises, rather than quietly doing nothing,
+    so that a future change wiring a client Tool into the real Registry by mistake fails loudly in
+    tests instead of silently reintroducing the finding this module's design fixes."""
+    raise AssertionError(f"a client tool's fn must never run (name={args!r}, ctx={ctx!r}); "
+                         "_ClientToolHarness.call dispatches by name and never calls it")
+
+
+def parse_client_tools(tools_field, tool_choice, reserved_names: set[str]) -> dict[str, Tool]:
+    """The request's OpenAI-shaped `tools` as dawnr_harness.tools.Tool entries, keyed by name -- for
+    _ClientToolHarness alone, never for a real Registry (the module docstring: client tools live in a
+    per-request overlay, never the shared registry). Each one's JSON Schema is exactly what the harness
+    validates every registry tool's arguments against (dawnr_harness.tools.validate).
+    `show_description=False` is set unconditionally, on every client tool, regardless of whether a
+    description was even given: nothing downstream needs to remember why a client's free-text
+    "description" must never be shown to the model (Tool.index_line would put it in the index
+    otherwise) -- and _client_tools_index below does not read `.description` either, so this is a
+    second, independent reason the field can never leak, not the only one."""
     if tool_choice not in (None, "auto", "none"):
         raise ApiError(400, f"tool_choice {tool_choice!r} is not supported; dawnr offers \"auto\" or \"none\" "
                        "(it has no way to force one specific call)", param="tool_choice")
@@ -255,6 +296,9 @@ def parse_client_tools(tools_field, tool_choice, reserved_names: set[str], recor
         return {}
     if not isinstance(tools_field, list):
         raise ApiError(400, "\"tools\" must be an array", param="tools")
+    if len(tools_field) > MAX_CLIENT_TOOLS:
+        raise ApiError(400, f"\"tools\" has {len(tools_field)} entries; the limit is {MAX_CLIENT_TOOLS}",
+                       param="tools")
     out: dict[str, Tool] = {}
     for t in tools_field:
         if not isinstance(t, dict) or t.get("type") != "function" or not isinstance(t.get("function"), dict):
@@ -273,18 +317,97 @@ def parse_client_tools(tools_field, tool_choice, reserved_names: set[str], recor
             schema = {"type": "object", "properties": {}}
         if not isinstance(schema, dict):
             raise ApiError(400, f"tool {name!r}: \"parameters\" must be a JSON Schema object", param="tools")
-
-        def make_fn(name):
-            def fn(args, _ctx):
-                record.append((name, dict(args)))
-                return ToolResult("", trust="untrusted", source=name)
-            return fn
         try:
-            out[name] = Tool(name, fn.get("description") or "", schema, make_fn(name), permission="allow",
-                             trust="untrusted", network=False, consequential=False, origin="client")
+            out[name] = Tool(name, fn.get("description") or "", schema, _client_tool_never_runs,
+                             permission="allow", trust="untrusted", network=False, consequential=False,
+                             origin="client", show_description=False)
         except ValueError as e:
             raise ApiError(400, f"tool {name!r}: {e}", param="tools") from None
     return out
+
+
+def _client_tool_line(tool: Tool) -> str:
+    """tool's name and argument names as one fixed-vocabulary line -- never its free-text description
+    (parse_client_tools already sets show_description=False; this function does not read `.description`
+    either, so the field's mere presence on the object is inert, not the only guard against it leaking).
+
+    A tool's own `name` is limited to dawnr_harness.tools.NAME's character set (1-128 of
+    A-Za-z0-9_.-, checked by Tool.__post_init__), but a JSON Schema's property KEYS -- what
+    Tool.signature() would use verbatim for argument names -- carry no such limit at all: a client
+    could spell a sentence as a "parameter name" instead of one. one_line's whitespace collapse plus a
+    short cap closes that the same way MAX_INDEX_DESCRIPTION bounds a description, at a size no real
+    parameter name needs; the whole line is capped again after joining, so many short names cannot add
+    up to one long one."""
+    props = tool.input_schema.get("properties") or {}
+    required = set(tool.input_schema.get("required") or ())
+    args = [one_line(str(p), MAX_CLIENT_ARG_NAME) + ("" if p in required else "?") for p in props]
+    return one_line(f"{tool.name}({', '.join(args)})", MAX_CLIENT_ARG_NAME * 4)
+
+
+def _client_tools_index(client_tools: dict[str, Tool]) -> str:
+    """The lines the model sees for THIS request's client-declared tools: names and argument names
+    only, never free text (_client_tool_line), in a block kept separate from the operator's own
+    Harness.index() output. This is a fixed vocabulary standing in for the untrusted-span marking the
+    rest of the harness uses (<|output_start|><|untrusted|> ..., DAWNR-HARNESS.md section 7) because
+    dawnr's chat format has no untrusted span inside a user turn to put it in at all
+    (chat.render_conversation raises unless a user message's content is a plain string), and this index
+    is text glued onto that turn, the only place a tool list is ever shown (Harness.index). See the
+    module docstring."""
+    lines = ["Client tools (declared by this API request, not the operator; call by exact name; names "
+            "and arguments only, no further description is shown):"]
+    lines += [_client_tool_line(t) for t in client_tools.values()]
+    return "\n".join(lines)
+
+
+class _ClientToolHarness:
+    """Stands in for the real harness for exactly the one locked generation a request with client
+    `tools` drives (DawnrAPI.create/create_stream swap it in and back out, always in a `finally`).
+    Every attribute and method engine.Engine.generate touches on `self.harness` other than .call and
+    .call_text (.hooks, .session(), .stop()) passes straight through unchanged, so dawnr's own registry
+    tools (t, an operator's skills, web, MCP) are entirely unaffected by this wrapper's presence: a call
+    to one of their names still reaches the real Harness.call in full, policy and hooks and the audit
+    log included.
+
+    A client-declared name is intercepted here INSTEAD, before it would ever reach Harness.call: no
+    policy decision runs for it (there is no operator rule to apply to a name the operator never
+    configured), no hook sees it, nothing about it is written to the audit log, and it is never added
+    to self._harness.registry (the module docstring's "never the shared registry") -- so nothing
+    outside this one object, for this one request, ever holds it, and there is nothing to remove when
+    the request ends because nothing else ever had it in the first place.
+    """
+
+    def __init__(self, harness, client_tools: dict[str, Tool], record: list):
+        self._harness = harness
+        self._client_tools = client_tools
+        self._record = record
+        self.hooks = harness.hooks
+
+    def session(self):
+        return self._harness.session()
+
+    def stop(self, *args, **kwargs):
+        return self._harness.stop(*args, **kwargs)
+
+    def call_text(self, text: str, *, context: str = "", session=None) -> ToolResult:
+        try:
+            name, arguments = parse_call(text)
+        except CallError as e:
+            return ToolResult(str(e), is_error=True, source="harness")
+        return self.call(name, arguments, context=context, session=session)
+
+    def call(self, name: str, arguments: dict, *, context: str = "", session=None) -> ToolResult:
+        tool = self._client_tools.get(name)
+        if tool is None:
+            return self._harness.call(name, arguments, context=context, session=session)
+        errs = validate(tool.input_schema, arguments)
+        if errs:
+            # untrusted, unlike Harness.call's own generic validation-error reply: the schema these
+            # errors quote from (a bad enum, a minLength) is the CLIENT's own, so an error message can
+            # otherwise become a second place for a client's free text to reach the model unmarked,
+            # after the index (_client_tools_index) is already closed to it.
+            return ToolResult(f"{name}: " + "; ".join(errs), is_error=True, trust="untrusted", source=name)
+        self._record.append((name, dict(arguments)))
+        return ToolResult("", trust="untrusted", source=name)
 
 
 # ------------------------------------------------------------------------------- driving the engine --
@@ -317,9 +440,9 @@ def run_turn(engine: Engine, tok, prompt_ids: list[int], *, max_tokens: int, tem
             top_k: int | None, seed: int, record: list, deadline: float, stop: list[str] | None):
     """Drive one assistant turn through the engine, yielding ("text", str) for each new slice of
     visible content, ("tool_call", name, arguments) at most once, then exactly one ("done",
-    finish_reason) -- always the last event. `record` is the list parse_client_tools' stub `fn`s
-    append onto: the moment it grows, the call that grew it is the answer and generation stops there,
-    before the harness's forced output for that call is ever produced (the module docstring). Only
+    finish_reason) -- always the last event. `record` is the list _ClientToolHarness.call appends
+    onto: the moment it grows, the call that grew it is the answer and generation stops there, before
+    the harness's forced output for that call is ever produced (the module docstring). Only
     the model's plain-language text reaches "text": dawnr's own registry tool calls (and their
     output) run in band as always but never leave this function, matching reply_parts' own part
     types."""
@@ -496,7 +619,7 @@ class DawnrAPI:
         conversation, continuing = to_conversation(req.get("messages"))
         record: list = []
         reserved = set(self.engine.harness.registry.names())
-        client_tools = parse_client_tools(req.get("tools"), req.get("tool_choice"), reserved, record)
+        client_tools = parse_client_tools(req.get("tools"), req.get("tool_choice"), reserved)
         if client_tools and not self.engine.harness_tokens:
             raise ApiError(400, "this checkpoint has no harness tokens (chat.with_harness_tokens); it cannot "
                            "be offered tools -- retrain, or send the request without \"tools\"", param="tools")
@@ -519,30 +642,42 @@ class DawnrAPI:
         if stop is not None and (not isinstance(stop, list) or not all(isinstance(s, str) for s in stop)):
             raise ApiError(400, "stop must be a string or an array of strings", param="stop")
 
-        for tool in client_tools.values():
-            self.engine.harness.registry.add(tool)
-        ok = False
+        # Client tools are never added to the registry (the module docstring): the index the model sees
+        # is the operator's own (unaffected by this request's tools) plus a separate, fixed-vocabulary
+        # block for the client's, rather than the operator's Harness.index() rebuilt over a registry
+        # that briefly held both.
+        sections = []
+        if len(self.engine.harness.registry) > 1:
+            sections.append(self.engine.harness.index())
+        if client_tools:
+            sections.append(_client_tools_index(client_tools))
+        first_turn = not any(m["role"] == "assistant" for m in conversation["messages"])
+        if first_turn and sections:
+            first = conversation["messages"][0]
+            first["content"] = "\n\n".join(sections) + "\n\n" + first["content"]
         try:
-            first_turn = not any(m["role"] == "assistant" for m in conversation["messages"])
-            if first_turn and (client_tools or len(self.engine.harness.registry) > 1):
-                first = conversation["messages"][0]
-                first["content"] = self.engine.harness.index() + "\n\n" + first["content"]
-            try:
-                render = render_for_continuation if continuing else chat.render_for_completion
-                prompt_ids = render(self.tok, conversation)
-            except ValueError as e:
-                raise ApiError(400, str(e), param="messages") from None
-            if len(prompt_ids) >= self.engine.model.config.block_size:
-                raise ApiError(400, f"the conversation is {len(prompt_ids)} tokens; the model's context "
-                               f"window is {self.engine.model.config.block_size}", code="context_length_exceeded",
-                               param="messages")
-            ok = True
-        finally:
-            if not ok:
-                for name in client_tools:
-                    self.engine.harness.registry.remove(name)
+            render = render_for_continuation if continuing else chat.render_for_completion
+            prompt_ids = render(self.tok, conversation)
+        except ValueError as e:
+            raise ApiError(400, str(e), param="messages") from None
+        if len(prompt_ids) >= self.engine.model.config.block_size:
+            raise ApiError(400, f"the conversation is {len(prompt_ids)} tokens; the model's context "
+                           f"window is {self.engine.model.config.block_size}", code="context_length_exceeded",
+                           param="messages")
         kw = dict(max_tokens=max_tokens, temperature=temperature, top_k=top_k, seed=seed, record=record, stop=stop)
         return prompt_ids, kw, client_tools
+
+    def _swap_in_client_tools(self, client_tools: dict[str, Tool], record: list):
+        """self.engine.harness for the generation about to run: a _ClientToolHarness wrapping the real
+        one when this request declared tools, the real harness unchanged otherwise (so a request with no
+        `tools` takes exactly the path it did before this class existed). The caller restores
+        self.engine.harness itself, in a `finally` (create, create_stream) -- safe to do unconditionally
+        there even when this returns the real harness untouched. This request already holds self.lock for
+        its whole duration (one generation at a time, AGENTS.md), so no other request's thread can
+        observe or race this swap."""
+        if not client_tools:
+            return self.engine.harness
+        return _ClientToolHarness(self.engine.harness, client_tools, record)
 
     def create(self, req: dict) -> dict:
         if not self.lock.acquire(timeout=self.lock_timeout):
@@ -550,26 +685,30 @@ class DawnrAPI:
                            type_="server_error", code="server_busy")
         try:
             prompt_ids, kw, client_tools = self._prepare(req)
+            real_harness = self.engine.harness
+            self.engine.harness = self._swap_in_client_tools(client_tools, kw["record"])
             try:
                 deadline = time.monotonic() + self.timeout
                 content, tool_call, finish_reason, completion_tokens = run_sync(
                     self.engine, self.tok, prompt_ids, deadline=deadline, **kw)
             finally:
-                for name in client_tools:
-                    self.engine.harness.registry.remove(name)
+                self.engine.harness = real_harness
         finally:
             self.lock.release()
         return chat_completion_response(self.model_id, content, tool_call, finish_reason, len(prompt_ids),
                                         completion_tokens)
 
     def create_stream(self, req: dict) -> Iterator[dict]:
-        """A generator: draining it fully (or closing it early) always releases the lock and any
-        client tools it registered, whether the caller reads every chunk or stops partway."""
+        """A generator: draining it fully (or closing it early) always releases the lock and restores
+        the engine's real harness (the `finally` blocks below), whether the caller reads every chunk or
+        stops partway."""
         if not self.lock.acquire(timeout=self.lock_timeout):
             raise ApiError(503, "another generation is already running; try again shortly",
                            type_="server_error", code="server_busy")
         try:
             prompt_ids, kw, client_tools = self._prepare(req)
+            real_harness = self.engine.harness
+            self.engine.harness = self._swap_in_client_tools(client_tools, kw["record"])
             try:
                 cid, created = "chatcmpl-" + uuid.uuid4().hex, int(time.time())
                 deadline = time.monotonic() + self.timeout
@@ -577,8 +716,7 @@ class DawnrAPI:
                 yield from stream_chat_completion(self.model_id, cid, created, self.engine, self.tok, prompt_ids,
                                                   include_usage=include_usage, deadline=deadline, **kw)
             finally:
-                for name in client_tools:
-                    self.engine.harness.registry.remove(name)
+                self.engine.harness = real_harness
         finally:
             self.lock.release()
 

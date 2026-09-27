@@ -538,31 +538,64 @@ harness this file describes around the model, exactly as `chat_cli.py`'s
 `--harness` does; with none given, only the t tool is offered, offline, as
 everywhere else in this repository.
 
-**A client's `tools` are offered the same way an operator's tools are.**
-dawnr's call syntax already has one form for every tool,
-`<|tool_start|> name {json} <|tool_end|>` (section 1), used until now only for
-tools the operator configured. An OpenAI-style `tools` array in the request
-is added into the harness's own registry for the lifetime of that one request
-(removed again once it answers, under the same lock that already serializes
-generation, so one request's tools are never visible to another's). What
-differs from an operator's tool: the harness never gets to force a client
-tool's result back into the model's context. Its arguments are checked
-against the JSON Schema the client supplied -- the same check every registry
-tool gets, `dawnr_harness.tools.validate`, before the tool ever "runs" -- and
-the moment a *validated* call closes, generation stops there, before the
-harness would force anything back into the stream. The call is returned to
-the caller as `tool_calls`, exactly as OpenAI's own API stops generation for
-a function call rather than answering it itself. An operator's OWN registry
-tools (the t checker, skills, web, MCP) are unaffected: they still run in
-band under the harness's existing policy the instant their call closes, and
-none of that ever reaches the client -- an OpenAI-style caller did not ask
-for them and does not know their schemas, so only the model's own text
-becomes the response `content`. A client's tool RESULT (its `tool`-role
-message, sent back on the next request) is folded into the conversation as a
-`tool_output` part marked **untrusted** (section 7's mark, the same one a
-fetched web page's text gets): computation this server did not run and
-cannot vouch for is exactly what "untrusted" means here, whether it came
-from a web page or from the other tool driving this API.
+**A client's `tools` are never added to the harness's own registry.** Section
+7's second rule is "only the configuration adds tools", and an HTTP request
+is not the configuration -- so a client's OpenAI-style `tools` array lives in
+`_ClientToolHarness`, a stand-in for the harness that `DawnrAPI.create` /
+`create_stream` swap in only for the one locked generation that request
+drives and swap back out in a `finally`. Nothing outside that one object, for
+that one request, ever holds a client tool: not the registry, not an
+operator's permission glob or hook matcher, not the audit log. A
+client-declared name is intercepted before it would ever reach
+`Harness.call`: its arguments are checked against the JSON Schema the client
+supplied -- the same check every registry tool gets, `dawnr_harness.tools.
+validate` -- and once *validated*, the call is simply recorded and generation
+stops there, before anything would be forced back into the stream. There is
+no `Tool.fn` to "run" for it in the sense section 2 means: a client tool's
+`fn` exists only to satisfy the dataclass and raises if anything ever calls
+it, because dispatch by name happens in `_ClientToolHarness.call` directly.
+The call is returned to the caller as `tool_calls`, exactly as OpenAI's own
+API stops generation for a function call rather than answering it itself --
+**a client tool is never run by dawnr**, only ever handed back to the caller
+that declared it. An operator's OWN registry tools (the t checker, skills,
+web, MCP) are entirely unaffected by any of this: a call to one of their
+names still reaches the real `Harness.call` in full, policy and hooks and the
+audit log included, and none of it ever reaches the client -- an OpenAI-style
+caller did not ask for them and does not know their schemas, so only the
+model's own text becomes the response `content`.
+
+The model's index (section 9's `Harness.index()`) is built from the real
+registry alone, so it is unaffected too. A client's tools
+are announced in a second, separate block glued onto the same first user
+turn, and only as a **fixed vocabulary**: every client `Tool` is built with
+`show_description=False`, and the rendering does not read `description`
+either, so a client's own free-text description -- the one OpenAI field
+written specifically to instruct the model ("used by the model to choose
+when and how to call it") -- never reaches the prompt, name and argument
+names only (each argument name capped too: a JSON Schema property key, unlike
+a tool's own name, carries none of `dawnr_harness.tools.NAME`'s character
+restrictions, so it is a second place free text could otherwise hide). This
+is deliberately not a smaller dose of section 7's own mark
+(`<|output_start|><|untrusted|> ... <|output_end|>`): that span exists only
+inside an ASSISTANT turn -- `chat.render_conversation` raises if a USER
+message's content is anything but a plain string -- and the index is text
+glued onto the first USER turn, the only place a tool list has ever been
+shown. There is no untrusted span available to put a client's prose in
+there, so none of it is let through at all, rather than let through and
+marked. (An earlier version of this server added a client's tools straight
+into the shared registry and rendered the ordinary index over both at once;
+a security review caught that a client's name and description would then
+reach the model exactly as trusted as the operator's own tools, with no mark
+and no separation at all -- the same mechanism named a "Tool Poisoning
+Attack" for MCP servers, Invariant Labs, 2025-04-01, invariantlabs.ai/blog/
+mcp-security-notification-tool-poisoning-attacks -- fixed by the design
+above.) A client's tool
+RESULT (its `tool`-role message, sent back on the next request) is folded
+into the conversation as a `tool_output` part marked **untrusted** (section
+7's mark, the same one a fetched web page's text gets): computation this
+server did not run and cannot vouch for is exactly what "untrusted" means
+here, whether it came from a web page or from the other tool driving this
+API.
 
 **Deviations from the reference**, because dawnr's engine cannot do
 everything OpenAI's own service does: no `function_call`/`function` role
@@ -586,4 +619,11 @@ tool call stopping generation without forcing anything back, dawnr's own
 registry tool calls never reaching visible content, and, over a real HTTP
 connection: `GET /v1/models`, a full tool-call-then-continue round trip,
 streaming (the SSE framing and the usage chunk), the bearer-token check, and
-the request-size and `n` limits.
+the request-size and `n` limits. Security regression coverage for the design
+above: a client tool's call never touches the operator's registry or audit
+log while an operator's own tool call through the same `_ClientToolHarness`
+is unaffected; a client's free-text description -- and an oversized JSON
+Schema property name standing in for one -- never appears in the rendered
+prompt token ids, checked directly (decoded), not just in a part dict; the
+registry is byte-for-byte the same list of names, and the same object, before
+and after a request that declared `tools`, over a real HTTP connection.
