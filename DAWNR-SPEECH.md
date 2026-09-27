@@ -59,8 +59,9 @@ yet — that is explicitly future work, sized and sequenced, not measured.
 Every module above is tested: `test_speech_text.py`, `test_speech_metrics.py`,
 `test_speech_audio_features.py`, `test_speech_ctc.py`, `test_speech_ctc_decode.py`,
 `test_speech_dataset.py`, `test_speech_checkpoint.py`, `test_speech_audio_io.py`,
-`test_speech_download.py`, `test_speech_prepare_manifest.py` — 94 cases, CPU only,
-under a second total, no network and no audio hardware required for any of them.
+`test_speech_download.py`, `test_speech_prepare_manifest.py` — 95 cases, CPU only,
+under 8 seconds total (nearly all of it the smoke test below), no network and
+no audio hardware required for any of them.
 
 ## Automatic speech recognition: the design
 
