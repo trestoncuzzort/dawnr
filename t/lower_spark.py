@@ -1680,6 +1680,8 @@ def _ce_stmts(stmts: list, env: dict) -> dict:
             # fail-closed treatment already given to loops, calls, seq ops
             # and quantifiers above.
             raise _NoCe("return: no machine mirror for early exit")
+        elif "lemma" in s:
+            continue              # SPEC.md "Lemmas (v1)": erased at run time
         else:
             raise _NoCe(f"statement {sorted(s)!r}")
     return env
@@ -3886,6 +3888,10 @@ class Lower:
         # value-neutral `(if OBL then E else E)` wrapper (_with_obls).
         self.path: list[str] = []
         self.obls: list[str] = []
+        # SPEC.md "Lemmas (v1)": each lemma's parameter types (expr()'s
+        # expected type for its call arguments).
+        self.lemma_ptys = {l["name"]: [p["type"] for p in l["params"]]
+                           for l in task.get("lemmas", [])}
         # 2026-09-14 (spark-cert, ROADMAP 16.2 "value-witness certificates
         # through loop bodies"): one UNCONTRACTED clone of each W_k this
         # compile pass lowers, keyed by the contracted helper's own name
@@ -4479,9 +4485,27 @@ class Lower:
                 raise NotImplementedError(
                     "spark: return statement reached compile(); "
                     "has_return()-routing should have used compile_r")
+            elif "lemma" in s:
+                # SPEC.md "Lemmas (v1)": the lemma is a Boolean function
+                # whose Pre is its requires and whose Post is its ensures
+                # (_lower_lemma). Its call joins the value-neutral
+                # obligation wrapper (_with_obls) where it executes, under
+                # its path condition: GNATprove checks its Pre there, and
+                # the call term puts its Post in the proof context.
+                self.obls.append(self._lemma_call(s["lemma"], env, types, psub))
             else:
                 raise ValueError(f"unknown statement {sorted(s)!r}")
         return env
+
+    def _lemma_call(self, c: dict, env: dict, types: dict, psub: dict,
+                    path: bool = True) -> str:
+        ptys = self.lemma_ptys[c["name"]]
+        args = [self.expr(a, {**psub, **env}, types, t)
+                for a, t in zip(c["args"], ptys)]
+        call = (f"{cap(c['name'])} ({', '.join(args)})" if args
+                else cap(c["name"]))
+        guard = " and then ".join(f"({p})" for p in self.path) if path else ""
+        return f"(if {guard} then {call} else True)" if guard else f"({call})"
 
     # compile_r() is compile()'s return-aware twin (SPEC.md "Early exit",
     # 2026-09-08, ROADMAP 12.7). Only called on a statement list has_return()
@@ -4533,6 +4557,10 @@ class Lower:
             # SPEC.md "Methods (v1)": the escape threading here does not
             # carry compile()'s path condition, so a call obligation could
             # not be guarded by "nothing escaped yet"; refused by name.
+            if "lemma" in s:
+                raise NotImplementedError(
+                    "spark: lemma call in a body with an early `return`; "
+                    "its Pre obligation has no escape-aware path guard")
             if ("assign" in s and self._is_method_call(s["assign"][1])) \
                     or ("var" in s and self._is_method_call(s["var"]["init"])):
                 raise NotImplementedError(
@@ -5483,6 +5511,8 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                     if it > interp.MAX_LOOP:
                         raise interp.Budget("loop cap")
                 continue
+            elif "lemma" in s:
+                continue          # SPEC.md "Lemmas (v1)": erased at run time
             else:
                 return None
             ob = defined(e)
@@ -5872,7 +5902,8 @@ def _method_pseudo(task: dict, m: dict) -> dict:
               "returns": m["returns"], "requires": m.get("requires", []),
               "ensures": m["ensures"], "body": m["body"],
               "spec_funs": task.get("spec_funs", []),
-              "methods": task.get("methods", [])}
+              "methods": task.get("methods", []),
+              "lemmas": task.get("lemmas", [])}
     if "decreases" in m:
         pseudo["decreases"] = m["decreases"]
     return pseudo
@@ -5966,6 +5997,59 @@ def _lower_method(task: dict, m: dict, L: "Lower") -> list[str]:
     return mL.helpers + [f"   {sig} is\n"
                          f"     ({final})\n"
                          "   with\n     " + ",\n     ".join(aspects) + ";\n"]
+
+
+def _lower_lemma(task: dict, l: dict, L: "Lower") -> str:
+    """SPEC.md "Lemmas (v1)": one t lemma as a Boolean SPARK function whose
+    Pre is the lemma's requires and whose Post is its ensures, the SPARK
+    lemma-function idiom (SPARK UG 7.9.3 "Writing Contracts for Program
+    Integrity" / the SPARK lemma library, whose lemmas are procedures with
+    Pre and Post; a function is used here because this lowering writes
+    expression functions only). GNATprove proves the Post from the body,
+    which is the lemma's own proof skeleton: an `if` over calls of earlier
+    lemmas or of itself, with Subprogram_Variant when it recurses. The
+    value is always True; only the contract carries information."""
+    name = cap(l["name"])
+    psub = {p["name"]: cap(p["name"]) for p in l["params"]}
+    types = {p["name"]: p["type"] for p in l["params"]}
+    for p in l["params"]:
+        if isinstance(p["type"], dict) and "pair" in p["type"]:
+            raise NotImplementedError(
+                f"spark: lemma {l['name']!r} has a pair parameter; pair "
+                f"records are declared from the task's own signature only")
+
+    def body_expr(stmts: list) -> str:
+        parts = []
+        for s in stmts:
+            if "lemma" in s:
+                parts.append(L._lemma_call(s["lemma"], {}, types, psub,
+                                           path=False))
+            else:
+                c = s["if"]
+                cond = L.expr(c["cond"], psub, types)
+                parts.append(f"(if {cond} then {body_expr(c['then'])} "
+                             f"else {body_expr(c['else'])})")
+        return " and ".join(parts) if parts else "True"
+
+    aspects = ["Pre  => " + ("\n       and then ".join(
+        L.expr(e, psub, types) for e in l["requires"]) or "True"),
+        "Post => " + "\n       and then ".join(
+            L.expr(e, psub, types) for e in l["ensures"])]
+    if "decreases" in l:
+        d = L.expr(l["decreases"], psub, types)
+        aspects.append(f"Subprogram_Variant => "
+                       f"(Decreases => (if {d} >= 0 then {d} else 0))")
+    # The body (always True) says nothing a caller needs, and a visible
+    # recursive body is one more quantified axiom in every caller's
+    # context: hidden, as a method's is (_METHOD_HIDE; it removes facts
+    # only).
+    aspects.append(_METHOD_HIDE)
+    plist = "; ".join(f"{cap(p['name'])} : {ada_type(p['type'])}"
+                      for p in l["params"])
+    sig = (f"function {name} ({plist}) return Boolean" if plist
+           else f"function {name} return Boolean")
+    return (f"   {sig}\n   with\n     " + ",\n     ".join(aspects) + ";\n\n"
+            f"   {sig} is\n     ({body_expr(l['body'])});\n")
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
@@ -6115,6 +6199,14 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # expressions need the same preambles the task's would. Only read when
     # the task has methods, so no other task's package changes.
     methods_return = False
+    # SPEC.md "Lemmas (v1)": a lemma's seq parameters need the seq preamble
+    if any(p["type"] == "seq" or _has_seq_op(l)
+           for l in task.get("lemmas", []) for p in l["params"]) \
+            or any(_has_seq_op(l) for l in task.get("lemmas", [])):
+        needs_seq = True
+    if any(_is_nested_seq(p["type"]) for l in task.get("lemmas", [])
+           for p in l["params"]):
+        needs_nested_seq = True
     if task.get("methods"):
         m_seq, m_nested, methods_return = _methods_need(task)
         needs_nested_seq = needs_nested_seq or m_nested
@@ -6206,6 +6298,17 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # task's F, lowered BEFORE the task body so the W_k counter continues
     # across them (_lower_method). A method whose Ada name would meet a
     # name this package generates is refused rather than captured.
+    # SPEC.md "Lemmas (v1)": each lemma, in declaration order, as a proved
+    # Boolean function ahead of the methods and the task (_lower_lemma).
+    lemma_parts: list[str] = []
+    for l in task.get("lemmas", []):
+        ln = cap(l["name"]).lower()
+        if re.fullmatch(r"w_\d+(_state)?(_cert)?(_state_cert)?", ln) \
+                or ln in ("f", "f_ce", "f_cert", "ce_num", "ce_int"):
+            raise NotImplementedError(
+                f"spark: lemma {l['name']!r} spells a name this package "
+                f"generates ({cap(l['name'])})")
+        lemma_parts.append(_lower_lemma(task, l, L))
     method_parts: list[str] = []
     for m in task.get("methods", []):
         mn = cap(m["name"]).lower()
@@ -6455,6 +6558,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [_pair_preamble(pair_types_used, L.needs_pair_eq)]
     for sf in spec_funs:
         parts += [sf]
+    parts += lemma_parts
     parts += method_parts
     for h in L.helpers:
         parts += [h]

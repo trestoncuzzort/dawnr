@@ -6883,6 +6883,97 @@ def _method_scratch(task: dict, body: list, funs: dict, used: set) -> list:
     return scratch
 
 
+# SPEC.md "Lemmas (v1)". Each lemma is a ghost C function with an ACSL
+# contract (ACSL reference manual, "Ghost functions", and the "lemma
+# function" idiom of ACSL by Example: a ghost function whose contract is
+# the lemma, whose body is its proof, and which is recursive with a
+# `decreases` clause for an induction), proved by WP in this file; a call
+# is a ghost call statement `/*@ ghost L_t(args); */`, whose contract WP
+# applies at that point exactly as for any C call. `_LEMMA_SIGS` holds the
+# lemma signatures of the task being lowered, set by the outermost
+# `lower()` so the method bodies it lowers see them too.
+_LEMMA_SIGS: dict = {}
+
+
+def _lemma_call_lines(c: dict, ctx: "Ctx", indent: str, task_name: str) -> list:
+    sig = _LEMMA_SIGS.get(c["name"])
+    if sig is None:
+        raise ValueError(f"call of unknown lemma {c['name']!r}")
+    out = []
+    args = []
+    for p, a in zip(sig, c["args"], strict=True):
+        out += at_asserts(a, ctx, indent, ctx.funs, task_name)
+        if p["type"] == "seq":
+            if "var" not in a or ctx.env.get(a["var"]) != "seq":
+                raise NotImplementedError(
+                    "lemma call: a seq argument must be a bare seq variable "
+                    "(its buffer and length are passed as a pointer, length "
+                    "pair)")
+            v = a["var"]
+            args += [v, ctx.seq_len.get(v, f"{v}_n")]
+        else:
+            args.append(cexpr(a, ctx.env, ctx.funs, task_name))
+    out.append(f"{indent}/*@ ghost {c['name']}_t({', '.join(args)}); */")
+    return out
+
+
+def _lemma_text(l: dict, funs: dict) -> str:
+    """One t lemma as a ghost C function with its ACSL contract."""
+    env = {}
+    for p in l["params"]:
+        if p["type"] not in ("int", "bool", "seq"):
+            raise NotImplementedError(
+                f"lemma {l['name']!r}: a {p['type']!r}-typed parameter is not "
+                f"implemented (int, bool and flat seq only)")
+        env[p["name"]] = p["type"]
+    ctx = Ctx(env, funs, ret=None, label="Here")
+    seqs = [p["name"] for p in l["params"] if p["type"] == "seq"]
+    clauses = []
+    for s in seqs:
+        clauses.append(f"  requires {s}_n >= 0;")
+        clauses.append(f"  requires \\valid_read({s} + (0 .. {s}_n - 1));")
+    for e in l["requires"]:
+        d = defs(e, ctx)
+        if d is not None:
+            clauses.append(f"  requires {d};")
+        clauses.append(f"  requires {pred(e, ctx)};")
+    if "decreases" in l:
+        clauses.append(f"  decreases ({term(l['decreases'], ctx)});")
+    clauses.append("  assigns \\nothing;")
+    for e in l["ensures"]:
+        d = defs(e, ctx)
+        p = pred(e, ctx)
+        clauses.append(f"  ensures {p};" if d is None else
+                       f"  ensures ({d}) && ({p});")
+    cparams = []
+    for p in l["params"]:
+        cparams += ([f"int *{p['name']}", f"int {p['name']}_n"]
+                    if p["type"] == "seq" else [f"int {p['name']}"])
+
+    def body(stmts_, ind):
+        out = []
+        for s in stmts_:
+            if "lemma" in s:
+                out += _lemma_call_lines(s["lemma"], ctx, ind, l["name"])
+            else:
+                c = s["if"]
+                out += at_asserts(c["cond"], ctx, ind, funs, l["name"])
+                out.append(f"{ind}if ({cexpr(c['cond'], env, funs, l['name'])}) {{")
+                out += body(c["then"], ind + "  ")
+                out.append(f"{ind}}} else {{")
+                out += body(c["else"], ind + "  ")
+                out.append(f"{ind}}}")
+        return out
+    # inside the ghost function every call is already ghost code, so the
+    # `/*@ ghost ... */` wrapper of a call statement is dropped there
+    lines = [x.replace("/*@ ghost ", "").replace("; */", ";") if "/*@ ghost " in x
+             else x for x in body(l["body"], "    ")]
+    return ("/*@ ghost\n  /@\n" + "\n".join(clauses) + "\n  @/\n"
+            + f"  void {l['name']}_t({', '.join(cparams) or 'void'}) {{\n"
+            + "".join(x + "\n" for x in lines)
+            + "  }\n*/\n")
+
+
 def _lower_method(task: dict, m: dict, earlier: list, info: dict) -> str:
     """One method as its own contract + C function, lowered by `lower()`
     on a task-shaped view of it (its self-calls then take the task
@@ -7398,6 +7489,8 @@ def stmts(body: list, ctx: Ctx, task_name: str, indent: str,
             out.append(f"{indent}}}")
             for n in hit:
                 prefix.pop(n, None)
+        elif "lemma" in s:
+            out += _lemma_call_lines(s["lemma"], ctx, indent, task_name)
         else:
             raise ValueError(f"t has no statement {s!r}")
     return out
@@ -8501,6 +8594,10 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
                     break
             if stopped:
                 return ctx, True
+        elif "lemma" in s:
+            # SPEC.md "Lemmas (v1)": erased at run time, and the
+            # certificate replays what the twin executes
+            continue
         else:
             raise _CertSkip(f"no replay for statement {s!r}")
     return ctx, False
@@ -9016,6 +9113,8 @@ def _undef_certificate(task: dict, twin_body: list, w: dict,
                     if it > interp.MAX_LOOP:
                         raise interp.Budget("loop cap")
                 continue
+            elif "lemma" in s:
+                continue          # SPEC.md "Lemmas (v1)": erased at run time
             else:
                 raise ValueError(f"undef-certificate: statement {s!r} "
                                  "not walked (return)")
@@ -9764,6 +9863,18 @@ def lower(task: dict, body: list, witness: dict | None = None,
     # `{m}_t`; see the methods section above `stmts()`.
     method_info = _unit if _unit is not None else {}
     method_texts = []
+    lemma_texts = []
+    if _unit is None:
+        _LEMMA_SIGS.clear()
+        _LEMMA_SIGS.update({l["name"]: l["params"]
+                            for l in task.get("lemmas", [])})
+        for l in task.get("lemmas", []):
+            if any(l["name"] + "_t" == n for n in
+                   [f"{task['name']}_t", CERT_FN, CERT_GOAL]
+                   + [f"{m['name']}_t" for m in task.get("methods", [])]):
+                raise NotImplementedError(
+                    f"lemma {l['name']!r}: its C function name collides")
+            lemma_texts.append(_lemma_text(l, funs))
     if _unit is None and task.get("methods"):
         taken: set = set()
 
@@ -10462,9 +10573,10 @@ def lower(task: dict, body: list, witness: dict | None = None,
                                       and _ensures_states_len(task))}
         return fn_text
     rc = t_names.rename_comment(renames)
-    if method_texts:
+    if method_texts or lemma_texts:
         return _place_mirrors(
             "\n".join(header) + ("\n" if header else "")
+            + "".join(lemma_texts)
             + "".join(method_texts)
             + fn_text
             + (cert or "")
