@@ -1043,15 +1043,17 @@ t/FEATURES-TRACK.md.
 
 Stated 2026-09-27 (t/FEATURES-TRACK.md "The features ahead: 9. Finite
 sets"). Measured first, on the 1886 staged Dafny files of the 2026-09-26
-lift: 89 methods refuse `set` in the round-1 baseline, and the shapes are
-three (`t/FEATURES-CLOUD-2026-09-27-r2.md` has the round-2 count and the
-per-shape split): the cardinality of a bounded comprehension, `|set i: int
-| 0 <= i < |s| && P(s[i])|`, used as a count in an `ensures` (the dominant
-shape, humaneval 018/026/064/069/073/098/108/126 and the vericoding
-`solve`s); a `set<int>` return built up by a loop (`common`); and
-membership in a display, `s[i] in {'G', 'T', '.', '#'}`. So t takes a
+lift with the merged lifter (the round-2 census,
+`t/FEATURES-CLOUD-2026-09-27-r2.md`): 77 methods refuse `set`, in three
+shapes -- 39 the cardinality of a bounded comprehension, `|set i: int | 0
+<= i < |s| && P(s[i])|`, used as a count in an `ensures` (humaneval
+018/026/064/069/073/098/108/126 and the vericoding `solve`s); 30 a display,
+`s[i] in {'G', 'T', '.', '#'}`; 8 a `set<int>` parameter or return
+(`common(l1, l2) returns (c: set<int>)`, built up by a loop). So t takes a
 finite set of ints as a value, with the six operations every kernel's own
-library states directly; the comprehension is the wave after (below).
+library states directly; the comprehension is the wave after (below), and
+the lifter's mapping of Dafny's `set<int>` onto this type is not yet built
+(the 38 display and typed-name methods are what it would reach).
 
 New type: `"set"`, a finite set of ints, written `set`. A parameter,
 return or local type. Not in v1: a set of bools, seqs or pairs, a set as a
