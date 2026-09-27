@@ -125,6 +125,7 @@ Lemma    ::= {"name": Id, "params": [ {"name": Id, "type": Type}* ],
               "body": [ LemmaStmt* ]}           (* its proof; may be empty *)
 LemmaStmt ::= {"if": {"cond": Expr, "then": [LemmaStmt*], "else": [LemmaStmt*]}}
            | {"lemma": {"name": Id, "args": [Expr*]}}   (* an EARLIER lemma, or itself *)
+           | {"assert": Expr}                            (* written `assert e;`; a proof step *)
               (* written `lemma l(a: int) requires .. ensures .. decreases .. { .. }`
                  between the task's clauses and its body, Dafny's lemma (reference
                  manual 6.3.3) with no return. A lemma is called only as a

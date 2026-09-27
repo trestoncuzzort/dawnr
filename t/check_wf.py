@@ -87,8 +87,9 @@ RULES: dict[str, str] = {
     "fill-types": "fill wants (int, int) or (int, seq) for the row "
                   "(Sequences as values; Nested sequences)",
     "ite-branches": "ite branches must have the same type",
-    "lemma-body": "a lemma body holds only `if` and lemma-call statements, "
-                  "and a lemma has no return (Lemmas; Dafny reference 6.3.3)",
+    "lemma-body": "a lemma body holds only `if`, `assert` and lemma-call "
+                  "statements, and a lemma has no return (Lemmas; Dafny "
+                  "reference 6.3.3)",
     "lemma-call": "a lemma call is a statement naming a declared lemma, "
                   "with matching arity and argument types; a lemma is never "
                   "called as an expression and its arguments call no method "
@@ -772,9 +773,10 @@ def _lemma_calls(body) -> list:
 
 def _check_lemma_body(body, name, errs) -> None:
     for s in body:
-        if not isinstance(s, dict) or not ("if" in s or "lemma" in s) or len(s) != 1:
-            _e(errs, s, f"lemma {name}: a lemma body holds only if and lemma "
-                        f"calls", "lemma-body")
+        if (not isinstance(s, dict) or not ("if" in s or "lemma" in s or "assert" in s)
+                or len(s) != 1):
+            _e(errs, s, f"lemma {name}: a lemma body holds only if, assert and "
+                        f"lemma calls", "lemma-body")
         elif "if" in s:
             _check_lemma_body(s["if"]["then"], name, errs)
             _check_lemma_body(s["if"]["else"], name, errs)
@@ -791,7 +793,7 @@ def _check_lemma(l, i, task, funs, earlier, lnames, mnames, ver, errs):
         _e(errs, l, f"bad lemma name {name!r}", "lemma-name")
         return
     if (name == task["name"] or name in funs or lnames.count(name) > 1
-            or name in mnames):
+            or name in mnames or name == "assert"):
         _e(errs, l, f"lemma name {name} collides with the task, a spec_fun, "
                     f"a method or another lemma", "lemma-name")
     for k in ("params", "requires", "ensures", "body"):
@@ -831,7 +833,8 @@ def _check_lemma(l, i, task, funs, earlier, lnames, mnames, ver, errs):
         _e(errs, l, f"lemma {name} calls a later lemma", "lemma-order")
     sigs = dict(earlier)
     sigs[name] = l
-    _check_stmts(l["body"], dict(penv), funs, ver, errs, set(), lemmas=sigs)
+    _check_stmts(l["body"], dict(penv), funs, ver, errs, set(), lemmas=sigs,
+                 in_lemma=True)
 
 
 def _calls_any(e, names) -> bool:
@@ -896,7 +899,8 @@ def _check_returns(body, rname, errs):
             _check_returns(s["while"]["body"], rname, errs)
 
 
-def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None):
+def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None,
+                 in_lemma=False):
     lemmas = {} if lemmas is None else lemmas
     for s in body:
         if "assign" in s:
@@ -924,9 +928,9 @@ def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None):
             if _ty(c["cond"], env, funs, ver, errs, set()) != "bool":
                 _e(errs, s, "if condition is not bool", "bool-cond")
             _check_stmts(c["then"], dict(env), funs, ver, errs, set(assignable),
-                         lemmas)
+                         lemmas, in_lemma)
             _check_stmts(c["else"], dict(env), funs, ver, errs, set(assignable),
-                         lemmas)
+                         lemmas, in_lemma)
         elif "while" in s:
             if ver == 0:
                 _e(errs, s, "while in a v0 task", "while-v0")
@@ -958,5 +962,9 @@ def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None):
             if ver == 0:
                 _e(errs, s, "lemma call in a v0 task", "v0-frozen")
             _check_lemma_call(s, env, funs, ver, errs, lemmas)
+        elif "assert" in s and in_lemma:
+            # SPEC.md "Lemmas (v1)": a proof step inside a lemma body only
+            if _ty(s["assert"], env, funs, ver, errs, set()) != "bool":
+                _e(errs, s, "assert is not bool", "bool-cond")
         else:
             _e(errs, s, f"t has no statement {sorted(s)!r}", "unknown-stmt")

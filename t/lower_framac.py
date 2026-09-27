@@ -6955,6 +6955,10 @@ def _lemma_text(l: dict, funs: dict) -> str:
         for s in stmts_:
             if "lemma" in s:
                 out += _lemma_call_lines(s["lemma"], ctx, ind, l["name"])
+            elif "assert" in s:
+                d = defs(s["assert"], ctx)
+                p = pred(s["assert"], ctx)
+                out.append(f"{ind}/@ assert {p if d is None else f'({d}) && ({p})'}; @/")
             else:
                 c = s["if"]
                 out += at_asserts(c["cond"], ctx, ind, funs, l["name"])

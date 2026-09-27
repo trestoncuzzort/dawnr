@@ -942,6 +942,7 @@ A new optional top-level field, v1 only, and one new statement:
              "decreases"?: Expr,      // required iff the body calls the lemma itself
              "body": [ LemmaStmt* ]}, ... ]      // its proof; may be empty
 LemmaStmt: {"if": {...}} over LemmaStmts | {"lemma": {"name": ID, "args": [Expr*]}}
+         | {"assert": Expr}                       // a proof step; lemma bodies only
 Stmt (new): {"lemma": {"name": ID, "args": [Expr*]}}
 ```
 
@@ -966,12 +967,16 @@ Rules (check_wf's `lemma-*` keys):
 - **Scope and typing.** The lemma's `requires`, `ensures`, `decreases` and
   body see its params only. Its contract may call spec_funs, never a
   method or a lemma.
-- **The body is a proof skeleton.** Only `if` and lemma calls: the case
-  split and the induction step of a Dafny lemma. No assignments, locals,
-  loops or returns (a lemma has no state and no result). Its calls name
-  EARLIER lemmas, or the lemma itself when it carries a `decreases`
-  (Dafny's own well-founded recursion for an inductive proof); no mutual
-  recursion.
+- **The body is a proof skeleton.** Only `if`, `assert` and lemma calls:
+  the case split, the intermediate facts and the induction step of a Dafny
+  lemma. No assignments, locals, loops or returns (a lemma has no state
+  and no result). `assert e;` (written so, contextual; allowed only inside
+  a lemma body) is a proof step: a kernel that states it must prove it
+  from what precedes it, and may then use it; a kernel that cannot place a
+  cut in its encoding (SPARK's expression functions) leaves it out, which
+  only removes a hint. Its calls name EARLIER lemmas, or the lemma itself
+  when it carries a `decreases` (Dafny's own well-founded recursion for an
+  inductive proof); no mutual recursion.
 - **Call position.** A lemma call is a whole statement. A lemma is never
   called inside an expression, and the call's arguments call no method.
 
@@ -1005,7 +1010,8 @@ spec_fun; sum_loop: an induction step used inside a loop; sq_bound: a
 nonlinear arithmetic fact) and seeded-fault probes `t/lemmas_probe/*.t`
 (false_lemma: an inductive lemma false at its base case; false_arith: a
 false nonlinear fact; circular: a lemma that "proves" `k == k + 1` by
-calling itself on the same argument). Per-kernel verdicts are in
+calling itself on the same argument; false_assert: a true lemma whose
+proof asserts a false step, around a correct program). Per-kernel verdicts are in
 t/FEATURES-TRACK.md.
 
 ## The twins

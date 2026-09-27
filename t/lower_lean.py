@@ -7021,6 +7021,11 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                         lines.append(f"{ind}have _lm{k[0]} := "
                                      f"{c['name']}_l {args} {pre}".rstrip())
                         continue
+                    if "assert" in s:
+                        k[0] += 1
+                        p = self.prop(s["assert"], {}, dict(ptypes))
+                        lines.append(f"{ind}have _la{k[0]} : {p} := by {base}")
+                        continue
                     c = s["if"]
                     rest = stmts[idx + 1:]
                     k[0] += 1
@@ -7059,7 +7064,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                     if set(ptypes) <= _lemma_vars(m, set()))
                 pats = [prods[0][0]] if prods else []
                 covered = set(ptypes) if prods else covered
-            if pats and set(ptypes) <= covered:
+            if ptypes and pats and set(ptypes) <= covered:
                 out.append(f"grind_pattern {name} => {', '.join(pats)}\n")
         return "\n".join(out), thms
 

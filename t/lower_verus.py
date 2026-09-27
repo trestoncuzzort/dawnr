@@ -4598,6 +4598,8 @@ class _V1:
                 ptys = self.lemma_ptys[c["name"]]
                 args = ", ".join(expr(a, t) for a, t in zip(c["args"], ptys))
                 out.append(f"{ind}{c['name']}({args});")
+            elif "assert" in s:
+                out.append(f"{ind}assert({expr(s['assert'])});")
             else:
                 c = s["if"]
                 out.append(f"{ind}if {expr(c['cond'])} {{")
