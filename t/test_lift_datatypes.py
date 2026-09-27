@@ -250,6 +250,32 @@ method Get(o: Option) returns (r: int)
 """
 
 
+RECORD_LOCAL = """
+datatype R = R(n: int, ok: bool)
+method Local(x: int) returns (r: int)
+  ensures r >= 0
+{
+  var parsed := R(x, x > 0);
+  r := if parsed.ok then parsed.n else 0;
+}
+method Mk(x: int) returns (p: R) ensures true { p := R(x, true); }
+method ViaCall(x: int) returns (r: int)
+  ensures r >= 0
+{
+  var parsed := Mk(x);
+  r := if parsed.ok then parsed.n else 0;
+}
+"""
+
+
+def test_a_datatype_local_is_named_by_shape() -> None:
+    v = _refusal(RECORD_LOCAL, "Local")
+    assert v.reason == "datatype-record" and v.token == "field ok", v
+    v = _refusal(RECORD_LOCAL, "ViaCall")
+    assert v.reason == "callee-refused:datatype-record", v
+    print("test_a_datatype_local_is_named_by_shape: ok")
+
+
 def test_match_is_named_by_its_first_pattern() -> None:
     for src, want in ((MATCH_INT, "match-literal"), (MATCH_STRING_STMT, "match-literal"),
                       (MATCH_CTOR, "datatype"), (MATCH_CTOR_ARGS, "datatype")):
@@ -264,6 +290,7 @@ def test_match_is_named_by_its_first_pattern() -> None:
 
 def run() -> None:
     test_match_is_named_by_its_first_pattern()
+    test_a_datatype_local_is_named_by_shape()
     test_pair_projections_are_named_by_their_base()
     test_array2_and_floor_members_take_their_own_names()
     test_datatype_shapes_are_named()
