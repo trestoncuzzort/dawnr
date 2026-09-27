@@ -4,6 +4,10 @@
 # this repo and are kept out of the public one by the whitelist, which cannot
 # be forgotten.
 .venv-train/
+# setup_training.py's own fetched uv binary, its downloaded release archives
+# and its uv package cache -- all regenerable from the sha256 pinned in that
+# file, none of it belongs in git.
+locallm/.tools/
 smoke_adapter/
 smoke_adapter_*/
 dpo_adapter_native/

@@ -1,0 +1,39 @@
+# Metadata for locallm, not a build. This folder is a flat collection of
+# scripts that import each other by bare name (home.py does `import look`,
+# studio.py does `import model`, and so on) rather than a `locallm/` package
+# namespace, and release.py already assembles the thing a stranger runs (a
+# zip, not a wheel) by walking those imports -- see release.py's own
+# docstring. Turning this into a real installable distribution would mean
+# moving every file under a package directory and rewriting every one of
+# those imports, which is a much larger change than "declare the optional
+# dependency" calls for.
+#
+# So there is no [build-system] table here on purpose. uv's own rule is that
+# without one, a project is "virtual": it manages dependencies and the
+# environment but never builds or installs the project itself
+# (docs.astral.sh/uv/concepts/projects/config/, "Project packaging"). This
+# file exists so `torch` is written down as optional in one place a tool can
+# read, instead of only in setup_training.py's --help text and this
+# project's own README.
+
+[project]
+name = "locallm"
+version = "0.2.0"
+description = "A small transformer trained from scratch on your own data, on your own hardware."
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+
+# No [project.dependencies]: the app shell (home.py, studio.py, the GUI) and
+# the torch-free generator (plain_generate.py) stay standard-library only, as
+# they always have. torch is the one thing that is genuinely optional -- the
+# app opens and talks to the included model without it -- so it lives here as
+# an extra rather than a required dependency. setup_training.py is still the
+# supported way to install it (it picks the right build for this machine);
+# `uv pip install -e .[train] --torch-backend=auto` or
+# `pip install -e .[train]` are equivalent for anyone who prefers to drive
+# uv or pip themselves.
+[project.optional-dependencies]
+train = ["torch"]
+
+[tool.uv]
+package = false

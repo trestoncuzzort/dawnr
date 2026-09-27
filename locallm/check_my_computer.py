@@ -42,6 +42,8 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
+import setup_training                                    # noqa: E402
+
 RESULT = HERE / "bench_device_result.json"
 MIN_PYTHON = (3, 10)
 
@@ -145,11 +147,22 @@ def main() -> int:
         print("\n" + "=" * 68)
         print("  CANNOT TRAIN YET")
         print("=" * 68)
-        print("\nPyTorch is what actually does the training. Install it with:\n")
-        print("    pip install torch\n")
-        print("If you have an NVIDIA graphics card, get the CUDA build instead -")
-        print("it is many times faster. See https://pytorch.org for the exact")
-        print("command for your machine, then run this check again.\n")
+        print("\nPyTorch is what actually does the training. The easiest way to")
+        print("install it is the setup script that comes with this copy:\n")
+        print("    python3 setup_training.py\n")
+        nvidia = setup_training.nvidia_driver_info()
+        if nvidia is not None:
+            name, driver = nvidia
+            index_url, _reason = setup_training.pick_wheel_index(
+                platform.system().lower(), nvidia)
+            print(f"You have an NVIDIA {name} (driver {driver}). By hand, that is:\n")
+            print(f"    pip install torch --index-url {index_url}\n")
+        else:
+            print("By hand, that is:\n")
+            print("    pip install torch\n")
+            print("If you have an NVIDIA graphics card, get the CUDA build instead -")
+            print("it is many times faster. See https://pytorch.org for the exact")
+            print("command for your machine.\n")
         for p in problems:
             print(f"  also: {p}")
         return 1
@@ -168,11 +181,19 @@ def main() -> int:
              f"{torch.mps.recommended_max_memory() / 1e9:.1f} GB usable")
     else:
         gpu_label = None
-        line(None, "Graphics card", "none usable by PyTorch — will use the CPU")
-        warnings.append(
-            "No graphics card is being used. Training still works on the "
-            "processor, just slower — the timings below are the real ones for "
-            "this machine, so trust those rather than the word 'slower'.")
+        nvidia = setup_training.nvidia_driver_info()
+        if nvidia is not None:
+            name, driver = nvidia
+            index_url, _reason = setup_training.pick_wheel_index(
+                platform.system().lower(), nvidia)
+            line(False, f"Graphics card {name}", f"driver {driver} — PyTorch cannot use it")
+            warnings.append(setup_training.unusable_nvidia_message(name, driver, index_url))
+        else:
+            line(None, "Graphics card", "none usable by PyTorch — will use the CPU")
+            warnings.append(
+                "No graphics card is being used. Training still works on the "
+                "processor, just slower — the timings below are the real ones for "
+                "this machine, so trust those rather than the word 'slower'.")
 
     if problems:
         print("\n" + "=" * 68)
