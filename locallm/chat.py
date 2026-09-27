@@ -28,6 +28,11 @@ Where dawnr differs, and why:
   first token of an output span whose text came from outside. Text cannot
   produce any of them, so a fetched page can neither close its span nor forge
   the mark (spotlighting, arXiv:2403.14720, done with tokens).
+* dawnr's memory (DAWNR-MEMORY.md) adds one more the same way
+  (with_memory_tokens, after the harness's): <|memory|>, the first token of
+  an output span holding what dawnr remembers of the person, forced in at
+  the start of a conversation's first reply and never supervised. No text
+  can produce it, so nothing a page says can open or close a memory span.
 * No <|bos|>: every row holds one conversation and starts at its first token
   (data.DocumentBatches' rule), so nothing needs delimiting.
 * A system message is refused, not merged into the user turn: dawnr has none.
@@ -84,7 +89,10 @@ TOOL_START, TOOL_END = "<|tool_start|>", "<|tool_end|>"   # the assistant calls 
 UNTRUSTED = "<|untrusted|>"                                 # opens an output span whose text came from outside
 HARNESS_TOKENS = (TOOL_START, TOOL_END, UNTRUSTED)
 
-PART_TYPES = ("text", "t", "t_output", "tool", "tool_output")
+MEMORY = "<|memory|>"                                       # opens an output span of what dawnr remembers of the person
+MEMORY_TOKENS = (MEMORY,)
+
+PART_TYPES = ("text", "t", "t_output", "tool", "tool_output", "memory")
 IGNORE_INDEX = -1            # model.GPT's cross-entropy ignores -1 (data.IGNORE_INDEX)
 
 
@@ -135,6 +143,30 @@ def with_harness_tokens(tokenizer):
         return CharTokenizer(tokenizer.chars, present + missing)
     if isinstance(tokenizer, BPETokenizer):
         return BPETokenizer(tokenizer.backend, tokenizer.training, present + missing)
+    raise TypeError(f"unsupported tokenizer type: {type(tokenizer).__name__}")
+
+
+def has_memory_tokens(tokenizer) -> bool:
+    return MEMORY in tuple(getattr(tokenizer, "sentinels", ()))
+
+
+def needs_memory_tokens(conversations) -> bool:
+    """True when an assistant turn holds a memory span (DAWNR-MEMORY.md)."""
+    return any(isinstance(m.get("content"), list) and any(p.get("type") == "memory" for p in m["content"])
+               for c in conversations for m in c["messages"] if m.get("role") == "assistant")
+
+
+def with_memory_tokens(tokenizer):
+    """The harness tokens (with_harness_tokens), then <|memory|>, appended only if missing."""
+    from data import BPETokenizer, CharTokenizer
+    tokenizer = with_harness_tokens(tokenizer)
+    present = tuple(tokenizer.sentinels)
+    if MEMORY in present:
+        return tokenizer
+    if isinstance(tokenizer, CharTokenizer):
+        return CharTokenizer(tokenizer.chars, present + MEMORY_TOKENS)
+    if isinstance(tokenizer, BPETokenizer):
+        return BPETokenizer(tokenizer.backend, tokenizer.training, present + MEMORY_TOKENS)
     raise TypeError(f"unsupported tokenizer type: {type(tokenizer).__name__}")
 
 
@@ -225,6 +257,16 @@ def render_conversation(tokenizer, conversation: dict) -> tuple[list[int], list[
                     add(special(tokenizer, TOOL_START), 1)
                     add(tokenizer.encode(text), 1)
                     add(special(tokenizer, TOOL_END), 1)
+                elif kind == "memory":
+                    # what dawnr remembers of the person, forced in at session start: read, never supervised
+                    if "train" in part or part.get("untrusted"):
+                        raise ValueError(f"a memory part is never supervised and never marked untrusted: {part!r}")
+                    if not has_memory_tokens(tokenizer):
+                        raise ValueError("a memory part needs the memory token (chat.with_memory_tokens)")
+                    add(special(tokenizer, OUTPUT_START), 0)
+                    add(special(tokenizer, MEMORY), 0)
+                    add(tokenizer.encode(text), 0)
+                    add(special(tokenizer, OUTPUT_END), 0)
                 else:
                     # the tool (or the harness) writes this at inference time: never supervised
                     add(special(tokenizer, OUTPUT_START), 0)
