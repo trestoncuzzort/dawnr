@@ -3144,6 +3144,7 @@ component as a RETURN or LOCAL, and a general (non-folded) `split`, are
 the two named residuals of this pass."""
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -7393,20 +7394,92 @@ def _spec_fun_c(f: dict, funs: dict) -> list:
     declares any spec_fun at all (confirmed: `grep spec_fun t/tasks/
     *.t` -> no match), so this widening reaches only the lifted corpus,
     never the regression bar's own 34-task column."""
+    # RECURSIVE MIRRORS (framac track, 2026-09-26). The eligibility rule
+    # above is widened in `lower()`: a self-recursive spec_fun, and one
+    # that calls OTHER spec_funs, now qualify when every callee is itself
+    # eligible and declared earlier (so the C mirrors are emitted callee
+    # first and no mutual recursion can arise). The pattern is VerKer's
+    # (Volkov, Mandrykin, Efremov, "Lemma Functions for Frama-C: C
+    # Programs as Proofs", arXiv 1811.05879): a C function whose contract
+    # states agreement with a recursive logic function, proved by WP
+    # inductively, the recursive call using the callee's own contract.
+    # The self-call is rendered through `cexpr`'s spec_fun branch (task
+    # name None, so no call is mistaken for a call to the task) as
+    # `{name}_c(...)`, and termination is not taken on faith: the mirror
+    # carries the spec_fun's OWN `decreases` measure, which WP checks at
+    # every recursive call (measure non-negative and strictly smaller),
+    # the same obligation `spec_fun_acsl`'s termination lemmas state for
+    # the logic side. `assigns \nothing` is added to every mirror: the
+    # body is a single `return` of a side-effect-free expression, WP
+    # proves the frame clause from that body, and without it a caller's
+    # own `assigns \nothing` was unprovable (multiply's `last_digit_c`
+    # call: every assigns goal of the caller ended in Stepout, 2026-09-26).
     params_c = ", ".join(f"int {p['name']}" for p in f["params"])
     env = {p["name"]: p["type"] for p in f["params"]}
-    body_c = cexpr(f["body"], env, funs, f["name"])
+    body_c = cexpr(f["body"], env, funs, None)
     args_acsl = ", ".join(p["name"] for p in f["params"])
     if f["result"] == "bool":
         contract = f"(\\result != 0) <==> {f['name']}({args_acsl})"
     else:
         contract = f"\\result == {f['name']}({args_acsl})"
-    return [
-        "/*@",
-        f"  ensures {contract};",
+    lines = ["/*@"]
+    if self_calls(f["body"], f["name"], []):
+        # ACSL's clause order puts `decreases` before assigns/ensures.
+        measure = term(f["decreases"], Ctx(env, funs, ret=None, label="Here"))
+        lines.append(f"  decreases {measure};")
+    lines += ["  assigns \\nothing;", f"  ensures {contract};"]
+    return lines + [
         "*/",
         f"int {f['name']}_c({params_c}) {{ return {body_c}; }}",
     ]
+
+
+def _called_funs(e) -> set:
+    """Every function name a `call` node anywhere under `e` names."""
+    out: set = set()
+    if isinstance(e, dict):
+        if "call" in e and isinstance(e["call"], dict):
+            out.add(e["call"].get("fun"))
+        for v in e.values():
+            out |= _called_funs(v)
+    elif isinstance(e, list):
+        for v in e:
+            out |= _called_funs(v)
+    return out
+
+
+_MIRROR_SLOT = "/* t: spec_fun C mirrors */"
+
+
+def _place_mirrors(text: str, mirrors: list) -> str:
+    """Replace `_MIRROR_SLOT` with exactly the C mirrors `text` calls,
+    closed under the calls the mirrors themselves make (framac track,
+    2026-09-26). `mirrors` is [(name, lines)] in declaration order, so a
+    callee always precedes its caller. Emitting every eligible mirror
+    unconditionally (the 2026-09-14 rule) cost verdicts, not only time:
+    an UNUSED mirror's own contract goal is still a goal of the file, and
+    on da0069/da0641/da0658 (vericoding) the only unproved goal in the
+    whole file was `validResult_c`/`validInput_c`'s ensures, a mirror no
+    statement called. Dropping an uncalled C function removes no fact any
+    other goal could rely on: WP uses a callee's contract only at a call
+    site, and no call site names it."""
+    if _MIRROR_SLOT not in text:
+        return text
+    used: set = set()
+    scan = text.replace(_MIRROR_SLOT, "")
+    changed = True
+    while changed:
+        changed = False
+        for name, lines in mirrors:
+            if name not in used and re.search(rf"\b{re.escape(name)}_c\(",
+                                              scan):
+                used.add(name)
+                scan += "\n" + "\n".join(lines)
+                changed = True
+    block = [ln for name, lines in mirrors if name in used for ln in lines]
+    if not block:
+        return text.replace(_MIRROR_SLOT + "\n", "").replace(_MIRROR_SLOT, "")
+    return text.replace(_MIRROR_SLOT, "\n".join(block))
 
 
 # ------------------------------------------------ refutation certificate ----
@@ -9334,9 +9407,29 @@ def lower(task: dict, body: list, witness: dict | None = None,
             "params": f["params"], "result": f["result"],
             "labeled": any(p["type"] == "seq" for p in f["params"]),
             "is_task": False,
-            "executable": (
-                not any(p["type"] == "seq" for p in f["params"])
-                and not self_calls(f["body"], f["name"], []))}
+            "executable": False}
+    # Widened 2026-09-26 (framac track; see `_spec_fun_c`'s RECURSIVE
+    # MIRRORS note): self-recursion is allowed when the spec_fun states a
+    # `decreases` (the mirror carries it), and calls to other spec_funs are
+    # allowed when each callee is eligible and declared EARLIER. The mirror
+    # is rendered once here, so a body `cexpr` cannot render (a quantifier,
+    # a string-library member) leaves the spec_fun ineligible and its call
+    # sites abstain with the original message, instead of failing the whole
+    # file when the unconditional header emission reached it.
+    for f in task.get("spec_funs", []):
+        if any(p["type"] == "seq" for p in f["params"]):
+            continue
+        callees = _called_funs(f["body"]) - {f["name"]}
+        if not all(c in funs and funs[c]["executable"] for c in callees):
+            continue
+        if (self_calls(f["body"], f["name"], [])
+                and f.get("decreases") is None):
+            continue
+        funs[f["name"]]["executable"] = True
+        try:
+            _spec_fun_c(f, funs)
+        except NotImplementedError:
+            funs[f["name"]]["executable"] = False
     # SPEC.md "Methods (v1)": each method (only the earlier ones, when this
     # call is itself lowering a method) is callable as its own C function
     # `{m}_t`; see the methods section above `stmts()`.
@@ -9540,9 +9633,13 @@ def lower(task: dict, body: list, witness: dict | None = None,
     # `= body` for `_spec_fun_c` to mirror as C, and the measure witness
     # already proves ITS own call site refutes via the certificate, not
     # this mirror.
-    for f in task.get("spec_funs", []):
-        if funs[f["name"]]["executable"] and f["name"] != measure_fn:
-            header += _spec_fun_c(f, funs)
+    # 2026-09-26: collected here, placed at the end (`_place_mirrors`), so
+    # only the mirrors the finished file actually calls are emitted.
+    mirrors = [(f["name"], _spec_fun_c(f, funs))
+               for f in task.get("spec_funs", [])
+               if funs[f["name"]]["executable"] and f["name"] != measure_fn]
+    if mirrors:
+        header.append(_MIRROR_SLOT)
 
     # DIVISOR-BOUND LEMMA, tried and MEASURED NOT WIRED, 2026-09-12
     # (ROADMAP 16.2, framac-cert; `_divisor_bound_target`/
@@ -10027,19 +10124,21 @@ def lower(task: dict, body: list, witness: dict | None = None,
         return fn_text
     rc = t_names.rename_comment(renames)
     if method_texts:
-        return ("\n".join(header) + ("\n" if header else "")
-                + "".join(method_texts)
-                + fn_text
-                + (cert or "")
-                + (f"\n// {rc}\n" if rc else ""))
-    return ("\n".join(header) + ("\n" if header else "")
-            + "/*@\n" + "\n".join(clauses) + "\n*/\n"
-            + f"{cfun_ret_ty} {name}_t({', '.join(cparams)}) {{\n"
-            + ret_decl
-            + "\n".join(body_lines) + "\n"
-            + tail + "}\n"
+        return _place_mirrors(
+            "\n".join(header) + ("\n" if header else "")
+            + "".join(method_texts)
+            + fn_text
             + (cert or "")
-            + (f"\n// {rc}\n" if rc else ""))
+            + (f"\n// {rc}\n" if rc else ""), mirrors)
+    return _place_mirrors(
+        "\n".join(header) + ("\n" if header else "")
+        + "/*@\n" + "\n".join(clauses) + "\n*/\n"
+        + f"{cfun_ret_ty} {name}_t({', '.join(cparams)}) {{\n"
+        + ret_decl
+        + "\n".join(body_lines) + "\n"
+        + tail + "}\n"
+        + (cert or "")
+        + (f"\n// {rc}\n" if rc else ""), mirrors)
 
 
 if __name__ == "__main__":
