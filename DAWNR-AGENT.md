@@ -21,7 +21,7 @@ What was copied, from where (each fetched and read on 2026-09-27):
 | containment | openat2(2)'s `RESOLVE_BENEATH` and `RESOLVE_NO_SYMLINKS` (man7.org/linux/man-pages/man2/openat2.2.html); the MCP reference filesystem server (github.com/modelcontextprotocol/servers, `src/filesystem`): allowed directories, exclusive create, temporary file and rename for a replace, the edit shown as a diff; its advisory GHSA-hc55-p739-j48w (a root `/allowed` let `/allowed_evil` through, compared as strings) | Python has no openat2, so each component is opened through its parent's descriptor with `O_NOFOLLOW`: the descriptor that was checked is the one used, where the server checks a real path and then opens by name; `..` is refused rather than normalised; links are refused rather than followed if they stay inside |
 | commands | Trail of Bits, 2025-10-22 (blog.trailofbits.com/2025/10/22/prompt-injection-to-rce-in-ai-agents/): with the shell gone, pre-approved commands still ran attacker code through their own options (`go test -exec`, `git show --output`, `rg --pre`, `fd -x`); sandbox first, else a facade with `--` separators, no shell, minimal allowlists, logging | the allowlist is of whole argv shapes the operator writes; the model fills typed placeholders that can never begin with `-`; programs are pinned by absolute path |
 | the sandbox | bubblewrap (github.com/containers/bubblewrap): "the level of protection ... is entirely determined by the arguments"; `--unshare-net` leaves only loopback; `--new-session` against CVE-2017-5226; anything mounted in, such as a D-Bus socket, can escalate | the arguments here: every namespace unshared, `/` read-only, `/run` and `/tmp` empty, the writable roots bound read-write, secret folders hidden |
-| processes | Python's `subprocess` documentation (a sequence argv, no shell; `communicate()` buffers everything; `start_new_session` instead of `preexec_fn`); Stack Overflow q/4789837 (kill the process group, not only the child) | output is read by threads that keep a capped prefix and drain the rest; the group is killed at the deadline and again when the call returns, while the leader is still an unreaped zombie so its id cannot have been reused |
+| processes | Python's `subprocess` documentation (a sequence argv, no shell; `communicate()` buffers everything; `start_new_session` instead of `preexec_fn`); Stack Overflow q/4789837 (kill the process group, not only the child) | output is read through a selector that keeps a capped prefix and drains the rest, for at most half a second after the command exits; the group is killed at the deadline and when the command exits, while the leader is still an unreaped zombie so its id cannot have been reused |
 | plans | plan-then-execute (Beurer-Kellner et al., arXiv:2506.08837, section 4.1 is an assistant acting on files whose attacker controls their contents and names); CaMeL (Debenedetti et al., arXiv:2503.18813: control flow from the trusted query only) | a step's arguments are exact, never a slot filled later from data, so an injection can steer neither which calls run nor what they are given; no interpreter or capability tags (the harness's taint bit carries the rest) |
 | the loop | ReAct (Yao et al., arXiv:2210.03629): act, observe, decide again | the unit of action is a whole plan, approved as a whole |
 | the dry run | Terraform's plan and saved-plan apply (developer.hashicorp.com/terraform/cli/commands/plan, .../apply): a saved plan is applied exactly as shown; re-check before applying because the target may drift | each edited file is pinned to its hash in the plan; the run refuses a step whose file moved |
@@ -75,7 +75,7 @@ rights; kernel bugs; a person who approves a plan whose dry run showed the harm.
 | an option smuggled into an argument (`-exec`, `--output=`, `--pre`) | a placeholder value may not begin with `-`; options exist only where the operator wrote them | `test_denied_means_never_started` |
 | a program replaced by the agent | programs resolved once, pinned by absolute path, refused if inside a writable root; the command PATH excludes the roots and relative entries | `test_a_program_inside_a_writable_root_is_not_used` |
 | secrets in the harness's environment | commands get a scrubbed environment: PATH, HOME, locale, the operator's additions | `test_no_shell_and_a_scrubbed_environment` |
-| a command that never ends, forks, or floods | a deadline that kills the process group; a capped output | `test_deadline_kills_the_whole_process_group`, `test_output_is_capped` |
+| a command that never ends, forks, or floods | a deadline that kills the process group; a capped output; the call returns half a second after the command exits even if a descendant holds its pipes; under bubblewrap nothing outlives the call | `test_deadline_kills_the_whole_process_group`, `test_output_is_capped`, `Sandbox.test_a_command_that_leaves_a_new_session_behind_does_not_outlive_the_call` |
 | data leaving by the network | offline by default; a rule reaches the network unless the operator says it does not; with bubblewrap that is enforced (only loopback in the command's network namespace) | `test_offline_denies_a_network_rule_and_online_allows_it`, `Sandbox.test_no_network_and_no_writes_outside_the_writable_roots` |
 | an injected instruction becoming an action | plans fixed before untrusted text is read; after it, the harness's taint rule makes every consequential call ask; an approval covers only the exact calls the person saw; with nobody present, ask is deny | `Injection.test_a_gullible_planner_is_fooled_and_nothing_it_was_fooled_into_runs` |
 | a hook or a plan changing what was approved | the approval is of the exact canonical arguments; a rewritten call falls back to asking the person | `test_an_approved_plan_runs_exactly_its_steps_and_a_rewritten_step_loses_the_approval` |
@@ -219,8 +219,8 @@ registry call). It stops at the first of:
 
 Predictions in `locallm/PREDICT-agent-2026-09-27.md`, committed before the code;
 the numbers from `DAWNR_AGENT_MEASURE=<file> python -m unittest
-locallm/test_dawnr_agent.py` on the desktop, 2026-09-27 (73 tests, 2 skipped by
-design, 3.6 s on Python 3.14; the same pass on Python 3.10).
+locallm/test_dawnr_agent.py` on the desktop, 2026-09-27 (74 tests, 2 skipped by
+design, 6.6 s on Python 3.14; the same pass on Python 3.10).
 
 | prediction | the number that would falsify it | measured |
 |---|---|---|
@@ -241,6 +241,15 @@ literal tokens, no value of the model's beginning with `-`, and every `{path}`
 inside a root (**0 violations**); a file whose *name* is an instruction, seen in
 a listing, fooled the planner and ran nothing, while the same command, asked for
 by the person before anything untrusted was read, ran.
+
+A failure found while measuring, and fixed: a command whose child put itself in
+a new session and kept the output pipes open held the call until the reader
+threads' joins gave up, 10.06 s for a command that ran 0.3 s, and reported that
+as its runtime. Output is now read with a selector and the call returns half a
+second after the command exits whatever it left behind (0.86 s for the same
+command). Under bubblewrap the child that escaped the process-group kill does
+not outlive the call (it stopped writing when the call returned); without the
+sandbox it does (it kept writing), which section 8 says.
 
 Weaker than it looks, said plainly: the sweep's generated paths mostly end in
 refusals (31 of 5,000 reads opened a real file), so the property is tested far
@@ -265,7 +274,9 @@ skips.
   An `{arg}` is not a path at all, to the agent: a rule that lets a program open
   an `{arg}` lets it open anything the program can.
 - **Without bubblewrap, `"network": false` and `"writes": false` are the
-  operator's claims.**
+  operator's claims**, and a command that puts itself in a new session escapes
+  the process-group kill; under bubblewrap it cannot, because the command's
+  process namespace ends with it.
 - **Hard links.** A file hard-linked into a root from elsewhere is in the root
   by the file system's own definition and is readable; writes never go through
   it; secrets are known by identity only in the home directory's secret folders.

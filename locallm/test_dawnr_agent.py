@@ -764,6 +764,45 @@ class Sandbox(Env):
         got2 = json.loads(h2.call("run_command", {"argv": [PY, path]}).text.splitlines()[1])
         self.assertEqual(got2["connect"], "yes")
 
+    def test_a_command_that_leaves_a_new_session_behind_does_not_outlive_the_call(self):
+        beat = self.proj / "beat.txt"
+        daemon = (f"import time\nfor _ in range(200):\n    open({str(beat)!r}, 'a').write('x')\n"
+                  f"    time.sleep(0.05)\n")                        # bounded: 10 s at most, even if it escapes
+        body = f"""
+            import subprocess, sys, time
+            subprocess.Popen([sys.executable, "-c", {daemon!r}], start_new_session=True)
+            time.sleep(0.3)
+            """
+        (self.proj / "tests" / "fork.py").write_text(textwrap.dedent(body))
+        rule = [{"argv": [PY, "{path}"], "permission": "allow", "network": False}]
+
+        def grows_after_return(h) -> bool:
+            beat.unlink(missing_ok=True)
+            started = time.monotonic()
+            h.call("run_command", {"argv": [PY, "project/tests/fork.py"]})
+            self.assertLess(time.monotonic() - started, 5)    # the call does not wait for what it left behind
+            time.sleep(0.3)
+            size = beat.stat().st_size if beat.exists() else 0
+            time.sleep(0.6)
+            return (beat.stat().st_size if beat.exists() else 0) > size
+
+        def kill_escaped():
+            for d in os.listdir("/proc"):
+                try:
+                    cmd = Path(f"/proc/{d}/cmdline").read_bytes().replace(b"\x00", b" ").decode(errors="replace")
+                except OSError:
+                    continue
+                if d.isdigit() and str(beat) in cmd:
+                    try:
+                        os.kill(int(d), 9)
+                    except OSError:
+                        pass
+        self.addCleanup(kill_escaped)
+        h, _ = self.build(permissions={"run_command": "allow"}, commands=rule, sandbox="bwrap")
+        self.assertFalse(grows_after_return(h))
+        h2, _ = self.build(permissions={"run_command": "allow"}, commands=rule)
+        self.assertTrue(grows_after_return(h2))          # the control: without the sandbox it does escape
+
 
 # ---------------------------------------------------------------- the harness hook --
 

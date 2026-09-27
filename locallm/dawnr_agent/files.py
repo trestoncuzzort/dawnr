@@ -437,16 +437,20 @@ class FileTools:
         return ToolResult(_clip("\n".join([head] + lines), self.limits.max_output_chars), trust="untrusted")
 
     def _list_into(self, handle, target: Target, prefix: str, depth: int, lines: list) -> int:
-        total = 0
+        total, kept = 0, []
+        keep = self.limits.max_list * 4           # a directory of a million names is counted, not held in memory
         try:
-            entries = sorted(paths.scandir(handle), key=lambda e: e.name)
+            with paths.scandir(handle) as it:
+                for entry in it:
+                    total += 1
+                    if len(kept) < keep:
+                        kept.append(entry)
         except OSError as e:
             lines.append(f"! {prefix or '.'}: cannot be listed: {e.strerror}")
             return 0
-        for entry in entries:
-            total += 1
+        for entry in sorted(kept, key=lambda e: e.name):
             if len(lines) >= self.limits.max_list:
-                continue
+                break
             child = target.child(entry.name)
             shown = prefix + entry.name
             try:
