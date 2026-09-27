@@ -83,10 +83,12 @@ silently applied: **a target whose program fails the t tool on the prompt's own
 Example lines is not used** (dawnr's checker, `dawnr_harness.checker`), and
 **an answer that carries text from outside** (a tool output marked
 `<|untrusted|>`: a web page, an MCP result) is kept for the person to read but
-never trained on. At sleep time every example also passes the held-out gates
-every trainer here applies (`loop_filter.validate_training_data` over the
-evaluation ids and same-task exclusions, plus the r12 dev ids), whatever the
-person typed.
+never trained on. Every example also passes the held-out gates every trainer
+here applies (`loop_filter.validate_training_data` over the evaluation ids and
+same-task exclusions, plus the r12 dev ids), whatever the person typed --
+`training_examples()` applies this gate itself, for every reader (a sleep, the
+style profile, the measurement protocol) and not only at sleep time; section 8
+discloses the gap this closed.
 
 The "that's wrong" detector is a regular expression anchored at the start of
 the person's message, following the self-feeding chatbot (Hancock et al.,
@@ -414,6 +416,30 @@ lowered it a little (4.15 to 4.38).
 
 ## 8. What is not done
 
+- **The held-out gate was applied inconsistently, until 2026-09-27 (found by
+  review, not by a run).** `sleep.gate_examples` screened a person's examples
+  against the held-out ids, the same-task exclusions and the r12 dev ids
+  before a sleep trained on them, but `style_profile.refresh` -- run from the
+  chat pane's `sync()` on every window session and every person switch, and
+  again after every sleep -- read `feedback.PersonStore.training_examples()`
+  directly and never gated them. A person's feedback on a held-out or dev
+  prompt could shape their style profile, and so dawnr's output, with no
+  decontamination check at all; nothing in section 6 or 7's numbers depends on
+  the style profile having seen a held-out prompt, since the simulated persons
+  are only ever given training-side problems (measure.py, section 6), but the
+  gap was real and undisclosed until now. Fixed at the root instead of at the
+  one call site found: the gate (`feedback.held_out_gate`, the same function
+  `sleep.gate_examples` now names) moved onto `training_examples()` itself, so
+  every reader -- a sleep, the style profile, the measurement protocol -- gets
+  only gated examples by default, and the one place that needs the person's
+  unscreened words, export and an adapter's own erasure bookkeeping, asks for
+  that by name (`include_ungated=True`); a test greps the package for any
+  other reader asking for it. Needs `t/` (`loop_filter` and what it imports,
+  which needs POSIX `fcntl`) wherever `training_examples()` is now called,
+  including every pane sync; on a platform without it the pane's existing
+  never-silent handling reports the profile as unreadable rather than
+  crashing, but the profile stops working -- not measured on Windows, and no
+  evidence this repository has ever run there.
 - **Negative feedback is kept, not learned from.** A "Not this" or a "that's
   wrong" without a correction is recorded and counted and never trained on.
   KTO (arXiv:2402.01306) learns from unpaired good and bad examples against a
