@@ -88,7 +88,7 @@ class Harness:
             return ToolResult(f"{name}: " + "; ".join(errs), is_error=True, source="harness")
         decision, why = self.policy.decide(tool, session)
         if decision == "deny":
-            self._log(session, name, arguments, "deny", why)
+            self._log(session, name, arguments, "deny", why, permission=decision)
             return ToolResult(f"denied: {why}", is_error=True, source="harness")
         notes: list[str] = []
         untrusted_notes: list[str] = []
@@ -97,7 +97,7 @@ class Harness:
                                                                              tool_input=arguments), name))
             self._note_errors(pre.errors, pre.messages)
             if pre.decision == "deny":
-                self._log(session, name, arguments, "deny", f"hook: {pre.reason}")
+                self._log(session, name, arguments, "deny", f"hook: {pre.reason}", permission=decision)
                 return ToolResult(f"blocked by a hook: {pre.reason or 'no reason given'}", is_error=True,
                                   source="harness")
             if pre.decision == "ask":
@@ -107,7 +107,8 @@ class Harness:
             if pre.updated_input is not None:
                 errs = validate(tool.input_schema, pre.updated_input)
                 if errs:
-                    self._log(session, name, pre.updated_input, "invalid", "hook input: " + "; ".join(errs))
+                    self._log(session, name, pre.updated_input, "invalid", "hook input: " + "; ".join(errs),
+                             permission=decision)
                     return ToolResult(f"{name}: a hook rewrote the input into an invalid one: " + "; ".join(errs),
                                       is_error=True, source="harness")
                 arguments = pre.updated_input
@@ -123,7 +124,7 @@ class Harness:
                     approved = False
             if not approved:
                 reason = why if self.approver is None else f"{why}; not approved"
-                self._log(session, name, arguments, "not approved", reason)
+                self._log(session, name, arguments, "not approved", reason, permission=decision)
                 return ToolResult(f"not run: {name} needs approval ({reason})" +
                                   ("" if self.approver else "; nobody is here to approve it"),
                                   is_error=True, source="harness")
@@ -136,6 +137,7 @@ class Harness:
         if tool.trust == "untrusted":
             result.trust = "untrusted"          # a tool declared untrusted never produces trusted text, errors included
         result.source = name
+        outcome = "run"
         if self.hooks.has("PostToolUse"):
             post = aggregate_post(self.hooks.run("PostToolUse", self._payload(
                 session, context, tool_name=name, tool_input=arguments,
@@ -143,6 +145,7 @@ class Harness:
             self._note_errors(post.errors, post.messages)
             if post.block:
                 result = ToolResult(f"[output withheld by a hook: {post.reason}]", is_error=True, source=name)
+                outcome = "withheld"            # the tool ran; a hook kept its output from the model (audit log)
             elif post.updated_output is not None:
                 result.text = post.updated_output
             # same rule as PreToolUse's notes, now against the call's actual result: a hook's commentary on an
@@ -153,7 +156,8 @@ class Harness:
         result.untrusted_notes = untrusted_notes + result.untrusted_notes
         if result.trust == "untrusted":
             session.tainted = True
-        self._log(session, name, arguments, "run", why, result=result, seconds=time.monotonic() - started)
+        self._log(session, name, arguments, outcome, why, result=result, seconds=time.monotonic() - started,
+                 permission=decision)
         return result
 
     # -------------------------------------------------------------- stop --
@@ -202,20 +206,38 @@ class Harness:
     def _note_errors(self, errors: list, messages: list) -> None:
         self.messages += [f"hook error: {e}" for e in errors] + list(messages)
 
-    def _log(self, session, tool, arguments, decision, why, result: ToolResult | None = None, seconds: float = 0.0):
-        text = json.dumps(arguments, ensure_ascii=False)
+    def _log(self, session, tool, arguments, decision, why, result: ToolResult | None = None, seconds: float = 0.0,
+             permission: str | None = None):
+        # `decision` is this call's outcome (unknown/invalid/deny/not approved/withheld/run); `permission` is
+        # the operator's raw allow/ask/deny for it, logged separately so an "ask" that was approved and run
+        # is still distinguishable in the log from one that was simply "allow" by default -- both otherwise
+        # look identical here ("run"), and outcome alone cannot tell a reader which one happened.
+        text = json.dumps(arguments, ensure_ascii=True)
         row = {"time": time.time(), "session": session.id if session else "", "tool": tool,
                "arguments": text if len(text) <= MAX_AUDIT_ARGS else text[:MAX_AUDIT_ARGS] + "...",
                "decision": decision, "why": why}
+        if permission is not None:
+            row["permission"] = permission
         if result is not None:
             row.update(is_error=result.is_error, trust=result.trust, chars=len(result.text),
                        notes=len(result.notes) + len(result.untrusted_notes), seconds=round(seconds, 3))
         self.audit.append(row)
         if self.audit_path is not None:
             try:
+                # ensure_ascii=True, not False: arguments (and why, via a hook's reason) can hold attacker-
+                # reachable text if the model echoes something it read, and among the characters that would
+                # otherwise pass through un-escaped are U+2028/U+2029 (LINE/PARAGRAPH SEPARATOR) -- confirmed
+                # directly, str.splitlines() (and several real tools beyond it) treats a raw one as a line
+                # break, so a single call's row could be misread as more than one JSON Lines record by
+                # anything reading this file line by line, the exact guarantee an append-only audit log is
+                # for. Escaping every non-ASCII codepoint keeps one write == one line, unconditionally.
                 with self.audit_path.open("a", encoding="utf-8") as f:
-                    f.write(json.dumps(row, ensure_ascii=False) + "\n")
-            except OSError as e:
+                    f.write(json.dumps(row, ensure_ascii=True) + "\n")
+            except (OSError, ValueError) as e:
+                # a bad path is usually OSError (missing directory, permission denied), but a path with an
+                # embedded null byte raises ValueError instead (confirmed directly: open("a\x00b", "a")) --
+                # either way this write must never crash a call that otherwise succeeded, so both are caught
+                # the same way as any other unwritable audit path.
                 self.messages.append(f"audit log not written: {e}")
 
     def close(self) -> None:
