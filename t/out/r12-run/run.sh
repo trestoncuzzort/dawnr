@@ -2,7 +2,7 @@
 # t/out/r12-run/run.sh -- launch the r12 fine-tune, once pretraining's core checkpoint is ready.
 #
 # Waits for t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337-desktop-best/{best.pt,run.json}
-# to report status "complete" (t/RUN-NEXT-locallm-r12.md section F step 0-2), then for each of
+# to report status "complete" or "stopped" (early stop at its best; t/RUN-NEXT-locallm-r12.md F 0-2), then for each of
 # ten seeds: trains on this desktop's GPU (section C's command), picks its dev-chosen stopping
 # step, generates the 232 held-out answers, and grades them on the lab. Finally scores all twenty
 # arms (ten r11 base seeds already graded, ten new r12 seeds) and compares them under
@@ -99,7 +99,10 @@ preflight_ok() {
 
 # --------------------------------------------------------- wait for the core --
 core_ready() {
-  [ -f "$CORE" ] && json_field_is "$PRETRAIN_DIR/run.json" status complete
+  # "complete" = ran every step; "stopped" = the early-stop rule ended it at its best (the trainer
+  # writes "stopped" for any run that ends before --steps, and best.pt is the state to use)
+  [ -f "$CORE" ] && { json_field_is "$PRETRAIN_DIR/run.json" status complete \
+                      || json_field_is "$PRETRAIN_DIR/run.json" status stopped; }
 }
 core_failed() {
   [ -f "$PRETRAIN_DIR/run.json" ] && json_field_is "$PRETRAIN_DIR/run.json" status failed
