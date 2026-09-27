@@ -47,11 +47,15 @@ SPLIT=t/out/loop/split-v5.json
 DEV_IDS=t/r12-dev-ids.json
 SEEDS="1 2 3 4 5 6 7 8 9 10"
 BASE_TAGS="locallm-r11-rerun locallm-r11-s1 locallm-r11-s2 locallm-r11-s3 locallm-r11-s4 locallm-r11-s5 locallm-r11-s6 locallm-r11-s7 locallm-r11-s8 locallm-r11-s9"
-GPU_LOCK=/home/t/scratch/gpu.lock
+GPU_LOCK="$HOME/scratch/gpu.lock"
 MEM_CAP=6G
-T_LAB=${T_LAB:-tmcuzzort@10.116.34.88}
+# T_LAB: the environment wins, else t/lab-workstation.conf (gitignored; the only place this
+# repository names a machine address, AGENTS.md's public-repo rule), same lookup as
+# t/r12_data_queue.sh and t/lab_mode.sh use.
+[ -z "${T_LAB:-}" ] && [ -f t/lab-workstation.conf ] && . t/lab-workstation.conf
+T_LAB=${T_LAB:?set T_LAB=user@host or T_LAB=local in t/lab-workstation.conf, or export it}
 GRADE_CELLS=${R12_RUN_GRADE_CELLS:-2}          # ~8 cores; see the header note
-PY=/home/t/.venv-locallm/bin/python
+PY="$HOME/.venv-locallm/bin/python"
 OUT_DIR=t/out/r12-run
 LOG="$OUT_DIR/run.log"
 mkdir -p "$OUT_DIR"
