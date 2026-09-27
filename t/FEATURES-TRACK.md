@@ -266,3 +266,12 @@ parameter. Chosen when it opens: the comprehension first (as a bounded seq
 constructor, an expression form every kernel has), general function values
 last: Frama-C and SPARK cannot pass closures without a defunctionalization the
 model would have to learn as noise.
+
+## Decision: SPARK's `Hide_Info` annotation (2026-09-26)
+
+The operator approved keeping `pragma Annotate (GNATprove, Hide_Info, "Expression_Function_Body")`
+in the SPARK lowering of methods. The earlier rule against `Annotate` covers justifications, which
+suppress a failed check and can make a proof pass. `Hide_Info` only removes facts from the prover's
+context (a callee's body), so it can make a proof fail but never pass; it is what makes SPARK reason
+about a call through the callee's contract alone, as the other six kernels do. Twin files unhide the
+body for the refutation check only. Any other use of `Annotate` stays banned.
