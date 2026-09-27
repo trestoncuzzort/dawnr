@@ -124,10 +124,15 @@ def check_dependencies():
           f"unexpected imports: {sorted(third_party)}" if third_party else "")
 
 
-# The ONE file allowed to open a socket, and only ever to fetch text. Named
-# rather than pattern-matched, so adding a second downloader is a decision
-# someone has to make here in the open instead of a file quietly slipping past.
-DOWNLOADER = "get_corpus.py"
+# The files allowed to open a socket, and only ever to fetch something onto
+# this machine. Named rather than pattern-matched, so adding one is a decision
+# made here in the open instead of a file quietly slipping past. get_corpus.py
+# fetches training TEXT; setup_training.py fetches a pinned, checksummed uv
+# release archive (never weights, never anything executed unverified -- see
+# its own docstring) and then hands PyTorch's own download off to uv/pip,
+# which this scanner cannot see because they run as a subprocess, the same
+# reason install.py's `pip install` never tripped this check either.
+DOWNLOADERS = frozenset({"get_corpus.py", "setup_training.py"})
 
 
 def check_nothing_phones_home():
@@ -189,14 +194,15 @@ def check_nothing_phones_home():
         if p.name == pathlib.Path(__file__).name:
             continue                       # this file quotes the patterns above
         for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
-            if net.search(line) and p.name != DOWNLOADER:
+            if net.search(line) and p.name not in DOWNLOADERS:
                 stray.append(f"{p.name}:{i}")
             if upload.search(line):
                 uploads.append(f"{p.name}:{i}")
     n = len(list(HERE.glob("*.py")))
-    check(f"only {DOWNLOADER} touches the network", not stray,
-          f"network use outside the downloader: {stray}",
-          f"no network import or call in the other {n - 1} files")
+    named = " and ".join(sorted(DOWNLOADERS))
+    check(f"only {named} touch the network", not stray,
+          f"network use outside the downloaders: {stray}",
+          f"no network import or call in the other {n - len(DOWNLOADERS)} files")
     check("nothing leaves your computer: no upload anywhere", not uploads,
           f"data-sending calls: {uploads}",
           f"no POST, mail or socket write in {n} files, downloader included")

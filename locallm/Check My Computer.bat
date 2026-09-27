@@ -9,6 +9,7 @@ rem must work with whatever Python the computer already has. It is stdlib-only
 rem until it tries to import torch, and it handles that import failing.
 set "PY="
 if exist "%~dp0.venv\Scripts\python.exe" set "PY=%~dp0.venv\Scripts\python.exe"
+if not defined PY if exist "%~dp0.venv-train\Scripts\python.exe" set "PY=%~dp0.venv-train\Scripts\python.exe"
 if not defined PY if exist "%~dp0..\.venv-train\Scripts\python.exe" set "PY=%~dp0..\.venv-train\Scripts\python.exe"
 if not defined PY where py >nul 2>nul && set "PY=py"
 if not defined PY where python >nul 2>nul && set "PY=python"
