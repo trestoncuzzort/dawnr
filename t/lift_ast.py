@@ -688,12 +688,33 @@ class MethodDecl(Decl):
 @dataclass
 class LemmaDecl(Decl):
     """`("lemma" | "least lemma" | "greatest lemma" | "twostate lemma")
-    ...`, brace-matched and its body dropped: a lemma is a hint
-    (LIFTER-DESIGN.md section 3), never elaborated, never lifted. `text`
-    is the declaration's raw rprint text, kept only so a `lemma-call`
-    refusal or a `lemma-call-dropped` log entry can quote it."""
+    ...`. `text` is the declaration's raw rprint text, kept so a
+    `lemma-call` refusal or a `lemma-call-dropped` log entry can quote it.
+
+    Since 2026-09-27 (SPEC.md "Lemmas (v1)", LIFTER-DECISIONS row 38) a
+    lemma may lift to a t lemma, so `lift_parse` also keeps its signature,
+    contract and (when it parses) its body, in `parts` (a `LemmaParts`).
+    `parts` is deliberately an attribute, not a dataclass field:
+    `lift_classify.walk` visits fields, and the classifier's refusal scan
+    must keep ignoring a lemma's own text exactly as before -- a lemma that
+    does not lift is dropped (decision 8), never a reason to refuse the
+    method that calls it."""
     keyword: str = "lemma"
     text: str = ""
+
+
+class LemmaParts:
+    """A lemma's signature, contract and body (`LemmaDecl.parts`). `body`
+    is None when the body did not parse (a `calc`, a `forall` statement
+    form the statement parser does not know): the lemma may still lift
+    with an empty proof."""
+
+    def __init__(self, type_params=(), params=(), returns=(), specs=(), body=None):
+        self.type_params = tuple(type_params)
+        self.params = tuple(params)
+        self.returns = tuple(returns)
+        self.specs = tuple(specs)
+        self.body = body
 
 
 @dataclass

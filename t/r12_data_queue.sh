@@ -636,7 +636,9 @@ lift_check_filter) cat <<'PY'
 # re-derived from verdict strings: the first version of this filter (2026-09-26)
 # expected strings the checker never writes and rejected all 373. A task with no
 # outcome record is a refusal. Tasks a previous run moved aside are moved back first,
-# so a rerun decides again from the records.
+# so a rerun decides again from the records. A kept task is the check stage's own copy
+# when the two differ: the check stage may drop a lifted lemma dafny could not prove
+# (LIFTER-DECISIONS row 38), and the task graded must be the task checked.
 import argparse, json, shutil, sys
 from collections import Counter
 from pathlib import Path
@@ -661,6 +663,9 @@ for task in sorted(tasks.glob("*.json")):
     r = m.get("refusal")
     if m.get("checked") and r is None:
         kept += 1
+        mine = checked / task.name
+        if mine.exists() and json.loads(mine.read_text(encoding="utf-8")) != json.loads(task.read_text(encoding="utf-8")):
+            shutil.copyfile(mine, task); differential["replaced by the checked task"] += 1
         side = checked / (task.name[:-5] + ".lift.json")
         verdict = str(json.loads(side.read_text(encoding="utf-8")).get("differential_verdict")) if side.exists() else "no sidecar"
         differential[verdict.split(" ")[0].rstrip(":")] += 1
