@@ -75,7 +75,7 @@ jobs:
       - name: locallm standard-library suites
         working-directory: locallm
         run: |
-          FILES="test_harness.py test_plain_generate.py test_home.py test_release.py test_ingest_any.py test_ingest_scripts.py test_launchers.py test_dawnr_persona.py"
+          FILES="test_harness.py test_plain_generate.py test_home.py test_release.py test_ingest_any.py test_ingest_scripts.py test_launchers.py test_dawnr_persona.py test_t_tool.py"
           if [ "$RUNNER_OS" = "Linux" ]; then
             xvfb-run -a python -m pytest -v $FILES
           else
