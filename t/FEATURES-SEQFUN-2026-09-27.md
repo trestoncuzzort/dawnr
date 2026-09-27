@@ -97,15 +97,21 @@ i)`; `ensures r == dbl(s, len(s))` and `len(r) == len(s)`), and four probes
 in t/fuzz_lower.py, `fz_p_sf_seq_len` (the result measured), `fz_p_sf_seq_at`
 (indexed), `fz_p_sf_seq_build` (built in the body from a slice) and
 `fz_p_sf_seq_false` (a false ensures through the recursive spec_fun,
-expected refuted, adversarial), each with the twin the ladder draws. The
-conformance suite reads probes from `fuzz_lower.probes()` directly; the
-committed t/CONFORMANCE.md is the record of a full run and was not
-regenerated here (the four probes are graded below by t/run_par.py, the
-same cell machinery).
+expected refuted, adversarial), each with the twin the ladder draws; and,
+since the review ("The review and the seeded faults" below), two more
+that plant the fault in the spec_fun's own body, `fz_p_sf_seq_swap`
+(double_all's loop under a `dbl` that prepends) and `fz_p_sf_seq_slice_off`
+(seq_build under a `tl` that drops the last element), both adversarial,
+expected refuted. The conformance suite reads probes from
+`fuzz_lower.probes()` directly; the committed t/CONFORMANCE.md is the
+record of a full run and was not regenerated here (the probes are graded
+below by t/run_par.py, the same cell machinery).
 
 **Tests.** t/test_seq_spec_fun.py (the language side: notation round
 trip, check_wf, the interpreter, the twin ladder, six lowerings plus the
-named abstain, every committed task still lowering) and
+named abstain, every committed task still lowering; since the review, the
+dafny and F* certificate rungs on the two seeded-fault probes as text,
+and with `--slow` the two kernels' own `refuted`) and
 t/test_lift_seq_fun.py (the lifter: a string helper, a recursive seq
 helper totalised with the empty seq, a result indexed/measured/sliced/
 compared, a `seq<nat>` result's dropped fact, a bool function, nested and
@@ -125,6 +131,17 @@ and twin. Every code path this feature adds is gated on a spec_fun whose
 result is `"seq"` (`_has_seq_sf`, `sf["result"] == "seq"`), which no task
 before double_all declares.
 
+After the review's fix (the certificate rungs, "The review and the seeded
+faults" below), hashed again with the same script on a fresh `git archive
+r12-blockers` export: **546 of 546 identical** (`fix/hashes_base.json`
+against `fix/hashes_fix.json`), and **560 of 560 identical** against the
+branch as reviewed, 4cb7e5b4 (`fix/hashes_reviewed.json`): the fix changes
+no committed lowering, double_all's own twin included, since its witness
+is the undefined-kind one at `s = []` whose formula reaches no spec_fun
+call, and the rungs are emitted only for a certificate that reaches a
+seq-valued one. t/AGREEMENT.md's matrix therefore stands as regraded
+below.
+
 ## The fixtures in seven kernels
 
 Graded on the desktop with t/run_par.py (all seven kernels installed
@@ -140,6 +157,8 @@ Cell = real / twin.
 | fz_p_sf_seq_at | verified | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
 | fz_p_sf_seq_build | verified | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted | verified / refuted |
 | fz_p_sf_seq_false | refuted (no twin) | refuted | refuted | refuted | abstain | refuted | refuted | refuted |
+| fz_p_sf_seq_swap | refuted | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | refuted / refuted | refuted / refuted | refuted / refuted |
+| fz_p_sf_seq_slice_off | refuted | refuted / refuted | refuted / refuted | refuted / refuted | abstain / abstain | refuted / refuted | refuted / refuted | refuted / refuted |
 
 Runs: `fix7.md` (double_all, six kernels, 2026-09-27 18:45Z), `probes7.md`
 (the four probes, six kernels), `rocq6.md` and `rocq7.md` (the Rocq
@@ -151,7 +170,15 @@ over each kernel's `verify`; without that witness, `false_real/`, the six
 kernels read unproved or timeout, no proof and no false verdict, which is
 the honest half of the same answer). Frama-C's cell is the named abstain on all five.
 The twin of every witnessed fixture is refuted by every kernel that
-states the construct, six of six.
+states the construct, six of six. The last two rows are the review's
+seeded faults as probes, graded after the fix below: `fix/probes8.md`
+(the six probes, seven kernels, 2026-09-27 20:29Z, 30 cells, 180 kernel
+runs, no cache; the four earlier probes read as before, and double_all
+alone the same in `fix/fix8.md`, 6 cells, 36 kernel runs). Their real
+side is the refutation the probe exists for; their twin (`compare-flip`
+on the loop guard, `off-by-one` on the slice) is refuted as any twin is.
+The single-cell `refuted` in the expected column is `fix/seeded/`, the
+no-twin path with the interpreter's real witness (next section).
 
 Rocq took two measured fixes to get there, both gated on a seq-valued
 spec_fun being present. As first built (the pair representation alone),
@@ -170,6 +197,123 @@ reflexivity`; a seq-valued call has no literal for `_glit`, so it raised,
 `_try_cert_v1` swallowed the error and emitted no certificate (the cell
 honestly read unproved); it now asserts the length (`snd`) and each
 element (`fst .. j`), which refuted seq_len's twin (`rocq7.md`).
+
+## The review and the seeded faults
+
+The 2026-09-27 review of this branch seeded three faults into a
+seq-valued spec_fun's own body, a shape none of the four probes above
+plants (each of theirs is on the task side, one unfolding from the base
+case), and ran each through every kernel by the no-twin path: (1) `tl`
+dropping the last element instead of the first (`slice(s, 0, len(s) - 1)`
+in fz_p_sf_seq_build's spec_fun), (2) `dbl` dropping the appended element
+(`dbl(s, n - 1)` alone in the else branch), (3) `dbl` prepending it
+(`[2 * s[n - 1]] + dbl(s, n - 1)`). Verus, SPARK, Lean and Rocq refuted
+all three; dafny and F* refuted (2) and read (1) and (3) **unproved**,
+not refuted and not verified. Reproduced here first, on the reviewer's
+own generated sources (`seqfun_review/seeded_faults/`): dafny 4.11.0 exit
+4 on the certificate lemma, F* 2026.08.30 Error 19 "unknown because
+(incomplete quantifiers)" up to fuel 8, both in 2 s. The finding is
+real, and its cause is in the certificate, not in the lowering of the
+construct.
+
+**Two causes.** The twin certificate (lower_dafny.py's section comment
+above `CERT_NAME`; lower_fstar.py's above its own) states the measured
+witness as a ground lemma the kernel must accept. Dafny's carries an
+assert ladder for every spec_fun call the formula reaches, `assert
+f(args) == v;`, callees before callers, because the kernel unfolds a
+recursive function only to its default fuel; that ladder skipped a
+seq-valued fact (`if isinstance(v, list): continue`, a line dead before
+this branch, since no spec_fun returned a seq), so `dbl([0, 1], 2)`
+needed two unfoldings the kernel did not make. F* carries no ladder: its
+`assert_norm` evaluates the formula by normalisation, which decides an
+int-valued recursive call outright but cannot evaluate a seq-valued one
+(`Seq.seq` is `new val`, abstract, in FStar.Seq.Base.fsti), so the
+residual goes to Z3, whose only index and length facts are the SMTPat'd
+lemmas (`lemma_index_app1`/`app2`, `lemma_index_create`,
+`lemma_index_slice`, `lemma_len_*`), triggered by index terms the goal
+never contains. That is cause one, the recursion. Cause two showed on the
+slice fault, which needs no recursion at all: once `tl([0, 1])` is
+grounded to `[0]`, what is left is `[1, 0] != [0] + [0]`, and neither
+kernel proves that either. Probe `T1`, a Dafny lemma with nothing but
+`ensures [1, 0] != [0] + [0]` and no spec_fun in the file, exits 4 on
+4.11.0 (`fix/hand/T1.dfy`); a display is a `Seq#Build` chain with an
+injectivity axiom, an append of two displays is not, and nothing relates
+the two without an index term to trigger on. Asserting the append's
+value as a display first (`T4`, `T6`) proves it; the same shape in F*
+(`fix/hand/sliceV5-V7.fst`) reads refuted with the rung and unproved
+without.
+
+**The fix** (commit "the dafny and F* certificates ladder seq-valued
+spec_fun calls and the ground seq operators around them"). lower_dafny.py's
+ladder states a seq-valued fact with its result bound to a fresh
+`seq<int>` local in the lemma body (`var t_v0: seq<int> := [];` then
+`assert dbl(s, 0) == t_v0;`, since an inline literal is
+type-underspecified), and, once a certificate grounds such a call, every
+seq-typed ground operator subterm of the formula, innermost first
+(`_seq_op_rungs`: `assert (tl(s) + [s[0]]) == t_v1;`). `seq_ladder` hands
+the same rungs to lower_fstar.py, which asserts each as `Seq.equal
+<term> <literal>` ahead of the `assert_norm`, so `lemma_eq_elim` and the
+index lemmas have their terms. The rungs are hints: the kernel re-proves
+every one, so a wrong rung loses the certificate and never fakes it, and
+verifiers/dafny.py's shape rule (one `lemma t_refutation_certificate()`,
+one ensures, no requires) and verifiers/fstar.py's targeted
+`--admit_except` run are untouched. A certificate whose formula reaches
+no seq-valued call gets no rung, which is every committed task's
+(double_all's own twin is the undefined-kind witness at `s = []`, whose
+formula has no call), hence the byte identity above. The two seeded
+faults are committed as adversarial probes, `fz_p_sf_seq_swap` and
+`fz_p_sf_seq_slice_off`, expected refuted.
+
+**Measured** (`fix/seeded/`, 2026-09-27 20:28Z, the desktop; the lab was
+unreachable for this session too): the reviewer's three seeded tasks and
+the two probes, real side with `harness.real_witness`, `flake_check` n=3
+over each kernel's `verify`:
+
+| task | dafny | verus | spark | framac | lean | rocq | fstar |
+|---|---|---|---|---|---|---|---|
+| seed_offbyone_slice_v2 (1) | refuted | refuted | refuted | abstain | refuted | refuted | refuted |
+| seed_dropped_element (2) | refuted | refuted | refuted | abstain | refuted | refuted | refuted |
+| seed_swapped_concat (3) | refuted | refuted | refuted | abstain | refuted | refuted | refuted |
+| fz_p_sf_seq_swap | refuted | refuted | refuted | abstain | refuted | refuted | refuted |
+| fz_p_sf_seq_slice_off | refuted | refuted | refuted | abstain | refuted | refuted | refuted |
+| fz_p_sf_seq_false | refuted | refuted | refuted | abstain | refuted | refuted | refuted |
+
+Every cell 3 of 3 agreed; dafny and F* under 3 s each, SPARK 19 to 27 s.
+The four earlier probes and double_all, regraded by t/run_par.py after
+the fix, read exactly as in the table above (`fix/probes8.md`,
+`fix/fix8.md`).
+
+**On the corpus.** The fix can only change a twin cell in the dafny and
+F* columns, and only for a task whose certificate reaches a seq-valued
+call, so the 55 checked tasks were regraded in those two columns alone
+(`fix/grade_df.md`, 2026-09-27, 80 cells, 480 kernel runs, no cache)
+against `COVERAGE-seqfun.md` (the 19:34Z grading): 6 twin cells moved
+from `verified / unproved` to `verified / refuted`, one in dafny
+(`vericoding_da0000__solve`, its certificate now laddering
+`intToDigits(1)` through its helper) and five in F* (`da0526`, `da0561`,
+`da0564`, `da0576`, `da0663`, each a string helper grounded by one
+`Seq.equal` rung); dafny 29 to 30 and F* 18 to 22 tasks verified /
+refuted of the 55. One real-side F* cell, `vericoding_da0453__solve`,
+read timeout in the regrade where the 19:34Z run read verified; its
+source is byte-identical to that run's (the fix does not touch a real
+side) and re-verified alone three times it reads verified, 3 of 3 agreed, 50 s each: a load timeout, the regrade having shared the desktop with the CI step, the probe matrix and an unrelated SPARK job. The lift measurement itself (the 1,886-file
+tally, the check stage) is untouched by the fix, which changes neither
+the lifter nor the check stage, so its counts above stand as measured.
+
+**The review's second finding**, that its own reproduction of the corpus
+measurement covered about 570 of the 1,886 files in its budget, is a
+coverage note on the review, not a discrepancy: the partial counts it
+reports agree in direction, magnitude and refusal-reason names with the
+full run above, and nothing in this fix touches the lifter, so the full
+run was not repeated here.
+
+**Left, and why.** Cause two is older than this branch: a certificate
+whose formula compares a literal against a ground `+` (or slice, update,
+fill, string member) of literals, with no spec_fun anywhere, is unproved
+in dafny and F* today (`T1`). Closing it for every certificate is the
+same rung emitted unconditionally, which changes the text of committed
+twins and so waits for a branch that regrades the committed matrix on
+purpose; here it is gated on a seq-valued fact.
 
 ## The measurement on the staged corpus
 
@@ -316,8 +460,16 @@ fourth being the `spec-fun-result` coverage row added since). The three
   `test_loop_train.py` failures are `ModuleNotFoundError: No module named
   'datasets'` on this machine, the same three before this branch; CI
   installs it.
-- `python3 t/test_seq_spec_fun.py`: 6 tests, 560 lowerings of the
-  committed tasks. `python3 t/test_lift_seq_fun.py --slow`: 6 tests plus the check stage on
+- After the review's fix, the same step (`fix/ci_step2.log`): 1,432 passed, 3 failed, 53 skipped, 25 deselected, 1 xfailed, 102 subtests passed, 152 s; the three failures the same `datasets` ones.
+  On the tree as reviewed it read 4 failed, 1,431 passed: the fourth was
+  t/test_twin_hints.py's exemplar `min_max` for "a program with a
+  timeout column is not a source", which the committed-matrix regrade
+  (4cb7e5b4, min_max's Rocq cell verified / refuted on the desktop) had
+  made a source; the test now names count_vowels, whose row still
+  carries a timeout in spark and fstar (the rule under test unchanged).
+- `python3 t/test_seq_spec_fun.py`: 7 tests, 560 lowerings of the
+  committed tasks; `--slow` adds dafny's and F*'s own `refuted` on the two
+  seeded-fault probes. `python3 t/test_lift_seq_fun.py --slow`: 6 tests plus the check stage on
   three of its programs under dafny (DropFirst, DoubleAll, MakeOnes: each
   checked, the differential harness agreeing on 47, 87 and 41 points).
 
@@ -342,7 +494,17 @@ T_SPARK_JOBS=1 python3 t/run_par.py --jobs 2 --tasks ~/scratch/seqfun/tasks_fix 
 git archive r12-blockers t | tar -x -C ~/scratch/seqfun/base_src
 python3 hash_lowerings.py ~/scratch/seqfun/base_src/t hashes_base2.json
 python3 hash_lowerings.py t hashes_branch5.json
+# the review's seeded faults and the two probes, real side with the
+# interpreter's witness, flake_check n=3 per kernel (fix/seeded/)
+python3 seeded.py verify
+# the corpus's 55 checked tasks in the two columns the fix touches
+python3 t/run_par.py --jobs 3 --no-cache --kernels dafny,fstar --tasks ~/scratch/seqfun/grade_tasks --out ~/scratch/seqfun/fix/grade_df --table ~/scratch/seqfun/fix/grade_df.md
 ```
+
+`seeded.py` lowers each task with `harness.real_witness` (the conformance
+suite's own no-twin path) in every kernel and runs `verifiers.flake_check`
+over each kernel's `verify` three times; it is the reviewer's own script
+with the tree it imports changed.
 
 `measure.py`, `summarize_check.py` and `hash_lowerings.py` are the tally
 scripts described in the text: the first reads every `<stem>.outcome.json`
