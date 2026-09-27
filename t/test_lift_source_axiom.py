@@ -154,6 +154,46 @@ method Plain(x: int) returns (r: int)
 }
 """
 
+# Row 51 review finding 2 (2026-09-27): an axiom-attributed CALLEE that is
+# itself a `method`, not a function/lemma. `_closure` (the shared helper
+# other checks rely on) only ever walks into FunctionDecl/LemmaDecl, so
+# before `_closure_incl_methods` existed, `DoubleIt` was invisible to the
+# axiom check no matter how directly `UsesDoubleIt` called it: it lifted
+# clean, and `DoubleIt`'s false, unchecked-by-Dafny `ensures` (only true
+# when x == 0) was folded straight into the task as a trusted fact -- the
+# exact DT0258 hazard, expressed through a method instead of a
+# function+lemma pair.
+AXIOM_METHOD_CALLEE = """
+method {:axiom} DoubleIt(x: int) returns (r: int)
+  ensures r == 2 * x
+{
+  r := 0;
+}
+
+method UsesDoubleIt(x: int) returns (r: int)
+  ensures r == 2 * x
+{
+  r := DoubleIt(x);
+}
+"""
+
+# The companion case: an axiom-attributed METHOD the calling method never
+# touches must still lift, noted `axiom-in-file` like any other untouched
+# axiom -- not wrongly refused, and not wrongly silent either.
+AXIOM_METHOD_OUTSIDE_CLOSURE = """
+method {:axiom} DoubleIt(x: int) returns (r: int)
+  ensures r == 2 * x
+{
+  r := 0;
+}
+
+method Unrelated(x: int) returns (r: int)
+  ensures r == x + 1
+{
+  r := x + 1;
+}
+"""
+
 
 def test_axiom_lemma_and_axiom_only_function_refuse_source_axiom() -> None:
     _refuses(NUMPY_BITWISE_OR, "NumpyBitwiseOr", "source-axiom")
@@ -175,10 +215,19 @@ def test_untouched_axiom_lifts_with_note() -> None:
     print("test_untouched_axiom_lifts_with_note: ok")
 
 
+def test_axiom_method_callee_refuses_source_axiom() -> None:
+    _refuses(AXIOM_METHOD_CALLEE, "UsesDoubleIt", "source-axiom", "DoubleIt")
+    v = _classify_one(AXIOM_METHOD_OUTSIDE_CLOSURE, "Unrelated")
+    assert isinstance(v, C.Liftable), v
+    assert v.axiom_in_file, "expected the untouched axiom method's line noted"
+    print("test_axiom_method_callee_refuses_source_axiom: ok")
+
+
 def run() -> None:
     test_axiom_lemma_and_axiom_only_function_refuse_source_axiom()
     test_assume_refuses_source_assume()
     test_untouched_axiom_lifts_with_note()
+    test_axiom_method_callee_refuses_source_axiom()
     print("test_lift_source_axiom: ok")
 
 
