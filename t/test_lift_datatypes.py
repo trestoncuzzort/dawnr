@@ -10,7 +10,7 @@ file's `datatype` declarations (enum, record, sum, real, generic, recursive;
 the hardest present when there are several); a member on a file with no
 datatype is `member-access`. Nothing lifts: t has no datatype yet.
 
-Run: python3 t/test_lift_datatypes.py   (or pytest)
+Run: python3 t/test_lift_datatypes.py [--slow]   (or pytest; --slow runs the check stage under dafny)
 """
 from __future__ import annotations
 
@@ -276,8 +276,86 @@ def test_a_datatype_local_is_named_by_shape() -> None:
     print("test_a_datatype_local_is_named_by_shape: ok")
 
 
+MATCH_NO_DEFAULT = """
+method Name(n: int) returns (r: int)
+  requires 1 <= n <= 2
+  ensures r == n
+{
+  match n {
+    case 1 => r := 1;
+    case 2 => r := 2;
+  }
+}
+"""
+
+MATCH_STMT = """
+method Sign(n: int) returns (r: int)
+  ensures n == 0 ==> r == 0
+  ensures n == 1 ==> r == 1
+  ensures n != 0 && n != 1 ==> r == 2
+{
+  match n {
+    case 0 => r := 0;
+    case 1 => r := 1;
+    case _ => r := 2;
+  }
+}
+"""
+
+MATCH_EXPR = """
+function Small(n: int): int {
+  match n
+  case 0 => 10
+  case -1 => 20
+  case _ => 30
+}
+method UseSmall(n: int) returns (r: int)
+  ensures r == Small(n)
+{
+  r := Small(n);
+}
+"""
+
+
+def test_a_match_on_int_literals_with_a_default_is_an_if_chain() -> None:
+    import lift_rewrite as R
+    import check_wf
+    import interp
+    mod = lift_parse.parse(MATCH_STMT)
+    m = {d.name: d for d in lift_parse.gradable_methods(mod)}["Sign"]
+    v = C.classify(mod, m)
+    assert isinstance(v, C.Liftable), v
+    assert any(rw.rule == "match-literal-if-chain" for rw in v.rewrites), v.rewrites
+    rr = R.rewrite(mod, v, "unit.dfy", "sha")
+    assert rr.refusal is None, rr.refusal
+    assert check_wf.check_wf(rr.task) == []
+    body = rr.task["body"]
+    assert "if" in body[-1], body[-1]
+    ref = interp.Reference(rr.task)
+    assert ref.points
+    # the chain is exact on every int: 0 -> 0, 1 -> 1, else 2 (the source's
+    # cases in order, `_` last)
+    funs = interp.funs_of(rr.task, body)
+    r = rr.task["returns"][0]["name"]
+    for n, want in ((0, 0), (1, 1), (5, 2), (-3, 2)):
+        env = {"n": n}
+        interp.exec_body(body, env, funs, interp.St())
+        assert env[r] == want, (n, env)
+    mod = lift_parse.parse(MATCH_EXPR)
+    m = {d.name: d for d in lift_parse.gradable_methods(mod)}["UseSmall"]
+    v = C.classify(mod, m)
+    assert isinstance(v, C.Liftable), v
+    assert any(rw.rule == "match-literal-if-chain" for rw in v.rewrites), v.rewrites
+    rr = R.rewrite(mod, v, "unit.dfy", "sha")
+    assert rr.refusal is None, rr.refusal
+    assert check_wf.check_wf(rr.task) == []
+    print("test_a_match_on_int_literals_with_a_default_is_an_if_chain: ok")
+
+
 def test_match_is_named_by_its_first_pattern() -> None:
-    for src, want in ((MATCH_INT, "match-literal"), (MATCH_STRING_STMT, "match-literal"),
+    mod = lift_parse.parse(MATCH_INT)  # parses now: an int match with a default
+    assert mod.decls
+    for src, want in ((MATCH_NO_DEFAULT, "match-no-default"), (MATCH_STRING_STMT, "match-literal"),
                       (MATCH_CTOR, "datatype"), (MATCH_CTOR_ARGS, "datatype")):
         try:
             lift_parse.parse(src)
@@ -288,16 +366,47 @@ def test_match_is_named_by_its_first_pattern() -> None:
     print("test_match_is_named_by_its_first_pattern: ok")
 
 
-def run() -> None:
+def _check_end_to_end(src: str, method_name: str) -> None:
+    import tempfile
+    from pathlib import Path
+    import lift_check
+    import lift_rewrite as R
+    mod = lift_parse.parse(src)
+    method = {d.name: d for d in lift_parse.gradable_methods(mod)}[method_name]
+    plan = C.classify(mod, method)
+    assert isinstance(plan, C.Liftable), plan
+    rr = R.rewrite(mod, plan, "unit.dfy", "sha")
+    assert rr.refusal is None, rr.refusal
+    with tempfile.TemporaryDirectory() as d:
+        out = lift_check.check(rr.task, method, plan.closure, rr.record, Path(d) / "unit.check.dfy",
+                               240.0, callees=rr.callees)
+    assert out.refusal is None, (out.refusal, rr.record.checker_verdicts, rr.record.warnings)
+    print(f"    {method_name}: {rr.record.checker_verdicts}")
+
+
+def test_check_stage(slow: bool) -> None:
+    """Dafny proves the if-chain body against the source's own clauses (the
+    check stage's L_req/L_ens), statement form and expression form."""
+    if not slow:
+        print("test_check_stage: skipped (pass --slow)")
+        return
+    for src, m in ((MATCH_STMT, "Sign"), (MATCH_EXPR, "UseSmall")):
+        _check_end_to_end(src, m)
+        print(f"test_check_stage: {m} ok")
+
+
+def run(slow: bool = False) -> None:
     test_match_is_named_by_its_first_pattern()
+    test_a_match_on_int_literals_with_a_default_is_an_if_chain()
     test_a_datatype_local_is_named_by_shape()
     test_pair_projections_are_named_by_their_base()
     test_array2_and_floor_members_take_their_own_names()
     test_datatype_shapes_are_named()
     test_member_on_a_file_without_datatypes()
     test_kind_order_is_hardest_first()
+    test_check_stage(slow)
     print("test_lift_datatypes: ok")
 
 
 if __name__ == "__main__":
-    run()
+    run("--slow" in sys.argv[1:])
