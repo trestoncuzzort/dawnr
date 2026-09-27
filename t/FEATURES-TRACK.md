@@ -168,6 +168,118 @@ lemmas are next. And the method-call tasks fail inside their callees (a
 recursive `Pow` Lean abstains on, loops Rocq's proof search cannot close), not
 at the call.
 
+### 2. Lemmas: declared, proved, called (2026-09-27)
+
+**The feature** (SPEC.md "Lemmas (v1)"). Candidates: Dafny `lemma` (a ghost
+method: requires/ensures, a proof body, a call adds the ensures as a fact);
+Why3 `lemma`/`let lemma`; Lean/Rocq `theorem` applied by name; F* `Lemma`;
+Verus `proof fn`; SPARK lemma subprograms with a `Post`; ACSL `lemma`
+(global, not called) or a ghost function with a contract. Chosen: Dafny's
+(reference manual 6.3.3), because it is the method call rule with the return
+removed and the corpora's own semantics. A t `lemma` has params, requires,
+ensures, a `decreases` when it calls itself, and a proof body of `if`,
+`assert` and lemma calls (Dafny's case split, intermediate facts and
+induction step); `L(a, b);` is a statement anywhere a statement may stand. It
+is a no-op in the interpreter and in every certificate replay; the twin never
+touches it. check_wf: `lemma-body`, `lemma-call`, `lemma-decreases`,
+`lemma-name`, `lemma-order`.
+
+The plan above said the Dafny proof body would be "a hint, not lowered". The
+measurement reversed that: proofs in these corpora are mostly asserts
+(1349 asserts in 112 of the 136 files), and a lemma lifted without them is
+often unprovable where its source was proved. So t keeps the proof skeleton,
+and a kernel that states a step must prove it.
+
+**Per kernel** (a lemma is never assumed: a kernel either proves it in the
+file or does not state it):
+
+| kernel | a lemma is | a call is | an `assert` step |
+|---|---|---|---|
+| dafny | a `lemma`, always with a body (a body-less one is an axiom) | the call statement | `assert` |
+| verus | a `proof fn`; recursive spec fns revealed to fuel 2 | a proof-fn call | `assert`; a nonlinear one `by (nonlinear_arith)` over the requires, guards and earlier steps on its path |
+| spark | a Boolean function, Pre/Post the lemma, body hidden | an obligation in the value-neutral wrapper where it executes (left out in a body with an early return) | left out (an expression function cannot cut) |
+| framac | a ghost C function with an ACSL contract | a ghost call statement | a ghost-code assertion |
+| fstar | a `Lemma` (`let rec` with `decreases` for an induction) with a conjunctive `SMTPat` over the spec_fun calls in its ensures | nothing: the pattern hands the proved fact to Z3 | `assert` |
+| lean | a theorem, the skeleton as `by_cases`/`have`, closed by grind, well-founded recursion for an induction, `#print axioms` audited | nothing: `grind_pattern` hands it to grind | `have .. := by grind` |
+| rocq | not stated in v1 | removed (a no-op) | n/a |
+
+Fixtures `t/lemmas/*.t` and seeded-fault probes `t/lemmas_probe/*.t`, one
+kernel at a time on the desktop (real / twin):
+
+| | dafny | verus | spark | framac | lean | rocq | fstar |
+|---|---|---|---|---|---|---|---|
+| pow2_pos (induction over a recursive spec_fun) | verified / refuted | verified / refuted | verified / refuted | abstain (a spec_fun in executable position) | verified / refuted | unproved / refuted | verified / refuted |
+| sq_bound (a nonlinear fact) | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| sum_loop (an induction step used in a loop) | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
+| false_lemma (false at its base case) | unproved | unproved | timeout | abstain | unproved | unproved | unproved |
+| false_arith (a false nonlinear fact) | unproved | unproved | refuted | timeout | unproved | unproved | unproved |
+| circular (`k == k + 1` by calling itself) | unproved | unproved | malformed | timeout | unproved | unproved | unproved |
+| false_assert (a false step, correct program) | unproved | unproved | verified | timeout | unproved | verified | unproved |
+| false_nonlinear_step (the same, nonlinear, under a guard) | unproved | unproved | verified | timeout | unproved | verified | unproved |
+
+No kernel verifies a program through a false lemma. The two `verified` cells
+on the last two rows are correct programs whose false step those two kernels
+do not state. Every committed task, the methods fixtures, 98 lifted tasks and
+the 66 conformance items lower byte-identically, real and twin, in all seven
+kernels; `t/conformance.py` on the grading machine: 2 FAIL cells before and
+after (the same two Frama-C timeouts). Tests (no prover): `t/test_lemmas.py`
+16, `t/test_lift_lemmas.py` 4.
+
+**The lifter** (LIFTER-DECISIONS row 38). A lemma the method (or a lemma it
+calls) calls lifts when its parameters are t types, it is not generic and has
+no out-parameters, its contract lifts and it adds no well-formedness error;
+its proof keeps `if`, `assert` and calls of lifted lemmas, with the proof's
+own locals substituted in; `calc` and `forall` statements are dropped. A
+lemma that does not lift is dropped with its calls as before: lemmas never
+make a method refuse. The check stage verifies the lifted lemmas with Dafny's
+automatic induction off (Dafny alone of the seven inducts on its own) and
+drops any it cannot prove, with their calls.
+
+**Measured** (the 136 files the 2026-09-26 lift refused for calls, through
+`t/lift_corpora.py --only-stems`, the check stage and seven-kernel grading on
+the grading machine, `run_par --jobs 6` with serial cells; tables
+`t/COVERAGE-lifted-2026-09-27-lemmas.md` and, for the same 48 tasks with
+their lemmas removed, `t/COVERAGE-lifted-2026-09-27-lemmas-removed.md`):
+187 lemmas lifted and 25 not, 179 lemma calls kept and 26 dropped; 117
+accepted by the corpus gates (as before); 74 kept by the check stage (73
+before), 48 of them carrying lemmas after the check stage dropped an unproved
+lemma in 14.
+
+Verified with the twin refuted, per kernel, on the 48 lemma-carrying tasks:
+
+| kernel | lemmas removed | with lemmas | gained | lost |
+|---|---:|---:|---:|---:|
+| dafny | 28 | 36 | 8 | 0 |
+| verus | 16 | 25 | 9 | 0 |
+| spark | 25 | 29 | 5 | 1 |
+| framac | 9 | 12 | 3 | 0 |
+| lean | 8 | 10 | 2 | 0 |
+| rocq | 3 | 3 | 0 | 0 |
+| fstar | 25 | 30 | 6 | 1 |
+
+Clean documents on those 48: **1 clean in all seven with lemmas, 1 without**
+(vericoding_DA0484 both ways); **4 clean in exactly six with lemmas, 3
+without** (the new one vericoding_DA0123; the other three are DA0399, missing
+lean, and DA0538 and DA0659, missing rocq). Over the whole relift (74 tasks):
+3 clean in seven (DA0308, DA0484, DA0531) and 6 in exactly six (3 missing
+lean, 3 missing rocq), against 3 and 3 in the 2026-09-26 relift. The two
+losses: spark cannot prove DA0524's lemma, whose ensures it proves at the
+task without it; fstar's twin of DH0079 times out with the lemma's pattern in
+play.
+
+**What this bought, and what it did not.** 33 kernel cells gained against 2
+lost, and every kernel but Rocq gains, most of all Dafny and Verus (the
+kernels closest to the source's own proof). But one new clean-in-six document
+and no new clean-in-seven, because the binding kernels are not the ones
+lemmas help: of the 10 lemma-carrying tasks clean in exactly five, 9 miss
+Rocq (6 miss Rocq and Lean together). Rocq states no lemma in v1, and its
+proof search fails even on straight-line tasks whose lemma is a one-line
+bound (DA0659: `result := 48 - m` against a three-function ensures). Lemmas
+in Rocq, as proved cuts its automation can use (a `try assert` of each call's
+conclusion, then the lemma as a theorem proved by fuel induction), are the
+next lever for clean-in-seven on this set; Lean's grind closing the lemma
+proofs is the second.
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
@@ -176,7 +288,6 @@ effort is the lowering work across seven kernels plus the lifter.
 
 | # | feature | unlocks (sole) | effort | why here |
 |---|---|---:|---|---|
-| 2 | **Lemmas: declared, proved, called** | the 55 checked lemma-dropped tasks, of which only 6 are clean in six or seven today | a zero-return method whose body the kernels prove; the call rule is already built | Dropping lemma calls (decision 8) keeps the program but loses the proof: Dafny itself re-proves only 32 of the 55 without them. The method feature already has the call rule; a lemma is a ghost method with no return. |
 | 3 | seq `decreases` on spec_funs (lifter only) | 32 of 108 in the re-lift, 32 of 373 in the lift, at the check stage | lifter only | no kernel cost |
 | 4 | arrays read by functions (`function f(a: array<int>) reads a`) | 43 | lifter only: decision 1 already lifts a read-only array parameter to a seq value; extend it to functions that read one | no kernel cost |
 | 5 | quantifier bounds through predicates and one-sided ranges | part of 57 | lifter first (infer the range from a predicate's body or a one-sided guard); truly unbounded quantifiers stay refused | the interpreter cannot evaluate an unbounded quantifier, so no twin witness; bounds are what makes a twin measurable |
@@ -186,24 +297,6 @@ effort is the lowering work across seven kernels plus the lifter.
 | 9 | higher-order functions | 1 + 91 files | all seven kernels | largest |
 
 ## The features ahead: designs and costs
-
-### 2. Lemmas
-
-Candidates: Dafny `lemma` (a ghost method: requires/ensures, a proof body, a call
-adds the ensures as a fact); Why3 `lemma`/`let lemma`; Lean/Rocq `theorem`
-applied by name; F* `Lemma` effect; Verus `proof fn`; SPARK ghost procedures
-(`Ghost` aspect) with a `Post`; ACSL `lemma` (global, not called) or a ghost
-function with a contract. Chosen shape: Dafny's, as a t `lemma` declaration with
-params, requires, ensures and no return, called as a statement; the kernel
-proves the lemma with its own automation (the Dafny proof body is a hint, not
-lowered), and a caller gets its ensures at the arguments. It fits because it
-is the method call rule with the return removed. Costs: Dafny, Verus, F*,
-SPARK native (a call statement of a ghost/proof subprogram); Frama-C a ghost
-function with a contract; Lean and Rocq a theorem per lemma and an `have` at
-the call, the same machinery methods use. The hard part is not the call but the
-lemma's own proof in Lean and Rocq, which have no SMT; where their automation
-cannot prove the statement, those two read unproved, graded, and the other five
-still count.
 
 ### 3. Sequence decreases on spec_funs (lifter)
 
