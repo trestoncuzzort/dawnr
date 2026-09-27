@@ -600,6 +600,10 @@ def exec_body(body: list, env: dict, funs: dict, st: St,
                 it += 1
                 if it > MAX_LOOP:
                     raise Budget("loop cap")
+        elif "lemma" in s:
+            # SPEC.md "Lemmas (v1)": a lemma call is erased at run time
+            # (Dafny reference manual 6.3.3: lemmas are ghost), a no-op.
+            pass
         else:
             raise ValueError(f"t has no statement {s!r}")
     return False

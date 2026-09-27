@@ -121,7 +121,8 @@ def expand_task(task, helpers, positions=None, file="<string>", max_nodes=100_00
     if task["t"] != 1:
         raise ExpansionError("inline functions require t 1", helpers[0], "inline-version")
     reserved = ({task["name"]} | {f["name"] for f in task.get("spec_funs", [])}
-                | {m["name"] for m in task.get("methods", [])})
+                | {m["name"] for m in task.get("methods", [])}
+                | {l["name"] for l in task.get("lemmas", [])})
     signatures = {}
     expander = Expander(task, helpers, positions, max_nodes)
     for helper in helpers:

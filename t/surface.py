@@ -578,18 +578,23 @@ class Parser:
         task["requires"] = requires
         task["ensures"] = ensures
 
-        funs, helpers, methods = [], [], []
-        while self.at("kw", "spec") or self.at_inline_fun() or self.at_method():
+        funs, helpers, methods, lemmas = [], [], [], []
+        while (self.at("kw", "spec") or self.at_inline_fun() or self.at_method()
+               or self.at_lemma()):
             if self.at("kw", "spec"):
                 funs.append(self.spec_fun())
             elif self.at_method():
                 methods.append(self.method())
+            elif self.at_lemma():
+                lemmas.append(self.lemma())
             else:
                 helpers.append(self.inline_fun())
         self.production = "Task"           # spec_fun() left it on "SpecFun"
         self.ret_name = rname              # method() rebinds it for its own body
         if funs:
             task["spec_funs"] = funs
+        if lemmas:
+            task["lemmas"] = lemmas
         if methods:
             task["methods"] = methods
         if dec is not None:
@@ -658,6 +663,42 @@ class Parser:
         m["body"] = self.block()
         self.production = "Method"
         return self.mark(start, m)
+
+    def at_lemma(self) -> bool:
+        # Contextual, as `method` is: `lemma` followed by a name. SPEC.md
+        # "Lemmas (v1)"; the notation is Dafny's lemma declaration
+        # (reference manual 6.3.3): no returns, a body that is its proof.
+        return (self.at("id", "lemma") and self.i + 1 < len(self.toks)
+                and self.toks[self.i + 1].kind == "id")
+
+    def lemma(self) -> dict:
+        start = self.tok
+        self.production = "Lemma"
+        self.eat("id", "lemma")
+        l = {"name": self.name("Lemma"), "params": self.params("Lemma")}
+        self.production = "Lemma"
+        requires, ensures, dec = [], [], None
+        while self.tok.kind == "kw" and self.tok.text in (
+                "requires", "ensures", "decreases"):
+            wtok = self.eat("kw")
+            e = self.expr()
+            self.production = "Lemma"
+            if wtok.text == "requires":
+                requires.append(e)
+            elif wtok.text == "ensures":
+                ensures.append(e)
+            else:
+                if dec is not None:
+                    self.err(wtok, "a lemma has at most one decreases")
+                dec = e
+        l["requires"] = requires
+        l["ensures"] = ensures
+        if dec is not None:
+            l["decreases"] = dec
+        self.ret_name = None               # a lemma has no return
+        l["body"] = self.block()
+        self.production = "Lemma"
+        return self.mark(start, l)
 
     def inline_fun(self) -> dict:
         start = self.tok
@@ -738,6 +779,23 @@ class Parser:
             e = self.expr()
             self.opt("sym", ";")
             return self.mark(t, {"return": [self.ret_name, e]})
+        if (t.kind == "id" and self.i + 1 < len(self.toks)
+                and self.toks[self.i + 1].kind == "sym"
+                and self.toks[self.i + 1].text == "("):
+            # SPEC.md "Lemmas (v1)": `L(a, b);`, Dafny's lemma call
+            # statement. Only a lemma is called as a statement.
+            name = self.name()
+            self.eat("sym", "(")
+            args = []
+            if not self.at("sym", ")"):
+                while True:
+                    args.append(self.expr())
+                    self.production = "Stmt"
+                    if not self.opt("sym", ","):
+                        break
+            self.eat("sym", ")")
+            self.opt("sym", ";")
+            return self.mark(t, {"lemma": {"name": name, "args": args}})
         if t.kind == "id":
             target = self.name()
             self.eat("sym", ":=", "Stmt")
@@ -1367,6 +1425,11 @@ def pstmts(body: list, ind: str) -> list:
         if kind == "return":
             out.append("%sreturn %s;" % (ind, pexpr(s["return"][1], 0)))
             continue
+        if kind == "lemma":
+            c = s["lemma"]
+            out.append("%s%s(%s);" % (ind, _ident(c["name"]),
+                                      ", ".join(pexpr(a) for a in c["args"])))
+            continue
         if kind == "assign":
             tgt, val = s["assign"]
             out.append("%s%s := %s;" % (ind, _ident(tgt), pexpr(val)))
@@ -1405,7 +1468,7 @@ def print_task(task: dict) -> str:
             raise SurfaceError("task is missing required field %r" % k)
     unknown = set(t) - {"t", "name", "params", "returns", "requires",
                         "ensures", "gate", "spec_funs", "methods",
-                        "decreases", "body"}
+                        "lemmas", "decreases", "body"}
     if unknown:
         raise SurfaceError("task carries fields t does not define: %s"
                            % " ".join(sorted(unknown)))
@@ -1437,6 +1500,19 @@ def print_task(task: dict) -> str:
                                               fn["result"]))
         lines.append("  decreases %s" % pexpr(fn["decreases"]))
         lines.append("= %s" % pexpr(fn["body"]))
+    for lm in t.get("lemmas", []):
+        lps = ", ".join("%s: %s" % (_ident(p["name"]), _print_type(p["type"]))
+                        for p in lm["params"])
+        lines.append("lemma %s(%s)" % (_ident(lm["name"]), lps))
+        for e in lm["requires"]:
+            lines.append("  requires %s" % pexpr(e))
+        for e in lm["ensures"]:
+            lines.append("  ensures %s" % pexpr(e))
+        if "decreases" in lm:
+            lines.append("  decreases %s" % pexpr(lm["decreases"]))
+        lines.append("{")
+        lines += pstmts(lm["body"], "  ")
+        lines.append("}")
     for m in t.get("methods", []):
         if len(m["returns"]) != 1:
             raise SurfaceError("a method returns exactly one value")

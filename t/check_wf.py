@@ -87,6 +87,19 @@ RULES: dict[str, str] = {
     "fill-types": "fill wants (int, int) or (int, seq) for the row "
                   "(Sequences as values; Nested sequences)",
     "ite-branches": "ite branches must have the same type",
+    "lemma-body": "a lemma body holds only `if` and lemma-call statements, "
+                  "and a lemma has no return (Lemmas; Dafny reference 6.3.3)",
+    "lemma-call": "a lemma call is a statement naming a declared lemma, "
+                  "with matching arity and argument types; a lemma is never "
+                  "called as an expression and its arguments call no method "
+                  "(Lemmas)",
+    "lemma-decreases": "a lemma decreases requires a self-calling lemma "
+                       "body, and vice versa (Lemmas)",
+    "lemma-name": "lemma names are distinct from each other, the task, the "
+                  "spec_funs and the methods, and match [A-Za-z][A-Za-z0-9_]* "
+                  "(Lemmas)",
+    "lemma-order": "a lemma body calls only EARLIER lemmas, or itself with "
+                   "a decreases; its contract calls no lemma or method (Lemmas)",
     "local-shadow": "a local must not shadow a name already in scope (Gate 1 scope rule)",
     "local-v0": "locals are a v1 construct (Gate 2)",
     "method-call-position": "a method call is the whole right-hand side of an "
@@ -129,7 +142,8 @@ RULES: dict[str, str] = {
     "strlib-types": "each string-library member's argument types must "
                     "match its signature (The string library)",
     "unbound": "a name must be bound before use (v0 and Gate 1 scope rule)",
-    "unknown-stmt": "a Stmt is one of assign/var/if/while/return (v0 Stmt; Gate 2)",
+    "unknown-stmt": "a Stmt is one of assign/var/if/while/return, or a "
+                    "lemma call (v0 Stmt; Gate 2; Lemmas)",
     "update-types": "update wants (seq, int, int) or (seq<seq>, int, seq) "
                     "for the row (Sequences as values; Nested sequences)",
     "v0-frozen": "t:0 is frozen; spec_funs/methods/decreases/gate are v1 fields",
@@ -576,7 +590,7 @@ def check_wf(task: dict, positions: dict | None = None,
     funs = dict(expression_funs or {})
     funs.update({f["name"]: f for f in task.get("spec_funs", [])})
     if ver == 0 and (funs or "decreases" in task or "gate" in task
-                     or "methods" in task):
+                     or "methods" in task or "lemmas" in task):
         _e(errs, task, "v1 field in a v0 task", "v0-frozen")
     penv = {p["name"]: p["type"] for p in task["params"]}
     if ver == 0 and any(t != "int" for t in penv.values()):
@@ -614,9 +628,19 @@ def check_wf(task: dict, positions: dict | None = None,
         _e(errs, task, "task decreases without a self-call", "decreases-selfcall")
     methods = task.get("methods", [])       # a v0 task with methods: v0-frozen above
     mnames = [m.get("name") for m in methods]
+    # SPEC.md "Lemmas (v1)": checked before the methods, since a method
+    # body may call any lemma and a lemma calls no method.
+    lemmas = task.get("lemmas", [])
+    lnames = [l.get("name") for l in lemmas]
+    lsigs: dict = {}
+    for i, l in enumerate(lemmas):
+        _check_lemma(l, i, task, funs, lsigs, lnames, mnames, ver, errs)
+        if isinstance(l.get("name"), str) and isinstance(l.get("params"), list):
+            lsigs[l["name"]] = l
+    all_lemmas = {n for n in lnames if isinstance(n, str)}
     msigs = {}
     for i, m in enumerate(methods):
-        _check_method(m, i, task, funs, msigs, mnames, ver, errs)
+        _check_method(m, i, task, funs, msigs, mnames, ver, errs, lemmas=lsigs)
         if isinstance(m.get("name"), str) and len(m.get("returns", [])) == 1:
             msigs[m["name"]] = {"params": m["params"],
                                 "result": m["returns"][0]["type"],
@@ -624,6 +648,10 @@ def check_wf(task: dict, positions: dict | None = None,
     all_methods = {n for n in mnames if isinstance(n, str)}
     for e in list(task.get("requires", [])) + list(task["ensures"]):
         _no_method_calls(e, all_methods, errs)
+    for l in lemmas:
+        for e in list(l.get("requires", [])) + list(l.get("ensures", [])) + (
+                [l["decreases"]] if "decreases" in l else []):
+            _no_method_calls(e, all_methods, errs)
     if "decreases" in task:
         _no_method_calls(task["decreases"], all_methods, errs)
     for f in task.get("spec_funs", []):
@@ -636,12 +664,14 @@ def check_wf(task: dict, positions: dict | None = None,
                                "result": ret["type"], "body": None,
                                "decreases": None}
     _check_call_positions(task["body"], all_methods, errs)
-    _check_stmts(task["body"], dict(eenv), bfuns, ver, errs, {ret["name"]})
+    _check_stmts(task["body"], dict(eenv), bfuns, ver, errs, {ret["name"]},
+                 lemmas=lsigs)
     _check_returns(task["body"], ret["name"], errs)
     return errs
 
 
-def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs):
+def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs,
+                  lemmas=None):
     """One entry of `methods` (SPEC.md "Methods (v1)"): a named body with
     its own contract, checked like a task, whose body may call the
     spec_funs, every EARLIER method, and itself when it carries a
@@ -702,8 +732,106 @@ def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs):
         bfuns[name] = {"params": m["params"], "result": r["type"],
                        "body": None, "decreases": None, "_method": True}
     _check_call_positions(m["body"], here, errs)
-    _check_stmts(m["body"], dict(eenv), bfuns, ver, errs, {r["name"]})
+    _check_stmts(m["body"], dict(eenv), bfuns, ver, errs, {r["name"]},
+                 lemmas=lemmas)
     _check_returns(m["body"], r["name"], errs)
+
+
+def _check_lemma_call(s, env, funs, ver, errs, lemmas) -> None:
+    """`{"lemma": {"name": L, "args": [...]}}`: Dafny's lemma call
+    statement (reference manual 6.3.3), a no-op at run time whose effect is
+    the lemma's ensures at the arguments, owed its requires there."""
+    c = s["lemma"]
+    if not isinstance(c, dict) or not isinstance(c.get("args"), list):
+        _e(errs, s, "a lemma call is {name, args}", "lemma-call")
+        return
+    l = lemmas.get(c.get("name"))
+    if l is None:
+        _e(errs, s, f"call of unknown lemma {c.get('name')!r}", "lemma-call")
+        return
+    if len(l["params"]) != len(c["args"]):
+        _e(errs, s, f"arity mismatch calling lemma {c['name']}", "lemma-call")
+    for p, a in zip(l["params"], c["args"]):
+        if _ty(a, env, funs, ver, errs, set(), p["type"]) != p["type"]:
+            _e(errs, s, f"argument type mismatch calling lemma {c['name']}",
+               "lemma-call")
+
+
+def _lemma_calls(body) -> list:
+    """Every lemma-call statement's name under `body` (if branches too)."""
+    out = []
+    for s in body:
+        if isinstance(s, dict) and "lemma" in s and isinstance(s["lemma"], dict):
+            out.append(s["lemma"].get("name"))
+        elif isinstance(s, dict) and "if" in s:
+            out += _lemma_calls(s["if"]["then"]) + _lemma_calls(s["if"]["else"])
+        elif isinstance(s, dict) and "while" in s:
+            out += _lemma_calls(s["while"]["body"])
+    return out
+
+
+def _check_lemma_body(body, name, errs) -> None:
+    for s in body:
+        if not isinstance(s, dict) or not ("if" in s or "lemma" in s) or len(s) != 1:
+            _e(errs, s, f"lemma {name}: a lemma body holds only if and lemma "
+                        f"calls", "lemma-body")
+        elif "if" in s:
+            _check_lemma_body(s["if"]["then"], name, errs)
+            _check_lemma_body(s["if"]["else"], name, errs)
+
+
+def _check_lemma(l, i, task, funs, earlier, lnames, mnames, ver, errs):
+    """One entry of `lemmas` (SPEC.md "Lemmas (v1)"), copied from Dafny's
+    lemma (reference manual 6.3.3): a ghost method with no return, whose
+    requires/ensures are the statement and whose body is its proof. The
+    body holds only `if` and calls of EARLIER lemmas or of itself (with a
+    decreases): Dafny's own shape for a case split and an induction."""
+    name = l.get("name")
+    if not isinstance(name, str) or not NAME_RE.match(name):
+        _e(errs, l, f"bad lemma name {name!r}", "lemma-name")
+        return
+    if (name == task["name"] or name in funs or lnames.count(name) > 1
+            or name in mnames):
+        _e(errs, l, f"lemma name {name} collides with the task, a spec_fun, "
+                    f"a method or another lemma", "lemma-name")
+    for k in ("params", "requires", "ensures", "body"):
+        if k not in l:
+            _e(errs, l, f"lemma {name} is missing {k!r}", "lemma-name")
+            return
+    if "returns" in l:
+        _e(errs, l, f"lemma {name} has no return", "lemma-body")
+    if not l["ensures"]:
+        _e(errs, l, f"lemma {name}: ensures must be non-empty", "ensures-nonempty")
+    penv = {p["name"]: p["type"] for p in l["params"]}
+    if len(penv) != len(l["params"]):
+        _e(errs, l, f"lemma {name}: two parameters share a name", "local-shadow")
+    for p in l["params"]:
+        if not _valid_type(p["type"]):
+            _e(errs, p, f"lemma {name}: {p['name']} has an invalid type: "
+                        f"{p['type']!r}", "valid-type")
+    for e in l["requires"]:
+        if _ty(e, penv, funs, ver, errs, set()) != "bool":
+            _e(errs, e, f"lemma {name}: requires clause is not bool", "requires-bool")
+    for e in l["ensures"]:
+        if _ty(e, penv, funs, ver, errs, set()) != "bool":
+            _e(errs, e, f"lemma {name}: ensures clause is not bool", "ensures-bool")
+    _check_lemma_body(l["body"], name, errs)
+    called = _lemma_calls(l["body"])
+    selfrec = name in called
+    if selfrec and "decreases" not in l:
+        _e(errs, l, f"lemma {name}: self-calling body without a decreases",
+           "lemma-decreases")
+    if not selfrec and "decreases" in l:
+        _e(errs, l, f"lemma {name}: decreases without a self-call", "lemma-decreases")
+    if "decreases" in l and _ty(l["decreases"], penv, funs, ver, errs, set()) != "int":
+        _e(errs, l, f"lemma {name}: decreases is not int", "lemma-decreases")
+    allowed = set(earlier) | {name}
+    if any(c not in allowed for c in called if isinstance(c, str)
+           and c in lnames):
+        _e(errs, l, f"lemma {name} calls a later lemma", "lemma-order")
+    sigs = dict(earlier)
+    sigs[name] = l
+    _check_stmts(l["body"], dict(penv), funs, ver, errs, set(), lemmas=sigs)
 
 
 def _calls_any(e, names) -> bool:
@@ -740,6 +868,8 @@ def _check_call_positions(body, names, errs) -> None:
                 _no_method_calls(rhs, names, errs)
         elif "return" in s:
             _no_method_calls(s["return"][1], names, errs)
+        elif "lemma" in s and isinstance(s["lemma"], dict):
+            _no_method_calls(s["lemma"].get("args", []), names, errs)
         elif "if" in s:
             _no_method_calls(s["if"]["cond"], names, errs)
             _check_call_positions(s["if"]["then"], names, errs)
@@ -766,7 +896,8 @@ def _check_returns(body, rname, errs):
             _check_returns(s["while"]["body"], rname, errs)
 
 
-def _check_stmts(body, env, funs, ver, errs, assignable):
+def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None):
+    lemmas = {} if lemmas is None else lemmas
     for s in body:
         if "assign" in s:
             n, e = s["assign"]
@@ -792,8 +923,10 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
             c = s["if"]
             if _ty(c["cond"], env, funs, ver, errs, set()) != "bool":
                 _e(errs, s, "if condition is not bool", "bool-cond")
-            _check_stmts(c["then"], dict(env), funs, ver, errs, set(assignable))
-            _check_stmts(c["else"], dict(env), funs, ver, errs, set(assignable))
+            _check_stmts(c["then"], dict(env), funs, ver, errs, set(assignable),
+                         lemmas)
+            _check_stmts(c["else"], dict(env), funs, ver, errs, set(assignable),
+                         lemmas)
         elif "while" in s:
             if ver == 0:
                 _e(errs, s, "while in a v0 task", "while-v0")
@@ -807,7 +940,8 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
             for inv in w.get("invariants", []):
                 if _ty(inv, env, funs, ver, errs, set()) != "bool":
                     _e(errs, s, "loop invariant is not bool", "loop-invariant-bool")
-            _check_stmts(w["body"], dict(env), funs, ver, errs, set(assignable))
+            _check_stmts(w["body"], dict(env), funs, ver, errs, set(assignable),
+                         lemmas)
         elif "return" in s:
             if ver == 0:
                 _e(errs, s, "return in a v0 task", "return-v0")
@@ -820,5 +954,9 @@ def _check_stmts(body, env, funs, ver, errs, assignable):
             if s is not body[-1]:
                 _e(errs, s, "statement after return is unreachable (SPEC.md Early exit)",
                    "return-unreachable")
+        elif "lemma" in s:
+            if ver == 0:
+                _e(errs, s, "lemma call in a v0 task", "v0-frozen")
+            _check_lemma_call(s, env, funs, ver, errs, lemmas)
         else:
             _e(errs, s, f"t has no statement {sorted(s)!r}", "unknown-stmt")
