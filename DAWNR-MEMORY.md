@@ -146,8 +146,9 @@ conversation removes nothing (the explicit control does that).
 
 **The episode** is built from counts and a fixed vocabulary plus up to eight
 keywords, the person's most used content words (letters only, so no codes or
-numbers; clauses the rules made facts of, and clauses that look like a secret,
-are not counted). No sentence of anyone's reaches it: tool outputs cannot, nor
+numbers; clauses the rules made facts of, clauses that look like a secret, and
+clauses outside text said first, as when the person retypes a page, are not
+counted). No sentence of anyone's reaches it: tool outputs cannot, nor
 the assistant's words, nor a tool name the model made up (only names in the
 harness's registry are kept; any other call is "another tool").
 
@@ -342,12 +343,17 @@ about the model's use of memory exists yet.
 
 Tests: `python -m unittest locallm/test_dawnr_memory.py` (standard library;
 the chat-token and engine cases need torch and skip without it, the window
-case needs a display and runs under `xvfb-run -a`): no leakage between two
+cases need a display and run under `xvfb-run -a`): no leakage between two
 persons through the store, the controls and the harness; forget, correct,
 forget-session and forget-everything leave no byte of the forgotten text under
 the person's folder; a fetched page, the assistant's words, a model's
 proposals, pastes, quotes, code, the index, recalled memory and tool verdicts
-never become a fact, and neither do secrets; recall never exceeds its budget
-over random stores and budgets under three counters; the rules, updates,
-reinforcement and checkpoints; the session events' contract; the token, the
-mask and the engine's first reply.
+never become a fact, and neither do secrets; a property test over 60 random
+sessions puts a page's own vocabulary, phrased as every rule's trigger, in
+every place outside text can be (and has the person retype it) and finds none
+of its words anywhere on disk, while the person's own statements are kept
+(it fails if the episode's keywords stop checking who said a clause first);
+recall never exceeds its budget over random stores and budgets under three
+counters; the rules, updates, reinforcement, order and checkpoints; the
+session events' contract; the command line and the Memory window; the token,
+the mask and the engine's first reply.

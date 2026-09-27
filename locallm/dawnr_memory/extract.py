@@ -512,16 +512,18 @@ def _forget(store: MemoryStore, request: ForgetRequest, report: Report, existing
                     report.forgotten.append(record["id"])
 
 
-def keywords(texts: Iterable[str], limit: int = MAX_KEYWORDS, skip: Iterable[str] = ()) -> list[str]:
+def keywords(texts: Iterable[str], limit: int = MAX_KEYWORDS, skip: Iterable[str] = (),
+             theirs=lambda clause: True) -> list[str]:
     """The person's most used content words, most frequent first (ties: first said first). Clauses in `skip`
-    (those the rules made facts of) and clauses that look like a secret are not counted at all."""
+    (those the rules made facts of), clauses that look like a secret and clauses that are not `theirs` (outside
+    text said them first: the person retyped a page) are not counted at all."""
     skip = {norm(c) for c in skip}
     counts: Counter = Counter()
     first: dict[str, int] = {}
     forms: dict[str, str] = {}
     position = 0
     for clause in (c for text in texts for c in clauses(text)):
-        if norm(clause) in skip or sensitive(clause):
+        if norm(clause) in skip or sensitive(clause) or not theirs(clause):
             continue
         for word in WORD.findall(clause):
             low = word.lower()
@@ -541,7 +543,7 @@ def episode_text(view: SessionView, known_tools: Iterable[str] = (), skip: Itera
     tools = Counter(name if name in known else "another tool" for name in view.calls)
     n = len(view.person)
     parts = [f"{n} message{'s' if n != 1 else ''} from the person"]
-    topics = keywords(view.speakable, skip=skip)
+    topics = keywords(view.speakable, skip=skip, theirs=view.said_first)
     if topics:
         parts.append("topics " + ", ".join(topics))
     if tools:
