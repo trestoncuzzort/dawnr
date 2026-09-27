@@ -272,9 +272,13 @@ def execute(harness, dry: DryRun, *, approved: bool | None, session: Session, co
             out.stopped = "budget: the step budget is spent"
             out.outcomes += [StepOutcome(w.index, w.step, "not run", note="budget") for w in dry.views[k:]]
             return out
-        with _LOCK, _ScopedApprover(harness, view.step if approved else None, fallback) as scope:
-            result = harness.call(view.step.tool, view.step.arguments, context=context, session=session)
-        out.approvals_asked += scope.asked_person
+        if approved or fallback is not None:
+            with _LOCK, _ScopedApprover(harness, view.step if approved else None, fallback) as scope:
+                result = harness.call(view.step.tool, view.step.arguments, context=context, session=session)
+            out.approvals_asked += scope.asked_person
+        else:                                # nobody to ask: the harness says so in its own words
+            with _LOCK:
+                result = harness.call(view.step.tool, view.step.arguments, context=context, session=session)
         out.steps_run += 1
         if result.is_error:
             status = "refused" if result.source == "harness" else "failed"

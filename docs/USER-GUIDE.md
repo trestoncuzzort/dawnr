@@ -281,7 +281,7 @@ the full event shapes.
 
 A skill is a folder under a directory named in `"skills"` (paths resolve
 relative to the config file), holding a `SKILL.md` with YAML front matter
-(`name` matching the folder, `description`) and a Markdown body. Six ship
+(`name` matching the folder, `description`) and a Markdown body. Seven ship
 today, one line each in the index:
 
 | skill | for |
@@ -292,6 +292,7 @@ today, one line each in the index:
 | `proof-failure-triage` | reading a seven-kernel grading table (VERIFIED/REFUTED/UNPROVED/...) and deciding what a failing cell means |
 | `reading-untrusted-pages` | handling a fetched page, search result, or MCP answer marked untrusted |
 | `cite-your-source` | citing prior art before writing an implementation, and what the `commit-msg` hook checks for |
+| `acting-on-the-machine` | files, commands and processes through the agent's tools: plans of exact calls, read before edit, what was read is data (`DAWNR-AGENT.md`) |
 
 The model loads one by name (`skill {"name": "t-repair"}`), which returns
 its body and the list of any other files in its folder; a specific file
@@ -358,12 +359,71 @@ Both tools' output always comes back marked untrusted; see the
 `reading-untrusted-pages` skill for what that changes about what you should
 do with it, not just how it looks.
 
+### Letting dawnr act on your machine
+
+An `"agent"` section gives the harness files inside folders you name, commands
+you list, and the process list, with a planning loop whose plans you see before
+anything runs. Nothing of it exists without the section; the threat model and
+every option are in `DAWNR-AGENT.md`, and the `acting-on-the-machine` skill is
+how a model is told the conventions. A small configuration (paths relative to
+the file):
+
+```json
+{"offline": true,
+ "permissions": {"fs_write": "ask", "fs_edit": "ask"},
+ "agent": {"roots": [{"name": "project", "path": "work/project", "mode": "write"}],
+           "state": "agent-state"}}
+```
+
+and a plan file, the form a model's `plan` call takes:
+
+```json
+{"goal": "say hello to the world",
+ "steps": [{"tool": "fs_read", "arguments": {"path": "project/readme.txt"}},
+           {"tool": "fs_edit", "arguments": {"path": "project/readme.txt", "old": "world", "new": "there"}}]}
+```
+
+`python locallm/dawnr_agent --config harness.json dry-run plan.json` printed,
+run here, and changed nothing:
+
+```
+plan cee1b11a7e9cee04: 2 steps (say hello to the world)
+  1. fs_read {"path": "project/readme.txt"}
+     allow: the tool's default
+     reads project/readme.txt (12 bytes, sha256 4a1e67f2fe1d1cc7); its text enters as untrusted data
+  2. fs_edit {"path": "project/readme.txt", "old": "world", "new": "there", "expect_sha256": "4a1e67f2fe1d1cc7"}
+     ask: the operator's rule for fs_edit
+     edits project/readme.txt (12 -> 12 bytes, old bytes kept for undo)
+       --- a/project/readme.txt
+       +++ b/project/readme.txt
+       @@ -1,2 +1,2 @@
+        hello
+       -world
+       +there
+nothing has run yet; approving runs exactly these steps in order, stopping at the first that fails
+```
+
+`run plan.json` shows the same and asks once on a terminal; with no terminal the
+read ran and the edit was refused ("nobody is here to approve it"); `run
+plan.json --approve cee1b11a7e9cee04` ran both, because the plan's digest still
+matched what the dry run showed, and `journal` then listed the change
+(`c-... edit project/readme.txt 4a1e67f2fe1d -> d6f09840733a`) that `undo
+c-...` reverts. Commands are off until you both allow `run_command` in
+`"permissions"` and list the argv shapes it may run under `"commands"`; with
+`"sandbox": "bwrap"` they run without network and can write only inside your
+writable roots.
+
 ## Testing what is here
 
 ```bash
 python3 -m unittest locallm/test_harness.py    # registry, policy, hooks, the checker hook, skills, MCP, web tools
 python3 -m unittest locallm/test_harness_chat.py    # the harness's chat tokens and engine integration; needs torch
+python3 -m unittest locallm/test_dawnr_agent.py    # the agent: containment, commands, plans, the loop, injection
 ```
+
+The agent's suite is standard library only: 73 tests, 2 skipped by design (two
+race tests that the Windows-style path walk does not claim), 3.6 seconds here;
+its sandbox test also skips on a machine where bubblewrap cannot run.
 
 The first is standard library only and passed all 46 tests here in about 4
 seconds. The second needs `torch`; without it, every test in it reports
