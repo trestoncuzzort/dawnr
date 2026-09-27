@@ -155,22 +155,22 @@ five raise without lemmas). The 90 stated tasks were verified with rocq 9.2
 twice, without their lemmas (the lowering before this feature) and with
 them:
 
-At the time of this commit the run had verified 72 of the 90 stated tasks both ways (each side capped at 180 s; the run continues and the final table replaces this one):
-
 | without lemmas -> with lemmas | tasks |
 |---|---:|
-| unproved -> unproved | 23 |
+| unproved -> unproved | 33 |
 | verified -> verified | 23 |
-| malformed -> malformed | 10 |
+| malformed -> malformed | 12 |
 | unproved -> verified | 6 |
-| timeout -> timeout | 3 |
+| timeout -> timeout | 5 |
+| timeout -> unproved | 2 |
+| malformed -> unproved | 2 |
 | unproved -> timeout | 2 |
 | verified -> unproved | 2 |
-| timeout -> unproved | 1 |
-| malformed -> unproved | 1 |
 | verified -> timeout | 1 |
+| timeout -> verified | 1 |
+| unproved -> malformed | 1 |
 
-72 tasks: verified without lemmas 26, with lemmas 29; gained 6 (DA0101, DA0113, DA0123, DA0157, DA0368, DA0585), lost 3 (DA0429, DA0472, DA0476); the rest unchanged (23 verified both ways).
+90 tasks: verified without lemmas 26, with lemmas 30; gained 7 (DA0101, DA0113, DA0123, DA0157, DA0368, DA0585, DJ0118), lost 3 (DA0429, DA0472, DA0476); the rest unchanged (23 verified both ways). The one timeout among the losses (DA0429) reproduces on the quiet machine (180 s with the lemmas posed, 25 s without): the posed instances slow the proof search past the cap. The two other losses are lemma proofs whose steps Rocq's automation cannot close (DA0472's `ceilDiv` monotonicity, a division fact lia cannot reach; DA0476 likewise), so per SPEC.md the whole file reads unproved. Net: 26 verified without lemmas, 30 with; 7 gained, 3 lost, 23 verified either way.
 
 ## What is left, and why
 
