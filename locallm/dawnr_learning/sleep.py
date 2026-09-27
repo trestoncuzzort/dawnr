@@ -56,6 +56,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import math
 import random
 import sys
@@ -622,7 +623,21 @@ def sleep_person(store, model_dir: Path, *, cfg: SleepConfig | None = None, repl
         record["profile"] = {"error": f"{type(e).__name__}: {e}"}
     sleeps = store.dir / "sleeps"
     sleeps.mkdir(parents=True, exist_ok=True)
+    # One file per sleep. The stamp has one-second resolution, and two sleeps in one second (a
+    # test, or `sleep-all` over a person with nothing to learn) must not overwrite each other, so
+    # the file is created exclusively (os.O_EXCL, as tempfile does) and a collision takes the
+    # next free suffix instead of replacing the record that was there.
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    (sleeps / f"sleep-{stamp}.json").write_text(json.dumps(record, indent=2, default=str) + "\n", encoding="utf-8")
-    return record
+    text = json.dumps(record, indent=2, default=str) + "\n"
+    for n in range(10000):
+        path = sleeps / (f"sleep-{stamp}.json" if n == 0 else f"sleep-{stamp}-{n}.json")
+        try:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            continue
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        record["file"] = str(path)
+        return record
+    raise OSError(f"could not create a sleep record under {sleeps}")
 

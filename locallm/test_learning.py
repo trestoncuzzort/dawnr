@@ -775,7 +775,7 @@ class SleepPerson(unittest.TestCase):
             self.assertEqual(alone["behavior"]["asked"], alone["rows"]["person_val"])
             identity = A.base_identity(d)
             self.assertTrue(A.status(s, identity)["fresh"])
-            self.assertEqual(len(list((s.dir / "sleeps").glob("sleep-*.json"))), 1)
+            self.assertEqual(len(list((s.dir / "sleeps").glob("sleep-*.json"))), 2)   # one record per sleep, never overwritten
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 cli(["--root", str(people), "show", "bo"])
