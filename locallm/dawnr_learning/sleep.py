@@ -7,10 +7,12 @@ One sleep, in order:
 
 1. The person's examples (feedback.PersonStore.training_examples: rated up,
    edited, or marked wrong with a correction; every target checked by the t
-   tool, nothing from outside) pass the same held-out gates every trainer here
-   applies (loop_filter.validate_training_data over the held-out ids and the
-   same-task exclusions, and the r12 dev ids): an example that names a held-out
-   problem is dropped and counted, whatever the person typed.
+   tool, nothing from outside). training_examples() itself applies the same
+   held-out gates every trainer here uses (feedback.held_out_gate:
+   loop_filter.validate_training_data over the held-out ids and the same-task
+   exclusions, and the r12 dev ids) before this or any other reader sees the
+   examples, so an example that names a held-out problem is dropped and
+   counted here whatever the person typed.
 2. A cap on how many are used: beyond `max_examples` a seeded random subset is
    kept. Rolnick et al. (arXiv:1811.11682) found that randomly discarding data
    from a capped replay buffer does almost as well as keeping everything.
@@ -111,29 +113,11 @@ class SleepConfig:
 
 # -------------------------------------------------------------- examples --
 
-def gate_examples(examples: list[dict], split_path: Path) -> tuple[list[dict], list[dict]]:
-    """(kept, refused): the trainers' held-out gates over each example's whole text and its record id."""
-    import loop_filter
-    eval_ids = {int(i) for i in json.loads(Path(split_path).read_text(encoding="utf-8"))["eval_ids"]}
-    dev = loop_filter.r12_dev_ids(split_path=split_path)
-    policy = loop_filter.decontamination()
-    kept, refused = [], []
-    for ex in examples:
-        text = json.dumps(ex["messages"], ensure_ascii=False)
-        v = loop_filter.validate_training_data(text, eval_ids, policy=policy)
-        dev_hit = loop_filter.held_out_ids_in(text, set(dev))
-        if v.ok and not dev_hit:
-            kept.append(ex)
-        else:
-            why = []
-            if v.held_out:
-                why.append(loop_filter.held_out_detail(v.held_out))
-            if v.same_task_names or v.same_task_ids:
-                why.append(loop_filter.same_task_detail(v))
-            if dev_hit:
-                why.append("dev-split " + loop_filter.held_out_detail(dev_hit))
-            refused.append({"id": ex["id"], "why": "; ".join(why)})
-    return kept, refused
+# The held-out gate now lives on the store (feedback.held_out_gate), so training_examples() applies it for
+# every reader instead of each trainer re-applying its own copy (DAWNR-LEARNING.md section 8: style_profile
+# read around the copy that used to live only here). Kept importable as sleep.gate_examples for callers
+# that already spell it that way; it is the same function, not a second implementation of the same check.
+from .feedback import held_out_gate as gate_examples  # noqa: E402,F401
 
 
 def cap_examples(examples: list[dict], cap: int, seed: int) -> list[dict]:
@@ -564,12 +548,10 @@ def sleep_person(store, model_dir: Path, *, cfg: SleepConfig | None = None, repl
     split = Path(split) if split is not None else ROOT / "t" / "out" / "loop" / "split-v5.json"
     device = device or pick_device()
     identity = adapters.base_identity(model_dir)
-    examples, excluded = store.training_examples(check=True)
-    examples, refused = gate_examples(examples, split)
+    examples, excluded = store.training_examples(check=True, split_path=split)      # gated: feedback.held_out_gate
     examples = cap_examples(examples, cfg.max_examples, cfg.seed)
     record = {"person": store.person, "base": identity, "mode": cfg.mode, "examples_available": len(examples),
-              "excluded": excluded, "refused_by_gate": refused,
-              "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+              "excluded": excluded, "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     if not examples:
         record["result"] = "nothing to learn: no usable examples"
         return record

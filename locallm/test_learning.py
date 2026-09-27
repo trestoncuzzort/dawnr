@@ -144,6 +144,36 @@ class Store(unittest.TestCase):
             self.assertEqual(examples, [])
             self.assertEqual(excluded, {"target fails the t tool": 1, "untrusted content": 1})
 
+    def test_held_out_dev_and_same_task_examples_are_gated_by_default(self):
+        """The one gate every reader of a person's examples goes through (feedback.held_out_gate): a
+        held-out id, an r12 dev id and a same-task exclusion are each absent from training_examples()'s
+        default view -- what a sleep and the style profile see (DAWNR-LEARNING.md section 8) -- and
+        present only when include_ungated=True is asked for by name, as export or an adapter's own
+        erasure bookkeeping would."""
+        import loop_filter
+        if not SPLIT.is_file():
+            self.skipTest("no split file")
+        held = sorted(json.loads(SPLIT.read_text())["eval_ids"])[0]
+        decon = json.loads((HERE.parent / "t" / "decontamination-2026-09-21.json").read_text())
+        same_task = sorted(decon["exclude_future_train_ids"])[0]
+        dev = sorted(loop_filter.r12_dev_ids(split_path=SPLIT))[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            s = store(tmp)
+            clean = s.add_answer([{"role": "user", "content": USER}], PROGRAM)
+            s.rate(clean, True)
+            tainted = {}
+            for label, tid in (("held-out", held), ("same-task", same_task), ("dev", dev)):
+                msgs = [{"role": "user", "content": USER + f"\n(see mbpp_{tid})"}]
+                rid = s.add_answer(msgs, PROGRAM)
+                s.rate(rid, True)
+                tainted[label] = rid
+            gated, excluded = s.training_examples(split_path=SPLIT)
+            self.assertEqual({e["id"] for e in gated}, {clean})
+            self.assertEqual(excluded.get("held-out, same-task or dev"), 3)
+            raw, raw_excluded = s.training_examples(split_path=SPLIT, include_ungated=True)
+            self.assertEqual({e["id"] for e in raw}, {clean, *tainted.values()})
+            self.assertNotIn("held-out, same-task or dev", raw_excluded)
+
     def test_read_correct_export_erase(self):
         with tempfile.TemporaryDirectory() as tmp:
             s = store(tmp)
@@ -338,6 +368,51 @@ class Profile(unittest.TestCase):
             self.assertEqual(prof["inferred"]["naming"]["value"], "cur-snake")
             self.assertEqual(PR.effective(prof)["semicolons"], False)
             self.assertEqual(PR.load(s.dir)["examples"], 4)
+
+    def test_refresh_does_not_learn_from_a_held_out_example(self):
+        """The exact defect this closes (DAWNR-LEARNING.md section 8): refresh() used to read
+        feedback.PersonStore.training_examples() straight, with no held-out screen, so a person's feedback
+        on a held-out prompt could shape their style profile. A fourth example, styled differently and
+        naming a held-out id, must not be counted: if it were, the vote would still decide "cur-snake" (3
+        of 4 meets AGREEMENT) but with votes=4, not 3, and examples=4, not 3 -- the two numbers this test
+        pins down."""
+        from dawnr_learning import style_profile as PR
+        if not SPLIT.is_file():
+            self.skipTest("no split file")
+        held = sorted(json.loads(SPLIT.read_text())["eval_ids"])[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            s = F.PersonStore("cy", tmp)
+            for ex in self.examples(P.PERSONS["cy"], n=3):
+                rid = s.add_answer(ex["messages"][:1], PROGRAM)
+                s.edit(rid, ex["messages"][1]["content"])
+            tainted_prog = PROGRAM.replace("count_up", "count_up9")
+            tainted_user = USER.replace("count_up", "count_up9") + f"\n(see mbpp_{held})"
+            rid = s.add_answer([{"role": "user", "content": tainted_user}], tainted_prog)
+            s.edit(rid, P.person_answer(P.PERSONS["di"], tainted_prog, tainted_user))     # di's naming: upper
+            prof = PR.refresh(s)
+            self.assertEqual(prof["examples"], 3)
+            self.assertEqual(prof["inferred"]["naming"], {"value": "cur-snake", "votes": 3, "agree": 3})
+
+
+# --------------------------------------------------------------- gate --
+
+class GateBypass(unittest.TestCase):
+    """No reader of a person's examples goes around training_examples()'s gate: the guard against this
+    file's own defect recurring (style_profile.refresh() used to call feedback.PersonStore.training_examples()
+    directly and skip the held-out/dev/same-task screen it applies by default now, DAWNR-LEARNING.md
+    section 8). include_ungated=True is the one way past it, named for export and an adapter's own erasure
+    bookkeeping; nothing else in the package should read it."""
+
+    ALLOWED = frozenset()          # no production module here needs the pre-gate view today
+
+    def test_no_module_in_the_package_asks_for_the_ungated_view(self):
+        package = Path(F.__file__).parent
+        offenders = sorted(path.name for path in package.glob("*.py")
+                           if path.name != "feedback.py" and "include_ungated" in path.read_text(encoding="utf-8")
+                           and path.stem not in self.ALLOWED)
+        self.assertEqual(offenders, [],
+                         f"{offenders} read a person's examples around the held-out gate; either they "
+                         f"should not, or add them to GateBypass.ALLOWED as a deliberate, reviewed choice")
 
 
 # ------------------------------------------------------------- measure --

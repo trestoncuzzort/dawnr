@@ -41,6 +41,11 @@ kept for the person to read but excluded from training_examples(), counted
 under its reason. Every target is checked by the t tool on the prompt's own
 Example lines before it can be trained on (dawnr_harness.checker.check); a
 target whose program fails is excluded and counted, never silently dropped.
+Last, training_examples() gates every example against the held-out ids, the
+same-task exclusions and the r12 dev ids (held_out_gate) before returning it,
+by default and for every caller: nothing that reads a person's examples for
+training, style or measurement sees an ungated one just because it did not
+ask for the gate itself (DAWNR-LEARNING.md section 8).
 
 Where the data lives: default_root(), the platform's per-user data directory
 (platformdirs' user_data_dir: $XDG_DATA_HOME or ~/.local/share on Linux,
@@ -191,6 +196,56 @@ def example_hash(messages: list[dict], target) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
+# ---------------------------------------------------------------- gate --
+
+_T_DIR = Path(__file__).resolve().parents[2] / "t"
+DEFAULT_SPLIT = _T_DIR / "out" / "loop" / "split-v5.json"
+
+
+def held_out_gate(examples: list[dict], split_path: Path | str | None = None) -> tuple[list[dict], list[dict]]:
+    """(kept, refused): every trainer's own screen over each example's whole rendered text and its record
+    id -- the evaluation ids of `split_path` (DEFAULT_SPLIT unless given), the checked-in same-task
+    exclusions (loop_filter.decontamination) and the r12 dev ids (loop_filter.r12_dev_ids) -- whatever the
+    person typed.
+
+    This is the one gate every reader of a person's examples goes through: PersonStore.training_examples()
+    calls it by default, so a sleep, the style profile and the measurement protocol cannot see an example
+    the corpus itself would refuse just because a caller forgot a second step. It used to be sleep.py's
+    alone (`sleep.gate_examples`, kept importable there under that name for callers who already spell it
+    that way); moved here 2026-09-27 because style_profile.refresh read training_examples() directly and
+    never applied it (DAWNR-LEARNING.md section 8): a person's feedback on a held-out or dev prompt could
+    shape their style profile, and so dawnr's output, with no decontamination check at all.
+
+    Needs t/ (loop_filter, and what it imports) on sys.path; finds it itself the same way t_tool.py and
+    loop_filter.py find their own imports, so a gated read never depends on some other module having
+    already added it."""
+    t_dir = str(_T_DIR)
+    if t_dir not in sys.path:
+        sys.path.insert(0, t_dir)
+    import loop_filter
+    split_path = Path(split_path) if split_path is not None else DEFAULT_SPLIT
+    eval_ids = {int(i) for i in json.loads(split_path.read_text(encoding="utf-8"))["eval_ids"]}
+    dev = loop_filter.r12_dev_ids(split_path=split_path)
+    policy = loop_filter.decontamination()
+    kept, refused = [], []
+    for ex in examples:
+        text = json.dumps(ex["messages"], ensure_ascii=False)
+        v = loop_filter.validate_training_data(text, eval_ids, policy=policy)
+        dev_hit = loop_filter.held_out_ids_in(text, set(dev))
+        if v.ok and not dev_hit:
+            kept.append(ex)
+        else:
+            why = []
+            if v.held_out:
+                why.append(loop_filter.held_out_detail(v.held_out))
+            if v.same_task_names or v.same_task_ids:
+                why.append(loop_filter.same_task_detail(v))
+            if dev_hit:
+                why.append("dev-split " + loop_filter.held_out_detail(dev_hit))
+            refused.append({"id": ex["id"], "why": "; ".join(why)})
+    return kept, refused
+
+
 # --------------------------------------------------------------- store --
 
 class PersonStore:
@@ -323,9 +378,17 @@ class PersonStore:
                 "summary": self.summary()}
 
     # ---- reading for training
-    def training_examples(self, check: bool = True) -> tuple[list[dict], dict]:
+    def training_examples(self, check: bool = True, *, split_path: Path | str | None = None,
+                          include_ungated: bool = False) -> tuple[list[dict], dict]:
         """(examples, excluded counts). An example is {"id", "hash", "feedback", "session", "created",
-        "messages": [..., the assistant's target]} for every record whose target may be trained on."""
+        "messages": [..., the assistant's target]} for every record whose target may be trained on.
+
+        Gated by held_out_gate before it is returned: a held-out, same-task or dev-split example is
+        dropped and counted here too, so every reader of a person's examples -- a sleep, the style
+        profile, the measurement protocol -- sees the same screened set without a second call of its own
+        (this used to be sleep.py's job alone; style_profile.refresh skipped it, DAWNR-LEARNING.md section
+        8). Only what needs the person's own unscreened words -- export, and an adapter's erasure
+        bookkeeping -- asks for that by name with include_ungated=True; nothing else should pass it."""
         examples, excluded = [], {}
 
         def skip(reason):
@@ -347,7 +410,12 @@ class PersonStore:
                              "feedback": row["feedback"], "session": row.get("session", ""),
                              "created": row.get("created", ""),
                              "messages": list(row["messages"]) + [{"role": "assistant", "content": row["target"]}]})
-        return examples, excluded
+        if include_ungated:
+            return examples, excluded
+        gated, refused = held_out_gate(examples, split_path)
+        if refused:
+            excluded["held-out, same-task or dev"] = len(refused)
+        return gated, excluded
 
     def current_hashes(self) -> dict[str, str]:
         """{record id: content hash} for every record that has a target, checked or not."""
