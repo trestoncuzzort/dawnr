@@ -294,8 +294,14 @@ the same way.
   has no row, so double_all needs the whole matrix regraded with no
   cache (`t/run_par.py --table t/AGREEMENT.md`, run_par's own rule for
   the committed table). It was regraded on the desktop after the
-  grading above (`matrix/`); the branch's last commit carries the table,
-  and its own header names the run.
+  grading above (`matrix/`, 248 cells, 1,488 kernel runs, 2026-09-27
+  19:46Z); the branch's last commit carries the table. Against the
+  2026-09-25 lab regrade, two rows differ: double_all is new (six
+  verified / refuted, Frama-C abstain / abstain), and min_max's Rocq cell
+  reads verified / refuted where the lab read timeout / refuted (the
+  desktop finished the proof inside the budget; nothing in this branch
+  touches min_max's text, byte identity above). 32 of 36 tasks are clean
+  in seven; of the 2 in six, both are Frama-C alone.
 - **t/CONFORMANCE.md**: a full conformance run regenerates it with the
   four probes; the probes' cells are graded above by the same machinery.
 
