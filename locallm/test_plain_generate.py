@@ -455,8 +455,10 @@ class IncludedModelInt8(unittest.TestCase):
     """The shipped round-4 checkpoint, quantized both ways.
 
     The full 200-token speed/memory/agreement measurement this track was asked
-    for is FINDINGS-int8-quant-2026-09-27.md and bench_int8.py; this class is
-    the fast regression that both paths still load and generate correctly.
+    for is bench_int8.py, run against PREDICT-int8-quant-2026-09-27.md's
+    predictions (bench-int8-results-2026-09-27.json has the numbers); this
+    class is the fast regression that both paths still load and generate
+    correctly.
     """
 
     def setUp(self):

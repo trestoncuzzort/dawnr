@@ -166,9 +166,9 @@ class QuantizeModel(unittest.TestCase):
         self.assertTrue(bool((quant_out >= 0).all() and (quant_out < cfg.vocab_size).all()))
         # Not asserted to be high: a small random-weight model has no signal to
         # preserve, so quantization noise can and does flip greedy choices.
-        # FINDINGS-int8-quant-2026-09-27.md has the measured agreement on the
-        # included, trained model, which is what this repo's claim rests on;
-        # this only checks the machinery runs end to end and stays in range.
+        # bench_int8.py / bench-int8-results-2026-09-27.json has the measured
+        # agreement on the included, trained model, which is what this repo's
+        # claim rests on; this only checks the machinery runs end to end.
         agreement = (float_out == quant_out).float().mean().item()
         self.assertGreaterEqual(agreement, 0.0)
         self.assertLessEqual(agreement, 1.0)

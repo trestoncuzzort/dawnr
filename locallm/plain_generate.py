@@ -62,10 +62,10 @@ stores every weight row as one array('b') plus one float32 scale rather than an
 array('f') (about a quarter the bytes); `--quantize-kv` does the same to the
 key/value cache this file already keeps in Python lists. Both are the symmetric,
 per-row scheme in Krishnamoorthi 2018 (arXiv:1806.08342) sections 2.2 and 2.6 —
-see `_quantize_row` below for the exact arithmetic. Neither is free: greedy
-output is measured, not assumed, to sometimes disagree with float32's past the
-first few dozen tokens (FINDINGS-int8-quant-2026-09-27.md has the numbers on the
-included model), so both stay opt-in.
+see `_quantize_row` below for the exact arithmetic. Neither is claimed free:
+`bench_int8.py` measures speed, memory and greedy-output agreement against
+float32 on the included model rather than assuming either
+(`bench-int8-results-2026-09-27.json` has the numbers), so both stay opt-in.
 
 The API mirrors `checkpoint.py` on purpose — `checkpoint_exists`,
 `load_checkpoint`, `sample` with the same arguments — so a caller switches
