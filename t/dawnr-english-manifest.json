@@ -1,0 +1,116 @@
+{
+ "about": "First shard set for dawnr's general-English pretraining layer (internal/PRETRAIN-DAWNR-GENERAL.md). Two open-licensed corpora, pulled whole per file so every download is checksum-verified against the source's own content-addressed hash.",
+ "sources": [
+  {
+   "name": "FineWeb-Edu sample-10BT",
+   "license": "ODC-BY 1.0",
+   "card": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu",
+   "note": "classifier-filtered educational subset of FineWeb (Common Crawl); ~10B GPT-2 tokens across 14 parquet shards, the smallest ready-made sample config."
+  },
+  {
+   "name": "TinyStoriesV2-GPT4",
+   "license": "CDLA-Sharing-1.0",
+   "card": "https://huggingface.co/datasets/roneneldan/TinyStories",
+   "note": "synthetic short-story corpus (Eldan & Li, arXiv:2305.07759); kept whole as the floor-of-the-survey sanity corpus, small enough not to need sharding."
+  }
+ ],
+ "files": [
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/000_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/000_00000.parquet",
+   "sha256": "b1ba7b2ce4cb5ea6ef42dca40263eabb85f37700d01693a68e9b30a31d78e871",
+   "bytes": 2152819114
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/001_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/001_00000.parquet",
+   "sha256": "3fcf2dc69cd52503986276d3d2d26a8c356d0f2ea28a0de4fdbda8cf87755693",
+   "bytes": 2152222432
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/002_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/002_00000.parquet",
+   "sha256": "547ae182d132c9f06b6ce63149567208ea9f57630bfd9b1a2938e504f0c9ebd7",
+   "bytes": 2151796315
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/003_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/003_00000.parquet",
+   "sha256": "22184e6eb25759ddd97783751ffc73e1705dfa2542e630dae1f2a8bac8ee6ddb",
+   "bytes": 2152437524
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/004_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/004_00000.parquet",
+   "sha256": "33557ddd87a07a4ae6fcaf7a4789c7b484e5cc0c273ca12a65b74200e6d8748b",
+   "bytes": 2152338550
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/005_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/005_00000.parquet",
+   "sha256": "e08d79927ecb377786572cd854817c748ceb8880878b1a0eb91abf8c85d505ea",
+   "bytes": 2152189947
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/006_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/006_00000.parquet",
+   "sha256": "554fa2613c9261d6c9c396caab881de3160175794c6c3e1856bf28a0e9cb9b76",
+   "bytes": 2152689867
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/007_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/007_00000.parquet",
+   "sha256": "4b7d1f697d4afff7f5f65cb7aa4d83acc6db716da4d46ea23399d0c50608c6e3",
+   "bytes": 2150686637
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/008_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/008_00000.parquet",
+   "sha256": "a6d9dcc0c72ecd7c7f0173c2d06b3a4249a2ccaa94961469d1a522ca689bbf1a",
+   "bytes": 2151274846
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/009_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/009_00000.parquet",
+   "sha256": "f836cd3c70b95776699eb6c356b2dbf702816e25dcf39992f5c80a29029d23c3",
+   "bytes": 2151913277
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/010_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/010_00000.parquet",
+   "sha256": "e5a2eae25f057f0856a10bfae314c6ca8ea8bb08456d2131e9e89b2b8305e2f6",
+   "bytes": 2152798864
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/011_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/011_00000.parquet",
+   "sha256": "db71cf0425bb3d1813a09f12ff1acd6dabdfb91a2e4f141960254ee5a7f036e7",
+   "bytes": 2152323681
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/012_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/012_00000.parquet",
+   "sha256": "08b47a3e1c25161f796d2f8dbf99ccf60affdebdcea4910833d0d5783315551f",
+   "bytes": 2152069689
+  },
+  {
+   "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu/resolve/main/sample/10BT/013_00000.parquet",
+   "dest": "fineweb-edu-sample-10BT/013_00000.parquet",
+   "sha256": "b393f51fefab26cd6f4c8f65707c1924f6666c4961a0ebebe04bb57f7ec832de",
+   "bytes": 540632672
+  },
+  {
+   "url": "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-train.txt",
+   "dest": "tinystories/TinyStoriesV2-GPT4-train.txt",
+   "sha256": "6418d412de72888f52b5142c761ac21a582f7d1166f0bfbdb5f03ccfdec90443",
+   "bytes": 2227753162
+  },
+  {
+   "url": "https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-valid.txt",
+   "dest": "tinystories/TinyStoriesV2-GPT4-valid.txt",
+   "sha256": "6874bae9a4c1a4e7edcf0e53b86c17817e9cf881fc75ff2368da457b80c0585d",
+   "bytes": 22502601
+  }
+ ],
+ "total_bytes": 30768449178
+}
