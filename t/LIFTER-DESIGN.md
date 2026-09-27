@@ -476,7 +476,9 @@ records the rprint line of the first offending token.
 | `parse-failure` | a token outside section 3's grammar | none |
 | `no-method` | no `method` declaration | has-method = false |
 | `no-ensures` | no method carries an ensures | method-with-ensures = false (gradable) |
-| `zero-returns` | the gradable method has no `returns` | zero-returns |
+| `lemma-shaped` | the gradable method has no `returns` and no `modifies`: a lemma about its parameters, which t states only inside a task (row 47; was `zero-returns`) | zero-returns |
+| `array-mutation` (`modifies-via-call`, `modifies-no-index-assign`) | no `returns`, a `modifies` clause, and no index assignment in the body itself (the writes are a callee's, or there are none) (row 47) | zero-returns |
+| `seq-of-real`, `seq-of-bitvector`, `seq-of-pair`, `seq-of-datatype`, `seq-of-set`, `seq-of-map`, `seq-of-object` | a `seq<X>` whose element X is no t value, named by X (row 46; was `nested-seq-other`) | nested-seq |
 | `multi-return` | two or more return values | multi-return |
 | `multi-method` | never a refusal here: each gradable method is its own candidate; a file-level row reports `split-per-method` | multi-method (the census's file-level gap) |
 | `array` | `array<T>` anywhere in the method's closure (read or written) | array (policy 15.1 could turn read-only params into seq) |

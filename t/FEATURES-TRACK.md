@@ -418,6 +418,47 @@ and `tuple-component` name what t's pair cannot carry. **Measured**: 10 of 27
 lift, 7 pass the check stage; 8 of the other 17 refuse `function-result`
 (a tuple-returning helper). Tests: `t/test_lift_tuples.py`.
 
+### 9. Nested sequences named by their element (2026-09-27, lifter)
+
+**Refused: 113 methods `nested-seq-other`** on the 1886 staged files of the
+2026-09-26 lift (the round-2 census, merged lifter). The name hid what they
+were: 84 hold `seq<real>` or `seq<seq<real>>` (the numpy-shaped vericoding
+files), 20 `seq<T>` under a type parameter or a datatype, 5 `seq<bv32>`, one
+`seq<(int, int)>`, one `seq<seq<bool>>`, one `[i % 3 == 0]`, one
+`[('0' as int + digit) as char]`. Each now refuses under its element's own
+name (row 46: `seq-of-real`, `seq-of-datatype`, `seq-of-bitvector`,
+`seq-of-pair`, `seq-of-bool`, `seq-of-set`, `seq-of-map`), so the census
+ranks them with `real`, `datatype` and `bitvector`; a cast to char or int
+inside a display is an int element, so `[c as char]` lifts when the cast is
+safe and refuses `char-cast-unbounded` when it is not. **Measured**: 0 of
+the 113 lift, because none is a t value (reals, bitvectors and datatypes
+have no t type; a seq of pairs or of bools is "Not in v1", SPEC.md "Nested
+sequences"); 84 read seq-of-real, 20 seq-of-datatype, 5 seq-of-bitvector, 2
+seq-of-bool, 1 seq-of-pair, and one is
+the `[.. as char]` display whose cast bound the syntactic rule cannot see, and 113 of 113 read as one of the seven names or `char-cast-unbounded`.
+The lever this leaves is a range analysis for `(lit + e) as char` under a
+`requires` on `e`, which is what the int-to-string helpers need. Tests:
+`t/test_lift_seq_elements.py`.
+
+### 10. Zero-return methods named by what they are (2026-09-27, lifter)
+
+**Refused: 39 methods `zero-returns`** on the 1886 staged files. SPEC.md
+already decides what t makes of a method with no out-parameter: a task
+whose return is its mutated array (decision 22, "a method whose effect is
+its array is a task whose return is a seq"), or nothing. So the bare name
+is retired and the refusal says why the shape did not apply (row 47): a
+mutation issue `find_array_mutation` had already named stands alone (the
+method-line `zero-returns` used to hide it by line order); a `modifies`
+whose writes are all a callee's refuses `array-mutation`
+(`modifies-via-call`), one with no write `modifies-no-index-assign`; a
+method with neither return nor `modifies` is a lemma about its parameters
+(SPEC.md "Lemmas (v1)") and refuses `lemma-shaped`. **Measured**: of the
+39, 34 read `array-mutation` (23 of them the vericoding DJ family, which
+writes two arrays, `a[i] := 0` and `sum[0] := total`), 4 `lemma-shaped`, 1
+`array`; 0 lift. The lever is a task returning a pair of seqs for the
+two-array methods (t's pair holds two seqs already); not built here. Tests:
+`t/test_lift_zero_returns.py`.
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is

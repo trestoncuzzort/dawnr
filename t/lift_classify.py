@@ -339,6 +339,8 @@ def _seq_element_issue(el: Optional[Type]) -> Optional[str]:
     (`nested-seq-other`)."""
     if el is None:
         return None
+    if el.kind == "bool":
+        return "seq-of-bool"    # `seq<seq<bool>>`: the row's own name, one level down
     if el.kind == "real":
         return "seq-of-real"
     if el.kind == "bv":

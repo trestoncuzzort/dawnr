@@ -79,6 +79,14 @@ method Count<T>(a: seq<T>) returns (r: int)
 }
 """
 
+SEQ_SEQ_BOOL = """
+method Masks(m: seq<seq<bool>>) returns (r: int)
+  ensures r == |m|
+{
+  r := |m|;
+}
+"""
+
 SEQ_SET = """
 method Sets(a: seq<set<int>>) returns (r: int)
   ensures r == |a|
@@ -95,6 +103,7 @@ def test_element_types_refuse_by_name() -> None:
     _refuses(SEQ_PAIR, "Pairs", "seq-of-pair")
     _refuses(SEQ_GENERIC, "Count", "seq-of-datatype")
     _refuses(SEQ_SET, "Sets", "seq-of-set")
+    _refuses(SEQ_SEQ_BOOL, "Masks", "seq-of-bool")
     print("test_element_types_refuse_by_name: ok")
 
 
