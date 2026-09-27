@@ -61,7 +61,7 @@ from lift_ast import (
     Cast, Chain, CharLit, ContinueStmt, Comprehension, DecreasesClause,
     EnsuresClause, Expr, ExpectStmt, ForallStmt, ForStmt, Fresh, FunctionDecl,
     Ident, Iff, IfCaseStmt, IfExpr, IfStmt, Implies, Index, IntLit, InvariantClause, LetExpr,
-    LabelStmt, LemmaDecl, Lhs, MapDisplay, Member, MethodDecl, Module,
+    LabelStmt, LemmaDecl, LemmaParts, Lhs, MapDisplay, Member, MethodDecl, Module,
     ModifiesClause, NaryBool, NewRhs, Node, Old, Param, PrintStmt,
     Quantifier, ReadsClause, RealLit, RequiresClause, Refusal, ReturnStmt,
     RevealStmt, SeqDisplay, SeqUpdate, SetDisplay, SkippedDecl, Slice, Star,
@@ -677,32 +677,46 @@ class _Parser:
         # it every lemma call read as `calls-other-method` (113 of the 139
         # such refusals of the 2026-09-26 lift, t/FEATURES-TRACK.md).
         name = self.expect_ident()
-        self._parse_type_params()
+        type_params = self._parse_type_params()
         self.expect("(")
-        self._parse_params()
+        params = self._parse_params()
         self.expect(")")
+        returns: list = []
         if self.at("returns"):
             self.advance()
             self.expect("(")
-            self._parse_params()
+            returns = self._parse_params()
             self.expect(")")
-        self._parse_mspec_list()
+        specs = self._parse_mspec_list()
         end = self.tokens[self.pos - 1].end
+        body = None
         if self.at("{"):
-            self.advance()
-            depth = 1
-            while depth > 0:
-                if self.at("{"):
-                    depth += 1
-                elif self.at("}"):
-                    depth -= 1
-                elif self.at_eof():
-                    raise LiftParseError("<eof>", self.cur.line, "unterminated lemma body")
+            # SPEC.md "Lemmas (v1)": the body is parsed when it can be (its
+            # `if`s and lemma calls are the lifted lemma's proof skeleton);
+            # when it cannot, it is brace-skipped exactly as before and
+            # the lemma keeps no body.
+            save = self.pos
+            try:
+                body = self.parse_block()
+            except LiftParseError:
+                body = None
+                self.pos = save
                 self.advance()
+                depth = 1
+                while depth > 0:
+                    if self.at("{"):
+                        depth += 1
+                    elif self.at("}"):
+                        depth -= 1
+                    elif self.at_eof():
+                        raise LiftParseError("<eof>", self.cur.line, "unterminated lemma body")
+                    self.advance()
             end = self.tokens[self.pos - 1].end
         keyword = _combine_keyword(modifiers, "lemma")
         text = self._source[start:end]
-        return LemmaDecl(line, name=name, keyword=keyword, text=text)
+        decl = LemmaDecl(line, name=name, keyword=keyword, text=text)
+        decl.parts = LemmaParts(type_params, params, returns, specs, body)
+        return decl
 
     def _skip_clause_label(self) -> None:
         """A `requires`/`ensures`/`invariant`/`assert` clause may open

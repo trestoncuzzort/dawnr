@@ -3011,6 +3011,69 @@ def _extract_warnings(out: str) -> list:
     return [line.strip() for line in out.splitlines() if "Warning" in line]
 
 
+def _unproved_task_lemmas(task: dict, verdicts: dict, all_ok: bool,
+                          exit_code: int) -> set:
+    """The task's own lifted lemmas (row 38) dafny did not verify in the
+    checker file, read from the per-symbol verdicts `_verify_checker`
+    records for every failing symbol it could not otherwise attribute
+    (`"<name> (<block kind>)"`); empty when the file verified, timed out
+    as a whole, or failed anywhere else."""
+    if all_ok or exit_code == _TIMEOUT_SENTINEL or not task.get("lemmas"):
+        return set()
+    names = {l["name"] for l in task["lemmas"]}
+    bad = set()
+    for key, v in verdicts.items():
+        sym = key.split(" (")[0]
+        if v != Outcome.VERIFIED and sym in names:
+            bad.add(sym)
+    return bad
+
+
+def _drop_task_lemmas(task: dict, names: set) -> set:
+    """Remove the lemmas in `names`, every lemma whose body calls a removed
+    one (transitively), and every call of a removed lemma anywhere; mutates
+    `task` in place and returns the removed names."""
+    dropped = set(names)
+
+    def calls(body) -> set:
+        out = set()
+        for s in body:
+            if "lemma" in s:
+                out.add(s["lemma"]["name"])
+            elif "if" in s:
+                out |= calls(s["if"]["then"]) | calls(s["if"]["else"])
+            elif "while" in s:
+                out |= calls(s["while"]["body"])
+        return out
+    changed = True
+    while changed:
+        changed = False
+        for l in task.get("lemmas", []):
+            if l["name"] not in dropped and calls(l["body"]) & dropped:
+                dropped.add(l["name"])
+                changed = True
+
+    def strip(body) -> list:
+        out = []
+        for s in body:
+            if "lemma" in s and s["lemma"]["name"] in dropped:
+                continue
+            if "if" in s:
+                s = {**s, "if": {**s["if"], "then": strip(s["if"]["then"]),
+                                 "else": strip(s["if"]["else"])}}
+            elif "while" in s:
+                s = {**s, "while": {**s["while"], "body": strip(s["while"]["body"])}}
+            out.append(s)
+        return out
+    task["lemmas"] = [l for l in task.get("lemmas", []) if l["name"] not in dropped]
+    if not task["lemmas"]:
+        del task["lemmas"]
+    task["body"] = strip(task["body"])
+    for m in task.get("methods", []):
+        m["body"] = strip(m["body"])
+    return dropped
+
+
 def _verify_checker(path: Path, lemma_names: list, timeout_s: float,
                     lowered_name: Optional[str] = None,
                     lowered_methods: frozenset = frozenset()):
@@ -3329,6 +3392,21 @@ def check(task: dict, source: MethodDecl, closure: tuple,
     t0 = time.monotonic()
     verdicts, exit_code, all_ok, first_bad, warnings, lowered_verdict = _verify_checker(
         checker_path, lemma_names, timeout_s, lowered_name, lowered_methods)
+    # Row 38 (SPEC.md "Lemmas (v1)"): a lifted lemma is a proof hint the
+    # task carries, not part of the lift's equivalence with its source. One
+    # that dafny cannot prove in its lifted form (its source proof leaned on
+    # a `calc` or a `forall` statement the lift drops) is dropped with its
+    # calls and every lemma that calls it, as decision 8 drops any hint, and
+    # the checker file is built and verified once more without it. The
+    # equivalence lemmas are never retried or changed (decision 18).
+    unproved_lemmas = _unproved_task_lemmas(task, verdicts, all_ok, exit_code)
+    if unproved_lemmas:
+        dropped = _drop_task_lemmas(task, unproved_lemmas)
+        record.warnings.append("lemma-dropped-unproved:" + ",".join(sorted(dropped)))
+        checker_text, lemma_names = _build_checker_parts(task, source, closure, record)
+        checker_path.write_text(checker_text, encoding="utf-8", newline="\n")
+        verdicts, exit_code, all_ok, first_bad, warnings, lowered_verdict = _verify_checker(
+            checker_path, lemma_names, timeout_s, lowered_name, lowered_methods)
     record.checker_verdicts.update(verdicts)
     record.lowered_task_verdict = lowered_verdict
     record.dafny_exit_codes["verify-checker"] = exit_code

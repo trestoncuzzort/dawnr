@@ -372,11 +372,17 @@ class Scope:
     # of every other method this one calls, so an untyped `var x := M(a);`
     # gets `M`'s return type rather than `_t_type_of(None)`'s int default.
     method_rets: dict = field(default_factory=dict)
+    # Row 38 (SPEC.md "Lemmas (v1)"): dafny lemma name -> (t lemma name,
+    # its params' t types) for every lemma this lift carries; a call
+    # statement of one lifts to a t lemma call, any other is dropped
+    # (decision 8). Shared, never mutated after `rewrite()` fills it.
+    lemmas: dict = field(default_factory=dict)
 
     def copy(self) -> "Scope":
         return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
                      self.old_array_name, self.old_array_param_tname, self.null_drop_ids,
-                     dict(self.pair_view), self.pair_ret, dict(self.method_rets))
+                     dict(self.pair_view), self.pair_ret, dict(self.method_rets),
+                     self.lemmas)
 
 
 # ---------------------------------------------------------------------------
@@ -1352,6 +1358,18 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
         return []
 
     if cls == "CallStmt":
+        lem = scope.lemmas.get(s.name)
+        if lem is not None and len(lem[1]) == len(s.args):
+            # Row 38 (SPEC.md "Lemmas (v1)"): a call of a lemma this lift
+            # carries is kept, as t's lemma call statement.
+            try:
+                args = [_lift_expr(a, scope, fn_names, self_name, task_name, record, renamer)
+                        for a in s.args]
+            except (ValueError, KeyError, AttributeError):
+                args = None
+            if args is not None:
+                record.rewrites.append(Rewrite(rule="lemma-call-lifted", line=s.line))
+                return [{"lemma": {"name": lem[0], "args": args}}]
         record.clauses_dropped.append(ClauseDropped(rule="lemma-call-dropped", count=1))
         record.rewrites.append(Rewrite(rule="lemma-call-dropped", line=s.line))
         return []
@@ -1763,9 +1781,14 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     for cname, cplan, crr in callee_results:
         fn_names[cname] = crr.task["name"]
         callee_fn_names |= {d.name for d in cplan.closure if d.name}
+    # Row 38 (SPEC.md "Lemmas (v1)"): every lemma the method (or a lemma
+    # it calls) calls, lifted when it can be; the rest stay dropped.
+    lemmas_out, lemma_map = _lift_lemmas(module, closure, renamer, fn_names,
+                                         spec_funs_out, record)
+    scope.lemmas.update(lemma_map)
     unused = [d for d in module.decls if isinstance(d, (FunctionDecl, LemmaDecl))
               and d is not method and d.name not in fn_names
-              and d.name not in callee_fn_names]
+              and d.name not in callee_fn_names and d.name not in lemma_map]
     if unused:
         record.clauses_dropped.append(ClauseDropped(rule="unused-function-dropped", count=len(unused)))
         for d in unused:
@@ -1985,6 +2008,8 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             "requires": requires_out, "ensures": ensures_out, "body": body_out}
     if spec_funs_out:
         task["spec_funs"] = spec_funs_out
+    if lemmas_out:
+        task["lemmas"] = lemmas_out
 
     self_recursive = _has_self_call(body_out, task_name)
     if self_recursive:
@@ -2035,8 +2060,349 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
         if spec_funs_out:
             task["spec_funs"] = spec_funs_out
         task["methods"] = methods_out
+        # a callee's own lemmas join this task's, one per name
+        for cname, cplan, crr in callee_results:
+            for l in crr.task.get("lemmas", []):
+                if l["name"] not in {x["name"] for x in task.get("lemmas", [])}:
+                    task.setdefault("lemmas", []).append(l)
 
+    _withdraw_lemmas_if_ill_formed(task, record)
     return RewriteResult(task=task, record=record, callees=tuple(callees))
+
+
+# ---------------------------------------------------------------------------
+# Row 38 (2026-09-27, SPEC.md "Lemmas (v1)", LIFTER-DECISIONS.md): lemmas.
+# A Dafny lemma lifts to a t lemma when its parameters are t types, it has
+# no type parameters and no out-parameters, its requires/ensures lift, and
+# the resulting entry is well-formed on its own. Its proof body keeps only
+# what t's lemma body can say: `if` statements, calls of lifted lemmas (the
+# case split and the induction step) and `assert`s (the proof's own steps,
+# which every kernel that states the lemma must discharge); a local the
+# proof defines is substituted into what follows it, and every calc and
+# forall statement, and any step not closed over the parameters, is
+# dropped. A self-call needs
+# an int `decreases`: the lemma's own clause (a seq measure read as its
+# length), or, when it has none, Dafny's default on its first parameter
+# (`len(p)` for a seq), kept only when every self-call changes that
+# argument; otherwise the self-calls are dropped and the kernels prove the
+# statement with their own automation. A lemma that does not lift is
+# dropped with its calls, exactly as before this row: lemmas never make a
+# method refuse.
+# ---------------------------------------------------------------------------
+
+def _lemma_parts(d) -> Optional[object]:
+    return getattr(d, "parts", None) if isinstance(d, LemmaDecl) else None
+
+
+def _lemma_called(stmts) -> list:
+    out = []
+    for s in stmts or ():
+        cls = s.__class__.__name__
+        if cls == "CallStmt":
+            out.append(s.name)
+        elif cls == "IfStmt":
+            out += _lemma_called(s.then)
+            e = s.else_
+            out += _lemma_called((e,) if cls == "IfStmt" and e is not None
+                                 and e.__class__.__name__ == "IfStmt" else e)
+        elif cls == "BlockStmt":
+            out += _lemma_called(s.body)
+    return out
+
+
+def _lemma_order(module: Module, closure) -> list:
+    """The lemmas reachable from `closure`, callees first (post-order); a
+    lemma on a cycle through ANOTHER lemma is left out (t has no mutual
+    recursion), and so is every lemma that calls one left out."""
+    by_name = {d.name: d for d in module.decls if isinstance(d, LemmaDecl) and d.name}
+    order: list = []
+    state: dict = {}
+
+    def visit(name: str) -> bool:
+        if state.get(name) == "done":
+            return name in {d.name for d in order}
+        if state.get(name) == "open":
+            return False                         # a cycle through another lemma
+        d = by_name.get(name)
+        parts = _lemma_parts(d)
+        if parts is None:
+            state[name] = "done"
+            return False
+        state[name] = "open"
+        ok = True
+        for c in _lemma_called(parts.body):
+            if c != name and c in by_name and not visit(c):
+                ok = False
+        state[name] = "done"
+        if ok:
+            order.append(d)
+        return ok
+
+    for d in closure:
+        if isinstance(d, LemmaDecl) and d.name:
+            visit(d.name)
+    return order
+
+
+def _lemma_probe_ok(entry: dict, earlier: list, spec_funs: list) -> bool:
+    """True iff `entry` adds no check_wf error to a probe task carrying the
+    task's spec_funs and the lemmas lifted before it. Errors the spec_funs
+    have on their own (a `decreases` that is a sequence, say) are the
+    task's, reported by the check stage as before, not the lemma's."""
+    import check_wf as _wf
+
+    def errs(lemmas: list):
+        probe = {"t": 1, "name": "t_lemma_probe", "params": [],
+                 "returns": [{"name": "t_probe_r", "type": "int"}],
+                 "requires": [], "ensures": [{"bool": True}],
+                 "body": [{"assign": ["t_probe_r", {"int": 0}]}]}
+        if lemmas:
+            probe["lemmas"] = lemmas
+        if spec_funs:
+            probe["spec_funs"] = spec_funs
+        return set(_wf.check_wf(probe))
+    try:
+        return not (errs(list(earlier) + [entry]) - errs(list(earlier)))
+    except Exception:                                    # noqa: BLE001
+        return False
+
+
+def _lift_lemmas(module: Module, closure, renamer: _Renamer, fn_names: dict,
+                 spec_funs: list, record: LiftRecord) -> tuple[list, dict]:
+    out: list = []
+    lemma_map: dict = {}
+    for d in _lemma_order(module, closure):
+        parts = _lemma_parts(d)
+        scratch = LiftRecord(source_path=record.source_path, method=record.method,
+                             rprint_sha256=record.rprint_sha256)
+        try:
+            entry = _lift_one_lemma(d, parts, renamer, fn_names, lemma_map, scratch)
+        except (ValueError, KeyError, AttributeError, TypeError, IndexError):
+            entry = None
+        if entry is None or not _lemma_probe_ok(entry, out, spec_funs):
+            record.rewrites.append(Rewrite(rule="lemma-not-lifted", line=d.line))
+            continue
+        out.append(entry)
+        lemma_map[d.name] = (entry["name"], [p["type"] for p in entry["params"]])
+        record.rename_map.update(scratch.rename_map)
+        record.rewrites.append(Rewrite(rule="lemma-lifted", line=d.line))
+    return out, lemma_map
+
+
+def _lift_one_lemma(d, parts, renamer: _Renamer, fn_names: dict, lemma_map: dict,
+                    record: LiftRecord) -> Optional[dict]:
+    if parts.type_params or parts.returns or d.keyword != "lemma":
+        return None
+    scope = Scope()
+    params_out, requires_out = [], []
+    for p in parts.params:
+        if p.type is None:
+            return None
+        ty = _t_json_type(p.type)
+        if ty not in ("int", "bool", "seq"):
+            return None
+        if p.type.kind == "array":
+            return None
+        tname = renamer.fresh(p.name, record, "lemmaparam")
+        scope.renames[p.name] = tname
+        scope.types[tname] = _t_type_of(p.type)
+        params_out.append({"name": tname, "type": ty})
+        if p.type.kind == "nat":
+            requires_out.append(_ge0(tname))
+    t_name = renamer.fresh(d.name, record, "lemma")
+    ensures_out, decreases = [], None
+    for spec in parts.specs:
+        if isinstance(spec, RequiresClause):
+            requires_out.extend(_split_top_and(
+                _lift_expr(spec.expr, scope, fn_names, d.name, t_name, record, renamer)))
+        elif isinstance(spec, EnsuresClause):
+            ensures_out.extend(_split_top_and(
+                _lift_expr(spec.expr, scope, fn_names, d.name, t_name, record, renamer)))
+        elif isinstance(spec, DecreasesClause):
+            decreases = spec
+        else:
+            return None                         # modifies/reads: not a pure lemma
+    if not ensures_out:
+        return None
+    lmap = dict(lemma_map)
+    lmap[d.name] = (t_name, [p["type"] for p in params_out])
+
+    pnames = {p["name"] for p in params_out}
+
+    def closed(j) -> bool:
+        """Every name `j` reads is a lemma parameter or bound inside it."""
+        free: set = set()
+
+        def go(x, bound):
+            if isinstance(x, dict):
+                v = x.get("var")
+                if isinstance(v, str) and v not in bound:
+                    free.add(v)
+                for k in ("forall", "exists"):
+                    if isinstance(x.get(k), dict):
+                        q = x[k]
+                        go(q.get("lo"), bound)
+                        go(q.get("hi"), bound)
+                        go(q.get("body"), bound | {q["var"]})
+                        return
+                for val in x.values():
+                    go(val, bound)
+            elif isinstance(x, list):
+                for val in x:
+                    go(val, bound)
+        go(j, frozenset())
+        return free <= pnames
+
+    def lift_closed(e, defs):
+        for n, v in defs.items():
+            e = _subst(e, n, v)
+        try:
+            j = _lift_expr(e, scope, fn_names, d.name, t_name, record, renamer)
+        except (ValueError, KeyError, AttributeError, TypeError):
+            return None
+        return j if closed(j) else None
+
+    def skel(stmts, defs) -> list:
+        """The proof skeleton. A local defined in the proof (`var x :=
+        e;`) is substituted into the calls and guards after it, so a call
+        on it still reads over the parameters; anything left that is not
+        closed over the parameters is dropped."""
+        defs = dict(defs)
+        body = []
+        for s in stmts or ():
+            cls = s.__class__.__name__
+            if cls == "VarDeclStmt":
+                if (s.init is not None and len(s.names) == 1 and len(s.init) == 1
+                        and hasattr(s.init[0], "__dataclass_fields__")
+                        and s.init[0].__class__.__name__ != "NewRhs"):
+                    init = s.init[0]
+                    for n, v in defs.items():
+                        init = _subst(init, n, v)
+                    defs[s.names[0].name] = init
+                else:
+                    for p in s.names:
+                        defs.pop(p.name, None)
+            elif cls == "Assign":
+                for t in s.targets:
+                    defs.pop(getattr(t, "name", None), None)
+            elif cls == "CallStmt":
+                lem = lmap.get(s.name)
+                if lem is None or len(lem[1]) != len(s.args):
+                    continue
+                args = [lift_closed(a, defs) for a in s.args]
+                if any(a is None for a in args):
+                    continue
+                body.append({"lemma": {"name": lem[0], "args": args}})
+            elif cls == "IfStmt":
+                if s.cond.__class__.__name__ == "Star":
+                    continue
+                cond = lift_closed(s.cond, defs)
+                if cond is None:
+                    continue
+                then = skel(s.then, defs)
+                e = s.else_
+                els = skel((e,) if e is not None and e.__class__.__name__ == "IfStmt" else e,
+                           defs)
+                if then or els:
+                    body.append({"if": {"cond": cond, "then": then, "else": els}})
+            elif cls == "AssertStmt":
+                c = lift_closed(s.cond, defs)
+                if c is not None:
+                    body.append({"assert": c})
+            elif cls == "AssertByStmt":
+                body += skel(s.proof, defs)
+                c = lift_closed(s.cond, defs)
+                if c is not None:
+                    body.append({"assert": c})
+            elif cls == "BlockStmt":
+                body += skel(s.body, defs)
+        return body
+
+    body = skel(parts.body, {})
+    entry = {"name": t_name, "params": params_out, "requires": requires_out,
+             "ensures": ensures_out, "body": body}
+
+    def self_args(b) -> list:
+        out = []
+        for s in b:
+            if "lemma" in s and s["lemma"]["name"] == t_name:
+                out.append(s["lemma"]["args"])
+            elif "if" in s:
+                out += self_args(s["if"]["then"]) + self_args(s["if"]["else"])
+        return out
+
+    def strip_self(b) -> list:
+        out = []
+        for s in b:
+            if "lemma" in s and s["lemma"]["name"] == t_name:
+                continue
+            if "if" in s:
+                th, el = strip_self(s["if"]["then"]), strip_self(s["if"]["else"])
+                if th or el:
+                    out.append({"if": {**s["if"], "then": th, "else": el}})
+                continue
+            out.append(s)
+        return out
+
+    calls = self_args(body)
+    if calls:
+        dec = None
+        if decreases is not None:
+            exprs = decreases.exprs
+            if isinstance(exprs, tuple) and len(exprs) == 1:
+                dec = _lift_expr(exprs[0], scope, fn_names, d.name, t_name, record, renamer)
+                if isinstance(dec.get("var"), str) and scope.types.get(dec["var"]) == "seq":
+                    dec = {"op": "len", "args": [dec]}
+        elif params_out:
+            p0 = params_out[0]
+            if all(args and args[0] != {"var": p0["name"]} for args in calls):
+                dec = ({"op": "len", "args": [{"var": p0["name"]}]} if p0["type"] == "seq"
+                       else {"var": p0["name"]} if p0["type"] == "int" else None)
+        if dec is None:
+            entry["body"] = strip_self(body)
+        else:
+            entry["decreases"] = dec
+    return entry
+
+
+def _strip_lemma_stmts(body: list) -> list:
+    out = []
+    for s in body:
+        if "lemma" in s:
+            continue
+        if "if" in s:
+            s = {**s, "if": {**s["if"], "then": _strip_lemma_stmts(s["if"]["then"]),
+                             "else": _strip_lemma_stmts(s["if"]["else"])}}
+        elif "while" in s:
+            s = {**s, "while": {**s["while"], "body": _strip_lemma_stmts(s["while"]["body"])}}
+        out.append(s)
+    return out
+
+
+def _withdraw_lemmas_if_ill_formed(task: dict, record: LiftRecord) -> None:
+    """Row 38's safety net: a task whose lemmas or lemma calls make it
+    ill-formed (an argument whose t type differs from the parameter's, say)
+    is lifted as it was before the row, lemmas and calls dropped, rather
+    than refused at the check stage for them."""
+    if not task.get("lemmas"):
+        return
+    import check_wf as _wf
+    bare = {k: v for k, v in task.items() if k != "lemmas"}
+    bare["body"] = _strip_lemma_stmts(task["body"])
+    if "methods" in bare:
+        bare["methods"] = [{**m, "body": _strip_lemma_stmts(m["body"])}
+                           for m in task["methods"]]
+    try:
+        added = set(_wf.check_wf(task)) - set(_wf.check_wf(bare))
+    except Exception:                                    # noqa: BLE001
+        added = {"crash"}
+    if not added:
+        return
+    task.pop("lemmas", None)
+    task["body"] = bare["body"]
+    if "methods" in bare:
+        task["methods"] = bare["methods"]
+    record.rewrites.append(Rewrite(rule="lemmas-withdrawn", line=0))
 
 
 def _method_level_decreases(method: MethodDecl, scope: Scope, fn_names: dict,
