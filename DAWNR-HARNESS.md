@@ -99,6 +99,11 @@ this process: network egress, running code, writing).
 | `web_fetch`, `web_search` | ask | untrusted | yes | yes |
 | `mcp__<server>__<tool>` | the server's configured permission, ask by default | untrusted | yes unless the operator says the server is local | yes |
 
+An `"agent"` section in the configuration adds the machine tools (`fs_list`,
+`fs_read`, `fs_search`, `fs_write`, `fs_edit`, `fs_undo`, `run_command`,
+`ps_list`) and the `plan` tool; they, their roots, allowlist and threat model are
+`DAWNR-AGENT.md`.
+
 **A call's path** (`Harness.call`), its outcome recorded in the audit log:
 
 1. Parse `name {json}`; an unreadable call is answered with the reason, so the
@@ -107,9 +112,12 @@ this process: network egress, running code, writing).
 3. The policy decides: offline mode denies any network tool; otherwise the
    operator's `permissions` rule for the exact name if there is one, else
    the strictest of the matching globs (such as `mcp__*`), else the tool's
-   default; then the taint rule (below) may raise allow to ask.
+   default; then the taint rule (below) may raise allow to ask; then the
+   tool's own rule for these arguments (`Tool.decide_call`, the agent's roots
+   and command allowlist) may make it stricter, never looser.
 4. `PreToolUse` hooks may deny, ask, allow (which answers an ask, never a
-   deny), rewrite the input (re-validated) or add context.
+   deny), rewrite the input (re-validated, and held to the tool's own rule
+   again) or add context.
 5. An `ask` goes to the approver (the terminal in `chat_cli.py`). With no
    approver, ask is deny: on a spaceship there is no one to ask, and the safe
    answer is no.
