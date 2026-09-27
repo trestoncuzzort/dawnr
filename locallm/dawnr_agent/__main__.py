@@ -81,6 +81,12 @@ def main(argv=None) -> int:
                           f"{'network' if rule.network else 'no network'}, {'writes' if rule.writes else 'reads'})")
                 print("sandbox: " + ("bubblewrap" if agent.commands.sandbox and not agent.commands.sandbox_problem
                                      else agent.commands.sandbox_problem or "none"))
+            scan = agent.home_scan
+            if scan:
+                ended = f", stopped {scan['stopped']}" if scan["stopped"] else ", complete"
+                print(f"home secret scan: {scan['entries']} entries in {scan['seconds']:g} s, every level to depth "
+                      f"{scan['whole_levels']} whole{ended}; {len(agent.space.secret_ids)} secret files and "
+                      "directories known by identity")
             print("offline: " + ("yes" if harness.policy.offline else "no"))
             for p in harness.problems:
                 print(f"[problem] {p}")

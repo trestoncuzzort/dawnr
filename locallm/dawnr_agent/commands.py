@@ -344,8 +344,9 @@ class CommandTools:
 
     def _path(self, value: str, writes: bool) -> str:
         """The absolute path a {path} value names, after every rule a file tool would apply to it: inside a root,
-        no link on the way or at the end, not secret, not protected (by name or identity), and in a writable root
-        when the rule writes. The program opens it later by name; DAWNR-AGENT.md says what that leaves."""
+        no link on the way or at the end, not secret, not protected (by name or identity), a file with no name
+        outside the roots (Space.link_problem), and in a writable root when the rule writes. The program opens it
+        later by name; DAWNR-AGENT.md says what that leaves."""
         _check_value("{path}", value)
         try:
             target = self.space.resolve(value)
@@ -366,6 +367,11 @@ class CommandTools:
                         if paths.is_link(st):
                             raise self.space._link_refusal(target, len(target.parts) - 1, parent)
                         self.space.check_file_ident(st, target, write=True)
+                        # a file with a name outside the roots (or a secret one): a program would read it, or write
+                        # through the link into the other name (a command writes in place; fs_write renames)
+                        problem = self.space.link_problem(st, target)
+                        if problem:
+                            raise PathRefused(problem)
                         if paths.is_dir(st):
                             paths.close(self.space.walk(target, write=writes))
                 finally:
