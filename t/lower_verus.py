@@ -4590,7 +4590,16 @@ class _V1:
                     f"verus: methods: declared name collision {dup}")
         return src
 
-    def _lemma_body(self, body: list, ind: str) -> list[str]:
+    def _lemma_body(self, body: list, ind: str, facts: list | None = None
+                    ) -> list[str]:
+        """`facts`: the Verus text of what holds at this point of the proof
+        (the lemma's requires, the guards on the path here, the asserts
+        before it), handed to a nonlinear assert as its `nonlinear_arith`
+        premises: Verus turns nonlinear arithmetic off by default, and an
+        assert like `(n - 2) * (m - 2) == 0` under the guard `n == 2` failed
+        as a plain assert (vericoding_DA0368). The block proves the assert
+        from those premises alone; nothing is assumed."""
+        facts = list(facts or [])
         out = []
         for s in body:
             if "lemma" in s:
@@ -4599,13 +4608,22 @@ class _V1:
                 args = ", ".join(expr(a, t) for a, t in zip(c["args"], ptys))
                 out.append(f"{ind}{c['name']}({args});")
             elif "assert" in s:
-                out.append(f"{ind}assert({expr(s['assert'])});")
+                e = expr(s["assert"])
+                if _has_nonlinear(s["assert"]) and facts:
+                    req = "".join(f"{ind}        {x},\n" for x in facts)
+                    out.append(f"{ind}assert({e}) by (nonlinear_arith)\n"
+                               f"{ind}    requires\n{req}{ind};")
+                else:
+                    out.append(f"{ind}assert({e});")
+                facts.append(e)
             else:
                 c = s["if"]
-                out.append(f"{ind}if {expr(c['cond'])} {{")
-                out += self._lemma_body(c["then"], ind + "    ")
+                cond = expr(c["cond"])
+                out.append(f"{ind}if {cond} {{")
+                out += self._lemma_body(c["then"], ind + "    ", facts + [cond])
                 out.append(f"{ind}}} else {{")
-                out += self._lemma_body(c["else"], ind + "    ")
+                out += self._lemma_body(c["else"], ind + "    ",
+                                        facts + [f"!({cond})"])
                 out.append(f"{ind}}}")
         return out
 
@@ -4639,7 +4657,8 @@ class _V1:
                 if (_calls(sf["body"], sf["name"])
                         and any(_calls(e, sf["name"]) for e in contract)):
                     lines.append(f"    reveal_with_fuel({sf['name']}, 2);")
-            lines += self._lemma_body(l["body"], "    ")
+            lines += self._lemma_body(l["body"], "    ",
+                                      [expr(e) for e in l["requires"]])
             if not l["body"]:
                 # Verus turns nonlinear arithmetic off by default; a
                 # body-less lemma whose statement multiplies two variables
