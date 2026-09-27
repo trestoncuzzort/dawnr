@@ -3,13 +3,15 @@ locallm/PREDICT-agent-2026-09-27.md registered before the code existed.
 
 What must hold: a path from the model never opens anything outside the roots (`..`, absolute paths, a sibling
 whose name extends a root's, links to files and directories, a directory swapped for a link mid-walk, NUL and
-control characters, Windows spellings), a write never goes through a link or a hard link, a secret is never
-read and a protected file never written (by name and by identity); a denied command never starts (no rule,
-no match, an option smuggled into a placeholder, offline, ask with nobody present), a command has no shell,
-a scrubbed environment, a working directory inside a root, a deadline that kills its whole process group and
-an output cap; a dry run changes nothing and shows the exact actions; an approval binds to exactly the calls
-it was shown; the loop stops at its budget; a file's injected instruction does not become an action even for
-a planner that obeys everything it reads; the model can reach no permission and no configuration.
+control characters, Windows spellings), a write never goes through a link or a hard link, a secret is never read
+and a protected file never written (by name and by identity), a file with a name outside the roots (a hard link
+from anywhere, found by no list) is never read, searched, kept for undo or given to a command, while two names
+inside the roots still work; a denied command never starts (no rule, no match, an option smuggled into a
+placeholder, offline, ask with nobody present), a command has no shell, a scrubbed environment, a working
+directory inside a root, a deadline that kills its whole process group and an output cap; a dry run changes
+nothing and shows the exact actions; an approval binds to exactly the calls it was shown; the loop stops at its
+budget; a file's injected instruction does not become an action even for a planner that obeys everything it
+reads; the model can reach no permission and no configuration.
 Standard library only; temporary directories (set TMPDIR to keep them off /tmp), local processes, and a local
 TCP server for the sandbox's network test.
 """
@@ -102,7 +104,11 @@ def snapshot(base: Path) -> dict:
 
 
 class Env(unittest.TestCase):
-    """A temporary machine: a writable root `project`, a read-only root `notes`, and `outside` next to them."""
+    """A temporary machine: a writable root `project`, a read-only root `notes`, and `outside` next to them.
+
+    The home directory is an empty folder of the temporary machine too: building an agent scans the home tree for
+    secrets (bounded, breadth-first), and a test that walked the real one would be slow and depend on whose machine
+    it ran on. A test that needs secrets under the home directory makes its own and points HOME at it."""
 
     def setUp(self):
         self.base = Path(tempfile.mkdtemp(prefix="dawnr-agent-"))
@@ -111,8 +117,12 @@ class Env(unittest.TestCase):
         self.notes = self.base / "notes"
         self.outside = self.base / "outside"
         self.evil = self.base / "project_evil"            # a sibling whose name extends the root's
-        for d in (self.proj / "src", self.proj / "tests", self.notes, self.outside, self.evil):
+        self.home = self.base / "home"
+        for d in (self.proj / "src", self.proj / "tests", self.notes, self.outside, self.evil, self.home):
             d.mkdir(parents=True)
+        home = mock.patch.dict(os.environ, {"HOME": str(self.home), "USERPROFILE": str(self.home)})
+        home.start()
+        self.addCleanup(home.stop)
         (self.proj / "src" / "a.t").write_text(PROGRAM)
         (self.proj / "readme.txt").write_text("hello\nworld\n")
         (self.notes / "todo.txt").write_text("buy milk\n")
@@ -284,6 +294,184 @@ class Containment(Env):
         self.assertTrue(r.is_error, r.text)
         self.assertNotIn("KEY-MATERIAL", r.text)
 
+    # -- hard links: the roots are the boundary, not the secret list ------------------------------------------------
+    # The second review of register_agent's identity coverage found that only the home directory's top level was
+    # scanned, so ~/Documents/mykey.pem, ~/work/credentials.json or ~/backup/id_rsa hard-linked into a root under an
+    # innocent name was read whole. These build the agent and read through the harness, end to end.
+
+    def _home_with(self, rel: str, text: str = "KEY-MATERIAL\n") -> tuple[Path, Path]:
+        home = self.base / "fake_home"
+        f = home / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(text)
+        return home, f
+
+    def _link(self, src, dst) -> None:
+        try:
+            os.link(src, dst)
+        except OSError as e:
+            self.skipTest(f"no hard links here: {e}")
+
+    def _build_at_home(self, home, **kw):
+        with mock.patch.dict(os.environ, {"HOME": str(home), "USERPROFILE": str(home)}):
+            return self.build(**kw)
+
+    def _refused_both_ways(self, home: Path, secret: Path, shown: str) -> None:
+        """Both defences, each alone: register_agent knew the nested secret by identity (the home scan), and with
+        that identity forgotten, which is what a secret made after the scan looks like, the read is still refused
+        because the file has a name outside the roots (the read-time link check, which consults no list)."""
+        h, a = self._build_at_home(home)
+        sid = paths_mod.ident(os.stat(secret))
+        self.assertIn(sid, a.space.secret_ids, f"register_agent did not pick up ~/{secret.relative_to(home)}")
+        r = h.call("fs_read", {"path": shown})
+        self.assertTrue(r.is_error, r.text)
+        self.assertNotIn("KEY-MATERIAL", r.text)
+        a.space.secret_ids.discard(sid)
+        r = h.call("fs_read", {"path": shown})
+        self.assertTrue(r.is_error, r.text)
+        self.assertNotIn("KEY-MATERIAL", r.text)
+        self.assertIn("outside the roots", r.text)
+
+    def test_a_nested_home_secret_hard_linked_into_a_root_is_refused(self):
+        home, key = self._home_with("Documents/mykey.pem")
+        self._link(key, self.proj / "meeting-notes.txt")
+        self._refused_both_ways(home, key, "project/meeting-notes.txt")
+
+    def test_a_nested_literal_secret_name_hard_linked_into_a_root_is_refused(self):
+        home, cred = self._home_with("work/credentials.json", '{"token": "KEY-MATERIAL"}\n')
+        self._link(cred, self.proj / "settings.json")
+        self._refused_both_ways(home, cred, "project/settings.json")
+
+    def test_every_secret_pattern_is_known_by_identity_anywhere_under_home(self):
+        """The home scan covers every kind of entry on the list at any depth: a literal file name, a glob, a file
+        inside a secret directory that no pattern names itself, and a pattern with a slash (HIDE_UNDER_HOME)."""
+        home = self.base / "fake_home"
+        cases = ["backup/id_rsa", "a/b/c/d/e/server.KEY", "old/laptop/.ssh/config", "x/.password-store/mail/gm.gpg",
+                 "proj/.env", "proj/.env.local", "vault/db.kdbx", "certs/client.p12", ".config/gh/hosts.yml",
+                 "deploy/.netrc", ".npmrc"]
+        for rel in cases:
+            self._home_with(rel)
+        plain = self._home_with("Documents/letter.txt", "dear\n")[1]
+        # dotfiles kept elsewhere and linked in (GNU Stow's way): what the secret name points to is the secret
+        self._home_with("dotfiles/netrc")
+        self._home_with("dotfiles/aws/config")
+        (home / "sub").mkdir()
+        os.symlink(home / "dotfiles" / "netrc", home / "sub" / ".netrc")
+        os.symlink(home / "dotfiles" / "aws", home / ".aws")
+        cases += ["sub/.netrc", ".aws/config"]
+        _h, a = self._build_at_home(home)
+        for rel in cases:
+            self.assertIn(paths_mod.ident(os.stat(home / rel)), a.space.secret_ids, rel)
+        self.assertNotIn(paths_mod.ident(os.stat(plain)), a.space.secret_ids)
+
+    def test_a_hard_link_to_a_file_outside_the_roots_is_refused_whatever_its_name(self):
+        """outside/secret.txt matches no secret pattern and is under no home directory: the roots are the
+        boundary, so a second name for it inside a root does not make it readable."""
+        self._link(self.outside / "secret.txt", self.proj / "copy.txt")
+        h, a = self.build()
+        self.assertNotIn(paths_mod.ident(os.stat(self.outside / "secret.txt")), a.space.secret_ids)
+        for p in ("project/copy.txt", str(self.proj / "copy.txt")):
+            r = h.call("fs_read", {"path": p})
+            self.assertTrue(r.is_error, r.text)
+            self.assertNotIn("CANARY", r.text)
+            self.assertIn("outside the roots", r.text)
+
+    def test_a_hard_link_between_two_names_inside_the_roots_is_read(self):
+        """The link check refuses a file only for a name outside the roots: three names for one file, in two
+        roots, are all read, and search finds all three."""
+        self._link(self.proj / "readme.txt", self.proj / "src" / "readme-again.txt")
+        self._link(self.proj / "readme.txt", self.notes / "readme-too.txt")
+        h, _ = self.build()
+        for p in ("project/readme.txt", "project/src/readme-again.txt", "notes/readme-too.txt"):
+            r = h.call("fs_read", {"path": p})
+            self.assertFalse(r.is_error, r.text)
+            self.assertIn("hello", r.text)
+        self.assertIn("3 matches in 3 files", h.call("fs_search", {"query": "hello"}).text)
+
+    def test_a_hard_link_whose_other_name_in_a_root_is_secret_is_refused(self):
+        (self.proj / ".env").write_text("TOKEN=KEY-MATERIAL\n")
+        self._link(self.proj / ".env", self.proj / "env.txt")
+        h, _ = self.build()
+        r = h.call("fs_read", {"path": "project/env.txt"})
+        self.assertTrue(r.is_error, r.text)
+        self.assertNotIn("KEY-MATERIAL", r.text)
+        found = h.call("fs_search", {"query": "TOKEN"}).text
+        self.assertNotIn("KEY-MATERIAL", found)
+
+    def test_search_does_not_show_a_file_hard_linked_from_outside(self):
+        self._link(self.outside / "secret.txt", self.proj / "copy.txt")
+        h, _ = self.build()
+        found = h.call("fs_search", {"query": "CANARY"}).text
+        self.assertNotIn("CANARY-OUTSIDE", found)
+        self.assertIn("0 matches", found)
+        self.assertIn("hard link", found)
+
+    def test_replacing_a_hard_link_from_outside_keeps_no_copy_to_undo_into_the_root(self):
+        """A write replaces the name and leaves the other one alone (as before). What it must not do is keep the
+        outside file's bytes as the old contents: fs_undo would then write them into the root as a new file with
+        one name, which every check above would read. And an expected hash is refused, not compared, so the
+        refusal cannot report the outside file's hash."""
+        self._link(self.outside / "secret.txt", self.proj / "hl.txt")
+        self._link(self.evil / "file.txt", self.proj / "hl2.txt")
+        h, a = self.build(permissions={"fs_write": "allow", "fs_undo": "allow"})
+        r = h.call("fs_write", {"path": "project/hl2.txt", "content": "x\n", "overwrite": True,
+                                "expect_sha256": "0" * 16})
+        self.assertTrue(r.is_error, r.text)
+        self.assertNotIn(sha256(b"CANARY-EVIL\n")[:16], r.text)
+        r = h.call("fs_write", {"path": "project/hl.txt", "content": "mine\n", "overwrite": True})
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual((self.outside / "secret.txt").read_text(), "CANARY-OUTSIDE\n")
+        change = re.search(r"change (c-[0-9a-f]{10})", r.text).group(1)
+        u = h.call("fs_undo", {"change": change})
+        self.assertTrue(u.is_error, u.text)
+        self.assertEqual((self.proj / "hl.txt").read_text(), "mine\n")
+        self.assertNotIn("CANARY", h.call("fs_read", {"path": "project/hl.txt"}).text)
+        backups = self.state / "backups"
+        for f in (backups.iterdir() if backups.exists() else ()):
+            self.assertNotIn(b"CANARY", f.read_bytes())
+
+    def test_overlapping_roots_do_not_count_one_name_twice(self):
+        """A root inside another reaches the same directory entry twice; it is still one name, so a file with one
+        name in the roots and one outside them is refused through either root."""
+        self._link(self.outside / "secret.txt", self.proj / "src" / "dup.txt")
+        cfg = {"offline": True, "permissions": {},
+               "agent": {"roots": [{"name": "project", "path": str(self.proj), "mode": "write"},
+                                   {"name": "src", "path": str(self.proj / "src")}], "state": str(self.state)}}
+        h, _ = build_agent(cfg)
+        self.addCleanup(h.close)
+        for p in ("project/src/dup.txt", "src/dup.txt"):
+            r = h.call("fs_read", {"path": p})
+            self.assertTrue(r.is_error, (p, r.text))
+            self.assertNotIn("CANARY", r.text)
+
+    def test_a_name_added_inside_the_roots_while_the_names_are_counted_is_caught(self):
+        """The race the count leaves: the link count is read, then the roots are searched. A second name made inside
+        a root during the search would bring the names found up to the stale count while the name outside remains;
+        the descriptor is examined again after the search, and the change refuses the read."""
+        self._link(self.outside / "secret.txt", self.proj / "copy.txt")
+        h, _ = self.build()
+        real = paths_mod.Space.names_in_roots
+
+        def racing(space, *args, **kw):
+            if not (self.proj / "copy2.txt").exists():
+                os.link(self.proj / "copy.txt", self.proj / "copy2.txt")
+            return real(space, *args, **kw)
+
+        with mock.patch.object(paths_mod.Space, "names_in_roots", racing):
+            r = h.call("fs_read", {"path": "project/copy.txt"})
+        self.assertTrue((self.proj / "copy2.txt").exists())
+        self.assertTrue(r.is_error, r.text)
+        self.assertNotIn("CANARY", r.text)
+
+    def test_the_search_for_a_files_other_names_fails_closed_at_its_cap(self):
+        self._link(self.proj / "readme.txt", self.proj / "src" / "again.txt")
+        h, _ = self.build(limits={"link_scan_entries": 1})
+        r = h.call("fs_read", {"path": "project/src/again.txt"})
+        self.assertTrue(r.is_error, r.text)
+        self.assertIn("stopped", r.text)
+        h2, _ = self.build()
+        self.assertFalse(h2.call("fs_read", {"path": "project/src/again.txt"}).is_error)
+
     def test_protected_paths_are_read_but_never_written(self):
         (self.proj / ".git").mkdir()
         (self.proj / ".git" / "config").write_text("[core]\n")
@@ -414,6 +602,65 @@ class ContainmentByPathWalk(_PathWalk, Containment):
 
     def test_a_file_swapped_for_a_link_before_it_opens_is_refused(self):
         self.skipTest("the path-string walk checks, then opens: the window DAWNR-AGENT.md names")
+
+    def test_a_file_swapped_for_a_link_between_check_and_open_is_refused_by_its_real_path(self):
+        """The window that walk leaves, for a read: the name is checked, then opened by name, and a link swapped in
+        between is followed. The real path of the file that was opened is checked before anything is returned, so
+        what it followed to is refused rather than read."""
+        h, _ = self.build()
+        real_open = os.open
+        name = str(self.proj / "readme.txt")
+        swapped = []
+
+        def racing_open(path, flags, mode=0o777, *, dir_fd=None):
+            if path == name and not swapped:
+                os.rename(name, self.proj / "readme.moved")
+                os.symlink(self.outside / "secret.txt", name)
+                swapped.append(True)
+            return real_open(path, flags, mode, dir_fd=dir_fd)
+
+        with mock.patch("os.open", side_effect=racing_open):
+            r = h.call("fs_read", {"path": "project/readme.txt"})
+        self.assertTrue(swapped)
+        self.assertTrue(r.is_error, r.text)
+        self.assertNotIn("CANARY", r.text)
+
+
+class HomeScan(unittest.TestCase):
+    """The home directory's secret scan by itself: breadth-first, bounded, and it says where it stopped."""
+
+    def test_breadth_first_and_bounded_skipping_roots_and_links(self):
+        base = Path(tempfile.mkdtemp(prefix="dawnr-home-"))
+        self.addCleanup(shutil.rmtree, base, True)
+        home = base / "home"
+        (home / "a").mkdir(parents=True)
+        (home / "a" / "key.pem").write_text("k\n")
+        deep = home.joinpath(*[f"d{i}" for i in range(30)])
+        deep.mkdir(parents=True)
+        (deep / "id_rsa").write_text("k\n")
+        root = home / "proj"                           # an operator root: the by-name check covers what is inside
+        root.mkdir()
+        (root / "x.pem").write_text("k\n")
+        out = base / "out"                              # a link to a directory elsewhere is not followed
+        out.mkdir()
+        (out / "y.pem").write_text("k\n")
+        os.symlink(out, home / "linkdir")
+        ident = lambda p: paths_mod.ident(os.stat(p))  # noqa: E731
+        skip = {ident(root)}
+        ids, info = paths_mod.home_secret_identities(home, paths_mod.DEFAULT_SECRETS, skip=skip, max_entries=20,
+                                                     seconds=30)
+        self.assertIn(ident(home / "a" / "key.pem"), ids)        # shallow: found before the cap
+        self.assertNotIn(ident(deep / "id_rsa"), ids)             # 31 levels down: the cap came first
+        self.assertTrue(info["stopped"])
+        self.assertNotIn(ident(root / "x.pem"), ids)
+        self.assertNotIn(ident(out / "y.pem"), ids)
+        ids, info = paths_mod.home_secret_identities(home, paths_mod.DEFAULT_SECRETS, skip=skip, max_entries=10_000,
+                                                     seconds=30)
+        self.assertIn(ident(deep / "id_rsa"), ids)
+        self.assertIsNone(info["stopped"])
+        self.assertEqual(info["depth"], 31)
+        self.assertNotIn(ident(root / "x.pem"), ids)
+        self.assertNotIn(ident(out / "y.pem"), ids)
 
 
 # ------------------------------------------------------------------ the file tools --
@@ -637,6 +884,25 @@ class Commands(Env):
             self.assertNotIn("CANARY", r.text)
         self.assertEqual(started, [])
         r = h.call("run_command", {"argv": ["cat", "project/readme.txt"]})
+        self.assertIn("hello", r.text)
+
+    def test_a_path_hard_linked_from_outside_the_roots_is_not_given_to_a_command(self):
+        """A {path} is checked like a file tool's: a file with a name outside the roots is refused before the
+        program could open it (and a program that writes in place would write through the link)."""
+        try:
+            os.link(self.outside / "secret.txt", self.proj / "copy.txt")
+            os.link(self.proj / "readme.txt", self.proj / "src" / "readme-again.txt")
+        except OSError as e:
+            self.skipTest(f"no hard links here: {e}")
+        h, a = self.build(permissions={"run_command": "allow"}, commands=[
+            {"argv": ["cat", "{path}"], "permission": "allow", "network": False, "writes": False}])
+        started = self.counting(a)
+        r = h.call("run_command", {"argv": ["cat", "project/copy.txt"]})
+        self.assertTrue(r.is_error, r.text)
+        self.assertNotIn("CANARY", r.text)
+        self.assertEqual(started, [])
+        r = h.call("run_command", {"argv": ["cat", "project/src/readme-again.txt"]})
+        self.assertFalse(r.is_error, r.text)
         self.assertIn("hello", r.text)
 
     def test_a_program_inside_a_writable_root_is_not_used(self):

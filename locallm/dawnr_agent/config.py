@@ -87,6 +87,7 @@ class Agent:
         self.dry_run = dry_run
         self.plan_approver = None          # set by a front end: callable(DryRun) -> bool; never by the model
         self.audit_path = audit_path
+        self.home_scan: dict = {}          # what the home directory's secret scan covered (register_agent)
         self.plans: list = []
         self._lock = threading.Lock()
 
@@ -259,13 +260,6 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
     secrets = spec.get("secrets")
     secret_names = DEFAULT_SECRETS if secrets is None else tuple(_type(secrets, list, "secrets"))
     space = Space(tuple(roots), secret_names=secret_names, protect_names=tuple(DEFAULT_PROTECT) + tuple(names))
-    home = Path.home()
-    # every DEFAULT_SECRETS entry (not just the four original directories), plus the sandbox's own extra
-    # hardening dirs (HIDE_UNDER_HOME: .config/gh, .local/share/keyrings), known by identity under the home
-    # directory too, regardless of an operator "secrets" override above: a hard link into a root under a name
-    # that override does not mention is still refused (see home_secret_identities in paths.py for why).
-    home_secret_names = tuple(dict.fromkeys(DEFAULT_SECRETS + HIDE_UNDER_HOME))
-    space.secret_ids |= paths.home_secret_identities(home, home_secret_names, max_files=2000)
 
     state = resolve(spec["state"]) if spec.get("state") else default_state_dir()
     lim = dict(_type(spec.get("limits", {}), dict, "limits"))
@@ -278,6 +272,18 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
         if v <= 0:
             raise AgentConfigError(f"agent: limits.{k} must be positive")
     limits = Limits(**{k: v for k, v in lim.items() if k in limit_fields})
+    space.link_scan_entries = int(limits.link_scan_entries)
+    space.link_scan_seconds = float(limits.link_scan_seconds)
+    # Every secret name, anywhere under the home directory, known by identity: DEFAULT_SECRETS, the sandbox's own
+    # extra hardening dirs (HIDE_UNDER_HOME: .config/gh, .local/share/keyrings) and the operator's "secrets", which
+    # adds to this list rather than replacing it (an override that leaves a default out still leaves the file
+    # refused when it is hard-linked into a root). The scan is bounded; what it cannot reach, the read-time link
+    # check still refuses (paths.home_secret_identities and Space.link_problem).
+    home_secret_names = tuple(dict.fromkeys(DEFAULT_SECRETS + HIDE_UNDER_HOME + tuple(secret_names)))
+    found, home_scan = paths.home_secret_identities(
+        Path.home(), home_secret_names, skip={r.ident for r in roots}, devices={r.ident[0] for r in roots},
+        max_entries=int(limits.home_scan_entries), seconds=float(limits.home_scan_seconds))
+    space.secret_ids |= found
     command_limits = {k: v for k, v in lim.items() if k in ("command_timeout", "command_output")}
     budget_spec = _type(spec.get("budget", {}), dict, "budget")
     unknown_budget = set(budget_spec) - {f.name for f in fields(Budget)}
@@ -328,6 +334,12 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
 
     agent = Agent(harness, space, ops, files, commands, budget, dry_run=bool(spec.get("dry_run", False)),
                   audit_path=state / "plans.jsonl")
+    agent.home_scan = home_scan
+    if home_scan["stopped"]:
+        problems.append(f"agent: the home directory's secret scan stopped {home_scan['stopped']}, every level to "
+                        f"depth {home_scan['whole_levels']} read whole: a secret deeper than that is not known by "
+                        "identity; a hard link to it is still refused when read, because it has a name outside the "
+                        "roots (limits home_scan_entries and home_scan_seconds raise the caps)")
     tools = []
     if files is not None:
         tools += files.tools()
