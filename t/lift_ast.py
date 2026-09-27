@@ -204,6 +204,10 @@ class IfExpr(Expr):
     cond: Expr
     then: Expr
     else_: Expr
+    # Row 49 (2026-09-27): "match-literal" when the parser built this
+    # if-chain from a `match` on int literals with a `_` default; the
+    # classifier logs the rewrite `match-literal-if-chain` at its line.
+    origin: str = ""
 
 
 @dataclass
@@ -482,6 +486,7 @@ class IfStmt(Stmt):
     cond: Union[Expr, Star]
     then: tuple[Stmt, ...]
     else_: Union[tuple[Stmt, ...], "IfStmt", None]
+    origin: str = ""  # row 49: "match-literal" for a desugared match, see IfExpr
 
 
 @dataclass
