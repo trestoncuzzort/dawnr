@@ -493,6 +493,66 @@ contradicting first message. Its prediction and the number that would falsify
 it go in a dated note committed before the run (AGENTS.md rule 3); no number
 about the model's use of memory exists yet.
 
+**Trained and measured** (`locallm/memory_fixtures.py`, `locallm/memory_
+conversations.py`, `locallm/memory_eval.py`; numbers in `locallm/memory-
+conversations-results-2026-09-27.json`). The one preference the corpus can
+apply without a word of new program text -- a name for a sequence parameter,
+"prefers `xs`" -- built into the four families above (`use`, `override`,
+`unapplied`, `recall`), every span the real output of dawnr's own recall
+(`dawnr_memory.harness_hooks`, `retrieval.recall`) run against a store holding
+exactly the fact the row is about, every rewritten answer kept only when the
+real t tool still verifies it. 197 training conversations (40 use, 40
+override, 37 unapplied, 80 recall) added to the tool track's own mix (the
+r12 core, 400 steps, `dawnr_pipeline.py`'s mid stage, two seeds): arm A is the
+tool track's own 358 base plus 1,007 tool conversations, unchanged; arm B adds
+the 197 memory conversations on top (1,562 rows). 112 held-out items,
+validation-side documents and held-out phrasings and canaries only, replayed
+through the real engine with the span installed and withheld, on the same
+task and person both ways:
+
+| | A (no memory data) | B (plus memory) |
+|---|---|---|
+| memory span shown when installed | 0.0 | 1.0 |
+| recall answered from the span | 0.0 | 0.46 (0.68, 0.25) |
+| recall says "nothing yet" with no span | 0.0 | 1.0 |
+| recall invents a preference with no span | 0.0 | 0.0 |
+| renamed parameter follows the span (`use`) | 0.0 | 0.0 |
+| renamed parameter follows the message over a contradicting span (`override`) | 0.0 | 0.0 |
+| unapplied program left unchanged | 0.18 | 0.07 |
+| pass all examples, 133 prompts (the tool track's own guard) | 13.5 | 14.0 |
+
+Two seeds (1337, 1338), means over both; arm A needed no new training -- it
+is the tool track's own already-trained checkpoint
+(`tool-conversations-results-2026-09-27.json`), read for its `chat-eval.json`
+and replayed through `memory_eval.py`, so only arm B (plus memory) trained,
+under `flock`/`systemd-run --scope -p MemoryMax=6G`, one seed at a time; 13.1
+of the 90 GPU minutes budgeted for this measurement were used, both mid runs
+completing with no CUDA or device error.
+
+What it says: **a model with no memory token cannot use memory it is
+handed** -- arm A shows the span 0% of the time regardless of what the store
+holds, which is the baseline the with/without comparison needs, not a result
+about arm B. **Recall transferred, unevenly**: with the span installed, arm B
+answers "what do you remember about me?" from it 68% of the time at one seed
+and 25% at the other (mean 0.46); with no span it says "nothing yet" 100% of
+the time at both seeds and never invents a preference with nothing to have
+grounded it. **The two rename families did not transfer at this size**:
+`preference_following_with_span` and `message_over_memory` are 0.0 for arm B
+at both seeds -- 197 rows over 400 steps, next to the tool track's 1,007, did
+not move a rewrite this specific either with the span's help or against a
+contradicting one. **`unapplied` moved the wrong way**: arm B changes a
+program that memory should leave alone more often than arm A does (0.07
+against 0.18) -- not enough data at two seeds to separate from noise, but not
+a win, and reported as one. **The guard holds**: pass-all-133 stayed within the tool track's own
+tolerance at both seeds (arm B 13 and 15 against arm A's 13 and 14, mean 14.0
+against 13.5) -- adding these 197 rows cost nothing measured on the same 133
+prompts.
+Memory conversations stay opt-in (`dawnr_pipeline.py --extra-conversations`),
+the same as the tool conversations, on the strength of one family (`recall`)
+transferring and nothing measured breaking; the rename families need more
+rows aimed at them before "use what is remembered" or "the person's current
+words beat memory" can be claimed.
+
 ## 9. Running it
 
     # the person's controls
