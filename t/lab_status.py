@@ -133,6 +133,10 @@ def process_start(proc: Path, boot: float, ticks: int) -> float:
 def process_runs(root: Path, proc_root: Path = Path("/proc"), uid: int | None = None) -> list[dict]:
     """Inspect actual Python argv; a shell quoting a command is never a running job."""
     uid = os.getuid() if uid is None else uid
+    # Compared against each process's resolved cwd below; resolve root the same way, or a root under
+    # a symlinked directory (macOS's /var -> /private/var, where tempfile puts the tests' roots)
+    # never matches its own resolved children.
+    root = Path(root).resolve()
     try:
         boot = next(float(line.split()[1]) for line in (proc_root / "stat").read_text().splitlines()
                     if line.startswith("btime "))
