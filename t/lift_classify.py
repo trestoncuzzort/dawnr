@@ -183,6 +183,15 @@ def _is_nested_seq_of_nat(t: Optional[Type]) -> bool:
             and t.args[0].args[0].kind == "nat")
 
 
+def _is_nested_seq_of_char(t: Optional[Type]) -> bool:
+    # Row 43 (2026-09-27, t/FEATURES-TRACK.md, nested string sequences):
+    # `seq<string>` or `seq<seq<char>>`, one level of nesting whose rows
+    # are strings -- t's `{"seq": "seq"}` with code-point rows, row 28's
+    # string-as-seq applied per row exactly as row 30 applies int rows.
+    return (t is not None and t.kind == "seq" and len(t.args) == 1
+            and (t.args[0].kind == "string" or _is_seq_of_char(t.args[0])))
+
+
 def _is_array_of_int(t: Optional[Type]) -> bool:
     return (t is not None and t.kind == "array" and not t.nullable
             and len(t.args) == 1 and _is_int_like(t.args[0]))
@@ -235,14 +244,14 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
             if leaf.kind == "int":
                 return None
             if leaf.kind == "char":
-                return "nested-seq-string"
-            if leaf.kind == "seq":
-                return "nested-seq-deep"
+                return None  # row 43: `seq<seq<char>>`, a row of code points
+            if leaf.kind in ("seq", "string"):
+                return "nested-seq-deep"  # a string is itself a seq: three levels
             return "nested-seq-other"
         if row is not None and row.kind == "bool":
             return "seq-of-bool"
         if row is not None and row.kind == "string":
-            return "nested-seq-string"
+            return None  # row 43: `seq<string>`, the same nested seq
         if row is not None and row.kind == "array":
             # `seq<array<int>>`: row 22's array-as-seq-value machinery is
             # built around exactly one top-level array per method (a
@@ -367,11 +376,12 @@ def _declared_kind(t: Optional[Type]) -> Optional[str]:
         return "int"
     if t.kind == "seq" and len(t.args) == 1 and (_is_int_like(t.args[0]) or _is_char(t.args[0])):
         return "seq"
-    if t.kind == "seq" and len(t.args) == 1 and t.args[0].kind == "seq":
+    if t.kind == "seq" and len(t.args) == 1 and t.args[0].kind in ("seq", "string"):
         # Row 30 (2026-09-10): a nested seq is still "seq" in this row's
         # own int/bool/seq vocabulary -- `+`/slice (rows 26-27) work the
         # same way at any nesting depth, this row only needs to know
-        # "is it seq-typed", never how deep.
+        # "is it seq-typed", never how deep. Row 43 (2026-09-27): a
+        # `seq<string>` is the same nested seq.
         return "seq"
     if t.kind == "string":
         return "seq"  # row 28: string is seq<int> by another name
@@ -415,6 +425,13 @@ def expr_kind(e: Expr, lookup) -> Optional[str]:
     if isinstance(e, (NaryBool, Implies, Iff, Chain, Quantifier)):
         return "bool"
     if isinstance(e, Index):
+        if isinstance(e.base, Ident):
+            # Row 43 (2026-09-27): a nested name's row, `xs[i]`, is itself
+            # seq-kinded (`_build_kind_env`'s `#row` entry); every other
+            # index is an element, an int, as before.
+            rk = lookup(e.base.name + "#row")
+            if rk is not None:
+                return rk
         return "int"
     if isinstance(e, Cardinality):
         return "int"
@@ -524,6 +541,38 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
                     env.setdefault(b.name, _declared_kind(b.type) or "int")
             elif isinstance(n, ForStmt):
                 env.setdefault(n.var, _declared_kind(n.var_type) or "int")
+    # Row 43 (2026-09-27, nested string sequences): a nested name's ROWS
+    # are seq-kinded too, recorded under a `<name>#row` key no Dafny
+    # identifier can spell, so `expr_kind` types `xs[i]` (a row) `seq`
+    # rather than `int` and `xs[i][..k]`, `xs[i] + s` resolve (row 30 left
+    # the row an int, its own named residual). Declared types first
+    # (`seq<seq<int>>`, `seq<seq<nat>>`, `seq<string>`, `seq<seq<char>>`),
+    # then an untyped local whose initialiser is a nested display.
+
+    def _row(name: str, t: Optional[Type]) -> None:
+        if (t is not None and t.kind == "seq" and len(t.args) == 1
+                and t.args[0].kind in ("seq", "string")):
+            env[name + "#row"] = "seq"
+
+    for p in method.params:
+        _row(p.name, p.type)
+    for r in method.returns:
+        _row(r.name, r.type)
+    for d in closure:
+        if isinstance(d, FunctionDecl):
+            for p in d.params:
+                _row(p.name, p.type)
+    for root in [method] + list(closure):
+        for n in walk(root):
+            if isinstance(n, VarDeclStmt):
+                for idx, nm in enumerate(n.names):
+                    if nm.type is not None:
+                        _row(nm.name, nm.type)
+                    elif (n.init and len(n.init) == len(n.names)
+                          and isinstance(n.init[idx], SeqDisplay)
+                          and any(isinstance(el, (SeqDisplay, StringLit))
+                                  for el in n.init[idx].elems)):
+                        env[nm.name + "#row"] = "seq"
     return env
 
 
@@ -546,11 +595,11 @@ def _seq_literal_issue(n: SeqDisplay, env: dict) -> Optional[str]:
     element)."""
     for el in n.elems:
         if isinstance(el, StringLit):
-            return "nested-seq-string"
+            continue  # row 43: a string-literal row is a row of code points
         if isinstance(el, SeqDisplay):
             for inner in el.elems:
                 if isinstance(inner, StringLit):
-                    return "nested-seq-string"
+                    return "nested-seq-deep"  # a row of strings: three levels
                 if isinstance(inner, SeqDisplay):
                     return "nested-seq-deep"
                 if expr_kind(inner, env.get) != "int":
@@ -671,6 +720,7 @@ def _build_char_names(method: MethodDecl, closure: tuple[Decl, ...]):
     reading can already see is declared one."""
     chars: set[str] = set()
     seqs: set[str] = set()
+    nested: set[str] = set()
 
     def note(name: Optional[str], t: Optional[Type]) -> None:
         if name is None or t is None:
@@ -679,6 +729,10 @@ def _build_char_names(method: MethodDecl, closure: tuple[Decl, ...]):
             chars.add(name)
         elif t.kind == "string" or _is_seq_of_char(t):
             seqs.add(name)
+        elif _is_nested_seq_of_char(t):
+            # Row 43: `xs[i]` is a string and `xs[i][j]` a char, so the
+            # nested name is kept apart for `_is_char_expr`.
+            nested.add(name)
 
     for p in method.params:
         note(p.name, p.type)
@@ -693,10 +747,11 @@ def _build_char_names(method: MethodDecl, closure: tuple[Decl, ...]):
             if isinstance(n, VarDeclStmt):
                 for nm in n.names:
                     note(nm.name, nm.type)
-    return chars, seqs
+    return chars, seqs, nested
 
 
-def _is_char_expr(e: Expr, char_names: set, char_seq_names: set = frozenset()) -> bool:
+def _is_char_expr(e: Expr, char_names: set, char_seq_names: set = frozenset(),
+                  nested_names: set = frozenset()) -> bool:
     """Row 28: best-effort "this expression's Dafny type is exactly
     char", the one question `expr_kind`'s int/bool/seq vocabulary cannot
     answer since it folds char into plain int by design. Used only for a
@@ -711,14 +766,18 @@ def _is_char_expr(e: Expr, char_names: set, char_seq_names: set = frozenset()) -
     if isinstance(e, Ident):
         return e.name in char_names
     if isinstance(e, Old):
-        return _is_char_expr(e.arg, char_names, char_seq_names)
+        return _is_char_expr(e.arg, char_names, char_seq_names, nested_names)
     if isinstance(e, Cast):
         return e.type.kind == "char"
     if isinstance(e, IfExpr):
-        return (_is_char_expr(e.then, char_names, char_seq_names)
-                and _is_char_expr(e.else_, char_names, char_seq_names))
+        return (_is_char_expr(e.then, char_names, char_seq_names, nested_names)
+                and _is_char_expr(e.else_, char_names, char_seq_names, nested_names))
     if isinstance(e, Index) and isinstance(e.base, Ident):
         return e.base.name in char_seq_names
+    if (isinstance(e, Index) and isinstance(e.base, Index)
+            and isinstance(e.base.base, Ident)):
+        # Row 43: `xs[i][j]` on a `seq<string>` name is a char.
+        return e.base.base.name in nested_names
     return False
 
 
@@ -2356,7 +2415,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             # `seq<nat>` return already has, just applied per row. Any
             # other seq shape (bool, string, three deep) stays refused.
             if not (_is_seq_of_int(rt) or _is_seq_of_nat(rt) or _is_seq_of_char(rt)
-                    or _is_nested_seq_of_int(rt) or _is_nested_seq_of_nat(rt)):
+                    or _is_nested_seq_of_int(rt) or _is_nested_seq_of_nat(rt)
+                    or _is_nested_seq_of_char(rt)):
                 issues.append((ret_param.line, "seq-return", ret_param.name))
         elif (rt is not None and rt.kind == "array" and not rt.nullable
                 and _is_array_of_int(rt) and array_mutation is not None
@@ -2416,7 +2476,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # `a[..]` on an array parameter "is the parameter itself, unchanged".
     kind_env = _build_kind_env(method, closure, _method_return_kinds(module),
                                _method_return_kind_lists(module))
-    char_names, char_seq_names = _build_char_names(method, closure)
+    char_names, char_seq_names, nested_str_names = _build_char_names(method, closure)
     mutated_array_name = array_mutation.name if array_mutation is not None else None
     for root in scope_roots:
         for n in walk(root):
@@ -2440,8 +2500,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                 else:
                     issues.append((n.line, "seq-slice", "[..]"))
             elif isinstance(n, Binary) and n.op in ("+", "-") and (
-                    _is_char_expr(n.left, char_names, char_seq_names)
-                    or _is_char_expr(n.right, char_names, char_seq_names)):
+                    _is_char_expr(n.left, char_names, char_seq_names, nested_str_names)
+                    or _is_char_expr(n.right, char_names, char_seq_names, nested_str_names)):
                 # Row 28: `char + char`/`char - char` verify on dafny
                 # 4.11.0 with an overflow/underflow proof obligation
                 # (measured: t8/t9.dfy above), a fact t's plain,
@@ -2509,7 +2569,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                         rewrites.append(Rewrite(rule="int-as-char-lifted", line=n.line))
                     else:
                         issues.append((n.line, "char-cast-unbounded", "as char"))
-                elif n.type.kind == "int" and _is_char_expr(n.base, char_names, char_seq_names):
+                elif n.type.kind == "int" and _is_char_expr(n.base, char_names, char_seq_names,
+                                                             nested_str_names):
                     rewrites.append(Rewrite(rule="char-as-int-lifted", line=n.line))
                 else:
                     issues.append((n.line, "as-cast", "as"))
