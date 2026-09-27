@@ -158,6 +158,15 @@ def _is_char(t: Optional[Type]) -> bool:
     return t is not None and t.kind == "char"
 
 
+def _is_seq_fun_result(t: Optional[Type]) -> bool:
+    """Row 45 (2026-09-27, SPEC.md "Seq-valued spec_funs (v1)"): the
+    Dafny function result types that lift to a spec_fun's `"seq"` result:
+    `string`, `seq<char>` (row 28's code points), `seq<int>`, `seq<nat>`.
+    One level only: a nested seq result is not in v1."""
+    return (t is not None
+            and (t.kind == "string" or _is_seq_of_int(t) or _is_seq_of_char(t)))
+
+
 def _type_text(t: Type) -> str:
     """A type's Dafny-like spelling for a refusal token (`seq<string>`)."""
     if t.args:
@@ -2752,14 +2761,27 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     for d in closure:
         if isinstance(d, FunctionDecl):
             # 2026-09-27 (t/FEATURES-TRACK.md, strings): a t spec_fun's result
-            # is int or bool (SPEC.md, `"result": "int"|"bool"`), so a closure
-            # function returning a `string`/`seq<..>`/anything else cannot lift
-            # and refuses here by name; before this it was lifted with an int
-            # result and failed check_wf ("body type != result") one stage
-            # later, the same outcome under a misleading name (135 methods of
-            # the 2026-09-26 lift). A `char` result is an int (row 28).
+            # is int, bool or seq (SPEC.md gate 3, `"result": "int"|"bool"|
+            # "seq"`, the seq result since "Seq-valued spec_funs (v1)",
+            # 2026-09-27, LIFTER-DECISIONS row 45). A closure function
+            # returning `string`, `seq<char>`, `seq<int>` or `seq<nat>` lifts
+            # to a seq-valued spec_fun (row 28's code points for the string
+            # spellings, exactly as a string parameter does); a `char` result
+            # is an int (row 28). A `function F(..): bool` is a predicate
+            # spelled as a function (Dafny Reference Manual 6.4.2: a
+            # predicate is a function returning bool) and lifts as one, a
+            # bool result, exactly as `_lift_function` already types it;
+            # the first spelling of this check (row 43's same-day note)
+            # listed int/nat/char only and refused 66 of the 305
+            # `function-result` methods of the 2026-09-27 baseline re-lift
+            # by this omission alone (t/FEATURES-SEQFUN-2026-09-27.md).
+            # Anything else -- a nested seq, a tuple, a set, a datatype, a
+            # real -- still refuses here by name, `function-result`; before
+            # 2026-09-27 every non-int result did (135 methods of the
+            # 2026-09-26 lift).
             if (not d.is_predicate and d.ret_type is not None
-                    and not (d.ret_type.kind in ("int", "nat", "char"))):
+                    and not (d.ret_type.kind in ("int", "nat", "char", "bool")
+                             or _is_seq_fun_result(d.ret_type))):
                 issues.append((d.line, "function-result",
                                f"{d.name or '?'}:{_type_text(d.ret_type)}"))
             own_array_names = {p.name for p in d.params
