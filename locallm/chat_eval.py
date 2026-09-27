@@ -67,9 +67,13 @@ def ask(engine, tok, user: str, max_tokens: int) -> dict:
     results, _masks = engine.generate_batch(prompt, 1, max_tokens=max_tokens, temperature=0.0, seed=0)
     parts = reply_parts(tok, results[0])
     row = engine.rows[0]
+    # the calls that submitted a program (a t span, or a registry call to t or an MCP t_check: chat.call_program),
+    # with their verdicts; a registry call that submits none (a fetch, an unknown tool) is not a draft
+    checked = [(program, out) for (text, out), kind in zip(row.tool_calls, row.call_kinds)
+               if (program := text if kind == "t" else chat.call_program({"type": "tool", "text": text})) is not None]
     return {"parts": parts, "program": chat.final_program(parts) if parts else None,
-            "tool_calls": len(row.tool_calls), "calls": [c[0] for c in row.tool_calls],
-            "tool_verdicts": [c[1] for c in row.tool_calls], "ended": row.completed,
+            "tool_calls": len(row.tool_calls), "calls": [c[0] for c in checked],
+            "tool_verdicts": [c[1] for c in checked], "ended": row.completed,
             "unclosed_call": row.in_tool_block or row.ended_in_call, "ended_in_call": row.ended_in_call,
             "budget_in_call": row.in_tool_block and not row.completed,
             "grammar_overrides": row.grammar_overrides, "budget_refusals": row.budget_refusals,

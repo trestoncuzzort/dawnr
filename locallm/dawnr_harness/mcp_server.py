@@ -110,12 +110,20 @@ class Server:
             return result(rid, self._complete({"supportedVersions": list(MODERN_VERSIONS),
                                                "capabilities": {"tools": {}}, "instructions": INSTRUCTIONS}))
         if method == "tools/list":
-            return result(rid, self._complete({"tools": [T_CHECK], "ttlMs": 3600000, "cacheScope": "public"}))
+            return result(rid, self._complete({"tools": self.tools(), "ttlMs": 3600000, "cacheScope": "public"}))
         if method == "tools/call":
-            if params.get("name") != "t_check":
+            if params.get("name") not in {t["name"] for t in self.tools()}:
                 return error(rid, INVALID_PARAMS, f"Unknown tool: {params.get('name')}")
-            return result(rid, self._complete(self._t_check(params.get("arguments"))))
+            return result(rid, self._complete(self.call(params["name"], params.get("arguments"))))
         return error(rid, METHOD_NOT_FOUND, f"unknown method {method}")
+
+    def tools(self) -> list[dict]:
+        """The tools this server lists. A subclass serving other tools overrides this and call()."""
+        return [T_CHECK]
+
+    def call(self, name: str, arguments) -> dict:
+        """A CallToolResult for one tools/call of a listed tool."""
+        return self._t_check(arguments)
 
     def _t_check(self, arguments) -> dict:
         errs = validate(T_CHECK["inputSchema"], arguments if arguments is not None else {})
