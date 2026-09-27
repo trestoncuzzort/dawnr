@@ -450,7 +450,12 @@ seven, 2 clean in six with Frama-C's abstain the missing column (dafny
 with no twin). The fixtures read verified/refuted in six kernels and
 abstain in Frama-C. Runs, per-kernel tables and what still refuses are
 in `t/FEATURES-SEQFUN-2026-09-27.md`. Tests: `t/test_seq_spec_fun.py`,
-`t/test_lift_seq_fun.py`.
+`t/test_lift_seq_fun.py`. The 2026-09-27 review seeded faults into the
+spec_fun's own body and found dafny and F* reading two of three
+unproved; the fix (the same file, "The review and the seeded faults")
+ladders every seq-valued call and the ground seq operators around it in
+those two certificates, and moved 6 corpus twin cells from unproved to
+refuted (dafny 29 to 30, F* 18 to 22 of the 55 checked tasks).
 
 ## The order from here
 
