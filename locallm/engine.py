@@ -62,6 +62,11 @@ retried until its tokens ran out on 82 of 100 dev answers
 (FINDINGS-repair-2026-09-26.md). Each row counts the steps where the budget
 refused the model's top token (budget_refusals).
 
+With the harness tokens (dawnr_harness) the grammar has a third state: inside a
+<|tool_start|> call only text and <|tool_end|> are legal, inside a <|t_start|>
+call only text and <|t_end|>, no call opens inside another, <|untrusted|> is
+never sampled, and the call budget counts both kinds of call.
+
 ----------------------------------------------------------------------------
 nanochat's notice (for the parts of RowState and Engine.generate ported here):
 
