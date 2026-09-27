@@ -4954,12 +4954,32 @@ def _post_sf_for(task: dict) -> str:
     nia = _has_nonlinear_mul(task)
     rec = _has_rec_int_spec_fun(task)
     if nia and rec:
-        return POST_SF_REC_NIA
-    if rec:
-        return POST_SF_REC
-    if nia:
-        return POST_SF_NIA
-    return POST_SF
+        text = POST_SF_REC_NIA
+    elif rec:
+        text = POST_SF_REC
+    elif nia:
+        text = POST_SF_NIA
+    else:
+        text = POST_SF
+    return _add_nr_alt(text) if _nonrec_sfs(task) else text
+
+
+def _add_nr_alt(text: str) -> str:
+    """Appends `solve [ t_nf; first [ t_vc0 | t_dm saturation; lia ] ]` as
+    the LAST alternative of `t_dis` only (`_nonrec_sfs`). Last, so every
+    goal an earlier alternative closes is closed exactly as before, and
+    only a goal that would otherwise fail pays for it; `t_side` (called
+    inside loop scripts' own `first [...]`, where a failed attempt is
+    normal and its cost adds up) is left alone. Proof search only: every
+    step is still checked by the kernel, and a false goal stays unproved."""
+    head = "Ltac t_dis := first ["
+    tail = '\n              || fail "unsolved t verification condition".'
+    i = text.index(head)
+    j = text.index(tail, i)
+    assert text[j - 2:j] == " ]", "t_dis block shape changed"
+    alt = ("\n                          | solve [ t_nf; first [ solve [ t_vc0 ]"
+           " | solve [ repeat t_dm1; lia ] ] ] ]")
+    return text[:j - 2] + alt + text[j:]
 
 
 def _has_nonlinear_mul(task: dict) -> bool:
@@ -5001,6 +5021,56 @@ def _has_rec_int_spec_fun(task: dict) -> bool:
     `t_eqs_rec`'s `first [ ring | nia | lia ]` finisher has no bool arm."""
     return any(sf.get("result") == "int" and has_self_call(sf["body"], sf["name"])
                for sf in task.get("spec_funs", []))
+
+
+# `t_nf`'s fixed tail (`_nonrec_sfs`): a `c = true`/`c = false` fact
+# rewrites the same `c` in the goal (`progress`, so a literal `true = true`
+# cannot spin), `if true`/`andb` reduce, and a bool `= true`/`= false` fact
+# or goal becomes the Prop lia reads. Each rewrite removes one bool
+# operator, so the repeat terminates.
+T_NF_TAIL = ("repeat match goal with | H : ?c = true |- context [?c] => progress rewrite H "
+             "| H : ?c = false |- context [?c] => progress rewrite H end; "
+             "cbn [andb orb negb] in *; "
+             "repeat first [ rewrite Bool.andb_true_iff in * | rewrite Bool.orb_true_iff in * "
+             "| rewrite Bool.andb_false_iff in * | rewrite Bool.orb_false_iff in * "
+             "| rewrite Bool.negb_true_iff in * | rewrite Bool.negb_false_iff in * "
+             "| rewrite Z.leb_le in * | rewrite Z.ltb_lt in * | rewrite Z.eqb_eq in * "
+             "| rewrite Z.leb_gt in * | rewrite Z.ltb_ge in * | rewrite Z.eqb_neq in * ].")
+
+
+def _nonrec_sfs(task: dict) -> list[str]:
+    """The NON-recursive spec_funs (not on a cycle of the spec_fun call
+    graph), whose equations `t_nf` rewrites to a normal form.
+
+    2026-09-26, the 35 six-of-seven documents Rocq alone missed: 15 are
+    straight-line vericoding solves over non-recursive spec_funs, and the
+    one-shot `t_eqs` pass left three gaps. (1) It is one `try rewrite
+    sf_f_eq` per spec_fun in DECLARATION order, and `rewrite` replaces only
+    the first matched instance (Rocq refman, "Reasoning with equalities"),
+    so a caller declared after its callee (da0119: optimalPetyaScore calls
+    optimalVasyaScore) re-exposes a callee application nothing rewrites.
+    (2) Once `requires validInput(n)` is unfolded in the hypothesis, the
+    goal's own unfolded `if <same condition> then ..` is not rewritten by
+    the fact (the ground arms only key on a folded `sf_f args = true`).
+    (3) A bool-valued `ensures` (`(1 <=? q) && (x <=? q * 5) = true`) never
+    becomes the linear facts lia reads. Repeat-rewriting only NON-recursive
+    equations terminates: each rewrite trades one application for
+    applications strictly lower in an acyclic graph."""
+    sfs = {sf["name"]: sf for sf in task.get("spec_funs", [])}
+    calls = {f: _called_methods(sf["body"], set(sfs)) for f, sf in sfs.items()}
+
+    def reaches(src: str, dst: str) -> bool:
+        seen, todo = set(), list(calls[src])
+        while todo:
+            g = todo.pop()
+            if g == dst:
+                return True
+            if g not in seen:
+                seen.add(g)
+                todo.extend(calls[g])
+        return False
+
+    return [f for f in sfs if not reaches(f, f)]
 
 RESERVED = {"at", "in", "fun", "if", "then", "else", "let", "forall", "exists",
             "match", "with", "end", "fix", "Prop", "Set", "Type", "fuel", "fu",
@@ -7038,6 +7108,10 @@ Qed.
                     + "end;" if ground_arms_h else "")
         chunks.append(f"Ltac t_eqs := {eq_tac} {norm} {ground} idtac.\n")
         chunks.append(f"Ltac t_eqs_h := {eq_tac_h} {norm_h} {ground_h} idtac.\n")
+        nr = _nonrec_sfs(task)
+        if nr:
+            arms = " | ".join(f"rewrite sf_{f}_eq in *" for f in nr)
+            chunks.append(f"Ltac t_nf := repeat (first [ {arms} ]); {T_NF_TAIL}\n")
         chunks.append(_emit_t_eqs_rec(rec_int_sf))
         # ATTEMPTED AND REVERTED (2026-09-10, is_even): a second half of
         # this fix tried putting the identical ground arms inside a new

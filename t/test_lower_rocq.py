@@ -667,5 +667,123 @@ task t_ifloop_probe(n: int) returns (r: int)
             self.assertTrue(ok, log[-3000:])
 
 
+class NonRecSpecFunNormalFormTest(unittest.TestCase):
+    """`t_nf` (2026-09-26): the last `t_dis` alternative unfolds every
+    NON-recursive spec_fun to a normal form, substitutes bool facts and
+    turns bool comparisons into Props. Shapes from the six-of-seven
+    documents Rocq missed: vericoding da0119 (a caller declared after its
+    callee) and da0152 (a bool-valued `ensures` over t_div). Each has a
+    seeded fault of the same shape that must still fail to compile."""
+
+    DA0119 = """t 1
+task nf_probe(n: int, m: int) returns (r: (int, int))
+  requires valid(n, m)
+  ensures r.1 == vasya(n, m)
+  ensures r.0 == petya(n, m)
+spec fun valid(n_v: int, m_v: int): bool
+  decreases 0
+= n_v >= 1 and m_v >= 1
+spec fun vasya(n_v2: int, m_v2: int): int
+  decreases 0
+= if valid(n_v2, m_v2) then if n_v2 < m_v2 then n_v2 else m_v2 else 0
+spec fun petya(n_v3: int, m_v3: int): int
+  decreases 0
+= if valid(n_v3, m_v3) then n_v3 + m_v3 - 1 - vasya(n_v3, m_v3) else 0
+{
+  var v: int := 0;
+  if n < m {
+    v := n;
+  } else {
+    v := m;
+  }
+  r := (n + m - 1 - v, v);
+}
+"""
+    DA0152 = """t 1
+task nf_probe2(x: int) returns (r: int)
+  requires ok(x)
+  ensures good(x, r)
+spec fun ok(x_v: int): bool
+  decreases 0
+= x_v >= 1
+spec fun good(x_v2: int, s: int): bool
+  decreases 0
+= if ok(x_v2) then s >= 1 and x_v2 <= s * 5 and (s - 1) * 5 < x_v2 else false
+{
+  r := (x + 4) / 5;
+}
+"""
+    REC = """t 1
+task nf_probe3(n: int) returns (r: int)
+  requires n >= 0
+  ensures r == tri(n)
+spec fun tri(k: int): int
+  decreases k
+= if k <= 0 then 0 else k + tri(k - 1)
+{
+  r := tri(n);
+}
+"""
+
+    @staticmethod
+    def _task(src: str) -> dict:
+        import tasks_io
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "probe.t"
+            p.write_text(src, encoding="utf-8")
+            return tasks_io.load_task(p)
+
+    def test_gate(self):
+        self.assertEqual(lower_rocq._nonrec_sfs(self._task(self.DA0119)),
+                         ["valid", "vasya", "petya"])
+        # a self-recursive spec_fun is never repeat-rewritten (that would loop)
+        self.assertEqual(lower_rocq._nonrec_sfs(self._task(self.REC)), [])
+        out = lower_rocq.lower(self._task(self.REC), self._task(self.REC)["body"])
+        self.assertNotIn("Ltac t_nf", out)
+
+    def test_emitted_last_in_t_dis_only(self):
+        t = self._task(self.DA0119)
+        out = lower_rocq.lower(t, t["body"])
+        self.assertIn("Ltac t_nf := repeat (first [ rewrite sf_valid_eq in * "
+                      "| rewrite sf_vasya_eq in * | rewrite sf_petya_eq in * ]);", out)
+        dis = out[out.index("Ltac t_dis := first ["):]
+        dis = dis[:dis.index("|| fail")]
+        self.assertTrue(dis.rstrip().endswith("| solve [ repeat t_dm1; lia ] ] ] ]"), dis)
+        side = out[out.index("Ltac t_side := first ["):]
+        self.assertNotIn("t_nf;", side[:side.index("].\n")])
+
+    @staticmethod
+    def _wrong(task: dict, old: str, new: str) -> list:
+        import json
+        return json.loads(json.dumps(task["body"]).replace(old, new))
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_real_proves_and_seeded_fault_does_not(self):
+        import json
+        t = self._task(self.DA0119)
+        ok, log = _compile(lower_rocq.lower(t, t["body"]))
+        self.assertTrue(ok, log[-3000:])
+        # seeded fault: `v := n` on both branches (wrong whenever m < n)
+        body = json.loads(json.dumps(t["body"]))
+        body[1]["if"]["else"] = body[1]["if"]["then"]
+        self.assertNotEqual(body, t["body"])
+        ok, log = _compile(lower_rocq.lower(t, body))
+        self.assertFalse(ok, "a wrong program verified")
+        self.assertIn("unsolved t verification condition", log)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_bool_ensures_proves_and_seeded_fault_does_not(self):
+        import json
+        t = self._task(self.DA0152)
+        ok, log = _compile(lower_rocq.lower(t, t["body"]))
+        self.assertTrue(ok, log[-3000:])
+        # seeded fault: (x + 5) / 5, off by one at every multiple of 5
+        s = json.dumps(t["body"])
+        self.assertIn('{"int": 4}', s)
+        ok, log = _compile(lower_rocq.lower(t, json.loads(s.replace('{"int": 4}', '{"int": 5}'))))
+        self.assertFalse(ok, "a wrong program verified")
+        self.assertIn("unsolved t verification condition", log)
+
+
 if __name__ == "__main__":
     unittest.main()
