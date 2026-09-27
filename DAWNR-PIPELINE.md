@@ -386,3 +386,18 @@ parameter name in the signature); conversations that end in an honest stop
 after repeated failures; then RL through the engine (SCoRe's multi-turn
 RL), pointing `t/rl_grpo.py`'s sampler at `engine.py` so the reward sees
 answers that used the tool.
+
+## Tool conversations (2026-09-27)
+
+`locallm/tool_conversations.py` builds conversations for every row of
+`DAWNR-HARNESS.md` section 8 through the real harness (the fixture web is
+recorded once by `locallm/tool_fixtures.py`); `dawnr_pipeline.py
+--extra-conversations` adds them to the mid stage and `--harness-tokens`
+gives a control arm the same ids. Measured against the base conversations at
+three seeds (`locallm/prereg_tool_conversations_2026-09-27.json`, numbers in
+`locallm/tool-conversations-results-2026-09-27.json`): the right first tool on
+0.97 of 238 held-out items against 0.42, 88% of registry calls well formed,
+calls closed on their own; pass all examples over the 133 prompts 14.7 against
+17.0, past the registered guard of 2, so they stay opt-in. `chat.final_program`
+now takes a registry `t` call or an MCP `t_check` as submitting a program, and
+`chat_eval.py` ranks only the calls that submit one.
