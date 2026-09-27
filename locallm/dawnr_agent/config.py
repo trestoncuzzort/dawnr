@@ -36,12 +36,12 @@ from dataclasses import fields
 from pathlib import Path
 
 from . import paths
-from .commands import (DEFAULT_MAX_OUTPUT, DEFAULT_TIMEOUT, MAX_TIMEOUT, PLACEHOLDERS, Bwrap, CommandRule,
-                       CommandTools, ps_tool, safe_exec_path)
+from .commands import (DEFAULT_MAX_OUTPUT, DEFAULT_TIMEOUT, HIDE_UNDER_HOME, MAX_TIMEOUT, PLACEHOLDERS, Bwrap,
+                       CommandRule, CommandTools, ps_tool, safe_exec_path)
 from .files import FileOps, FileTools, Limits, Preview
 from .journal import Journal
 from .loop import Budget
-from .paths import DEFAULT_PROTECT, DEFAULT_SECRETS, HOME_SECRET_DIRS, Space
+from .paths import DEFAULT_PROTECT, DEFAULT_SECRETS, Space
 
 AGENT_KEYS = {"roots", "protect", "secrets", "commands", "command_path", "env", "sandbox", "processes",
               "check_writes", "state", "limits", "budget", "dry_run"}
@@ -260,7 +260,12 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
     secret_names = DEFAULT_SECRETS if secrets is None else tuple(_type(secrets, list, "secrets"))
     space = Space(tuple(roots), secret_names=secret_names, protect_names=tuple(DEFAULT_PROTECT) + tuple(names))
     home = Path.home()
-    space.secret_ids |= paths.identities([home / d for d in HOME_SECRET_DIRS], recurse=True, max_files=2000)
+    # every DEFAULT_SECRETS entry (not just the four original directories), plus the sandbox's own extra
+    # hardening dirs (HIDE_UNDER_HOME: .config/gh, .local/share/keyrings), known by identity under the home
+    # directory too, regardless of an operator "secrets" override above: a hard link into a root under a name
+    # that override does not mention is still refused (see home_secret_identities in paths.py for why).
+    home_secret_names = tuple(dict.fromkeys(DEFAULT_SECRETS + HIDE_UNDER_HOME))
+    space.secret_ids |= paths.home_secret_identities(home, home_secret_names, max_files=2000)
 
     state = resolve(spec["state"]) if spec.get("state") else default_state_dir()
     lim = dict(_type(spec.get("limits", {}), dict, "limits"))

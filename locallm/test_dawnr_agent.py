@@ -264,6 +264,26 @@ class Containment(Env):
         self.assertTrue(r.is_error)
         self.assertNotIn("KEY-MATERIAL", r.text)
 
+    def test_register_agent_covers_secrets_beyond_the_old_four_home_dirs_by_identity(self):
+        """register_agent's own population of secret_ids, not one seeded by the test: a ~/.netrc-shaped file
+        (never one of the old HOME_SECRET_DIRS -- .ssh, .gnupg, .aws, .password-store) hard-linked into a
+        writable root under an innocent name is still refused, because building the agent picked up its
+        identity on its own."""
+        fake_home = self.base / "fake_home"
+        fake_home.mkdir()
+        (fake_home / ".netrc").write_text("machine example.com login me password KEY-MATERIAL\n")
+        try:
+            os.link(fake_home / ".netrc", self.proj / "innocent.txt")
+        except OSError as e:
+            self.skipTest(f"no hard links here: {e}")
+        with mock.patch.dict(os.environ, {"HOME": str(fake_home), "USERPROFILE": str(fake_home)}):
+            h, a = self.build()
+        self.assertIn(paths_mod.ident(os.stat(fake_home / ".netrc")), a.space.secret_ids,
+                      "register_agent did not pick up ~/.netrc's identity")
+        r = h.call("fs_read", {"path": "project/innocent.txt"})
+        self.assertTrue(r.is_error, r.text)
+        self.assertNotIn("KEY-MATERIAL", r.text)
+
     def test_protected_paths_are_read_but_never_written(self):
         (self.proj / ".git").mkdir()
         (self.proj / ".git" / "config").write_text("[core]\n")
