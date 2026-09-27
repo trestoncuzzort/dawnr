@@ -1,5 +1,17 @@
 # Repair conversations: does dawnr learn to act on a failed check? 2026-09-26
 
+**In short.** Repair conversations built from the model's own cross-fitted
+drafts teach dawnr to act on a failed check (a different program after 55-70%
+of failing verdicts, against 5-12% without them), but they do not raise the
+number of answers that pass their examples by more than seed noise: +2.3 of
+133 at the three registered seeds, +1.2 at six fresh ones, INCONCLUSIVE both
+times. Not adopted. The unclosed tool call is gone two ways: a grammar on the
+chat tokens (0 left) and, separately, training in which calls dominate.
+Learned on the way: the answer must be the call with the best verdict, not
+the last; retries need a stop; and the t tool passes drafts that rewrote the
+user's specification. The sections below were written in order, each
+prediction before its run.
+
 ## Why
 
 The first run of dawnr's chat pipeline (`DAWNR-PIPELINE.md`, "What has been
@@ -390,3 +402,79 @@ grammar is **off by default** (`Engine(grammar=False)`, `chat_eval.py
 --grammar` to turn it on); it passes post hoc together with the best-verdict
 answer, which is where the third look uses it. Repair conversations are off
 by default (`dawnr_pipeline.py --extra-conversations` adds them).
+
+### Third look: results (six fresh seeds)
+
+`repair_report.py --runs <fresh runs dir> --fresh`: arms A and B at seeds
+1340-1345, grammar on, two calls at most, best-verdict answer.
+
+| per seed 1340 ... 1345 | A | B |
+|---|---|---|
+| **pass all examples, 133 prompts** | 17 20 16 17 19 14 (17.2) | 15 22 17 20 19 17 (18.3) |
+| dev well formed | 16 25 19 15 16 32 (20.5) | 13 33 24 47 20 17 (25.7) |
+| dev pass all examples | 0 1 0 0 1 0 | 0 2 0 3 0 0 |
+| dev tests passed | 0 0 0 0 1 0 | 0 0 0 1 0 0 |
+| dev answers that ended | 95 86 90 89 94 90 | 94 69 89 86 82 90 |
+| dev a different program after a failing verdict | 3 7 2 3 3 3 | 55 41 56 53 52 50 |
+| val pass all examples | 17 19 16 17 18 14 | 15 20 17 17 19 17 |
+| val exact proved program | 5 8 7 6 7 6 (6.5) | 6 7 7 6 7 5 (6.3) |
+| val repaired | 0 1 0 0 0 0 | 1 2 2 0 1 0 |
+
+- **Pass all examples: B above A by 1.2 on the mean** (predicted about 2,
+  range 1 to 3: inside the range, below the point). B is ahead at 3 seeds,
+  level at 1, behind at 2. Exact permutation p 71/308 (0.23), P(B > A) 23/36
+  with bootstrap interval [0.31, 0.92]: **INCONCLUSIVE.**
+- Dev well formed B above A by 5.2 (predicted within 5 either way: just
+  outside, in B's favour); validation exact -0.2; the guards pass.
+- Dev tests passed: one problem at one seed in each arm (predicted 0 to 1:
+  held). A's model also passed MBPP 350's tests once here, so B's two passes
+  of it in the first look were not something only repair data produced.
+- B's dev answers end on 85 of 100 on the mean (predicted at least 75: held
+  on the mean, not at seed 1341, 69).
+
+**Decision (registered): not adopted.** Repair conversations stay off by
+default; the effect on answers that pass their examples is not
+distinguishable from zero at this size.
+
+Seed noise is the size of the effect. Over the nine seeds evaluated this way
+(1337-1339 in the second look and these six; pooled for description only,
+not a registered test) A ranges 14 to 20 and B 15 to 22, the mean difference
+is +1.4 prompts of 133 (exact p 0.09), and a difference that size at that
+spread needs about 24 seeds a side to show at 80% power.
+
+## What this bought
+
+- **The model acts on a failed check, and the pipeline can measure it.**
+  After repair conversations it writes a different program after 55-70% of
+  failing verdicts, against 5-12% without them; it repaired 0 to 2 of the 33
+  validation answers per seed, against almost none. What it does not yet do
+  is repair *well*: it keeps the fault the verdict names (a missing parameter
+  name rewritten three times in the body) because the target of every repair
+  is the whole proved program, never an edit of the draft at the line the
+  tool points to.
+- **The unclosed call is solved two ways.** The grammar makes it impossible
+  (0 of arm A's 399 answers ended inside a call, against 41, 28 and 7 of 133
+  per seed without it); and training where nearly every conversation calls
+  the tool makes the model close calls on its own (arm B: 0 without any grammar). The
+  grammar is off by default because its registered rule failed on the answer
+  rule, not on the calls.
+- **Take the best-verdict call as the answer.** Taking the last call counted
+  a program the model wrote after reading a failing verdict, which was
+  usually worse (dev well formed 5 against 28 for the same B rows). The
+  tool's verdicts on the user's own examples pick the answer at no cost.
+- **Retries need a stop.** Trained only on one failure followed by a fix,
+  the model retried until its tokens ran out on 82 of 100 dev answers. A
+  budget of two calls makes 81-85 of 100 end. Conversations with two
+  failures and then an honest stop (dawnr's rule: what cannot be checked is
+  refused) would teach the stop instead of imposing it.
+- **The t tool has a hole on specification prompts.** 285 fold drafts passed
+  every example without being the proved program, and 101 of them had
+  changed the specification the user gave. The tool should check that a
+  draft keeps the prompt's declaration, requires and ensures before it runs
+  the examples; until it does, "pass" on a specification prompt can mean the
+  draft weakened the specification.
+- **Next:** the tool's specification check; repairs as edits of the draft
+  (the twins in `t/twins/` are real near-misses with the input that
+  separates them); and SCoRe's multi-turn RL through `engine.py`, with the
+  proof engine as the reward, which is the port `DAWNR-PIPELINE.md` names
+  next. Any rerun of this comparison needs about 24 seeds a side.

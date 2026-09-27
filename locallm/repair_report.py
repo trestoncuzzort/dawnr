@@ -20,7 +20,10 @@ The note's second look (post hoc, predictions written before it was
 computed) reads three more files per run when present: `rescore-grammar.json`
 and `rescore-nogrammar.json` (the same rows under chat_eval.py --rescore
 --answer best-verdict) and `eval-budget2.json` (grammar on, --max-calls 2,
---answer best-verdict), and applies the same two rules to them.
+--answer best-verdict), and applies the same two rules to them. With
+`--fresh`, the runs directory holds the third look's fresh seeds (registered
+before they were trained), and the budget variant's repair rule is the
+registered decision.
 
 Nothing here generates or grades; every number is read from the eval files.
 """
@@ -136,9 +139,16 @@ def grammar_rule(on: dict, off: dict) -> dict:
             "passes_rule": ended_on == 0 and d_primary >= -1 and d_wf >= -1}
 
 
-def decide(data: dict) -> dict:
-    """The registered decisions (first look), then the same rules on the second look's variants."""
+def decide(data: dict, fresh: bool = False) -> dict:
+    """The registered decisions (first look), then the same rules on the second look's variants; with fresh,
+    the third look's registered decision on its fresh seeds."""
     out = {}
+    if fresh:
+        if ("A", "budget2") in data and ("B", "budget2") in data:
+            out["third look (registered, fresh seeds)"] = rule = repair_rule(data[("A", "budget2")],
+                                                                             data[("B", "budget2")])
+            rule["adopted"] = rule["passes_rule"]
+        return out
     if ("A", "grammar") in data and ("B", "grammar") in data:
         out["repair"] = repair_rule(data[("A", "grammar")], data[("B", "grammar")])
         out["repair"]["adopted"] = out["repair"]["passes_rule"]
@@ -160,6 +170,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--runs", type=Path, required=True)
     ap.add_argument("--json", type=Path, default=None)
+    ap.add_argument("--fresh", action="store_true", help="the runs are the third look's fresh seeds")
     a = ap.parse_args(argv)
     data = collect(a.runs)
     lines = []
@@ -167,7 +178,7 @@ def main(argv=None) -> int:
         for arm in ARMS:
             if (arm, variant) in data:
                 lines += table(data[(arm, variant)], f"arm {arm}, {variant} ({VARIANTS[variant][0]})")
-    decisions = decide(data)
+    decisions = decide(data, fresh=a.fresh)
     lines += ["### decisions", "", "```", json.dumps(decisions, indent=2), "```"]
     print("\n".join(lines))
     if a.json:
