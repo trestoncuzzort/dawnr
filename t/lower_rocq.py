@@ -5005,6 +5005,31 @@ Ltac t_set_equal_case a b :=
   let c := fresh "t_c" in let E := fresh "t_eq" in
   remember (S.equal a b) as c eqn:E in *;
   destruct c; symmetry in E; [ apply t_equal_true in E | apply t_equal_false in E ].
+(* GROUND SET ATOMS, for the twin value certificate only (2026-09-27): once
+   `_value_cert` has replaced the applied twin by its literal set, every set
+   atom left is closed (`S.In 3 (S.add 3 S.empty)`, `S.cardinal S.empty`),
+   and `S.mem`/`S.cardinal` on an MSetList literal compute under vm_compute.
+   Each membership atom is decided and rewritten to True/False through the
+   iff, each cardinality replaced by its computed integer, so `t_dis` sees
+   only propositional and Z structure. `repeat` terminates because every
+   arm removes the atom it matched. *)
+Lemma t_prop_true (P : Prop) : P -> (P <-> True).
+Proof. tauto. Qed.
+Lemma t_prop_false (P : Prop) : ~ P -> (P <-> False).
+Proof. tauto. Qed.
+Ltac t_set_ground :=
+  repeat match goal with
+  | |- context [S.In ?x ?s] =>
+      first [ let H := fresh "t_gin" in
+              assert (H : S.In x s) by (apply S.mem_spec; vm_compute; reflexivity);
+              rewrite (t_prop_true _ H); clear H
+            | let H := fresh "t_gin" in
+              assert (H : ~ S.In x s) by (rewrite <- S.mem_spec; vm_compute; discriminate);
+              rewrite (t_prop_false _ H); clear H ]
+  | |- context [Z.of_nat (S.cardinal ?s)] =>
+      let c := eval vm_compute in (Z.of_nat (S.cardinal s)) in
+      replace (Z.of_nat (S.cardinal s)) with c by (vm_compute; reflexivity)
+  end.
 """
 
 _SET_GOAL_ARMS = r"""  (* FINITE SETS (v1), 2026-09-27: goal-position arms, see _SET_DEFS *)
@@ -11263,7 +11288,14 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
         if tv == "no value":
             # the lowered twin returns the type's default on that path
             tv = False if ret_t == "bool" else 0
-        if not isinstance(tv, (int, bool)):
+        if ret_t == "set":
+            # SPEC.md "Finite sets" (2026-09-27): a set-valued twin result
+            # arrives as its sorted list (interp._j); `_glit` renders it as
+            # nested `S.add` and `_to_interp_value` reads it back as the
+            # frozenset interp evaluates on.
+            if not isinstance(tv, list):
+                return None
+        elif not isinstance(tv, (int, bool)):
             return None
     env_py[ret] = _to_interp_value(tv, ret_t)
     if not _falsified_conjunct(task, body, env_py):
@@ -11292,7 +11324,25 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
     env_lit = dict(env_txt)
     env_lit[ret] = retlit
     lines = []
-    if any(ret in _fv(e, set()) for e in task["ensures"]):
+    if ret_t == "set" and any(ret in _fv(e, set()) for e in task["ensures"]):
+        # SPEC.md "Finite sets (v1)", 2026-09-27: an MSetList value is a
+        # record carrying a sortedness proof, so two computations of the
+        # same set are NOT Leibniz-equal (measured: `cbv; reflexivity`
+        # fails on set_toggle's twin). The certificate states extensional
+        # equality `S.Equal applied literal` instead, proved by computing
+        # `S.equal` (S.equal_spec), then pushes it through the two places a
+        # set can sit in an ensures -- under `S.cardinal` (P.Equal_cardinal)
+        # and as the set of an `S.In` (the Equal instance at that element)
+        # -- and `t_set_ground` decides the closed atoms that remain.
+        lines.append(f"  assert (t_out : S.Equal {applied} {retlit}).\n")
+        lines.append("  { apply S.equal_spec. vm_compute. reflexivity. }\n")
+        lines.append("  repeat match goal with\n"
+                     f"  | |- context [S.cardinal {applied}] => "
+                     "rewrite (P.Equal_cardinal t_out)\n"
+                     f"  | |- context [S.In ?x {applied}] => rewrite (t_out x)\n"
+                     "  end.\n")
+        lines.append("  t_set_ground.\n")
+    elif any(ret in _fv(e, set()) for e in task["ensures"]):
         lines.append(f"  assert (t_out : {applied} = {retlit}) "
                      f"by (cbv; reflexivity).\n")
         lines.append("  rewrite t_out.\n")
