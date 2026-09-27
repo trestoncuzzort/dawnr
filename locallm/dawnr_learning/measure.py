@@ -21,8 +21,8 @@ side conversations (documents the base never trained on) are a second held-out
 set. The replay pool is the base's training-side conversations minus every
 problem a person is asked or evaluated on, so replay never shows the canonical
 answer to a prompt the person is measured on. Every example a person produces
-passes the held-out gates before a sleep uses it (sleep.gate_examples); dev
-problems (t/r12-dev-ids.json) are only ever asked, never trained on.
+passes the held-out gates before a sleep uses it (feedback.PersonStore.training_examples applies
+feedback.held_out_gate); dev problems (t/r12-dev-ids.json) are only ever asked, never trained on.
 
 What is measured, per person, after the last sleep, against the frozen base:
 
@@ -65,7 +65,7 @@ for p in (str(LOCALLM), str(ROOT / "t")):
 
 from dawnr_learning import persons as P  # noqa: E402
 from dawnr_learning.feedback import PersonStore, final_program  # noqa: E402
-from dawnr_learning.sleep import (BehaviorGuard, GuardWindows, Rows, SleepConfig, gate_examples,  # noqa: E402
+from dawnr_learning.sleep import (BehaviorGuard, GuardWindows, Rows, SleepConfig,  # noqa: E402
                                   hash_unit, mean_loss, split_examples, train_adapter)
 
 PROBLEM_SEED = 0          # which problems go where: fixed, so every arm and seed sees the same ones
@@ -346,14 +346,13 @@ def main(argv=None) -> int:
                               "kinds": kinds}), flush=True)
             if has_lora(model):
                 remove_lora(model)
-            examples, excluded = store.training_examples(check=True)
-            examples, refused = gate_examples(examples, a.split)
+            examples, excluded = store.training_examples(check=True, split_path=a.split)  # gated: held_out_gate
             train_ex, val_ex = split_examples(examples, cfg.val_frac, cfg.seed)
             rows_t, rows_v = Rows(tok, train_ex, block), (Rows(tok, val_ex, block) if val_ex else None)
             new_state, rec = train_adapter(model, tok, rows_t, rows_v, replay, cfg, device, guard=guard,
                                            behavior=behavior,
                                            extra_evals={"canonical_val": canon_val})
-            rec.update({"session": s, "examples": len(examples), "excluded": excluded, "refused": refused,
+            rec.update({"session": s, "examples": len(examples), "excluded": excluded,
                         "accepted": new_state is not None})
             sleeps.append(rec)
             print(json.dumps({"person": person.name, "sleep": s, "steps": rec["steps"], "best": rec["best_step"],

@@ -30,8 +30,9 @@ formatting must leave the parse tree unchanged (surface.canon), and the whole
 restyled program must pass the t tool wherever the original did.
 
 Only training-side problems are ever given to a person (measure.py), and
-every example they produce passes the held-out gates before a sleep trains on
-it (sleep.gate_examples).
+every example they produce passes the held-out gates before a sleep, or the
+style profile, ever sees it (feedback.PersonStore.training_examples applies
+feedback.held_out_gate to every reader, by default).
 """
 from __future__ import annotations
 
