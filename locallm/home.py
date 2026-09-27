@@ -76,6 +76,7 @@ if str(HERE) not in sys.path:
 
 import look  # noqa: E402
 from look import MONO, SANS, resolve_fonts  # noqa: E402
+import chat_pane  # noqa: E402
 
 # Where a release drops a ready-made model, so "try the one that came with it"
 # has something to try before anybody has trained anything. It is a plain
@@ -1481,7 +1482,8 @@ class Home(ttk.Frame):
         for i, (n, title) in enumerate(((1, "Your text"),
                                         (2, "How big, how long"),
                                         (3, "Train"),
-                                        (4, "Try it"))):
+                                        (4, "Try it"),
+                                        (5, "Chat"))):
             card = _Card(col, self.C)
             card.grid(row=i, column=0, sticky="ew",
                       pady=(0, look.SPACE.group))
@@ -1491,6 +1493,7 @@ class Home(ttk.Frame):
         self._build_effort_card(self.cards[2])
         self._build_train_card(self.cards[3])
         self._build_try_card(self.cards[4])
+        self._build_chat_card(self.cards[5])
         self._build_more(col)
         self.status = tk.Label(self, bg=self.C["paper"], fg=self.C["muted"],
                                font=SANS(TYPE.caption), anchor="w")
@@ -2353,6 +2356,22 @@ class Home(ttk.Frame):
         self.b_hush.set_enabled(False)
         self._set_status("Stopping after this character.")
 
+    # ------------------------------------------------------------- 5  chat
+    def _build_chat_card(self, card: _Card):
+        """A conversation with the harness-aware chat engine, when one exists.
+
+        chat_pane.ChatPane owns its own widgets and its own background
+        thread, put onto this page's own queue and drained by this page's
+        own `_drain` (the "chat-*" branches there), the same way step 4's
+        write_pieces already is — one pump for the whole window, never a
+        second one. Which checkpoint it may try is decided here, once, from
+        the same candidate step 4 offers (`ready_made`), so discovering a
+        usable model is not duplicated between the two cards.
+        """
+        self.chat = chat_pane.ChatPane(
+            card.body, self.C, self.q, ready_made(HERE),
+            on_status=lambda say: self._show(5, say))
+
     # --------------------------------------------------------- more settings
     def _build_more(self, col):
         """Every knob studio.py's left column has, behind one shut door.
@@ -2591,6 +2610,8 @@ class Home(ttk.Frame):
                         "Training stopped with an error. The panel below has "
                         "what Python said, which is worth keeping if you ask "
                         "anyone about it.", "refuted"))
+                elif kind in ("chat-event", "chat-done", "chat-failed", "chat-ask"):
+                    self.chat.handle(kind, payload)
         except queue.Empty:
             pass
         self._keep_draining()
