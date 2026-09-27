@@ -148,11 +148,15 @@ def attach(model, store, identity: dict) -> dict:
     return dict(st, attached=True)
 
 
+SLEEP_HINT = "python3 locallm/dawnr_learning sleep <your name> --model <this checkpoint>"
+
+
 def describe(st: dict) -> str:
-    """One sentence for the window about what was attached."""
+    """One sentence for the window about what was attached, and how the next sleep is started."""
     if st.get("attached"):
-        more = f"; {st['untrained']} newer example(s) wait for the next sleep" if st.get("untrained") else ""
+        more = (f"; {st['untrained']} newer example(s) wait for the next sleep ({SLEEP_HINT})"
+                if st.get("untrained") else "")
         return f"Using what it learned from {st['trained_on']} of your examples{more}."
     if st.get("exists"):
         return f"Your adapter is not in use: {st['why']}."
-    return "No adapter yet: it learns from your feedback at the next sleep."
+    return f"No adapter yet: it learns from your feedback at the next sleep ({SLEEP_HINT})."

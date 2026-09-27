@@ -195,6 +195,12 @@ class Store(unittest.TestCase):
             self.assertEqual(r.store.get(rid2)["feedback"], "edit")
             examples, _ = r.store.training_examples()
             self.assertEqual({e["id"] for e in examples}, {rid, rid2})
+            long = []
+            for i in range(10):
+                long += [{"role": "user", "content": f"turn {i}"}, {"role": "assistant", "content": f"reply {i}"}]
+            kept = r.store.get(r.answered(long))["messages"]
+            self.assertEqual(len(kept), r.KEEP_MESSAGES)
+            self.assertEqual((kept[0]["role"], kept[-1]["content"]), ("user", "turn 9"))
 
 
 # ---------------------------------------------------------------- persons --
@@ -249,6 +255,100 @@ class Persons(unittest.TestCase):
     def test_explanation_counts_the_program(self):
         line = P.explanation(P.restyle_program(PROGRAM, P.PERSONS["ada"]))
         self.assertEqual(line, "Approach: 1 loop with 2 invariants; local myI; the result is s.")
+
+
+# ------------------------------------------------------------- profile --
+
+class Profile(unittest.TestCase):
+    def examples(self, person, n=4):
+        out = []
+        for i in range(n):
+            prog, user = PROGRAM.replace("count_up", f"count_up{i}"), USER.replace("count_up", f"count_up{i}")
+            out.append({"messages": [{"role": "user", "content": user},
+                                     {"role": "assistant", "content": P.person_answer(person, prog, user)}]})
+        return out
+
+    def test_infers_each_persons_mechanical_taste_and_applies_it(self):
+        from dawnr_learning import profile as PR
+        for name in ("ada", "bo", "cy", "di"):
+            person = P.PERSONS[name]
+            prof = {"inferred": PR.infer(self.examples(person)), "pinned": {}}
+            prefs = PR.effective(prof)
+            self.assertEqual(prefs["naming"], person.naming, name)
+            self.assertEqual(prefs["semicolons"], person.semicolons, name)
+            self.assertEqual(prefs["indent"], person.indent, name)
+            self.assertEqual(prefs["tool"], person.tool, name)
+            self.assertNotIn("if_expression", prefs)             # PROGRAM has no two-way assignment to vote with
+            shown = PR.apply(prof, PROGRAM, USER)                    # the canonical answer, rewritten
+            want = P.person_answer(person, PROGRAM, USER)
+            if person.explain:                                       # free text is not a mechanical dimension
+                want = [p for p in want if p["type"] != "text"]
+            self.assertEqual(F.content_text(shown), F.content_text(want), name)
+            self.assertEqual(P.style_report(person, shown)["features"]["naming"], 1.0)
+
+    def test_undecided_until_enough_agreeing_votes_and_pins_win(self):
+        from dawnr_learning import profile as PR
+        two = PR.infer(self.examples(P.PERSONS["bo"], n=2))
+        self.assertEqual(two, {})                                     # 2 votes < MIN_VOTES
+        mixed = self.examples(P.PERSONS["bo"], 2) + self.examples(P.PERSONS["di"], 2)
+        self.assertNotIn("naming", PR.infer(mixed))                   # 2 of 4 agree: not decided
+        prof = {"inferred": PR.infer(self.examples(P.PERSONS["bo"])), "pinned": {"indent": 4}}
+        self.assertEqual(PR.effective(prof)["indent"], 4)
+        self.assertIn("indentation: 4 (set by you)", PR.describe(prof))
+        self.assertEqual(PR.apply({"inferred": {}, "pinned": {}}, PROGRAM, USER), PROGRAM)
+        self.assertEqual(PR.apply(prof, "no program here", USER), "no program here")
+
+    def test_refresh_reads_the_store_and_keeps_pins(self):
+        from dawnr_learning import profile as PR
+        with tempfile.TemporaryDirectory() as tmp:
+            s = F.PersonStore("cy", tmp)
+            for ex in self.examples(P.PERSONS["cy"]):
+                rid = s.add_answer(ex["messages"][:1], PROGRAM)
+                s.edit(rid, ex["messages"][1]["content"])
+            PR.save(s.dir, {"inferred": {}, "pinned": {"semicolons": False}})
+            prof = PR.refresh(s)
+            self.assertEqual(prof["inferred"]["naming"]["value"], "cur-snake")
+            self.assertEqual(PR.effective(prof)["semicolons"], False)
+            self.assertEqual(PR.load(s.dir)["examples"], 4)
+
+
+# ------------------------------------------------------------- measure --
+
+class Measure(unittest.TestCase):
+    def convs(self):
+        out = []
+        for i in range(12):
+            prog, user = PROGRAM.replace("count_up", f"count_up{i}"), USER.replace("count_up", f"count_up{i}")
+            out.append({"source": f"count_up{i}", "split": "train" if i < 10 else "val",
+                        "messages": [{"role": "user", "content": user}, {"role": "assistant", "content": prog}]})
+        return out
+
+    def test_problems_are_disjoint_and_fixed_by_the_registered_set(self):
+        from dawnr_learning import measure as M
+        people = [P.PERSONS["ada"], P.PERSONS["bo"]]
+        chosen = M.choose(self.convs(), people, 2, 2, 2, guard_prompts=2)
+        sessions = [c["source"] for s in chosen["sessions"] for c in s]
+        held = [c["source"] for c in chosen["heldout_train"]]
+        guard = [c["source"] for c in chosen["guard_prompts"]]
+        replay = [c["source"] for c in chosen["replay_pool"]]
+        self.assertEqual((len(sessions), len(held), len(guard), len(chosen["heldout_val"])), (4, 2, 2, 2))
+        groups = [set(sessions), set(held), set(guard), set(replay)]
+        self.assertEqual(sum(len(g) for g in groups), len(set().union(*groups)))     # pairwise disjoint
+        self.assertEqual(len(replay), 2)
+        self.assertEqual(M.choose(self.convs(), people, 2, 2, 2, guard_prompts=2)["sessions"], chosen["sessions"])
+        with self.assertRaises(SystemExit):
+            M.choose(self.convs(), people, 5, 2, 2)                                  # 12 are not enough
+
+    def test_scores_zero_cost_for_the_persons_own_answers(self):
+        from dawnr_learning import measure as M
+        people = [P.PERSONS["ada"], P.PERSONS["di"]]
+        problems = self.convs()[:3]
+        own = [{"parts": P.person_answer(people[0], M.reference(c), M.user_of(c))} for c in problems]
+        scored = M.score_answers(people, problems, own, None)
+        self.assertEqual(scored["by_person"]["ada"]["cost_mean"], 0)
+        self.assertEqual(scored["by_person"]["ada"]["adherence_mean"], 1.0)
+        self.assertGreater(scored["by_person"]["di"]["cost_mean"], 0)
+        self.assertEqual(scored["core"]["examples_pass"], 3)
 
 
 # ------------------------------------------------------------- sleep data --
@@ -507,6 +607,64 @@ class Adapters(unittest.TestCase):
             self.assertIn("erased or corrected", st["why"])
             self.assertFalse(A.attach(model, s, identity)["attached"])
             self.assertFalse(has_lora(model))
+
+
+@unittest.skipIf(torch is None, "needs torch")
+class SleepPerson(unittest.TestCase):
+    """The product path from files: a store, a checkpoint on disk, replay conversations, a held-out text."""
+
+    def test_sleep_saves_a_fresh_adapter_then_forgetting_makes_it_stale(self):
+        from dataclasses import asdict
+        from data import tokenizer_fingerprint
+        from dawnr_learning import adapters as A
+        from dawnr_learning import sleep as S
+        from dawnr_learning.__main__ import main as cli
+        import io
+        import contextlib
+        with tempfile.TemporaryDirectory() as tmp:
+            model, tok = tiny()
+            d = Path(tmp) / "model"
+            d.mkdir()
+            torch.save({"model": model.state_dict(), "config": asdict(model.config),
+                        "tokenizer_fingerprint": tokenizer_fingerprint(tok)}, d / "ckpt.pt")
+            tok.save(d / "tokenizer.json")
+            replay = Path(tmp) / "conv.jsonl"
+            replay.write_text("\n".join(json.dumps({"split": "train", "messages": [
+                {"role": "user", "content": f"say {w}"}, {"role": "assistant", "content": w}]})
+                for w in ("one", "two", "three", "four")) + "\n")
+            guard = Path(tmp) / "plain.txt"
+            guard.write_text(string.printable * 60)
+            people = Path(tmp) / "people"
+            s = F.PersonStore("bo", people)
+            _, convs = person_rows(tok, 4)
+            ids = []
+            for c in convs:
+                rid = s.add_answer(c["messages"][:1], "not it")
+                s.edit(rid, c["messages"][1]["content"])
+                ids.append(rid)
+            cfg = S.SleepConfig(r=2, lr=1e-2, batch_size=4, min_steps=6, max_steps=6, eval_every=3,
+                                dropout=0.0, guard_tolerance=None)
+            record = S.sleep_person(s, d, cfg=cfg, replay=replay, guard_text=guard, split=SPLIT, device="cpu",
+                                    guard_chars=2000, behavior_prompts=2, log=None)
+            self.assertEqual(record["result"], "saved", record.get("result"))
+            self.assertEqual(record["rows"]["replay_pool"], 2)                 # two prompts went to the guard
+            self.assertEqual(record["behavior"]["asked"], 2)
+            identity = A.base_identity(d)
+            self.assertTrue(A.status(s, identity)["fresh"])
+            self.assertEqual(len(list((s.dir / "sleeps").glob("sleep-*.json"))), 1)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                cli(["--root", str(people), "show", "bo"])
+                cli(["--root", str(people), "forget", "bo", ids[0]])
+                cli(["--root", str(people), "status", "bo", "--model", str(d)])
+            self.assertIn(ids[1], out.getvalue())
+            self.assertFalse(A.status(s, identity)["fresh"])
+            with self.assertRaises(ValueError):                                # continue would keep the erased one
+                S.sleep_person(s, d, cfg=S.SleepConfig(mode="continue"), split=SPLIT, device="cpu", log=None)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(cli(["--root", str(people), "forget-all", "bo"]), 2)   # asks for --yes
+                cli(["--root", str(people), "forget-all", "bo", "--yes"])
+            self.assertFalse(s.dir.exists())
 
 
 @unittest.skipIf(torch is None, "needs torch")
