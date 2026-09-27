@@ -74,7 +74,11 @@ new `PROMPT_VERSIONS` member).
 from __future__ import annotations
 
 import argparse
-import fcntl
+try:
+    import fcntl                       # Unix (docs.python.org/3/library/fcntl.html)
+except ImportError:                    # Windows: msvcrt.locking is its byte-range lock
+    fcntl = None                       # (docs.python.org/3/library/msvcrt.html)
+    import msvcrt
 import hashlib
 import json
 import os
@@ -888,10 +892,16 @@ def tag_lock(d: Path):
     The caller keeps the returned file open for as long as it writes; closing
     it releases the lock. flock is per open file description, so a second open
     of the same file in the same process is refused too, which is what the
-    test relies on."""
+    test relies on. Windows has no fcntl: there the first byte of the (empty)
+    lock file is locked with msvcrt.locking(LK_NBLCK), which likewise raises
+    OSError at once when another handle holds it, and is released on close."""
     fh = open(d / "raw" / LOCK_NAME, "a+")
     try:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if fcntl is not None:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        else:
+            fh.seek(0)
+            msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
     except OSError:
         fh.close()
         return None
