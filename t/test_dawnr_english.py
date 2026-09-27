@@ -8,6 +8,7 @@ and the real held-out/dev id files.
 import importlib.util
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -130,6 +131,30 @@ class WidenedProtectedSetTest(unittest.TestCase):
         result = sorted(mixed, key=str)  # must not raise
         self.assertEqual(set(result), mixed)
         self.assertEqual(len(result), 3)
+
+
+class FlaggedIdsUncappedTest(unittest.TestCase):
+    """examples.jsonl keeps only the first 25 matches per file for human review;
+    flagged_ids must record every match, uncapped, or corpus assembly cannot
+    exclude a document past the 25th match in a heavily-flagged file."""
+
+    def test_more_than_25_matches_are_all_recorded_as_flagged_ids(self):
+        ids = decontam.protected_ids(HERE / "out" / "loop" / "split-v5.json", HERE / "r12-dev-ids.json")
+        records = decontam.mbpp_records(HERE.parent / "nl" / "data")
+        index, owners, missing = decontam.build_index(records, ids)
+        some_id = next(iter(ids))
+        needle = decontam.problem_text(records[some_id])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "fake.txt"
+            # 40 separate "stories" all containing the same needle: more than the
+            # 25-example cap, so this only passes if flagged_ids is not itself capped.
+            path.write_text("<|endoftext|>".join(f"story {i}\n{needle}\n" for i in range(40)),
+                            encoding="utf-8")
+            result = decontam.scan_tinystories_file(str(path), index, owners)
+        self.assertEqual(result["contaminated"], 40)
+        self.assertEqual(len(result["examples"]), 25)
+        self.assertEqual(len(result["flagged_ids"]), 40)
+        self.assertEqual(result["flagged_ids"], list(range(1, 41)))
 
 
 class NgramFilterTest(unittest.TestCase):

@@ -271,6 +271,7 @@ def scan_fineweb_shard(path: str, index: dict[str, set[tuple]], owners: dict[tup
     pf = pq.ParquetFile(path)
     scanned = matched = 0
     examples = []
+    flagged_ids = []  # every match, uncapped: examples below keeps only the first 25 for human review
     for batch in pf.iter_batches(columns=["text", "id", "url"], batch_size=4096):
         texts = batch.column("text").to_pylist()
         ids = batch.column("id").to_pylist()
@@ -281,13 +282,15 @@ def scan_fineweb_shard(path: str, index: dict[str, set[tuple]], owners: dict[tup
             pos, gram = find_match(words, index)
             if gram is not None:
                 matched += 1
+                flagged_ids.append(doc_id)
                 if len(examples) < 25:
                     examples.append({
                         "shard": os.path.basename(path), "doc_id": doc_id, "url": url,
                         "matched_problem_ids": sorted(owners[gram], key=str), "shared_phrase": " ".join(gram),
                         "snippet": text[max(0, text.lower().find(gram[0])):][:280],
                     })
-    return {"file": os.path.basename(path), "documents": scanned, "contaminated": matched, "examples": examples}
+    return {"file": os.path.basename(path), "documents": scanned, "contaminated": matched,
+            "examples": examples, "flagged_ids": flagged_ids}
 
 
 def scan_tinystories_file(path: str, index: dict[str, set[tuple]], owners: dict[tuple, set[int]]) -> dict:
@@ -295,6 +298,7 @@ def scan_tinystories_file(path: str, index: dict[str, set[tuple]], owners: dict[
     stories = text.split("<|endoftext|>")
     scanned = matched = 0
     examples = []
+    flagged_ids = []  # every match, uncapped; doc_id here is the 1-based story index within this file
     for story in stories:
         if not story.strip():
             continue
@@ -303,13 +307,15 @@ def scan_tinystories_file(path: str, index: dict[str, set[tuple]], owners: dict[
         pos, gram = find_match(words, index)
         if gram is not None:
             matched += 1
+            flagged_ids.append(scanned)
             if len(examples) < 25:
                 examples.append({
                     "shard": os.path.basename(path), "doc_id": scanned,
                     "matched_problem_ids": sorted(owners[gram], key=str), "shared_phrase": " ".join(gram),
                     "snippet": story.strip()[:280],
                 })
-    return {"file": os.path.basename(path), "documents": scanned, "contaminated": matched, "examples": examples}
+    return {"file": os.path.basename(path), "documents": scanned, "contaminated": matched,
+            "examples": examples, "flagged_ids": flagged_ids}
 
 
 _INDEX = None
@@ -369,11 +375,26 @@ def main() -> None:
         "elapsed_seconds": round(elapsed, 1),
         "total_documents": total_documents, "total_contaminated": total_contaminated,
         "contaminated_fraction": round(total_contaminated / total_documents, 8) if total_documents else None,
-        "per_file": [{k: v for k, v in r.items() if k != "examples"} for r in per_file],
+        "per_file": [{k: v for k, v in r.items() if k not in ("examples", "flagged_ids")} for r in per_file],
     }
+    # examples.jsonl keeps only the first 25 matches per file for human review (shared
+    # phrase, matched problem ids, a snippet); flagged_ids.json is the complete,
+    # uncapped list every match ever produced. A corpus-assembly step that excludes
+    # "the flagged documents" and can only find them in examples.jsonl would silently
+    # keep everything past the 25th match in a file with more matches than that -- the
+    # equality check below is the proof that did not happen here.
+    flagged_ids_by_file = {r["file"]: r["flagged_ids"] for r in per_file}
+    total_flagged_ids = sum(len(v) for v in flagged_ids_by_file.values())
+    if total_flagged_ids != total_contaminated:
+        raise AssertionError(
+            f"flagged_ids.json would record {total_flagged_ids} ids but {total_contaminated} "
+            "documents were counted contaminated -- a scan function dropped an id")
+    report["flagged_ids_file"] = "flagged_ids.json"
+    report["flagged_ids_count"] = total_flagged_ids
     out_dir = Path(a.out).expanduser()
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
+    (out_dir / "flagged_ids.json").write_text(json.dumps(flagged_ids_by_file, indent=1), encoding="utf-8")
     with open(out_dir / "examples.jsonl", "w", encoding="utf-8") as f:
         for e in all_examples:
             f.write(json.dumps(e) + "\n")
