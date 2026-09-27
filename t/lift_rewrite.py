@@ -62,7 +62,7 @@ from lift_classify import (
     ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier, closure_predicates,
     decode_char_literal, decode_string_literal, expr_kind, find_array_mutation,
     scan_breaks, scan_null_checks, walk, unchanged_at_every_call, _is_seq_of_char,
-    _is_nested_seq_of_int, _is_nested_seq_of_nat,
+    _is_nested_seq_of_char, _is_nested_seq_of_int, _is_nested_seq_of_nat,
 )
 
 
@@ -147,7 +147,9 @@ def _t_json_type(t: Optional[Type]) -> object:
     RETURN -- the only position a nat row's non-negativity gap allows
     through; a param/local nat row is refused before `rewrite` ever
     runs)."""
-    if _is_nested_seq_of_int(t) or _is_nested_seq_of_nat(t):
+    if _is_nested_seq_of_int(t) or _is_nested_seq_of_nat(t) or _is_nested_seq_of_char(t):
+        # Row 43 (2026-09-27): a `seq<string>`/`seq<seq<char>>` is the
+        # same compound type, its rows code points (row 28 per row).
         return {"seq": "seq"}
     return _t_type_of(t)
 
@@ -177,7 +179,8 @@ def _rw_looks_nested(e: Expr, scope: "Scope") -> bool:
     measured shapes always give the accumulator an explicit declared
     type; an untyped `var r := m;` for a nested `m` is this row's own
     known residual, falling back to the flat JSON type instead)."""
-    return isinstance(e, SeqDisplay) and any(isinstance(el, SeqDisplay) for el in e.elems)
+    return isinstance(e, SeqDisplay) and any(isinstance(el, (SeqDisplay, StringLit))
+                                             for el in e.elems)
 
 
 def _ge0(t_name: str) -> dict:
@@ -2000,6 +2003,29 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             record.clauses_added.append(ClauseAdded(
                 rule="string-elements-requires", text=f"forall k. 0 <= {tn}[k] <= {_CHAR_MAX}"))
             record.rewrites.append(Rewrite(rule="string-elements-requires", line=p.line))
+    for p in method.params:
+        if p.type is not None and _is_nested_seq_of_char(p.type):
+            # Row 43 (2026-09-27): the same code-point bound per ROW of a
+            # `seq<string>` parameter, for the same reason (the
+            # differential harness converts every sampled row back into a
+            # Dafny string with `as char`, which needs the range).
+            tn = scope.renames[p.name]
+            i = renamer.fresh("i", record, "quantbind")
+            k = renamer.fresh("k", record, "quantbind")
+            row = {"op": "at", "args": [{"var": tn}, {"var": i}]}
+            elem = {"op": "at", "args": [row, {"var": k}]}
+            body = {"op": "and", "args": [
+                {"op": ">=", "args": [elem, {"int": 0}]},
+                {"op": "<=", "args": [elem, {"int": _CHAR_MAX}]}]}
+            inner = {"forall": {"var": k, "lo": {"int": 0},
+                                "hi": {"op": "len", "args": [row]}, "body": body}}
+            clause = {"forall": {"var": i, "lo": {"int": 0},
+                                  "hi": {"op": "len", "args": [{"var": tn}]}, "body": inner}}
+            requires_out.append(clause)
+            record.clauses_added.append(ClauseAdded(
+                rule="strings-elements-requires",
+                text=f"forall i, k. 0 <= {tn}[i][k] <= {_CHAR_MAX}"))
+            record.rewrites.append(Rewrite(rule="strings-elements-requires", line=p.line))
     for spec in method.specs:
         if isinstance(spec, RequiresClause):
             src_e = _strip_null_checks(spec.expr, scope.null_drop_ids, record, spec.line)
