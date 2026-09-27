@@ -1,6 +1,6 @@
-# locallm
+# dawnr
 
-locallm is a local code-generation research project built around a stubborn
+dawnr is a local code-generation research project built around a stubborn
 idea: passing tests is not enough. A candidate program has to survive the
 problem's tests, seven independent proof backends, a deliberately broken twin,
 and a task-specific check that its specification describes the problem it was
@@ -11,23 +11,23 @@ asked to solve.
 This project is building **dawnr**: an assistant trained here from random
 weights, running on its own hardware with nothing behind it, trustworthy
 because what it produces is checked by proof before anyone relies on it. The
-bar is a model you could trust on a spaceship. locallm is dawnr's core model
-and the proof engine is its judge; everything else in this repository serves
-one of them. The goal, the parts dawnr needs, where each stands, and the
+bar is a model you could trust on a spaceship. Its core model (code in
+`locallm/`) is trained here and the proof engine is its judge; everything else
+in this repository serves one of them. The goal, the parts dawnr needs, where each stands, and the
 order they are built in are in [AMBITION.md](AMBITION.md). Beating Phi-4-mini
 is a milestone on the way, not the destination.
 
 ## Status: no win over Phi
 
-locallm has **not** beaten Phi. There is no verified Phi-versus-LocalLLM result
+dawnr has **not** beaten Phi. There is no verified Phi-versus-dawnr result
 from the new confirmation protocol, no frozen final v7 panel, and no v7
 head-to-head generation result to report.
 
 The earlier 232-task MBPP comparison is still useful history, but it is not a
-win. The best scratch-trained locallm arm and Phi-4-mini each reached 3 clean
-answers. A later contamination audit found that every clean locallm answer was
+win. The best scratch-trained dawnr arm and Phi-4-mini each reached 3 clean
+answers. A later contamination audit found that every clean dawnr answer was
 in the 32 problems whose function had effectively appeared in its training
-material. Nine seeds of the same recipe, run as the r11 baseline, passed 0 of those 200 problems' tests in eight seeds and 2 in one. On the remaining 200 problems, locallm had 0 clean answers and Phi
+material. Nine seeds of the same recipe, run as the r11 baseline, passed 0 of those 200 problems' tests in eight seeds and 2 in one. On the remaining 200 problems, dawnr had 0 clean answers and Phi
 had 2. The audit changed the project from trying to defend a tie to building a
 fresh comparison that can survive scrutiny.
 
@@ -38,7 +38,7 @@ The historical tables, caveats, and raw definitions live in
 
 ## What is being built now
 
-The next run is **r12**, and it trains locallm the way this project defines
+The next run is **r12**, and it trains dawnr the way this project defines
 it: from random weights, on the proved corpus, with no borrowed base. Nine
 defects that had each corrupted an earlier number are fixed and tested before
 anything trains ([`t/RUN-NEXT-locallm-r12.md`](t/RUN-NEXT-locallm-r12.md),
@@ -73,7 +73,7 @@ served through vLLM, a fresh 200-task panel drawn from CodeContests (the v1-v6
 pools are used up: 4,030 of their 4,035 problems have been opened by some
 model's output), and an exposure ledger that retires any panel opened for
 development. Its one trained artifact is a QLoRA adapter on top of Phi, which
-is not locallm and is not this project's result; the panel and the ledger are
+is not dawnr and is not this project's result; the panel and the ledger are
 what r12's confirmation step will use after the pre-registered look. Prompts,
 replies, hidden tests and adapters stay in the lab; public receipts carry
 hashes, counts and settings.
@@ -98,7 +98,7 @@ following:
   outcomes, and a task-specific specification check.
 - A paired seed-1337 advantage with an exact two-sided McNemar/binomial
   p-value of at most 0.05.
-- Ten LocalLLM training seeds, with at least nine clean-count wins over the
+- Ten dawnr training seeds, with at least nine clean-count wins over the
   fixed Phi responses and an exact sign-test result.
 - Manual review of every LocalLLM-only clean answer.
 
@@ -115,7 +115,7 @@ F*, and each backend rejects a sabotaged twin at a concrete counterexample.
 That bar still has limits. A proof can show that a program meets its
 specification while the specification describes the wrong function. The
 pipeline therefore keeps tests, proof checks, twins, and task-specific
-specification checks separate. The old experiments found that locallm was much
+specification checks separate. The old experiments found that dawnr was much
 better at writing well-formed formal programs than at solving unseen problems.
 That distinction is the reason the new comparison measures both.
 
