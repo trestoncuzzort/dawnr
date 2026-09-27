@@ -350,7 +350,7 @@ ready -- see below). It waits for
 run.json}` to report `status: complete` (at this writing: `running`, step
 1,700 of 11,200), then per seed 1-10 trains (section C's command), picks the
 dev-chosen stopping step, generates the 232 held-out answers, and grades on the
-lab, each GPU-touching step as `flock /home/t/scratch/gpu.lock systemd-run
+lab, each GPU-touching step as `flock $HOME/scratch/gpu.lock systemd-run
 --user --scope -p MemoryMax=6G <cmd>`; grading cells are capped at `T_LAB_JOBS=2`
 (about 8 cores) as a courtesy on the shared lab. It ends by running
 `score_heldout.py` and `compare_arms.py --prereg t/PREDICT-r12.md` over the ten
