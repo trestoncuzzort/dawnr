@@ -45,6 +45,7 @@ trusted because what it writes is checked.
 | the model's own verified answers as new data (expert iteration) | running with a local teacher model |
 | a chat pipeline (format, mid-training, tools, report card), adapted from nanochat | runs end to end ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md)); its first tool is the t interpreter, which the model calls on its own draft; it does not yet act on a failed check |
 | acting on the machine: files, commands, processes, plans | built, not yet learned by any model: every action through the harness's permissions, plans shown in a dry run and approved as a whole; 0 escapes on 5,000 generated paths, 0 of 80 injected actions run ([DAWNR-AGENT.md](DAWNR-AGENT.md)) |
+| learning from each person between sessions ([DAWNR-LEARNING.md](DAWNR-LEARNING.md)) | built: feedback kept per person under their control, a per-person adapter trained in guarded sleeps, a style profile inferred from their edits. Measured on four simulated persons: the profile halves their edit cost with every checked answer unchanged; the adapter fits their style only in likelihood, and where it changes what dawnr writes it costs correct answers |
 | retrieval, memory, tool use, speech, vision | not started; in the order [AMBITION.md](AMBITION.md) gives |
 
 The honest headline: the machinery that makes dawnr trustworthy works; the
