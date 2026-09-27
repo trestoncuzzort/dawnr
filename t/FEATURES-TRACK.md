@@ -418,6 +418,49 @@ and `tuple-component` name what t's pair cannot carry. **Measured**: 10 of 27
 lift, 7 pass the check stage; 8 of the other 17 refuse `function-result`
 (a tuple-returning helper). Tests: `t/test_lift_tuples.py`.
 
+### 11. Finite sets (2026-09-27, SPEC.md "Finite sets (v1)", six lowerings touched)
+
+**Refused: 77 methods `set`** on the 1886 staged files (round-2 census): 39
+the cardinality of a bounded comprehension used as a count, 30 a display
+(`s[i] in {'G', 'T', '.', '#'}`), 8 a `set<int>` parameter or return. t now
+has the type `set` (a finite set of ints) with six total operations, the
+display `{e1, ..., en}`, `x in s`, `card(s)`, `union`, `inter`, `diff`,
+written by name, `==` extensional (SPEC.md "Finite sets (v1)", SYNTAX.md);
+`surface.py` parses and prints it (26 of 26 written examples, 1846 of 1846
+corpus tasks and 3000 fuzzed ASTs round-trip), `check_wf` types it,
+`interp` runs it on a frozenset with its own domain ladder, and
+`fuzz_lower` carries nine probes `fz_p_set_*` (duplicates collapse,
+inclusion-exclusion, difference against intersection, extensional equality,
+an adversarial union count and duplicate count, membership through an
+intersection, the empty display, a set-collecting loop) plus two committed
+tasks, `tasks/set_toggle.t` (add or remove one element, four cardinality and
+membership ensures; twin `collapse-if`) and `tasks/set_collect.t` (a loop
+collecting a seq into a set; twin `compare-flip`). The comprehension is not
+in v1 (its predicate needs a binder every kernel would close over; SPEC.md
+says how it will be stated), and the lifter's mapping of Dafny's `set<int>`
+onto the type is not built, so no corpus method lifts yet: the 38
+display-and-typed-name methods are what that mapping would reach.
+
+Per kernel, measured on this machine (the nine probes as expected with
+twins refuted, the two tasks verified with twins refuted, unless noted):
+
+| kernel | representation | probes | tasks | note |
+|---|---|---|---|---|
+| dafny | `set<int>`; `{..}`, `in`, `\|s\|`, `+ * -`; the empty display let-bound to a typed name | 9 of 9 | 2 of 2 | `\|{}\|` is underspecified and a false-ranged comprehension is rejected as not finite, measured; hence the let |
+| verus | `vstd::set::Set<int>`; `set![..]`, `contains`, `len`, `insert`/`remove` for a singleton union/difference, `union`/`intersect`/`difference`; vstd's three broadcast groups plus one prelude lemma (empty difference is inclusion) in its own module; `==` bridged to `=~=` | 9 of 9 | 2 of 2 | the ground certificate over sets is closed by the SMT arm, `compute_only` cannot evaluate a cardinality (measured) |
+| fstar | `FStar.FiniteSet.Base` with `FStar.FiniteSet.Ambient`; a task that uses sets is lowered in the Ghost effect (`cardinality` is GTot, equality the ghost decision of `equal`) | 9 of 9 | 2 of 2 | `union` with a singleton is spelled `insert`, the one law the ambient facts do not close otherwise |
+| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality | 9 of 9 real; 8 twins refuted, `fz_p_set_eq`'s twin at the wall | set_collect 1 of 1; set_toggle real verified, twin unproved (no certificate: the value certificate's closing step does not reach a set-valued return yet) | |
+| lean | none: core Lean 4, no Mathlib, no finite set | abstain by name | abstain | a sorted duplicate-free `List Int` is the encoding to build and measure |
+| framac | none: C has no set value | abstain by name | abstain | a sorted-array encoding with WP proofs is the encoding to build |
+| spark | none yet: `SPARK.Containers.Functional.Sets` exists but has no difference function and its cardinality laws are unmeasured here | abstain by name | abstain | the instantiation is the next step |
+
+Byte identity: every set-free committed task lowers byte for byte as before
+in all seven kernels (48 fixture tasks, real and twin, `sha256` before and
+after). No twin-generator, grader or check-filter change: the ladder's
+existing moves (`wrong-var` over two set names, `off-by-one` on an int,
+`collapse-if`, `compare-flip`) found a refuting twin for every probe that
+has one.
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
