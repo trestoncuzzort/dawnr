@@ -75,9 +75,13 @@ def summarize(out: Path) -> tuple[str, dict]:
                                                                      "accepted", "behavior", "guard", "loss_base",
                                                                      "loss_adapter", "examples")}
                                              for s in r["sleeps"]]}
-            others = {k: v for k, v in f["style_loss"].items()}
+            # personal, not generic: on this person's style (a column), is their own adapter the lowest row?
+            column = {row: people[row]["final"]["style_loss"].get(name) for row in people}
+            own_best = (own_a <= min(v for v in column.values() if v is not None)
+                        if own_a is not None and len(column) > 1 else None)
+            s_arm[name]["own_adapter_best_on_own_style"] = own_best
             lines.append(f"| {name} | {fmt(own_b)} | {fmt(own_a)} | "
-                         f"{'yes' if own_a is not None and own_a <= min(others.values()) else 'no'} | "
+                         f"{'-' if own_best is None else ('yes' if own_best else 'no')} | "
                          f"{fmt(bp.get('cost_mean'), 1)} | {fmt(ap.get('cost_mean'), 1)} | "
                          f"{fmt(bp.get('rel_cost_mean'))} | {fmt(ap.get('rel_cost_mean'))} | "
                          f"{fmt(bp.get('adherence_mean'))} | {fmt(ap.get('adherence_mean'))} | "
