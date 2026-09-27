@@ -12,6 +12,7 @@ engine are tested at the end and need torch. Standard library otherwise; tempora
 import json
 import os
 import random
+import re
 import stat
 import string
 import sys
@@ -571,6 +572,193 @@ class GroundingChecksRelationNotOnlyNouns(Temp):
         self.assertEqual(checked, 80)
 
 
+class GroundingFailsClosed(Temp):
+    """The second round on grounding. The first fix named the relations it knew (like/dislike, want/avoid, an
+    ordered "A over B") and let every phrasing its lists did not hold fall through to the old bag-of-words check:
+    "I don't, honestly, like cats." still grounded "likes cats" (a comma ended the negation's reach), and an order
+    word or a verb on no list grounded the opposite order or sense. Now the gate fails closed (extract.py's
+    grounded()): a statement is admitted only when an enumerated pattern reads it and reads the whole of the
+    person's sentence it quotes, with the same polarity and the same words in the same order; anything else is
+    refused as "cannot ground: <why>", true memories included."""
+
+    def check(self, statement, evidence, said=None, kind="preference", slot=None):
+        view = SessionView.of(conversation(evidence if said is None else said))
+        return admit(Proposal(kind, statement, evidence, slot=slot, origin="model"), view)
+
+    def assert_refused(self, statement, evidence, said=None, **fields):
+        ok, why = self.check(statement, evidence, said, **fields)
+        self.assertFalse(ok, (statement, evidence, said))
+        self.assertTrue(why.startswith("cannot ground: "), (statement, evidence, said, why))
+
+    def assert_admitted(self, statement, evidence, said=None, **fields):
+        self.assertEqual(self.check(statement, evidence, said, **fields), (True, ""), (statement, evidence, said))
+
+    def test_the_three_reviewer_inputs(self):
+        self.assert_refused("likes cats", "I don't, honestly, like cats.")
+        self.assert_refused("prefers coffee above tea", "I prefer tea above coffee.")
+        self.assert_refused("likes cats more than dogs", "I like dogs more than cats.")
+
+    def test_insertions_inside_a_negation_ground_neither_polarity(self):
+        for said in ("I don't, honestly, like cats.", "I do not, and will not, like cats.",          # commas
+                     "I don't (honestly, I mean it) like cats.", "I don't (and never did) like cats.",  # asides
+                     "I don't really, truly like cats.", "I don't honestly like cats.",                 # adverbs
+                     "I never, ever like cats."):
+            with self.subTest(said=said):
+                self.assert_refused("likes cats", said)          # the inversion round 1 admitted
+                self.assert_refused("dislikes cats", said)       # the right sense, but no pattern reads it whole
+
+    def test_order_is_the_persons_word_for_word_whatever_the_order_word(self):
+        # round 1 checked order only after the connectors it listed; "above", "more than" and, after "like",
+        # "instead of" were not among them
+        for said, shape in (("I prefer tea above coffee.", "prefers {} above {}"),
+                            ("I like tea more than coffee.", "likes {} more than {}"),
+                            ("I like tea instead of coffee.", "likes {} instead of {}"),
+                            ("I'd rather have tea above coffee.", "would rather have {} above {}"),
+                            ("I prefer tea over coffee.", "prefers {} over {}")):
+            with self.subTest(said=said):
+                self.assert_refused(shape.format("coffee", "tea"), said)
+                self.assert_admitted(shape.format("tea", "coffee"), said)   # the person's words, in their order
+
+    def test_a_verb_no_pattern_holds_is_refused_not_admitted(self):
+        self.assert_refused("loathes cats", "I don't loathe cats.")
+        self.assert_refused("loathes cats", "I loathe cats.")
+        self.assert_refused("fancies coffee over tea", "I fancy tea over coffee.")
+        for statement in ("likes cats", "dislikes cats"):
+            self.assert_refused(statement, "I loathe cats.")
+
+    def test_a_quoted_fragment_is_read_in_its_whole_sentence(self):
+        for said in ("I never said I like cats.", "My sister thinks I like cats.", "Not that I like cats.",
+                     "I don't think I like cats.", "If I like cats, I will say so."):
+            with self.subTest(said=said):
+                self.assert_refused("likes cats", "I like cats", said=said)
+
+    def test_a_question_grounds_nothing(self):
+        self.assert_refused("likes cats", "I like cats?")
+        self.assert_refused("likes cats", "I like cats", said="Would you say I like cats?")
+        s = self.store()
+        end_session(s, conversation("I like cats?"), session_id="s1", now=NOW)
+        self.assertEqual(s.records(("preference",)), [])
+
+    def test_words_after_the_object_that_no_pattern_reads_count(self):
+        for i, said in enumerate(("I like cats, not really.", "I like cats but not really.", "I like cats (not).",
+                                  "I like cats, said no one ever.", "I like cats, or so they say.",
+                                  "I like cats; not.")):
+            with self.subTest(said=said):
+                self.assert_refused("likes cats", said)
+                s = self.store(f"p{i}")
+                end_session(s, conversation(said), session_id="s1", now=NOW)
+                self.assertEqual(s.records(("preference",)), [])        # the rules' own reading is refused too
+
+    def test_every_clause_of_the_sentence_is_read(self):
+        for said in ("I like cats, and I don't mean it.", "I like cats and don't care who knows.",
+                     "I like cats but I don't, not anymore."):
+            with self.subTest(said=said):
+                self.assert_refused("likes cats", "I like cats", said=said)
+                self.assert_refused("likes cats", said)
+        # clauses the patterns read whole stand on their own, each with its own negation
+        said = "I like cats, and I don't like dogs."
+        self.assert_admitted("likes cats", "I like cats", said=said)
+        self.assert_admitted("dislikes dogs", "I don't like dogs", said=said)
+        self.assert_refused("likes dogs", "I don't like dogs", said=said)
+        self.assert_refused("likes dogs", said)
+
+    def test_a_models_kind_and_slot_are_the_patterns_own(self):
+        s = self.store()
+        end_session(s, conversation("I live in Lisbon."), session_id="s1", now=NOW)
+        hijack = [Proposal("fact", "likes cats", "I like cats.", slot="location", origin="model")]
+        report = end_session(s, conversation("I like cats."), session_id="s2", proposers=(), proposals=hijack,
+                             now=NOW)
+        self.assertEqual([r["text"] for r in s.records(("fact",))], ["lives in Lisbon"])     # not overwritten
+        self.assertTrue(report.rejected and report.rejected[0][1].startswith("cannot ground: "), report.rejected)
+        self.assert_refused("likes cats", "I like cats.", kind="fact")
+        self.assert_refused("likes cats", "I like cats.", slot="location")
+
+    def test_failing_closed_costs_some_true_memories(self):
+        """What the design gives up on purpose: a true statement in phrasing no pattern reads whole is not
+        remembered; the person can pin it as a note by hand."""
+        self.assert_refused("dislikes cats", "I don't, honestly, like cats.")
+        s = self.store()
+        report = end_session(s, conversation("I live in Lisbon, I think. I like cats because they purr."),
+                             session_id="s1", now=NOW)
+        self.assertEqual(s.records(("fact", "preference")), [])
+        self.assertEqual(len(report.rejected), 2)
+        self.assertTrue(all(why.startswith("cannot ground: ") for _text, why in report.rejected), report.rejected)
+        note = s.pin("I live in Lisbon, and I like cats because they purr.")
+        self.assertEqual([r["id"] for r in s.records(("note",))], [note["id"]])
+
+    def test_property_whatever_is_admitted_is_literally_in_the_persons_sentence(self):
+        """Sentences and proposals from a grammar, expanded at random (The Fuzzing Book, "Fuzzing with Grammars",
+        fuzzingbook.org/html/Grammars.html), mixing the patterns' own phrasings with every kind round 1 let
+        through: insertions inside a negation, order words, verbs on no list, leads and tails that change what a
+        clause means, a second clause, a question, a quoted fragment. Whatever the gate admits must be literally
+        in the person's sentence: its verb as a first-person phrasing this test lists for it (so its relation and
+        polarity), its object word for word (so its order), and around that clause nothing but a filler, a
+        trailing "now" or "though", a second clause this test knows is whole, and the end mark."""
+        rng = random.Random(20260927)
+        says = {"likes": ("like", "love", "really like", "do like"),
+                "dislikes": ("don't like", "do not like", "hate", "dislike", "can't stand"),
+                "prefers": ("prefer",), "would rather": ("'d rather",), "wants": ("want",), "avoids": ("avoid",)}
+        unread = ("don't, honestly, like", "don't (really) like", "don't honestly like", "don't really, truly like",
+                  "never, ever like", "loathe", "fancy", "don't loathe", "don't hate", "don't want",
+                  "never said I like", "don't think I like")
+        leads = ("Well, ", "No, ", "Honestly, ", "Not that ", "My sister says ", "Do you think ")
+        tails = (" now", " though", ", not really", " (not)", ", I think", " because they purr", ", said no one",
+                 " at all", ", and I don't mean it", " but I don't", ", and I live in Lisbon", ", and I don't like {}")
+        order_words = ("over", "to", "than", "above", "more than", "instead of", "rather than", "and", "not", "before")
+        verbs = tuple(says) + ("loves", "hates", "loathes", "fancies", "is a fan of")
+        harmless = re.compile(r"\s*(?:well,)?\s*(?:now|though)?\s*(?:,? and i (?:live in lisbon|don't like q[a-z]+))?"
+                              r"\s*[.!]?\s*")
+
+        def noun():
+            return "q" + "".join(rng.choice("bcdfghjklmnpqrstvwz") for _ in range(5))  # no vowel: no English word
+
+        def literally_there(statement, evidence, sentence):
+            verb = next((v for v in says if statement.startswith(v + " ")), None)
+            if verb is None:
+                return False
+            for phrase in says[verb]:
+                clause = ("i" if phrase.startswith("'") else "i ") + phrase + " " + statement[len(verb) + 1:]
+                if clause in evidence.lower() and clause in sentence.lower():
+                    if harmless.fullmatch(sentence.lower().replace(clause, " ", 1)):
+                        return True
+            return False
+
+        admitted = sneaky = 0
+        for _ in range(4000):
+            n1, n2, n3 = noun(), noun(), noun()
+            family = rng.choice(tuple(says) + ("unread",))
+            phrase = rng.choice(unread if family == "unread" else says[family])
+            obj = n1 if rng.random() < 0.5 else f"{n1} {rng.choice(order_words)} {n2}"
+            core = ("I" if phrase.startswith("'") else "I ") + phrase + " " + obj
+            sentence = ((rng.choice(leads) if rng.random() < 0.5 else "") + core
+                        + (rng.choice(tails).format(n3) if rng.random() < 0.5 else "")
+                        + rng.choice((".", ".", ".", "!", "?", "")))
+            message = sentence if rng.random() < 0.7 else sentence + "\nI live in Lisbon."
+            evidence = rng.choice((sentence, core, core[core.rfind("I "):], core[:len(core) - len(obj)] + n1,
+                                   message))
+            verb = family if family != "unread" and rng.random() < 0.6 else rng.choice(verbs)
+            shape = rng.random()
+            if shape < 0.5 or " " not in obj:
+                said_obj = obj if shape < 0.75 else n1
+            elif shape < 0.75:
+                said_obj = f"{n2} {obj[len(n1) + 1:len(obj) - len(n2) - 1]} {n1}"      # the same words, swapped
+            else:
+                said_obj = f"{n1} {rng.choice(order_words)} {n2}"
+            statement = f"{verb} {said_obj}"
+            ok, why = admit(Proposal("preference", statement, evidence, origin="model"),
+                            SessionView.of(conversation(message)))
+            there = literally_there(statement, evidence, sentence)
+            if ok:
+                admitted += 1
+                self.assertTrue(there, (message, evidence, statement))
+            else:
+                self.assertTrue(why.startswith("cannot ground: "), (message, evidence, statement, why))
+                if not there and set(said_obj.split()) <= set(re.findall(r"[\w']+", evidence.lower())):
+                    sneaky += 1         # every word of its object is the person's: a nouns-only check admits it
+        self.assertGreater(admitted, 250)     # the gate still admits what is literally there: not vacuous
+        self.assertGreater(sneaky, 1000)      # and it met many proposals a check of nouns alone would admit
+
+
 # ----------------------------------------------------------------- recall --
 
 class RecallRespectsTheBudget(Temp):
@@ -691,6 +879,18 @@ class Extraction(Temp):
         r = end_session(s, conversation("I live in Lisbon, I think."), session_id="s2", proposers=(), proposals=model)
         self.assertEqual(s.get(rec["id"])["text"], "lives in Porto")
         self.assertTrue(r.rejected)
+
+    def test_a_person_correction_outranks_a_grounded_model(self):
+        # the test above now stops at the gate (", I think" is words no pattern reads); this one reaches the update
+        s = self.store()
+        end_session(s, conversation("I live in Lisbon."), session_id="s1", now=NOW)
+        rec = s.records(("fact",))[0]
+        s.correct(rec["id"], "lives in Porto")
+        model = [Proposal("fact", "lives in Lisbon", "I live in Lisbon", slot="location", origin="model")]
+        r = end_session(s, conversation("I live in Lisbon."), session_id="s2", proposers=(), proposals=model)
+        self.assertEqual(s.get(rec["id"])["text"], "lives in Porto")
+        self.assertEqual(r.rejected, [("lives in Lisbon", "the person wrote this one themselves; a model does not "
+                                                          "overwrite it")])
 
     def test_episodes_are_counts_and_the_persons_keywords(self):
         s = self.store()
