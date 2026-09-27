@@ -28,3 +28,8 @@ THIRD-PARTY MATERIAL
   verifiers are not part of the Work and keep their own licenses. See LICENSE section 7.
   locallm/ingest.py copies eight keywords and two thresholds from charset-normalizer (MIT License,
   Copyright (c) 2025 TAHRI Ahmed R.); its notice is reproduced in that file beside them.
+  locallm/chat.py and locallm/engine.py copy parts of nanochat (MIT License, Copyright (c) 2025 Andrej Karpathy,
+  https://github.com/karpathy/nanochat): the chat special tokens, render_conversation and render_for_completion,
+  and the engine's tool-use state machine; its notice is reproduced in each of those files. chat_data.py,
+  chat_train.py, chat_eval.py, chat_cli.py, dawnr_pipeline.py and dawnr_report.py in locallm/ follow nanochat's
+  design without copying its code.

@@ -1,0 +1,121 @@
+"""chat_cli.py: talk to a chat-trained locallm in the terminal; its t tool runs on this machine.
+
+    python3 locallm/chat_cli.py --model <dir> [-p "prompt"] [--temperature 0.6] [--top-k 50]
+
+nanochat's scripts/chat_cli.py (https://github.com/karpathy/nanochat): the
+conversation is kept as token ids, each user turn is appended between
+<|user_start|> and <|user_end|>, <|assistant_start|> primes the reply, the
+engine streams it, and <|assistant_end|> is appended even when the budget ran
+out so the next turn starts clean. `clear` starts over, `quit` or `exit`
+leaves, -p answers one prompt and exits. Added here: -f reads a many-line
+prompt from a file, and a typed line ending in a backslash continues. What
+differs otherwise: tool calls and their
+output are shown as they happen, marked, and after each reply the tool calls
+are summarised, because in dawnr what the tool said is the evidence.
+Nothing is sent anywhere; the model and the tool both run here.
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--model", type=Path, required=True, help="a checkpoint directory chat_train.py wrote")
+    ap.add_argument("-p", "--prompt", default="", help="answer this one prompt and exit")
+    ap.add_argument("-f", "--prompt-file", type=Path, default=None,
+                    help="answer the prompt in this file (several lines, e.g. a specification) and exit")
+    ap.add_argument("-t", "--temperature", type=float, default=0.6)
+    ap.add_argument("-k", "--top-k", type=int, default=50)
+    ap.add_argument("--max-tokens", type=int, default=512)
+    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--device", default=None)
+    a = ap.parse_args(argv)
+
+    import chat
+    from checkpoint import load_checkpoint
+    from engine import Engine
+
+    if a.prompt_file is not None:
+        a.prompt = a.prompt_file.read_text(encoding="utf-8").strip()
+    model, tok, _cfg = load_checkpoint(a.model, a.device)
+    if not chat.has_chat_tokens(tok):
+        raise SystemExit(f"{a.model} was not trained in the chat format (no chat tokens); run chat_train.py on it")
+    engine = Engine(model, tok)
+    sp = lambda name: chat.special(tok, name)                        # noqa: E731
+    marks = {sp(chat.T_START): "\n[t tool call]\n", sp(chat.T_END): "\n[end of call]\n",
+             sp(chat.OUTPUT_START): "[tool says]\n", sp(chat.OUTPUT_END): "\n[end of tool]\n"}
+    conversation: list[int] = []
+    interactive = not a.prompt
+    if interactive:
+        print("dawnr chat. 'clear' starts over, 'quit' leaves. Everything runs on this machine.")
+    while True:
+        if a.prompt:
+            user = a.prompt
+        else:
+            try:
+                # a line ending in a backslash continues on the next one, so a
+                # specification can be typed or pasted over several lines
+                lines = [input("\nYou: ")]
+                while lines[-1].endswith("\\"):
+                    lines[-1] = lines[-1][:-1]
+                    lines.append(input("...  "))
+                user = "\n".join(lines).strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                break
+        if user.lower() in ("quit", "exit"):
+            break
+        if user.lower() == "clear":
+            conversation = []
+            print("Conversation cleared.")
+            continue
+        if not user:
+            continue
+        conversation += [sp(chat.USER_START)] + tok.encode(user) + [sp(chat.USER_END), sp(chat.ASSISTANT_START)]
+        print("\ndawnr: ", end="", flush=True)
+        reply, run = [], []
+        try:
+            stream = engine.generate(conversation, 1, max_tokens=a.max_tokens, temperature=a.temperature,
+                                     top_k=a.top_k, seed=a.seed)
+            for column, _masks in stream:
+                token = column[0]
+                reply.append(token)
+                if token in marks:
+                    print(tok.decode(run), end="")
+                    run = []
+                    print(marks[token], end="", flush=True)
+                elif token == sp(chat.ASSISTANT_END):
+                    break
+                else:
+                    run.append(token)
+                    if len(run) >= 8:
+                        text = tok.decode(run)
+                        if "�" not in text:          # a multi-byte character split across tokens waits
+                            print(text, end="", flush=True)
+                            run = []
+        except ValueError as e:                           # the conversation filled the context
+            print(f"\n[{e}; 'clear' to start over]")
+            conversation = []
+            continue
+        print(tok.decode(run))
+        if not reply or reply[-1] != sp(chat.ASSISTANT_END):
+            reply.append(sp(chat.ASSISTANT_END))
+        conversation += reply
+        if engine.rows[0].in_tool_block:
+            print("[the model opened a tool call and never closed it; the tool did not run]")
+        calls = engine.rows[0].tool_calls
+        if calls:
+            print(f"[{len(calls)} tool call(s); last verdict: {calls[-1][1].splitlines()[-1] if calls[-1][1] else '-'}]")
+        if not interactive:
+            break
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
