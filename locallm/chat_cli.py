@@ -20,6 +20,14 @@ configuration says otherwise. The index of what the model may use heads the
 first user turn, untrusted output is marked as it streams, a call that needs
 approval asks on this terminal, and a Stop hook's reason is shown when the
 checker keeps the reply from ending.
+
+--persona ID carries a persona across sessions (dawnr_persona.py): every
+message is run through its rule table (`observe`), a change is printed the
+moment it happens so nothing is learned unseen, and whatever the persona has
+become by the first turn of a conversation (or the first turn after `clear`)
+is folded onto that turn, in the same place and the same way the harness
+index is. `python3 locallm/dawnr_persona.py show --person ID` reads it,
+`set`/`interest`/`preference` correct it, and `erase` forgets it completely.
 """
 from __future__ import annotations
 
@@ -45,6 +53,11 @@ def main(argv=None) -> int:
     ap.add_argument("--harness", type=Path, default=None,
                     help="dawnr's harness configuration (JSON): tools, hooks, skills, MCP servers, permissions")
     ap.add_argument("--no-index", action="store_true", help="with --harness, do not put the tool index in the turn")
+    ap.add_argument("--persona", default=None,
+                    help="a person id (dawnr_persona.py): tone, detail and preferences learned from what you "
+                         "type, folded onto the first turn like the harness index; omit to carry no persona")
+    ap.add_argument("--persona-dir", type=Path, default=None,
+                    help="where personas are kept (default: $DAWNR_PERSONA_DIR or ~/.dawnr/personas)")
     a = ap.parse_args(argv)
 
     import chat
@@ -66,6 +79,11 @@ def main(argv=None) -> int:
             print(f"[harness] {problem}")
         if not chat.has_harness_tokens(tok) and len(harness.registry) > 1:
             print("[harness] this model has no harness tokens: only the t tool is reachable")
+    persona_store = persona_record = None
+    if a.persona:
+        import dawnr_persona
+        persona_store = dawnr_persona.JSONFilePersonaStore(a.persona_dir)
+        persona_record = persona_store.get(a.persona)
     engine = Engine(model, tok, harness=harness)
     session = engine.harness.session()
     sp = lambda name: chat.special(tok, name)                        # noqa: E731
@@ -101,8 +119,17 @@ def main(argv=None) -> int:
             continue
         if not user:
             continue
-        if harness is not None and not a.no_index and not conversation:
-            user = harness.index() + "\n\n" + user
+        if persona_record is not None:
+            changes = dawnr_persona.observe(persona_record, user)
+            if changes:
+                persona_store.save(persona_record)
+                for c in changes:
+                    print(f"[persona] {c.field}: {c.old!r} -> {c.new!r} ({c.reason})")
+        if not conversation:
+            if persona_record is not None:
+                user = dawnr_persona.with_persona_preamble(user, persona_record)
+            if harness is not None and not a.no_index:
+                user = harness.index() + "\n\n" + user
         conversation += [sp(chat.USER_START)] + tok.encode(user) + [sp(chat.USER_END), sp(chat.ASSISTANT_START)]
         print("\ndawnr: ", end="", flush=True)
         reply, run = [], []
