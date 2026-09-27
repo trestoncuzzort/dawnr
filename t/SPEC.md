@@ -922,6 +922,92 @@ Rocq's `rev_twice` (timeout) and refute every twin except Dafny's `count_pos`
 `t/methods_probe/opaque_callee.t` unproved. Each column's named abstentions
 and the per-kernel table are in `t/FEATURES-TRACK.md`.
 
+### Lemmas (v1)
+
+Stated 2026-09-27 (t/FEATURES-TRACK.md, feature 2). Copied from Dafny's
+lemma (Dafny reference manual, section 6.3.3 "Lemmas"): a ghost method
+with no return, whose `requires`/`ensures` are the statement proved, whose
+body is the proof, and whose call statement gives the caller the ensures
+at the arguments once the caller has shown the requires there. Lemmas are
+erased when a Dafny program is compiled; in t a lemma call is a no-op at
+run time.
+
+A new optional top-level field, v1 only, and one new statement:
+
+```
+"lemmas": [ {"name": ID,
+             "params":  [ {"name": ID, "type": Type}* ],
+             "requires": [ Expr* ],
+             "ensures":  [ Expr+ ],
+             "decreases"?: Expr,      // required iff the body calls the lemma itself
+             "body": [ LemmaStmt* ]}, ... ]      // its proof; may be empty
+LemmaStmt: {"if": {...}} over LemmaStmts | {"lemma": {"name": ID, "args": [Expr*]}}
+Stmt (new): {"lemma": {"name": ID, "args": [Expr*]}}
+```
+
+Written, beside `spec fun` and `method`:
+
+```
+lemma sum_append(a: seq, lo: int, hi: int)
+  requires 0 <= lo and lo <= hi and hi < len(a)
+  ensures sum_range(a, lo, hi + 1) == sum_range(a, lo, hi) + a[hi]
+  decreases hi - lo
+{ if lo < hi { sum_append(a, lo + 1, hi); } else { } }
+```
+
+and called as a statement, `sum_append(s, 0, i);`, anywhere a statement may
+stand in the task body, a method body or a loop body.
+
+Rules (check_wf's `lemma-*` keys):
+
+- **Names.** A lemma's name is distinct from the task's, every spec_fun's,
+  every method's and every other lemma's. `lemma` is contextual in the
+  notation, as `method` is.
+- **Scope and typing.** The lemma's `requires`, `ensures`, `decreases` and
+  body see its params only. Its contract may call spec_funs, never a
+  method or a lemma.
+- **The body is a proof skeleton.** Only `if` and lemma calls: the case
+  split and the induction step of a Dafny lemma. No assignments, locals,
+  loops or returns (a lemma has no state and no result). Its calls name
+  EARLIER lemmas, or the lemma itself when it carries a `decreases`
+  (Dafny's own well-founded recursion for an inductive proof); no mutual
+  recursion.
+- **Call position.** A lemma call is a whole statement. A lemma is never
+  called inside an expression, and the call's arguments call no method.
+
+Semantics:
+
+- **A lemma is proved in the file that uses it, never assumed.** A
+  lowering either proves every lemma in the file (a kernel that cannot
+  prove one reads the whole file unproved) or states none of them and
+  proves the program without their help; nothing a lemma states is ever
+  used unproved, so no lowering of a lemma can make a wrong program or a
+  sabotaged twin verify.
+- **A call gives the caller the lemma's ensures at the arguments.** In
+  Dafny, Verus, SPARK and Frama-C this is the kernel's own call rule for
+  a lemma, proof fn, Boolean lemma function or ghost function, and the
+  caller owes the lemma's `requires` at the call. F* and Lean have no call
+  statement inside their functional encoding of a t body: there each
+  proved lemma is handed to the automation with a trigger (an F* `SMTPat`,
+  a Lean `grind_pattern`) over the spec_fun calls in its ensures, so its
+  conclusion is available wherever those terms occur and its hypotheses
+  can be shown. That adds only proved facts; the one difference is that a
+  call whose requires is false is not rejected there. Rocq states no
+  lemma in v1: its lowering proves the program with the calls removed.
+- **Execution.** The interpreter skips a lemma call. The twin never
+  mutates a lemma and never mutates a lemma call's arguments (the ladder
+  breaks only assignments, locals, returns and guards). A twin's
+  refutation certificate replays what the twin executes, so every
+  certificate walk skips the call too.
+
+Fixtures `t/lemmas/*.t` (pow2_pos: an inductive lemma over a recursive
+spec_fun; sum_loop: an induction step used inside a loop; sq_bound: a
+nonlinear arithmetic fact) and seeded-fault probes `t/lemmas_probe/*.t`
+(false_lemma: an inductive lemma false at its base case; false_arith: a
+false nonlinear fact; circular: a lemma that "proves" `k == k + 1` by
+calling itself on the same argument). Per-kernel verdicts are in
+t/FEATURES-TRACK.md.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

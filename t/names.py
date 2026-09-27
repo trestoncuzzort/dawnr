@@ -265,6 +265,12 @@ def _declared_names(task: dict, body: list, check_task_name: bool = True) -> set
         declared |= _declared_in(sf["body"])
         if "decreases" in sf:
             declared |= _declared_in(sf["decreases"])
+    for l in task.get("lemmas", []):       # SPEC.md "Lemmas (v1)"
+        declared.add(l["name"])
+        for p in l["params"]:
+            declared.add(p["name"])
+        declared |= _declared_in([l["requires"], l["ensures"], l["body"],
+                                  l.get("decreases")])
     for m in task.get("methods", []):      # SPEC.md "Methods (v1)"
         declared.add(m["name"])
         for p in m["params"] + m["returns"]:
@@ -318,6 +324,10 @@ def _rename_walk(node, mapping: dict[str, str]):
             if k in q:
                 q[k] = _rename_walk(q[k], mapping)
         return {**node, kind: q}
+    if "lemma" in node and isinstance(node["lemma"], dict):
+        c = node["lemma"]
+        return {**node, "lemma": {"name": mapping.get(c["name"], c["name"]),
+                                  "args": _rename_walk(c["args"], mapping)}}
     if "call" in node:
         c = dict(node["call"])
         c["fun"] = mapping.get(c["fun"], c["fun"])
@@ -391,6 +401,16 @@ def sanitize(task: dict, reserved: set[str], uppercase_ok: bool,
          **({"decreases": _rename_walk(sf["decreases"], mapping)}
             if "decreases" in sf else {})}
         for sf in task.get("spec_funs", [])]
+    if "lemmas" in task:
+        new_task["lemmas"] = [
+            {**l, "name": rn(l["name"]),
+             "params": [{**p, "name": rn(p["name"])} for p in l["params"]],
+             "requires": _rename_walk(l["requires"], mapping),
+             "ensures": _rename_walk(l["ensures"], mapping),
+             "body": _rename_walk(l["body"], mapping),
+             **({"decreases": _rename_walk(l["decreases"], mapping)}
+                if "decreases" in l else {})}
+            for l in task["lemmas"]]
     if "methods" in task:
         new_task["methods"] = [
             {**m, "name": rn(m["name"]),

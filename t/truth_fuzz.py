@@ -440,6 +440,8 @@ def ck_run(body, env, funs, fuel):
                     return UNDEF
             else:
                 raise CkBudget("loop cap")
+        elif "lemma" in s:
+            pass                  # SPEC.md "Lemmas (v1)": erased at run time
         else:
             raise ValueError(f"t has no statement {s!r}")
     return None

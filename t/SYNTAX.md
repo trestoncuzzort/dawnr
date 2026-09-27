@@ -52,6 +52,7 @@ Task     ::= { "t": 0|1, "name": Id,
                "gate"?: "quantifiers"|"loops"|"recursion",
                "spec_funs"?: [ SpecFun* ],      (* v1 *)
                "methods"?: [ Method* ],         (* v1, since 2026-09-26; SPEC.md "Methods (v1)" *)
+               "lemmas"?: [ Lemma* ],           (* v1, since 2026-09-27; SPEC.md "Lemmas (v1)" *)
                "decreases"?: Expr,              (* v1; required iff body self-calls *)
                "body": [ Stmt+ ] }              (* every path ends in assign *)
 
@@ -99,6 +100,7 @@ Stmt     ::= {"assign": [Id, Expr]}
                         "invariants": [Expr*],
                         "decreases": Expr,      (* required on every loop *)
                         "body": [Stmt+]}}                                   (* v1 *)
+           | {"lemma": {"name": Id, "args": [Expr*]}}  (* v1; written `L(a, b);`; a no-op at run time *)
 
 SpecFun  ::= {"name": Id,
               "params": [ {"name": Id, "type": "int"|"seq"}* ],
@@ -116,6 +118,17 @@ Method   ::= {"name": Id, "params": [ {"name": Id, "type": Type}* ],
                  whole right-hand side of an assign or var init, with call-free
                  arguments (Dafny reference manual 8.5.2); a caller knows only the
                  callee's contract. *)
+
+Lemma    ::= {"name": Id, "params": [ {"name": Id, "type": Type}* ],
+              "requires": [ Expr* ], "ensures": [ Expr+ ],
+              "decreases"?: Expr,               (* required iff the body calls the lemma itself *)
+              "body": [ LemmaStmt* ]}           (* its proof; may be empty *)
+LemmaStmt ::= {"if": {"cond": Expr, "then": [LemmaStmt*], "else": [LemmaStmt*]}}
+           | {"lemma": {"name": Id, "args": [Expr*]}}   (* an EARLIER lemma, or itself *)
+              (* written `lemma l(a: int) requires .. ensures .. decreases .. { .. }`
+                 between the task's clauses and its body, Dafny's lemma (reference
+                 manual 6.3.3) with no return. A lemma is called only as a
+                 statement; its arguments call no method. *)
 
 Id       ::= [A-Za-z][A-Za-z0-9_]*
 ```

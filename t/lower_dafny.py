@@ -1451,6 +1451,14 @@ def stmts(body: list, indent: str, ctx: _Ctx) -> str:
             out.append(f"{indent}}} else {{")
             out.append(stmts(c["else"], indent + "  ", ctx))
             out.append(f"{indent}}}")
+        elif "lemma" in s:
+            # SPEC.md "Lemmas (v1)": Dafny's own lemma call statement; the
+            # caller owes the lemma's requires here and gets its ensures.
+            c = s["lemma"]
+            pre = []
+            args = [body_expr(a, ctx, pre) for a in c["args"]]
+            out.extend(indent + p for p in pre)
+            out.append(f"{indent}{c['name']}({', '.join(args)});")
         elif "while" in s:
             w = s["while"]
             # guard/invariants/decreases are spec positions: no self-calls
@@ -2168,6 +2176,8 @@ def _exec_undef(body: list, env: dict, funs: dict, st) -> bool:
                 it += 1
                 if it > interp.MAX_LOOP:
                     raise interp.Budget("loop cap")
+        elif "lemma" in s:
+            pass                  # SPEC.md "Lemmas (v1)": erased at run time
         else:
             raise ValueError(f"t has no statement {s!r}")
     return False
@@ -2418,6 +2428,43 @@ def _method_decl(task: dict, m: dict) -> list[str]:
     return out
 
 
+def _lemma_stmts(body: list, indent: str, self_name: str) -> list[str]:
+    """A t lemma body (only `if` and lemma calls, check_wf's lemma-body
+    rule) as Dafny proof statements."""
+    out = []
+    for s in body:
+        if "lemma" in s:
+            c = s["lemma"]
+            args = ", ".join(expr(a, self_name) for a in c["args"])
+            out.append(f"{indent}{c['name']}({args});")
+        else:
+            c = s["if"]
+            out.append(f"{indent}if {expr(c['cond'], self_name)} {{")
+            out.extend(_lemma_stmts(c["then"], indent + "  ", self_name))
+            out.append(f"{indent}}} else {{")
+            out.extend(_lemma_stmts(c["else"], indent + "  ", self_name))
+            out.append(f"{indent}}}")
+    return out
+
+
+def _lemma_decl(l: dict, self_name: str) -> list[str]:
+    """One t lemma as a Dafny lemma (reference manual 6.3.3). The body is
+    always emitted, even when empty: a Dafny lemma with no body at all is
+    an axiom, and `{}` is an obligation Dafny must discharge."""
+    ps = ", ".join(f"{p['name']}: {dafny_type(p['type'])}" for p in l["params"])
+    out = [f"lemma {l['name']}({ps})"]
+    for e in l["requires"]:
+        out.append(f"  requires {expr(e, self_name)}")
+    for e in l["ensures"]:
+        out.append(f"  ensures {expr(e, self_name)}")
+    if "decreases" in l:
+        out.append(f"  decreases {expr(l['decreases'], self_name)}")
+    out.append("{")
+    out.extend(_lemma_stmts(l["body"], "  ", self_name))
+    out.append("}")
+    return out
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Dafny reserved word, before anything below ever sees
@@ -2465,6 +2512,16 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         lines.append("{")
         lines.append(f"  {expr(f['body'], self_name)}")
         lines.append("}")
+        lines.append("")
+
+    # SPEC.md "Lemmas (v1)": each lemma is a Dafny lemma, proved in this
+    # file; a call statement gives the caller its ensures.
+    for l in task.get("lemmas", []):
+        if l["name"] == method:
+            raise NotImplementedError(
+                f"dafny: lemma {l['name']!r} collides with the task's "
+                f"lowered method name")
+        lines.extend(_lemma_decl(l, self_name))
         lines.append("")
 
     # SPEC.md "Methods (v1)": each method is a Dafny method of its own,
