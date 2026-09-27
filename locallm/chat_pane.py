@@ -384,13 +384,16 @@ class ChatPane:
 
     def __init__(self, parent: tk.Widget, palette: dict, q: queue.Queue,
                 checkpoint_dir: Path | None, on_status: Callable[[look.Say], None],
-                config_path: Path | None = None):
+                config_path: Path | None = None, people_root: Path | None = None):
         self.C = palette
         self.q = q
         self.checkpoint_dir = checkpoint_dir
         self.config_path = config_path or (
             checkpoint_dir / "harness.json" if checkpoint_dir else None)
         self.on_status = on_status
+        # per-person learning (DAWNR-LEARNING.md): off unless a people folder is given and the person turned it on
+        from dawnr_learning.pane import PaneLearning                  # noqa: PLC0415
+        self.learning = PaneLearning(people_root) if people_root is not None else None
         self.model = None
         self.tokenizer = None
         # One persona, this desktop's own operator (DAWNR-HARNESS.md's index
@@ -456,6 +459,11 @@ class ChatPane:
             row=0, column=3, padx=(look.SPACE.item, 0))
         _Button(row, C, "Persona…", self.open_persona).grid(
             row=0, column=4, padx=(look.SPACE.item, 0))
+        if self.learning is not None:                                 # the person's feedback on the last answer
+            for col, (label, act) in enumerate((("Good", lambda: self._learn_note(self.learning.thumbs(True))),
+                                                ("Not this", lambda: self._learn_note(self.learning.thumbs(False))),
+                                                ("Correct…", self.open_correct)), start=5):
+                _Button(row, C, label, act).grid(row=0, column=col, padx=(look.SPACE.item, 0))
 
     # ------------------------------------------------------------ status
     def refresh(self) -> look.Say:
@@ -507,6 +515,10 @@ class ChatPane:
             except Exception as e:                                  # noqa: BLE001
                 self.on_status(say_needs_modules(f"{type(e).__name__}: {e}"))
                 return
+            if self.learning is not None:
+                self._learn_note(self.learning.attach_adapter(self.model, self.checkpoint_dir))
+        if self.learning is not None:
+            self._learn_note(self.learning.user_turn(text))
         self.entry.delete(0, "end")
         persona = self.persona_store.get(self.person_id)
         if dawnr_persona.observe(persona, text):
@@ -579,6 +591,8 @@ class ChatPane:
             self._open_output_body = None
         elif ev == "final_parts":
             self.messages.append({"role": "assistant", "content": data})
+            if self.learning is not None:
+                self.learning.replied(self.messages)
 
     def _on_done(self, payload: dict):
         self._insert("\n", ())
@@ -659,12 +673,31 @@ class ChatPane:
                 justify="left", anchor="w").grid(row=1, column=0, sticky="w",
                                                  pady=(look.SPACE.item, 0))
         btns = tk.Frame(body, bg=C["paper"])
-        btns.grid(row=2, column=0, sticky="e", pady=(look.SPACE.item, 0))
+        btns.grid(row=4, column=0, sticky="e", pady=(look.SPACE.item, 0))
+        learn = self.learning.settings() if self.learning is not None else None
+        learn_on = tk.BooleanVar(value=bool(learn and learn["enabled"]))
+        learn_name = tk.StringVar(value=learn["person"] if learn else "")
+        if learn is not None:
+            tk.Checkbutton(body, text="Learn from my feedback (kept on this machine; yours to read and erase)",
+                           variable=learn_on, bg=C["paper"], fg=C["ink"], activebackground=C["paper"],
+                           activeforeground=C["ink"], selectcolor=C["card"], highlightthickness=0,
+                           font=SANS(BODY_SIZE), anchor="w").grid(row=2, column=0, sticky="w",
+                                                                  pady=(look.SPACE.item, 0))
+            who = tk.Frame(body, bg=C["paper"])
+            who.grid(row=3, column=0, sticky="w")
+            tk.Label(who, text="Your name for it:", bg=C["paper"], fg=C["muted"],
+                     font=SANS(CAPTION_SIZE)).grid(row=0, column=0)
+            tk.Entry(who, textvariable=learn_name, width=16, font=SANS(BODY_SIZE)).grid(row=0, column=1)
 
         def do_save():
             if self.config_path is not None:
                 config["offline"] = not allow_network.get()
                 save_harness_config(self.config_path, config)
+            if learn is not None:
+                try:
+                    self._learn_note(self.learning.save_settings(learn_on.get(), learn_name.get()))
+                except ValueError as e:
+                    self._learn_note(str(e))
             win.destroy()
 
         _Button(btns, C, "Save", do_save, primary=True).grid(row=0, column=0)
@@ -752,6 +785,41 @@ class ChatPane:
         _Button(btns, C, "Cancel", win.destroy).grid(row=0, column=1, padx=(look.SPACE.inner, 0))
         _Button(btns, C, "Forget everything", do_forget).grid(row=0, column=2, padx=(look.SPACE.inner, 0))
         win.grab_set()
+
+    # --------------------------------------------------------- learning
+    def open_correct(self):
+        """The person's own version of the last answer: it replaces the answer as a training example."""
+        _Button = _home()._Button
+        C = self.C
+        start = self.learning.last_answer_text() if self.learning is not None else ""
+        if not start:
+            self._learn_note(self.learning.off_sentence() if self.learning is not None else "")
+            return
+        win = tk.Toplevel(self.transcript)
+        win.title("Correct the last answer")
+        win.configure(bg=C["paper"])
+        win.transient(self.transcript.winfo_toplevel())
+        body = tk.Frame(win, bg=C["paper"], padx=look.SPACE.card, pady=look.SPACE.card)
+        body.grid(row=0, column=0)
+        text = tk.Text(body, width=72, height=18, font=MONO(BODY_SIZE), bg=C["log_bg"], fg=C["log_fg"],
+                       insertbackground=C["log_fg"], relief="flat")
+        text.grid(row=0, column=0)
+        text.insert("1.0", start)
+        btns = tk.Frame(body, bg=C["paper"])
+        btns.grid(row=1, column=0, sticky="e", pady=(look.SPACE.item, 0))
+
+        def do_save():
+            self._learn_note(self.learning.correct(text.get("1.0", "end-1c")))
+            win.destroy()
+
+        _Button(btns, C, "Keep my version", do_save, primary=True).grid(row=0, column=0)
+        _Button(btns, C, "Cancel", win.destroy).grid(row=0, column=1, padx=(look.SPACE.inner, 0))
+        win.grab_set()
+
+    def _learn_note(self, sentence: str | None):
+        """What learning kept, said in the transcript; nothing is remembered silently."""
+        if sentence:
+            self._insert(f"[{sentence}]\n", ("error",) if sentence.startswith("Learning is on, but") else ())
 
     # ------------------------------------------------------------- text
     def _insert(self, text: str, tags: tuple[str, ...]):

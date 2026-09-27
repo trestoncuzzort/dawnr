@@ -461,3 +461,192 @@ class Sampled:
     @property
     def mean_logprob(self):
         return self.logprob_sum / len(self.tokens) if self.tokens else None
+
+
+# ------------------------------------------------------------------ LoRA --
+# Low-rank adapters, off unless add_lora is called (dawnr's per-person learning,
+# DAWNR-LEARNING.md). LoRA (Hu et al., arXiv:2106.09685): the pretrained weight
+# W0 is frozen and a trainable update B A of rank r is added beside it,
+# h = W0 x + (alpha / r) B A x, with A random and B zero so the adapted model
+# starts exactly where the base is. The layer follows microsoft/LoRA's
+# loralib/layers.py Linear (github.com/microsoft/LoRA): lora_A is (r, in),
+# lora_B is (out, r), A is initialised as nn.Linear initialises its weight
+# (kaiming_uniform, a = sqrt(5)), dropout acts on the input to A. The paper
+# adapts the attention projections only and leaves the MLP to future work; the
+# repo's own peft recipe for the Phi student adapts attention and MLP
+# (t/loop_train.py), and so does this one.
+#
+# Two things differ from loralib, on purpose. loralib merges B A into the base
+# weight as a side effect of .eval() and unmerges on .train(); here merging is
+# an explicit call (merge_lora), because dawnr swaps one person's adapter for
+# another's on the same base and must be able to show the base never changed
+# (base_fingerprint before add_lora and after remove_lora). And an adapter can
+# be switched off in place (set_lora_enabled), which gives the frozen base's
+# own predictions without unloading anything: the reference a measurement
+# compares against.
+
+LORA_TARGETS = {"gpt": ("attn.c_attn", "attn.c_proj", "mlp.c_fc", "mlp.c_proj"),
+                "modern": ("attn.c_attn", "attn.c_proj", "mlp.gate_up", "mlp.c_proj")}
+
+
+class LoRALinear(nn.Module):
+    """A frozen nn.Linear with a trainable rank-r update beside it."""
+
+    def __init__(self, base: nn.Linear, r: int, alpha: float, dropout: float = 0.0):
+        super().__init__()
+        if not isinstance(base, nn.Linear):
+            raise TypeError(f"LoRA wraps an nn.Linear, not {type(base).__name__}")
+        if r < 1 or alpha <= 0 or not 0 <= dropout < 1:
+            raise ValueError(f"LoRA needs r >= 1, alpha > 0 and dropout in [0, 1); got {r}, {alpha}, {dropout}")
+        self.base = base
+        for p in base.parameters():
+            p.requires_grad_(False)
+        self.r, self.alpha, self.scaling = int(r), float(alpha), float(alpha) / r
+        self.lora_A = nn.Parameter(base.weight.new_zeros((r, base.in_features)))
+        self.lora_B = nn.Parameter(base.weight.new_zeros((base.out_features, r)))
+        nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
+        self.lora_dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
+        self.enabled = True
+
+    @property
+    def in_features(self) -> int:
+        return self.base.in_features
+
+    @property
+    def out_features(self) -> int:
+        return self.base.out_features
+
+    def delta_weight(self) -> torch.Tensor:
+        """The update this adapter adds to the base weight: (alpha / r) B A, shaped like it."""
+        return (self.lora_B @ self.lora_A) * self.scaling
+
+    def forward(self, x):
+        out = self.base(x)
+        if not self.enabled:
+            return out
+        return out + F.linear(F.linear(self.lora_dropout(x), self.lora_A), self.lora_B) * self.scaling
+
+
+def _lora_slots(model, targets):
+    """(block index, dotted path, parent module, attribute name) for every target Linear."""
+    for i, block in enumerate(model.transformer.h):
+        for path in targets:
+            parent_path, _, leaf = path.rpartition(".")
+            parent = block.get_submodule(parent_path) if parent_path else block
+            yield i, path, parent, leaf
+
+
+def has_lora(model) -> bool:
+    return any(isinstance(m, LoRALinear) for m in model.modules())
+
+
+def lora_modules(model) -> list[tuple[str, LoRALinear]]:
+    return [(name, m) for name, m in model.named_modules() if isinstance(m, LoRALinear)]
+
+
+def add_lora(model, r: int = 8, alpha: float | None = None, dropout: float = 0.0, targets=None) -> dict:
+    """Freeze every parameter of the model and wrap each block's target Linears in a LoRALinear.
+
+    Returns the adapter's configuration, which is also kept as model.lora_config
+    and saved with the adapter (lora_state), so a load can refuse a mismatch.
+    alpha defaults to r (scaling 1): the LoRA paper sets alpha to the first r it
+    tries and does not tune it. remove_lora restores the model exactly.
+    """
+    if has_lora(model):
+        raise ValueError("this model already carries a LoRA adapter; remove_lora first")
+    targets = tuple(targets or LORA_TARGETS[model.config.architecture])
+    alpha = float(r if alpha is None else alpha)
+    slots = list(_lora_slots(model, targets))
+    for _i, path, parent, leaf in slots:
+        if not isinstance(getattr(parent, leaf, None), nn.Linear):
+            raise ValueError(f"LoRA target {path!r} is not an nn.Linear in this model")
+    model._lora_requires_grad = {name: p.requires_grad for name, p in model.named_parameters()}
+    for p in model.parameters():
+        p.requires_grad_(False)
+    for _i, _path, parent, leaf in slots:
+        setattr(parent, leaf, LoRALinear(getattr(parent, leaf), r, alpha, dropout))
+    model.lora_config = {"r": int(r), "alpha": alpha, "dropout": float(dropout), "targets": list(targets),
+                         "n_layer": model.config.n_layer, "architecture": model.config.architecture}
+    return dict(model.lora_config)
+
+
+def remove_lora(model) -> None:
+    """Unwrap every LoRALinear back to its frozen base and restore each parameter's requires_grad."""
+    for name, m in lora_modules(model):
+        parent_path, _, leaf = name.rpartition(".")
+        setattr(model.get_submodule(parent_path) if parent_path else model, leaf, m.base)
+    for name, p in model.named_parameters():
+        p.requires_grad_(getattr(model, "_lora_requires_grad", {}).get(name, True))
+    model.__dict__.pop("_lora_requires_grad", None)
+    model.__dict__.pop("lora_config", None)
+
+
+def merge_lora(model) -> None:
+    """Fold every adapter into its base weight (W0 + (alpha / r) B A) and unwrap it.
+
+    The result is a plain GPT whose state_dict loads like any checkpoint; the
+    adapter's own tensors are gone, so this is an export, never a step in a
+    session (a merged base can no longer be shown untouched)."""
+    with torch.no_grad():
+        for _name, m in lora_modules(model):
+            m.base.weight += m.delta_weight().to(m.base.weight.dtype)
+    remove_lora(model)
+
+
+def set_lora_enabled(model, enabled: bool) -> None:
+    """Switch every adapter on or off in place; off, the model computes exactly the frozen base."""
+    for _name, m in lora_modules(model):
+        m.enabled = bool(enabled)
+
+
+def lora_parameters(model) -> list[nn.Parameter]:
+    return [p for _name, m in lora_modules(model) for p in (m.lora_A, m.lora_B)]
+
+
+def lora_state(model) -> dict:
+    """The adapter alone, on the CPU: its configuration and every lora_A / lora_B tensor by module name."""
+    if not has_lora(model):
+        raise ValueError("this model carries no LoRA adapter")
+    tensors = {}
+    for name, m in lora_modules(model):
+        tensors[name + ".lora_A"] = m.lora_A.detach().to("cpu", torch.float32).clone()
+        tensors[name + ".lora_B"] = m.lora_B.detach().to("cpu", torch.float32).clone()
+    return {"config": dict(model.lora_config), "tensors": tensors}
+
+
+def load_lora_state(model, state: dict) -> dict:
+    """Wrap the model with the saved adapter's configuration and load its tensors, refusing any mismatch."""
+    config = dict(state["config"])
+    if config.get("architecture") != model.config.architecture or config.get("n_layer") != model.config.n_layer:
+        raise ValueError(f"this adapter was made for a {config.get('architecture')} model of "
+                         f"{config.get('n_layer')} layers, not {model.config.architecture} of {model.config.n_layer}")
+    if not has_lora(model):
+        add_lora(model, r=config["r"], alpha=config["alpha"], dropout=config["dropout"], targets=config["targets"])
+    elif model.lora_config != config:
+        raise ValueError("the model carries a different adapter configuration; remove_lora first")
+    modules = dict(lora_modules(model))
+    expected = {name + suffix for name in modules for suffix in (".lora_A", ".lora_B")}
+    if set(state["tensors"]) != expected:
+        raise ValueError("the adapter's tensors do not name this model's adapted modules")
+    with torch.no_grad():
+        for key, tensor in state["tensors"].items():
+            name, _, which = key.rpartition(".")
+            target = getattr(modules[name], which)
+            if tuple(target.shape) != tuple(tensor.shape):
+                raise ValueError(f"{key} is {tuple(tensor.shape)}, the model's is {tuple(target.shape)}")
+            target.copy_(tensor.to(target.device, target.dtype))
+    return config
+
+
+def base_fingerprint(model) -> str:
+    """sha256 over every non-LoRA tensor in the model, by name: equal before and after an adapter's life."""
+    import hashlib
+    h = hashlib.sha256()
+    for name, tensor in sorted(model.state_dict().items()):
+        if ".lora_" in name:
+            continue
+        name = name.replace(".base.", ".")          # a wrapped Linear names its weight <module>.base.weight
+        h.update(name.encode())
+        h.update(tensor.detach().to("cpu").contiguous().numpy().tobytes() if tensor.dtype != torch.bfloat16
+                 else tensor.detach().to("cpu", torch.float32).contiguous().numpy().tobytes())
+    return h.hexdigest()

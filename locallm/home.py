@@ -2368,9 +2368,10 @@ class Home(ttk.Frame):
         the same candidate step 4 offers (`ready_made`), so discovering a
         usable model is not duplicated between the two cards.
         """
+        from dawnr_learning.feedback import default_root              # noqa: PLC0415  (DAWNR-LEARNING.md)
         self.chat = chat_pane.ChatPane(
             card.body, self.C, self.q, ready_made(HERE),
-            on_status=lambda say: self._show(5, say))
+            on_status=lambda say: self._show(5, say), people_root=default_root())
 
     # --------------------------------------------------------- more settings
     def _build_more(self, col):
