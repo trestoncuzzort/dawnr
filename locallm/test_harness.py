@@ -431,10 +431,15 @@ class SkillTests(unittest.TestCase):
             self.assertTrue(h.call("skill_script", {"name": "one", "script": "run.sh"}).is_error)
             self.assertTrue(h.call("skill_script", {"name": "one", "script": "../../x.py"}).is_error)
 
-    def test_the_shipped_skill_is_valid(self):
+    def test_the_shipped_skills_are_valid(self):
         found, problems = skills_mod.discover([HERE / "dawnr_harness" / "skills"])
         self.assertEqual(problems, [])
-        self.assertIn("t-repair", found)
+        for name in ("t-repair", "t-spec-writing", "t-debug-with-examples", "reading-untrusted-pages",
+                     "proof-failure-triage", "cite-your-source"):
+            self.assertIn(name, found)
+            line = found[name].index_line()
+            self.assertNotIn("\n", line, name)                      # the index is one line per skill
+            self.assertFalse(line.endswith("..."), f"{name}'s description is truncated in the index")
 
 
 class MCPServerUnit(unittest.TestCase):
