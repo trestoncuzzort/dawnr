@@ -27,7 +27,7 @@ if __name__ == "__main__" and __package__ in (None, ""):
     raise SystemExit(_main())
 
 from .retrieval import recall  # noqa: E402
-from .store import KINDS, MemoryStore, StoreError, memory_root  # noqa: E402
+from .store import KINDS, MemoryStore, StoreError, memory_root, write_owner_only  # noqa: E402
 
 DEFAULT_BUDGET = 256
 
@@ -117,9 +117,8 @@ def main(argv=None) -> int:
         if a.out is None:
             sys.stdout.write(text)
         else:
-            from .store import _write_file
             a.out.parent.mkdir(parents=True, exist_ok=True)
-            _write_file(a.out.resolve(), text.encode("utf-8"), "export")
+            write_owner_only(a.out.resolve(), text.encode("utf-8"), "export")
             print(f"exported {store.person}'s memory to {a.out}")
     elif a.cmd == "forget-everything":
         if not a.yes:

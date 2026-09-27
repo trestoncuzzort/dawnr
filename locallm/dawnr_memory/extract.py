@@ -42,7 +42,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Iterable
 
-from .retrieval import STOP_WORDS, s_stem, terms
+from .retrieval import STOP_WORDS, confidence_of, s_stem, terms
 from .store import MAX_EVIDENCE, MAX_SESSIONS, MAX_TEXT, SESSION, MemoryStore, clean_text, fmt_time
 
 MAX_MESSAGE = 2000            # a longer message is taken as a paste, not as the person speaking
@@ -475,12 +475,15 @@ def _apply(store: MemoryStore, p: Proposal, session_id: str, now: float | None, 
         report.added.append(record)
         return
     if norm(target["text"]) == norm(p.text):
-        sessions = list(target.get("sessions") or [])
+        # a hand-edited record may hold anything in these fields: read them defensively
+        sessions = [s for s in target.get("sessions") or [] if isinstance(s, str)] \
+            if isinstance(target.get("sessions"), list) else []
         if session_id not in sessions and target.get("source_session") != session_id:
-            target.update(sessions=(sessions + [session_id])[-MAX_SESSIONS:], seen=int(target.get("seen", 1)) + 1,
-                          last_seen=stamp, updated=stamp)
+            seen = target.get("seen") if isinstance(target.get("seen"), int) else 1
+            target.update(sessions=(sessions + [session_id])[-MAX_SESSIONS:], seen=seen + 1, last_seen=stamp,
+                          updated=stamp)
             if target.get("origin") != "person":
-                target["confidence"] = round(min(0.99, 1.0 - (1.0 - float(target.get("confidence", 0.5))) * 0.5), 3)
+                target["confidence"] = round(min(0.99, 1.0 - (1.0 - confidence_of(target)) * 0.5), 3)
             store.put(target)
             report.reinforced.append(target["id"])
         return
