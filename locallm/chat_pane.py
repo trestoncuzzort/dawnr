@@ -515,9 +515,8 @@ class ChatPane:
             except Exception as e:                                  # noqa: BLE001
                 self.on_status(say_needs_modules(f"{type(e).__name__}: {e}"))
                 return
-            if self.learning is not None:
-                self._learn_note(self.learning.attach_adapter(self.model, self.checkpoint_dir))
         if self.learning is not None:
+            self._learn_note(self.learning.sync(self.model, self.checkpoint_dir))
             self._learn_note(self.learning.user_turn(text))
         self.entry.delete(0, "end")
         persona = self.persona_store.get(self.person_id)
