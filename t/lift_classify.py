@@ -1029,6 +1029,41 @@ def _closure(module: Module, method: MethodDecl) -> tuple[Decl, ...]:
     return tuple(order)
 
 
+def _closure_incl_methods(module: Module, method: MethodDecl) -> tuple[Decl, ...]:
+    """Row 51's own reachability walk: identical to `_closure` except a
+    `MethodDecl` callee is also followed and included, not dropped. `_closure`
+    itself must stay function/lemma-only -- its other three callers (the
+    mutual-recursion check, the read-only-array condition, `find_array_
+    mutation`) all assume a closure of side-effect-free, provable-body
+    declarations, and a method has neither property, so widening the shared
+    helper would change what those three see. The source-axiom/source-assume
+    check has no such assumption: Dafny gives a called METHOD's `ensures`
+    exactly the same caller-trusted status as a called function's or lemma's
+    (Reference Manual 6.3.1, 6.3.3), so an axiom-attributed method reached as
+    a callee is exactly as much a row-51 hazard as an axiom-attributed
+    function or lemma is, and must be walked into and included the same way."""
+    by_name = {d.name: d for d in module.decls if d.name}
+    order: list[Decl] = []
+    seen: set[str] = set()
+
+    def visit(name: str) -> None:
+        if name in seen:
+            return
+        d = by_name.get(name)
+        if d is None or not isinstance(d, (FunctionDecl, LemmaDecl, MethodDecl)):
+            return
+        seen.add(name)
+        for dep in _called_names(d):
+            if dep != name:
+                visit(dep)
+        order.append(d)
+
+    for dep in _called_names(method):
+        if dep != method.name:
+            visit(dep)
+    return tuple(order)
+
+
 # ---------------------------------------------------------------------------
 # `source-axiom` / `source-assume` (row 51, 2026-09-27, t/LIFT-2026-09-26.md's
 # DT0258 finding): a source-level reading, over the WHOLE module, of the
@@ -2659,13 +2694,21 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # module (a declaration outside this method's closure is a note, not a
     # refusal -- `axiom_in_file` below), then checked against exactly what
     # LIFTER-DECISIONS row 51 names: the method's own closure (its spec,
-    # body and invariants are all inside `_called_names(method)`'s reach,
-    # which is how `closure` itself was built) and, for `assume`, the
-    # method's own body directly.
+    # body and invariants are all inside `_called_names(method)`'s reach)
+    # and, for `assume`, the method's own body directly. This closure is
+    # `_closure_incl_methods`, not the shared `closure`/`source_closure`:
+    # `closure` stops at any callee that is not a FunctionDecl/LemmaDecl, so
+    # an axiom-attributed METHOD reached as a callee (row 51 review finding
+    # 2: `method {:axiom} DoubleIt(...)` called by a plain method) would
+    # otherwise be neither checked against `axiomatised` here nor excluded
+    # from `axiom_in_file` correctly -- it would be dropped from the check
+    # entirely and then wrongly reported as an axiom lying outside the
+    # closure, though it is a direct callee.
+    axiom_closure = _closure_incl_methods(module, source_method)
     axiomatised = _axiomatised_names(module)
     axiom_only = _axiom_only_functions(module, axiomatised)
-    closure_names = {d.name for d in closure if d.name}
-    for d in closure:
+    closure_names = {d.name for d in axiom_closure if d.name}
+    for d in axiom_closure:
         if not d.name:
             continue
         if d.name in axiomatised:
