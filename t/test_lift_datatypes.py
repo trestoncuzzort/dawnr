@@ -329,6 +329,7 @@ def test_a_match_on_int_literals_with_a_default_is_an_if_chain() -> None:
     rr = R.rewrite(mod, v, "unit.dfy", "sha")
     assert rr.refusal is None, rr.refusal
     assert check_wf.check_wf(rr.task) == []
+    assert any(rw.rule == "match-literal-if-chain" for rw in rr.record.rewrites), rr.record.rewrites
     body = rr.task["body"]
     assert "if" in body[-1], body[-1]
     ref = interp.Reference(rr.task)
