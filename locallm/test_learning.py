@@ -661,6 +661,10 @@ class SleepPerson(unittest.TestCase):
             self.assertFalse(A.status(s, identity)["fresh"])
             with self.assertRaises(ValueError):                                # continue would keep the erased one
                 S.sleep_person(s, d, cfg=S.SleepConfig(mode="continue"), split=SPLIT, device="cpu", log=None)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):                              # the nightly command sees the stale one
+                cli(["--root", str(people), "sleep-all", "--model", str(d), "--min-new", "99", "--device", "cpu"])
+            self.assertIn("bo: sleeping (0 new, stale)", out.getvalue())
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(cli(["--root", str(people), "forget-all", "bo"]), 2)   # asks for --yes
                 cli(["--root", str(people), "forget-all", "bo", "--yes"])
