@@ -7,7 +7,9 @@ and `_ret_capacity`'s LITERAL-ONLY WRITES source):
     EXACT-length return (replaceLastElement, removeKthElement);
   * a seq return written only by literals under a branch (da0054, da0488);
   * an append-built local folded into the return, whose `:= []` now
-    initializes the length local (vt0029 `ones`);
+    initializes the length local (vt0029 `ones`), and whose executable
+    `len` reads that length local rather than the buffer capacity (vt0362
+    `spacing`);
   * and, in the twin's certificate, an `ite` or a short-circuit `and`/`or`
     resolved branch-free (clamp, is_equal_to_sum_even), which used to reach
     the certificate as a C conditional whose dead arm doomed a smoke goal.
@@ -96,6 +98,26 @@ task onesT(n: int) returns (result: seq)
 }
 """
 
+# Executable `len` of a capacity-tracked return reads its length local, not
+# the buffer capacity (`_EXEC_SEQ_LEN`; vericoding vt0362 `spacing`, whose
+# guard `len(y) < len(x)` used to lower to `result_n < x_n`).
+SPACING = """t 1
+task spacingT(x: seq) returns (result: seq)
+  ensures len(result) == len(x)
+  ensures forall i in [0, len(x)) . result[i] > 0
+{
+  var y: seq := [];
+  while GUARD
+    invariant len(y) <= len(x)
+    invariant forall i_v in [0, len(y)) . y[i_v] > 0
+    decreases len(x) - len(y)
+  {
+    y := y + [VAL];
+  }
+  result := y;
+}
+"""
+
 FAILURES: list = []
 
 
@@ -144,6 +166,10 @@ def lowering_checks() -> None:
         encoding="utf-8")
     check("folded local's `:= []` initializes the length local",
           "result_len = 0;" in c, c)
+    c = _write(SPACING.replace("GUARD", "len(y) < len(x)").replace("VAL", "1"),
+               "spacing_real").read_text(encoding="utf-8")
+    check("executable len of the tracked return reads its length local",
+          "while ((result_len < x_n))" in c, c)
 
 
 def kernel_checks() -> None:
@@ -159,6 +185,14 @@ def kernel_checks() -> None:
     ]
     for src, body, want, stem in cases:
         r = framac.verify(_write(src.replace("BODY", body), stem))
+        ok = (r.outcome == Outcome.VERIFIED) if want else (r.outcome != Outcome.VERIFIED)
+        check(f"{stem}: {'verifies' if want else 'is not verified'}", ok, r.outcome)
+    for guard, val, want, stem in (("len(y) < len(x)", "1", True, "spacing_real"),
+                                   ("len(y) < len(x)", "0", False, "spacing_zero"),
+                                   ("len(y) + 1 < len(x)", "1", False,
+                                    "spacing_short")):
+        r = framac.verify(_write(SPACING.replace("GUARD", guard)
+                                 .replace("VAL", val), stem))
         ok = (r.outcome == Outcome.VERIFIED) if want else (r.outcome != Outcome.VERIFIED)
         check(f"{stem}: {'verifies' if want else 'is not verified'}", ok, r.outcome)
     for body, want, stem in (("v := v + [1];", True, "ones_real"),
