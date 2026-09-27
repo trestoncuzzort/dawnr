@@ -22,12 +22,12 @@ passes admit():
    tool and harness outputs, trusted or not, recalled memory, the assistant's own words, the harness's index,
    the pasted parts of their own messages. A sentence the person copied from a page, or typed because the
    assistant told them to, is the page's sentence; an assistant repeating the person afterwards changes nothing;
-3. the statement says nothing the evidence does not: every content word of it is a word of the evidence, or one
-   of the fixed template words the rules phrase statements with ("likes", "lives", "their", ...); and, when the
-   statement asserts a relation the rules can name -- like/dislike, want/avoid, an ordered "A over B" -- the
-   evidence must carry that same polarity and order, not just its nouns, a negation word's reach running to the
-   next punctuation mark as in Pang, Lee & Vaithyanathan's negation tagging for sentiment words (arXiv:cs/0205070,
-   sec. 6.1); a relation the rules cannot confirm this way is refused, never admitted;
+3. the statement is one the enumerated patterns make, read whole from the person's own words, and it fails
+   closed: a sentence of theirs that holds the evidence must be read to its end by the patterns, every clause of
+   it, with no question mark and no negation outside the patterns' own words; one of those clauses, inside the
+   evidence, must make exactly this statement (the same relation and polarity, the same object word for word and
+   in order); a model's kind and slot must be the pattern's. Anything else is refused as "cannot ground: <why>",
+   true statements in phrasing no pattern reads included (grounded(); the person can still pin a note);
 4. it is not a secret or an identifier (passwords, keys, card and account numbers, long digit strings, e-mail
    addresses, links), which dawnr does not remember on its own; the person can still pin a note;
 5. a model's proposal in a session that read outside text is refused outright: once untrusted text is in the
@@ -60,6 +60,9 @@ QUOTED = re.compile(r"\"[^\"\n]{0,2000}\"|“[^”\n]{0,2000}”|«[^»\n]{0,200
 LINE_OUT = re.compile(r"^(?:\s*>|\s*t\s+\d+\s*$|\s*example:| {4}|\t)", re.I)
 CODEISH = re.compile(r"[{}]|:=|==|->|=>|</?[A-Za-z][\w-]*>")
 SENTENCE_END = re.compile(r"[.!?;]+(?=\s|$)|\n")      # a stop inside "example.org" or "3.5" ends nothing
+# where a sentence ends for grounding, and so how far a negation reaches: not at a comma, a colon, a semicolon or
+# the dots of an ellipsis ("I like cats... not." is one sentence)
+SENTENCE_STOP = re.compile(r"(?<!\.)\.(?=\s|$)|[!?]+(?=\s|$)|\n")
 JOIN = re.compile(r",?\s+(?:and|but|also)\s+(?=(?:i|i'm|im|i've|i'd|my|please|remember|don'?t|do not|keep in mind|"
                   r"call me|from now on|always|never)\b)", re.I)
 FILLER = re.compile(r"^(?:(?:hi|hello|hey|well|also|oh|ok|okay|so|btw|by the way|actually|anyway|and|but|fyi|"
@@ -89,6 +92,7 @@ SHIFT = [(re.compile(p, re.I), r) for p, r in (
     (r"\byourself\b", "dawnr"), (r"\byours\b", "dawnr's"), (r"\byour\b", "dawnr's"), (r"\byou\b", "dawnr"))]
 
 # the only words a statement may carry that its evidence does not: the rules' own phrasing and the pronoun shift
+# (grounding now compares a statement with the patterns' own, word for word; this names that vocabulary for tests)
 TEMPLATE = frozenset(terms(
     "name is are wants want to be called lives live from works work learning working building likes like dislikes "
     "dislike prefers prefer would rather favorite favourite fan their they them theirs themselves they're they've "
@@ -148,6 +152,16 @@ def clauses(text: str) -> list[str]:
             if 2 <= len(piece) <= MAX_CLAUSE:
                 out.append(piece)
     return out
+
+
+def sentence_spans(text: str) -> list[tuple[int, int]]:
+    """(start, end) of each sentence of `text`, its end mark included (SENTENCE_STOP)."""
+    spans, start = [], 0
+    for m in SENTENCE_STOP.finditer(text):
+        spans.append((start, m.end()))
+        start = m.end()
+    spans.append((start, len(text)))
+    return [(a, b) for a, b in spans if text[a:b].strip()]
 
 
 def third_person(text: str) -> str:
@@ -230,17 +244,36 @@ class SessionView:
                            [norm(o) for o in self.outside])
         return self._norms
 
-    def said_first(self, evidence: str) -> bool:
-        """The person said `evidence` (in the speaking part of a message they typed) before anything else in the
+    def _theirs(self, ev: str) -> list[int]:
+        """The messages in whose speaking part the person said `ev` (normalised) before anything else in the
         session had said it. Linear in the transcript: outside text only grows, so it is enough to find where it
-        first held the evidence."""
-        ev = norm(evidence)
-        if not ev:
-            return False
+        first held `ev`."""
         speakable, person, outside = self._normed()
         first = next((k for k, o in enumerate(outside) if ev in o), len(outside) + 1)
-        return any(before <= first and ev in said and ev in typed
-                   for said, typed, before in zip(speakable, person, self.before))
+        return [i for i, (said, typed, before) in enumerate(zip(speakable, person, self.before))
+                if before <= first and ev in said and ev in typed]
+
+    def said_first(self, evidence: str) -> bool:
+        """The person said `evidence` (in the speaking part of a message they typed) before anything else in the
+        session had said it."""
+        ev = norm(evidence)
+        return bool(ev) and bool(self._theirs(ev))
+
+    def contexts(self, evidence: str) -> list[str]:
+        """Each whole sentence of the person's own speech that holds `evidence`, in the messages where they said it
+        first: what grounding reads, so that a quote cannot leave out the words around it ("I like cats" out of "I
+        never said I like cats."). A quote the person's text does not hold word for word has no context."""
+        ev = norm(evidence)
+        if not ev:
+            return []
+        find = re.compile(r"\s+".join(map(re.escape, ev.split())), re.I)
+        out = []
+        for i in self._theirs(ev):
+            text = self.speakable[i]
+            spans = sentence_spans(text)
+            for m in find.finditer(text):
+                out.extend(text[a:b] for a, b in spans if a < m.end() and m.start() < b)
+        return out
 
     def says(self, evidence: str) -> bool:
         ev = norm(evidence)
@@ -264,6 +297,20 @@ class ForgetRequest:
     words: list                     # the content words of what to forget
     evidence: str
     origin: str = "rules"
+
+
+@dataclass(frozen=True)
+class Reading:
+    """What one clause says under the enumerated pattern that read it (_read)."""
+    kind: str
+    text: str                       # the statement: the pattern's template with its {k} and {x} filled in
+    slot: str | None
+    confidence: float
+    template: str                   # "likes {x}", "wants dawnr to {k} {x}", ...
+    k: str                          # the pattern's own choice word ("always", "at", "a"), or ""
+    x: str                          # the object, in the third person, word for word
+    whole: bool                     # the pattern read the clause to its end: nothing after the object was cut off
+                                    # but end marks and the trailing words the rules drop ("now", "too", ...)
 
 
 def _object(x: str) -> str | None:
@@ -326,6 +373,48 @@ _RULES = [(re.compile(p, re.I), make, statement, slot, conf, check) for p, make,
      r"title|occupation|profession|hometown|home town|team|editor|operating system|os|shell|major|field|main goal|"
      r"goal|birthday|level)\s+(?:is|are)\s+(?P<x>.+)$", "fact", "their {k} is {x}", "my {k}", 0.7, "object"),
 )]
+# Relations grounding can read that the rules do not propose on their own (so "I want a function that sorts" is
+# not made a memory), because a model's proposal may state them.
+_GROUNDING_ONLY = [(re.compile(p, re.I), make, statement, slot, conf, check) for p, make, statement, slot, conf, check
+                   in ((r"^i\s+(?:really\s+|also\s+|just\s+|do\s+)?want\s+(?P<x>.+)$",
+                        "preference", "wants {x}", "want {key}", 0.6, "object"),
+                       (r"^i\s+(?:really\s+|also\s+|just\s+|do\s+)?avoid\s+(?P<x>.+)$",
+                        "preference", "avoids {x}", "want {key}", 0.6, "object"))]
+_READS = _RULES + _GROUNDING_ONLY
+
+
+def _read(clause: str, rules=_RULES):
+    """What `clause` says under the first pattern of `rules` that matches it: a Reading, a ForgetRequest, or None
+    when none matches or the first that does finds no crisp object."""
+    for pattern, make, statement, slot, conf, check in rules:
+        m = pattern.match(clause)
+        if not m:
+            continue
+        x, k = m.group("x").strip(), (m.groupdict().get("k") or "").lower().strip()
+        if make == "forget":
+            words = [t for t in terms(x) if t not in PRONOUNS]
+            return ForgetRequest(words, clause) if words else None
+        if check == "raw":
+            obj = x.strip(" .!?")
+            if not obj or len(obj.split()) > 24:
+                return None
+            whole = True
+        else:
+            obj = _object(x)
+            if obj is None:
+                return None
+            if check == "name" and not NAME.fullmatch(obj):
+                return None
+            if check == "identity" and obj.split()[0].lower() in HEDGES:
+                return None
+            whole = obj == TRAILING.sub("", x.strip(" .!?'\"()[]"))     # _object cut nothing but what is dropped
+        kind = make
+        if make == "remember":
+            kind = "preference" if obj.lower().startswith("to ") else "fact"
+        said = third_person(obj)
+        return Reading(kind, statement.format(x=said, k=k), slot.format(k=k, key=_key(obj)) if slot else None,
+                       conf, statement, k, said, whole)
+    return None
 
 
 class RuleProposer:
@@ -343,33 +432,10 @@ class RuleProposer:
 
     @staticmethod
     def _one(clause: str):
-        for pattern, make, statement, slot, conf, check in _RULES:
-            m = pattern.match(clause)
-            if not m:
-                continue
-            x, k = m.group("x").strip(), (m.groupdict().get("k") or "").lower().strip()
-            if make == "forget":
-                words = [t for t in terms(x) if t not in PRONOUNS]
-                return ForgetRequest(words, clause) if words else None
-            if check == "raw":
-                obj = x.strip(" .!?")
-                if not obj or len(obj.split()) > 24:
-                    return None
-            else:
-                obj = _object(x)
-                if obj is None:
-                    return None
-                if check == "name" and not NAME.fullmatch(obj):
-                    return None
-                if check == "identity" and obj.split()[0].lower() in HEDGES:
-                    return None
-            kind = make
-            if make == "remember":
-                kind = "preference" if obj.lower().startswith("to ") else "fact"
-            text = statement.format(x=third_person(obj), k=k)
-            slot_name = slot.format(k=k, key=_key(obj)) if slot else None
-            return Proposal(kind, text, clause, slot_name, conf, "rules")
-        return None
+        got = _read(clause)
+        if isinstance(got, Reading):
+            return Proposal(got.kind, got.text, clause, got.slot, got.confidence, "rules")
+        return got
 
 
 def proposals_from_json(text: str, origin: str = "model") -> tuple[list[Proposal], list[str]]:
@@ -399,99 +465,115 @@ def proposals_from_json(text: str, origin: str = "model") -> tuple[list[Proposal
     return out, errors
 
 
-# ---------------------------------------------------- grounding: the relation, not only its nouns --
+# --------------------------------------------------------- grounding: read whole, or refuse --
 
-# A shared noun is not a shared claim: "I like cats" and "I dislike cats" (or a proposal that swaps "prefers tea
-# over coffee" to "prefers coffee over tea") share every content word once "likes"/"dislikes"/"prefers" are
-# dropped as the rules' own phrasing, so a bag-of-words check alone admits the opposite of what was said. Pang,
-# Lee & Vaithyanathan (arXiv:cs/0205070, sec. 6.1, read 2026-09-27) tag every word from a negation cue ("not",
-# "isn't", "didn't", ...) up to the next punctuation mark, because a cue's reach is the clause, not the next
-# token ("don't even slightly like" still negates "like"); that scope rule is reused here for a narrower,
-# deterministic question than their trained classifier answered: for the small set of relations the rules phrase
-# statements with, does the evidence carry the same polarity, and, for an ordered "A over B", the same order.
-# Nothing here resolves a relation it cannot name: a family whose cue is absent, or whose polarity or order
-# cannot be confirmed on the evidence side, makes grounded() refuse rather than guess (fail closed).
+# Round 1 named the relations it knew (like/dislike, want/avoid, an ordered "A over B"), checked their polarity with
+# a negation's reach cut at the next comma, and let every other phrasing fall through to a bag-of-words check. So a
+# phrasing its lists missed was admitted: "I don't, honestly, like cats." grounded "likes cats", and "I prefer tea
+# above coffee." grounded "prefers coffee above tea". That is the failure Saltzer and Schroeder's fail-safe defaults
+# warn of ("The Protection of Information in Computer Systems", 1975, sec. I.A.3(b),
+# web.mit.edu/Saltzer/www/publications/protection/Basic.html, read 2026-09-27): "a design or implementation mistake
+# in a mechanism that explicitly excludes access tends to fail by allowing access, a failure which may go unnoticed
+# in normal use". Grounding is now allowlist validation as OWASP's Input Validation Cheat Sheet puts it
+# (cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html, read 2026-09-27): "defining exactly
+# what IS authorized, and by definition, everything else is not authorized", each pattern "covering the whole input
+# string (^...$)", a denylist only ever a supplement. The allowlist is the rules' own patterns plus want and avoid
+# (_READS). A statement is admitted only when
+#   1. it is in one of the patterns' statement forms ("likes {x}", "prefers {x}", "lives in {x}", ...);
+#   2. a sentence of the person's own that holds the evidence reads whole: no question mark in it, every clause of
+#      it read by a pattern to its end (nothing cut off after an object but end marks and the trailing words the
+#      rules drop, "now", "too", ...), and no negation in a filler before a clause ("No, I like cats"), the one
+#      place a negation word could stand outside the patterns' own words. A negation therefore reaches its whole
+#      sentence, never stopping at a comma: a sentence with any clause the patterns cannot read grounds nothing;
+#   3. one of those clauses lies inside the quoted evidence and makes exactly this statement: the same pattern, so
+#      the same relation and polarity ("likes" is not "dislikes", "always" is not "never"), and the same object word
+#      for word and in order, so no list of order words ("over", "above", "more than", ...) is needed or can be
+#      incomplete: "prefers tea above coffee" is admitted from "I prefer tea above coffee" and its swap is not.
+# Anything else is "cannot ground: <why>", true statements in phrasing no pattern reads included; the person can
+# pin those as notes. A reason never holds the proposal's words, which may be a refused secret.
 NEGATION = re.compile(r"\b(?:not|never|no|none|without|"
                       r"don'?t|do\s+not|dont|doesn'?t|does\s+not|doesnt|didn'?t|did\s+not|didnt|"
                       r"isn'?t|is\s+not|isnt|aren'?t|are\s+not|arent|wasn'?t|was\s+not|wasnt|"
                       r"weren'?t|were\s+not|werent|won'?t|will\s+not|wont|"
                       r"can'?t|cannot|can\s+not|cant|couldn'?t|could\s+not|couldnt|"
                       r"wouldn'?t|would\s+not|wouldnt|shouldn'?t|should\s+not|shouldnt)\b", re.I)
-CLAUSE_END = re.compile(r"[.!?;,:]")
-PREFER_ORDER = re.compile(
-    r"\b(?:prefers?\s+(?P<a1>.+?)|(?:would\s+)?rather\s+(?P<a2>.+?))\s+"
-    r"\b(?:over|to|than|instead\s+of|ahead\s+of|before)\b\s+(?P<b>.+)$", re.I)
-
-# (positive cue, negative cue) per polarity-bearing family. "want" excludes the two fixed templates that use the
-# bare word without expressing a want/avoid preference ("wants to be called {x}", "wants dawnr to {k} {x}"), so
-# it only fires on a preference phrased this way, rule-based or a model's.
-_POLARITY_RULES = (
-    (re.compile(r"\b(?:likes?|liked|liking|loves?|loved|loving|enjoys?|enjoyed|enjoying|adores?|adored|adoring|"
-               r"fond|fan)\b", re.I),
-     re.compile(r"\b(?:dislikes?|disliked|disliking|hates?|hated|hating|detests?|detested|detesting|"
-               r"can(?:'|no)?t stand|cannot stand|couldn'?t stand)\b", re.I)),
-    (re.compile(r"\b(?:wants?|wanted|wanting)\b(?!\s+(?:to\s+be\s+called|dawnr)\b)", re.I),
-     re.compile(r"\b(?:avoids?|avoided|avoiding)\b", re.I)),
-)
 
 
-def _negation_scopes(text: str) -> list[tuple[int, int]]:
-    """Spans a negation cue covers: from just after the cue to the next punctuation mark, or the end of `text`
-    when there is none (Pang, Lee & Vaithyanathan, arXiv:cs/0205070, sec. 6.1)."""
-    scopes = []
-    for m in NEGATION.finditer(text):
-        stop = CLAUSE_END.search(text, m.end())
-        scopes.append((m.end(), stop.start() if stop else len(text)))
-    return scopes
+def _form(template: str) -> re.Pattern:
+    """A statement template as a pattern over whole statements: its own words exactly, {k} and {x} any words."""
+    return re.compile("".join({"{k}": r"(?P<k>.+?)", "{x}": r"(?P<x>.+)"}.get(part, re.escape(part))
+                              for part in re.split(r"(\{[kx]\})", template)), re.I)
 
 
-def _side_polarity(text: str, pos_re: re.Pattern, neg_re: re.Pattern) -> bool | None:
-    """True/False: `text` asserts this family's positive/negative sense once negation is accounted for. None:
-    neither cue occurs, or the occurrences disagree (a plain cue and a negated one for the same family) -- either
-    way this is not a sense the caller may treat as settled."""
-    scopes = _negation_scopes(text)
-    senses = {sense != any(a <= m.start() < b for a, b in scopes)
-              for sense, pattern in ((True, pos_re), (False, neg_re)) for m in pattern.finditer(text)}
-    return senses.pop() if len(senses) == 1 else None
+_FORMS = [(_form(t), t) for t in dict.fromkeys(statement for _p, make, statement, *_rest in _READS
+                                                if make != "forget")]
+_OPPOSITE = {"likes {x}": "dislikes {x}", "is a fan of {x}": "dislikes {x}", "dislikes {x}": "likes {x}",
+             "wants {x}": "avoids {x}", "avoids {x}": "wants {x}"}
 
 
-def _ordered(text: str, evidence: str) -> bool | None:
-    """None: `text` makes no ordered preference claim (no "A over/to/than B" shape). True/False: whether
-    `evidence` has the same shape with the statement's A-words on its A side and B-words on its B side -- not
-    just present somewhere in it, so a swapped "coffee over tea" cannot borrow a real "tea over coffee"'s shared
-    nouns."""
-    tm = PREFER_ORDER.search(text)
-    if not tm:
-        return None
-    em = PREFER_ORDER.search(evidence)
-    if not em:
-        return False
-    ta = {t for t in terms(tm.group("a1") or tm.group("a2")) if t not in PRONOUNS}
-    tb = {t for t in terms(tm.group("b")) if t not in PRONOUNS}
-    ea = {t for t in terms(em.group("a1") or em.group("a2")) if t not in PRONOUNS}
-    eb = {t for t in terms(em.group("b")) if t not in PRONOUNS}
-    return bool(ta) and bool(tb) and ta <= ea and tb <= eb
+def _canonical(statement: str) -> str:
+    return norm(statement).rstrip(".").rstrip()
 
 
-def _relation_ok(text: str, evidence: str) -> bool:
-    """The statement's own relation -- an order, and each family's polarity -- is the one the evidence gives,
-    for every relation `text` asserts that this module can name."""
-    if _ordered(text, evidence) is False:
-        return False
-    for pos_re, neg_re in _POLARITY_RULES:
-        want = _side_polarity(text, pos_re, neg_re)
-        if want is not None and _side_polarity(evidence, pos_re, neg_re) != want:
-            return False
-    return True
+def _opposite(r: Reading) -> str:
+    """The statement with the other polarity, if the reading's pattern has one ("likes x" / "dislikes x")."""
+    if r.template == "wants dawnr to {k} {x}":
+        return r.template.format(k="never" if r.k == "always" else "always", x=r.x)
+    flip = _OPPOSITE.get(r.template)
+    return flip.format(x=r.x) if flip else ""
 
 
-def grounded(text: str, evidence: str) -> bool:
-    """Every content word of the statement is a word of the evidence or of the rules' own phrasing, and, for
-    every relation this module can name (like/dislike, want/avoid, an ordered "A over B"), the evidence's own
-    polarity and order agree with the statement's: shared nouns are necessary, never sufficient."""
-    if not set(terms(text)) - TEMPLATE <= set(terms(evidence)):
-        return False
-    return _relation_ok(text, evidence)
+def _read_sentence(sentence: str) -> tuple[list, str]:
+    """([(clause, Reading), ...], "") when the patterns read all of one sentence, else ([], why not)."""
+    if "?" in sentence:
+        return [], "the person's sentence is a question"
+    got = []
+    for part in SENTENCE_END.split(sentence):
+        for piece in JOIN.split(part):
+            piece = piece.strip()
+            filler = FILLER.match(piece)
+            lead = filler.group(0) if filler else ""
+            if NEGATION.search(lead):
+                return [], "a negation in the person's sentence is outside the patterns' words"
+            clause = piece[len(lead):].strip(" ,:-")
+            if not clause:
+                continue
+            reading = _read(clause, _READS) if len(clause) <= MAX_CLAUSE else None
+            if not isinstance(reading, Reading) or not reading.whole:
+                return [], "the person's sentence has words no pattern reads"
+            got.append((clause, reading))
+    return got, ""
+
+
+def grounded(text: str, evidence: str, contexts: Iterable[str] | None = None) -> tuple[Reading | None, str]:
+    """(the Reading that grounds the statement `text`, "") or (None, "cannot ground: <why>"): the rule in the
+    comment above. `contexts` are the person's own sentences holding `evidence` (SessionView.contexts); without
+    them the evidence's own sentences are read, which is only as good as the quote."""
+    statement = _canonical(text)
+    if not any(form.fullmatch(statement) for form, _template in _FORMS):
+        return None, "cannot ground: the statement is not in a form the patterns make"
+    quoted, readings, trouble = norm(evidence), [], ""
+    for sentence in (contexts if contexts is not None else [evidence[a:b] for a, b in sentence_spans(evidence)]):
+        got, why = _read_sentence(sentence)
+        trouble = trouble or why
+        readings += [r for clause, r in got                      # a whole clause of the quote, not "cats" in "catsup"
+                     if re.search(r"(?<!\w)" + re.escape(norm(clause)) + r"(?!\w)", quoted)]
+    for r in readings:
+        if _canonical(r.text) == statement:
+            return r, ""
+    if not readings:
+        return None, "cannot ground: " + (trouble or "the quoted words hold no whole clause a pattern reads")
+    if any(_canonical(_opposite(r)) == statement for r in readings):
+        differs = "it reverses what they said"
+    elif any(form.fullmatch(statement) for form, template in _FORMS if template in {r.template for r in readings}):
+        differs = "its words or their order are not theirs"
+    else:
+        differs = "they said something else"
+    return None, f"cannot ground: the statement says more than the person's words ({differs})"
+
+
+def _slot(slot) -> str | None:
+    return clean_text(slot or "", 80).lower() or None          # as the store keeps it
 
 
 def admit(p: Proposal, view: SessionView) -> tuple[bool, str]:
@@ -511,8 +593,13 @@ def admit(p: Proposal, view: SessionView) -> tuple[bool, str]:
         return False, "the evidence is not the person's own words in this session"
     if not view.said_first(evidence):
         return False, "the evidence was in text that did not come from the person before they said it"
-    if not grounded(text, evidence):
-        return False, "the statement says more than the person's words"
+    reading, why = grounded(text, evidence, view.contexts(evidence))
+    if reading is None:
+        return False, why
+    if p.kind != reading.kind:
+        return False, f"cannot ground: the person's words make it a {reading.kind}, not a {p.kind}"
+    if p.slot is not None and _slot(p.slot) != _slot(reading.slot):
+        return False, "cannot ground: the person's words give it another slot"
     if sensitive(text) or sensitive(evidence):
         return False, "it looks like a secret, an identifier or a link, which dawnr does not remember on its own"
     return True, ""
