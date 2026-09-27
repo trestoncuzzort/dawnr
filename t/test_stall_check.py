@@ -27,7 +27,10 @@ sys.path.insert(0, str(HERE))
 
 import stall_check                                            # noqa: E402
 
-CLK = float(os.sysconf("SC_CLK_TCK"))
+# the fake /proc below is written and read with one tick rate, so where os.sysconf is
+# absent (Windows; docs.python.org/3/library/os.html#os.sysconf, Availability: Unix)
+# the usual Linux CLK_TCK stands in
+CLK = float(os.sysconf("SC_CLK_TCK")) if hasattr(os, "sysconf") else 100.0
 BTIME = 1_000_000
 
 
