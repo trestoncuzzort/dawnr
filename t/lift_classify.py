@@ -158,6 +158,13 @@ def _is_char(t: Optional[Type]) -> bool:
     return t is not None and t.kind == "char"
 
 
+def _type_text(t: Type) -> str:
+    """A type's Dafny-like spelling for a refusal token (`seq<string>`)."""
+    if t.args:
+        return f"{t.kind}<{', '.join(_type_text(a) for a in t.args)}>"
+    return t.kind
+
+
 def _is_seq_of_char(t: Optional[Type]) -> bool:
     # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code points
     # (v1)"): `seq<char>` written that way is `string` by another name
@@ -181,6 +188,15 @@ def _is_nested_seq_of_nat(t: Optional[Type]) -> bool:
     return (t is not None and t.kind == "seq" and len(t.args) == 1
             and t.args[0].kind == "seq" and len(t.args[0].args) == 1
             and t.args[0].args[0].kind == "nat")
+
+
+def _is_nested_seq_of_char(t: Optional[Type]) -> bool:
+    # Row 43 (2026-09-27, t/FEATURES-TRACK.md, nested string sequences):
+    # `seq<string>` or `seq<seq<char>>`, one level of nesting whose rows
+    # are strings -- t's `{"seq": "seq"}` with code-point rows, row 28's
+    # string-as-seq applied per row exactly as row 30 applies int rows.
+    return (t is not None and t.kind == "seq" and len(t.args) == 1
+            and (t.args[0].kind == "string" or _is_seq_of_char(t.args[0])))
 
 
 def _is_array_of_int(t: Optional[Type]) -> bool:
@@ -235,14 +251,14 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
             if leaf.kind == "int":
                 return None
             if leaf.kind == "char":
-                return "nested-seq-string"
-            if leaf.kind == "seq":
-                return "nested-seq-deep"
+                return None  # row 43: `seq<seq<char>>`, a row of code points
+            if leaf.kind in ("seq", "string"):
+                return "nested-seq-deep"  # a string is itself a seq: three levels
             return "nested-seq-other"
         if row is not None and row.kind == "bool":
             return "seq-of-bool"
         if row is not None and row.kind == "string":
-            return "nested-seq-string"
+            return None  # row 43: `seq<string>`, the same nested seq
         if row is not None and row.kind == "array":
             # `seq<array<int>>`: row 22's array-as-seq-value machinery is
             # built around exactly one top-level array per method (a
@@ -280,7 +296,7 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
     if t.kind in ("map", "imap"):
         return "map"
     if t.kind == "tuple":
-        return "tuple"
+        return _tuple_issue(t)  # row 44: a two-component tuple is t's pair
     if t.kind == "bv":
         return "bitvector"
     if t.kind == "object":
@@ -298,6 +314,46 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
             return "array2"
         return "generics" if t.args else "datatype"
     return "type-decl"
+
+
+def _tuple_issue(t: Type) -> Optional[str]:
+    """Row 44 (2026-09-27, t/FEATURES-TRACK.md, tuples): a Dafny tuple type
+    `(T1, T2)` is t's pair (SPEC.md "Pairs (v1)") when it has exactly two
+    components, each a type row 29 already carries as a pair component
+    (`_pair_component_issue`: int, nat, bool, seq, string); `tuple-arity`
+    for any other arity (t has no triple), `tuple-component` otherwise
+    (a real, a char, an array, a nested tuple, ...)."""
+    if len(t.args) != 2:
+        return "tuple-arity"
+    if any(_pair_component_issue(a) is not None for a in t.args):
+        return "tuple-component"
+    return None
+
+
+def _tuple_names(method: MethodDecl, closure: tuple) -> frozenset:
+    """Row 44: every name declared with an accepted tuple type (a param, the
+    return, a closure function's param, a typed local), whose `.0`/`.1`
+    projections lift as `fst`/`snd`."""
+    names = set()
+
+    def note(name: Optional[str], t: Optional[Type]) -> None:
+        if name and t is not None and t.kind == "tuple" and _tuple_issue(t) is None:
+            names.add(name)
+
+    for p in method.params:
+        note(p.name, p.type)
+    for r in method.returns:
+        note(r.name, r.type)
+    for d in closure:
+        if isinstance(d, FunctionDecl):
+            for p in d.params:
+                note(p.name, p.type)
+    for root in [method] + list(closure):
+        for n in walk(root):
+            if isinstance(n, VarDeclStmt):
+                for nm in n.names:
+                    note(nm.name, nm.type)
+    return frozenset(names)
 
 
 def _pair_component_issue(t: Optional[Type]) -> Optional[str]:
@@ -367,16 +423,19 @@ def _declared_kind(t: Optional[Type]) -> Optional[str]:
         return "int"
     if t.kind == "seq" and len(t.args) == 1 and (_is_int_like(t.args[0]) or _is_char(t.args[0])):
         return "seq"
-    if t.kind == "seq" and len(t.args) == 1 and t.args[0].kind == "seq":
+    if t.kind == "seq" and len(t.args) == 1 and t.args[0].kind in ("seq", "string"):
         # Row 30 (2026-09-10): a nested seq is still "seq" in this row's
         # own int/bool/seq vocabulary -- `+`/slice (rows 26-27) work the
         # same way at any nesting depth, this row only needs to know
-        # "is it seq-typed", never how deep.
+        # "is it seq-typed", never how deep. Row 43 (2026-09-27): a
+        # `seq<string>` is the same nested seq.
         return "seq"
     if t.kind == "string":
         return "seq"  # row 28: string is seq<int> by another name
     if t.kind == "array" and not t.nullable and _is_array_of_int(t):
         return "seq"
+    if t.kind == "tuple" and _tuple_issue(t) is None:
+        return "pair"  # row 44: a tuple-typed name; its components are `#0`/`#1`
     return None
 
 
@@ -415,10 +474,23 @@ def expr_kind(e: Expr, lookup) -> Optional[str]:
     if isinstance(e, (NaryBool, Implies, Iff, Chain, Quantifier)):
         return "bool"
     if isinstance(e, Index):
+        if isinstance(e.base, Ident):
+            # Row 43 (2026-09-27): a nested name's row, `xs[i]`, is itself
+            # seq-kinded (`_build_kind_env`'s `#row` entry); every other
+            # index is an element, an int, as before.
+            rk = lookup(e.base.name + "#row")
+            if rk is not None:
+                return rk
         return "int"
     if isinstance(e, Cardinality):
         return "int"
+    if isinstance(e, TupleExpr):
+        return "pair" if len(e.elems) == 2 else None  # row 44: a pair literal
     if isinstance(e, Member):
+        if e.name in ("0", "1") and isinstance(e.base, Ident):
+            # Row 44: a tuple projection has its component's kind
+            # (`_build_kind_env`'s `<name>#0`/`#1` entries), else unknown.
+            return lookup(e.base.name + "#" + e.name)
         return "int"  # `.Length`; anything else is refused `datatype` elsewhere
     if isinstance(e, IfExpr):
         tk, ek = expr_kind(e.then, lookup), expr_kind(e.else_, lookup)
@@ -449,7 +521,8 @@ def _closure_fn_kinds(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str
 
 
 def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
-                    method_kinds: Optional[dict] = None) -> dict[str, str]:
+                    method_kinds: Optional[dict] = None,
+                    multi_kinds: Optional[dict] = None) -> dict[str, str]:
     """Name -> `int`/`bool`/`seq` for rows 25-27's own questions: every
     parameter and the one return by declared type (the method's own and
     every closure function's -- a `+`/slice/literal can sit inside a
@@ -497,7 +570,16 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
     for root in [method] + list(closure):
         for n in walk(root):
             if isinstance(n, VarDeclStmt):
-                if n.init:
+                if (n.init and len(n.init) == 1 and len(n.names) >= 2 and multi_kinds
+                        and isinstance(n.init[0], Call) and isinstance(n.init[0].fn, Ident)
+                        and n.init[0].fn.name in multi_kinds):
+                    # Row 41 (2026-09-27): `var a, b := M(x);` of a two-return
+                    # method types each name from M's own out-parameters.
+                    for nm, k in zip(n.names, multi_kinds[n.init[0].fn.name]):
+                        k = _declared_kind(nm.type) or k
+                        if k is not None:
+                            env[nm.name] = k
+                elif n.init:
                     for nm, rhs in zip(n.names, n.init):
                         k = _declared_kind(nm.type)
                         if k is None and isinstance(rhs, Expr):
@@ -514,6 +596,45 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
                     env.setdefault(b.name, _declared_kind(b.type) or "int")
             elif isinstance(n, ForStmt):
                 env.setdefault(n.var, _declared_kind(n.var_type) or "int")
+    # Row 43 (2026-09-27, nested string sequences): a nested name's ROWS
+    # are seq-kinded too, recorded under a `<name>#row` key no Dafny
+    # identifier can spell, so `expr_kind` types `xs[i]` (a row) `seq`
+    # rather than `int` and `xs[i][..k]`, `xs[i] + s` resolve (row 30 left
+    # the row an int, its own named residual). Declared types first
+    # (`seq<seq<int>>`, `seq<seq<nat>>`, `seq<string>`, `seq<seq<char>>`),
+    # then an untyped local whose initialiser is a nested display.
+
+    def _row(name: str, t: Optional[Type]) -> None:
+        if (t is not None and t.kind == "seq" and len(t.args) == 1
+                and t.args[0].kind in ("seq", "string")):
+            env[name + "#row"] = "seq"
+        if t is not None and t.kind == "tuple" and _tuple_issue(t) is None:
+            # Row 44 (2026-09-27, tuples): the two components of a tuple-
+            # typed name, `p.0`/`p.1`, under the same unspellable key idea.
+            for idx, ct in enumerate(t.args):
+                k = _declared_kind(ct)
+                if k is not None:
+                    env[f"{name}#{idx}"] = k
+
+    for p in method.params:
+        _row(p.name, p.type)
+    for r in method.returns:
+        _row(r.name, r.type)
+    for d in closure:
+        if isinstance(d, FunctionDecl):
+            for p in d.params:
+                _row(p.name, p.type)
+    for root in [method] + list(closure):
+        for n in walk(root):
+            if isinstance(n, VarDeclStmt):
+                for idx, nm in enumerate(n.names):
+                    if nm.type is not None:
+                        _row(nm.name, nm.type)
+                    elif (n.init and len(n.init) == len(n.names)
+                          and isinstance(n.init[idx], SeqDisplay)
+                          and any(isinstance(el, (SeqDisplay, StringLit))
+                                  for el in n.init[idx].elems)):
+                        env[nm.name + "#row"] = "seq"
     return env
 
 
@@ -536,11 +657,11 @@ def _seq_literal_issue(n: SeqDisplay, env: dict) -> Optional[str]:
     element)."""
     for el in n.elems:
         if isinstance(el, StringLit):
-            return "nested-seq-string"
+            continue  # row 43: a string-literal row is a row of code points
         if isinstance(el, SeqDisplay):
             for inner in el.elems:
                 if isinstance(inner, StringLit):
-                    return "nested-seq-string"
+                    return "nested-seq-deep"  # a row of strings: three levels
                 if isinstance(inner, SeqDisplay):
                     return "nested-seq-deep"
                 if expr_kind(inner, env.get) != "int":
@@ -661,6 +782,7 @@ def _build_char_names(method: MethodDecl, closure: tuple[Decl, ...]):
     reading can already see is declared one."""
     chars: set[str] = set()
     seqs: set[str] = set()
+    nested: set[str] = set()
 
     def note(name: Optional[str], t: Optional[Type]) -> None:
         if name is None or t is None:
@@ -669,6 +791,10 @@ def _build_char_names(method: MethodDecl, closure: tuple[Decl, ...]):
             chars.add(name)
         elif t.kind == "string" or _is_seq_of_char(t):
             seqs.add(name)
+        elif _is_nested_seq_of_char(t):
+            # Row 43: `xs[i]` is a string and `xs[i][j]` a char, so the
+            # nested name is kept apart for `_is_char_expr`.
+            nested.add(name)
 
     for p in method.params:
         note(p.name, p.type)
@@ -683,10 +809,11 @@ def _build_char_names(method: MethodDecl, closure: tuple[Decl, ...]):
             if isinstance(n, VarDeclStmt):
                 for nm in n.names:
                     note(nm.name, nm.type)
-    return chars, seqs
+    return chars, seqs, nested
 
 
-def _is_char_expr(e: Expr, char_names: set, char_seq_names: set = frozenset()) -> bool:
+def _is_char_expr(e: Expr, char_names: set, char_seq_names: set = frozenset(),
+                  nested_names: set = frozenset()) -> bool:
     """Row 28: best-effort "this expression's Dafny type is exactly
     char", the one question `expr_kind`'s int/bool/seq vocabulary cannot
     answer since it folds char into plain int by design. Used only for a
@@ -701,14 +828,18 @@ def _is_char_expr(e: Expr, char_names: set, char_seq_names: set = frozenset()) -
     if isinstance(e, Ident):
         return e.name in char_names
     if isinstance(e, Old):
-        return _is_char_expr(e.arg, char_names, char_seq_names)
+        return _is_char_expr(e.arg, char_names, char_seq_names, nested_names)
     if isinstance(e, Cast):
         return e.type.kind == "char"
     if isinstance(e, IfExpr):
-        return (_is_char_expr(e.then, char_names, char_seq_names)
-                and _is_char_expr(e.else_, char_names, char_seq_names))
+        return (_is_char_expr(e.then, char_names, char_seq_names, nested_names)
+                and _is_char_expr(e.else_, char_names, char_seq_names, nested_names))
     if isinstance(e, Index) and isinstance(e.base, Ident):
         return e.base.name in char_seq_names
+    if (isinstance(e, Index) and isinstance(e.base, Index)
+            and isinstance(e.base.base, Ident)):
+        # Row 43: `xs[i][j]` on a `seq<string>` name is a char.
+        return e.base.base.name in nested_names
     return False
 
 
@@ -820,51 +951,54 @@ def _plus1(e: Expr) -> Expr:
     return Binary(e.line, "+", e, IntLit(e.line, 1))
 
 
+_REL_FLIP = {">": "<", ">=": "<="}
+
+
+def _normalize_chain(c: Expr) -> Expr:
+    """A relational chain written right to left (`|s| > i >= 0`, `n > k`) as
+    its `<`/`<=` mirror (`0 <= i < |s|`, `k < n`): every rule below reads
+    only `<`/`<=` chains, and the corpora write both spellings (2026-09-27:
+    `i >= 0 && i < |res|` is the HumanEval-Dafny house style, 8 of the 40
+    quantifiers refused `unbounded-quantifier` in the first 720 methods of
+    the vericoding + HumanEval-Dafny lift). A chain already in `<`/`<=`
+    form, a mixed one, or one with `==`/`!=`/`in` is returned unchanged."""
+    if not isinstance(c, Chain):
+        return c
+    if all(op in ("<", "<=") for op in c.ops):
+        return c
+    if all(op in (">", ">=") for op in c.ops):
+        return Chain(c.line, tuple(_REL_FLIP[op] for op in reversed(c.ops)),
+                     tuple(reversed(c.operands)))
+    return c
+
+
+def _top_conjuncts(e: Expr) -> list:
+    return list(e.args) if isinstance(e, NaryBool) and e.op == "&&" else [e]
+
+
+def _conj(parts: list, line: int) -> Optional[Expr]:
+    if not parts:
+        return None
+    return parts[0] if len(parts) == 1 else NaryBool(line, "&&", tuple(parts))
+
+
 def _bound_range(binder: str, guard: Expr) -> Optional[tuple[Expr, Expr, Optional[Expr]]]:
-    """`lo <= k < hi` and its three half-open siblings (section 4.4), for
-    exactly the named binder, optionally AND'ed with more conjuncts.
-    Returns (lo, hi, extra) where `extra` is the conjunction of whatever
-    else was in the guard (None if nothing else was), or None if no
-    conjunct bounds `binder` this way."""
-    conjuncts = list(guard.args) if isinstance(guard, NaryBool) and guard.op == "&&" else [guard]
-    for i, c in enumerate(conjuncts):
-        if isinstance(c, Chain) and len(c.ops) == 2 and len(c.operands) == 3:
-            lo_op, hi_op = c.ops
-            lo, mid, hi = c.operands
-            if _is_ident(mid, binder) and lo_op in ("<", "<=") and hi_op in ("<", "<="):
-                lo2 = _plus1(lo) if lo_op == "<" else lo
-                hi2 = _plus1(hi) if hi_op == "<=" else hi
-                rest = [x for j, x in enumerate(conjuncts) if j != i]
-                extra = None
-                if rest:
-                    extra = rest[0] if len(rest) == 1 else NaryBool(rest[0].line, "&&", tuple(rest))
-                return (lo2, hi2, extra)
-    # Integrator addition 2026-09-05: the SAME range, written as two
-    # separate single-comparison conjuncts (`lo <= k && k < hi`) rather
-    # than one written chain (`lo <= k < hi`) -- the shape
-    # `lower_dafny.lower` always prints and dafny's own rprint never
-    # recombines into a chain, measured via the 18.4 inverse test: every
-    # one of 13/31 sampled tasks with a quantifier hit `unbounded
-    # -quantifier` on the round trip before this was added, all for this
-    # one reason.
-    lo_i = hi_i = None
-    lo = hi = None
-    for i, c in enumerate(conjuncts):
-        if not (isinstance(c, Chain) and len(c.ops) == 1 and len(c.operands) == 2):
-            continue
-        op = c.ops[0]
-        a, b = c.operands
-        if op in ("<", "<=") and _is_ident(b, binder) and lo_i is None:
-            lo_i, lo = i, (_plus1(a) if op == "<" else a)
-        elif op in ("<", "<=") and _is_ident(a, binder) and hi_i is None:
-            hi_i, hi = i, (_plus1(b) if op == "<=" else b)
-    if lo_i is not None and hi_i is not None and lo_i != hi_i:
-        rest = [x for j, x in enumerate(conjuncts) if j not in (lo_i, hi_i)]
-        extra = None
-        if rest:
-            extra = rest[0] if len(rest) == 1 else NaryBool(rest[0].line, "&&", tuple(rest))
-        return (lo, hi, extra)
-    return None
+    """`lo <= k < hi` (one chain, or two comparisons, either spelling) for
+    exactly the named binder, optionally AND'ed with more conjuncts:
+    (lo, hi, extra) with `extra` the conjunction of whatever else was in
+    the guard (None if nothing else), or None if no conjunct bounds `binder`
+    this way. Kept for callers that bound one binder in a guard; the
+    quantifier rules below use `_bind_binders` directly."""
+    conjuncts = _top_conjuncts(guard)
+    got = _bind_binders([binder], conjuncts, None, set())
+    if got is None:
+        return None
+    bound, used, chain_extras, _rules = got
+    lo, hi, mem = bound[binder]
+    if mem is not None:
+        return None
+    rest = [c for i, c in enumerate(conjuncts) if i not in used] + chain_extras
+    return (lo, hi, _conj(rest, guard.line))
 
 
 def _bound_membership(binder: str, guard: Expr) -> Optional[Expr]:
@@ -874,6 +1008,333 @@ def _bound_membership(binder: str, guard: Expr) -> Optional[Expr]:
         a, b = guard.operands
         if _is_ident(a, binder):
             return b
+    return None
+
+
+def _chain_bounds(unbound: set, c: Chain, nat_names: set):
+    """Every binder in one `<`/`<=` chain, bounded at once (t/FEATURES-TRACK.md
+    feature 5, generalising row 31's `0 <= i < j < hi` pair): `0 <= x < y <
+    z < w < |s|`, the sortedness invariant `0 <= k1 < i <= k2 < n`, or a
+    single binder inside a longer chain, `0 <= k < i <= n`. A binder's lower
+    bound is its left neighbour (plus one after `<`; a leftmost `nat` binder
+    reads 0); its upper bound is the nearest operand to its right that is
+    not a binder, plus one when every relation between them is `<=`. Reading
+    the quantifier as nested single-binder ranges in chain order is exact:
+    an outer value the chain would have excluded (no room for the binders to
+    its right) gets an empty inner range, true for a forall and false for an
+    exists, the same widening row 31 relied on. The chain's relations between
+    two non-binder operands (`i <= n` in `0 <= k < i <= n`) are returned as
+    `extras` and stay in the body. Returns (bounds, extras) or None when a
+    binder occurs twice or lacks a bound."""
+    ops, xs = c.ops, c.operands
+
+    def is_binder(x) -> bool:
+        return isinstance(x, Ident) and x.name in unbound
+
+    pos: dict = {}
+    for i, x in enumerate(xs):
+        if is_binder(x):
+            if x.name in pos:
+                return None
+            pos[x.name] = i
+    if not pos:
+        return None
+    bounds: dict = {}
+    for name, i in pos.items():
+        if i == 0:
+            if name not in nat_names:
+                return None
+            lo = IntLit(c.line, 0)
+        else:
+            lo = xs[i - 1] if ops[i - 1] == "<=" else _plus1(xs[i - 1])
+        j = i + 1
+        while j < len(xs) and is_binder(xs[j]):
+            j += 1
+        if j >= len(xs):
+            return None
+        strict = any(op == "<" for op in ops[i:j])
+        hi = xs[j] if strict else _plus1(xs[j])
+        bounds[name] = (lo, hi)
+    extras = [Chain(c.line, (ops[k],), (xs[k], xs[k + 1]))
+              for k in range(len(ops)) if not (is_binder(xs[k]) or is_binder(xs[k + 1]))]
+    return bounds, extras
+
+
+def _subst_many(e, mapping: dict):
+    """Simultaneous substitution of several identifiers (a predicate's
+    parameters by a call's arguments), so `P(b, a)` for `P(a, b)` never
+    substitutes through itself."""
+    if isinstance(e, Ident):
+        return mapping.get(e.name, e)
+    if dataclasses.is_dataclass(e):
+        changes = {}
+        for f in dataclasses.fields(e):
+            val = getattr(e, f.name)
+            if isinstance(val, tuple):
+                newval = tuple(_subst_many(v, mapping) for v in val)
+            elif dataclasses.is_dataclass(val):
+                newval = _subst_many(val, mapping)
+            else:
+                newval = val
+            if newval is not val:
+                changes[f.name] = newval
+        return dataclasses.replace(e, **changes) if changes else e
+    return e
+
+
+def _bind_binders(names: list, conjuncts: list, predicates: Optional[dict], nat_names: set):
+    """Bound every binder in `names` from the conjunct list of a quantifier's
+    guard, antecedent or body. Four rules, in this order, each over the
+    binders the earlier ones left unbound:
+
+    1. membership, `k in s` (decision 2): `s`, the binder reading `s[j]`;
+    2. a `<`/`<=` chain of two or more relations holding the binder
+       (`_chain_bounds`, either spelling via `_normalize_chain`);
+    3. two single comparisons, a lower one (`lo <= k`, `lo < k`, or `k >= lo`,
+       `k > lo`) and an upper one (`k < hi`, `k <= hi`, `hi > k`, `hi >= k`);
+       a `nat` binder with only an upper bound reads `0` for its lower one
+       (feature 5's one-sided range: the binder's own type is the bound
+       Dafny used);
+    4. a call of a closure predicate `P(.., k, ..)` with the binder as a bare
+       argument whose body is a conjunction that bounds that parameter by
+       rules 1 to 3 (feature 5's range through a predicate): the range, with
+       P's parameters replaced by the call's arguments, bounds `k`, and the
+       call itself stays in the body, so the quantifier is unchanged where
+       `P(k)` holds and vacuous elsewhere, exactly as the source. The check
+       stage proves the equivalence on every program (L_req/L_ens/L_inv).
+
+    Returns (bound: name -> (lo, hi, mem), used conjunct indices, the
+    chains' binder-free relations to keep, rule names) or None when some
+    binder stays unbound (`unbounded-quantifier`, the caller's refusal)."""
+    unbound = set(names)
+    bound: dict = {}
+    used: set = set()
+    rules: set = set()
+    extras: list = []
+    norm = [_normalize_chain(c) for c in conjuncts]
+    # 1. membership
+    for i, c in enumerate(norm):
+        if isinstance(c, Chain) and len(c.ops) == 1 and c.ops[0] == "in":
+            a, b = c.operands
+            if isinstance(a, Ident) and a.name in unbound and not _mentions_ident(b, a.name):
+                bound[a.name] = (None, None, b)
+                unbound.discard(a.name)
+                used.add(i)
+                rules.add("in-desugared")
+    # 2. chains
+    for i, c in enumerate(norm):
+        if i in used or not isinstance(c, Chain) or len(c.ops) < 2:
+            continue
+        if not all(op in ("<", "<=") for op in c.ops):
+            continue
+        got = _chain_bounds(unbound, c, nat_names)
+        if got is None:
+            continue
+        bs, ex = got
+        for name, (lo, hi) in bs.items():
+            bound[name] = (lo, hi, None)
+            unbound.discard(name)
+        used.add(i)
+        extras.extend(ex)
+        if len(bs) > 1 or len(c.ops) > 2:
+            rules.add("quantifier-bounded-chain")
+    # 3. single comparisons
+    for name in list(names):
+        if name not in unbound:
+            continue
+        lo_i = hi_i = None
+        lo = hi = None
+        for i, c in enumerate(norm):
+            if i in used or not (isinstance(c, Chain) and len(c.ops) == 1
+                                 and c.ops[0] in ("<", "<=")):
+                continue
+            a, b = c.operands
+            if _is_ident(b, name) and lo_i is None and not _mentions_ident(a, name):
+                lo_i, lo = i, (_plus1(a) if c.ops[0] == "<" else a)
+            elif _is_ident(a, name) and hi_i is None and not _mentions_ident(b, name):
+                hi_i, hi = i, (_plus1(b) if c.ops[0] == "<=" else b)
+        if hi_i is not None and lo_i is None and name in nat_names:
+            lo = IntLit(norm[hi_i].line, 0)
+            rules.add("quantifier-bounded-nat")
+        if hi_i is not None and lo is not None:
+            bound[name] = (lo, hi, None)
+            unbound.discard(name)
+            used.add(hi_i)
+            if lo_i is not None:
+                used.add(lo_i)
+    # 4. a predicate whose body bounds its parameter
+    if unbound and predicates:
+        for name in list(names):
+            if name not in unbound:
+                continue
+            for c in norm:
+                if not (isinstance(c, Call) and isinstance(c.fn, Ident) and c.fn.name in predicates):
+                    continue
+                pd = predicates[c.fn.name]
+                if pd.body is None or len(pd.params) != len(c.args):
+                    continue
+                for j, a in enumerate(c.args):
+                    if not _is_ident(a, name):
+                        continue
+                    pn = pd.params[j]
+                    pnat = {pn.name} if pn.type is not None and pn.type.kind == "nat" else set()
+                    inner = _bind_binders([pn.name], _top_conjuncts(pd.body), None, pnat)
+                    if inner is None:
+                        continue
+                    lo, hi, mem = inner[0][pn.name]
+                    mapping = {q.name: arg for q, arg in zip(pd.params, c.args)}
+                    sub = lambda e: None if e is None else _subst_many(e, mapping)
+                    bound[name] = (sub(lo), sub(hi), sub(mem))
+                    unbound.discard(name)
+                    rules.add("quantifier-bounded-predicate")
+                    if mem is not None:
+                        rules.add("in-desugared")
+                    break
+                if name not in unbound:
+                    break
+    if unbound:
+        return None
+    return bound, used, extras, rules
+
+
+def _order_binders(binders: tuple, bound: dict) -> Optional[list]:
+    """Nest the binders so that each one's bounds mention only binders
+    nested outside it (`0 <= j < i < n` nests `i` inside `j`): the declared
+    order where it works, else the first order that does; None on a cycle."""
+    names = [b.name for b in binders]
+    deps = {}
+    for n in names:
+        lo, hi, mem = bound[n]
+        deps[n] = {m for m in names if m != n and any(
+            e is not None and _mentions_ident(e, m) for e in (lo, hi, mem))}
+    out: list = []
+    done: set = set()
+    while len(out) < len(names):
+        progressed = False
+        for n in names:
+            if n in done or not deps[n] <= done:
+                continue
+            lo, hi, mem = bound[n]
+            out.append((n, lo, hi, mem))
+            done.add(n)
+            progressed = True
+        if not progressed:
+            return None
+    return out
+
+
+def _eliminate_defined_binders(q: Quantifier) -> Optional[Quantifier]:
+    """Row 33 (2026-09-14), widened 2026-09-27 (feature 5): a binder pinned
+    by an equality is substituted away wherever Dafny puts the equation --
+    the range guard (`| _t#0 == i + 1`, the resolver's companion binder), an
+    unguarded `exists` body's own conjunction (`exists c :: c == F(s) && r ==
+    G(c)`, vericoding DA0491) or an unguarded `forall`'s antecedent (`forall
+    c :: c == F(s) ==> P(c)`). `exists x :: x == E && P(x)` and `forall x ::
+    x == E ==> P(x)` are both `P(E)`, so a quantifier all of whose binders
+    are pinned collapses to its body, which the caller lifts as a plain
+    expression. Returns the quantifier with the pinned binders gone (possibly
+    none left), or None when nothing applies... never None: the input itself
+    when no equation is found."""
+    while q.binders:
+        where = "range"
+        found = _binder_defining_equality(q.binders, q.range)
+        if found is None and q.range is None:
+            if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
+                found = _binder_defining_equality(q.binders, q.body)
+                where = "body"
+            elif q.kind == "forall" and isinstance(q.body, Implies):
+                found = _binder_defining_equality(q.binders, q.body.left)
+                where = "antecedent"
+        if found is None:
+            break
+        name, repl, remaining = found
+        new_binders = tuple(b for b in q.binders if b.name != name)
+        if where == "range":
+            new_body = _subst_ast(q.body, name, repl)
+            new_range = _subst_ast(remaining, name, repl) if remaining is not None else None
+            q = dataclasses.replace(q, binders=new_binders, range=new_range, body=new_body)
+        elif where == "body":
+            rest = (_subst_ast(remaining, name, repl) if remaining is not None
+                    else BoolLit(q.line, True))
+            q = dataclasses.replace(q, binders=new_binders, body=rest)
+        else:
+            right = _subst_ast(q.body.right, name, repl)
+            new_body = (right if remaining is None
+                        else Implies(q.line, _subst_ast(remaining, name, repl), right))
+            q = dataclasses.replace(q, binders=new_binders, body=new_body)
+    return q
+
+
+def closure_predicates(closure: tuple) -> dict:
+    """Feature 5: the closure's bodied predicates (and bool-valued
+    functions) by name, the `predicates` argument of `bound_quantifier`."""
+    return {d.name: d for d in closure
+            if isinstance(d, FunctionDecl) and d.name and d.body is not None
+            and (d.is_predicate or (d.ret_type is not None and d.ret_type.kind == "bool"))}
+
+
+def bound_quantifier(q: Quantifier, predicates: Optional[dict] = None):
+    """Section 4.4's quantifier-bounding rules, unified into one contract:
+    on success, returns {"binders": [(name, lo, hi, membership_seq), ...],
+    "body": Expr, "rules": set} where `body` is the FULLY RESOLVED predicate
+    to lift at the innermost level (every `&&`/`==>` combination already
+    folded in), each binder's `lo`/`hi` are `None` exactly when
+    `membership_seq` is not (the `k in s` row: `lo`/`hi` become `0`/`len(s)`
+    and `body` must still be substituted `k -> s[j]` by the caller using the
+    returned fresh binder position), the binders are listed outermost first
+    (`_order_binders`: each one's bounds mention only earlier ones), and an
+    EMPTY binder list means every binder was pinned by an equality and the
+    quantifier IS its body (`_eliminate_defined_binders`). `rules` names the
+    rules that fired, for the sidecar. Returns None when some binder has no
+    finite range this reads (the caller refuses `unbounded-quantifier`).
+
+    `predicates` (t/FEATURES-TRACK.md feature 5, 2026-09-27) maps the
+    closure's predicate names to their `FunctionDecl`s, for the range
+    through a predicate rule of `_bind_binders`; None disables that rule.
+
+    The shapes read, each the source's own conjunction of constraints plus a
+    residual body: a guard (`| C :: B`); an unguarded forall with an
+    antecedent (`C ==> B`); an unguarded exists whose body is one
+    conjunction (`C && B'`, the constraints and the residual mixed, every
+    unused conjunct kept as body); and the resolver's distributed forms
+    (`_extract_unguarded_range`, row 31). Whatever the constraints do not
+    bound stays in the body: `extra ==> B` for a forall, `extra && B` for an
+    exists, so the lifted quantifier says exactly what the source said."""
+    q = _eliminate_defined_binders(q)
+    if not q.binders:
+        return {"binders": [], "body": q.body, "rules": {"quantifier-eliminated"}}
+    nat_names = {b.name for b in q.binders if b.type is not None and b.type.kind == "nat"}
+    names = [b.name for b in q.binders]
+    shapes = []
+    if q.range is not None:
+        shapes.append((_top_conjuncts(q.range), q.body))
+    else:
+        if q.kind == "forall" and isinstance(q.body, Implies):
+            shapes.append((_top_conjuncts(q.body.left), q.body.right))
+        if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
+            shapes.append((list(q.body.args), None))
+        extracted = _extract_unguarded_range(q.kind, q.body)
+        if extracted is not None:
+            rng, new_body = extracted
+            shapes.append((_top_conjuncts(rng), new_body))
+    for conjuncts, residual in shapes:
+        got = _bind_binders(names, conjuncts, predicates, nat_names)
+        if got is None:
+            continue
+        bound, used, chain_extras, rules = got
+        rest = [c for i, c in enumerate(conjuncts) if i not in used] + chain_extras
+        extra = _conj(rest, q.line)
+        if q.kind == "forall":
+            body = residual if extra is None else Implies(q.line, extra, residual)
+        elif residual is None:
+            body = extra if extra is not None else BoolLit(q.line, True)
+        else:
+            body = residual if extra is None else NaryBool(q.line, "&&", (extra, residual))
+        ordered = _order_binders(q.binders, bound)
+        if ordered is None:
+            return None
+        rules = set(rules) | {"quantifier-bounded"}
+        return {"binders": ordered, "body": body, "rules": rules}
     return None
 
 
@@ -1049,192 +1510,6 @@ def _binder_defining_equality(binders: tuple, guard: Optional[Expr]):
                     remaining = rest[0] if len(rest) == 1 else NaryBool(c.line, "&&", tuple(rest))
                 return (lhs.name, rhs, remaining)
     return None
-
-
-def bound_quantifier(q: Quantifier):
-    """Section 4.4's quantifier-bounding rules, unified into one contract:
-    on success, returns {"binders": [(name, lo, hi, membership_seq), ...],
-    "body": Expr} where `body` is the FULLY RESOLVED predicate to lift at
-    the innermost level (every `&&`/`==>` combination already folded in),
-    and each binder's `lo`/`hi` are `None` exactly when `membership_seq`
-    is not (the `k in s` row, section 4.4's third quantifier row: `lo`/`hi`
-    become `0`/`len(s)` and `body` must still be substituted `k -> s[j]`
-    by the caller using the returned fresh binder position). Returns None
-    when the range is not one of section 4.4's bounded shapes (the caller
-    refuses `unbounded-quantifier`).
-
-    Row 33 (2026-09-14): before any of the shapes below are tried, a
-    binder pinned by an equality filter clause (`| _t#0 == i + 1`, row 31's
-    own carve-out -- "a binder defined by an equation rather than bounded
-    by an inequality") is eliminated by substitution: the quantifier over
-    `_t#0` with body `P(_t#0)` becomes the quantifier over the REMAINING
-    binders with body `P(i + 1)`, `_t#0` itself gone. This can repeat (an
-    equality can define more than one binder) and always runs before the
-    single/multi-binder range logic below, so every existing shape keeps
-    reading exactly the range/body it already read once the equality
-    binder(s) are gone; a quantifier with no equality-filter conjunct at
-    all falls through unchanged, byte for byte. A binder with no defining
-    equation and no range stays refused `unbounded-quantifier` by the same
-    path as before -- this only ever REMOVES a binder, never invents a
-    bound for one that has neither an equation nor a range."""
-    while True:
-        found = _binder_defining_equality(q.binders, q.range)
-        if found is None:
-            break
-        name, repl, remaining_guard = found
-        new_binders = tuple(b for b in q.binders if b.name != name)
-        if len(new_binders) == 0:
-            # The whole quantifier collapses to a closed boolean with no
-            # binders left -- not a shape any in-corpus program has ever
-            # exercised (every measured equality-filter binder has at
-            # least one companion binder left), and t's own forall/exists
-            # node has no zero-binder form to build here; left refused
-            # rather than guessed.
-            return None
-        new_body = _subst_ast(q.body, name, repl)
-        if remaining_guard is not None:
-            remaining_guard = _subst_ast(remaining_guard, name, repl)
-        q = dataclasses.replace(q, binders=new_binders, range=remaining_guard, body=new_body)
-
-    if len(q.binders) == 0:
-        return None
-
-    if len(q.binders) == 1:
-        b = q.binders[0]
-        guard = q.range
-        if guard is None:
-            # Unguarded: the range lives inside body as `lo<=k<hi ==> P`
-            # (forall) or `lo<=k<hi && P` (exists), or (row 31) distributed
-            # across body's own top-level `&&`/`||` -- see
-            # `_extract_unguarded_range`.
-            if q.kind == "forall" and isinstance(q.body, Implies):
-                # Row 31: `l in lists ==> P` -- a membership antecedent, not
-                # a numeric range -- binds `l` the same way a GUARDED `k in
-                # s` would (decision 2); tried before `_bound_range` since
-                # a membership chain never parses as one.
-                mem = _bound_membership(b.name, q.body.left)
-                if mem is not None:
-                    return {"binders": [(b.name, None, None, mem)], "body": q.body.right}
-                got = _bound_range(b.name, q.body.left)
-                if got is not None:
-                    lo, hi, extra = got
-                    # Row 31: a leftover conjunct in the antecedent (e.g.
-                    # `1 <= d <= a && 1 <= d <= b && ...`) used to bail here
-                    # even though the GUARDED branch below folds the very
-                    # same shape back into the body via `Implies` -- there
-                    # is no reason the unguarded form should be stricter.
-                    body = Implies(q.line, extra, q.body.right) if extra is not None \
-                        else q.body.right
-                    return {"binders": [(b.name, lo, hi, None)], "body": body}
-            if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
-                got = _bound_range(b.name, q.body)
-                if got is None:
-                    return None
-                lo, hi, extra = got
-                body = extra if extra is not None else BoolLit(q.line, True)
-                return {"binders": [(b.name, lo, hi, None)], "body": body}
-            extracted = _extract_unguarded_range(q.kind, q.body)
-            if extracted is not None:
-                rng, new_body = extracted
-                got = _bound_range(b.name, rng)
-                if got is not None:
-                    lo, hi, extra = got
-                    body = Implies(q.line, extra, new_body) if (extra is not None and q.kind == "forall") \
-                        else (NaryBool(q.line, "&&", (extra, new_body)) if extra is not None else new_body)
-                    return {"binders": [(b.name, lo, hi, None)], "body": body}
-            return None
-        mem = _bound_membership(b.name, guard)
-        if mem is not None:
-            return {"binders": [(b.name, None, None, mem)], "body": q.body}
-        got = _bound_range(b.name, guard)
-        if got is None:
-            return None
-        lo, hi, extra = got
-        if extra is not None:
-            body = Implies(q.line, extra, q.body) if q.kind == "forall" \
-                else NaryBool(q.line, "&&", (extra, q.body))
-        else:
-            body = q.body
-        return {"binders": [(b.name, lo, hi, None)], "body": body}
-
-    # Multiple binders: each finds its own chain conjunct in a top-level
-    # "&&" range guard (section 4.4's "two binders" row, generalised to N).
-    # Row 31: an unguarded N-binder quantifier reads its range from `body`
-    # the same way the single-binder case above does (`_extract_unguarded_
-    # range`, which also covers the plain `Implies` shape directly).
-    guard = q.range
-    working_body = q.body
-    exists_plain_and = False
-    if guard is None:
-        if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
-            # Row 31: an unguarded N-binder `exists` never wraps its range
-            # in `Implies` (that's a `forall` thing) -- dafny prints it as
-            # ONE flat `&&` of range chains and predicate conjuncts
-            # together, same shape the single-binder branch above already
-            # reads directly via `_bound_range(b.name, q.body)`.
-            guard = q.body
-            exists_plain_and = True
-        else:
-            extracted = _extract_unguarded_range(q.kind, q.body)
-            if extracted is None:
-                return None
-            guard, working_body = extracted
-    conjuncts = list(guard.args) if isinstance(guard, NaryBool) and guard.op == "&&" else [guard]
-    used = [False] * len(conjuncts)
-    result_binders = []
-    i_b = 0
-    while i_b < len(q.binders):
-        b = q.binders[i_b]
-        found = None
-        for i, c in enumerate(conjuncts):
-            if used[i]:
-                continue
-            if isinstance(c, Chain) and len(c.ops) == 2 and len(c.operands) == 3:
-                lo_op, hi_op = c.ops
-                lo, mid, hi = c.operands
-                if _is_ident(mid, b.name) and lo_op in ("<", "<=") and hi_op in ("<", "<="):
-                    lo2 = _plus1(lo) if lo_op == "<" else lo
-                    hi2 = _plus1(hi) if hi_op == "<=" else hi
-                    found = (lo2, hi2)
-                    used[i] = True
-                    break
-        if found is not None:
-            result_binders.append((b.name, found[0], found[1], None))
-            i_b += 1
-            continue
-        # Row 31: `0 <= i < j < hi`, one chain binding TWO consecutive
-        # binders at once (`_ordered_pair_bound`) -- tried only when the
-        # single-conjunct match above found nothing for this binder.
-        if i_b + 1 < len(q.binders):
-            b2 = q.binders[i_b + 1]
-            pair_found = None
-            for i, c in enumerate(conjuncts):
-                if used[i] or not isinstance(c, Chain):
-                    continue
-                pair = _ordered_pair_bound(b.name, b2.name, c)
-                if pair is not None:
-                    pair_found = (i, pair)
-                    break
-            if pair_found is not None:
-                i, (bound1, bound2) = pair_found
-                used[i] = True
-                result_binders.append((b.name, bound1[0], bound1[1], None))
-                result_binders.append((b2.name, bound2[0], bound2[1], None))
-                i_b += 2
-                continue
-        return None
-    rest = [c for i, c in enumerate(conjuncts) if not used[i]]
-    extra = None
-    if rest:
-        extra = rest[0] if len(rest) == 1 else NaryBool(rest[0].line, "&&", tuple(rest))
-    if exists_plain_and:
-        body = extra if extra is not None else BoolLit(q.line, True)
-    elif extra is not None:
-        body = Implies(q.line, extra, working_body) if q.kind == "forall" \
-            else NaryBool(q.line, "&&", (extra, working_body))
-    else:
-        body = working_body
-    return {"binders": result_binders, "body": body}
 
 
 # ---------------------------------------------------------------------------
@@ -1545,7 +1820,8 @@ def _closure_root_shadows(root: Node, method: MethodDecl, name: str) -> bool:
 
 
 def array_readonly_issue(param_name: str, method: MethodDecl,
-                          closure: tuple[Decl, ...]) -> Optional[str]:
+                          closure: tuple[Decl, ...], module: Optional[Module] = None,
+                          _stack: tuple = ()) -> Optional[str]:
     """None if `param_name` (an `array<int|nat>` parameter) satisfies the
     read-only condition everywhere in the method's closure; else the
     section-5 reason it fails with (`array-mutation` for a write,
@@ -1583,8 +1859,56 @@ def array_readonly_issue(param_name: str, method: MethodDecl,
     x)`): before this exemption, the bare `a`/`b` argument tripped this
     same escape check the reads-clause row above also had to widen, so
     fixing only the reads clause would have left these four refused
-    `array` instead."""
+    `array` instead.
+
+    t/FEATURES-TRACK.md feature 4 (2026-09-27, "arrays read by functions"),
+    with `module` given: two more calls are not escapes. A LEMMA call
+    (`SumRPrefix(v, i);`, vericoding DD0128; `UpdateMinCount(v, ...)`,
+    DD0130): a Dafny lemma is a ghost method with no `modifies` clause
+    (Reference Manual 6.3.3, "Lemmas": a lemma "cannot modify the heap"),
+    so an array it is handed is only read, and the lifter drops or lifts
+    the lemma on its own terms anyway (decision 8, row 38). A call of
+    another METHOD of the module whose own parameter at that position is
+    itself a read-only array by this same condition, recursively
+    (`search(v, elem)` calling `binarySearch(v, elem)`, DD0135): the callee
+    sees the same value the caller does and writes nothing through it (a
+    callee that writes it, or reaches a cycle, is still an escape; a
+    self-call passes the array to the very method being checked, whose
+    own reads are what this scan covers). Measured 2026-09-27 by
+    re-lifting the 86 staged files whose 88 methods the 2026-09-26 lift
+    refused `array` (rewrite stage, check skipped): 21 of the 88 pass this
+    condition now, 14 of them lift (query, queryFast x2, sumElemsB,
+    mCountMin, mPeekSum, binarySearchRec, barrier, SharedElements,
+    FilterOddNumbers, BinarySearchRecursive, Mcontained, BinarySearch,
+    BinarySearchLoop) and 7 are refused later by name; the 67 still
+    refused `array` are arrays of char/real/bool/bv32/T/arrays, array
+    results, and the in-place sorts (`aliased`), none of them this
+    condition's."""
     closure_fn_names = {d.name for d in closure if isinstance(d, FunctionDecl) and d.name}
+    # the closure carries the lemmas the method calls (row 38), so a caller
+    # without the module (the check stage re-deriving decision 22's shape)
+    # still sees a lemma call as a lemma call
+    lemma_names: set = {d.name for d in closure if isinstance(d, LemmaDecl) and d.name}
+    methods_by_name: dict = {}
+    if module is not None:
+        lemma_names |= {d.name for d in module.decls if isinstance(d, LemmaDecl) and d.name}
+        methods_by_name = {d.name: d for d in module.decls
+                           if isinstance(d, MethodDecl) and d.name}
+
+    def _callee_reads_only(callee: MethodDecl, positions: list) -> bool:
+        if callee.name in _stack or callee.name == method.name:
+            return callee.name == method.name
+        for i in positions:
+            if i >= len(callee.params):
+                return False
+            cp = callee.params[i]
+            if cp.type is None or cp.type.kind != "array" or cp.type.nullable:
+                return False
+            if array_readonly_issue(cp.name, callee, _closure(module, callee), module,
+                                    _stack + (method.name,)) is not None:
+                return False
+        return True
+
     scope: list[Node] = [method] + list(closure)
     for root in scope:
         shadowed = _closure_root_shadows(root, method, param_name)
@@ -1600,24 +1924,56 @@ def array_readonly_issue(param_name: str, method: MethodDecl,
                 if shadowed:
                     continue
                 args = n.args
-                for a in args:
-                    if isinstance(a, Ident) and a.name == param_name:
-                        return "array"
+                positions = [i for i, a in enumerate(args)
+                             if isinstance(a, Ident) and a.name == param_name]
+                if not positions:
+                    continue
+                callee_name = (n.name if isinstance(n, CallStmt)
+                               else (n.fn.name if isinstance(n.fn, Ident) else None))
+                if callee_name in lemma_names:
+                    continue  # feature 4: a lemma reads, never writes
+                if callee_name in methods_by_name and _callee_reads_only(
+                        methods_by_name[callee_name], positions):
+                    continue  # feature 4: a read-only callee
+                return "array"
     return None
 
 
-def _array_passed_to_call(name: str, method: MethodDecl, closure: tuple[Decl, ...]) -> bool:
+def _array_passed_to_call(name: str, method: MethodDecl, closure: tuple[Decl, ...],
+                          module: Optional[Module] = None) -> bool:
     """True iff `name` appears as a bare argument to some call anywhere
     in the method's closure -- the aliasing half of `array_readonly
     _issue`, factored out so decision 22's mutated array can reuse it
     without also tripping that function's own array-mutation check
     (which the mutated array is EXPECTED to trip). Shadow-guarded the
-    same way and for the same reason as `array_readonly_issue`."""
+    same way and for the same reason as `array_readonly_issue`. With
+    `module` given (feature 4, 2026-09-27), a LEMMA call is not an alias:
+    a lemma reads the array and cannot write it (the sorts' own
+    permutation lemmas, `SortedLemma(a, ...)`, are what tripped this)."""
+    lemma_names: set = {d.name for d in closure if isinstance(d, LemmaDecl) and d.name}
+    if module is not None:
+        lemma_names |= {d.name for d in module.decls if isinstance(d, LemmaDecl) and d.name}
+    # 2026-09-27 (t/FEATURES-TRACK.md, in-place writes, the Dafny half's
+    # first shape): a closure FUNCTION (a predicate in an invariant,
+    # `IsSorted(a, 0, i)`, insertionSort's `sorted(a, 0, i)`) is not an
+    # alias either: a Dafny function has no assignment and no heap
+    # mutation, it reads the array's value at the point of evaluation, and
+    # that value is exactly the seq decision 22 threads there (the same
+    # exemption `array_readonly_issue` grants a read-only parameter).
+    # Measured: 2 of the 11 `aliased` sorts have no `multiset` spec and
+    # lift once this is exempt; the other 9 refuse `multiset` next.
+    closure_fn_names = {d.name for d in closure if isinstance(d, FunctionDecl) and d.name}
     for root in [method] + list(closure):
         if _closure_root_shadows(root, method, name):
             continue
         for n in walk(root):
+            if isinstance(n, Call) and isinstance(n.fn, Ident) and n.fn.name in closure_fn_names:
+                continue
             if isinstance(n, (Call, CallStmt)):
+                callee_name = (n.name if isinstance(n, CallStmt)
+                               else (n.fn.name if isinstance(n.fn, Ident) else None))
+                if callee_name in lemma_names:
+                    continue
                 for a in n.args:
                     if isinstance(a, Ident) and a.name == name:
                         return True
@@ -1729,8 +2085,9 @@ def _alloc_bindings(method: MethodDecl) -> list[tuple[int, str, "NewRhs"]]:
     return out
 
 
-def find_array_mutation(method: MethodDecl, closure: tuple[Decl, ...]
-                         ) -> tuple[Optional[ArrayMutation], Optional[tuple[int, str, str]]]:
+def find_array_mutation(method: MethodDecl, closure: tuple[Decl, ...],
+                        module: Optional[Module] = None
+                        ) -> tuple[Optional[ArrayMutation], Optional[tuple[int, str, str]]]:
     """The method's ONE mutated/allocated array, per the shapes above.
     Returns `(mutation, None)` when found and well-shaped, `(None,
     None)` when the method has no array index-assignment and no `new
@@ -1814,7 +2171,7 @@ def find_array_mutation(method: MethodDecl, closure: tuple[Decl, ...]
         if len(mc.exprs) != 1 or not (isinstance(mc.exprs[0], Ident) and mc.exprs[0].name == name):
             return None, (mc.line, "array-mutation", "modifies-other")
 
-    if _array_passed_to_call(name, method, closure):
+    if _array_passed_to_call(name, method, closure, module):
         # Aliasing: the mutated array is also read through another name
         # (passed as an argument somewhere in the closure), which this
         # shim cannot verify the callee's effect on.
@@ -2028,7 +2385,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # that already returns something would need a SECOND return, which
     # t cannot express), so the zero-returns row below must see the
     # verdict first. --------------------------------------------------
-    array_mutation, mutation_issue = find_array_mutation(method, closure)
+    array_mutation, mutation_issue = find_array_mutation(method, closure, module)
     if mutation_issue is not None:
         issues.append(mutation_issue)
     if (array_mutation is not None and array_mutation.kind == "modifies-param"
@@ -2064,24 +2421,42 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
         if bad_a is not None or bad_b is not None:
             bad_name = ret_a.name if bad_a is not None else ret_b.name
             issues.append((method.line, "multi-return-nested", bad_name))
-        elif method.body is not None and any(
-                isinstance(n, Assign) and len(n.targets) != len(n.values)
-                for n in walk(method.body)):
-            # A destructuring assign (`a, b := M(x);`, ONE value for TWO
-            # targets, Dafny's own multi-return call-assignment sugar)
-            # is not a shape `lift_rewrite._lift_stmt`'s general
-            # multi-target Assign handling maps (it `zip`s targets
-            # against values pairwise and would silently drop `b`'s
-            # assignment) -- refused rather than mis-lifted; the only
-            # way past every OTHER refusal (a call to a different
-            # method already refuses `multi-method`/`calls-other-
-            # method` elsewhere) is a SELF-recursive multi-return call,
-            # absent from the corpus population this row measured.
-            issues.append((method.line, "multi-return-nested", "destructuring-assign"))
         else:
             pair_returns = (ret_a, ret_b)
     elif len(method.returns) > 1:
         issues.append((method.line, "multi-return-arity", method.name or "?"))
+
+    # A destructuring assign or declaration (`a, b := M(x);`, `var a, b :=
+    # M(x);`: one value for two targets, Dafny's multi-return call sugar,
+    # Reference Manual 8.5.2) lifts when the value is a call of another
+    # two-return method (t/FEATURES-TRACK.md feature 6, 2026-09-27; decided
+    # by `_method_calls` below, row 41). Any other shape -- a self-recursive
+    # multi-return call, three or more targets, a target that is not a name
+    # -- is not one `lift_rewrite._lift_stmt` maps (its multi-target Assign
+    # zips targets against values pairwise and would silently drop an
+    # assignment), so it is refused rather than mis-lifted. Before feature 6
+    # this refused every two-return method with any destructuring assign.
+    if method.body is not None:
+        # other methods by out-parameter count; a destructuring call of one
+        # with as many targets as out-parameters is `_method_calls`'s to
+        # decide (two lift, three or more refuse `method-call-multi-return`)
+        other_arity = {d.name: len(d.returns) for d in module.decls
+                       if isinstance(d, MethodDecl) and d.name and d.name != method.name}
+
+        def _call_of_other(v, n_targets: int) -> bool:
+            return (isinstance(v, Call) and isinstance(v.fn, Ident)
+                    and other_arity.get(v.fn.name) == n_targets)
+
+        for n in walk(method.body):
+            if isinstance(n, Assign) and len(n.targets) != len(n.values):
+                ok = (len(n.values) == 1 and all(t.kind == "name" for t in n.targets)
+                      and _call_of_other(n.values[0], len(n.targets)))
+                if not ok:
+                    issues.append((n.line, "multi-return-nested", "destructuring-assign"))
+            elif isinstance(n, VarDeclStmt) and n.init and len(n.names) != len(n.init):
+                ok = len(n.init) == 1 and _call_of_other(n.init[0], len(n.names))
+                if not ok:
+                    issues.append((n.line, "multi-return-nested", "destructuring-assign"))
 
     ret_param = method.returns[0] if len(method.returns) == 1 else None
 
@@ -2117,7 +2492,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             # `seq<nat>` return already has, just applied per row. Any
             # other seq shape (bool, string, three deep) stays refused.
             if not (_is_seq_of_int(rt) or _is_seq_of_nat(rt) or _is_seq_of_char(rt)
-                    or _is_nested_seq_of_int(rt) or _is_nested_seq_of_nat(rt)):
+                    or _is_nested_seq_of_int(rt) or _is_nested_seq_of_nat(rt)
+                    or _is_nested_seq_of_char(rt)):
                 issues.append((ret_param.line, "seq-return", ret_param.name))
         elif (rt is not None and rt.kind == "array" and not rt.nullable
                 and _is_array_of_int(rt) and array_mutation is not None
@@ -2136,7 +2512,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     for p in array_params:
         if p.name == mutated_param_name:
             continue
-        bad = array_readonly_issue(p.name, method, closure)
+        bad = array_readonly_issue(p.name, method, closure, module)
         if bad is not None:
             issues.append((p.line, bad, p.name))
 
@@ -2155,12 +2531,14 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     closure_names = {d.name for d in closure if d.name}
     method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
     null_checks = scan_null_checks(method)
+    tuple_names = _tuple_names(method, closure)  # row 44
     accepted_ids = (_array_mutation_accepted_ids(method, array_mutation, ret_param)
                      | frozenset(id(m) for _, _, m in null_checks)
                      | _dropped_function_decreases_set_ids(closure))
     for root in scope_roots:
         for n in walk(root):
-            _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids)
+            _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids,
+                                  tuple_names)
 
     # -- sequences: literal, concat, slice (rows 25-27, 2026-09-09) ------
     # `SeqDisplay`/`Slice`/a `+` on seqs used to be unconditional
@@ -2175,8 +2553,9 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # parameter, a seq local/parameter/return, a slice-of-a-slice) now
     # lifts the same way a plain seq does, per SPEC.md's own note that
     # `a[..]` on an array parameter "is the parameter itself, unchanged".
-    kind_env = _build_kind_env(method, closure, _method_return_kinds(module))
-    char_names, char_seq_names = _build_char_names(method, closure)
+    kind_env = _build_kind_env(method, closure, _method_return_kinds(module),
+                               _method_return_kind_lists(module))
+    char_names, char_seq_names, nested_str_names = _build_char_names(method, closure)
     mutated_array_name = array_mutation.name if array_mutation is not None else None
     for root in scope_roots:
         for n in walk(root):
@@ -2200,8 +2579,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                 else:
                     issues.append((n.line, "seq-slice", "[..]"))
             elif isinstance(n, Binary) and n.op in ("+", "-") and (
-                    _is_char_expr(n.left, char_names, char_seq_names)
-                    or _is_char_expr(n.right, char_names, char_seq_names)):
+                    _is_char_expr(n.left, char_names, char_seq_names, nested_str_names)
+                    or _is_char_expr(n.right, char_names, char_seq_names, nested_str_names)):
                 # Row 28: `char + char`/`char - char` verify on dafny
                 # 4.11.0 with an overflow/underflow proof obligation
                 # (measured: t8/t9.dfy above), a fact t's plain,
@@ -2269,7 +2648,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                         rewrites.append(Rewrite(rule="int-as-char-lifted", line=n.line))
                     else:
                         issues.append((n.line, "char-cast-unbounded", "as char"))
-                elif n.type.kind == "int" and _is_char_expr(n.base, char_names, char_seq_names):
+                elif n.type.kind == "int" and _is_char_expr(n.base, char_names, char_seq_names,
+                                                             nested_str_names):
                     rewrites.append(Rewrite(rule="char-as-int-lifted", line=n.line))
                 else:
                     issues.append((n.line, "as-cast", "as"))
@@ -2324,16 +2704,23 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
         rewrites.append(Rewrite(rule="null-check-dropped", line=null_checks[0][1].line))
 
     # -- quantifier boundedness -------------------------------------------
+    # Feature 5 (2026-09-27): the closure's predicates, for the range
+    # through a predicate rule; the same dict `lift_rewrite` reads off
+    # `Scope.predicates`, so the two stages bound every quantifier alike.
+    predicates = closure_predicates(closure)
     for root in scope_roots:
         for n in walk(root):
             if isinstance(n, Quantifier):
-                got = bound_quantifier(n)
+                got = bound_quantifier(n, predicates)
                 if got is None:
                     issues.append((n.line, "unbounded-quantifier", n.kind))
                 else:
                     has_mem = any(mem is not None for _, _, _, mem in got["binders"])
                     rewrites.append(Rewrite(rule="in-desugared" if has_mem
                                              else "quantifier-bounded", line=n.line))
+                    for rule in sorted(got.get("rules", ())):
+                        if rule not in ("in-desugared", "quantifier-bounded"):
+                            rewrites.append(Rewrite(rule=rule, line=n.line))
 
     # -- mutual recursion ---------------------------------------------------
     mr = _mutual_recursion_issue(closure)
@@ -2364,6 +2751,17 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # this widening touches only the shape decision 1 already trusts.
     for d in closure:
         if isinstance(d, FunctionDecl):
+            # 2026-09-27 (t/FEATURES-TRACK.md, strings): a t spec_fun's result
+            # is int or bool (SPEC.md, `"result": "int"|"bool"`), so a closure
+            # function returning a `string`/`seq<..>`/anything else cannot lift
+            # and refuses here by name; before this it was lifted with an int
+            # result and failed check_wf ("body type != result") one stage
+            # later, the same outcome under a misleading name (135 methods of
+            # the 2026-09-26 lift). A `char` result is an int (row 28).
+            if (not d.is_predicate and d.ret_type is not None
+                    and not (d.ret_type.kind in ("int", "nat", "char"))):
+                issues.append((d.line, "function-result",
+                               f"{d.name or '?'}:{_type_text(d.ret_type)}"))
             own_array_names = {p.name for p in d.params
                                 if p.type is not None and p.type.kind == "array"
                                 and not p.type.nullable and _is_array_of_int(p.type)}
@@ -2401,7 +2799,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,
                            closure_names: set[str],
                            method_names: set[str] = frozenset(),
-                           accepted_ids: frozenset[int] = frozenset()) -> None:
+                           accepted_ids: frozenset[int] = frozenset(),
+                           tuple_names: frozenset = frozenset()) -> None:
     """One generic pass catching every section-5 row that is a plain
     "does this construct appear anywhere" test. Rows needing context
     (self-recursion shape, tail returns, quantifier bounds, decreases,
@@ -2481,11 +2880,18 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     elif isinstance(n, Comprehension) and n.kind == "seq":
         issues.append((n.line, "seq-comprehension", "seq-comprehension"))
     elif isinstance(n, TupleExpr):
-        issues.append((n.line, "tuple", "(...)"))
+        # Row 44 (2026-09-27): a two-element tuple literal is t's pair
+        # literal (SPEC.md "Pairs (v1)"); any other arity has no t value.
+        if len(n.elems) != 2:
+            issues.append((n.line, "tuple-arity", f"({len(n.elems)})"))
     elif isinstance(n, TypeTest):
         issues.append((n.line, "as-cast", "is"))
     elif isinstance(n, Member) and n.name != "Length":
-        issues.append((n.line, "datatype", n.name))
+        # Row 44: `.0`/`.1` on a name declared with an accepted tuple type
+        # is a pair projection; any other member is a datatype's.
+        if not (n.name in ("0", "1") and isinstance(n.base, Ident)
+                and n.base.name in tuple_names):
+            issues.append((n.line, "datatype", n.name))
     elif isinstance(n, VarDeclStmt) and n.ghost:
         issues.append((n.line, "ghost-local", "ghost var"))
     elif isinstance(n, CallStmt):
@@ -2511,6 +2917,15 @@ def _method_return_kinds(module: Module) -> dict[str, str]:
             if k is not None:
                 kinds[d.name] = k
     return kinds
+
+
+def _method_return_kind_lists(module: Module) -> dict[str, list]:
+    """dafny method name -> the kinds of its out-parameters, in order, for
+    every method with two or more (row 41: `var a, b := M(x);` types `a` and
+    `b` from them); a kind `expr_kind` does not know is None in its slot."""
+    return {d.name: [_declared_kind(r.type) for r in d.returns]
+            for d in module.decls
+            if isinstance(d, MethodDecl) and d.name and len(d.returns) >= 2}
 
 
 def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
@@ -2548,16 +2963,26 @@ def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
                 and n.fn.name in by_name and n.fn.name != method.name)
 
     whole_rhs: set[int] = set()
+    # Row 41 (t/FEATURES-TRACK.md feature 6, 2026-09-27): `a, b := M(args);`
+    # and `var a, b := M(args);`, Dafny's call of a two-out-parameter method
+    # (Reference Manual 8.5.2: "assigned to as many left-hand sides as it
+    # has out-parameters"), keyed by the number of targets the call must
+    # match; `lift_rewrite` binds the callee's pair return to a fresh local
+    # and projects it (`p.0`, `p.1`) into the two names.
+    arity_at: dict[int, int] = {}
     for s in walk(method.body):
         rhs = None
-        if (isinstance(s, Assign) and len(s.targets) == 1 and len(s.values) == 1
-                and s.targets[0].kind == "name"):
+        if (isinstance(s, Assign) and len(s.values) == 1
+                and all(t.kind == "name" for t in s.targets) and 1 <= len(s.targets) <= 2):
             rhs = s.values[0]
+            n_targets = len(s.targets)
         elif (isinstance(s, VarDeclStmt) and not s.ghost and s.init
-                and len(s.names) == 1 and len(s.init) == 1):
+                and len(s.init) == 1 and 1 <= len(s.names) <= 2):
             rhs = s.init[0]
+            n_targets = len(s.names)
         if rhs is not None and is_other_call(rhs):
             whole_rhs.add(id(rhs))
+            arity_at[id(rhs)] = n_targets
 
     seen: set[str] = set()
     for n in walk(method.body):
@@ -2571,7 +2996,7 @@ def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
         if len(callee.returns) == 0:
             issues.append((n.line, "method-call-no-return", name))
             continue
-        if len(callee.returns) > 1:
+        if len(callee.returns) > 2:
             issues.append((n.line, "method-call-multi-return", name))
             continue
         if callee.type_params:
@@ -2579,6 +3004,13 @@ def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
             continue
         if id(n) not in whole_rhs or any(is_other_call(x) for a in n.args for x in walk(a)):
             issues.append((n.line, "method-call-position", name))
+            continue
+        if arity_at.get(id(n)) != len(callee.returns):
+            # `x := Two(a);` (one name for two out-parameters) is a Dafny
+            # type error; the source verified, so this is a shape the
+            # parser read but Dafny never accepts. Refused by the call's
+            # own name for completeness.
+            issues.append((n.line, "method-call-multi-return", name))
             continue
         if name in stack:
             issues.append((n.line, "method-mutual-recursion", name))
@@ -2600,7 +3032,7 @@ def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
                 issues.append((n.line, f"callee-refused:{verdict.reason}",
                                f"{name}:{verdict.token}"))
             continue
-        mutation, _ = find_array_mutation(callee, _closure(module, callee))
+        mutation, _ = find_array_mutation(callee, _closure(module, callee), module)
         if mutation is not None:
             issues.append((n.line, "method-call-array", name))
             continue

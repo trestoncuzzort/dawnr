@@ -123,6 +123,7 @@ from lift_ast import (
 
 import fuzz_lower
 import lift_let
+from lift_classify import expr_kind
 import interp
 import harness
 import lower_dafny
@@ -355,6 +356,10 @@ def _print_expr(e, rename: dict) -> str:
         # differential harness prints the source method's statements too;
         # vericoding DA0543's `assert forall j, _t#0 | ...` measured).
         e = _source_form(e)
+        if not isinstance(e, Quantifier):
+            # every binder pinned by an equality: the quantifier is its
+            # body (the one-point rule, `_source_form`)
+            return _print_expr(e, rename)
         binders = ", ".join(_print_binder(b, rename) for b in e.binders)
         rng = f" | {_print_expr(e.range, rename)}" if e.range is not None else ""
         return f"({e.kind} {binders}{rng} :: {_print_expr(e.body, rename)})"
@@ -705,20 +710,23 @@ def _source_form(e):
         e = dataclasses.replace(e, **changes)
     if isinstance(e, Quantifier):
         import lift_classify
-        while True:
-            synth = tuple(b for b in e.binders if _is_synth_binder(b.name))
-            found = (lift_classify._binder_defining_equality(synth, e.range)
-                     if synth else None)
-            if found is None:
-                break
-            name, repl, remaining = found
-            binders = tuple(b for b in e.binders if b.name != name)
-            if not binders:
-                break
-            body = lift_classify._subst_ast(e.body, name, repl)
-            if remaining is not None:
-                remaining = lift_classify._subst_ast(remaining, name, repl)
-            e = dataclasses.replace(e, binders=binders, range=remaining, body=body)
+        # The resolver's `_t#N` binders, and (2026-09-27, t/FEATURES-TRACK.md
+        # feature 5) every other binder pinned by an equality in the range, an
+        # exists body or a forall antecedent, are substituted away by the
+        # one-point rule, `(exists x :: x == E && P(x)) == P(E)` and `(forall
+        # x :: x == E ==> P(x)) == P(E)` for an `E` not mentioning `x` (Gries
+        # and Schneider, A Logical Approach to Discrete Math, 1993, theorem
+        # (8.14)), the same rule `lift_classify._eliminate_defined_binders`
+        # applies on the lifted side. Dafny does not find the witness `E` for
+        # the source's own existential against the lift's `P(E)` (measured
+        # 2026-09-27: L_ens unproved on `exists count :: count == Count(s)
+        # && result == count + 1`), and the rule is a logical identity, not
+        # a fact about this program. A quantifier all of whose binders are
+        # pinned is its body.
+        e2 = lift_classify._eliminate_defined_binders(e)
+        if not e2.binders:
+            return e2.body
+        e = e2
         body = _rejoin_split_body(e.kind, e.body)
         if body is not e.body:
             e = dataclasses.replace(e, body=body)
@@ -769,9 +777,20 @@ def _view_kind_for_type(t: Optional[Type]) -> Optional[str]:
         return "char"
     if t.kind == "string" or (t.kind == "seq" and len(t.args) == 1 and t.args[0].kind == "char"):
         return "string"
+    if _is_nested_strings(t):
+        return "strings"  # row 43: a `seq<string>`, viewed row by row
     if t.kind == "array":
         return "array"
     return None
+
+
+def _is_nested_strings(t: Optional[Type]) -> bool:
+    """Row 43 (2026-09-27): `seq<string>` or `seq<seq<char>>`, lifted to
+    t's nested seq of code-point rows (`lift_classify._is_nested_seq_of_char`)."""
+    return (t is not None and t.kind == "seq" and len(t.args) == 1
+            and (t.args[0].kind == "string"
+                 or (t.args[0].kind == "seq" and len(t.args[0].args) == 1
+                     and t.args[0].args[0].kind == "char")))
 
 
 def _src_result_text(call_text: str, ret_type: Optional[Type]) -> str:
@@ -813,6 +832,14 @@ def _view_hint_lines(vws: dict, declared) -> list:
         if kind == "string":
             out.append(f"  assert forall k_view: int :: 0 <= k_view < |{n}| ==> "
                        f"{v}[k_view] == ({n}[k_view] as int);")
+        elif kind == "strings":
+            # Row 43: what the nested comprehension means, row by row.
+            out.append(f"  assert |{v}| == |{n}|;")
+            out.append(f"  assert forall i_view: int :: 0 <= i_view < |{n}| ==> "
+                       f"|{v}[i_view]| == |{n}[i_view]|;")
+            out.append(f"  assert forall i_view: int, k_view: int :: 0 <= i_view < |{n}| && "
+                       f"0 <= k_view < |{n}[i_view]| ==> "
+                       f"{v}[i_view][k_view] == ({n}[i_view][k_view] as int);")
         elif kind == "array":
             # The same elementwise statement for decision 1's `(a[..])`
             # view. L_ens/L_inv_k carry it as a requires already
@@ -829,6 +856,72 @@ def _view_hint_lines(vws: dict, declared) -> list:
 
 def _body(hints: list) -> list:
     return ["{"] + hints + ["}"] if hints else ["{ }"]
+
+
+def _is_len_json(e: dict) -> bool:
+    return isinstance(e, dict) and e.get("op") == "len"
+
+
+def _seq_measure(e, names: list, types: list, crename: dict) -> bool:
+    """Feature 3 of t/FEATURES-TRACK.md (seq `decreases`, 2026-09-27): is
+    the SOURCE measure `e` a sequence (a `seq<..>`/`string`-typed name, a
+    slice, a display, a concatenation of those)? `lift_rewrite` lifts such a
+    component as `len(component)`, so the equality lemma compares
+    `|component|` on the source side (a bare `s == |s|` would not even
+    type-check). `names`/`types` are the lemma's parameters (true names) and
+    their source types; `crename` maps source names onto them."""
+    kinds = {}
+    for n, t in zip(names, types):
+        if t is None:
+            continue
+        if t.kind in ("seq", "string"):
+            kinds[n] = "seq"
+        elif t.kind in ("int", "nat", "char"):
+            kinds[n] = "int"
+        elif t.kind == "bool":
+            kinds[n] = "bool"
+    return expr_kind(e, lambda name: kinds.get(crename.get(name, name))) == "seq"
+
+
+def _slice_bridge_lines(fd: FunctionDecl, rename: dict) -> list:
+    """Feature 3 of t/FEATURES-TRACK.md (seq `decreases`, 2026-09-27): proved
+    bridges between the two spellings of a one-sided slice. The source
+    writes `s[1..]` / `s[..k]`; the lift carries the three-argument form
+    (SPEC.md "Sequences: literals, concatenation, slices (v1)"), which
+    `lower_dafny` prints as `s[1..|s|]` / `s[0..k]`. Dafny translates the
+    two differently (`Seq#Drop`/`Seq#Take` against a `Take` of a `Drop`) and
+    does not equate them unprompted: `L_fun_sum` for `Sum(s) = s[0] +
+    Sum(s[1..])` read unproved under every induction hint tried (dafny
+    4.11.0, 2026-09-27) and verifies once the equality is stated over the
+    function's own sequence parameters. Each statement is proved by Dafny
+    in an empty `forall` body, so nothing about the lift is assumed; it is
+    emitted only for a function whose body has a one-sided slice, so every
+    other checker file is byte for byte what it was."""
+    if fd.body is None:
+        return []
+    drop = take = False
+    for n in _walk_exprs(fd.body):
+        if isinstance(n, Slice) and not (n.lo is None and n.hi is None):
+            if n.hi is None:
+                drop = True
+            if n.lo is None:
+                take = True
+    if not (drop or take):
+        return []
+    names = {p.name for p in fd.params}
+    k = "k_bridge"
+    while k in names:
+        k += "_"
+    out = []
+    for p in fd.params:
+        if p.type is None or p.type.kind not in ("seq", "string"):
+            continue
+        n = rename.get(p.name, p.name)
+        if drop:
+            out.append(f"  forall {k}: int | 0 <= {k} <= |{n}| ensures {n}[{k}..|{n}|] == {n}[{k}..] {{ }}")
+        if take:
+            out.append(f"  forall {k}: int | 0 <= {k} <= |{n}| ensures {n}[0..{k}] == {n}[..{k}] {{ }}")
+    return out
 
 
 def _induction_hint(fd: FunctionDecl, f: dict, rename: dict):
@@ -853,8 +946,15 @@ def _induction_hint(fd: FunctionDecl, f: dict, rename: dict):
     d = decs[0].exprs[0]
     int_params = {p.name for p in fd.params
                   if p.type is not None and (p.type.kind in ("int", "nat"))}
+    # Feature 3 (seq `decreases`, 2026-09-27): a bare seq/string-typed
+    # parameter as the measure (Dafny's default for a function over a
+    # sequence) is ordered by length on both sides, `|s_ih| < |s|`, the
+    # order `lift_rewrite._seq_measure_to_len` lifts it to.
+    seq_params = {p.name for p in fd.params
+                  if p.type is not None and p.type.kind in ("seq", "string")}
+    by_length = isinstance(d, Ident) and d.name in seq_params
     if isinstance(d, Ident):
-        if d.name not in int_params:
+        if d.name not in int_params and not by_length:
             return None, []
     elif not isinstance(d, (Binary, Unary, Cardinality, IntLit)):
         return None, []
@@ -869,6 +969,8 @@ def _induction_hint(fd: FunctionDecl, f: dict, rename: dict):
     req2 = _conj_text([sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)], ren2)
     d_now = _print_expr(d, rename)
     d_ih = _print_expr(d, ren2)
+    if by_length:
+        d_now, d_ih = f"|{d_now}|", f"|{d_ih}|"
     fn_src = rename.get(fd.name, fd.name)
     src_call = _src_result_text(f"{fn_src}({args2})", fd.ret_type)
     guard = _and([nat2, req2, f"(0 <= {d_ih} < {d_now})"])
@@ -1105,6 +1207,12 @@ def _view_text(name: str, views: dict) -> str:
     if kind == "string":
         return (f"(seq(|{name}|, (k: int) requires 0 <= k < |{name}| "
                  f"=> {name}[k] as int))")
+    if kind == "strings":
+        # Row 43: the same code-point view, one row at a time, so the
+        # substituted expression has Dafny type `seq<seq<int>>`.
+        return (f"(seq(|{name}|, (i: int) requires 0 <= i < |{name}| => "
+                 f"seq(|{name}[i]|, (k: int) requires 0 <= k < |{name}[i]| "
+                 f"=> {name}[i][k] as int)))")
     if kind == "char":
         return f"({name} as int)"
     return name
@@ -2087,6 +2195,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             if call.fn.name != fd.name and call.fn.name not in callee_names:
                 callee_names.append(call.fn.name)
         lines.extend(_body(_view_hint_lines(fd_views, {p.name for p in fd.params})
+                           + _slice_bridge_lines(fd, rename)
                            + [fun_hints[n] for n in callee_names] + ih_lines))
         lines.append("")
 
@@ -2612,6 +2721,11 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             lemma_names.append(name)
             src_dec = _print_expr(dec_specs[0].exprs[0], loop_crename)
             lifted_dec = _t_expr(task_loops[k]["decreases"], views)
+            if (_is_len_json(task_loops[k]["decreases"])
+                    and _seq_measure(dec_specs[0].exprs[0], full_names, full_types, loop_crename)):
+                # Feature 3 (seq `decreases`, 2026-09-27): the lift is
+                # `len(s)`, so the source side is `|s|` (see `_seq_measure`).
+                src_dec = f"|{src_dec}|"
             lines.append(f"lemma {name}({ps_inv})")
             # Same ordering, same reason as `L_inv_k`'s own `requires`
             # above: `extra_fact` can index with the enclosing `for`'s
@@ -2661,14 +2775,34 @@ def build_checker(task: dict, source: MethodDecl, closure: tuple,
 # build_differential (section 10(a), plus 18.5's third-arm printing).
 # ===========================================================================
 
-def _dafny_literal(v, ty: str) -> str:
+def _dafny_literal(v, ty) -> str:
     if ty == "bool":
         return "true" if v else "false"
     if ty == "int":
         return str(v)
     if ty == "seq":
         return "[" + ", ".join(str(x) for x in v) + "]"
+    if isinstance(ty, dict) and ty.get("seq") == "seq":
+        # Row 43 (2026-09-27; also row 30's own residual, a nested-seq
+        # point could not be printed before): a nested value is a display
+        # of displays, the shape `interp` holds it in.
+        return "[" + ", ".join(_dafny_literal(row, "seq") for row in v) + "]"
+    if isinstance(ty, dict) and "pair" in ty:
+        # Row 44 (2026-09-27): a pair point is Dafny's own tuple literal;
+        # `interp.Pair` holds the two components as `.a`/`.b`.
+        t1, t2 = ty["pair"]
+        a, b = (v.a, v.b) if hasattr(v, "a") else (v[0], v[1])
+        return f"({_dafny_literal(a, t1)}, {_dafny_literal(b, t2)})"
     raise ValueError(f"lift_check._dafny_literal: unknown t type {ty!r}")
+
+
+def _dafny_type_text(ty) -> str:
+    """The Dafny spelling of a lifted param's JSON type in the differential
+    harness's point list: `lower_dafny.TYPES` for a flat type, and the
+    nested `seq<seq<int>>` for t's compound `{"seq": "seq"}` (row 43)."""
+    if isinstance(ty, dict):
+        return lower_dafny.dafny_type(ty)  # `seq<seq<int>>`, `(int, int)` (row 44)
+    return lower_dafny.TYPES[ty]
 
 
 def _param_names_types(task: dict) -> list:
@@ -2827,6 +2961,11 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
         if ret_type_src0.kind == "string" or is_seq_of_char:
             return (f"(seq(|{expr}|, (k: int) requires 0 <= k < |{expr}| "
                      f"=> {expr}[k] as int))")
+        if _is_nested_strings(ret_type_src0):
+            # Row 43: a `seq<string>` result, every row viewed as code points.
+            return (f"(seq(|{expr}|, (i: int) requires 0 <= i < |{expr}| => "
+                     f"seq(|{expr}[i]|, (k: int) requires 0 <= k < |{expr}[i]| "
+                     f"=> {expr}[i][k] as int)))")
         if ret_type_src0.kind == "char":
             return f"({expr} as int)"
         return expr
@@ -2851,11 +2990,11 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
     else:
         if n_params == 1:
             n0, ty0 = names_types[0]
-            pts_ty = lower_dafny.TYPES[ty0]
+            pts_ty = _dafny_type_text(ty0)
             lit_list = [_dafny_literal(env0[n0], ty0) for env0, _real in points]
             call_args = "pts[i]"
         else:
-            field_tys = ", ".join(lower_dafny.TYPES[ty] for _n, ty in names_types)
+            field_tys = ", ".join(_dafny_type_text(ty) for _n, ty in names_types)
             pts_ty = f"({field_tys})"
             lit_list = []
             for env0, _real in points:
@@ -2886,6 +3025,11 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
                                          and sp.type.args[0].kind == "char")))
         char_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
                               if sp.type is not None and sp.type.kind == "char")
+        # Row 43: a `seq<string>` parameter's sampled rows of code points,
+        # each converted back into a Dafny string (`strings-elements-
+        # requires` keeps every sampled value in `as char`'s range).
+        strings_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
+                                 if _is_nested_strings(sp.type))
         point_exprs = ["pts[i]"] if n_params == 1 else [f"pts[i].{j}" for j in range(n_params)]
         src_args = []
         materialise = []
@@ -2916,6 +3060,12 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
                 src_args.append(f"s{j}")
             elif pn in char_view:
                 src_args.append(f"({pe} as char)")
+            elif pn in strings_view:
+                materialise.append(
+                    f"    var s{j} := seq(|{pe}|, (i: int) requires 0 <= i < |{pe}| => "
+                    f"seq(|{pe}[i]|, (k: int) requires 0 <= k < |{pe}[i]| "
+                    f"=> {pe}[i][k] as char));")
+                src_args.append(f"s{j}")
             else:
                 src_args.append(pe)
         lines.append(f"  var pts: seq<{pts_ty}> := [{', '.join(lit_list)}];")
