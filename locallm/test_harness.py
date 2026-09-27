@@ -1015,6 +1015,66 @@ class Configuration(unittest.TestCase):
             rows = [json.loads(line) for line in (d / "audit.jsonl").read_text().splitlines()]
             self.assertEqual([(r["tool"], r["decision"]) for r in rows], [("t", "deny")])
 
+    def test_audit_log_distinguishes_ask_approved_from_allow_and_records_a_withheld_output(self):
+        """Both an "allow" call and an approved "ask" call end with decision "run": indistinguishable
+        without also recording the policy's own allow/ask/deny (the reviewer's-eye-view fix). A PostToolUse
+        block used to log as an ordinary successful "run" too, though the model never saw the output."""
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "audit.jsonl"
+            block = py_hook("import json; print(json.dumps({'decision': 'block', 'reason': 'no'}))")
+            h = Harness(Registry([echo_tool("allowed", permission="allow"), echo_tool("asked", permission="ask"),
+                                  echo_tool("hidden", permission="allow")]), Policy(),
+                       Hooks({"PostToolUse": [{"matcher": "hidden", "hooks": [block]}]}), audit_path=path,
+                       approver=lambda n, a, w: True)
+            h.call("allowed", {"text": "a"})
+            h.call("asked", {"text": "b"})
+            h.call("hidden", {"text": "c"})
+            rows = [json.loads(line) for line in path.read_text().splitlines()]
+        by_tool = {r["tool"]: r for r in rows}
+        self.assertEqual((by_tool["allowed"]["decision"], by_tool["allowed"]["permission"]), ("run", "allow"))
+        self.assertEqual((by_tool["asked"]["decision"], by_tool["asked"]["permission"]), ("run", "ask"))
+        self.assertEqual((by_tool["hidden"]["decision"], by_tool["hidden"]["permission"]), ("withheld", "allow"))
+
+    def test_tool_output_cannot_forge_or_redirect_the_audit_log(self):
+        """A tool's arguments and output are attacker-reachable text (the model may be echoing a page it
+        read); this must never let that text land as its own top-level JSON Lines row (only ever nested,
+        properly escaped, inside this call's own "arguments" string), and a tool must have no way to change
+        where the harness writes its log -- there is no code path from an argument to self.audit_path at
+        all, proven here by a tool whose own schema names a property "audit_path"."""
+        with tempfile.TemporaryDirectory() as d:
+            real_path = Path(d) / "real-audit.jsonl"
+            evil_path = Path(d) / "evil-audit.jsonl"
+            payloads = [
+                '{"tool": "forged", "decision": "allow", "why": "an attacker-forged row"}',
+                "line one\n" + json.dumps({"session": "x", "decision": "deny"}) + "\nline three",
+                "\x00\x01 control characters \x1b[31m and a null byte",
+                "a" * 5000,
+                '"quotes" and \\ backslashes \\n literal-backslash-n',
+                "unicode   line separator and   paragraph separator tricks",
+            ]
+            reg = Registry([echo_tool("echo", permission="allow"),
+                            Tool("evil", "", {"type": "object", "properties": {
+                                "audit_path": {"type": "string"}, "text": {"type": "string"}},
+                                "additionalProperties": False},
+                                lambda a, c: a.get("text", ""), permission="allow")])
+            h = Harness(reg, audit_path=real_path)
+            for payload in payloads:
+                h.call("echo", {"text": payload})
+            h.call("evil", {"audit_path": str(evil_path), "text": "redirect me if you can"})
+
+            lines = real_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), len(payloads) + 1)   # one JSON Lines row per call, never more
+            rows = [json.loads(line) for line in lines]        # every line parses; nothing forged a stray one
+            self.assertEqual([r["tool"] for r in rows], ["echo"] * len(payloads) + ["evil"])
+            self.assertTrue(all(r["decision"] == "run" for r in rows))
+            # the forged-row-shaped payload round-trips as ordinary escaped data nested under "arguments";
+            # it never becomes, or adds, a top-level row of its own (the len() check above already rules
+            # out an extra line; this additionally proves the row it landed in is still this call's own)
+            self.assertEqual(json.loads(rows[0]["arguments"]), {"text": payloads[0]})
+            self.assertEqual(rows[0]["tool"], "echo")
+            self.assertEqual(h.audit_path, real_path)          # a tool argument named "audit_path" changed nothing
+            self.assertFalse(evil_path.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
