@@ -5091,7 +5091,7 @@ def _post_sf_for(task: dict) -> str:
         text = POST_SF
     if _nonrec_sfs(task):
         text = _add_nr_alt(text)
-    spec = [task.get("ensures"), task.get("body")]
+    spec = [task.get("ensures"), task.get("body"), task.get("lemmas")]
     ex, fa = _has_quant(spec, "exists"), _has_quant(spec, "forall")
     loop_fa = _has_quant(task.get("body"), "forall") and _any_while_deep(task.get("body") or [])
     return _add_quant_alts(text, exw=ex, conj=ex or fa, fext=loop_fa)
@@ -5178,7 +5178,11 @@ def _has_nonlinear_mul(task: dict) -> bool:
         return False
     return (any(walk(e) for e in task.get("requires", []))
             or any(walk(e) for e in task.get("ensures", []))
-            or walk({"body": task.get("body", [])}))
+            or walk({"body": task.get("body", [])})
+            # SPEC.md "Lemmas (v1)": a stated lemma's contract and proof
+            # steps are goals of this file too (sq_bound's `a * b <= (a +
+            # b) * (a + b)`); absent, this adds nothing.
+            or walk({"lemmas": task.get("lemmas", [])}))
 
 
 def _has_rec_int_spec_fun(task: dict) -> bool:
@@ -5284,6 +5288,13 @@ class Ctx:
             self.sfparams[sf["name"]] = sf["params"]
         self.sfres[task["name"]] = task["returns"][0]["type"]
         self.sfparams[task["name"]] = task["params"]
+        # SPEC.md "Lemmas (v1)" (2026-09-27, the LEMMAS section before
+        # `lower_v1`): the task's lemmas by name, and the collector
+        # `exec_straight` fills with the lemma-call sites it walks past
+        # while a generator has armed it (None: not collecting). Empty and
+        # None for every task without lemmas.
+        self.lemmas: dict[str, dict] = {l["name"]: l for l in task.get("lemmas", [])}
+        self.lemma_sites: list | None = None
         # how to render a call to `fun`: fname -> prefix string; the callee's
         # args are appended. Defaults set by the shapes.
         self.callpre: dict[str, str] = {
@@ -6435,6 +6446,15 @@ def exec_straight(cx: Ctx, stmts: list, env: dict, local: dict,
                 tv = env_t.get(v, base)
                 ev = env_e.get(v, base)
                 env[v] = tv if tv == ev else f"(if {cb} then {tv} else {ev})"
+        elif "lemma" in s:
+            # SPEC.md "Lemmas (v1)": a lemma call is a no-op at run time, so
+            # the symbolic state is unchanged; when a generator has armed
+            # the collector, the call is recorded with its arguments
+            # rendered in the state at this point (the LEMMAS section).
+            if cx.lemma_sites is not None:
+                c = s["lemma"]
+                cx.lemma_sites.append(
+                    (c["name"], _lemma_args(cx, cx.lemmas[c["name"]], c["args"], env, local)))
         elif "while" in s:
             raise AssertionError("while must be split out before exec")
         else:
@@ -7568,6 +7588,10 @@ def _mpseudo(task: dict, idx: int) -> dict:
               "methods": ms[:idx]}
     if "decreases" in m:
         pseudo["decreases"] = m["decreases"]
+    if task.get("lemmas"):
+        # SPEC.md "Lemmas (v1)": a method body may call a lemma; its unit's
+        # Ctx needs the signatures (`Ctx.lemmas`) to pose the instance.
+        pseudo["lemmas"] = task["lemmas"]
     return pseudo
 
 
@@ -7836,6 +7860,319 @@ def _mconcrete_defs(task: dict) -> str:
     return "\n".join(out)
 
 
+# --------------------------------------------------------------------------
+# LEMMAS (v1), 2026-09-27 (SPEC.md "Lemmas (v1)"; t/FEATURES-TRACK.md, the
+# lemma table's rocq column). Until this date this lowering stated no lemma:
+# it stripped every lemma call (a run-time no-op) and proved the program
+# alone, so a program whose proof needs its lemma read unproved here while
+# the other six kernels proved it (FEATURES-TRACK's 2026-09-27 measurement:
+# rocq gained 0 of the 33 kernel cells lemmas bought; 9 of the 10
+# lemma-carrying documents clean in exactly five kernels missed rocq).
+#
+# The design is copied from two places this file already trusts. From the
+# Lean lowering's `emit_lemmas`: one theorem per lemma, its proof the lemma's
+# own skeleton (a case split per `if`, a proved cut per `assert`, a posed
+# instance per call), the call handing the proved fact to the automation
+# rather than being a statement of its own. From `gen_rec` and
+# `emit_spec_funs` here: a recursive lemma is proved by induction on a nat
+# fuel bounding its `decreases` (the same encoding every self-recursive task
+# and spec_fun already gets), so the induction hypothesis is exactly the
+# lemma at smaller arguments and a self-call poses it:
+#
+#   lemma L(params) requires R ensures E [decreases d] { skeleton }
+#     non-recursive ->  Theorem tl_L : forall params, lens -> R -> E.
+#     recursive     ->  Lemma tl_L_fuel : forall (fuel : nat) params,
+#                         (Z.to_nat d < fuel)%nat -> lens -> R -> E.
+#                       Theorem tl_L instantiates fuel at S (Z.to_nat d).
+#   skeleton:  assert e;          ->  assert (tl_A : e) by t_dis
+#              M(args);           ->  pose proof (tl_M args) as tl_C; t_feed tl_C
+#              L(args);  (self)   ->  pose proof (IH args) as tl_C; t_feed tl_C
+#              if c {..} else {..} -> a case split on c, the two arms' steps
+#   then every spec_fun application the ensures names is unfolded once in
+#   the goal (`rewrite (sf_f_eq args)`: Dafny's own default fuel of one
+#   unfolding per application in the goal, Amin, Leino and Rompf,
+#   "Computing with an SMT solver", TAP 2014) and t_dis closes it.
+#
+#   a call L(args); in the task body -> its instance `tl_L <args rendered in
+#   the symbolic state at the call>` posed in the proof whose goal covers
+#   that statement (gen_plain's theorem; gen_loop's theorem for a prefix or
+#   suffix call, its loop lemma for a loop-body call, posed before the step
+#   proof's case split and fed after it, once the guard is in context), and
+#   `t_feed` specializes each premise (a length fact, a `requires`) it can
+#   prove with t_dis, leaving any it cannot in place as an implication.
+#
+# Soundness. Every tl_* theorem is proved by the kernel in this file and
+# audited by the adapter's Print Assumptions like every other obligation; a
+# posed instance is a proved theorem applied to terms, valid on every path
+# whatever the call's guard, and t_feed only removes a premise it has
+# PROVED. Nothing is assumed: a false lemma, a false `assert` step or a
+# circular induction fails its own Qed and the file reads unproved (the five
+# t/lemmas_probe/ fixtures). The refutation certificate is untouched: it is
+# still built from the stripped body (`lower`).
+#
+# What still strips (states none of the lemmas, this file's behaviour before
+# this date, `_lemmas_stated`): a body that self-recurses or takes the
+# general loop path (gen_rec/gen_loops close their goals inside their own
+# `repeat first [...]` chains, where a posed fact has no site yet), a lemma
+# with a parameter type this file cannot bind (only int, bool and seq), a
+# declared identifier this file's `_ck` refuses or that would collide with
+# the `tl_` namespace, and a task whose body (and methods) never call a
+# lemma. A task with no lemmas renders byte for byte as before.
+# --------------------------------------------------------------------------
+
+_LEMMA_PARAM_TYPES = ("int", "bool", "seq")
+
+
+def _lemma_stmts(stmts: list) -> list:
+    """Every lemma-call statement under `stmts`, through `if` and `while`."""
+    out = []
+    for s in stmts:
+        if "lemma" in s:
+            out.append(s)
+        elif "if" in s:
+            out += _lemma_stmts(s["if"]["then"]) + _lemma_stmts(s["if"]["else"])
+        elif "while" in s:
+            out += _lemma_stmts(s["while"]["body"])
+    return out
+
+
+def _lemmas_stated(task: dict, body: list) -> bool:
+    """True iff this file states (and proves, and poses) the task's lemmas;
+    False keeps the strip. `body` is the body being lowered (real or twin)."""
+    lemmas = task.get("lemmas") or []
+    if not lemmas:
+        return False
+    called = {s["lemma"]["name"] for s in _lemma_stmts(body)}
+    for m in task.get("methods", []):
+        called |= {s["lemma"]["name"] for s in _lemma_stmts(m["body"])}
+    if not called:
+        return False
+    names: set = set()
+    for l in lemmas:
+        for p in l["params"]:
+            if p["type"] not in _LEMMA_PARAM_TYPES:
+                return False
+            try:
+                _ck(p["name"])
+            except NotImplementedError:
+                return False
+        names.add(f"tl_{l['name']}")
+        names.add(f"tl_{l['name']}_fuel")
+    if len(names) < 2 * len(lemmas):
+        return False
+    declared = t_names._declared_names(task, body)
+    if any(n.startswith("tl_") for n in declared):
+        return False
+
+    def shape_ok(name: str, b: list) -> bool:
+        if has_self_call(b, name):
+            return False
+        try:
+            find_while(b)
+        except _GeneralLoops:
+            return False
+        except NotImplementedError:
+            return False
+        return True
+
+    if not shape_ok(task["name"], body):
+        return False
+    return all(shape_ok(m["name"], m["body"]) for m in task.get("methods", []))
+
+
+def _lemma_binders(l: dict) -> tuple[str, str, list, dict]:
+    """(binder text, argument text, length hypotheses, name -> t type) of a
+    lemma's parameters, the spec_fun convention: a seq is its function and
+    its length, with `0 <= v_len` as a hypothesis."""
+    bs, args, lens, tys = [], [], [], {}
+    for p in l["params"]:
+        v = _ck(p["name"])
+        tys[v] = p["type"]
+        if p["type"] == "seq":
+            bs.append(f"({v} : Z -> Z) ({v}_len : Z)")
+            args += [v, f"{v}_len"]
+            lens.append(f"(0 <= {v}_len)")
+        elif p["type"] == "bool":
+            bs.append(f"({v} : bool)")
+            args.append(v)
+        else:
+            bs.append(f"({v} : Z)")
+            args.append(v)
+    return " ".join(bs), " ".join(args), lens, tys
+
+
+def _lemma_args(cx: Ctx, l: dict, args: list, env: dict, local: dict) -> str:
+    """A call's arguments rendered in `env`, positionally as the lemma's
+    binders take them (`Ctx.call`'s own rule for a spec_fun)."""
+    parts = []
+    for formal, a in zip(l["params"], args, strict=True):
+        if formal["type"] == "seq":
+            fn, ln = cx.seq_fn(a, env, local)
+            parts += [fn, ln]
+        elif formal["type"] == "bool":
+            parts.append(cx.bx(a, env, local))
+        else:
+            parts.append(cx.zx(a, env, local))
+    return " ".join(parts)
+
+
+def _arith_cond(cx: Ctx, e: dict) -> bool:
+    """True iff `e` is a Prop lia can decide (`P \/ ~ P`): comparisons of
+    ints (a spec_fun application is an opaque atom, fine) under and/or/not/
+    implies. A bool variable, a bool spec_fun or a quantifier is not."""
+    if "bool" in e:
+        return True
+    op = e.get("op")
+    if op in ("and", "or", "not", "implies"):
+        return all(_arith_cond(cx, a) for a in e["args"])
+    if op in ("<", "<=", ">", ">="):
+        return True
+    if op in ("==", "!="):
+        return cx.ty(e["args"][0], {}) == "int"
+    return False
+
+
+def _lemma_steps(cx: Ctx, l: dict, stmts: list, k: list) -> list:
+    """The proof skeleton as tactic steps (each closes nothing; the caller
+    joins them with `;` and ends with t_dis). A self-call poses `IH`, the
+    fuel induction's hypothesis (`emit_lemmas`)."""
+    out = []
+    for s in stmts:
+        if "assert" in s:
+            k[0] += 1
+            out.append(f"assert (tl_A{k[0]} : {cx.prop(s['assert'], {}, {})}) by t_dis")
+        elif "lemma" in s:
+            c = s["lemma"]
+            k[0] += 1
+            head = "IH" if c["name"] == l["name"] else f"tl_{c['name']}"
+            inst = f"{head} {_lemma_args(cx, cx.lemmas[c['name']], c['args'], {}, {})}".rstrip()
+            out.append(f"pose proof ({inst}) as tl_C{k[0]}; t_feed tl_C{k[0]}")
+        elif "if" in s:
+            c = s["if"]
+            k[0] += 1
+            hk = f"tl_c{k[0]}"
+            then = "; ".join(_lemma_steps(cx, l, c["then"], k)) or "idtac"
+            els = "; ".join(_lemma_steps(cx, l, c["else"], k)) or "idtac"
+            if _arith_cond(cx, c["cond"]):
+                p = cx.prop(c["cond"], {}, {})
+                out.append(f"assert ({hk} : {p} \\/ ~ {p}) by lia; "
+                           f"destruct {hk} as [{hk}|{hk}]; [ {then} | {els} ]")
+            else:
+                out.append(f"destruct ({cx.bx(c['cond'], {}, {})}) eqn:{hk}; "
+                           f"[ {then} | {els} ]")
+    return out
+
+
+def _lemma_unfolds(cx: Ctx, l: dict) -> str:
+    """`try rewrite (sf_f_eq args);` once per distinct spec_fun application
+    in the lemma's ensures (Dafny's fuel-one unfolding), goal side."""
+    apps: list = []
+
+    def walk(e) -> None:
+        if isinstance(e, dict):
+            if "call" in e:
+                t = cx.call(e, {}, {})[1:-1]
+                head, _, rest = t.partition(" ")
+                eq = f"{head}_eq {rest}".rstrip()
+                if eq not in apps:
+                    apps.append(eq)
+            for v in e.values():
+                walk(v)
+        elif isinstance(e, list):
+            for v in e:
+                walk(v)
+
+    walk(l["ensures"])
+    return "".join(f"try rewrite ({eq}); " for eq in apps)
+
+
+def emit_lemmas(cx: Ctx) -> str:
+    """Every lemma of the task, in declaration order: the definedness lemmas
+    of its contract (the task's own `spec_def_obls` rule: each `at`, `div`
+    and `mod` in a `requires` under the earlier ones, in an `ensures` under
+    every `requires`), then its theorem, proved from its skeleton."""
+    out = []
+    for l in cx.task.get("lemmas", []):
+        name = l["name"]
+        bt, at, lens, tys = _lemma_binders(l)
+        saved = dict(cx.tys)
+        cx.tys.update(tys)
+        try:
+            reqs = [cx.prop(e, {}, {}) for e in l.get("requires", [])]
+            ens = " /\\ ".join(cx.prop(e, {}, {}) for e in l["ensures"])
+            obls: list = []
+            ctx: list = []
+            for e in l.get("requires", []):
+                cx.defs(e, list(ctx), [], obls, {}, {})
+                ctx.append(cx.prop(e, {}, {}))
+            ectx = list(ctx)
+            for e in l["ensures"]:
+                cx.defs(e, list(ectx), [], obls, {}, {})
+                ectx.append(cx.prop(e, {}, {}))
+            for k, (binders, hyps, concl) in enumerate(obls, 1):
+                allb = " ".join(x for x in [bt, " ".join(binders)] if x)
+                fa = f"forall {allb},\n" if allb else ""
+                hyp_txt = "".join(f"  {h} ->\n" for h in lens + hyps)
+                out.append(f"Lemma tl_{name}_def_{k} : {fa}{hyp_txt}  {concl}.\n"
+                           f"Proof. intros. t_dis. Qed.\n")
+            selfrec = any(s["lemma"]["name"] == name for s in _lemma_stmts(l["body"]))
+            steps = _lemma_steps(cx, l, l["body"], [0])
+            step_txt = "".join(f"  {s};\n" for s in steps)
+            close = f"  {_lemma_unfolds(cx, l)}t_dis.\n"
+            hyps = ([f"Hl{k+1}" for k in range(len(lens))]
+                    + [f"Hreq{k+1}" for k in range(len(reqs))])
+            intro_names = " ".join(x for x in [at] + hyps if x)
+            intro = f"  intros {intro_names}.\n" if intro_names else "  intros.\n"
+            fa = f"forall {bt},\n" if bt else ""
+            hyp_txt = "".join(f"  {h} ->\n" for h in lens + reqs)
+            stmt = f"  {fa}{hyp_txt}  {ens}.\n"
+            if not selfrec:
+                out.append(f"Theorem tl_{name} :\n{stmt}Proof.\n{intro}{step_txt}{close}Qed.\n")
+                continue
+            measure = cx.zx(l["decreases"], {}, {})
+            fintro = " ".join(x for x in [at, "Hf"] + hyps if x)
+            fb = f"forall (fuel : nat) {bt},\n" if bt else "forall (fuel : nat),\n"
+            out.append(
+                f"Lemma tl_{name}_fuel :\n"
+                f"  {fb}"
+                f"  (Z.to_nat {measure} < fuel)%nat ->\n{hyp_txt}  {ens}.\n"
+                f"Proof.\n"
+                f"  induction fuel as [|fu IH]; intros {fintro}; [ exfalso; lia | ].\n"
+                f"{step_txt}{close}Qed.\n")
+            app = " ".join(x for x in [f"tl_{name}_fuel (S (Z.to_nat {measure}))", at] if x)
+            out.append(
+                f"Theorem tl_{name} :\n{stmt}Proof.\n{intro}"
+                f"  apply ({app}); first [ lia | assumption ].\nQed.\n")
+        finally:
+            cx.tys = saved
+    return "\n".join(out)
+
+
+def _lemma_site_lines(cx: Ctx, sites: list, k: list) -> str:
+    """Proof-script lines posing and feeding each collected call's instance
+    (a theorem proof, period-terminated); empty without a site."""
+    lines = []
+    for name, args in sites:
+        k[0] += 1
+        inst = f"tl_{name} {args}".rstrip()
+        lines.append(f"  pose proof ({inst}) as tl_H{k[0]}; t_feed tl_H{k[0]}.\n")
+    return "".join(lines)
+
+
+def _lemma_loop_lines(cx: Ctx, sites: list, k: list) -> tuple[str, str]:
+    """(pose text, feed text) for a loop lemma's `;`-chained script: the
+    instances are posed while every state name is in scope, before the
+    step's case split, and fed after it, once the guard is a hypothesis."""
+    pose, feed = [], []
+    for name, args in sites:
+        k[0] += 1
+        inst = f"tl_{name} {args}".rstrip()
+        pose.append(f"  pose proof ({inst}) as tl_H{k[0]};\n")
+        feed.append(f"  t_feed tl_H{k[0]};\n")
+    return "".join(pose), "".join(feed)
+
+
+
 def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
     # SPEC.md "Pairs (v1)": validate every pair type in the task FIRST,
     # unconditionally, before `_try_cert_v1`'s own try/except (which would
@@ -7887,9 +8224,17 @@ def lower_v1(task: dict, body: list, witness: dict | None = None) -> str:
         # section above `lower_v1`). Absent for every task without one.
         parts.append(_mspec_text(task))
         parts.append(_post_sf_methods(_post_sf_for(task)) + "\n")
+        if cx.lemmas:
+            # SPEC.md "Lemmas (v1)": t_feed (on t_dis) and every lemma,
+            # proved, ahead of the units that pose them (LEMMAS section).
+            parts.append(T_FEED)
+            parts.append(emit_lemmas(cx))
         parts.append(_method_units(task))
     else:
         parts.append(_post_sf_for(task) + "\n")
+        if cx.lemmas:
+            parts.append(T_FEED)
+            parts.append(emit_lemmas(cx))
 
     counter = [0]
     parts.append(emit_sf_def_lemmas(cx, counter))
@@ -7943,7 +8288,12 @@ def gen_plain(cx: Ctx, body: list, counter: list) -> str:
                ret + "_len": "0"}
     else:
         env0 = {ret: default_term(ret_t)}
+    cx.lemma_sites = sites = []
     env = exec_straight(cx, body, env0, local, list(reqs), [], obls)
+    cx.lemma_sites = None
+    # SPEC.md "Lemmas (v1)": each lemma call's instance, posed before the
+    # closing t_dis (the LEMMAS section); empty text without a call.
+    site_txt = _lemma_site_lines(cx, sites, [0])
     def_txt = emit_def_lemmas(cx, name, obls, counter=counter)
 
     if isinstance(ret_t, dict) and "seq" in ret_t:
@@ -7979,7 +8329,7 @@ Theorem {name}_t_spec :
 Proof.
   unfold {name}_t, {name}_t_len.
   intros.
-{pdestr}{pair_line}  t_dis.
+{pdestr}{pair_line}{site_txt}  t_dis.
 Qed.
 """
 
@@ -8009,7 +8359,7 @@ Theorem {name}_t_spec :
 Proof.
   unfold {name}_t, {name}_t_len.
   intros.
-{pdestr}  t_dis.
+{pdestr}{site_txt}  t_dis.
 Qed.
 """
 
@@ -8047,7 +8397,7 @@ Theorem {name}_t_spec :
 Proof.
   unfold {name}_t.
   intros.
-{pdestr}{pair_line}  t_dis.
+{pdestr}{pair_line}{site_txt}  t_dis.
 Qed.
 """
 
@@ -8091,7 +8441,9 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
                ret + "_len": "0"}
     else:
         env0 = {ret: default_term(ret_t)}
+    cx.lemma_sites = sites_pre = []
     env_pre = exec_straight(cx, prefix, env0, local, list(reqs), [], obls)
+    cx.lemma_sites = None
 
     # state variables: return + locals declared in the prefix, in order
     svars = [ret] + [s["var"]["name"] for s in prefix if "var" in s]
@@ -8191,8 +8543,10 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
     obls += gob
     # loop body: definedness under requires + invariants + guard
     body_ctx = inv_ctx + [guard_p]
+    cx.lemma_sites = sites_body = []
     step_env = exec_straight(cx, w["body"], id_env, dict(local),
                              list(body_ctx), [], obls)
+    cx.lemma_sites = None
     step_terms = " ".join(step_env[v] for v in svars_x)
     # Early exit (SPEC.md, 2026-09-08): step_env's synthetic _DONE entry is
     # the literal "false" unless w["body"] actually executed a `return`
@@ -8211,9 +8565,30 @@ def gen_loop(cx: Ctx, prefix: list, w: dict, suffix: list,
 
     # suffix (after the loop): requires + invariants + ~guard
     post_ctx = inv_ctx + [f"(~ {guard_p})"]
+    # SPEC.md "Lemmas (v1)": a suffix lemma call is posed in the theorem,
+    # where the loop's result is destructed into the PRIMED state names
+    # (`pat_p`, below), so its arguments are rendered in a primed state,
+    # by a collection-only pass over the suffix run FIRST (a `var` the
+    # suffix declares is registered in `cx.tys` once, so this pass keeps a
+    # copy and restores it; the real run below then registers it again).
+    sites_post: list = []
+    if cx.lemmas and _lemma_stmts(suffix):
+        saved_tys = dict(cx.tys)
+        cx.lemma_sites = sites_post
+        exec_straight(cx, suffix, {v: v + "'" for v in svars_x}, dict(local),
+                      None, [], [])
+        cx.lemma_sites = None
+        cx.tys = saved_tys
     env_post = exec_straight(cx, suffix, id_env, dict(local),
                              list(post_ctx), [], obls)
     result_term = env_post[ret]
+    # the three site texts (the LEMMAS section): prefix and suffix calls in
+    # the theorem, loop-body calls posed before the step proof's case split
+    # and fed after it; all empty for a task without a lemma call
+    kctr = [0]
+    pre_txt = _lemma_site_lines(cx, sites_pre, kctr)
+    post_txt = _lemma_site_lines(cx, sites_post, kctr)
+    body_pose, body_feed = _lemma_loop_lines(cx, sites_body, kctr)
 
     # the state-var definedness lemmas quantify over the state
     def_txt = emit_def_lemmas(cx, name, obls, extra_binders=sb,
@@ -8434,8 +8809,8 @@ Lemma {name}_loop_spec :
 Proof.
   induction fuel as [|fu IH];
   intros {param_names} {state_names} {primed_names} {' '.join(hyp_names)};
-  cbn [{name}_loop];{bool_destruct} t_sweep;
-  (* `try clear Heq`, not a bare `clear Heq` (2026-09-10, upWhileLess: a
+{body_pose}  cbn [{name}_loop];{bool_destruct} t_sweep;
+{body_feed}  (* `try clear Heq`, not a bare `clear Heq` (2026-09-10, upWhileLess: a
      ONE-Z-variable loop state, the only committed/lifted shape so far
      small enough to expose this): when the non-recursing branch's own
      equation is between two bare Z variables (no tuple/pair to inject),
@@ -8459,12 +8834,12 @@ Theorem {name}_t_spec :
 {lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros {param_names} {lens_intro} {reqs_intro}.
-{pdestr}  {unfold_line}
+{pre_txt}{pdestr}  {unfold_line}
 {destruct1_txt}  cbn beta iota.
 {pair_line}  assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
 {ini_asserts}  pose proof ({name}_loop_spec {pose_args}) as Hout.
   clear Hfb Heq {ini_intro}.
-  {bool_destruct_p}t_dis.
+{post_txt}  {bool_destruct_p}t_dis.
 Qed.
 """
 
@@ -8532,8 +8907,8 @@ Lemma {name}_loop_spec :
 Proof.
   induction fuel as [|fu IH];
   intros {param_names} {state_names} {primed_names} {rfp} {' '.join(hyp_names)};
-  cbn [{name}_loop];{bool_destruct} t_sweep;
-  (* `try clear Heq`: the same fix as the non-return `gen_loop` branch
+{body_pose}  cbn [{name}_loop];{bool_destruct} t_sweep;
+{body_feed}  (* `try clear Heq`: the same fix as the non-return `gen_loop` branch
      above, applied here defensively (this shape's own equation is always
      a genuine pair `(state, bool)`, never a bare Z=Z, so no committed or
      lifted task has exercised the failure here yet; `try` costs a
@@ -8549,14 +8924,14 @@ Theorem {name}_t_spec :
 {lens_arrows(cx)}{requires_arrows(cx)}  {ens}.
 Proof.
   intros {param_names} {lens_intro} {reqs_intro}.
-{pdestr}  unfold {name}_t.
+{pre_txt}{pdestr}  unfold {name}_t.
   destruct ({name}_loop (S (Z.to_nat {dec0})) {pargs} {init_terms})
     as [{pat_p} {rf}] eqn:Heq.
   cbn beta iota.
 {pair_line}  assert (Hfb : {dec0} < Z.of_nat (S (Z.to_nat {dec0}))) by lia.
 {ini_asserts}  pose proof ({name}_loop_spec {pose_args}) as Hout.
   clear Hfb Heq {ini_intro}.
-  {bool_destruct_p}t_dis_ext.
+{post_txt}  {bool_destruct_p}t_dis_ext.
 Qed.
 """
 
@@ -11514,19 +11889,19 @@ def _v0_cert(task: dict, body: list, witness: dict):
 # sites pass it; when a certificate can ground it, the twin file carries
 # t_refutation_certificate instead of an unprovable spec theorem.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
-    # SPEC.md "Lemmas (v1)": a lemma call is a no-op at run time, and this
-    # lowering does not state lemmas: it proves the program without their
-    # hints (removing a no-op changes no value, so the program it proves
-    # is the same program), with lemma declarations left out of the file.
-    # A program whose proof needs a lemma reads unproved here; nothing a
-    # lemma states is ever used unproved. The Lean lowering's strip is the
-    # same function.
-    if task.get("lemmas"):
-        import lower_lean
-        is_real = body is task.get("body")
-        task = {k: v for k, v in lower_lean._strip_task(task).items()
-                if k != "lemmas"}
-        body = task["body"] if is_real else lower_lean.strip_lemma_calls(body)
+    # SPEC.md "Lemmas (v1)" (2026-09-27, the LEMMAS section before
+    # `lower_v1`): a lemma call is a no-op at run time. The refutation
+    # certificate (the one door to REFUTED) is still built from the body
+    # with the calls stripped and the declarations left out, exactly as
+    # before this date (removing a no-op changes no value, so the program
+    # it grounds is the same program; the Lean lowering's strip is the
+    # same function). The spec proof STATES the lemmas when
+    # `_lemmas_stated` says this file can (every lemma proved by the kernel
+    # in this file, each call's instance posed where the proof needs it);
+    # otherwise it proves the program without them, as it always did.
+    # Nothing a lemma states is ever used unproved either way. The strip
+    # now happens after the names pass below, so a lemma's own identifiers
+    # get the same rename every other identifier gets.
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Rocq reserved word, before `lower_v0`/`lower_v1`
     # ever see the task -- see names.py's module docstring. The rename
@@ -11590,10 +11965,23 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     body = t_names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = t_names.remap_witness(witness, renames)
     rc = t_names.rename_comment(renames)
+    # SPEC.md "Lemmas (v1)": `task_s`/`body_s` are the stripped pair every
+    # certificate attempt grounds; the spec proof below keeps the lemmas
+    # when this file states them. Both are the very same objects as
+    # `task`/`body` for a task without lemmas.
+    task_s, body_s = task, body
+    if task.get("lemmas"):
+        import lower_lean
+        task_s = {k: v for k, v in lower_lean._strip_task(task).items()
+                  if k != "lemmas"}
+        body_s = (task_s["body"] if twin_body is None
+                  else lower_lean.strip_lemma_calls(body))
+        if not _lemmas_stated(task, body):
+            task, body = task_s, body_s
     if witness is not None:
-        cert = (_v0_cert(task, body, witness)
+        cert = (_v0_cert(task_s, body_s, witness)
                if task.get("t") == 0 else
-               _try_cert_v1(task, body, witness))
+               _try_cert_v1(task_s, body_s, witness))
         if cert is not None:
             return cert + (f"\n(* {rc} *)\n" if rc else "")
     # 2026-09-12 (rocq, the four ensures-level probes): a local stand-in
@@ -11615,9 +12003,9 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # byte-identity tasks below), so this changes nothing for them beyond
     # one extra, harmless domain scan.
     if twin_body is None:
-        ew = _real_ensures_undef_witness(task)
+        ew = _real_ensures_undef_witness(task_s)
         if ew is not None:
-            cert = (_try_cert_v1(task, body, ew)
+            cert = (_try_cert_v1(task_s, body_s, ew)
                     if task.get("t") != 0 else None)
             if cert is not None:
                 return cert + (f"\n(* {rc} *)\n" if rc else "")

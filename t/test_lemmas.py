@@ -186,14 +186,45 @@ def test_lean_proves_each_lemma_and_hands_it_to_grind() -> None:
         assert f"theorem {t['lemmas'][0]['name']}_l " in _lower("lower_lean", t)
 
 
-def test_rocq_proves_the_program_without_the_lemma() -> None:
+def test_rocq_states_proves_and_poses_each_lemma() -> None:
+    """2026-09-27 (lower_rocq's LEMMAS section): the lemma is a theorem
+    proved in the file, a recursive one by fuel induction, and each call's
+    instance is posed where the proof needs it; the refutation certificate
+    still grounds the stripped twin, byte for byte as before."""
+    import lower_lean
+    import lower_rocq
     t = _fx("sum_loop")
     src = _lower("lower_rocq", t)
-    assert "sum_append" not in src
-    import lower_lean
+    assert "Ltac t_feed H :=" in src
+    assert "Lemma tl_sum_append_fuel :\n  forall (fuel : nat) (a : Z -> Z) (a_len : Z) (lo : Z) (hi : Z),\n" in src
+    assert "  (Z.to_nat (hi - lo) < fuel)%nat ->" in src
+    assert "induction fuel as [|fu IH]; intros a a_len lo hi Hf Hl1 Hreq1; [ exfalso; lia | ]." in src
+    assert "pose proof (IH a a_len (lo + 1) hi) as tl_C2; t_feed tl_C2" in src
+    assert "Theorem tl_sum_append :" in src
+    assert "apply (tl_sum_append_fuel (S (Z.to_nat (hi - lo))) a a_len lo hi); first [ lia | assumption ]." in src
+    # the loop-body call: posed with the state names in scope, fed after the case split
+    assert "  pose proof (tl_sum_append s s_len 0 i) as tl_H1;\n  cbn [sum_loop_loop]; t_sweep;\n  t_feed tl_H1;\n" in src
+    # a straight-line call: posed right before the closing t_dis
+    src2 = _lower("lower_rocq", _fx("pow2_pos"))
+    assert "  pose proof (tl_pow2_ge1 n) as tl_H1; t_feed tl_H1.\n  t_dis.\n" in src2
+    assert "try rewrite (sf_pow2_eq k); t_dis." in src2
+    # the false step is stated and must be proved (a kernel that states an
+    # assert proves it); the false lemmas are stated, never dropped
+    assert "assert (tl_A1 : (k >= 1)) by t_dis" in _lower("lower_rocq", _pr("false_assert"))
+    for p in PROBES:
+        pt = _load(p)
+        assert f"Theorem tl_{pt['lemmas'][0]['name']} :" in _lower("lower_rocq", pt)
+    # the twin's certificate is built from the stripped body, unchanged
+    twin_body, _op, w = harness.twin_cached(t)
+    assert twin_body is not None and w is not None
+    twin_src = lower_rocq.lower(t, twin_body, witness=w)
+    assert "t_refutation_certificate" in twin_src and "tl_sum_append" not in twin_src
     bare = {k: v for k, v in t.items() if k != "lemmas"}
     bare["body"] = lower_lean.strip_lemma_calls(t["body"])
-    assert src == __import__("lower_rocq").lower(bare, bare["body"])
+    assert twin_src == lower_rocq.lower(bare, lower_lean.strip_lemma_calls(twin_body), witness=w)
+    # a task without lemmas is untouched by the lemma path
+    abs_t = _load(os.path.join(HERE, "tasks", "abs.t"))
+    assert "tl_" not in _lower("lower_rocq", abs_t) and "t_feed" not in _lower("lower_rocq", abs_t)
 
 
 def test_an_assert_is_a_proof_step_where_it_can_be_stated() -> None:
@@ -254,7 +285,9 @@ def test_no_kernel_axiomatizes_a_lemma() -> None:
               "lower_fstar": [r"\badmit\b", r"\bassume\b"],
               "lower_lean": [r"\bsorry\b", r"\baxiom\b"],
               "lower_framac": [r"\baxiom\b", r"admit"],
-              "lower_spark": [r"pragma Assume", r"False_Positive"]}
+              "lower_spark": [r"pragma Assume", r"False_Positive"],
+              "lower_rocq": [r"\bAdmitted\b", r"\badmit\b", r"\bAxiom\b",
+                             r"\bParameter\b", r"\bHypothesis\b"]}
     for f in FIXTURES + PROBES:
         t = _load(f)
         for mod, pats in banned.items():

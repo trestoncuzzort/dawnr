@@ -59,10 +59,10 @@ from lift_ast import (
     SeqDisplay, SeqUpdate, Slice, Stmt, StringLit, Type, Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
-    ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier,
+    ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier, closure_predicates,
     decode_char_literal, decode_string_literal, expr_kind, find_array_mutation,
     scan_breaks, scan_null_checks, walk, unchanged_at_every_call, _is_seq_of_char,
-    _is_nested_seq_of_int, _is_nested_seq_of_nat,
+    _is_nested_seq_of_char, _is_nested_seq_of_int, _is_nested_seq_of_nat,
 )
 
 
@@ -122,6 +122,8 @@ def _t_type_of(t: Optional[Type]) -> str:
         return "int"
     if t.kind == "bool":
         return "bool"
+    if t.kind == "tuple":
+        return "pair"  # row 44 (2026-09-27): a tuple-typed name is a pair
     if t.kind in ("seq", "array", "string"):
         # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code
         # points (v1)"): `string` is the same t `seq` a Dafny
@@ -147,8 +149,14 @@ def _t_json_type(t: Optional[Type]) -> object:
     RETURN -- the only position a nat row's non-negativity gap allows
     through; a param/local nat row is refused before `rewrite` ever
     runs)."""
-    if _is_nested_seq_of_int(t) or _is_nested_seq_of_nat(t):
+    if _is_nested_seq_of_int(t) or _is_nested_seq_of_nat(t) or _is_nested_seq_of_char(t):
+        # Row 43 (2026-09-27): a `seq<string>`/`seq<seq<char>>` is the
+        # same compound type, its rows code points (row 28 per row).
         return {"seq": "seq"}
+    if t is not None and t.kind == "tuple" and len(t.args) == 2:
+        # Row 44 (2026-09-27): a two-component Dafny tuple is t's pair type,
+        # each component mapped as row 29 maps an out-parameter's type.
+        return {"pair": [_pair_component_ty_of(t.args[0]), _pair_component_ty_of(t.args[1])]}
     return _t_type_of(t)
 
 
@@ -177,7 +185,8 @@ def _rw_looks_nested(e: Expr, scope: "Scope") -> bool:
     measured shapes always give the accumulator an explicit declared
     type; an untyped `var r := m;` for a nested `m` is this row's own
     known residual, falling back to the flat JSON type instead)."""
-    return isinstance(e, SeqDisplay) and any(isinstance(el, SeqDisplay) for el in e.elems)
+    return isinstance(e, SeqDisplay) and any(isinstance(el, (SeqDisplay, StringLit))
+                                             for el in e.elems)
 
 
 def _ge0(t_name: str) -> dict:
@@ -377,12 +386,17 @@ class Scope:
     # statement of one lifts to a t lemma call, any other is dropped
     # (decision 8). Shared, never mutated after `rewrite()` fills it.
     lemmas: dict = field(default_factory=dict)
+    # Feature 5 (2026-09-27, t/FEATURES-TRACK.md): the closure's predicates
+    # by dafny name, `lift_classify.closure_predicates`, so `_lift_quantifier`
+    # bounds a quantifier through a predicate's body exactly as classify did.
+    # Shared, never mutated after `rewrite()` sets it.
+    predicates: dict = field(default_factory=dict)
 
     def copy(self) -> "Scope":
         return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
                      self.old_array_name, self.old_array_param_tname, self.null_drop_ids,
                      dict(self.pair_view), self.pair_ret, dict(self.method_rets),
-                     self.lemmas)
+                     self.lemmas, self.predicates)
 
 
 # ---------------------------------------------------------------------------
@@ -577,6 +591,17 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
         return _lift_quantifier(e, scope, fn_names, self_name, task_name, record, renamer)
     if e.__class__.__name__ == "Cardinality":
         return {"op": "len", "args": [_lift_expr(e.arg, scope, fn_names, self_name, task_name, record, renamer)]}
+    if e.__class__.__name__ == "TupleExpr":
+        # Row 44 (2026-09-27): `(a, b)` is t's pair literal; `classify`
+        # has already confirmed the arity is two.
+        record.rewrites.append(Rewrite(rule="tuple-literal-lifted", line=e.line))
+        return {"op": "pair", "args": [
+            _lift_expr(x, scope, fn_names, self_name, task_name, record, renamer) for x in e.elems]}
+    if e.__class__.__name__ == "Member" and e.name in ("0", "1"):
+        # Row 44: `p.0`/`p.1` on a tuple-typed name are t's projections.
+        record.rewrites.append(Rewrite(rule="tuple-projection-lifted", line=e.line))
+        return {"op": "fst" if e.name == "0" else "snd",
+                "args": [_lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)]}
     if e.__class__.__name__ == "Member":  # `.Length`, only reachable form (classify refused others)
         return {"op": "len", "args": [_lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)]}
     if e.__class__.__name__ == "Index":
@@ -711,15 +736,34 @@ def _lift_chain(e: Chain, scope: Scope, fn_names: dict, self_name: str,
 
 def _lift_quantifier(q: Quantifier, scope: Scope, fn_names: dict, self_name: str,
                       task_name: str, record: LiftRecord, renamer: "_Renamer") -> dict:
-    got = bound_quantifier(q)
+    got = bound_quantifier(q, scope.predicates)
     if got is None:
         raise ValueError("lift_rewrite: unbounded quantifier reached rewrite "
                           "(a lift_classify bug: should have been refused)")
     binders = got["binders"]
     body_expr = got["body"]
+    # The rules that bounded it, in the sidecar (classify's `Liftable.rewrites`
+    # is a plan, never the persisted provenance); `in-desugared` is recorded
+    # per membership binder below.
+    for rule in sorted(got.get("rules", ())):
+        if rule != "in-desugared":
+            record.rewrites.append(Rewrite(rule=rule, line=q.line))
+    if not binders:
+        # Feature 5 (2026-09-27): every binder was pinned by an equality
+        # (`exists c :: c == E && P(c)` is `P(E)`), so the quantifier is
+        # its body, lifted as a plain expression.
+        return _lift_expr(body_expr, scope, fn_names, self_name, task_name, record, renamer)
 
-    def build(i: int, inner_scope: Scope) -> dict:
+    def build(i: int, inner_scope: Scope, subs: list) -> dict:
+        # `subs`: the membership binders already read as `s[j]` (`_AtHole`),
+        # applied to this binder's own bounds too, since a later binder's
+        # range may mention an earlier membership binder (feature 5:
+        # `x in s && 0 <= j < x`).
         name, lo, hi, mem = binders[i]
+        for sname, hole in subs:
+            lo = _subst(lo, sname, hole) if lo is not None else None
+            hi = _subst(hi, sname, hole) if hi is not None else None
+            mem = _subst(mem, sname, hole) if mem is not None else None
         fresh = renamer.fresh(name, record, "quantbind")
         s2 = inner_scope.copy()
         if mem is not None:
@@ -728,20 +772,22 @@ def _lift_quantifier(q: Quantifier, scope: Scope, fn_names: dict, self_name: str
             lo_e = {"int": 0}
             hi_e = {"op": "len", "args": [s_e]}
             s2.renames[name] = fresh  # bound var itself unused directly; substitution below
-            body_sub = _subst(body_expr, name, _AtHole(s_e, fresh))
+            subs = subs + [(name, _AtHole(s_e, fresh))]
         else:
             lo_e = _lift_expr(lo, inner_scope, fn_names, self_name, task_name, record, renamer)
             hi_e = _lift_expr(hi, inner_scope, fn_names, self_name, task_name, record, renamer)
             s2.renames[name] = fresh
-            body_sub = body_expr
         if i + 1 == len(binders):
+            body_sub = body_expr
+            for sname, hole in subs:
+                body_sub = _subst(body_sub, sname, hole)
             inner = _lift_expr(body_sub, s2, fn_names, self_name, task_name, record, renamer)
         else:
-            inner = build(i + 1, s2)
+            inner = build(i + 1, s2, subs)
         key = "forall" if q.kind == "forall" else "exists"
         return {key: {"var": fresh, "lo": lo_e, "hi": hi_e, "body": inner}}
 
-    return build(0, scope)
+    return build(0, scope, [])
 
 
 class _AtHole:
@@ -822,6 +868,29 @@ def _expr_eq(a: Expr, b: Expr) -> bool:
     return False  # conservative: anything more complex counts as "different"
 
 
+def _seq_measure_to_len(e: Expr, lifted: dict, scope: Scope, record: LiftRecord, line: int) -> dict:
+    """t/FEATURES-TRACK.md feature 3 ("Sequence decreases on spec_funs",
+    2026-09-27): a `decreases` component that is itself a sequence. Dafny
+    orders sequences in its built-in well-founded order (Reference Manual,
+    "Well-founded orders": a sequence is smaller than another when it is a
+    proper prefix, a proper suffix or the middle of one -- the `Seq#Rank`
+    axioms over `Seq#Take`/`Seq#Drop` in Source/DafnyCore/DafnyPrelude.bpl,
+    github.com/dafny-lang/dafny), so every step Dafny can prove is to a
+    STRICTLY SHORTER sequence, and rprint materialises exactly this measure
+    (`decreases s`, the parameters in order) for every function over a seq
+    that states none. t's measures are ints (SPEC.md gate 3; check_wf's
+    `spec-fun-decreases-int`, which refused 32 of the 108 re-lifted tasks of
+    2026-09-27 at the check stage). Lift the component as `len(component)`:
+    it decreases exactly where Dafny's did, and the kernels prove the
+    decrease rather than trust it (the check stage's L_dec/L_fun lemmas
+    compare `|component|` against the lift). Recorded `decreases-seq-length`
+    per component. A component of any other kind is returned unchanged."""
+    if _rw_seq_kind(e, scope) == "seq":
+        record.rewrites.append(Rewrite(rule="decreases-seq-length", line=line))
+        return {"op": "len", "args": [lifted]}
+    return lifted
+
+
 def _loop_decreases(w: WhileStmt, dc: DecreasesClause, scope: Scope, fn_names, self_name,
                      task_name, record, renamer) -> dict:
     exprs = dc.exprs
@@ -830,7 +899,8 @@ def _loop_decreases(w: WhileStmt, dc: DecreasesClause, scope: Scope, fn_names, s
         origin = "rprint-inferred" if (not isinstance(w.cond, type(None))
                                         and _looks_rprint_inferred(e, w.cond)) else "stated"
         record.decreases_origin[f"loop@{w.line}"] = origin
-        return _lift_expr(e, scope, fn_names, self_name, task_name, record, renamer)
+        return _seq_measure_to_len(e, _lift_expr(e, scope, fn_names, self_name, task_name, record, renamer),
+                                   scope, record, dc.line)
     assigned = set()
     for n in walk(w.body):
         if isinstance(n, Assign):
@@ -841,10 +911,12 @@ def _loop_decreases(w: WhileStmt, dc: DecreasesClause, scope: Scope, fn_names, s
     if len(kept) == 1:
         record.decreases_origin[f"loop@{w.line}"] = "projected"
         record.rewrites.append(Rewrite(rule="decreases-tuple-reduced", line=dc.line))
-        return _lift_expr(kept[0], scope, fn_names, self_name, task_name, record, renamer)
+        return _seq_measure_to_len(kept[0], _lift_expr(kept[0], scope, fn_names, self_name, task_name, record, renamer),
+                                   scope, record, dc.line)
     record.decreases_origin[f"loop@{w.line}"] = "guess:sum"
     record.rewrites.append(Rewrite(rule="guess:sum", line=dc.line))
-    lifted = [_lift_expr(e, scope, fn_names, self_name, task_name, record, renamer) for e in kept]
+    lifted = [_seq_measure_to_len(e, _lift_expr(e, scope, fn_names, self_name, task_name, record, renamer),
+                                  scope, record, dc.line) for e in kept]
     out = lifted[0]
     for nxt in lifted[1:]:
         out = {"op": "+", "args": [out, nxt]}
@@ -879,17 +951,23 @@ def _function_decreases(d: FunctionDecl, fn_scope: Scope, fn_names, record, rena
     exprs = dc.exprs
     if len(exprs) == 1:
         record.decreases_origin[d.name or "?"] = "stated"
-        return _lift_expr(exprs[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer)
+        return _seq_measure_to_len(
+            exprs[0], _lift_expr(exprs[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer),
+            fn_scope, record, dc.line)
     param_names = [p.name for p in d.params]
     dropped = unchanged_at_every_call(param_names, calls, len(exprs))
     kept = [exprs[i] for i in range(len(exprs)) if i not in dropped]
     if len(kept) == 1:
         record.decreases_origin[d.name or "?"] = "projected"
         record.rewrites.append(Rewrite(rule="decreases-tuple-reduced", line=dc.line))
-        return _lift_expr(kept[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer)
+        return _seq_measure_to_len(
+            kept[0], _lift_expr(kept[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer),
+            fn_scope, record, dc.line)
     record.decreases_origin[d.name or "?"] = "guess:sum"
     record.rewrites.append(Rewrite(rule="guess:sum", line=dc.line))
-    lifted = [_lift_expr(e, fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer) for e in kept]
+    lifted = [_seq_measure_to_len(
+                  e, _lift_expr(e, fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer),
+                  fn_scope, record, dc.line) for e in kept]
     out = lifted[0]
     for nxt in lifted[1:]:
         out = {"op": "+", "args": [out, nxt]}
@@ -1069,10 +1147,72 @@ def _assigned_dafny_names(body) -> set[str]:
     return names
 
 
+def _pair_component_ty_of(t: Optional[Type]) -> str:
+    """A pair component's t type for a Dafny out-parameter type (row 29's
+    own mapping): `seq`/`string` are `seq`, `bool` is `bool`, the rest int."""
+    if t is not None and t.kind in ("seq", "string"):
+        return "seq"
+    if t is not None and t.kind == "bool":
+        return "bool"
+    return "int"
+
+
+def _two_return_call(rhs, scope: Scope):
+    """The call node when `rhs` calls a callee this lift carries with two
+    out-parameters (row 41), else None."""
+    if isinstance(rhs, Call) and isinstance(rhs.fn, Ident):
+        rets = scope.method_rets.get(rhs.fn.name)
+        if rets is not None and len(rets) == 2:
+            return rhs
+    return None
+
+
+def _lift_destructuring_call(names: list, decl: bool, declared: list, call, line: int,
+                             scope: Scope, fn_names: dict, self_name: str, task_name: str,
+                             renamer: _Renamer, record: LiftRecord) -> list:
+    """Row 41 (t/FEATURES-TRACK.md feature 6, 2026-09-27): `a, b := M(args);`
+    or `var a, b := M(args);` of a two-out-parameter method. The callee lifts
+    to a pair-returning t method (row 29's own mapping of two returns, SPEC.md
+    "Pairs (v1)"), and the call, which t only allows as the whole right-hand
+    side of one `var` init (SPEC.md "Methods (v1)"), binds that pair to a fresh
+    local; the two names are its projections, `p.0` and `p.1` (Dafny 8.5.2:
+    the call's results are "assigned to as many left-hand sides as it has
+    out-parameters", in order). `decl` is the `var` form; `declared` carries
+    each name's declared `Type` there (None when Dafny inferred it, then the
+    callee's own out-parameter type decides)."""
+    rets = scope.method_rets[call.fn.name]
+    tys = [_pair_component_ty_of(r.type) for r in rets]
+    args = [_lift_expr(a, scope, fn_names, self_name, task_name, record, renamer) for a in call.args]
+    call_e = {"call": {"fun": fn_names.get(call.fn.name, call.fn.name), "args": args}}
+    p_t = renamer.fresh("p", record, "temp")
+    scope.types[p_t] = "pair"
+    out = [{"var": {"name": p_t, "type": {"pair": tys}, "init": call_e}}]
+    for name, proj, ty, ret, dty in zip(names, ("fst", "snd"), tys, rets, declared):
+        proj_e = {"op": proj, "args": [{"var": p_t}]}
+        if decl:
+            tname = renamer.fresh(name, record, "local")
+            scope.renames[name] = tname
+            scope.types[tname] = ty
+            if (dty is not None and dty.kind == "nat") or (dty is None and ret.type is not None
+                                                            and ret.type.kind == "nat"):
+                scope.nat.append(name)
+            out.append({"var": {"name": tname, "type": ty, "init": proj_e}})
+        else:
+            out.append({"assign": [scope.renames[name], proj_e]})
+    record.rewrites.append(Rewrite(rule="multi-return-call-destructured", line=line))
+    return out
+
+
 def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                task_name: str, renamer: _Renamer, record: LiftRecord) -> list:
     cls = s.__class__.__name__
     if cls == "Assign":
+        if (len(s.targets) == 2 and len(s.values) == 1
+                and all(t.kind == "name" for t in s.targets)
+                and _two_return_call(s.values[0], scope) is not None):
+            return _lift_destructuring_call([t.name for t in s.targets], False, [None, None],
+                                            s.values[0], s.line, scope, fn_names, self_name,
+                                            task_name, renamer, record)
         if len(s.targets) > 1:
             # Decision 22: a target can now be `x[i]` as well as `x`
             # (Clover_reverse's `a[i], a[hi-i] := a[hi-i], a[i];`). Every
@@ -1143,6 +1283,11 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
 
     if cls == "VarDeclStmt":
         out = []
+        if (s.init and len(s.init) == 1 and len(s.names) == 2
+                and _two_return_call(s.init[0], scope) is not None):
+            return _lift_destructuring_call([nm.name for nm in s.names], True,
+                                            [nm.type for nm in s.names], s.init[0], s.line,
+                                            scope, fn_names, self_name, task_name, renamer, record)
         if s.init is None:
             for nm in s.names:
                 ty = _t_type_of(nm.type)
@@ -1194,8 +1339,9 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 else:
                     rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
                     json_ty = None
-                    callee_ret = (scope.method_rets.get(rhs.fn.name)
-                                  if isinstance(rhs, Call) and isinstance(rhs.fn, Ident) else None)
+                    callee_rets = (scope.method_rets.get(rhs.fn.name)
+                                   if isinstance(rhs, Call) and isinstance(rhs.fn, Ident) else None)
+                    callee_ret = callee_rets[0].type if callee_rets and len(callee_rets) == 1 else None
                     if nm.type is not None:
                         ty = _t_type_of(nm.type)
                         json_ty = _t_json_type(nm.type)
@@ -1620,7 +1766,7 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     task_name = f"{_sanitize_stem(source_path)}__{t_method}"
     record.method = t_method
 
-    array_mutation, _array_mutation_issue = find_array_mutation(method, closure)
+    array_mutation, _array_mutation_issue = find_array_mutation(method, closure, module)
     mutated_param_name = (array_mutation.name if array_mutation is not None
                            and array_mutation.kind == "modifies-param" else None)
     # Row 29 (2026-09-09, SPEC.md "Pairs (v1)"): `classify` already
@@ -1661,7 +1807,9 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
 
     scope = Scope()
     scope.null_drop_ids = null_drop_ids
-    scope.method_rets = {cname: cplan.method.returns[0].type
+    scope.predicates = closure_predicates(closure)
+    # a callee's out-parameters (one, or the two a pair return stands for)
+    scope.method_rets = {cname: tuple(cplan.method.returns)
                          for cname, cplan, _crr in callee_results}
     params_out = []
     for p in method.params:
@@ -1759,6 +1907,13 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             # same reason.
             ret_ty = "seq"
             ret_json_ty = _t_json_type(ret.type)  # row 30: nested when ret.type is
+        elif ret.type is not None and ret.type.kind == "tuple":
+            # Row 44 (2026-09-27): a tuple-typed return IS the pair return
+            # row 29 builds for two out-parameters, here under the source's
+            # own single name (`result`), so `result.0`/`result.1` and
+            # `result := (a, b)` lift through `_lift_expr` unchanged.
+            ret_ty = "pair"
+            ret_json_ty = _t_json_type(ret.type)
         else:
             ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"
             ret_json_ty = ret_ty
@@ -1829,6 +1984,16 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             record.clauses_added.append(ClauseAdded(rule="nat-param-guard", text=f"{tn} >= 0"))
             record.rewrites.append(Rewrite(rule="nat-param-guard", line=p.line))
     for p in method.params:
+        if p.type is not None and p.type.kind == "tuple" and len(p.type.args) == 2:
+            # Row 44 (2026-09-27): a tuple parameter's `nat` component owes
+            # the same guard a `nat` parameter does, on its projection.
+            for ct, proj, idx in zip(p.type.args, ("fst", "snd"), ("0", "1")):
+                if ct is not None and ct.kind == "nat":
+                    tn = scope.renames[p.name]
+                    requires_out.append(_ge0_of({"op": proj, "args": [{"var": tn}]}))
+                    record.clauses_added.append(ClauseAdded(rule="nat-param-guard", text=f"{tn}.{idx} >= 0"))
+                    record.rewrites.append(Rewrite(rule="nat-param-guard", line=p.line))
+    for p in method.params:
         if p.type is not None and p.type.kind == "char":
             tn = scope.renames[p.name]
             requires_out.append(_char_range(tn))
@@ -1872,6 +2037,29 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             record.clauses_added.append(ClauseAdded(
                 rule="string-elements-requires", text=f"forall k. 0 <= {tn}[k] <= {_CHAR_MAX}"))
             record.rewrites.append(Rewrite(rule="string-elements-requires", line=p.line))
+    for p in method.params:
+        if p.type is not None and _is_nested_seq_of_char(p.type):
+            # Row 43 (2026-09-27): the same code-point bound per ROW of a
+            # `seq<string>` parameter, for the same reason (the
+            # differential harness converts every sampled row back into a
+            # Dafny string with `as char`, which needs the range).
+            tn = scope.renames[p.name]
+            i = renamer.fresh("i", record, "quantbind")
+            k = renamer.fresh("k", record, "quantbind")
+            row = {"op": "at", "args": [{"var": tn}, {"var": i}]}
+            elem = {"op": "at", "args": [row, {"var": k}]}
+            body = {"op": "and", "args": [
+                {"op": ">=", "args": [elem, {"int": 0}]},
+                {"op": "<=", "args": [elem, {"int": _CHAR_MAX}]}]}
+            inner = {"forall": {"var": k, "lo": {"int": 0},
+                                "hi": {"op": "len", "args": [row]}, "body": body}}
+            clause = {"forall": {"var": i, "lo": {"int": 0},
+                                  "hi": {"op": "len", "args": [{"var": tn}]}, "body": inner}}
+            requires_out.append(clause)
+            record.clauses_added.append(ClauseAdded(
+                rule="strings-elements-requires",
+                text=f"forall i, k. 0 <= {tn}[i][k] <= {_CHAR_MAX}"))
+            record.rewrites.append(Rewrite(rule="strings-elements-requires", line=p.line))
     for spec in method.specs:
         if isinstance(spec, RequiresClause):
             src_e = _strip_null_checks(spec.expr, scope.null_drop_ids, record, spec.line)
@@ -1939,6 +2127,17 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             ensures_out.append(clause)
             record.clauses_added.append(ClauseAdded(rule="nat-return-ensures", text=f"{t_ret}.1 >= 0"))
             record.rewrites.append(Rewrite(rule="nat-return-ensures", line=method.line))
+    # Row 44 (2026-09-27): the same per-component non-negativity for a
+    # tuple-typed return with a `nat` component (`(nat, nat)`, DD0145).
+    tuple_ret = (method.returns[0].type if pair_returns is None and len(method.returns) == 1
+                 and method.returns[0].type is not None and method.returns[0].type.kind == "tuple"
+                 else None)
+    if tuple_ret is not None and len(tuple_ret.args) == 2:
+        for ct, proj, idx in zip(tuple_ret.args, ("fst", "snd"), ("0", "1")):
+            if ct is not None and ct.kind == "nat":
+                ensures_out.append(_ge0_of({"op": proj, "args": [{"var": t_ret}]}))
+                record.clauses_added.append(ClauseAdded(rule="nat-return-ensures", text=f"{t_ret}.{idx} >= 0"))
+                record.rewrites.append(Rewrite(rule="nat-return-ensures", line=method.line))
     for spec in method.specs:
         if isinstance(spec, EnsuresClause):
             src_e = _strip_fresh_conjuncts(spec.expr, fresh_ret_name, record, spec.line)
@@ -2201,7 +2400,9 @@ def _lift_one_lemma(d, parts, renamer: _Renamer, fn_names: dict, lemma_map: dict
         ty = _t_json_type(p.type)
         if ty not in ("int", "bool", "seq"):
             return None
-        if p.type.kind == "array":
+        if p.type.kind == "array" and not (len(p.type.args) == 1
+                                           and p.type.args[0].kind in ("int", "nat")
+                                           and not p.type.nullable):
             return None
         tname = renamer.fresh(p.name, record, "lemmaparam")
         scope.renames[p.name] = tname
@@ -2209,6 +2410,15 @@ def _lift_one_lemma(d, parts, renamer: _Renamer, fn_names: dict, lemma_map: dict
         params_out.append({"name": tname, "type": ty})
         if p.type.kind == "nat":
             requires_out.append(_ge0(tname))
+        if p.type.kind == "array" and p.type.args[0].kind == "nat":
+            # feature 4 (2026-09-27): an `array<nat>` lemma parameter is a seq
+            # whose elements are non-negative, the method-level
+            # `nat-elements-requires` clause stated on the lemma
+            k = renamer.fresh("k", record, "quantbind")
+            requires_out.append({"forall": {
+                "var": k, "lo": {"int": 0}, "hi": {"op": "len", "args": [{"var": tname}]},
+                "body": {"op": ">=", "args": [{"op": "at", "args": [{"var": tname}, {"var": k}]},
+                                              {"int": 0}]}}})
     t_name = renamer.fresh(d.name, record, "lemma")
     ensures_out, decreases = [], None
     for spec in parts.specs:
@@ -2413,7 +2623,9 @@ def _method_level_decreases(method: MethodDecl, scope: Scope, fn_names: dict,
     dc = dcs[0]
     exprs = dc.exprs
     if len(exprs) == 1:
-        return _lift_expr(exprs[0], scope, fn_names, method.name, task_name, record, renamer), "stated"
+        return _seq_measure_to_len(
+            exprs[0], _lift_expr(exprs[0], scope, fn_names, method.name, task_name, record, renamer),
+            scope, record, dc.line), "stated"
     # Mirror `_function_decreases`'s projection test (decision 11): a
     # component is kept only when it CHANGES at every self-call (i.e. is
     # not passed through unchanged), found by walking the method's own
@@ -2428,14 +2640,17 @@ def _method_level_decreases(method: MethodDecl, scope: Scope, fn_names: dict,
     kept = [exprs[i] for i in range(len(exprs)) if i not in dropped]
     if len(kept) == 1:
         record.rewrites.append(Rewrite(rule="decreases-tuple-reduced", line=dc.line))
-        return _lift_expr(kept[0], scope, fn_names, method.name, task_name, record, renamer), "projected"
+        return _seq_measure_to_len(
+            kept[0], _lift_expr(kept[0], scope, fn_names, method.name, task_name, record, renamer),
+            scope, record, dc.line), "projected"
     if len(kept) == 0:
         # classify's pre-check (section 5's `lexicographic-decreases`) is
         # supposed to have refused this already; fall back to summing
         # every stated component rather than crashing if it did not.
         kept = list(exprs)
     record.rewrites.append(Rewrite(rule="guess:sum", line=dc.line))
-    lifted = [_lift_expr(e, scope, fn_names, method.name, task_name, record, renamer) for e in kept]
+    lifted = [_seq_measure_to_len(e, _lift_expr(e, scope, fn_names, method.name, task_name, record, renamer),
+                                  scope, record, dc.line) for e in kept]
     out = lifted[0]
     for nxt in lifted[1:]:
         out = {"op": "+", "args": [out, nxt]}

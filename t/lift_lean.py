@@ -160,8 +160,11 @@ class LType:
         if self.kind == "refuse":
             raise LeanRefusal(self.reason, self.text)
         if self.kind == "seq":
-            return "seq<int>"
-        return {"int": "int", "nat": "nat", "bool": "bool", "prop": "bool"}[self.kind]
+            # a `List Char`/`Array Char` is Dafny's `seq<char>`, a string
+            # spelled another way (LIFTER-DECISIONS row 28)
+            return "seq<char>" if self.elem is not None and self.elem.kind == "char" else "seq<int>"
+        return {"int": "int", "nat": "nat", "bool": "bool", "prop": "bool",
+                "string": "string", "char": "char"}[self.kind]
 
 
 @dataclass
@@ -441,9 +444,11 @@ class Parser:
         elif t.kind == "float":
             raise LeanRefusal("float", t.text)
         elif t.kind == "str":
-            raise LeanRefusal("string", t.text[:20])
+            self.take()
+            e = ("str", t.text)
         elif t.kind == "char":
-            raise LeanRefusal("char", t.text)
+            self.take()
+            e = ("char", t.text)
         elif t.text == "↑":
             self.take()
             e = ("coe", self.parse_atom())
@@ -581,15 +586,28 @@ def classify_type(text: str, src: str) -> LType:
     m = re.fullmatch(r"(List|Array) (\S+)", t)
     if m:
         inner = classify_type(m.group(2), m.group(2))
-        if inner.kind in ("int", "nat"):
+        if inner.kind in ("int", "nat", "char"):
             return LType("seq", src, inner)
         if inner.kind == "bool":
             return LType("refuse", src, reason="seq-of-bool")
-        if inner.kind == "seq":
+        if inner.kind in ("seq", "string"):
             return LType("refuse", src, reason="nested-seq")
         return LType("refuse", src, reason=inner.reason or "datatype")
     if re.search(r"\bFloat\b|ℝ|\bReal\b", t):
         return LType("refuse", src, reason="float")
+    # Feature 6 of t/FEATURES-TRACK.md's cloud track (2026-09-27): a
+    # `String` is Dafny's `string` (a `seq<char>`, Dafny Reference Manual
+    # 5.5.3.4, dafny.org/latest/DafnyRef/DafnyRef#sec-strings) and a
+    # `Char` its `char`, both of which the Dafny lifter lifts as code
+    # points (LIFTER-DECISIONS row 28); every String/Char operation this
+    # reader renders is spelled by its Lean core definition (`field`,
+    # `call` below) over that model. What it cannot spell refuses by name:
+    # `string-pos` (a byte position, `String.Pos`), `string-lib` (a
+    # library member with no Dafny expression: splitOn, trim, toNat?, ...).
+    if t == "String":
+        return LType("string", src)
+    if t == "Char":
+        return LType("char", src)
     if re.search(r"\bString\b", t):
         return LType("refuse", src, reason="string")
     if re.search(r"\bChar\b", t):
@@ -706,6 +724,10 @@ class Renderer:
             return None
         if tag in ("paren",):
             return self.type_of(e[1])
+        if tag == "str":
+            return "string"
+        if tag == "char":
+            return "char"
         if tag == "ascribe":
             return e[2].kind
         if tag == "coe":
@@ -719,8 +741,23 @@ class Renderer:
         if tag == "field":
             if e[2] in ("size", "length"):
                 return "nat"
-            if e[2] in ("toNat", "natAbs"):
+            if e[2] in ("toNat", "natAbs", "val"):
                 return "nat"
+            rt = self.type_of(e[1])
+            if rt == "string":
+                if e[2] in ("take", "drop", "dropRight", "takeRight", "push", "append", "trim"):
+                    return "string"
+                if e[2] in ("front", "back"):
+                    return "char"
+                if e[2] in ("data", "toList"):
+                    return "seq"
+                if e[2] in ("isEmpty", "startsWith", "endsWith", "contains", "isPrefixOf"):
+                    return "prop"
+            if rt == "char":
+                if e[2] in ("isDigit", "isAlpha", "isUpper", "isLower", "isAlphanum", "isWhitespace"):
+                    return "prop"
+                if e[2] in ("toUpper", "toLower"):
+                    return "char"
             return None
         if tag == "app":
             head = e[1]
@@ -728,8 +765,13 @@ class Renderer:
                 d = self.lf.defs.get(head[1])
                 if d is not None:
                     return d.ret.kind
-                if head[1] in ("Int.toNat", "Int.natAbs", "List.length", "Array.size"):
+                if head[1] in ("Int.toNat", "Int.natAbs", "List.length", "Array.size",
+                               "String.length", "Char.toNat"):
                     return "nat"
+                if head[1] in ("String.mk", "String.singleton", "String.append", "String.push"):
+                    return "string"
+                if head[1] == "Char.ofNat":
+                    return "char"
                 if head[1] in ("min", "max"):
                     kinds = {self.type_of(a) for a in e[2]}
                     return "nat" if kinds <= {"nat", None} and "nat" in kinds else ("int" if "int" in kinds else None)
@@ -761,6 +803,10 @@ class Renderer:
             t = self.env.get(e0[1])
             if t is not None and t.kind == "seq":
                 return t.elem.kind
+            if t is not None and t.kind == "string":
+                return "char"  # feature 6: a string's elements are chars
+        if e0[0] == "str":
+            return "char"
         return None
 
     def ex(self, e) -> str:
@@ -769,6 +815,10 @@ class Renderer:
             return str(e[1])
         if tag == "bool":
             return "true" if e[1] else "false"
+        if tag == "str":
+            return _dafny_string_literal(e[1])
+        if tag == "char":
+            return _dafny_char_literal(e[1])
         if tag == "paren":
             return "(" + self.ex(e[1]) + ")"
         if tag == "ascribe":
@@ -902,10 +952,70 @@ class Renderer:
 
     def field(self, recv, name: str, args: list) -> str:
         R = self.ex(recv)
+        rt = self.type_of(recv)
+        if rt == "string" and name in ("get", "get!", "get?", "get'", "extract", "posOf", "revPosOf",
+                                       "atEnd", "next", "prev", "set", "modify", "endPos",
+                                       "toSubstring", "iter", "mkIterator", "utf8ByteSize"):
+            # a byte position (`String.Pos`) indexes UTF-8 bytes, not chars
+            raise LeanRefusal("string-pos", f".{name}")
+        if rt == "string" and name in ("splitOn", "split", "intercalate", "trim", "trimLeft",
+                                       "trimRight", "toNat?", "toNat!", "toInt?", "toInt!",
+                                       "toUpper", "toLower", "capitalize", "decapitalize",
+                                       "replace", "containsSubstr", "findSubstr", "find",
+                                       "words", "lines", "splitOn", "isNat", "isInt",
+                                       "toList!", "join", "map", "foldl", "foldr", "any", "all",
+                                       "revFind", "dropWhile", "takeWhile", "dropRightWhile",
+                                       "takeRightWhile", "isPrefixOf", "hash", "toName"):
+            raise LeanRefusal("string-lib", f".{name}")
+        if rt == "string" and name in ("dropRight", "takeRight") and len(args) == 1:
+            # `String.dropRight s n`: all but the last n chars (Lean core,
+            # `s.toSubstring.dropRight n`); `takeRight`: the last n
+            n = self.ex(args[0])
+            m = f"(if {n} <= |{R}| then {n} else |{R}|)"
+            return f"{R}[..(|{R}| - {m})]" if name == "dropRight" else f"{R}[(|{R}| - {m})..]"
+        if rt == "string" and name == "isEmpty" and not args:
+            return f"(|{R}| == 0)"
+        if rt == "string" and name == "front" and not args:
+            return f"{R}[0]"
+        if rt == "string" and name == "back" and not args:
+            return f"{R}[|{R}| - 1]"
+        if rt == "string" and name in ("startsWith", "endsWith") and len(args) == 1:
+            # Lean core: `s.startsWith pre := s.substrEq 0 pre 0 pre.length`,
+            # `s.endsWith post := s.takeRight post.length == post`
+            P = self.ex(args[0])
+            if name == "startsWith":
+                return f"(|{P}| <= |{R}| && {R}[..|{P}|] == {P})"
+            return f"(|{P}| <= |{R}| && {R}[|{R}| - |{P}|..] == {P})"
+        if rt == "string" and name == "append" and len(args) == 1:
+            return f"({R} + {self.ex(args[0])})"
+        if rt == "string" and name == "asString" and not args:
+            return R
+        if rt == "char":
+            if name in ("toNat", "val") and not args:
+                return f"({R} as int)"
+            if name == "isDigit" and not args:
+                return f"('0' <= {R} && {R} <= '9')"
+            if name == "isUpper" and not args:
+                return f"('A' <= {R} && {R} <= 'Z')"
+            if name == "isLower" and not args:
+                return f"('a' <= {R} && {R} <= 'z')"
+            if name == "isAlpha" and not args:
+                return f"(('A' <= {R} && {R} <= 'Z') || ('a' <= {R} && {R} <= 'z'))"
+            if name == "isAlphanum" and not args:
+                return (f"(('A' <= {R} && {R} <= 'Z') || ('a' <= {R} && {R} <= 'z') "
+                        f"|| ('0' <= {R} && {R} <= '9'))")
+            if name == "isWhitespace" and not args:
+                return f"({R} == ' ' || {R} == '\\t' || {R} == '\\r' || {R} == '\\n')"
+            if name in ("toUpper", "toLower", "toString", "ofNat"):
+                # `Char.toLower c = if 'A' <= c <= 'Z' then Char.ofNat (c.toNat + 32) else c`:
+                # a code-point cast the Dafny lifter can only accept on a literal
+                raise LeanRefusal("char-case", f".{name}")
         if name in ("size", "length") and not args:
             return f"|{R}|"
         if name in ("toList", "toArray", "data") and not args:
             return R
+        if name == "asString" and not args:
+            return R  # `List Char` to `String`: the same seq<char>
         if name == "toNat" and not args:
             return f"(if {R} >= 0 then {R} else 0)"
         if name == "natAbs" and not args:
@@ -974,8 +1084,30 @@ class Renderer:
             return f"({A(0)} / {A(1)})"
         if n in ("Int.fdiv", "Int.tdiv", "Int.fmod", "Int.tmod", "Int.div", "Int.mod", "Int.bdiv", "Int.bmod"):
             raise LeanRefusal("div-convention", n)
-        if n in ("List.length", "Array.size") and len(args) == 1:
+        if n in ("List.length", "Array.size", "String.length") and len(args) == 1:
             return f"|{A(0)}|"
+        if n in ("String.mk", "List.asString", "String.toList", "String.data") and len(args) == 1:
+            return A(0)  # a string IS its list of chars
+        if n == "String.singleton" and len(args) == 1:
+            return f"[{A(0)}]"
+        if n in ("String.append", "String.push") and len(args) == 2:
+            return f"({A(0)} + {'[' + A(1) + ']' if n == 'String.push' else A(1)})"
+        if n == "String.isEmpty" and len(args) == 1:
+            return f"(|{A(0)}| == 0)"
+        if n in ("Char.toNat", "Char.val") and len(args) == 1:
+            return f"({A(0)} as int)"
+        if n == "Char.ofNat" and len(args) == 1:
+            # the Dafny lifter accepts `n as char` only when n is visibly a
+            # code point (a literal in range), refusing `char-cast-unbounded`
+            # otherwise; Lean's `Char.ofNat` returns '\0' outside the range
+            return f"({A(0)} as char)"
+        if n in ("Char.isDigit", "Char.isAlpha", "Char.isUpper", "Char.isLower", "Char.isAlphanum",
+                 "Char.isWhitespace") and len(args) == 1:
+            return self.field(args[0], n.split(".")[1], [])
+        if n.startswith("String.") and n not in ("String.length",):
+            raise LeanRefusal("string-lib", n)
+        if n.startswith("Char."):
+            raise LeanRefusal("char-case", n)
         if n in ("List.replicate", "Array.replicate", "Array.mkArray", "mkArray") and len(args) == 2:
             return f"seq({A(0)}, _ => {A(1)})"
         if n in ("Nat.succ",) and len(args) == 1:
@@ -1005,6 +1137,43 @@ class Renderer:
         if not keep:
             return f"{dn(n)}()"
         return f"{dn(n)}(" + ", ".join(self.ex(a) for a in used) + ")"
+
+
+def _lean_escapes_to_dafny(body: str) -> str:
+    """The escapes a Lean literal may carry, in Dafny's spelling: `\\n \\t
+    \\r \\0 \\' \\" \\\\` are the same in both; Lean's `\\xHH` and
+    `\\u{H+}` become Dafny's `\\U{H+}` (the one code-point escape
+    dafny 4.11 parses, LIFTER-DECISIONS row 28)."""
+    out = []
+    i = 0
+    while i < len(body):
+        c = body[i]
+        if c != "\\":
+            out.append(c)
+            i += 1
+            continue
+        nxt = body[i + 1] if i + 1 < len(body) else ""
+        if nxt in ("n", "t", "r", "0", "'", '"', "\\"):
+            out.append("\\" + nxt)
+            i += 2
+        elif nxt == "x" and i + 3 < len(body) + 1:
+            out.append("\\U{" + body[i + 2:i + 4].upper() + "}")
+            i += 4
+        elif nxt == "u" and i + 2 < len(body) and body[i + 2] == "{":
+            j = body.index("}", i)
+            out.append("\\U{" + body[i + 3:j].upper() + "}")
+            i = j + 1
+        else:
+            raise LeanRefusal("string", f"escape \\{nxt}")
+    return "".join(out)
+
+
+def _dafny_string_literal(text: str) -> str:
+    return '"' + _lean_escapes_to_dafny(text[1:-1]) + '"'
+
+
+def _dafny_char_literal(text: str) -> str:
+    return "'" + _lean_escapes_to_dafny(text[1:-1]) + "'"
 
 
 # ---------------------------------------------------------------- driver --
