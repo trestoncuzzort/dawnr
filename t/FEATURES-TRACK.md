@@ -281,6 +281,106 @@ conclusion, then the lemma as a theorem proved by fuel induction), are the
 next lever for clean-in-seven on this set; Lean's grind closing the lemma
 proofs is the second.
 
+### 3. Sequence decreases on spec_funs (2026-09-27, lifter)
+
+**Refused: 93 methods** of the 2026-09-26 lift passed classify and failed
+check_wf on `spec_fun .. decreases is not int` (29 of them one `str2Int`).
+Dafny orders a `decreases s` over a sequence by its built-in rank (reference
+manual 7.1.3); t requires an int. The lifter now lifts such a component as
+`len(s)` (LIFTER-DECISIONS row 39) and the check stage verifies the order
+rather than trusting it: `L_dec` compares the source's `|s|` with the lifted
+`len`, `L_fun`'s strong-induction hint orders by length, and a function whose
+body has a one-sided slice gets proved bridges between `s[1..]` and
+`s[1..|s|]` (without them `L_fun_sum` read unproved under every induction
+hint tried). No kernel changes. **Measured** (the 88 staged files, re-lifted
+with the check stage): 24 checked, 47 lift-check-failed, 18 check-wf-failed
+(string-returning helpers, since refused `function-result`), 3 differential
+timeouts (the arm needs dotnet, absent on the measuring machine), 1 error.
+Tests: `t/test_lift_seq_decreases.py`.
+
+### 4. Arrays read by functions (2026-09-27, lifter)
+
+**Refused: 88 methods `array`** (91 first blocker, 43 sole). Decision 1's
+read-only array parameter escaped the moment it was passed to a lemma or to
+another method. Both are no escape (row 42): a lemma cannot write the heap
+(reference manual 6.3.3), a callee whose own parameter is read-only by the
+same condition writes nothing through it; a lemma with an array parameter
+lifts with a seq parameter. **Measured**: 21 of 88 pass, 14 lift, 12 of those
+pass the check stage. The 67 still refused are arrays of char/real/bool/bv32/
+a type parameter/arrays, array results, and the in-place sorts (`aliased`: a
+mutated array passed to a predicate; 9 of the 11 also need `multiset`).
+Tests: `t/test_lift_array_functions.py`.
+
+### 5. Quantifier bounds (2026-09-27, lifter)
+
+**Refused: 88 methods `unbounded-quantifier`** (166 any, 57 sole). The
+lifter now finds the bound where Dafny left it implicit (row 40): inside a
+called predicate's body, in a `<`/`<=` chain over several binders, in a
+`nat` binder's implicit lower bound, or eliminates a binder an equality pins
+(the one-point rule, Gries and Schneider (8.14)); a quantifier with no finite
+range stays refused, since the interpreter cannot evaluate it and a twin has
+no witness. **Measured**: 50 of 88 pass the gate, 24 lift, 10 pass the check
+stage (11 equivalence lemmas unproved, in two of them after the source's own
+sum lemma was dropped `lemma-dropped-unproved`; 3 check-wf-failed).
+Tests: `t/test_lift_quant_bounds.py`.
+
+### 6. Multi-return calls (2026-09-27, lifter)
+
+**Refused: 5 methods `method-call-multi-return`** and 12
+`multi-return-nested`. `a, b := M(x);` binds the callee's pair return to a
+fresh local and the two names to its projections (row 41). **Measured**: all
+5 pass the call rule; none lifts, each callee refused on its own terms
+(`seq-typing`, `return-not-assigned-on-all-paths`, `seq-update`). The 12
+`multi-return-nested` are two out-parameters with a component t's pair does
+not carry (array, real, char, a datatype) and are unchanged. Tests:
+`t/test_lift_multi_return_calls.py`.
+
+### 7. Nested string sequences, and strings for the Lean front end (2026-09-27, lifter)
+
+**Refused: 79 methods `nested-seq-string`** (Dafny) and 119 Lean files
+`string`/`char`. `seq<string>` and `seq<seq<char>>` lift as t's nested seq
+with code-point rows (row 43: row 28 per row, as row 30 lifts int rows); a
+nested name's rows are seq-kinded, so `xs[i][..k]` resolves; the checker
+views such a name row by row and the differential harness prints nested
+points (row 30's own residual). **Measured**: 37 of 79 lift at the rewrite
+stage; through the check stage 3 checked, 25 refused `function-result`, 5
+lift-check-failed, 3 check-wf-failed, 1 differential timeout. The binding
+gap is a helper FUNCTION returning a string (or any seq): a t spec_fun's
+result is int or bool (SPEC.md), so such a function cannot lift, and it now
+refuses by name, `function-result`, where before it was lifted with an int
+result and failed check_wf a stage later (135 methods of the 2026-09-26
+lift). Seq-returning spec_funs in t, across the seven kernels, is the next
+lever for every string program with a helper.
+
+The Lean front end (`t/lift_lean.py`) reads `String` as Dafny's `string` and
+`Char` as `char`, each String/Char operation by its Lean core definition
+(`.length`, `.data`/`.toList`/`String.mk`, `++`/`.push`, `.take`/`.drop`/
+`.dropRight`/`.takeRight` as slices, `.startsWith`/`.endsWith` as slice
+equality, `.contains`, `Char.toNat`, the ASCII class tests as core's
+ranges), and refuses by name what has no Dafny expression: `string-pos` (a
+`String.Pos` is a UTF-8 byte position), `string-lib` (`splitOn`, `trim`,
+`toNat?`, ...), `char-case`. The equivalence harness views a String as
+`s.toList.map (fun c => (c.toNat : Int))`. **Measured** on the 119 files:
+33 render, 18 lift (10 `function-result`, 5 `unbounded-quantifier`), and
+the Lean harness proves none: `grind` stops on the code-point range clause
+`string-elements-requires` adds to the lifted requires. A standalone probe
+proved the char bound (`c.toNat <= 1114111` from `Char.valid`) and the
+length half (`String.length_toList`, `List.length_map`) but not the clause
+over the mapped list's `!` index; teaching the fixed cascade that one fact,
+or letting the Lean track drop the clause it never needs (no `dafny run`
+there), is what stands between these 18 and a proved equivalence. Tests:
+`t/test_lift_nested_strings.py`, `t/test_lift_lean.py`.
+
+### 8. Tuples (2026-09-27, lifter)
+
+**Refused: 27 methods `tuple`.** A two-component Dafny tuple (reference
+manual 5.6.3) is t's pair under the source's own name (row 44): the return
+type `(int, int)`, a parameter or local, the literal `(a, b)`, `p.0`/`p.1`;
+a `nat` component keeps its guard or ensures on the projection; `tuple-arity`
+and `tuple-component` name what t's pair cannot carry. **Measured**: 10 of 27
+lift, 7 pass the check stage; 8 of the other 17 refuse `function-result`
+(a tuple-returning helper). Tests: `t/test_lift_tuples.py`.
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
@@ -293,48 +393,20 @@ effort is the lowering work across seven kernels plus the lifter.
 | 4 | arrays read by functions (`function f(a: array<int>) reads a`) | 43 | lifter only: decision 1 already lifts a read-only array parameter to a seq value; extend it to functions that read one | no kernel cost |
 | 5 | quantifier bounds through predicates and one-sided ranges | part of 57 | lifter first (infer the range from a predicate's body or a one-sided guard); truly unbounded quantifiers stay refused | the interpreter cannot evaluate an unbounded quantifier, so no twin witness; bounds are what makes a twin measurable |
 | 6 | multi-return calls (`a, b := M(x)`) | 4 | pairs exist; destructuring is surface plus lifter | small |
-| 7 | finite sets | 32 | all seven kernels, a new type | large |
-| 8 | datatypes | 11 + 56 files | all seven kernels, a new declaration form | large |
-| 9 | higher-order functions | 1 + 91 files | all seven kernels | largest |
+| 9 | finite sets | 32 | all seven kernels, a new type | large |
+| 10 | datatypes | 11 + 56 files | all seven kernels, a new declaration form | large |
+| 11 | higher-order functions | 1 + 91 files | all seven kernels | largest |
+
+Rows 3 to 6 landed 2026-09-27 (Done, above), with nested string sequences,
+Lean strings and tuples beside them; the measured yield of each is in its
+entry. Finite sets, datatypes and higher-order functions remain, and two
+gaps the measurements named rank with them: a spec_fun that returns a
+sequence (the binding refusal for string programs, `function-result`), and
+the in-place sorts' `multiset` permutation specs.
 
 ## The features ahead: designs and costs
 
-### 3. Sequence decreases on spec_funs (lifter)
-
-Dafny's default and explicit `decreases s` for a function over a sequence is
-compared in Dafny's built-in well-founded order; t requires an int. The lifter
-rewrites it to `|s|` where every recursive call's argument is a strictly
-shorter sequence (a slice `s[1..]`, `s[..|s|-1]`), which the check stage's
-equivalence lemmas then verify rather than trust.
-
-### 4. Arrays read by functions (lifter)
-
-Decision 1 lifts a read-only `array<int>` method parameter to a `seq` value.
-Many corpora functions take the same array (`function sum(a: array<int>, i:
-int): int reads a`). Candidates: keep arrays as a heap type (Dafny, SPARK,
-Frama-C natively; Lean/Rocq/F* would need a heap model, far too costly), or
-Dafny's own `a[..]` view: a function reading an array is a function of its
-sequence view. Chosen: the view, which is what decision 1 already does for
-methods; no t construct changes.
-
-### 5. Quantifier bounds
-
-t's quantifiers are bounded so the interpreter can evaluate them and a twin can
-carry a witness. Candidates: Dafny/Why3/SPARK unbounded quantifiers (fine for
-SMT kernels, not evaluable); Isabelle/Lean bounded `∀ x ∈ Finset.range n`;
-Python's `all(... for i in range(n))`. Chosen: keep t bounded, and make the
-lifter find the bound where Dafny left it implicit (inside a called predicate,
-or a one-sided guard paired with a type bound such as `nat`). A quantifier with
-no finite range stays refused by name.
-
-### 6. Multi-return calls
-
-Dafny `a, b := M(x)`, Rust/Python tuple destructuring `let (a, b) = m(x)`.
-t has pairs, so a two-return callee lifts to a pair return and the call to
-`var p: (T1, T2) := m(x); a := p.0; b := p.1`, a lifter rewrite with no kernel
-cost, or a surface destructuring sugar printed back as that expansion.
-
-### 7. Finite sets
+### 9. Finite sets
 
 Candidates: Dafny `set<int>` with comprehension and `|s|`; SPARK
 `Ada.Containers.Functional_Sets`; Why3 `fset`; Lean `Finset`; Rocq
@@ -344,7 +416,7 @@ set-of-int with the bounded comprehension `set i | lo <= i < hi && P(i)`, the
 common corpus shape, which every kernel can express as a bounded filter. Cost:
 a new value type in all seven lowerings, the interpreter, twin ladder moves.
 
-### 8. Datatypes
+### 10. Datatypes
 
 Candidates: Dafny `datatype`, Rust `enum`, OCaml/Haskell variants, Lean
 `inductive`, SPARK discriminated records, C tagged unions. Chosen when it opens:
@@ -352,7 +424,7 @@ non-recursive, then recursive, algebraic datatypes with `match`, Dafny's
 syntax. Cost: a declaration form in all seven kernels (Frama-C and SPARK
 through records with discriminants), twin moves over constructors.
 
-### 9. Higher-order functions
+### 11. Higher-order functions
 
 Candidates: Dafny arrow types and lambdas, Python lambdas, Haskell. Most corpus
 uses are `seq(n, i => f(i))` comprehensions and `forall` over a function
