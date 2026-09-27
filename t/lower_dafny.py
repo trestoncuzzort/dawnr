@@ -953,7 +953,11 @@ function EndsWith(s: seq<int>, t: seq<int>): bool
 """
 
 NARY_OPS = {"and": "&&", "or": "||"}
-TYPES = {"int": "int", "bool": "bool", "seq": "seq<int>"}
+TYPES = {"int": "int", "bool": "bool", "seq": "seq<int>",
+         # SPEC.md "Finite sets" (2026-09-27): Dafny's own finite set of
+         # ints; display `{..}`, `in`, `|s|`, `+` (union), `*` (intersection),
+         # `-` (difference) are all native and total, exactly t's six.
+         "set": "set<int>"}
 
 
 # SPEC.md "The string library (v1)" (2026-09-11): the 17 members, each the
@@ -1282,11 +1286,49 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return f"{args[0]}.0"
     if op == "snd":
         return f"{args[0]}.1"
+    sl = _set_lower(op, args)
+    if sl is not None:
+        return sl
     if op in NARY_OPS:
         return "(" + f" {NARY_OPS[op]} ".join(args) + ")"
     if op in BIN_OPS:
         return f"({args[0]} {BIN_OPS[op]} {args[1]})"
     raise ValueError(f"t has no operator {op!r}")
+
+
+# SPEC.md "Finite sets" (2026-09-27): the six set operations as Dafny's own
+# (`{..}`, `in`, `|s|`, `+`, `*`, `-`), all native and total. The one form
+# that needs care is the EMPTY display: a bare `{}` under `|..|` has no
+# element to infer its type from ("the type of this expression is
+# underspecified", measured on dafny 4.11.0), and the comprehension
+# `set i: int | false` is rejected as not provably finite ("Dafny's
+# heuristics can't figure out how to produce a bounded set"). A let
+# expression carries the type: `(var t_emptyset: set<int> := {};
+# t_emptyset)` types and verifies in spec and body positions alike
+# (measured, the same file: `|..| == 0` and `x in ..` both proved), so the
+# empty display lowers to it; a non-empty display is typed by its elements.
+# The name is `t_`-prefixed, a prefix rule 4.8 keeps out of every task
+# (lower_rocq's reserved prefix), so it can shadow nothing. Measured in
+# the same file: `|a + b| + |a * b| == |a| + |b|`, `|a - b| + |a * b| ==
+# |a|`, `|{x, x, 1}|` in [1, 2] and `a == b` against two empty differences
+# all verify with no hint; `x in s == (|s * {x}| == 1)` does not (a
+# cardinality fact about a singleton intersection Dafny's set axioms leave
+# to the user), which is why the membership probe is stated over
+# membership alone.
+_SET_BIN = {"union": "+", "inter": "*", "diff": "-"}
+_EMPTY_SET = "(var t_emptyset: set<int> := {}; t_emptyset)"
+
+
+def _set_lower(op: str, args: list) -> str | None:
+    if op == "set":
+        return ("{" + ", ".join(args) + "}") if args else _EMPTY_SET
+    if op == "in":
+        return f"({args[0]} in {args[1]})"
+    if op == "card":
+        return f"|{args[0]}|"
+    if op in _SET_BIN:
+        return f"({args[0]} {_SET_BIN[op]} {args[1]})"
+    return None
 
 
 def _collect_names(obj) -> set[str]:
@@ -1397,6 +1439,9 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
             return f"{args[0]}[{args[1]}..{args[2]}]"
         if op == "pair":
             return f"({args[0]}, {args[1]})"
+        sl = _set_lower(op, args)
+        if sl is not None:
+            return sl
         if op == "fst":
             return f"{args[0]}.0"
         if op == "snd":
@@ -1592,6 +1637,12 @@ def _tlit(v, ty=None):
             t1, t2 = ty["pair"]
             return {"op": "pair", "args": [_tlit(v[0], t1), _tlit(v[1], t2)]}
         return {"_seq2": tuple(tuple(row) for row in v)}
+    if ty == "set" or isinstance(v, frozenset):
+        # SPEC.md "Finite sets" (2026-09-27): interp._j shows a set as its
+        # sorted list, the same shape as a seq, so a set-typed name is built
+        # from `ty` as a pair is; tagged `_set` so `_name_seqs`/`_certificate`
+        # bind it `set<int>` and never as a seq.
+        return {"_set": tuple(sorted(v))}
     if isinstance(v, bool):
         return {"bool": v}
     if isinstance(v, int):
@@ -1611,7 +1662,7 @@ def subst(e: dict, m: dict) -> dict:
     if "var" in e:
         v = m.get(e["var"])
         return e if v is None else v
-    if "int" in e or "bool" in e or "_seq" in e or "_seq2" in e:
+    if "int" in e or "bool" in e or "_seq" in e or "_seq2" in e or "_set" in e:
         return e
     if "ite" in e:
         c = e["ite"]
@@ -1675,6 +1726,22 @@ def _twin_loop(real_body: list, twin_body: list) -> dict | None:
     return diffs[0] if len(diffs) == 1 else None
 
 
+def _set_ev(op: str, vs: list):
+    """The six set operations on already-evaluated operands (SPEC.md "Finite
+    sets", 2026-09-27), mirroring interp.ev; a set operand that arrived as
+    a witness's sorted list is read as the set it shows."""
+    def as_set(v):
+        return v if isinstance(v, frozenset) else frozenset(v)
+    if op == "set":
+        return frozenset(vs)
+    if op == "in":
+        return vs[0] in as_set(vs[1])
+    if op == "card":
+        return len(as_set(vs[0]))
+    a, b = as_set(vs[0]), as_set(vs[1])
+    return a | b if op == "union" else (a & b if op == "inter" else a - b)
+
+
 def _key(v):
     """A type-tagged hashable form of a value (True and 1 stay distinct)."""
     if isinstance(v, bool):
@@ -1703,6 +1770,8 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         return e, list(e["_seq"])
     if "_seq2" in e:
         return e, [list(row) for row in e["_seq2"]]
+    if "_set" in e:
+        return e, frozenset(e["_set"])
     if "var" in e:
         if e["var"] not in env:
             raise interp.Undef(f"unbound {e['var']}")
@@ -1794,6 +1863,11 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         return out, vs[0].a
     if op == "snd":
         return out, vs[0].b
+    if op in ("set", "in", "card", "union", "inter", "diff"):
+        # SPEC.md "Finite sets" (2026-09-27): six total operations, the
+        # dispatch of interp.ev (a set value is a frozenset there too; a
+        # witness's set arrives as its sorted list and is read back here).
+        return out, _set_ev(op, vs)
     if op in ("div", "mod"):
         # Same Euclidean law as interp.ev and SPEC.md "Division and modulo":
         # q = x div y, r = x mod y are the unique pair with x == q*y + r and
@@ -1938,7 +2012,7 @@ def _unroll(e: dict, funs: dict, st, budget: list, bounds: list) -> dict:
 
 
 def _name_seqs(e: dict, names: dict, used: dict,
-               nnames: dict, nused: dict) -> dict:
+               nnames: dict, nused: dict, snames: dict = None, sused: dict = None) -> dict:
     """Replace every seq literal by the witness name bound to that value
     (see the certificate section: `[]` needs a typed binding). `_seq`
     (flat) and `_seq2` (nested, SPEC.md "Nested sequences", 2026-09-10)
@@ -1956,21 +2030,37 @@ def _name_seqs(e: dict, names: dict, used: dict,
         key = e["_seq2"]
         nused[key] = nnames[key]
         return {"var": nnames[key]}
+    if "_set" in e:
+        # SPEC.md "Finite sets" (2026-09-27): a set witness value gets its
+        # own typed binding (`set<int>`) from its own table, as a nested seq
+        # does, so `{}` and `[]` never answer for each other.
+        key = e["_set"]
+        if snames is None or key not in snames:
+            raise KeyError(("set", key))
+        sused[key] = snames[key]
+        return {"var": snames[key]}
     if "ite" in e:
         c = e["ite"]
-        return {"ite": {"cond": _name_seqs(c["cond"], names, used, nnames, nused),
-                        "then": _name_seqs(c["then"], names, used, nnames, nused),
-                        "else": _name_seqs(c["else"], names, used, nnames, nused)}}
+        return {"ite": {"cond": _name_seqs(c["cond"], names, used, nnames, nused, snames, sused),
+                        "then": _name_seqs(c["then"], names, used, nnames, nused, snames, sused),
+                        "else": _name_seqs(c["else"], names, used, nnames, nused, snames, sused)}}
     if "call" in e:
         c = e["call"]
         return {"call": {"fun": c["fun"],
-                         "args": [_name_seqs(a, names, used, nnames, nused)
+                         "args": [_name_seqs(a, names, used, nnames, nused, snames, sused)
                                   for a in c["args"]]}}
     if "op" in e:
         return {"op": e["op"],
-                "args": [_name_seqs(a, names, used, nnames, nused)
+                "args": [_name_seqs(a, names, used, nnames, nused, snames, sused)
                          for a in e.get("args", [])]}
     return e
+
+
+def _set_lit(v: tuple) -> str:
+    """A set witness's own Dafny literal under a `set<int>` binding: the
+    display of its sorted elements, `{}` for the empty set (typed by the
+    binding, so the bare display is fine here)."""
+    return "{" + ", ".join(str(x) for x in v) + "}"
 
 
 def _seq_lit(v: tuple) -> str:
@@ -2123,6 +2213,8 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
             raise _DefViol({"op": "!=", "args": [_tlit(y), {"int": 0}]})
         r = x % abs(y)
         return r if op == "mod" else (x - r) // y
+    if op in ("set", "in", "card", "union", "inter", "diff"):
+        return _set_ev(op, a)   # SPEC.md "Finite sets": all six total
     if op == "==":
         return a[0] == a[1]
     if op == "!=":
@@ -2339,6 +2431,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         formula = _conj(list(seen.values()))
         seq_names: dict = {}
         nseq_names: dict = {}
+        set_names: dict = {}
         for n, v in (list(names.items())
                      + ([ret_extra] if ret_extra is not None else [])):
             # scope_types-gated (SPEC.md "Pairs", 2026-09-10): a pair-typed
@@ -2360,9 +2453,14 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
                 seq_names.setdefault(tuple(v), n)
             elif t == {"seq": "seq"} and isinstance(v, list):
                 nseq_names.setdefault(tuple(tuple(row) for row in v), n)
+            elif t == "set" and isinstance(v, (list, frozenset)):
+                # SPEC.md "Finite sets" (2026-09-27): its own table, keyed by
+                # the sorted tuple `_tlit` tags `_set`.
+                set_names.setdefault(tuple(sorted(v)), n)
         used: dict = {}
         nused: dict = {}
-        formula = _name_seqs(formula, seq_names, used, nseq_names, nused)
+        sused: dict = {}
+        formula = _name_seqs(formula, seq_names, used, nseq_names, nused, set_names, sused)
         ladder: list[str] = []
         ladder_seqs: dict = {}
         if len(facts) <= _LADDER_CAP:
@@ -2389,6 +2487,8 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
                    for v, n in used.items())
     lets += "".join(f"var {n}: seq<seq<int>> := {_nseq_lit(v)}; "
                     for v, n in nused.items())
+    lets += "".join(f"var {n}: set<int> := {_set_lit(v)}; "
+                    for v, n in sused.items())
     lines = [f"lemma {CERT_NAME}()", f"  ensures {lets}{body}", "{"]
     lines += [f"  var {n}: seq<int> := {_seq_lit(v)};"
               for v, n in ladder_seqs.items()]

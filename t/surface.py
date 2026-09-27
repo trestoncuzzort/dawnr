@@ -33,7 +33,7 @@ THE ROUND TRIP, measured (2026-09-04, this file's --check):
   print(parse(text)) == text on the second pass for all 1628, so printing is
   idempotent and every task has one normal form in the notation.
 
-  The 22 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
+  The 26 `written:` lines in SYNTAX.md parse, unedited, to the JSON they sit
   beside (two added 2026-09-09, one for the char and string literals below
   and one for sequence literals, concatenation and slices). That
   is the check that this grammar is the documented notation and not a new
@@ -67,7 +67,7 @@ isdigit, isalpha, isupper, islower, startswith, endswith), a postfix
 `join` (the notation's `sep.join(rows)` swaps the AST's own `(rows, sep)`
 argument order, its receiver second, the one member where "receiver
 first" does not hold). Measured: `python3 t/surface.py --check` with 6 new
-`written:` lines (22 total) and the corpus grown by 3 committed tasks
+`written:` lines (26 total) and the corpus grown by 3 committed tasks
 (word_count, split_join, count_vowels) still round trips at 100%; see the
 live counts the command itself prints, not the numbers frozen into this
 docstring's 2026-09-04 paragraph above, which this wave did not re-measure.
@@ -259,6 +259,10 @@ KEYWORDS = {
     "int", "bool", "seq",
     "tostr",       # SPEC.md "The string library" (2026-09-11): tostr(n) is
                    # a function like len(n), reserved the same way.
+    "set", "card", "union", "inter", "diff",
+                   # SPEC.md "Finite sets" (2026-09-27): the type keyword and
+                   # the four named operations, functions like len(n); `in`
+                   # (membership) is already reserved for the quantifier range.
 }
 
 # SPEC.md "The string library" (2026-09-11): the 16 members reached as a
@@ -437,7 +441,8 @@ CMP_OPS = {"==", "!=", "<", "<=", ">", ">="}
 # and the AST op names are the words, as SPEC.md writes them.
 _MUL_OPS = {"*": "*", "/": "div", "%": "mod"}
 _OP_TEXT = {"div": "/", "mod": "%"}
-VAL_TYPES = ("int", "bool", "seq")
+VAL_TYPES = ("int", "bool", "seq", "set")   # "set": SPEC.md "Finite sets" (2026-09-27)
+PAIR_TYPES = ("int", "bool", "seq")          # what a pair component may be (SPEC.md "Pairs")
 
 
 # 2026-09-11 (ROADMAP 14.2): the production every raise site below names.
@@ -521,9 +526,9 @@ class Parser:
         start = self.tok
         if self.at("sym", "("):
             self.eat("sym", "(", "Type")
-            t1 = self.vtype()
+            t1 = self.vtype(PAIR_TYPES)
             self.eat("sym", ",", "Type")
-            t2 = self.vtype()
+            t2 = self.vtype(PAIR_TYPES)
             self.eat("sym", ")", "Type")
             return self.mark(start, {"pair": [t1, t2]})
         t = self.vtype()
@@ -920,6 +925,15 @@ class Parser:
     def p_cmp(self) -> dict:
         start = self.tok
         left = self.p_add()
+        if self.at("kw", "in"):
+            # x in s: set membership (SPEC.md "Finite sets", 2026-09-27), at
+            # the comparison level and, like a comparison, never chained.
+            self.eat("kw", "in")
+            right = self.p_add()
+            if (self.tok.kind == "sym" and self.tok.text in CMP_OPS) or self.at("kw", "in"):
+                self.err(self.tok, "comparisons do not chain; parenthesise",
+                         NO_CHAIN_HEADING)
+            return self.mark(start, {"op": "in", "args": [left, right]})
         if self.tok.kind == "sym" and self.tok.text in CMP_OPS:
             op = self.eat("sym").text
             right = self.p_add()
@@ -1115,6 +1129,39 @@ class Parser:
             self.production = "Expr"
             self.eat("sym", ")")
             return self.mark(t, {"op": "fill", "args": [n, v]})
+        if self.at("kw", "card"):
+            # card(s): SPEC.md "Finite sets" (2026-09-27), a function like len(s).
+            self.eat("kw")
+            self.eat("sym", "(")
+            e = self.expr()
+            self.production = "Expr"
+            self.eat("sym", ")")
+            return self.mark(t, {"op": "card", "args": [e]})
+        if self.at("kw", "union") or self.at("kw", "inter") or self.at("kw", "diff"):
+            # union(s, t), inter(s, t), diff(s, t): SPEC.md "Finite sets"
+            # (2026-09-27); written by name, never as +, * or -.
+            op = self.eat("kw").text
+            self.eat("sym", "(")
+            a = self.expr()
+            self.production = "Expr"
+            self.eat("sym", ",")
+            b = self.expr()
+            self.production = "Expr"
+            self.eat("sym", ")")
+            return self.mark(t, {"op": op, "args": [a, b]})
+        if self.opt("sym", "{"):
+            # {e1, ..., en}, the set display; {} the empty set (SPEC.md
+            # "Finite sets", 2026-09-27). An expression position never
+            # starts a block, so the brace is unambiguous here.
+            args = []
+            if not self.at("sym", "}"):
+                while True:
+                    args.append(self.expr())
+                    self.production = "Expr"
+                    if not self.opt("sym", ","):
+                        break
+            self.eat("sym", "}")
+            return self.mark(t, {"op": "set", "args": args})
         if self.at("kw", "tostr"):
             # tostr(n): SPEC.md "The string library" (2026-09-11), a
             # function like len(n), not a postfix member.
@@ -1250,6 +1297,9 @@ _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice"
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2,
           "pair": 2, "fst": 1, "snd": 1,
+          # SPEC.md "Finite sets" (2026-09-27); `set` (the display) is
+          # excluded here for its variable arity, exactly as `seq` is.
+          "in": 2, "card": 1, "union": 2, "inter": 2, "diff": 2,
           # SPEC.md "The string library" (2026-09-11); `split` is excluded
           # here (one or two arguments) and checked in its own print/parse
           # branches instead, exactly as `seq`/`and`/`or` are excluded for
@@ -1330,6 +1380,18 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # to the same AST.
         return _wrap("%s[%s..%s]" % (pexpr(args[0], P_POSTFIX), pexpr(args[1]),
                                      pexpr(args[2])), P_POSTFIX, floor)
+    if op == "set":
+        # {e1, ..., en}, the set display, any arity including zero (SPEC.md
+        # "Finite sets", 2026-09-27); its own delimiters, no floor.
+        return "{%s}" % ", ".join(pexpr(a) for a in args)
+    if op == "in":
+        # x in s: membership at the comparison level, non-associative.
+        return _wrap("%s in %s" % (pexpr(args[0], P_CMP + 1),
+                                   pexpr(args[1], P_CMP + 1)), P_CMP, floor)
+    if op == "card":
+        return "card(%s)" % pexpr(args[0])
+    if op in ("union", "inter", "diff"):
+        return "%s(%s, %s)" % (op, pexpr(args[0]), pexpr(args[1]))
     if op == "pair":
         # (e1, e2) (SPEC.md "Pairs", 2026-09-10): its own delimiters, like
         # `seq`'s `[...]` or `call`'s `f(...)`, so no `_wrap` floor applies.
@@ -1417,7 +1479,7 @@ def _print_type(t) -> str:
     if isinstance(t, dict):
         p = t.get("pair")
         if (set(t) == {"pair"} and isinstance(p, list) and len(p) == 2
-                and all(c in VAL_TYPES for c in p)):
+                and all(c in PAIR_TYPES for c in p)):
             return "(%s, %s)" % (p[0], p[1])
         if t == {"seq": "seq"}:
             return "seq<seq>"
@@ -1573,6 +1635,14 @@ WRITTEN = [
              "else": [{"assign": ["r", {"op": "neg",
                                         "args": [{"var": "x"}]}]}]}}),
     ("expr", "len(s)", {"op": "len", "args": [{"var": "s"}]}),
+    # SPEC.md "Finite sets" (2026-09-27), SYNTAX.md's own written: line.
+    ("expr", "{1, x}", {"op": "set", "args": [{"int": 1}, {"var": "x"}]}),
+    ("expr", "x in s", {"op": "in", "args": [{"var": "x"}, {"var": "s"}]}),
+    ("expr", "card(union(s, u))",
+     {"op": "card", "args": [{"op": "union", "args": [{"var": "s"}, {"var": "u"}]}]}),
+    ("stmt", "var d: set := diff(s, u);",
+     {"var": {"name": "d", "type": "set",
+              "init": {"op": "diff", "args": [{"var": "s"}, {"var": "u"}]}}}),
     ("expr", "s[i]", {"op": "at", "args": [{"var": "s"}, {"var": "i"}]}),
     ("expr", "forall i in [0, len(s)) . r >= s[i]",
      {"forall": {"var": "i", "lo": {"int": 0},
@@ -1730,7 +1800,7 @@ def _rand_expr(rng, depth: int) -> dict:
     kind = rng.choice([
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
         "len", "at", "update", "fill", "seq", "slice", "ite", "quant", "call",
-        "pair", "fst", "snd", "strlib",
+        "pair", "fst", "snd", "strlib", "setlit", "in", "card", "setbin",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -1773,6 +1843,17 @@ def _rand_expr(rng, depth: int) -> dict:
         return {"op": "pair", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind in ("fst", "snd"):
         return {"op": kind, "args": [_rand_expr(rng, d)]}
+    if kind == "setlit":
+        # SPEC.md "Finite sets" (2026-09-27): {e1, ..., en}, {} included.
+        return {"op": "set", "args": [_rand_expr(rng, d)
+                                      for _ in range(rng.randint(0, 3))]}
+    if kind == "in":
+        return {"op": "in", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
+    if kind == "card":
+        return {"op": "card", "args": [_rand_expr(rng, d)]}
+    if kind == "setbin":
+        return {"op": rng.choice(["union", "inter", "diff"]),
+                "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind == "strlib":
         # SPEC.md "The string library (v1)", added 2026-09-11: 17 members,
         # `split` at two arities of its own op.
@@ -1822,7 +1903,7 @@ def _rand_type(rng):
                          rng.choice(["int", "bool", "seq"])]}
     if r < 0.35:
         return {"seq": "seq"}
-    return rng.choice(["int", "bool", "seq"])
+    return rng.choice(["int", "bool", "seq", "set"])   # "set": SPEC.md "Finite sets"
 
 
 def _rand_stmts(rng, depth: int, k: int) -> list:
