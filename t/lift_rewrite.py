@@ -59,7 +59,7 @@ from lift_ast import (
     SeqDisplay, SeqUpdate, Slice, Stmt, StringLit, Type, Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
-    ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier,
+    ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier, closure_predicates,
     decode_char_literal, decode_string_literal, expr_kind, find_array_mutation,
     scan_breaks, scan_null_checks, walk, unchanged_at_every_call, _is_seq_of_char,
     _is_nested_seq_of_int, _is_nested_seq_of_nat,
@@ -377,12 +377,17 @@ class Scope:
     # statement of one lifts to a t lemma call, any other is dropped
     # (decision 8). Shared, never mutated after `rewrite()` fills it.
     lemmas: dict = field(default_factory=dict)
+    # Feature 5 (2026-09-27, t/FEATURES-TRACK.md): the closure's predicates
+    # by dafny name, `lift_classify.closure_predicates`, so `_lift_quantifier`
+    # bounds a quantifier through a predicate's body exactly as classify did.
+    # Shared, never mutated after `rewrite()` sets it.
+    predicates: dict = field(default_factory=dict)
 
     def copy(self) -> "Scope":
         return Scope(dict(self.renames), dict(self.types), list(self.nat), self.ret_name,
                      self.old_array_name, self.old_array_param_tname, self.null_drop_ids,
                      dict(self.pair_view), self.pair_ret, dict(self.method_rets),
-                     self.lemmas)
+                     self.lemmas, self.predicates)
 
 
 # ---------------------------------------------------------------------------
@@ -711,15 +716,34 @@ def _lift_chain(e: Chain, scope: Scope, fn_names: dict, self_name: str,
 
 def _lift_quantifier(q: Quantifier, scope: Scope, fn_names: dict, self_name: str,
                       task_name: str, record: LiftRecord, renamer: "_Renamer") -> dict:
-    got = bound_quantifier(q)
+    got = bound_quantifier(q, scope.predicates)
     if got is None:
         raise ValueError("lift_rewrite: unbounded quantifier reached rewrite "
                           "(a lift_classify bug: should have been refused)")
     binders = got["binders"]
     body_expr = got["body"]
+    # The rules that bounded it, in the sidecar (classify's `Liftable.rewrites`
+    # is a plan, never the persisted provenance); `in-desugared` is recorded
+    # per membership binder below.
+    for rule in sorted(got.get("rules", ())):
+        if rule != "in-desugared":
+            record.rewrites.append(Rewrite(rule=rule, line=q.line))
+    if not binders:
+        # Feature 5 (2026-09-27): every binder was pinned by an equality
+        # (`exists c :: c == E && P(c)` is `P(E)`), so the quantifier is
+        # its body, lifted as a plain expression.
+        return _lift_expr(body_expr, scope, fn_names, self_name, task_name, record, renamer)
 
-    def build(i: int, inner_scope: Scope) -> dict:
+    def build(i: int, inner_scope: Scope, subs: list) -> dict:
+        # `subs`: the membership binders already read as `s[j]` (`_AtHole`),
+        # applied to this binder's own bounds too, since a later binder's
+        # range may mention an earlier membership binder (feature 5:
+        # `x in s && 0 <= j < x`).
         name, lo, hi, mem = binders[i]
+        for sname, hole in subs:
+            lo = _subst(lo, sname, hole) if lo is not None else None
+            hi = _subst(hi, sname, hole) if hi is not None else None
+            mem = _subst(mem, sname, hole) if mem is not None else None
         fresh = renamer.fresh(name, record, "quantbind")
         s2 = inner_scope.copy()
         if mem is not None:
@@ -728,20 +752,22 @@ def _lift_quantifier(q: Quantifier, scope: Scope, fn_names: dict, self_name: str
             lo_e = {"int": 0}
             hi_e = {"op": "len", "args": [s_e]}
             s2.renames[name] = fresh  # bound var itself unused directly; substitution below
-            body_sub = _subst(body_expr, name, _AtHole(s_e, fresh))
+            subs = subs + [(name, _AtHole(s_e, fresh))]
         else:
             lo_e = _lift_expr(lo, inner_scope, fn_names, self_name, task_name, record, renamer)
             hi_e = _lift_expr(hi, inner_scope, fn_names, self_name, task_name, record, renamer)
             s2.renames[name] = fresh
-            body_sub = body_expr
         if i + 1 == len(binders):
+            body_sub = body_expr
+            for sname, hole in subs:
+                body_sub = _subst(body_sub, sname, hole)
             inner = _lift_expr(body_sub, s2, fn_names, self_name, task_name, record, renamer)
         else:
-            inner = build(i + 1, s2)
+            inner = build(i + 1, s2, subs)
         key = "forall" if q.kind == "forall" else "exists"
         return {key: {"var": fresh, "lo": lo_e, "hi": hi_e, "body": inner}}
 
-    return build(0, scope)
+    return build(0, scope, [])
 
 
 class _AtHole:
@@ -1693,6 +1719,7 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
 
     scope = Scope()
     scope.null_drop_ids = null_drop_ids
+    scope.predicates = closure_predicates(closure)
     scope.method_rets = {cname: cplan.method.returns[0].type
                          for cname, cplan, _crr in callee_results}
     params_out = []

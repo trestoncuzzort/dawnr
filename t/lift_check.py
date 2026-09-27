@@ -356,6 +356,10 @@ def _print_expr(e, rename: dict) -> str:
         # differential harness prints the source method's statements too;
         # vericoding DA0543's `assert forall j, _t#0 | ...` measured).
         e = _source_form(e)
+        if not isinstance(e, Quantifier):
+            # every binder pinned by an equality: the quantifier is its
+            # body (the one-point rule, `_source_form`)
+            return _print_expr(e, rename)
         binders = ", ".join(_print_binder(b, rename) for b in e.binders)
         rng = f" | {_print_expr(e.range, rename)}" if e.range is not None else ""
         return f"({e.kind} {binders}{rng} :: {_print_expr(e.body, rename)})"
@@ -706,20 +710,23 @@ def _source_form(e):
         e = dataclasses.replace(e, **changes)
     if isinstance(e, Quantifier):
         import lift_classify
-        while True:
-            synth = tuple(b for b in e.binders if _is_synth_binder(b.name))
-            found = (lift_classify._binder_defining_equality(synth, e.range)
-                     if synth else None)
-            if found is None:
-                break
-            name, repl, remaining = found
-            binders = tuple(b for b in e.binders if b.name != name)
-            if not binders:
-                break
-            body = lift_classify._subst_ast(e.body, name, repl)
-            if remaining is not None:
-                remaining = lift_classify._subst_ast(remaining, name, repl)
-            e = dataclasses.replace(e, binders=binders, range=remaining, body=body)
+        # The resolver's `_t#N` binders, and (2026-09-27, t/FEATURES-TRACK.md
+        # feature 5) every other binder pinned by an equality in the range, an
+        # exists body or a forall antecedent, are substituted away by the
+        # one-point rule, `(exists x :: x == E && P(x)) == P(E)` and `(forall
+        # x :: x == E ==> P(x)) == P(E)` for an `E` not mentioning `x` (Gries
+        # and Schneider, A Logical Approach to Discrete Math, 1993, theorem
+        # (8.14)), the same rule `lift_classify._eliminate_defined_binders`
+        # applies on the lifted side. Dafny does not find the witness `E` for
+        # the source's own existential against the lift's `P(E)` (measured
+        # 2026-09-27: L_ens unproved on `exists count :: count == Count(s)
+        # && result == count + 1`), and the rule is a logical identity, not
+        # a fact about this program. A quantifier all of whose binders are
+        # pinned is its body.
+        e2 = lift_classify._eliminate_defined_binders(e)
+        if not e2.binders:
+            return e2.body
+        e = e2
         body = _rejoin_split_body(e.kind, e.body)
         if body is not e.body:
             e = dataclasses.replace(e, body=body)
