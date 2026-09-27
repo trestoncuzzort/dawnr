@@ -1005,13 +1005,25 @@ Semantics:
   refutation certificate replays what the twin executes, so every
   certificate walk skips the call too.
 
+Lowering status (2026-09-27, all seven `lower_*.py`): Dafny a `lemma`
+(always with a body; a body-less Dafny lemma is an axiom); Verus a `proof
+fn` (recursive spec fns revealed to fuel 2 in its proof, a nonlinear step
+proved by `nonlinear_arith` from the requires, guards and earlier steps on
+its path); SPARK a Boolean function with Pre/Post, its call in the
+value-neutral obligation wrapper (left out in a body with an early return,
+whose escape threading has no path guard for the Pre); Frama-C a ghost C
+function with an ACSL contract and a ghost call; F* a `Lemma` with an
+`SMTPat`; Lean a theorem closed by grind with a `grind_pattern`; Rocq
+states no lemma and proves the program with the calls removed.
+
 Fixtures `t/lemmas/*.t` (pow2_pos: an inductive lemma over a recursive
 spec_fun; sum_loop: an induction step used inside a loop; sq_bound: a
 nonlinear arithmetic fact) and seeded-fault probes `t/lemmas_probe/*.t`
 (false_lemma: an inductive lemma false at its base case; false_arith: a
 false nonlinear fact; circular: a lemma that "proves" `k == k + 1` by
 calling itself on the same argument; false_assert: a true lemma whose
-proof asserts a false step, around a correct program). Per-kernel verdicts are in
+proof asserts a false step, around a correct program; false_nonlinear_step:
+the same with a false nonlinear step under a guard). Per-kernel verdicts are in
 t/FEATURES-TRACK.md.
 
 ## The twins
