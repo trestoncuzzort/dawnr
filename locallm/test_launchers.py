@@ -62,6 +62,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -173,6 +174,7 @@ class Stick:
             text=True, timeout=60)
 
 
+@unittest.skipIf(sys.platform == "win32", "the .sh and .command launchers are POSIX shell scripts; Windows has no interpreter for them (the .bat is checked by reading its text)")
 class TestItStarts(unittest.TestCase):
     def test_it_runs_home_py_from_its_own_folder(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -216,6 +218,7 @@ class TestItStarts(unittest.TestCase):
                              invocations(stick.record)[-1])
 
 
+@unittest.skipIf(sys.platform == "win32", "the .sh and .command launchers are POSIX shell scripts; Windows has no interpreter for them (the .bat is checked by reading its text)")
 class TestItExplainsItself(unittest.TestCase):
     def test_no_python_at_all_explains_where_to_get_it(self):
         with tempfile.TemporaryDirectory() as tmp:
