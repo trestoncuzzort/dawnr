@@ -4640,6 +4640,132 @@ Ltac t_go n :=
 
 Ltac t_vc0 := solve [ t_go 6%nat ].
 
+(* t_exw (2026-09-26): an existential goal whose witness is fixed by one of
+   its own equations. `eexists`, split, let `reflexivity` on an equation
+   unify the witness evar (`s ?k = s i` gives ?k := i), then lia on the
+   rest. seng2011 max, min_max, linearSearch: t_go's generic `exists x`
+   search re-runs t_base's saturation for every candidate and blew the
+   180 s wall on `exists k, 0 <= k < s_len /\ s k = s i`. A goal it does
+   not fit fails at once; lia never sees an uninstantiated evar as proved.
+   An old witness carried by an `exists` hypothesis (min_max's unchanged
+   `lo`) is opened first, and each argument of a read equation in scope is
+   tried as the witness in turn (linearSearch: `a i0 = e` from the old
+   invariant, not `a i = e` from the requires). A read that equals v at x
+   and differs from v at y gives x <> y (congruence), which lia needs to
+   move the witness past the index just ruled out (`a n <> e`). *)
+Ltac t_exw_close :=
+  repeat split; first [ reflexivity | assumption | symmetry; assumption | lia ].
+Ltac t_exw :=
+  lazymatch goal with |- exists _ : Z, _ => idtac end;
+  repeat match goal with
+         | H : exists _ : Z, _ |- _ => let k := fresh "k" in destruct H as [k H]
+         | H : _ /\ _ |- _ => destruct H
+         end;
+  repeat match goal with
+         | H1 : ?f ?x = ?v, H2 : ?f ?y <> ?v |- _ =>
+             tryif (t_have constr:(x <> y)) then fail else
+             assert (x <> y) by (intro; congruence)
+         end;
+  first
+  [ eexists; repeat split;
+    try (lazymatch goal with |- _ = _ => reflexivity end); lia
+  | match goal with H : ?f ?x = _ |- _ => exists x; solve [ t_exw_close ] end
+  | match goal with H : _ = ?f ?x |- _ => exists x; solve [ t_exw_close ] end ].
+
+(* t_fext (2026-09-26): a loop step's bounded-forall invariant grown by one
+   index, `forall k, lo <= k < e -> P k` from the old invariant on
+   [lo, e - 1) (forward loop) or [lo + 1, e) (backward loop). Split k into
+   the old range and the new index; in each case instantiate every bounded
+   forall hypothesis whose range lia proves at that index, then lia.
+   MEASURED on min_max: t_vc0 needed 14-23 s per such obligation, eight of
+   them per iteration shape, past the 180 s wall; this is milliseconds. *)
+(* one new instance of a bounded forall hypothesis at u, when lia proves u
+   in its range and the instance is not already a hypothesis *)
+Ltac t_inst1 u :=
+  match goal with
+  | H : forall x : Z, ?lo <= x < ?hi -> _ |- _ =>
+      let Hr := fresh "Hr" in
+      assert (Hr : lo <= u < hi) by lia;
+      let T := type of (H u Hr) in
+      tryif (t_have T) then fail else pose proof (H u Hr)
+  end.
+Ltac t_fext_at t :=
+  repeat t_dm1;
+  repeat t_inst1 t;
+  (* a sequence write read back (reverse's `aRev[len - i - 1 := a[i]]`):
+     open t_upd and decide each comparison; an equal case substitutes its
+     variable so the two reads become one term *)
+  unfold t_upd in *; cbv beta in *;
+  repeat match goal with
+         | |- context [Z.eqb ?x ?y] => destruct (Z.eqb_spec x y)
+         | |- context [Z.ltb ?x ?y] => destruct (Z.ltb_spec x y)
+         | |- context [Z.leb ?x ?y] => destruct (Z.leb_spec x y)
+         end; cbv beta iota in *; try subst;
+  (* then instances at every index the goal reads a sequence at
+     (invertArray's untouched middle, read at len - 1 - index) *)
+  repeat match goal with |- context [?f ?u] => is_var f; t_inst1 u end;
+  repeat t_dm1; lia.
+Ltac t_fext :=
+  lazymatch goal with |- forall _ : Z, _ <= _ < _ -> _ => idtac end;
+  let k := fresh "k" in let Hk := fresh "Hk" in intros k Hk;
+  lazymatch type of Hk with ?lo <= _ < ?e =>
+    let Hc := fresh "Hc" in
+    first
+    [ assert (Hc : k < e - 1 \/ k = e - 1) by lia;
+      destruct Hc as [Hc | Hc];
+      [ t_fext_at k
+      | ring_simplify in Hc;
+        lazymatch type of Hc with k = ?t => subst k; t_fext_at t end ]
+    | assert (Hc : lo + 1 <= k \/ k = lo) by lia;
+      destruct Hc as [Hc | Hc];
+      [ t_fext_at k
+      | lazymatch type of Hc with k = ?t => subst k; t_fext_at t end ] ]
+  end.
+
+(* t_conj (2026-09-26): a conjunction of quantified facts that follow from
+   hypotheses index by index (a loop's exit, or the ensures read off the
+   loop's post-state). Open every conjunction and existential hypothesis,
+   split the goal, and close each part by assumption, lia, t_exw, a bounded
+   forall instantiated at a fresh index, or t_fext. MEASURED on min_max:
+   the final t_dis took 57 s through t_vc0. An early-exit loop's post-state
+   is a disjunction on its return flag (acsl find: returned, so the return
+   branch's ensures hold of result'; or ran out, so no element matched):
+   each side is split off and its flag substituted. An implication part
+   (`(exists i, a i = v) -> ...`) opens its antecedent and instantiates the
+   bounded foralls at every integer in scope, the matching element among
+   them. *)
+Ltac t_open :=
+  repeat match goal with
+         | H : exists _ : Z, _ |- _ => let k := fresh "k" in destruct H as [k H]
+         | H : _ /\ _ |- _ => destruct H
+         end.
+Ltac t_conj_leaf :=
+  first [ reflexivity | assumption | lia | t_exw
+        | lazymatch goal with |- forall _ : Z, _ <= _ < _ -> _ => idtac end;
+          let k := fresh "k" in let Hk := fresh "Hk" in intros k Hk; t_fext_at k
+        | t_fext
+        | intros; repeat (lazymatch goal with |- ~ _ => intro end); intros;
+          repeat match goal with
+                 | H : ?P -> _, H' : ?P |- _ =>
+                     lazymatch type of P with Prop => specialize (H H') end
+                 end;
+          t_open;
+          repeat match goal with x : Z |- _ => t_inst1 x end;
+          first [ t_exw | repeat t_dm1; lia | exfalso; congruence ] ].
+(* a return branch's goal is the disjunction on the flag: pick the side
+   that closes (dd0789: `true = true /\ ..` on the left) *)
+Ltac t_conj_goal :=
+  lazymatch goal with
+  | |- _ /\ _ => split; t_conj_goal
+  | |- _ \/ _ => first [ left; t_conj_goal | right; t_conj_goal ]
+  | _ => t_conj_leaf
+  end.
+Ltac t_conj :=
+  t_open;
+  repeat match goal with H : _ \/ _ |- _ => destruct H end;
+  t_open; try subst; cbv beta iota in *;
+  t_conj_goal.
+
 (* Early exit (SPEC.md, 2026-09-08): closing a `return`'s ensures obligation
    from raw invariant/guard/branch-condition facts can need instantiating a
    `forall _ : Z, _` hypothesis at a witness that is not a seq application
@@ -4926,7 +5052,8 @@ def _add_rec_alt(text: str) -> str:
         'Ltac t_dis := first [ solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
         '                          | solve [ t_eqs_h; t_vc0 ]\n'
         '                          | solve [ t_eqs; t_eqs_h; t_vc0 ]\n'
-        '                          | solve [ t_eqs_rec; first [ ring | nia | lia ] ]')
+        '                          | solve [ t_eqs_rec; first [ ring | nia | lia ] ]\n'
+        '                          | solve [ t_recg ] | solve [ t_rech ]')
     text = text.replace(
         'Ltac t_side := first [ assumption | solve [ lia ]\n'
         '                     | solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
@@ -4936,7 +5063,8 @@ def _add_rec_alt(text: str) -> str:
         '                     | solve [ t_vc0 ] | solve [ t_eqs; t_vc0 ]\n'
         '                     | solve [ t_eqs_h; t_vc0 ]\n'
         '                     | solve [ t_eqs; t_eqs_h; t_vc0 ]\n'
-        '                     | solve [ t_eqs_rec; first [ ring | nia | lia ] ] ].')
+        '                     | solve [ t_eqs_rec; first [ ring | nia | lia ] ]\n'
+        '                     | solve [ t_recg ] | solve [ t_rech ] ].')
     return text
 
 
@@ -4961,7 +5089,49 @@ def _post_sf_for(task: dict) -> str:
         text = POST_SF_NIA
     else:
         text = POST_SF
-    return _add_nr_alt(text) if _nonrec_sfs(task) else text
+    if _nonrec_sfs(task):
+        text = _add_nr_alt(text)
+    spec = [task.get("ensures"), task.get("body")]
+    ex, fa = _has_quant(spec, "exists"), _has_quant(spec, "forall")
+    loop_fa = _has_quant(task.get("body"), "forall") and _any_while_deep(task.get("body") or [])
+    return _add_quant_alts(text, exw=ex, conj=ex or fa, fext=loop_fa)
+
+
+def _has_quant(node, q: str) -> bool:
+    """True iff a `q` ("exists"/"forall") quantifier occurs anywhere in `node`."""
+    if isinstance(node, dict):
+        return q in node or any(_has_quant(v, q) for v in node.values())
+    if isinstance(node, list):
+        return any(_has_quant(v, q) for v in node)
+    return False
+
+
+def _add_quant_alts(text: str, exw: bool, conj: bool, fext: bool) -> str:
+    """Cheap, targeted alternatives for quantified goals, tried BEFORE the
+    general t_vc0 search (the PRELUDE's t_exw / t_fext / t_conj notes):
+    `t_dis` gets `solve [ t_exw ]` (exw) and `solve [ t_conj ]` (conj) first;
+    `t_side` gets them right after `solve [ lia ]`, plus `solve [ t_fext ]`
+    (fext). Gates, from the task alone: exw = an `exists` in the ensures or
+    body (invariants live in the body); conj = any quantifier there; fext =
+    a forall inside a task that has a loop. A task with none of them keeps
+    its text byte-identical. Each alternative closes its goal outright or
+    fails within a few lia calls, and `solve` restores the goal for the
+    next one; nothing here is trusted, the kernel re-checks every term."""
+    dis = [a for a, on in (("solve [ t_exw ]", exw), ("solve [ t_conj ]", conj)) if on]
+    side = dis + (["solve [ t_fext ]"] if fext else [])
+    # the early-exit pair (t_dis_ext / t_side_ext, a `return` inside a loop:
+    # linearSearch) meets the same goals, so it gets the same alternatives
+    for name in ("t_dis", "t_dis_ext"):
+        if dis:
+            head = f"Ltac {name} := first [ "
+            assert text.count(head) == 1, f"{name} block shape changed"
+            text = text.replace(head, head + "".join(a + " | " for a in dis), 1)
+    for name in ("t_side", "t_side_ext"):
+        if side:
+            at = f"Ltac {name} := first [ assumption | solve [ lia ]\n"
+            assert text.count(at) == 1, f"{name} block shape changed"
+            text = text.replace(at, at + "".join(f"                     | {a}\n" for a in side), 1)
+    return text
 
 
 def _add_nr_alt(text: str) -> str:
@@ -7180,15 +7350,56 @@ def _emit_t_eqs_rec(rec_int_sf: list[tuple[str, str, str]]) -> str:
     extra_sum's `sum` (t/grade.py --tasks <one-task copy> --kernels
     dafny,rocq --flake 1): real reads verified in dafny and rocq both."""
     if not rec_int_sf:
-        return "Ltac t_eqs_rec := fail.\n"
+        return "Ltac t_eqs_rec := fail.\nLtac t_recg := fail.\nLtac t_rech := fail.\n"
     arms = []
     for f, pat_holes, use_holes in rec_int_sf:
         arms.append(
             f"  | H : context [ sf_{f} {pat_holes} ] |- _ =>\n"
             f"      rewrite (sf_{f}_eq {use_holes}) in H; repeat t_base;\n"
             f"      first [ rewrite H | rewrite <- H ]\n")
+    # t_recg (2026-09-26): the GOAL-directed twin of t_eqs_rec. A loop step
+    # proves `res * b = sf_expt_v b (i + 1)` from `res = sf_expt_v b i`
+    # (dd0634/expt, computeFact2, computeExp): unfold the goal's application
+    # one step, decide its guards (a contradictory branch closes by lia),
+    # normalize the recursive call's arguments (`i + 1 - 1` to `i`), let
+    # `subst` put the invariant's value in, and lia (products of atoms are
+    # monomials to lia, so `res * b = b * res` is linear to it). t_eqs_rec
+    # unfolds the HYPOTHESIS side instead, which cannot converge on this
+    # shape (MEASURED: expt's step read unproved with it).
+    garms = "".join(f"  | |- context [ sf_{f} {p} ] => rewrite (sf_{f}_eq {u})\n"
+                    for f, p, u in rec_int_sf)
+    narms = "".join(f"         | |- context [ sf_{f} {p} ] => progress ring_simplify {h}\n"
+                    for f, p, u in rec_int_sf for h in u.split())
+    # A second unfold (on the application the first one exposed, after
+    # `subst`) closes a base case the guards pick out: computeFact2's
+    # `x + 1 = 1` branch needs sf_factorial x = 1 at x = 0.
+    recg = ("Ltac t_recg1 :=\n  multimatch goal with\n" + garms + "  end;\n"
+            "  repeat match goal with\n"
+            "         | |- context [Z.eqb ?x ?y] => destruct (Z.eqb_spec x y)\n"
+            "         | |- context [Z.ltb ?x ?y] => destruct (Z.ltb_spec x y)\n"
+            "         | |- context [Z.leb ?x ?y] => destruct (Z.leb_spec x y)\n"
+            "         end;\n"
+            "  cbn [andb orb negb] in *; try subst;\n"
+            "  repeat match goal with\n" + narms + "         end.\n"
+            "Ltac t_recg := t_recg1; first [ lia | t_recg1; lia ].\n")
+    # t_rech (2026-09-26): the HYPOTHESIS-side unfold t_eqs_rec does, with
+    # the guards then decided (t_eqs_rec leaves them to t_base) and the goal
+    # finished by lia over div/mod facts, or by one goal-side unfold (count7:
+    # `count + sf_count7_r n = sf_count7_r x` unfolds at n; in the n < 10
+    # branch the goal's sf_count7_r (n / 10) is sf_count7_r 0 = 0).
+    harms = "".join(f"  | H : context [ sf_{f} {p} ] |- _ =>\n"
+                    f"      rewrite (sf_{f}_eq {u}) in H; revert H\n"
+                    for f, p, u in rec_int_sf)
+    recg += ("Ltac t_rech :=\n  multimatch goal with\n" + harms + "  end;\n"
+             "  repeat match goal with\n"
+             "         | |- context [Z.eqb ?x ?y] => destruct (Z.eqb_spec x y)\n"
+             "         | |- context [Z.ltb ?x ?y] => destruct (Z.ltb_spec x y)\n"
+             "         | |- context [Z.leb ?x ?y] => destruct (Z.leb_spec x y)\n"
+             "         end;\n"
+             "  cbn [andb orb negb]; intro; repeat t_dm1;\n"
+             "  first [ lia | t_recg1; repeat t_dm1; lia ].\n")
     return ("Ltac t_eqs_rec :=\n  multimatch goal with\n"
-            + "".join(arms) + "  end.\n")
+            + "".join(arms) + "  end.\n" + recg)
 
 
 def emit_sf_def_lemmas(cx: Ctx, counter: list) -> str:
@@ -9228,6 +9439,25 @@ def gen_rec(cx: Ctx, body: list) -> str:
                        for sf in task.get("spec_funs", []))
     hyps = " ".join([f"Hl{k+1}" for k in range(n_lens)]
                     + [f"Hreq{k+1}" for k in range(n_reqs)])
+    # 2026-09-26 (mystery1: `1 + F fu (n - 1) m >= 0 /\ n + m = 1 + F fu
+    # (n - 1) m`): once the goal is split, no part is IH's own conclusion,
+    # so `apply IH` never fires. Instead, for every recursive call in the
+    # goal, pose IH at its arguments with each premise (fuel, lengths,
+    # requires) proved by lia, name the call so it is not visited again,
+    # and close by lia over the instances. Tried after every alternative
+    # but f_equal (which on `n + m = 1 + F fu (n - 1) m` commits to the
+    # unprovable `n = 1`); it is wrapped in solve, so it either closes the
+    # goal or leaves it exactly as it was. The premises are real
+    # hypotheses of IH, so a call outside the requires or the measure gets
+    # no instance and the goal stays unproved.
+    holes = " ".join(f"?a{i}" for i in range(len(pargs.split())))
+    uses = " ".join(f"a{i}" for i in range(len(pargs.split())))
+    ih_inst = (f"repeat match goal with |- context [{name}_fuel fu {holes}] =>\n"
+               f"                   let Hih := fresh \"Hih\" in let v := fresh \"t_rc\" in\n"
+               f"                   pose proof (IH {uses}) as Hih;\n"
+               f"                   repeat specialize (Hih ltac:(repeat t_dm1; lia));\n"
+               f"                   set (v := {name}_fuel fu {uses}) in * end;\n"
+               f"                 repeat t_dm1; lia")
 
     return f"""Fixpoint {name}_fuel (fuel : nat) {pb} : {rty(ret_t)} :=
   match fuel with
@@ -9251,6 +9481,7 @@ Proof.
                | solve [ lia ]
                | solve [ apply IH; repeat t_dm1; lia ]
                | (lazymatch goal with |- _ /\\ _ => split end)
+               | solve [ {ih_inst} ]
                | f_equal ].
   all: fail "unsolved t verification condition".
 Qed.

@@ -785,5 +785,242 @@ spec fun tri(k: int): int
         self.assertIn("unsolved t verification condition", log)
 
 
+class QuantifiedLoopStepTest(unittest.TestCase):
+    """t_exw / t_fext / t_conj / t_recg (2026-09-26): loop shapes that read
+    TIMEOUT or unproved in Rocq alone among the six-of-seven documents
+    (seng2011 max, vericoding dd0539 reverse, dd0634 expt). Each correct
+    program now compiles fast, and each seeded fault of the same shape
+    still fails: the new tactics only search, the kernel still decides."""
+
+    MAX = """t 1
+task q_max(s: seq) returns (a: int)
+  requires forall k in [0, len(s)) . s[k] >= 0
+  requires len(s) > 0
+  ensures forall x in [0, len(s)) . a >= s[x]
+  ensures exists k_v in [0, len(s)) . s[k_v] == a
+{
+  a := s[0];
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i and i <= len(s)
+    invariant forall x_v in [0, i) . a >= s[x_v]
+    invariant exists k_v2 in [0, len(s)) . s[k_v2] == a
+    decreases len(s) - i
+  {
+    if s[i] > a {
+      a := s[i];
+    } else {
+    }
+    i := i + 1;
+  }
+}
+"""
+    REVERSE = """t 1
+task q_reverse(a: seq) returns (aRev: seq)
+  ensures len(aRev) == len(a)
+  ensures forall i in [0, len(a)) . a[i] == aRev[len(aRev) - i - 1]
+{
+  aRev := seq(len(a), 0);
+  var i_v: int := 0;
+  while i_v < len(a)
+    invariant len(aRev) == len(a)
+    invariant 0 <= i_v and i_v <= len(a)
+    invariant forall j in [0, i_v) . aRev[len(a) - j - 1] == a[j]
+    decreases len(a) - i_v
+  {
+    aRev := aRev[len(a) - i_v - 1 := a[i_v]];
+    i_v := i_v + 1;
+  }
+}
+"""
+    EXPT = """t 1
+task q_expt(b: int, n: int) returns (res: int)
+  requires n >= 0
+  ensures res == ex(b, n)
+spec fun ex(b_v: int, n_v: int): int
+  decreases n_v
+= if n_v >= 0 then if n_v == 0 then 1 else b_v * ex(b_v, n_v - 1) else 0
+{
+  res := 1;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant res == ex(b, i)
+    decreases n - i
+  {
+    res := res * b;
+    i := i + 1;
+  }
+}
+"""
+    # (source, tactic it uses, whether the harness's twin lowered WITHOUT its
+    # witness fails fast). MAX's wrong programs (its twin, `s[i] < a`) send
+    # the general search to the 180 s wall: TIMEOUT, never VERIFIED, but
+    # minutes per test run, so its tactic is checked on false goals below.
+    COUNT7 = """t 1
+task q_count7(x: int) returns (count: int)
+  requires x >= 0
+  ensures count == c7(x)
+spec fun c7(x_v: int): int
+  decreases x_v
+= if x_v >= 0 then if x_v < 10 then if x_v % 10 == 7 then 1 else 0 else (if x_v % 10 == 7 then 1 else 0) + c7(x_v / 10) else 0
+{
+  count := 0;
+  var n: int := x;
+  while n > 0
+    invariant count + c7(n) == c7(x)
+    invariant count >= 0
+    invariant n >= 0
+    decreases n
+  {
+    if n % 10 == 7 {
+      count := count + 1;
+    } else {
+    }
+    n := n / 10;
+  }
+}
+"""
+    FIND = """t 1
+task q_find(a: seq, v: int) returns (result: int)
+  ensures 0 <= result and result <= len(a)
+  ensures (exists i in [0, len(a)) . a[i] == v) ==> result < len(a) and a[result] == v
+  ensures (forall i_v4 in [0, len(a)) . a[i_v4] != v) ==> result == len(a)
+{
+  var i_v5: int := 0;
+  while i_v5 < len(a)
+    invariant 0 <= i_v5 and i_v5 <= len(a)
+    invariant forall k in [0, i_v5) . a[k] != v
+    decreases len(a) - i_v5
+  {
+    if a[i_v5] == v {
+      return i_v5;
+    } else {
+    }
+    i_v5 := i_v5 + 1;
+  }
+  result := len(a);
+}
+"""
+    CASES = [
+        (MAX, "t_exw", False),
+        (REVERSE, "t_fext", True),
+        (EXPT, "t_recg", True),
+        (COUNT7, "t_rech", True),
+        (FIND, "t_conj", True),
+    ]
+
+    _task = staticmethod(NonRecSpecFunNormalFormTest._task)
+
+    def test_gates(self):
+        for src, tac, _fast in self.CASES:
+            t = self._task(src)
+            self.assertIn(f"solve [ {tac} ]", lower_rocq.lower(t, t["body"]), tac)
+        # a loop-free, quantifier-free, non-recursive task keeps its old text
+        t = self._task(NonRecSpecFunNormalFormTest.REC.replace("decreases k", "decreases k"))
+        out = lower_rocq.lower(t, t["body"])
+        for tac in ("t_exw ]", "t_conj ]", "t_fext ]"):
+            self.assertNotIn(f"solve [ {tac}", out)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_real_proves_and_seeded_fault_does_not(self):
+        for src, tac, fast in self.CASES:
+            with self.subTest(tac=tac):
+                t = self._task(src)
+                ok, log = _compile(lower_rocq.lower(t, t["body"]))
+                self.assertTrue(ok, log[-3000:])
+                # the harness's twin, lowered with its witness, still carries
+                # a certificate that compiles: the only door to REFUTED
+                twin_body, _op, w = harness.twin_for(t)
+                self.assertIsNotNone(w)
+                cert = lower_rocq.lower(t, twin_body, witness=w)
+                self.assertIn(lower_rocq.CERT_NAME, cert)
+                ok, log = _compile(cert)
+                self.assertTrue(ok, log[-3000:])
+                # and that wrong program, lowered as if it were the real one,
+                # does not verify
+                if fast:
+                    ok, log = _compile(lower_rocq.lower(t, twin_body))
+                    self.assertFalse(ok, f"{tac}: a wrong program verified")
+                    self.assertIn("unsolved", log)
+
+    MYST = """t 1
+task q_myst(n: int, m: int) returns (res: int)
+  requires n >= 0
+  requires m >= 0
+  ensures res >= 0
+  ensures n + m == res
+  decreases n
+{
+  if n == 0 {
+    res := m;
+  } else {
+    var aux: int := q_myst(n - 1, m);
+    res := 1 + aux;
+  }
+}
+"""
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_recursive_method_ih_instances(self):
+        """A recursive method whose split ensures parts are not IH's own
+        conclusion (vericoding-style mystery1): proved by posing IH at each
+        recursive call; the harness twin still refutes, and that wrong
+        program lowered as the real one does not verify."""
+        t = self._task(self.MYST)
+        out = lower_rocq.lower(t, t["body"])
+        self.assertIn("pose proof (IH a0 a1) as Hih", out)
+        ok, log = _compile(out)
+        self.assertTrue(ok, log[-3000:])
+        twin_body, _op, w = harness.twin_for(t)
+        self.assertIsNotNone(w)
+        ok, log = _compile(lower_rocq.lower(t, twin_body, witness=w))
+        self.assertTrue(ok, log[-3000:])
+        ok, log = _compile(lower_rocq.lower(t, twin_body))
+        self.assertFalse(ok, "a wrong recursive program verified")
+        self.assertIn("unsolved", log)
+
+    @unittest.skipUnless(COQC, "coqc not on PATH")
+    def test_tactics_refuse_false_goals(self):
+        """Each new tactic, handed a FALSE goal of exactly its shape, fails
+        (fast): t_exw with no witness that works, t_fext with a step that
+        breaks the grown invariant, t_conj with one false conjunct."""
+        t = self._task(self.MAX)
+        prelude = lower_rocq.lower(t, t["body"])
+        prelude = prelude[:prelude.index("Ltac t_dis :=")]
+        goals = {   # tactic: (false goal, the binders to introduce first)
+            "t_exw": ("forall (s : Z -> Z) (i n : Z), 0 <= i < n -> "
+                      "exists k : Z, 0 <= k < n /\\ s k = s i + 1", "s i n H"),
+            "t_fext": ("forall (s : Z -> Z) (i lo : Z), "
+                       "(forall k : Z, 0 <= k < i -> lo <= s k) -> lo < s i -> "
+                       "forall k : Z, 0 <= k < i + 1 -> s i <= s k", "s i lo H1 H2"),
+            "t_conj": ("forall (s : Z -> Z) (n a : Z), "
+                       "(forall k : Z, 0 <= k < n -> s k <= a) -> "
+                       "(forall k : Z, 0 <= k < n -> s k <= a) /\\ "
+                       "(exists k : Z, 0 <= k < n /\\ s k = a)", "s n a H"),
+        }
+        for tac, (goal, names) in goals.items():
+            with self.subTest(tac=tac):
+                ok, log = _compile(prelude + f"Lemma q_false : {goal}.\n"
+                                   f"Proof. intros {names}. {tac}. Qed.\n")
+                self.assertFalse(ok, f"{tac} proved a false goal")
+                self.assertIn("Error", log)
+                self.assertNotIn("Syntax error", log)
+                self.assertNotIn("was not found", log)
+        # the same harness on TRUE goals of each shape: the check above is
+        # not passing merely because the tactic never runs
+        true_goals = {
+            "t_exw": ("forall (s : Z -> Z) (i n : Z), 0 <= i < n -> "
+                      "exists k : Z, 0 <= k < n /\\ s k = s i", "s i n H"),
+            "t_fext": ("forall (s : Z -> Z) (i lo : Z), "
+                       "(forall k : Z, 0 <= k < i -> lo <= s k) -> s i < lo -> "
+                       "forall k : Z, 0 <= k < i + 1 -> s i <= s k", "s i lo H1 H2"),
+        }
+        for tac, (goal, names) in true_goals.items():
+            with self.subTest(tac=tac, truth=True):
+                ok, log = _compile(prelude + f"Lemma q_true : {goal}.\n"
+                                   f"Proof. intros {names}. {tac}. Qed.\n")
+                self.assertTrue(ok, log[-2000:])
+
 if __name__ == "__main__":
     unittest.main()
