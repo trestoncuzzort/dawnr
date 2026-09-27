@@ -634,9 +634,27 @@ reach of a non-recursive datatype without reals or type parameters is
 therefore 11 methods and at most 8 files, against a declaration form in
 seven kernels and twin moves over constructors ("The features ahead: 10.
 Datatypes"); it was not built this round, and the numbers say what to build
-first instead: `match-literal` as an if-chain (7 int matches with a `_`
-default lift exactly) and a record of ints as an n-ary pair (8 methods).
-Tests: `t/test_lift_datatypes.py` (7).
+first instead: `match-literal` as an if-chain (Done 16: built, 1 file
+lifts, the rest match on chars or lack a default) and a record of ints as
+an n-ary pair (8 methods). Tests: `t/test_lift_datatypes.py`.
+
+### 16. A `match` on int literals with a default lifts as an if-chain (2026-09-27, lifter)
+
+**Refused: 15 files `match-literal`** after Done 15's split of the parser's
+`match` refusal. Dafny tries a match's cases in order, takes the first that
+matches, and `_` matches everything, so over int literals with a `_` default
+the construct is exactly an if-chain over `==`. The parser builds that chain
+(row 52) as the IfStmt/IfExpr nodes every later stage already handles,
+statement and expression form, and the classifier logs
+`match-literal-if-chain`; a char or string literal keeps `match-literal`
+(t compares neither yet), a missing `_` refuses `match-no-default` (an
+if-chain needs an else and exhaustiveness would rest on the precondition).
+**Measured**: 1 of the 15 files lifts (vericoding DD0831, FibonacciIterative
+through its spec_fun Fibonacci) and passes the check stage with every
+checker lemma verified; 9 still refuse `match-literal` (a match on a char or
+string in the same file), 5 `match-no-default`. Tests:
+`t/test_lift_datatypes.py` (8, plus 2 slow: dafny proves both if-chains
+against the source clauses).
 
 ## The order from here
 
