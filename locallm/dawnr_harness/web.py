@@ -234,7 +234,14 @@ def fetch(url: str, cfg: WebConfig, *, allow_private: bool | None = None, accept
                 if time.monotonic() > deadline:
                     truncated = True
                     break
-                chunk = resp.read(65536)
+                # read1(), not read(): read() loops internally until it has 65536 bytes or hits EOF, so one
+                # call can span many underlying socket reads, each with its own fresh cfg.timeout allowance --
+                # a server that drips one byte every (cfg.timeout - epsilon) seconds then never reaches this
+                # loop's own deadline check at all, and fetch() blocks for as long as the drip continues
+                # (docs.python.org/3/library/io.html#io.BufferedIOBase.read1: "at most one call to the
+                # underlying raw stream's read"). read1() returns as soon as any data has arrived, so the
+                # deadline above is checked once per chunk actually received, not once per 65536 bytes.
+                chunk = resp.read1(65536)
                 if not chunk:
                     break
                 chunks.append(chunk)
