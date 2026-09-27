@@ -81,6 +81,7 @@ changes nothing else). Every commit cites the design it copies or says
 | B3 zero-returns | Done 10, row 47 | lifter: the bare name is retired for why decision 22's shape did not apply: a named mutation issue stands alone, a `modifies` without an index assignment refuses `array-mutation` (`modifies-via-call` or `modifies-no-index-assign`), a method with neither return nor `modifies` refuses `lemma-shaped` | none |
 | B4 finite sets | Done 11, SPEC.md "Finite sets (v1)" | the type `set` and six total operations (display, `in`, `card`, `union`, `inter`, `diff`), the notation, check_wf, interp, nine probes, two committed tasks; lowered in dafny, verus, fstar, rocq; lean, framac, spark abstain by name | 4 lower, 3 abstain |
 | B5 datatypes | Done 15, row 48 | lifter: the blanket `datatype` refusal is split by what the method touches (`seq-of-pair`, `tuple-projection`, `array2`, `real`, `type-decl`, `opaque-type`, `member-access`) and a real datatype use is named by the shape of the file's declarations (`datatype-enum`, `-record`, `-sum`, `-real`, `-generic`, `-recursive`), read from the skipped declaration's tokens; the parser names a `match` on a literal `match-literal`; no t datatype built (measured reach: 11 methods, at most 8 files) | none |
+| B5b match on int literals | Done 16, row 52 | lifter: a `match` whose cases are int literals with a `_` default is parsed as the if-chain it is (statement and expression form), logged `match-literal-if-chain`; a char or string literal keeps `match-literal`, no `_` refuses `match-no-default` | none |
 
 The measurement of B2 changed a belief written in `t/LIFTER-DESIGN.md`
 section 4.7: Dafny does not "accept such a method with an unspecified
@@ -138,6 +139,7 @@ with the check stage on for the methods that lifted.
 | B3 zero-returns | 39 | 39 (every method now carries a name) | 0 | 0 | 34 `array-mutation` (23 of them the DJ family writing two arrays; 6 `modifies-via-call`; 5 `modifies-no-index-assign`), 4 `lemma-shaped`, 1 `array` |
 | B4 set | 77 | 0 (no lifter mapping yet) | 0 | 0 | 39 comprehensions, 30 displays, 8 typed names |
 | B5 datatype | 78 methods, 56 files | 78 (every method now carries a name); 56 (every file) | 0 | 0 | methods: 18 `seq-of-pair`, 17 `datatype-real`, 9 `function-result`, 8 `type-decl`, 8 `datatype-record`, 5 `tuple-projection`, 4 `datatype-generic`, 3 `array2`, 2 `datatype-sum`, 1 each `datatype-enum`, `set`, `opaque-type`, `real`; files: 41 `datatype` (constructor patterns), 15 `match-literal` (12 int, 7 with a `_` default; 2 char; 1 string) |
+| B5b match-literal | 15 files | 15 (every file carries a name) | 1 | 1 | 9 `match-literal` (a char or string match in the file), 5 `match-no-default`; the 1 that lifts (DD0831 FibonacciIterative, through its spec_fun) passes the check stage with every lemma verified |
 
 Three of the five buckets were, on measurement, buckets of names rather
 than of liftable programs: nothing in `nested-seq-other` is a t value,
@@ -151,7 +153,8 @@ return for the 23 two-array methods, `match` on an int as an if-chain (7
 files with a `_` default), a record of ints as an n-ary pair (8 methods), a
 range analysis for `(lit + e) as char`. A t datatype proper, non-recursive
 and without reals or type parameters, would reach 11 methods and at most 8
-files; that is why it was named and not built.
+files; that is why it was named and not built. The if-chain lift was
+built and reaches 1 file here, checked.
 
 ## Task A: the 2026-09-27 features re-lift, graded
 
@@ -200,9 +203,11 @@ adds the table.
   56 `match` files, against a declaration form in seven kernels and twin
   moves over constructors. 17 datatype methods carry a real field and 4 a
   type parameter; 41 of the 56 files match on constructors. The two cheaper
-  levers the census exposed are `match-literal` on an int with a `_`
-  default as an if-chain (7 files, an exact rewrite) and a record of ints
-  as an n-ary pair (t's pair covers two fields already).
+  levers the census exposed were `match-literal` on an int with a `_`
+  default as an if-chain, since built (B5b: 1 of the 15 files lifts and
+  checks; the other int matches share their file with a char match or have
+  no default), and a record of ints as an n-ary pair (t's pair covers two
+  fields already), not built.
 - **The differential arm** still needs dotnet; `dafny run --target:py`
   works on this machine (measured while checking Dafny's auto-init
   defaults: 0, false, [], "", 'D' for char) and would give the check stage

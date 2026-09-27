@@ -1806,6 +1806,12 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     # `rewrite` at all (`classify` refused it `source-axiom`).
     for line in getattr(plan, "axiom_in_file", ()):
         record.rewrites.append(Rewrite(rule="axiom-in-file", line=line))
+    # Row 52 (2026-09-27): the plan's own rewrite log so far is the parser's
+    # desugared `match` chains (`match-literal-if-chain`); the sidecar carries
+    # them like every other rewrite.
+    for rw in plan.rewrites:
+        if rw.rule == "match-literal-if-chain":
+            record.rewrites.append(rw)
 
     t_method = renamer.fresh(method.name, record, "method")
     task_name = f"{_sanitize_stem(source_path)}__{t_method}"
