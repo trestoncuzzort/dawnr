@@ -23,7 +23,11 @@ passes admit():
    the pasted parts of their own messages. A sentence the person copied from a page, or typed because the
    assistant told them to, is the page's sentence; an assistant repeating the person afterwards changes nothing;
 3. the statement says nothing the evidence does not: every content word of it is a word of the evidence, or one
-   of the fixed template words the rules phrase statements with ("likes", "lives", "their", ...);
+   of the fixed template words the rules phrase statements with ("likes", "lives", "their", ...); and, when the
+   statement asserts a relation the rules can name -- like/dislike, want/avoid, an ordered "A over B" -- the
+   evidence must carry that same polarity and order, not just its nouns, a negation word's reach running to the
+   next punctuation mark as in Pang, Lee & Vaithyanathan's negation tagging for sentiment words (arXiv:cs/0205070,
+   sec. 6.1); a relation the rules cannot confirm this way is refused, never admitted;
 4. it is not a secret or an identifier (passwords, keys, card and account numbers, long digit strings, e-mail
    addresses, links), which dawnr does not remember on its own; the person can still pin a note;
 5. a model's proposal in a session that read outside text is refused outright: once untrusted text is in the
@@ -395,9 +399,99 @@ def proposals_from_json(text: str, origin: str = "model") -> tuple[list[Proposal
     return out, errors
 
 
+# ---------------------------------------------------- grounding: the relation, not only its nouns --
+
+# A shared noun is not a shared claim: "I like cats" and "I dislike cats" (or a proposal that swaps "prefers tea
+# over coffee" to "prefers coffee over tea") share every content word once "likes"/"dislikes"/"prefers" are
+# dropped as the rules' own phrasing, so a bag-of-words check alone admits the opposite of what was said. Pang,
+# Lee & Vaithyanathan (arXiv:cs/0205070, sec. 6.1, read 2026-09-27) tag every word from a negation cue ("not",
+# "isn't", "didn't", ...) up to the next punctuation mark, because a cue's reach is the clause, not the next
+# token ("don't even slightly like" still negates "like"); that scope rule is reused here for a narrower,
+# deterministic question than their trained classifier answered: for the small set of relations the rules phrase
+# statements with, does the evidence carry the same polarity, and, for an ordered "A over B", the same order.
+# Nothing here resolves a relation it cannot name: a family whose cue is absent, or whose polarity or order
+# cannot be confirmed on the evidence side, makes grounded() refuse rather than guess (fail closed).
+NEGATION = re.compile(r"\b(?:not|never|no|none|without|"
+                      r"don'?t|do\s+not|dont|doesn'?t|does\s+not|doesnt|didn'?t|did\s+not|didnt|"
+                      r"isn'?t|is\s+not|isnt|aren'?t|are\s+not|arent|wasn'?t|was\s+not|wasnt|"
+                      r"weren'?t|were\s+not|werent|won'?t|will\s+not|wont|"
+                      r"can'?t|cannot|can\s+not|cant|couldn'?t|could\s+not|couldnt|"
+                      r"wouldn'?t|would\s+not|wouldnt|shouldn'?t|should\s+not|shouldnt)\b", re.I)
+CLAUSE_END = re.compile(r"[.!?;,:]")
+PREFER_ORDER = re.compile(
+    r"\b(?:prefers?\s+(?P<a1>.+?)|(?:would\s+)?rather\s+(?P<a2>.+?))\s+"
+    r"\b(?:over|to|than|instead\s+of|ahead\s+of|before)\b\s+(?P<b>.+)$", re.I)
+
+# (positive cue, negative cue) per polarity-bearing family. "want" excludes the two fixed templates that use the
+# bare word without expressing a want/avoid preference ("wants to be called {x}", "wants dawnr to {k} {x}"), so
+# it only fires on a preference phrased this way, rule-based or a model's.
+_POLARITY_RULES = (
+    (re.compile(r"\b(?:likes?|liked|liking|loves?|loved|loving|enjoys?|enjoyed|enjoying|adores?|adored|adoring|"
+               r"fond|fan)\b", re.I),
+     re.compile(r"\b(?:dislikes?|disliked|disliking|hates?|hated|hating|detests?|detested|detesting|"
+               r"can(?:'|no)?t stand|cannot stand|couldn'?t stand)\b", re.I)),
+    (re.compile(r"\b(?:wants?|wanted|wanting)\b(?!\s+(?:to\s+be\s+called|dawnr)\b)", re.I),
+     re.compile(r"\b(?:avoids?|avoided|avoiding)\b", re.I)),
+)
+
+
+def _negation_scopes(text: str) -> list[tuple[int, int]]:
+    """Spans a negation cue covers: from just after the cue to the next punctuation mark, or the end of `text`
+    when there is none (Pang, Lee & Vaithyanathan, arXiv:cs/0205070, sec. 6.1)."""
+    scopes = []
+    for m in NEGATION.finditer(text):
+        stop = CLAUSE_END.search(text, m.end())
+        scopes.append((m.end(), stop.start() if stop else len(text)))
+    return scopes
+
+
+def _side_polarity(text: str, pos_re: re.Pattern, neg_re: re.Pattern) -> bool | None:
+    """True/False: `text` asserts this family's positive/negative sense once negation is accounted for. None:
+    neither cue occurs, or the occurrences disagree (a plain cue and a negated one for the same family) -- either
+    way this is not a sense the caller may treat as settled."""
+    scopes = _negation_scopes(text)
+    senses = {sense != any(a <= m.start() < b for a, b in scopes)
+              for sense, pattern in ((True, pos_re), (False, neg_re)) for m in pattern.finditer(text)}
+    return senses.pop() if len(senses) == 1 else None
+
+
+def _ordered(text: str, evidence: str) -> bool | None:
+    """None: `text` makes no ordered preference claim (no "A over/to/than B" shape). True/False: whether
+    `evidence` has the same shape with the statement's A-words on its A side and B-words on its B side -- not
+    just present somewhere in it, so a swapped "coffee over tea" cannot borrow a real "tea over coffee"'s shared
+    nouns."""
+    tm = PREFER_ORDER.search(text)
+    if not tm:
+        return None
+    em = PREFER_ORDER.search(evidence)
+    if not em:
+        return False
+    ta = {t for t in terms(tm.group("a1") or tm.group("a2")) if t not in PRONOUNS}
+    tb = {t for t in terms(tm.group("b")) if t not in PRONOUNS}
+    ea = {t for t in terms(em.group("a1") or em.group("a2")) if t not in PRONOUNS}
+    eb = {t for t in terms(em.group("b")) if t not in PRONOUNS}
+    return bool(ta) and bool(tb) and ta <= ea and tb <= eb
+
+
+def _relation_ok(text: str, evidence: str) -> bool:
+    """The statement's own relation -- an order, and each family's polarity -- is the one the evidence gives,
+    for every relation `text` asserts that this module can name."""
+    if _ordered(text, evidence) is False:
+        return False
+    for pos_re, neg_re in _POLARITY_RULES:
+        want = _side_polarity(text, pos_re, neg_re)
+        if want is not None and _side_polarity(evidence, pos_re, neg_re) != want:
+            return False
+    return True
+
+
 def grounded(text: str, evidence: str) -> bool:
-    """Every content word of the statement is a word of the evidence or of the rules' own phrasing."""
-    return set(terms(text)) - TEMPLATE <= set(terms(evidence))
+    """Every content word of the statement is a word of the evidence or of the rules' own phrasing, and, for
+    every relation this module can name (like/dislike, want/avoid, an ordered "A over B"), the evidence's own
+    polarity and order agree with the statement's: shared nouns are necessary, never sufficient."""
+    if not set(terms(text)) - TEMPLATE <= set(terms(evidence)):
+        return False
+    return _relation_ok(text, evidence)
 
 
 def admit(p: Proposal, view: SessionView) -> tuple[bool, str]:

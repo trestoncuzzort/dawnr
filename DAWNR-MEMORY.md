@@ -127,6 +127,14 @@ learning", "I'm working on", "I like / love / don't like / hate", "I prefer",
 4. The statement says nothing the evidence does not: every content word of it
    is a word of the evidence or one of the fixed template words the rules
    phrase statements with ("lives", "likes", "their", "wants dawnr to", ...).
+   Shared nouns alone are not enough, though: "dislikes cats" and "I like
+   cats." share every noun once "dislikes"/"likes" drop out as the rules' own
+   phrasing, so when the statement asserts a relation the rules can name
+   (like/dislike, want/avoid, an ordered "A over B"), the evidence must carry
+   that same polarity and order too, a negation's reach running to the next
+   punctuation mark as in Pang, Lee & Vaithyanathan's negation tagging for
+   sentiment words (arXiv:cs/0205070, sec. 6.1). A relation the rules cannot
+   confirm this way is refused, never admitted.
 5. It is not a secret or an identifier: passwords, keys, tokens, card and
    account numbers, long digit strings, e-mail addresses and links are not
    remembered on dawnr's own initiative (the person can still pin a note).
@@ -352,8 +360,14 @@ never become a fact, and neither do secrets; a property test over 60 random
 sessions puts a page's own vocabulary, phrased as every rule's trigger, in
 every place outside text can be (and has the person retype it) and finds none
 of its words anywhere on disk, while the person's own statements are kept
-(it fails if the episode's keywords stop checking who said a clause first);
-recall never exceeds its budget over random stores and budgets under three
+(it fails if the episode's keywords stop checking who said a clause first); a
+model cannot ground a statement that inverts the person's polarity ("dislikes
+cats" from "I like cats.") or swaps an ordered preference's sides ("prefers
+coffee over tea" from "I prefer tea over coffee"), including a negated one
+("I don't like cats."), and a property test flips a grounded proposal's
+polarity or the order of its "A over B" over random nouns and checks that the
+gate now refuses it; recall never exceeds its budget over random stores and
+budgets under three
 counters; the rules, updates, reinforcement, order and checkpoints; the
 session events' contract; the command line and the Memory window; the token,
 the mask and the engine's first reply.
