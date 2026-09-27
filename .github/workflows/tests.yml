@@ -174,4 +174,4 @@ jobs:
         run: |
           python -m pytest -v test_dawnr_chat.py test_harness_chat.py test_fim.py test_early_stop.py \
             test_dawnr_interp_sae.py test_dawnr_interp_activations.py test_dawnr_interp_spec_probe.py \
-            test_dawnr_interp_browser.py
+            test_dawnr_interp_browser.py test_dawnr_interp_run_sae.py
