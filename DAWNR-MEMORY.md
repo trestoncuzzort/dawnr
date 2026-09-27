@@ -28,6 +28,7 @@ What was copied, from where (each fetched and read on 2026-09-27):
 | piece | copied from | what differs |
 |---|---|---|
 | extract, then update | Mem0 (Chhikara et al., arXiv:2504.19413): candidate memories from the conversation, then ADD / UPDATE / DELETE / NONE against what is stored; its user-memory prompt, "GENERATE FACTS SOLELY BASED ON THE USER'S MESSAGES" (`mem0/configs/prompts.py`) | the rules are deterministic patterns for now, and "only the person's words" is a gate in code every proposal passes, a model's included; the update is keyed by a slot (a newer statement in the same slot replaces the older); Mem0's later "additive" prompt, which also extracts from assistant messages and from documents the user shares, is exactly what is refused here |
+| the grounding gate | Saltzer & Schroeder, "The Protection of Information in Computer Systems" (1975, web.mit.edu/Saltzer/www/publications/protection/Basic.html), fail-safe defaults: "base access decisions on permission rather than exclusion"; OWASP's Input Validation Cheat Sheet: allowlist validation, "defining exactly what IS authorized", with patterns covering the whole input (`^...$`) and a denylist only as a supplement | the allowlist is the rules' own patterns; a statement they cannot read whole from the person's sentence is refused, true ones included |
 | recall | Generative Agents (Park et al., arXiv:2304.03442, section 4.1): recency (exponential decay) + importance + relevance, each min-max scaled to [0, 1], all weights 1; "the top-ranked memories that fit within the language model's context window" go in | relevance is BM25 against the first message, not embeddings (offline, no model needed, explainable); importance is the extraction's confidence, not a model's 1-to-10 rating; recency decays from when the person last said it, not from the last retrieval, so recalling something cannot keep it fresh on its own |
 | BM25 | Lucene's `BM25Similarity` (k1 1.2, b 0.75, idf ln(1 + (N - n + 0.5)/(n + 0.5)), never negative), `rank_bm25`'s shape, `EnglishAnalyzer`'s stop words and `EnglishMinimalStemmer` (Harman's S-stemmer) | standard library, over the person's own records only |
 | the session events | Claude Code's hooks (code.claude.com/docs/en/hooks): `SessionStart` (matcher on how the session started, `additionalContext`, cannot block) and `SessionEnd` (matcher on why it ended, side effects only) | `SessionStart` fires when the person's first message arrives, not at launch, so a hook can rank what it recalls by that message; dawnr's two handlers are `builtin` ones |
@@ -124,17 +125,32 @@ learning", "I'm working on", "I like / love / don't like / hate", "I prefer",
    it before. A sentence the person copied from a page, or typed because the
    assistant told them to, is the page's sentence; an assistant repeating the
    person afterwards changes nothing.
-4. The statement says nothing the evidence does not: every content word of it
-   is a word of the evidence or one of the fixed template words the rules
-   phrase statements with ("lives", "likes", "their", "wants dawnr to", ...).
-   Shared nouns alone are not enough, though: "dislikes cats" and "I like
-   cats." share every noun once "dislikes"/"likes" drop out as the rules' own
-   phrasing, so when the statement asserts a relation the rules can name
-   (like/dislike, want/avoid, an ordered "A over B"), the evidence must carry
-   that same polarity and order too, a negation's reach running to the next
-   punctuation mark as in Pang, Lee & Vaithyanathan's negation tagging for
-   sentiment words (arXiv:cs/0205070, sec. 6.1). A relation the rules cannot
-   confirm this way is refused, never admitted.
+4. The statement is one the enumerated patterns make, read whole from the
+   person's own words. Anything else is refused ("cannot ground: ..."): the
+   gate fails closed. The patterns are the rules' own, plus "I want" and "I
+   avoid", which a model may state but the rules do not propose. A sentence
+   of the person's that holds the evidence must be read to its end: every
+   clause of it by some pattern, nothing after an object but end marks and
+   the words the rules drop ("now", "too", ...), no question mark, and no
+   negation outside the patterns' own words (a "No," before a clause). So a
+   negation reaches its whole sentence, never stopping at a comma: "I don't,
+   honestly, like cats." grounds neither "likes cats" nor "dislikes cats",
+   because no pattern reads it. One clause of that sentence, inside the
+   quoted evidence, must then make exactly the proposed statement: the same
+   pattern, so the same relation and polarity ("dislikes" is not "likes",
+   "never" is not "always"), and the same object word for word and in order.
+   "prefers coffee above tea" is not grounded by "I prefer tea above coffee",
+   and no list of order words is needed that could miss one. A model's kind
+   and slot, when it gives them, must be the pattern's. This refuses true
+   memories too, on purpose: "I live in Lisbon, Portugal.", "No, I like
+   cats." and "I don't really, truly like cats." are not remembered. The two
+   earlier versions of this check refused only what they could name (a word
+   the evidence lacked, then also a polarity or order on their lists) and
+   admitted everything else, and each admitted a phrasing nobody had
+   foreseen. That is Saltzer and Schroeder's warning against exclusion ("The
+   Protection of Information in Computer Systems", 1975, fail-safe defaults:
+   a mechanism that excludes "tends to fail by allowing access"). The person
+   can always pin a note by hand.
 5. It is not a secret or an identifier: passwords, keys, tokens, card and
    account numbers, long digit strings, e-mail addresses and links are not
    remembered on dawnr's own initiative (the person can still pin a note).
@@ -273,11 +289,14 @@ hostile about the person, which then speaks in every later session.
   statement about themselves in their own words, and dawnr will believe them,
   as it should believe its person; the rules misread some sentences ("I'm a
   mess" becomes "is a mess"), which the person sees at the end of the session
-  and can forget; the grounding check compares words, not meaning, so a
-  future model's proposal could flip a negation within the person's own words
-  in a clean session. The span's mark tells a trained model the text is
-  memory, not the current instruction; whether a model this size learns that
-  is unmeasured (section 8).
+  and can forget. The gate reads one sentence at a time, and reads words, not
+  meaning, so a meaning changed from outside the clause by words the patterns
+  do read still grounds: a retraction in the next sentence ("I like cats. Not
+  really."), a clause that undercuts another ("I like cats and I'm a liar"),
+  or a retraction inside an object the patterns carry word for word, which is
+  then stored with it ("likes cats… not"). The span's mark tells a trained
+  model the text is memory, not the current instruction; whether a model this
+  size learns that is unmeasured (section 8).
 
 **Leakage** (MEXTRA): one person's memory reaching another person, the
 model's context of the wrong person, or anywhere off the machine.
@@ -366,8 +385,19 @@ cats" from "I like cats.") or swaps an ordered preference's sides ("prefers
 coffee over tea" from "I prefer tea over coffee"), including a negated one
 ("I don't like cats."), and a property test flips a grounded proposal's
 polarity or the order of its "A over B" over random nouns and checks that the
-gate now refuses it; recall never exceeds its budget over random stores and
-budgets under three
-counters; the rules, updates, reinforcement, order and checkpoints; the
+gate now refuses it; the gate fails closed, so the three inputs that got
+past that first fix, commas, asides and adverbs inside a negation, "more
+than", "above" and "instead of", a verb on no list, a quoted fragment of a
+sentence that says otherwise, a question, words after the object, a second
+clause no pattern reads, and a model's foreign kind or slot are all refused
+as "cannot ground", and so are some true memories; a property test draws
+4,000 proposals and sentences from a grammar of those phrasings and finds
+every admitted statement literally in the person's sentence (its verb, its
+object word for word, and around it only a filler, a trailing "now" or
+"though", or a whole clause), while at the committed seed the gate admits
+446 of them (the test requires more than 250) and refuses 2,665 that a
+nouns-only check would admit (it requires more than 1,000); recall never
+exceeds its budget over random stores and budgets under three counters; the
+rules, updates, reinforcement, order and checkpoints; the
 session events' contract; the command line and the Memory window; the token,
 the mask and the engine's first reply.
