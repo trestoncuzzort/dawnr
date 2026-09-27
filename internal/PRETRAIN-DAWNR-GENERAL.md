@@ -127,8 +127,51 @@ not, before it ever sees the real corpus.
 flagged (0.00001%-0.1%); zero flagged would be grounds to suspect the filter, not the
 corpus.
 
-**Result, run on the lab's CPUs (`~/.venv-train/bin/python3`, `pyarrow`, `--jobs 8`):**
-`DECONTAM_RESULT_PLACEHOLDER`
+**Result, run on the lab's CPUs (`~/.venv-train/bin/python3`, `pyarrow`, `--jobs 8`,
+397.6 seconds wall for all 16 files):**
+
+| | |
+|---|---:|
+| documents scanned | 12,417,226 |
+| documents flagged | **53** |
+| flagged fraction | 0.000427% (4.27e-06) |
+
+**The prediction held.** 53 falls inside the pre-registered 1-10,000 range, so this is
+read as the ordinary web-scale base rate the prediction expected, not evidence of a
+broken filter or a systemic leak. Zero of the 2,745,125 TinyStories documents were
+flagged (expected: it is synthetic fiction with no reason to contain a programming
+problem's text), all 53 are in FineWeb-Edu.
+
+**What the 53 actually are, read by hand (`~/scratch/dawnr-english/decontam/examples.jsonl`),
+split into two real categories:**
+
+1. **Generic numeric/algorithmic boilerplate (the large majority, ~40 of 53), exactly the
+   kind GPT-3's own top-13-gram list warns about.** The single most common match, by far,
+   is `i 1 v 5 x 10 l 50 c 100 d 500 m` -- the Roman-numeral value table -- which is
+   protected because MBPP id 961 is a Roman-numeral-conversion problem, but which also
+   appears on essentially every independent "how Roman numerals work" page on the web.
+   `for i in range n for j in range i 1 n if` (a nested-loop idiom, ids 296/831) and
+   `0 8 4 12 2 10 6 14 1 9 5 13 3` / `1 2 3 4 5 6 7 1 2 3 4 5 6` (short numeric sequences
+   that recur in unrelated bit-manipulation and music-theory pages, ids 522/769) are the
+   same phenomenon: a 13-gram that is specific enough to name a protected problem's own
+   test data, but common enough that many unrelated pages independently contain it. These
+   are correctly dropped -- the filter's job is to keep protected content out, not to
+   adjudicate intent -- but they are not evidence that anyone copied a held-out problem.
+2. **Actual shared problem-statement or solution-idiom phrasing (~10 of 53), a genuine
+   signal.** `can be rearranged so that two characters that are adjacent to each other`
+   (id 39) and `remove characters from the first string which are present in the second
+   string` (id 18) are close paraphrases of MBPP's own problem statements appearing on
+   unrelated pages; `found false while first last and not found mid first last 2 if` (id
+   492, a binary-search implementation) lines up with something this project's own
+   decontamination policy already flags -- id 492 is one of the 21 ids
+   `t/decontamination-2026-09-21.json` already excludes as a same-task source
+   (`positive:apps_124__search`), so finding a related binary-search phrasing
+   independently in FineWeb-Edu corroborates that this project's existing exclusion list
+   was catching a real, recurring pattern, not a one-off.
+
+All 53 are logged with their shard, matched problem id(s) and the shared phrase in
+`~/scratch/dawnr-english/decontam/examples.jsonl`, ready to be excluded by document id
+the moment a training-ready corpus is assembled from these shards.
 
 ## 5. Tokenizer: does the code-trained BPE read English?
 
