@@ -378,11 +378,20 @@ class Recorder:
         self.session = session or f"{now()}#{uuid.uuid4().hex[:6]}"
         self.last_id: str | None = None
 
+    KEEP_MESSAGES = 7        # the prompt kept with an answer: the last user turn and up to three exchanges before it
+
     def answered(self, messages: list[dict]) -> str | None:
-        """Record the conversation's last assistant message as an answer to what came before it."""
+        """Record the conversation's last assistant message as an answer to what came before it.
+
+        Only the last few turns are kept with it (a sleep drops the oldest turns
+        of a conversation that does not fit the context anyway), so a long
+        conversation does not store its whole history again with every answer."""
         if len(messages) < 2 or messages[-1].get("role") != "assistant":
             return None
-        self.last_id = self.store.add_answer(messages[:-1], messages[-1]["content"], session=self.session,
+        prompt = list(messages[:-1])[-self.KEEP_MESSAGES:]
+        while prompt and prompt[0].get("role") != "user":
+            prompt = prompt[1:]
+        self.last_id = self.store.add_answer(prompt, messages[-1]["content"], session=self.session,
                                              model=self.model)
         return self.last_id
 

@@ -6,6 +6,8 @@
     python3 locallm/dawnr_learning forget NAME ID                 erase one record (its adapter goes stale)
     python3 locallm/dawnr_learning forget-all NAME --yes          erase NAME: records, adapters, sleeps
     python3 locallm/dawnr_learning status NAME --model DIR        is there an adapter for this base, fresh?
+    python3 locallm/dawnr_learning profile NAME [--pin DIM=VALUE] [--unpin DIM]
+                                                                  what dawnr believes about NAME's taste
     python3 locallm/dawnr_learning sleep NAME --model DIR [--replay CONV.jsonl] [--guard-text VALID.txt]
                                           [--mode rebuild|continue] [--lr 1e-3] [--rank 8] [--device cuda]
 
@@ -40,7 +42,7 @@ def main(argv=None) -> int:
     ap.add_argument("--root", type=Path, default=None, help="where people's records live (default: per-user data)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("people")
-    for name in ("show", "export", "forget", "forget-all", "status", "sleep"):
+    for name in ("show", "export", "forget", "forget-all", "status", "sleep", "profile"):
         sp = sub.add_parser(name)
         sp.add_argument("name")
         if name == "export":
@@ -51,6 +53,9 @@ def main(argv=None) -> int:
             sp.add_argument("--yes", action="store_true", help="really erase everything kept about this person")
         if name in ("status", "sleep"):
             sp.add_argument("--model", type=Path, required=True, help="the chat checkpoint the adapter belongs to")
+        if name == "profile":
+            sp.add_argument("--pin", action="append", default=[], help="DIM=VALUE, e.g. indent=4 or naming=upper")
+            sp.add_argument("--unpin", action="append", default=[])
         if name == "sleep":
             sp.add_argument("--replay", type=Path, default=None, help="the base's chat_data.py conversations")
             sp.add_argument("--guard-text", type=Path, default=None, help="held-out plain source text")
@@ -95,6 +100,20 @@ def main(argv=None) -> int:
             print("this erases every record, adapter and sleep kept about this person; add --yes to do it")
             return 2
         print(f"erased {store.erase_all()} file(s) kept about {store.person}")
+    elif a.cmd == "profile":
+        from dawnr_learning import profile as PR
+        prof = PR.refresh(store)
+        for item in a.pin:
+            dim, _, raw = item.partition("=")
+            if dim not in PR.DIMENSIONS or not raw:
+                print(f"--pin takes DIM=VALUE with DIM one of {', '.join(PR.DIMENSIONS)}")
+                return 2
+            prof.setdefault("pinned", {})[dim] = json.loads(raw) if raw in ("true", "false") or raw.isdigit() \
+                else raw
+        for dim in a.unpin:
+            prof.get("pinned", {}).pop(dim, None)
+        PR.save(store.dir, prof)
+        print("\n".join(PR.describe(prof)))
     elif a.cmd == "status":
         from dawnr_learning import adapters
         print(json.dumps(adapters.status(store, adapters.base_identity(a.model)), indent=2))
