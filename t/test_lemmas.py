@@ -196,6 +196,21 @@ def test_rocq_proves_the_program_without_the_lemma() -> None:
     assert src == __import__("lower_rocq").lower(bare, bare["body"])
 
 
+def test_an_assert_is_a_proof_step_where_it_can_be_stated() -> None:
+    t = _pr("false_assert")
+    assert t["lemmas"][0]["body"] == [{"assert": {"op": ">=", "args": [
+        {"var": "k"}, {"int": 1}]}}]
+    assert "assert (k >= 1);" in _lower("lower_dafny", t)
+    assert "assert((k >= (1int)));" in _lower("lower_verus", t)
+    assert "assert ((k >= 1))" in _lower("lower_fstar", t)
+    assert "/@ assert (k >= 1); @/" in _lower("lower_framac", t)
+    assert "have _la1 : (k ≥ (1 : Int)) := by" in _lower("lower_lean", t)
+    # an assert outside a lemma body is not a t statement
+    bad = copy.deepcopy(t)
+    bad["body"].insert(0, {"assert": {"bool": True}})
+    assert "unknown-stmt" in _keys(bad)
+
+
 def test_no_kernel_axiomatizes_a_lemma() -> None:
     banned = {"lower_dafny": [r"\{:axiom\}", r"\bassume\b"],
               "lower_verus": [r"admit\(", r"assume\("],

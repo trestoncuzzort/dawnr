@@ -3581,6 +3581,8 @@ def _lemma_body_src(cx: "Ctx", body: list, local: dict, ptys: dict) -> str:
             args = " ".join(_render(cx, a, t, {}, local)
                             for a, t in zip(c["args"], ptys[c["name"]]))
             parts.append(f"{c['name']} {args}")
+        elif "assert" in s:
+            parts.append(f"assert ({cx.prop(s['assert'], {}, local)})")
         else:
             c = s["if"]
             parts.append(f"(if {cx.bx(c['cond'], {}, local)} then "
@@ -3618,6 +3620,10 @@ def _lemma_src(cx: "Ctx", l: dict, ptys: dict) -> str:
     req = _conj([cx.prop(e, {}, local) for e in l["requires"]])
     ens = _conj([cx.prop(e, {}, local) for e in l["ensures"]])
     selfrec = any(n == l["name"] for n in _lemma_names(l["body"]))
+    if not l["params"]:
+        terms_ok = False           # a pattern needs a bound variable
+    else:
+        terms_ok = True
     head = "let rec" if selfrec else "let"
     dec = ""
     if selfrec:
@@ -3635,7 +3641,7 @@ def _lemma_src(cx: "Ctx", l: dict, ptys: dict) -> str:
     for _, c in terms:
         _free_vars(c, covered)
     pat = ""
-    if terms and set(local) <= covered:
+    if terms_ok and terms and set(local) <= covered:
         pat = "\n  [" + "; ".join(f"SMTPat {t}" for t, _ in terms) + "]"
     return (f"{head} {l['name']} {binders}\n"
             f"  : Lemma (requires {req}) (ensures {ens}){dec}{pat}\n"

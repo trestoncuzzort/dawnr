@@ -779,6 +779,17 @@ class Parser:
             e = self.expr()
             self.opt("sym", ";")
             return self.mark(t, {"return": [self.ret_name, e]})
+        if (t.kind == "id" and t.text == "assert" and self.i + 1 < len(self.toks)
+                and not (self.toks[self.i + 1].kind == "sym"
+                         and self.toks[self.i + 1].text == ":=")):
+            # SPEC.md "Lemmas (v1)": `assert e;`, a proof step, contextual
+            # (a variable may still be called `assert`); check_wf allows it
+            # only inside a lemma body.
+            self.name()
+            e = self.expr()
+            self.production = "Stmt"
+            self.opt("sym", ";")
+            return self.mark(t, {"assert": e})
         if (t.kind == "id" and self.i + 1 < len(self.toks)
                 and self.toks[self.i + 1].kind == "sym"
                 and self.toks[self.i + 1].text == "("):
@@ -1424,6 +1435,9 @@ def pstmts(body: list, ind: str) -> list:
         kind = next(iter(s))
         if kind == "return":
             out.append("%sreturn %s;" % (ind, pexpr(s["return"][1], 0)))
+            continue
+        if kind == "assert":
+            out.append("%sassert %s;" % (ind, pexpr(s["assert"])))
             continue
         if kind == "lemma":
             c = s["lemma"]
