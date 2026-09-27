@@ -3404,6 +3404,125 @@ def _has_wordcount(x) -> bool:
     return False
 
 
+# T_SEQ_OF_RANGE_ACSL, SPEC.md "Seq-valued spec_funs (v1)", the \list
+# route (2026-09-27): converts a RANGE of a real C buffer into ACSL's own
+# \list<integer> (built-in ctors \Nil/\Cons, \nth/\length/\concat; Frama-C
+# kernel_internals/typing/logic_builtin.ml -- WP's own Vlist.ml gives the
+# four a native decision procedure, not a user axiom), needed only when a
+# seq-valued spec_fun's own body slices a real buffer parameter directly
+# (`list_term`'s own `slice` case; `tl`'s shape, t/fuzz_lower.py's
+# fz_p_sf_seq_at/fz_p_sf_seq_build/fz_p_sf_seq_slice_off, neither of which
+# concatenates the slice with a recursive call first). A direct recursive
+# `logic` equation (this file's own house style for every other internal
+# helper -- t_mod, t_div, t_wc, t_find/t_count -- WP checks no logic-
+# function's termination itself, see the module docstring), total for
+# every integer lo/hi (the base case `hi <= lo` fires immediately when
+# the range is empty or ill-formed, and the recursive step strictly
+# decreases the measure `hi - lo`), so it can never make the ACSL theory
+# inconsistent regardless of the caller's own bounds; the accompanying
+# lemma is the same non-required sanity check `t_wc_terminates` already
+# is for `t_wc`, not something WP needs to accept the definition. Emitted
+# only when `_has_seq_slice_sf` finds a seq-valued spec_fun whose body
+# reaches a `slice`, the same "unused costs nothing, so gate rather than
+# always emit" discipline T_DIVMOD_ACSL/T_WORDCOUNT_ACSL already follow.
+T_SEQ_OF_RANGE_ACSL = (
+    "/*@\n"
+    "  logic \\list<integer> t_seq_of_range{L}(int *s, integer lo, "
+    "integer hi) =\n"
+    "    hi <= lo ? \\Nil : \\Cons(s[lo], t_seq_of_range(s, lo + 1, hi));\n"
+    "  lemma t_seq_of_range_terminates:\n"
+    "    \\forall int *s, integer lo, integer hi;\n"
+    "    hi > lo ==> ((hi - (lo + 1)) >= 0 && (hi - (lo + 1)) < (hi - lo));\n"
+    "*/\n"
+)
+
+
+def _has_seq_slice_sf(task: dict) -> bool:
+    """Whether any spec_fun of `task` has a seq RESULT and its own body
+    reaches a `slice` node anywhere (SPEC.md "Seq-valued spec_funs (v1)",
+    the \\list route): the one shape that needs `T_SEQ_OF_RANGE_ACSL`,
+    converting a slice of a real buffer parameter into a \\list. A plain
+    over-inclusive walk, the same shape `_has_divmod`/`_has_wordcount` use
+    for their own helpers."""
+    def walk(x) -> bool:
+        if isinstance(x, dict):
+            if x.get("op") == "slice":
+                return True
+            return any(walk(v) for v in x.values())
+        if isinstance(x, list):
+            return any(walk(v) for v in x)
+        return False
+    return any(f["result"] == "seq" and walk(f["body"])
+               for f in task.get("spec_funs", []))
+
+
+def _has_seq_result_sf(task: dict) -> bool:
+    """Whether `task` declares ANY spec_fun with a seq RESULT (SPEC.md
+    "Seq-valued spec_funs (v1)", the \\list route): the gate for
+    `T_SEQ_LIST_LEMMAS_ACSL`, below."""
+    return any(f["result"] == "seq" for f in task.get("spec_funs", []))
+
+
+# T_SEQ_LIST_LEMMAS_ACSL, the \list route's own append/prepend facts
+# (2026-09-27, SPEC.md "Seq-valued spec_funs (v1)"): every seq-valued
+# spec_fun this pass measures builds its recursive case by concatenating
+# ONE element onto a shorter list, on the left (`_SF_DBL_SWAPPED`'s own
+# seeded fault) or the right (`_SF_DBL`, `double_all`'s own `dbl`) --
+# `list_term`'s own `+`/`seq`-literal cases render EXACTLY this shape,
+# `\concat(l, \Cons(x, \Nil))` or `\concat(\Cons(x, \Nil), l)` -- and a
+# LOOP whose own invariant restates the spec_fun's result one element at
+# a time (`double_all`'s own `invariant r == dbl(s, i)`) needs the
+# length/`\nth` facts about that ONE-ELEMENT step to carry the invariant
+# from `i` to `i + 1`; WP's recursive-definition axiom for the spec_fun
+# itself unfolds the STEP (measured: a lone `logic \list<integer> dbl{L}
+# (...) = ...` plus its termination lemma already lets alt-ergo unfold
+# `dbl(s, s_n, i + 1)` to `\concat(dbl(s, s_n, i), \Cons(2 * s[i],
+# \Nil))` unaided, in an otherwise uncluttered goal -- `probe_chain.c`,
+# the measured note below), but relating `\nth`/`\length` of that
+# `\concat` back to the SHORTER list's own needs a second E-matching
+# step (the append/prepend lemma itself) that alt-ergo's untriggered
+# search does not always chain unaided once the surrounding goal also
+# carries the task's OTHER hypotheses (`\valid`/`\separated`, the
+# invariant's own bound clauses) -- PROVING these six facts once, here,
+# as their own lemmas (each closes in single-digit milliseconds, WP's
+# Vlist.ml native decision procedure for \Cons/\concat/\nth/\length, not
+# a user axiom taken on faith) gives every later goal a ready-made fact
+# to use by direct substitution instead of a fresh instantiation search.
+# Measured: closes fz_p_sf_seq_at's real side outright (already closed
+# without them) and reduces double_all's/fz_p_sf_seq_swap's own loop-
+# invariant-preservation goal to ONE remaining obstacle (relating the
+# SHORTER list's `\length`/`\nth` across the SAME loop step to the
+# invariant's own prior value, still an open gap, "left, and why" in
+# t/FEATURES-SEQFUN-2026-09-27.md) rather than two. Gated on ANY seq-
+# result spec_fun (not the slice-specific gate `_has_seq_slice_sf` uses):
+# unlike `T_SEQ_OF_RANGE_ACSL`, nothing here names a task-specific
+# symbol, so one copy serves append- and prepend-shaped bodies alike.
+T_SEQ_LIST_LEMMAS_ACSL = (
+    "/*@\n"
+    "  lemma t_list_append_length{L}:\n"
+    "    \\forall \\list<integer> l, integer x;\n"
+    "    \\length(\\concat(l, \\Cons(x, \\Nil))) == \\length(l) + 1;\n"
+    "  lemma t_list_append_nth{L}:\n"
+    "    \\forall \\list<integer> l, integer x, integer k;\n"
+    "    0 <= k && k < \\length(l) ==> "
+    "\\nth(\\concat(l, \\Cons(x, \\Nil)), k) == \\nth(l, k);\n"
+    "  lemma t_list_append_last{L}:\n"
+    "    \\forall \\list<integer> l, integer x;\n"
+    "    \\nth(\\concat(l, \\Cons(x, \\Nil)), \\length(l)) == x;\n"
+    "  lemma t_list_prepend_length{L}:\n"
+    "    \\forall \\list<integer> l, integer x;\n"
+    "    \\length(\\concat(\\Cons(x, \\Nil), l)) == \\length(l) + 1;\n"
+    "  lemma t_list_prepend_nth_zero{L}:\n"
+    "    \\forall \\list<integer> l, integer x;\n"
+    "    \\nth(\\concat(\\Cons(x, \\Nil), l), 0) == x;\n"
+    "  lemma t_list_prepend_nth_succ{L}:\n"
+    "    \\forall \\list<integer> l, integer x, integer k;\n"
+    "    1 <= k && k <= \\length(l) ==> "
+    "\\nth(\\concat(\\Cons(x, \\Nil), l), k) == \\nth(l, k - 1);\n"
+    "*/\n"
+)
+
+
 def _wordcount(s: list) -> int:
     """Python replay of `t_wc`, used only by `_cev` (certificate ground
     evaluation, which has no C/ACSL to run): the number of maximal
@@ -3860,6 +3979,16 @@ def _seq_len_render(e: dict, ctx) -> str:
         v = seq_var(base, ctx.env)
         n = ctx.seq_len.get(v, f"{v}_n")
         return f"t_wc({v}, {n})"
+    if "call" in e:
+        # SEQ-VALUED SPEC_FUN CALL, the \list route (2026-09-27, SPEC.md
+        # "Seq-valued spec_funs (v1)"): `e` is a call to a spec_fun whose
+        # own result is "seq" (the only shape that ever reaches this
+        # function with a `call` node -- every caller of
+        # `_seq_len_render` already knows `e` is seq-typed), stated as
+        # `logic \list<integer>` by `spec_fun_acsl`'s own new branch, so
+        # its length is ACSL's BUILT-IN `\length`, not a buffer's `_n`
+        # field (a \list has no buffer to size).
+        return f"\\length({acsl_call(e['call'], ctx)})"
     v = seq_var(e, ctx.env)
     return ctx.seq_len.get(v, f"{v}_n")
 
@@ -3940,6 +4069,12 @@ def _seq_at_render(e: dict, k_render: str, ctx) -> str:
             "ACSL term position directly, has no rendering in the flat "
             "data+offsets encoding; only `len(m[i])` (a row's LENGTH) is "
             "supported, via `_seq_len_render`'s own `at` case")
+    if "call" in e:
+        # SEQ-VALUED SPEC_FUN CALL, the \list route (2026-09-27, see
+        # `_seq_len_render`'s matching case, just above): element `k` of
+        # a `\list<integer>` is ACSL's BUILT-IN `\nth`, not a buffer
+        # index.
+        return f"\\nth({acsl_call(e['call'], ctx)}, {k_render})"
     return f"{seq_var(e, ctx.env)}[{k_render}]"
 
 
@@ -3982,6 +4117,65 @@ def acsl_call(c: dict, ctx: Ctx) -> str:
             parts.append(term(a, ctx))
     lab = f"{{{ctx.label}}}" if info["labeled"] else ""
     return f"{fun}{lab}({', '.join(parts)})"
+
+
+def list_term(e: dict, ctx: Ctx) -> str:
+    """ACSL `\\list<integer>` term for a seq-VALUED expression `e`: the
+    BODY of a spec_fun whose result is "seq" (SPEC.md "Seq-valued
+    spec_funs (v1)", the \\list route, 2026-09-27), and any seq-typed
+    subexpression such a body recurses into (an `ite`'s two arms, a
+    concatenation's two operands). This lowering models a plain seq
+    VALUE (a task param, a body-position local or return) as a C buffer,
+    the module docstring's own machinery, and `spec_fun_acsl` states an
+    int/bool-result spec_fun as a recursive `logic integer`/`logic
+    boolean` definition over that buffer already -- a seq-RESULT
+    spec_fun cannot do the same (a logic function has no buffer to
+    return), so its definition is stated in ACSL's OWN list theory
+    instead: the built-in constructors `\\Nil`/`\\Cons` and the built-in
+    `\\concat` (`\\nth`/`\\length` are the READ side, `_seq_at_render`/
+    `_seq_len_render`'s own new cases below), all three natively decided
+    by WP (Vlist.ml), not user axioms -- so this is one more `logic
+    \\list<integer> f(...) = ...;` equation, the SAME "prefer logic
+    definitions, not an axiomatic block" shape `spec_fun_acsl` already
+    uses for an int result, with `\\Nil`/`\\Cons`/`\\concat` standing in
+    for the int case's own `0`/`+`/`ite` combinators.
+
+    Only the shapes t/fuzz_lower.py's `_SF_TL`/`_SF_DBL` families and
+    `t/tasks/double_all.t` actually need are covered: a literal (`[]` the
+    base case, and a general fixed-length literal), `+` concatenation,
+    `ite`, a further spec_fun call (self-recursive or not), and a slice
+    of a real buffer PARAMETER (`t_seq_of_range`, above `_has_wordcount`).
+    Anything else -- a bare seq-typed PARAMETER passed through unchanged,
+    `update`/`fill` inside a seq-valued body, a nested seq -- abstains by
+    name rather than guessing an encoding no committed or probed task
+    needs (SPEC.md's own rule for a kernel that cannot state a
+    construct); the exception surfaces at `lower()`'s call site exactly
+    like every other named refusal in this file."""
+    if e.get("op") == "seq":
+        out = "\\Nil"
+        for a in reversed(e.get("args", ())):
+            out = f"\\Cons({term(a, ctx)}, {out})"
+        return out
+    if e.get("op") == "+":
+        a, b = e["args"]
+        return f"\\concat({list_term(a, ctx)}, {list_term(b, ctx)})"
+    if e.get("op") == "slice":
+        base, lo, hi = e["args"]
+        s = seq_var(base, ctx.env)
+        return (f"t_seq_of_range{{{ctx.label}}}({s}, {term(lo, ctx)}, "
+                f"{term(hi, ctx)})")
+    if "ite" in e:
+        i = e["ite"]
+        return (f"(({term(i['cond'], ctx)}) ? ({list_term(i['then'], ctx)}) "
+                f": ({list_term(i['else'], ctx)}))")
+    if "call" in e:
+        return acsl_call(e["call"], ctx)
+    raise NotImplementedError(
+        f"seq-valued spec_fun body {e!r}: the \\list route states a "
+        f"literal, `+` concatenation, `ite`, a further spec_fun call, "
+        f"and a slice of a real buffer parameter; anything else (a bare "
+        f"seq parameter passed through, `update`/`fill`, a nested seq) "
+        f"has no \\list rendering here")
 
 
 def _gap(rendered: str) -> str:
@@ -4214,6 +4408,16 @@ def defs(e: dict, ctx: Ctx):
             mv = seq_var(base["args"][0], ctx.env)
             ib = term(base["args"][1], ctx)
             n = f"({mv}_off[({ib}) + 1] - {mv}_off[({ib})])"
+            return _conj([defs(base, ctx), defs(args[1], ctx),
+                          f"(0 <= ({i}) && ({i}) < {n})"])
+        if "call" in base:
+            # SEQ-VALUED SPEC_FUN CALL, the \list route (2026-09-27,
+            # SPEC.md "Seq-valued spec_funs (v1)"; fz_p_sf_seq_at's own
+            # `ensures ... at(tl(s), 0)`): the call's own \list value has
+            # no `_n` buffer field to read (`seq_var` raises by name for
+            # exactly this), so the bound is `\length` of the call
+            # itself, `_seq_len_render`'s own matching new case.
+            n = _seq_len_render(base, ctx)
             return _conj([defs(base, ctx), defs(args[1], ctx),
                           f"(0 <= ({i}) && ({i}) < {n})"])
         n = ctx.seq_len.get(seq_var(base, ctx.env),
@@ -5886,6 +6090,28 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
         if cap is not None:
             out.append(f"{indent}{cap} = {src_len};")
         return out
+    if "call" in e:
+        # A seq-valued spec_fun CALL as the whole right-hand side of a
+        # body assignment (SPEC.md "Seq-valued spec_funs (v1)", the
+        # \list route, 2026-09-27; measured on the corpus's
+        # vericoding_DA0576.solve, `KeyError: 'op'` before this guard --
+        # a call node has no "op" key, and this function's every other
+        # branch assumes one): this backend's seq VALUE is a real C
+        # buffer, materialized by a copy/store loop over MEMORY, and a
+        # spec_fun's own result is ACSL logic (a `\list<integer>`, no
+        # buffer, `spec_fun_acsl`'s own new branch), so there is no
+        # buffer here to copy FROM. Named rather than guessed at: no
+        # committed or probed task assigns a seq-valued spec_fun call's
+        # result to a seq-typed name in EXECUTABLE position (every
+        # fixture only ever calls one from `requires`/`ensures`/an
+        # invariant, ACSL positions `term()`/`pred()` already state
+        # through `list_term`/`_seq_len_render`/`_seq_at_render`).
+        raise NotImplementedError(
+            "a seq-valued spec_fun call as the whole right-hand side of "
+            "a body assignment: this lowering's seq value is a real C "
+            "buffer and a spec_fun's result is ACSL logic (\\list<integer>"
+            "), with no buffer to copy from; only requires/ensures/an "
+            "invariant can name such a call directly")
     op, args = e["op"], e["args"]
     if op == "update":
         src = seq_var(args[0], ctx.env)
@@ -7613,7 +7839,19 @@ def spec_fun_acsl(f: dict, funs: dict, declare_only: bool = False) -> list:
     of termination exists to state. Withheld ONLY for the one function
     the witness names, ONLY when the witness's kind is "measure": every
     other spec_fun on the same task (and every task with no such witness)
-    still gets its full recursive definition, byte-identical to before."""
+    still gets its full recursive definition, byte-identical to before.
+
+    SEQ RESULT, the \\list route (2026-09-27, SPEC.md "Seq-valued
+    spec_funs (v1)"): a result of "seq" gets ACSL's own `\\list<integer>`
+    (`res`'s third entry) and its body is rendered through `list_term`,
+    not `term` -- the same recursive-`logic`-equation shape as an int/
+    bool result, only the combinators differ (`\\Nil`/`\\Cons`/`\\concat`
+    in place of `0`/`+`/an int `ite`). `declare_only` and the termination
+    lemmas below are untouched: a WITHHELD seq-valued definition needs no
+    special case (the bare declaration line already works for any `res`
+    string), and a termination lemma states the `decreases` MEASURE,
+    always an int expression whatever the spec_fun itself returns, so
+    `self_calls`/`term(f["decreases"], ...)` need no change either."""
     env = {p["name"]: p["type"] for p in f["params"]}
     labeled = funs[f["name"]]["labeled"]
     lab = "{L}" if labeled else ""
@@ -7623,12 +7861,15 @@ def spec_fun_acsl(f: dict, funs: dict, declare_only: bool = False) -> list:
             sig += [f"int *{p['name']}", f"integer {p['name']}_n"]
         else:
             sig.append(f"integer {p['name']}")
-    res = {"int": "integer", "bool": "boolean"}[f["result"]]
+    res = {"int": "integer", "bool": "boolean",
+           "seq": "\\list<integer>"}[f["result"]]
     if declare_only:
         return [f"/*@ logic {res} {f['name']}{lab}({', '.join(sig)}); */"]
     body_ctx = Ctx(env, funs, ret=None, label="L")
+    body_txt = (list_term(f["body"], body_ctx) if f["result"] == "seq"
+                else term(f["body"], body_ctx))
     lines = [f"/*@ logic {res} {f['name']}{lab}({', '.join(sig)}) =",
-             f"      {term(f['body'], body_ctx)};", "*/"]
+             f"      {body_txt};", "*/"]
     quant = ", ".join(
         (f"int *{p['name']}, integer {p['name']}_n"
          if p["type"] == "seq" else f"integer {p['name']}")
@@ -8097,6 +8338,79 @@ MAX_CEV_CALLS = 4000
 MAX_CEV_TRACE = 300
 _CEV_CALLS = [0]
 
+# SEQ-VALUED CALLS IN THE REPLAY, the \list route (2026-09-27, SPEC.md
+# "Seq-valued spec_funs (v1)"). `_CEV_TRACE`/`_CEV_SEEN` just above trace
+# only an int/bool-result call (their own gate, `f["result"] in ("int",
+# "bool")`, unchanged below); a seq-valued one is traced separately here
+# so the int ladder's existing text is untouched for every task without
+# one (byte identity). `_value_certificate` flushes this trace itself
+# (not through `_flush_trace`, which several OTHER call sites reach
+# during ordinary statement replay where a seq-valued spec_fun call can
+# never occur -- spec_funs are not callable in executable position,
+# `funs[name]["executable"]` is always False for one, `lower()`'s own
+# eligibility loop -- so routing this through `_flush_trace` would only
+# add a permanently-empty check there; kept as its own small pair of
+# globals and its own flush loop instead, exactly where it is needed).
+_CEV_TRACE_SEQ: list = []
+_CEV_SEEN_SEQ: set = set()
+
+# `_CEV_SEQ_ARGS[fname]`: one entry per PARAMETER of spec_fun `fname`, the
+# ACSL text `(ptr_name, len_name)` for a seq-typed one or None for an
+# int-typed one, resolved ONCE by `_value_certificate` from a TOP-LEVEL
+# call in `task["ensures"]` (`seq_var(arg, env)` against the OUTER,
+# certificate-scope `env` -- a name always valid there). A call this
+# function's own recursion reaches is NEVER a top-level `ensures` call
+# (it is `f`'s OWN recursive self-call, or a callee's), so its ARGS name
+# `f`'s OWN internal parameters (e.g. `dbl`'s own `n`), which do not
+# exist in the certificate's outer scope at all -- rendering such a call
+# by re-walking ITS OWN arg AST through the outer `ctx` would raise
+# `KeyError` (measured: `seed_dropped_element`'s own recursive `dbl(s,
+# n - 1)` trace entry, `n` unbound in `double_all_t`'s own env). Sound
+# because a seq-valued spec_fun's OWN self-recursion only ever varies its
+# INT argument (SPEC.md's decreases measure; `self_calls`'s own
+# termination-lemma machinery already assumes this for every spec_fun),
+# so its seq-typed parameter's OUTER rendering is exactly the same
+# `(ptr, ptr_n)` pair whichever recursion depth reaches it. A seq-typed
+# argument this cannot resolve (no top-level call reaches `fname` at all,
+# or its own argument is not a bare seq variable) leaves `fname` absent
+# from this map, and `_seq_call_lhs` returns None -- the trace entry is
+# then silently dropped rather than crash or emit a wrong name; the
+# refutation certificate degrades to "no rung for this call", never to
+# an incorrect one.
+_CEV_SEQ_ARGS: dict = {}
+
+
+def _seq_call_lhs(fname: str, vals: list, funs: dict) -> str | None:
+    """ACSL text for a call to spec_fun `fname` at ground argument values
+    `vals` (`_CEV_TRACE_SEQ`'s own entries): each int-typed argument as
+    its ground literal (`_int_lit`, exactly the int ladder's own
+    approach, `_flush_trace`), each seq-typed one as the pre-resolved
+    `(ptr, ptr_n)` pair from `_CEV_SEQ_ARGS` -- or None when that map has
+    nothing for `fname` (see its own docstring)."""
+    seq_args = _CEV_SEQ_ARGS.get(fname)
+    if seq_args is None:
+        return None
+    f = funs[fname]
+    parts = []
+    for p, v, sa in zip(f["params"], vals, seq_args, strict=True):
+        if p["type"] == "seq":
+            if sa is None:
+                return None
+            parts += [sa[0], sa[1]]
+        else:
+            parts.append(_int_lit(v))
+    lab = "{Here}" if f["labeled"] else ""
+    return f"{fname}{lab}({', '.join(parts)})"
+
+
+def _freeze_cev(x):
+    """A hashable key for a `_cev`/`_cev_seqval` ground value, which may
+    be a Python list (a seq-typed argument or a seq-valued call's own
+    result) rather than a bare bool/int."""
+    if isinstance(x, list):
+        return tuple(_freeze_cev(v) for v in x)
+    return x
+
 
 def _cev_call(c: dict, st: dict):
     f = _CEV_SPEC.get(c["fun"])
@@ -8106,8 +8420,11 @@ def _cev_call(c: dict, st: dict):
     if _CEV_CALLS[0] > MAX_CEV_CALLS:
         raise _CertSkip("spec_fun evaluation exceeds its call cap")
     vals = [_cev(a, st) for a in c["args"]]
-    v = _cev(f["body"], {p["name"]: x for p, x in zip(f["params"], vals,
-                                                      strict=True)})
+    bind = {p["name"]: x for p, x in zip(f["params"], vals, strict=True)}
+    if f["result"] == "seq":
+        v = _cev_seqval(f["body"], bind)
+    else:
+        v = _cev(f["body"], bind)
     key = (f["name"], tuple(vals))
     if (all(p["type"] == "int" for p in f["params"])
             and all(isinstance(x, int) and not isinstance(x, bool)
@@ -8115,7 +8432,55 @@ def _cev_call(c: dict, st: dict):
             and f["result"] in ("int", "bool") and key not in _CEV_SEEN):
         _CEV_SEEN.add(key)
         _CEV_TRACE.append((f["name"], vals, v, f["result"]))
+    if f["result"] == "seq":
+        # The \list route's own ladder (mirrors the int-result gate just
+        # above, but keyed and stored separately, `_CEV_TRACE_SEQ`): every
+        # DISTINCT (name, ground args) pair, callees before callers
+        # (this function's own recursion into `f["body"]`, above, already
+        # evaluates and traces every nested call before this one is
+        # appended), capped the same way the int ladder is.
+        skey = (f["name"], tuple(_freeze_cev(x) for x in vals))
+        if skey not in _CEV_SEEN_SEQ and len(_CEV_SEEN_SEQ) < MAX_CEV_TRACE:
+            _CEV_SEEN_SEQ.add(skey)
+            _CEV_TRACE_SEQ.append((f["name"], vals, v))
     return v
+
+
+def _cev_seqval(e: dict, st: dict):
+    """Ground evaluation of a SEQ-VALUED t expression, used only to
+    evaluate a seq-valued spec_fun's own BODY at a witness (`_cev_call`'s
+    seq-result branch, just above) -- never called from `_cert_stmts`'s
+    replay of the twin's own executable statements (an int/bool-typed
+    evaluation, plain `_cev`, wholly unchanged), so a task with no seq-
+    valued spec_fun never reaches this function (byte identity). A
+    condition, an index, or a recursive call's own int argument is handed
+    to the ordinary `_cev`, which already evaluates a bare seq-typed
+    VARIABLE correctly (`st[name]`, whatever Python value it holds) and
+    `+` correctly for two seq operands too (Python's own list `+` IS
+    concatenation, `ARITH`'s existing case). Mirrors `list_term`'s own
+    ACSL-side coverage: a literal, `+`, `ite`, a further call, a slice of
+    a real buffer; anything else is the same named refusal."""
+    if "var" in e:
+        return _cev(e, st)
+    if "ite" in e:
+        i = e["ite"]
+        branch = i["then"] if _cev(i["cond"], st) else i["else"]
+        return _cev_seqval(branch, st)
+    if "call" in e:
+        return _cev_call(e["call"], st)
+    op = e.get("op")
+    if op == "seq":
+        return [_cev(a, st) for a in e.get("args", ())]
+    if op == "slice":
+        s_e, lo_e, hi_e = e["args"]
+        sv, lo, hi = _cev(s_e, st), _cev(lo_e, st), _cev(hi_e, st)
+        if not (0 <= lo <= hi <= len(sv)):
+            raise _CertSkip("undefined slice in replay")
+        return sv[lo:hi]
+    if op == "+":
+        a, b = e["args"]
+        return _cev_seqval(a, st) + _cev_seqval(b, st)
+    raise _CertSkip(f"no ground evaluation for seq-valued operator {op!r}")
 
 
 def _flush_trace(out: list, ind: str) -> None:
@@ -8857,6 +9222,27 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
     except (_CertSkip, NotImplementedError, ValueError, KeyError,
             TypeError, RecursionError):
         return None
+    # SEQ-VALUED spec_fun CALLS, resolving each one's SEQ-typed argument's
+    # outer name ONCE (the \list route, 2026-09-27, SPEC.md "Seq-valued
+    # spec_funs (v1)"; `_CEV_SEQ_ARGS`'s own docstring for why this must
+    # happen from the TOP-LEVEL call, before any recursive evaluation):
+    # a call whose own seq argument is not a bare variable in this outer
+    # scope (`seq_var` raising) is simply left unresolved, same as any
+    # other named refusal here -- no rung for it, not a wrong one.
+    for e in task["ensures"]:
+        for c in _call_nodes(e):
+            fname = c.get("fun")
+            f = funs.get(fname) if fname else None
+            if f is None or f.get("result") != "seq" or fname in _CEV_SEQ_ARGS:
+                continue
+            try:
+                seq_args = [
+                    (seq_var(a, env), f"{seq_var(a, env)}_n")
+                    if p["type"] == "seq" else None
+                    for p, a in zip(f["params"], c["args"], strict=True)]
+            except (NotImplementedError, KeyError):
+                continue
+            _CEV_SEQ_ARGS[fname] = seq_args
     # 2026-09-26: the spec_fun values the final assert names at ground
     # arguments (an `ensures` call whose arguments evaluate at the final
     # state), established by the same kernel-checked unfolding trace the
@@ -8874,6 +9260,35 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
     except _CertSkip:
         _CEV_TRACE.clear()
     ctx = Ctx(env, funs, ret=None, label="Here")
+    # SEQ-VALUED spec_fun CALLS IN THE REPLAY, the \list route (2026-09-27,
+    # SPEC.md "Seq-valued spec_funs (v1)"): the int/bool ladder just
+    # above never traces a seq-valued call (`_cev_call`'s own gate is
+    # unchanged); `_CEV_TRACE_SEQ`, filled by the SAME evaluation loop a
+    # few lines up (`_cev_call`'s own new branch, reached only when a
+    # spec_fun's result is "seq"), states each one's ground \list value
+    # directly -- `dbl(s, i) == \Cons(v0, \Cons(v1, ..., \Nil))` -- the
+    # same role the int ladder already plays for a recursive int
+    # spec_fun (t/FEATURES-SEQFUN-2026-09-27.md's own note on why Dafny
+    # and F* needed an equivalent ladder: a deeply recursive call is not
+    # left for the prover to unfold from nothing). `_seq_call_lhs` (not
+    # a fresh AST re-walk) renders each call's own arguments: an int one
+    # as its ground literal, a seq one as the outer `(ptr, ptr_n)` pair
+    # `_CEV_SEQ_ARGS` resolved just above -- correct at this program
+    # point exactly because the assert is placed here, after every
+    # statement that establishes their ground values, the same reasoning
+    # the int ladder's own `f(args) == v` line already relies on.
+    # Untouched (an empty, no-op loop) for any task with no seq-valued
+    # spec_fun call in `ensures` (byte identity).
+    for fname, vals, v in _CEV_TRACE_SEQ:
+        lhs = _seq_call_lhs(fname, vals, funs)
+        if lhs is None:
+            continue                   # unresolved seq argument; no rung
+        rhs = "\\Nil"
+        for x in reversed(v):
+            rhs = f"\\Cons({_int_lit(x)}, {rhs})"
+        body_out.append(f"  /*@ assert {lhs} == {rhs}; */")
+    _CEV_TRACE_SEQ.clear()
+    _CEV_SEQ_ARGS.clear()
     pieces = []
     for e in task["ensures"]:
         d, p = defs(e, ctx), pred(e, ctx)
@@ -9662,6 +10077,9 @@ def certificate(task: dict, twin_body: list, w: dict,
     _CEV_SPEC.update({f["name"]: f for f in task.get("spec_funs", [])})
     _CEV_TRACE.clear()
     _CEV_SEEN.clear()
+    _CEV_TRACE_SEQ.clear()
+    _CEV_SEEN_SEQ.clear()
+    _CEV_SEQ_ARGS.clear()
     _CEV_CALLS[0] = 0
     try:
         return _certificate(task, twin_body, w, env, funs, used)
@@ -9669,6 +10087,9 @@ def certificate(task: dict, twin_body: list, w: dict,
         _CEV_SPEC.clear()
         _CEV_TRACE.clear()
         _CEV_SEEN.clear()
+        _CEV_TRACE_SEQ.clear()
+        _CEV_SEEN_SEQ.clear()
+        _CEV_SEQ_ARGS.clear()
 
 
 def _certificate(task: dict, twin_body: list, w: dict,
@@ -9862,29 +10283,22 @@ def lower(task: dict, body: list, witness: dict | None = None,
     env = {p["name"]: p["type"] for p in task["params"]}
     env[ret] = rett
 
-    for f in task.get("spec_funs", []):
-        if f["result"] == "seq":
-            # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a named
-            # abstain, SPEC.md's rule for a kernel that cannot state a
-            # construct. This lowering models every seq as a C buffer
-            # (`int *s, integer s_n`, the module docstring's seq value
-            # machinery) and states a spec_fun as an ACSL logic function
-            # over that buffer (`spec_fun_acsl`); a logic function has no
-            # buffer to return, and every `==`/`len`/`at` site on a seq
-            # value here is a buffer comparison or read, so the result
-            # would need ACSL's own `\list<integer>` (`\Nil`, `\Cons`,
-            # `^`, `\nth`, `\length`; ACSL manual, "Logic specifications",
-            # frama-c.com/download/acsl.pdf) and a bridge predicate
-            # between a buffer and a `\list` at every such site. That
-            # bridge is the open design (t/FEATURES-SEQFUN-2026-09-27.md);
-            # until it is measured, the column abstains by name rather
-            # than emit an obligation WP cannot state.
-            raise NotImplementedError(
-                f"framac: spec_fun {f['name']!r} returns a seq; this "
-                "lowering models a seq as a C buffer (int *, integer n) and "
-                "an ACSL logic function cannot return one (the \\list "
-                "route is not built; SPEC.md \"Seq-valued spec_funs (v1)\")")
-
+    # SPEC.md "Seq-valued spec_funs (v1)", the \list route (2026-09-27):
+    # a seq-valued spec_fun is stated as an ACSL logic function over ACSL's
+    # OWN list type, `\list<integer>` (`spec_fun_acsl`'s own new branch),
+    # not the buffer model this lowering otherwise gives every seq VALUE.
+    # `_seq_len_render`/`_seq_at_render`/`defs()` grew a `call` case each
+    # (their own section comments) so `==`/`len`/`at` on such a call
+    # bridge to the call's own `\length`/`\nth` rather than a buffer's
+    # `_n` field/index -- element-wise equality over ACSL's built-in list
+    # operators is the bridge, needing no `predicate` symbol of its own.
+    # What the route does NOT reach still abstains by name, at the exact
+    # site that cannot state it (`list_term`'s own refusal for a spec_fun
+    # BODY shape outside its literal/`+`/`ite`/call/slice-of-buffer
+    # coverage; `seq_var`'s pre-existing refusal for a seq-valued call
+    # reaching a POSITION only a bare seq variable was ever accepted at,
+    # e.g. a seq-typed spec_fun PARAMETER) -- no wholesale refusal is
+    # raised here any more merely because a spec_fun's result is "seq".
     funs = {}
     for f in task.get("spec_funs", []):
         # "executable" (framac-closure, 2026-09-14): whether this
@@ -9911,6 +10325,16 @@ def lower(task: dict, body: list, witness: dict | None = None,
     # file when the unconditional header emission reached it.
     for f in task.get("spec_funs", []):
         if any(p["type"] == "seq" for p in f["params"]):
+            continue
+        if f["result"] == "seq":
+            # The \list route (2026-09-27): a C mirror can only return an
+            # `int` (`_spec_fun_c`'s own body, `int {name}_c(...)`), never
+            # a `\list<integer>`, so a seq RESULT is never eligible here --
+            # defense in depth alongside the seq-PARAM check just above,
+            # unexercised today (every seq-valued spec_fun this pass
+            # measures, `dbl`/`tl`, already has a seq PARAM too, so the
+            # check above already excludes it), kept for a spec_fun this
+            # pass has not measured, a seq result with no seq param.
             continue
         callees = _called_funs(f["body"]) - {f["name"]}
         if not all(c in funs and funs[c]["executable"] for c in callees):
@@ -10109,6 +10533,10 @@ def lower(task: dict, body: list, witness: dict | None = None,
         header.append(T_WORDCOUNT_ACSL.rstrip("\n"))
     if _has_countfind(task) or _has_countfind(body):
         header.append(T_STRFIND_ACSL.rstrip("\n"))
+    if _has_seq_slice_sf(task):
+        header.append(T_SEQ_OF_RANGE_ACSL.rstrip("\n"))
+    if _has_seq_result_sf(task):
+        header.append(T_SEQ_LIST_LEMMAS_ACSL.rstrip("\n"))
     # WITHHELD DEFINITION (2026-09-11, ROADMAP 13.4, framac-axiom): a
     # "measure"-kind witness names, in `_site`, the exact spec_fun whose
     # own `decreases` the harness caught failing at a concrete input
