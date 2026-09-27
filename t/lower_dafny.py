@@ -2507,7 +2507,13 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         lines = [STRLIB_PRELUDE.strip("\n"), ""]
 
     for f in task.get("spec_funs", []):
-        ps = ", ".join(f"{p['name']}: {TYPES[p['type']]}"
+        # 2026-09-27 (t/FEATURES-TRACK.md, nested string sequences): a
+        # spec_fun PARAMETER may be a nested seq (`{"seq": "seq"}`, SPEC.md
+        # "Nested sequences (v1)"), which `dafny_type` spells and the flat
+        # `TYPES` table cannot (it raised "unhashable type: 'dict'" on the
+        # lifted `seq<string>` helpers, 7 methods of the 2026-09-27
+        # re-lift); a flat type prints exactly as before.
+        ps = ", ".join(f"{p['name']}: {dafny_type(p['type'])}"
                        for p in f["params"])
         lines.append(f"function {f['name']}({ps}): {TYPES[f['result']]}")
         lines.append(f"  decreases {expr(f['decreases'], self_name)}")

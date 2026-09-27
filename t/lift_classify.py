@@ -158,6 +158,13 @@ def _is_char(t: Optional[Type]) -> bool:
     return t is not None and t.kind == "char"
 
 
+def _type_text(t: Type) -> str:
+    """A type's Dafny-like spelling for a refusal token (`seq<string>`)."""
+    if t.args:
+        return f"{t.kind}<{', '.join(_type_text(a) for a in t.args)}>"
+    return t.kind
+
+
 def _is_seq_of_char(t: Optional[Type]) -> bool:
     # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code points
     # (v1)"): `seq<char>` written that way is `string` by another name
@@ -2672,6 +2679,17 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # this widening touches only the shape decision 1 already trusts.
     for d in closure:
         if isinstance(d, FunctionDecl):
+            # 2026-09-27 (t/FEATURES-TRACK.md, strings): a t spec_fun's result
+            # is int or bool (SPEC.md, `"result": "int"|"bool"`), so a closure
+            # function returning a `string`/`seq<..>`/anything else cannot lift
+            # and refuses here by name; before this it was lifted with an int
+            # result and failed check_wf ("body type != result") one stage
+            # later, the same outcome under a misleading name (135 methods of
+            # the 2026-09-26 lift). A `char` result is an int (row 28).
+            if (not d.is_predicate and d.ret_type is not None
+                    and not (d.ret_type.kind in ("int", "nat", "char"))):
+                issues.append((d.line, "function-result",
+                               f"{d.name or '?'}:{_type_text(d.ret_type)}"))
             own_array_names = {p.name for p in d.params
                                 if p.type is not None and p.type.kind == "array"
                                 and not p.type.nullable and _is_array_of_int(p.type)}
