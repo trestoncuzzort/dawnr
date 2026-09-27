@@ -317,3 +317,76 @@ Predictions:
   within 1 of B's best-verdict re-analysis.
 - Call budget, arm A: within 1 of its own re-analysis on every count (it
   rarely makes a third call).
+
+### Second look: results
+
+`chat_eval.py --rescore` under the first look's own rule (`--answer last`)
+reproduces every number of the A seed-1337 evaluation exactly, so the
+re-analysis differs from the first look only by the answer rule.
+
+| mean of seeds 1337 / 1338 / 1339 | A last | A best | B last | B best | A budget | B budget |
+|---|---|---|---|---|---|---|
+| **pass all examples, 133 prompts** | 16.3 | 16.3 | 18.7 | 18.7 | 16.3 | 18.3 |
+| dev well formed | 22.0 | 24.0 | 5.0 | **27.7** | 24.0 | 26.0 |
+| dev tests passed | 0 | 0 | 0.7 | 0.7 | 0 | 0.7 |
+| dev answers that ended | 92.0 | 92.0 | 0.7 | 0.7 | 92.3 | **81.3** |
+| val well formed | 22.7 | 23.0 | 18.7 | 24.0 | 23.0 | 23.3 |
+| val exact proved program | 6.3 | 6.3 | 7.0 | 7.0 | 6.3 | 7.0 |
+| val answers that ended | 33 | 33 | 18.0 | 18.0 | 33 | 31.0 |
+
+("last" and "best" are the first look's rows under each answer rule, grammar
+on; "budget" is the new generation with two calls at most and best verdict.)
+
+- **Answer rule, arm A: held.** Dev well formed with the grammar goes back to
+  24.0, its grammar-off value; with best verdict on both sides the grammar
+  rule passes (ended inside a call 0, primary 0, dev well formed 0).
+- **Answer rule, arm B: held.** Dev well formed from 5.0 to 27.7, now above
+  A's 24.0; B's retries were writing well-formed programs all along, the last
+  one was just cut off. The primary does not move (18.7; predicted 19 to 20),
+  because a program that passes every example already ended its answer.
+- **Call budget, arm B: mostly held.** 81 of 100 dev answers end (predicted
+  at least 85: missed; about 9 run out of tokens inside the second call and
+  7 in text after the third call was refused), 31 of 33 validation answers
+  (predicted at least 30). Pass all examples within 1 of the re-analysis.
+  B makes exactly two calls on about 90 of 100 dev problems.
+- **Call budget, arm A: held**, within 1 of its re-analysis everywhere.
+- **The repair rule, applied to both variants: still INCONCLUSIVE.** Under
+  best verdict the primary is unchanged (A 16/16/17, B 17/20/19, p 1/10) and
+  the guards now pass (dev well formed +3.7, val exact +0.7). Under the
+  budget, B's seed 1337 falls to 16 (a validation answer whose third call had
+  repaired it) and p is 1/5. Three seeds a side with one tie cannot reach
+  p 0.05: the effect, if real, is about 2 prompts in 133, and three seeds
+  cannot separate that from seed noise.
+
+What the second look settles: the collapse in the first look was the answer
+rule and the missing stop, not a loss of skill. What it does not settle is
+whether repair conversations raise the number of prompts whose answer passes
+its examples; that needs more seeds.
+
+## A third look: fresh seeds (registered before the runs)
+
+- **Recipe:** arms A and B exactly as above (same conversations, same repair
+  file, same mid recipe) at **six fresh seeds, 1340 to 1345**, none of which
+  has been trained. Evaluated once each: grammar on, a budget of two calls,
+  best-verdict answer, 800 tokens, 100 dev problems and 33 validation
+  conversations (`chat_eval.py --grammar --max-calls 2 --answer best-verdict`).
+- **Prediction:** B above A on pass all examples over the 133 prompts by
+  about 2 (range 1 to 3) on the mean of six seeds; dev well formed within 5
+  of A either way; dev tests passed 0 to 1 per seed in both arms; B's dev
+  answers end on at least 75 of 100.
+- **Decision:** the same repair rule on the six fresh seeds alone (the three
+  seeds above are not pooled in, since they chose this variant): compare_arms
+  ADOPT (exact one-sided permutation p at most 0.05 and the bootstrap upper
+  bound of P(B > A) above 0.75) and B losing no more than 2 on the mean in dev
+  well formed or validation exact. If it passes, repair conversations become
+  the mid stage's default data with the budget and best-verdict answer as the
+  evaluation's default; if not, they stay off by default and the note says
+  the effect is not distinguishable from zero at this size.
+
+## The registered decisions, applied
+
+The grammar failed its registered rule (dev well formed -2), so the engine's
+grammar is **off by default** (`Engine(grammar=False)`, `chat_eval.py
+--grammar` to turn it on); it passes post hoc together with the best-verdict
+answer, which is where the third look uses it. Repair conversations are off
+by default (`dawnr_pipeline.py --extra-conversations` adds them).
