@@ -201,25 +201,26 @@ file or does not state it):
 | framac | a ghost C function with an ACSL contract | a ghost call statement | a ghost-code assertion |
 | fstar | a `Lemma` (`let rec` with `decreases` for an induction) with a conjunctive `SMTPat` over the spec_fun calls in its ensures | nothing: the pattern hands the proved fact to Z3 | `assert` |
 | lean | a theorem, the skeleton as `by_cases`/`have`, closed by grind, well-founded recursion for an induction, `#print axioms` audited | nothing: `grind_pattern` hands it to grind | `have .. := by grind` |
-| rocq | not stated in v1 | removed (a no-op) | n/a |
+| rocq (2026-09-27, `lower_rocq.py`'s LEMMAS section; before it: not stated, the call removed) | a `Theorem tl_<l>` proved from the skeleton by the file's own automation, a recursive one by induction on a nat fuel bounding its `decreases` (the encoding every spec_fun and self-recursive task already has); the spec_fun applications its ensures names are unfolded once each first (Dafny's fuel of one) | `pose proof (tl_l args) as H; t_feed H` in the proof whose goal covers the call (the theorem; the loop lemma for a loop-body call), each premise discharged where `t_dis` proves it and left as an implication otherwise; a body with no site (self-recursion, nested or multiple loops) states none of the lemmas, as before | `assert (..) by t_dis`, a proved cut |
 
 Fixtures `t/lemmas/*.t` and seeded-fault probes `t/lemmas_probe/*.t`, one
 kernel at a time on the desktop (real / twin):
 
 | | dafny | verus | spark | framac | lean | rocq | fstar |
 |---|---|---|---|---|---|---|---|
-| pow2_pos (induction over a recursive spec_fun) | verified / refuted | verified / refuted | verified / refuted | abstain (a spec_fun in executable position) | verified / refuted | unproved / refuted | verified / refuted |
+| pow2_pos (induction over a recursive spec_fun) | verified / refuted | verified / refuted | verified / refuted | abstain (a spec_fun in executable position) | verified / refuted | verified / refuted (unproved / refuted before 2026-09-27's LEMMAS section) | verified / refuted |
 | sq_bound (a nonlinear fact) | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| sum_loop (an induction step used in a loop) | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted |
+| sum_loop (an induction step used in a loop) | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted (unproved / refuted before) | verified / refuted |
 | false_lemma (false at its base case) | unproved | unproved | timeout | abstain | unproved | unproved | unproved |
 | false_arith (a false nonlinear fact) | unproved | unproved | refuted | timeout | unproved | unproved | unproved |
 | circular (`k == k + 1` by calling itself) | unproved | unproved | malformed | timeout | unproved | unproved | unproved |
-| false_assert (a false step, correct program) | unproved | unproved | verified | timeout | unproved | verified | unproved |
-| false_nonlinear_step (the same, nonlinear, under a guard) | unproved | unproved | verified | timeout | unproved | verified | unproved |
+| false_assert (a false step, correct program) | unproved | unproved | verified | timeout | unproved | unproved (verified before, the step unstated) | unproved |
+| false_nonlinear_step (the same, nonlinear, under a guard) | unproved | unproved | verified | timeout | unproved | unproved (verified before, the step unstated) | unproved |
 
 No kernel verifies a program through a false lemma. The two `verified` cells
-on the last two rows are correct programs whose false step those two kernels
-do not state. Every committed task, the methods fixtures, 98 lifted tasks and
+on the last two rows are SPARK's: correct programs whose false step an
+expression function cannot state (Rocq's two read the same until its lemmas
+were stated, below). Every committed task, the methods fixtures, 98 lifted tasks and
 the 66 conformance items lower byte-identically, real and twin, in all seven
 kernels; `t/conformance.py` on the grading machine: 2 FAIL cells before and
 after (the same two Frama-C timeouts). Tests (no prover): `t/test_lemmas.py`
