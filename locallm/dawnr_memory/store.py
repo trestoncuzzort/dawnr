@@ -21,7 +21,9 @@ cannot promise is said plainly in DAWNR-MEMORY.md: unlinking is not wiping the m
 manual: journaling and copy-on-write file systems and SSD wear levelling keep old blocks).
 
 Owner-only. Folders are made with mode 0o700 and files opened with 0o600, then set to exactly that (the umask can
-only take bits away). On Windows os.chmod sets only the read-only flag, and os.mkdir honours 0o700 from Python 3.13
+only take bits away); a person's folders found looser are tightened, while a memory folder an operator pointed at
+and dawnr did not make keeps its permissions (dawnr does not change a folder that is not its own). On Windows
+os.chmod sets only the read-only flag, and os.mkdir honours 0o700 from Python 3.13
 by giving the folder an access list for the current user and administrators (docs.python.org/3/library/os.html,
 os.mkdir and os.chmod); on older Pythons the folder inherits the access list of %LOCALAPPDATA%, which is per-user.
 
@@ -140,12 +142,17 @@ def memory_root(env=None, platform: str | None = None, home: str | Path | None =
     return data_root(env, platform, home) / "memory"
 
 
-def _private_dir(path: Path) -> None:
-    """Make `path` an owner-only folder, or refuse a link, a file or another account's folder in its place."""
+def _private_dir(path: Path, tighten: bool = True) -> None:
+    """Make `path` an owner-only folder, or refuse a link, a file or another account's folder in its place.
+
+    An existing folder is tightened to owner-only when `tighten` is set (a person's folder and its kind folders,
+    which are dawnr's by name); the memory root is tightened only if dawnr made it, so a root an operator points
+    at an existing folder of theirs keeps its permissions (the person folders inside it are owner-only anyway)."""
     try:
         os.mkdir(path, DIR_MODE)
+        made = True
     except FileExistsError:
-        pass
+        made = False
     st = os.lstat(path)
     if stat.S_ISLNK(st.st_mode):
         raise StoreError(f"{path} is a symbolic link; dawnr's memory never follows one")
@@ -154,7 +161,7 @@ def _private_dir(path: Path) -> None:
     if os.name == "posix":
         if st.st_uid != os.getuid():
             raise StoreError(f"{path} belongs to another account")
-        if stat.S_IMODE(st.st_mode) != DIR_MODE:
+        if (made or tighten) and stat.S_IMODE(st.st_mode) != DIR_MODE:
             os.chmod(path, DIR_MODE)
 
 
@@ -174,7 +181,7 @@ def _fsync_dir(folder: Path) -> None:
         os.close(fd)
 
 
-def _write_file(path: Path, payload: bytes, tag: str) -> None:
+def write_owner_only(path: Path, payload: bytes, tag: str) -> None:
     """Write `payload` to `path` atomically: an owner-only temporary file, synced, then renamed over it."""
     folder = path.parent
     tmp = folder / f"{TMP}{tag}-{secrets.token_hex(4)}"
@@ -239,7 +246,7 @@ class MemoryStore:
 
     def _ensure(self) -> None:
         self.root.parent.mkdir(parents=True, exist_ok=True)
-        _private_dir(self.root)
+        _private_dir(self.root, tighten=False)
         _private_dir(self.dir)
         for folder in FOLDERS.values():
             _private_dir(self.dir / folder)
@@ -376,7 +383,7 @@ class MemoryStore:
         if len(payload) > MAX_FILE:
             raise ValueError(f"record {record_id} is over {MAX_FILE} bytes")
         self._ensure()
-        _write_file(path, payload, record_id)
+        write_owner_only(path, payload, record_id)
         return record
 
     def add(self, kind: str, text: str, *, origin: str = "person", confidence: float = 1.0,
@@ -444,8 +451,8 @@ class MemoryStore:
                 raise ValueError(f"{key} is true or false")
             out[key] = value
         self._ensure()
-        _write_file(self.dir / SETTINGS_FILE, (json.dumps(out, indent=1, sort_keys=True) + "\n").encode("utf-8"),
-                    "settings")
+        payload = (json.dumps(out, indent=1, sort_keys=True) + "\n").encode("utf-8")
+        write_owner_only(self.dir / SETTINGS_FILE, payload, "settings")
         return out
 
     # ----------------------------------------------------------- forgets --

@@ -61,6 +61,15 @@ def disk_text(folder) -> str:
     return "\n".join(chunks).casefold()
 
 
+def tk_root(test):
+    """A Tk root, or the test skipped when this Python's Tk cannot start (a display alone is not enough)."""
+    import tkinter as tk
+    try:
+        return tk.Tk()
+    except tk.TclError as e:
+        test.skipTest(f"no usable Tk: {str(e).splitlines()[0]}")
+
+
 class Temp(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -111,6 +120,12 @@ class StoreTests(Temp):
         os.chmod(loose, 0o755)
         MemoryStore(self.root, "bob")
         self.assertEqual(stat.S_IMODE(os.stat(loose).st_mode), 0o700)     # an existing loose folder is tightened
+        theirs = Path(self._tmp.name) / "operator-folder"                  # but not one dawnr did not make
+        theirs.mkdir()
+        os.chmod(theirs, 0o755)
+        carol = MemoryStore(theirs, "carol")
+        self.assertEqual(stat.S_IMODE(os.stat(theirs).st_mode), 0o755)
+        self.assertEqual(stat.S_IMODE(os.stat(carol.dir).st_mode), 0o700)
 
     def test_records_round_trip_and_the_controls(self):
         s = self.store()
@@ -147,6 +162,18 @@ class StoreTests(Temp):
             json.dumps({"schema": 1, "id": "f-0000000000000000", "kind": "fact", "text": "x"}), encoding="utf-8")
         self.assertEqual(len(s.records()), 1)
         self.assertEqual(len(s.problems), 3)
+
+    def test_hand_edited_fields_do_not_break_recall_or_extraction(self):
+        s = self.store()
+        r = s.add("fact", "lives in Lisbon", origin="rules", slot="location", evidence="I live in Lisbon",
+                  source_session="s0")
+        r.update(confidence="very", seen="twice", sessions="s0", last_seen="yesterday")
+        s.put(r)
+        self.assertIn("lives in Lisbon", recall(s, "Lisbon", budget=1000).text)
+        report = end_session(s, conversation("I live in Lisbon."), session_id="s1", now=NOW)
+        self.assertEqual(report.reinforced, [r["id"]])
+        again = s.get(r["id"])
+        self.assertEqual((again["seen"], again["sessions"]), (2, ["s1"]))
 
     @unittest.skipUnless(hasattr(os, "symlink"), "symbolic links")
     def test_links_are_refused_not_followed(self):
@@ -701,7 +728,7 @@ class ChatPaneShowsMemory(Temp):
         import tkinter as tk
         import chat_pane
         import look
-        root = tk.Tk()
+        root = tk_root(self)
         try:
             parent = tk.Frame(root)
             parent.grid()
@@ -733,6 +760,50 @@ class ChatPaneShowsMemory(Temp):
             memory.invoke()
             press("Save")
             self.assertEqual(json.loads(pane.config_path.read_text(encoding="utf-8")), {"offline": True})
+        finally:
+            root.destroy()
+
+    @unittest.skipUnless(os.environ.get("DISPLAY") or sys.platform in ("win32", "darwin"),
+                         "no display; run under xvfb-run -a")
+    def test_the_memory_window_gives_the_person_every_control(self):
+        import queue
+        import tkinter as tk
+        from unittest import mock
+        import chat_pane
+        import look
+        ann = self.store("ann")
+        end_session(ann, conversation("I live in Lisbon. I prefer tabs to spaces."), session_id="s1", now=NOW)
+        root = tk_root(self)
+        try:
+            parent = tk.Frame(root)
+            parent.grid()
+            pane = chat_pane.ChatPane(parent, look.palette(dark=False), queue.Queue(),
+                                      checkpoint_dir=Path(self._tmp.name) / "model", on_status=lambda say: None)
+            chat_pane.save_harness_config(pane.config_path, {"memory": {"root": str(self.root), "person": "ann"}})
+            w = pane.open_memory()
+            self.assertEqual(w.store.dir, ann.dir)
+            self.assertEqual(set(w.tree.get_children()), {r["id"] for r in ann.records()})
+            fact = next(r["id"] for r in ann.records(("fact",)))
+            self.assertEqual(w.correct(fact, "lives in Porto")["text"], "lives in Porto")
+            self.assertEqual(w.tree.item(fact)["values"][2], "lives in Porto")
+            note = w.pin("Answer in short sentences.")
+            self.assertIn(note["id"], w.tree.get_children())
+            w.tree.selection_set([fact, note["id"]])
+            w._forget_selected()
+            self.assertEqual({r["kind"] for r in ann.records()}, {"preference", "episode"})
+            out = w.export(Path(self._tmp.name) / "out" / "ann.json")
+            self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["person"], "ann")
+            w.set_switch("recall", False)
+            self.assertFalse(ann.settings()["recall"])
+            self.assertGreater(w.forget_everything(), 0)
+            self.assertEqual(w.tree.get_children(), ())
+            self.assertFalse(os.path.lexists(ann.dir))
+            w.win.destroy()
+            with mock.patch.dict(os.environ, {"DAWNR_DATA_DIR": str(Path(self._tmp.name) / "data")}):
+                chat_pane.save_harness_config(pane.config_path, {"offline": True})     # memory off: still readable
+                w = pane.open_memory()
+                self.assertEqual(w.store.person, "default")
+                self.assertTrue(str(w.store.dir).startswith(str(Path(self._tmp.name) / "data")))
         finally:
             root.destroy()
 

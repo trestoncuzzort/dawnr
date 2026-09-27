@@ -123,6 +123,15 @@ def _seen(record: dict) -> float:
     return 0.0
 
 
+def confidence_of(record: dict) -> float:
+    """A record's confidence, 0.5 when a hand-edited file holds something that is not a number from 0 to 1."""
+    try:
+        value = float(record.get("confidence", 0.5))
+    except (TypeError, ValueError):
+        return 0.5
+    return value if 0.0 <= value <= 1.0 else 0.5
+
+
 def _minmax(xs: list[float]) -> list[float]:
     lo, hi = min(xs), max(xs)
     if hi - lo <= 1e-12:
@@ -139,7 +148,7 @@ def rank(records: list[dict], query: str = "", *, now: float | None = None, half
     now = time.time() if now is None else now
     relevance = BM25([terms(r.get("text", "")) for r in records]).scores(terms(query))
     recency = [0.5 ** (max(0.0, now - _seen(r)) / 86400.0 / max(half_life_days, 1e-9)) for r in records]
-    importance = [float(r.get("confidence", 0.5) or 0.0) for r in records]
+    importance = [confidence_of(r) for r in records]
     w_rec, w_imp, w_rel = weights
     score = [w_rec * a + w_imp * b + w_rel * c
              for a, b, c in zip(_minmax(recency), _minmax(importance), _minmax(relevance))]

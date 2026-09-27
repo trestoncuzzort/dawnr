@@ -484,6 +484,8 @@ class ChatPane:
                                                 ("Not this", lambda: self._learn_note(self.learning.thumbs(False))),
                                                 ("Correct…", self.open_correct)), start=5):
                 _Button(row, C, label, act).grid(row=0, column=col, padx=(look.SPACE.item, 0))
+        _Button(row, C, "Memory…", self.open_memory).grid(
+            row=0, column=8, padx=(look.SPACE.item, 0))
 
     # ------------------------------------------------------------ status
     def refresh(self) -> look.Say:
@@ -866,6 +868,15 @@ class ChatPane:
         """What learning kept, said in the transcript; nothing is remembered silently."""
         if sentence:
             self._insert(f"[{sentence}]\n", ("error",) if sentence.startswith("Learning is on, but") else ())
+
+    # ---------------------------------------------------------- memory
+    def open_memory(self):
+        """What dawnr remembers of the person, and their controls over it (dawnr_memory/window.py)."""
+        from dawnr_memory import window                            # noqa: PLC0415
+        config = load_harness_config(self.config_path) if self.config_path else dict(DEFAULT_CONFIG)
+        return window.open_for_config(self.transcript, self.C, config,
+                                      self.config_path.parent if self.config_path else None,
+                                      button=_home()._Button, font=SANS)
 
     # ------------------------------------------------------------- text
     def _insert(self, text: str, tags: tuple[str, ...]):

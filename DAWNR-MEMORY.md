@@ -73,8 +73,9 @@ another memory folder. A person id is 1 to 64 of `a-z 0-9 _ -`, lowercased (so
 reserves.
 
 - **Owner-only.** Every folder is mode 0700 and every file 0600 where the OS
-  has modes, set exactly (an existing looser folder is tightened); a folder
-  owned by another account is refused.
+  has modes, set exactly (a person's folders found looser are tightened; a
+  memory folder the operator pointed at, which dawnr did not make, keeps its
+  own permissions); a folder owned by another account is refused.
 - **One person per store.** A `MemoryStore` is bound to one person when it is
   made. Every path it touches is built from that person's validated id, a
   kind's fixed folder name and a record id that must match `[efpn]-[0-9a-f]{16}`:
@@ -204,6 +205,7 @@ span in it, so later turns see the same memory without recalling again.
 | keep one conversation out | say "off the record" or "don't remember this conversation" in it, or run the chat with `--no-memory` |
 | forget in conversation | "forget that I live in Lisbon" |
 | turn memory on in the window | Settings, "Remember me across conversations" |
+| do all of the above in the window | the chat card's Memory... button (`dawnr_memory/window.py`): every record, Forget selected, Correct..., Pin a note..., Export..., Forget everything... (asked first), and both switches |
 
 Every session ends with one line for the person (never for the model): what
 was remembered, with ids to forget it by, what was updated, and how many
@@ -233,8 +235,10 @@ hooks already place them. The events are available to any operator hook:
 `--harness`; `--no-memory` runs a session that recalls nothing and writes
 nothing. The window (`chat_pane.py`) keeps one harness session per
 conversation, saves after every reply, shows the memory span as a collapsed
-block labelled "remembered from earlier conversations", and shows the
-harness's messages to the person. The audit log records `SessionStart` and
+block labelled "remembered from earlier conversations", shows the harness's
+messages to the person, and opens the memory window from its Memory...
+button (for the default person when memory is off, so old memory can still be
+read and erased). The audit log records `SessionStart` and
 `SessionEnd` by their source and reason only, never the recalled text.
 
 ## 7. Threat model
