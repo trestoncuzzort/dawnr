@@ -28,6 +28,7 @@ class PaneLearning:
         self.root = Path(root)
         self.recorder: Recorder | None = None
         self.model_identity: dict | None = None
+        self.attached_for: str | None = None        # whose adapter state the model is in (None: learning off)
 
     # ----------------------------------------------------------- settings --
     def settings(self) -> dict:
@@ -59,14 +60,28 @@ class PaneLearning:
         return self.recorder
 
     # -------------------------------------------------------------- hooks --
-    def attach_adapter(self, model, checkpoint_dir: Path) -> str | None:
-        """After the model loads: put this person's fresh adapter on it, if learning is on and one exists.
+    def sync(self, model, checkpoint_dir: Path) -> str | None:
+        """Before every reply: make the model carry exactly what the settings say, and say so when it changes.
 
-        Replies are recorded only after this has identified the base (an answer
-        is kept with the weights that wrote it), so a window whose model could
-        not be identified records nothing rather than something unattributed."""
-        if not self.enabled():
+        Learning on for a person: that person's fresh adapter is attached (or none,
+        if there is none yet), and replies are recorded for them. Learning off, or
+        another name: the previous person's adapter comes off first. Replies are
+        recorded only once the base is identified (an answer is kept with the
+        weights that wrote it), so a window whose model cannot be identified
+        records nothing rather than something unattributed."""
+        settings = self.settings()
+        want = settings["person"] if settings["enabled"] else None
+        if want == self.attached_for:
             return None
+        self.recorder, self.model_identity, self.attached_for = None, None, None
+        try:
+            from model import has_lora, remove_lora
+            if has_lora(model):
+                remove_lora(model)
+        except Exception:                                        # noqa: BLE001  (a stand-in model has no adapter)
+            pass
+        if want is None:
+            return "Learning is off: no adapter is in use and nothing new is remembered."
         try:
             from . import adapters
             identity = adapters.base_identity(checkpoint_dir)
@@ -75,7 +90,7 @@ class PaneLearning:
             status = adapters.attach(model, rec.store, identity)
         except Exception as e:                                   # noqa: BLE001  (said, never silent)
             return f"Learning is on, but this model could not be identified, so nothing is recorded: {e}"
-        self.model_identity = identity
+        self.model_identity, self.attached_for = identity, want
         return adapters.describe(status)
 
     def user_turn(self, text: str) -> str | None:
