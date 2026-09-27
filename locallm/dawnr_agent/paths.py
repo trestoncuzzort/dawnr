@@ -69,8 +69,6 @@ DEFAULT_SECRETS = (".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker", ".pas
                    "*.kdbx", "id_rsa*", "id_dsa*", "id_ecdsa*", "id_ed25519*", "credentials", "credentials.json")
 # read but never written
 DEFAULT_PROTECT = (".git",)
-# directories under the home directory whose files are also secret by identity (a hard link keeps the inode)
-HOME_SECRET_DIRS = (".ssh", ".gnupg", ".aws", ".password-store")
 
 
 class PathRefused(ValueError):
@@ -480,3 +478,30 @@ def identities(paths, *, max_files: int = 2000, recurse: bool = False) -> set:
                 if seen >= max_files:
                     break
     return out
+
+
+def home_secret_identities(home, names, *, max_files: int = 2000) -> set:
+    """(st_dev, st_ino) of every entry directly under the home directory that one of `names` names, by exact
+    spelling or by glob (case-insensitively, like secret_reason), plus the files beneath a matching directory
+    (bounded, as identities() does): the identity twin of the by-name check, so a hard link into a root under
+    an innocent name is refused even when that name itself is not on the list (CWE-59, cwe.mitre.org: a link
+    resolves a checked name to an unintended file; stat(2), man7.org: st_dev+st_ino identify a file regardless
+    of the name used to reach it, so they are unchanged by the second name a hard link adds).
+
+    A literal name (no `*`, `?` or `[`) is looked up directly, existing or not, exactly as the four hardcoded
+    directories were before this covered the rest of DEFAULT_SECRETS. A glob is matched against one scandir()
+    of the home directory's own top level rather than a walk of the whole home directory, which is where a
+    person's dotfiles and credential files conventionally sit and where the fixed cost stays bounded."""
+    literal = [n for n in names if not re.search(r"[*?\[]", n)]
+    globs = [n.casefold() for n in names if re.search(r"[*?\[]", n)]
+    targets = [os.path.join(home, n) for n in literal]
+    if globs:
+        try:
+            entries = list(os.scandir(home))
+        except OSError:
+            entries = []
+        for e in entries:
+            cf = e.name.casefold()
+            if any(fnmatch.fnmatchcase(cf, g) for g in globs):
+                targets.append(e.path)
+    return identities(targets, recurse=True, max_files=max_files)
