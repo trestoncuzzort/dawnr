@@ -12,7 +12,14 @@ program between the tool tokens, forces its answer back with mask 0, and
 matches plain greedy decoding elsewhere; a tiny CPU chat run trains, saves a
 checkpoint load_checkpoint reads, resumes only on identical inputs; the
 driver skips a stage only for identical inputs; the report reads what stages
-wrote. Needs torch; CPU only, seconds.
+wrote. The repair track: a draft marked "train": false is context while the
+call tokens around it stay targets; the engine's chat-token grammar closes a
+call the model would have ended inside (and the tool then runs), counts the
+override, and leaves a completed row inert; repair conversations come only
+from failing drafts of training conversations, keep a passing draft only when
+it is the proved program, and end with the proved program under a passing
+verdict; the eval's judge tells acting on a failed check from repeating it.
+Needs torch; CPU only, seconds.
 """
 import json
 import string
@@ -101,6 +108,25 @@ class Rendering(unittest.TestCase):
         text = self.tok.decode([i for i, m in zip(ids, mask) if m and i < 10 ** 6
                                 and i not in {sp(n) for n in chat.CHAT_TOKENS}])
         self.assertEqual(text, "y := 2;")
+
+    def test_unsupervised_draft_keeps_its_call_tokens_supervised(self):
+        c = {"messages": [{"role": "user", "content": "Double it"}, {"role": "assistant", "content": [
+            {"type": "t", "text": "bad", "train": False}, {"type": "t_output", "text": "parses: no"},
+            {"type": "t", "text": "good"}, {"type": "t_output", "text": "parses: yes"}]}]}
+        ids, mask = chat.render_conversation(self.tok, c)
+        sp = lambda n: chat.special(self.tok, n)                         # noqa: E731
+        specials = {sp(n) for n in chat.CHAT_TOKENS}
+        self.assertEqual(self.tok.decode([i for i, m in zip(ids, mask) if m and i not in specials]), "good")
+        starts = [k for k, i in enumerate(ids) if i == sp(chat.T_START)]
+        ends = [k for k, i in enumerate(ids) if i == sp(chat.T_END)]
+        self.assertEqual([mask[k] for k in starts + ends], [1, 1, 1, 1])
+        self.assertEqual(mask[-1], 1)                                     # <|assistant_end|>
+        with self.assertRaises(ValueError):
+            chat.render_conversation(self.tok, {"messages": [c["messages"][0], {"role": "assistant", "content": [
+                {"type": "t", "text": "x"}, {"type": "t_output", "text": "o", "train": True}]}]})
+        with self.assertRaises(ValueError):
+            chat.render_conversation(self.tok, {"messages": [c["messages"][0], {"role": "assistant", "content": [
+                {"type": "t", "text": "x", "train": "no"}]}]})
 
     def test_system_refused_and_completion_primed(self):
         with self.assertRaises(ValueError):
@@ -267,6 +293,208 @@ class EngineTests(unittest.TestCase):
         self.assertEqual([c[0] for c in rows], [c[1] for c in rows])          # the cache copied to both rows
         n = next((i for i, t in enumerate(want) if t >= tok.vocab_size - len(chat.CHAT_TOKENS)), len(want))
         self.assertEqual(got0[:n], want[:n])
+
+
+class TableModel(torch.nn.Module):
+    """Next-token logits from each row's own last token: table[last] = [(token, logit), ...]."""
+
+    def __init__(self, tok, table, block=512):
+        super().__init__()
+        self.w = torch.nn.Parameter(torch.zeros(1))
+        self.config = GPTConfig(vocab_size=tok.vocab_size, block_size=block, n_layer=1, n_head=1, n_embd=4)
+        self.tok, self.table = tok, table
+
+    def forward_cached(self, idx, cache=None, *, only_last=False):
+        logits = torch.full((idx.size(0), 1, self.tok.vocab_size), -1e9)
+        for r in range(idx.size(0)):
+            for token, logit in self.table.get(int(idx[r, -1]), []):
+                logits[r, 0, token] = logit
+        return logits, ()
+
+
+class Grammar(unittest.TestCase):
+    def setUp(self):
+        self.tok = chat.with_chat_tokens(char_tok())
+        sp = self.sp = lambda n: chat.special(self.tok, n)                # noqa: E731
+        self.y = self.tok.encode("y")[0]
+        # the first run's failure: after its one-token program the model prefers <|assistant_end|> to <|t_end|>
+        self.table = {sp(chat.ASSISTANT_START): [(sp(chat.T_START), 0.0)],
+                      sp(chat.T_START): [(self.y, 0.0)],
+                      self.y: [(sp(chat.ASSISTANT_END), 0.0), (sp(chat.T_END), -1.0)],
+                      sp(chat.OUTPUT_END): [(sp(chat.ASSISTANT_END), 0.0)],
+                      sp(chat.ASSISTANT_END): [(sp(chat.T_START), 0.0)]}
+        self.prompt = chat.render_for_completion(self.tok, {"messages": [{"role": "user", "content": "go"}]})
+
+    def run_engine(self, grammar, table=None, n=1, temperature=0.0):
+        from engine import Engine
+        seen = []
+        eng = Engine(TableModel(self.tok, table or self.table), self.tok, grammar=grammar,
+                     tool=lambda program, context: seen.append(program) or "parses: no")
+        cols = [col for col, _ in eng.generate(self.prompt, num_samples=n, max_tokens=60,
+                                               temperature=temperature, seed=3)]
+        return eng, seen, cols
+
+    def test_unmasked_engine_ends_inside_the_call(self):
+        eng, seen, _ = self.run_engine(grammar=False)
+        row = eng.rows[0]
+        self.assertTrue(row.completed and row.in_tool_block and row.ended_in_call)
+        self.assertEqual(seen, [])                                        # the tool never ran
+
+    def test_grammar_closes_the_call_and_the_tool_runs(self):
+        eng, seen, cols = self.run_engine(grammar=True)
+        row = eng.rows[0]
+        self.assertTrue(row.completed)
+        self.assertFalse(row.in_tool_block or row.ended_in_call)
+        self.assertEqual(seen, ["y"])
+        self.assertEqual(row.grammar_overrides, 1)
+        tokens = [c[0] for c in cols]
+        sp = self.sp
+        self.assertEqual(tokens[:3], [sp(chat.T_START), self.y, sp(chat.T_END)])
+        self.assertEqual(tokens[3], sp(chat.OUTPUT_START))
+        self.assertEqual(tokens[-1], sp(chat.ASSISTANT_END))
+
+    def test_output_and_turn_tokens_are_never_sampled(self):
+        from engine import Engine
+        eng = Engine(TableModel(self.tok, {}), self.tok)
+        table = eng.illegal_ids()
+        expect = {"t", "outside"} | ({"tool"} if chat.has_harness_tokens(self.tok) else set())
+        self.assertEqual(set(table), expect)                 # a tool state only with the harness tokens
+        inside, outside = table["t"], table["outside"]
+        sp = self.sp
+        for name in (chat.OUTPUT_START, chat.OUTPUT_END, chat.USER_START, chat.USER_END, chat.ASSISTANT_START):
+            self.assertIn(sp(name), inside)
+            self.assertIn(sp(name), outside)
+        self.assertIn(sp(chat.ASSISTANT_END), inside)
+        self.assertIn(sp(chat.T_START), inside)
+        self.assertNotIn(sp(chat.T_END), inside)
+        self.assertIn(sp(chat.T_END), outside)
+        self.assertNotIn(sp(chat.ASSISTANT_END), outside)
+
+    def test_harness_tool_calls_close_only_with_their_own_token(self):
+        from engine import Engine
+        tok = chat.with_harness_tokens(self.tok)
+        eng = Engine(TableModel(tok, {}), tok)
+        sp = lambda name: chat.special(tok, name)              # noqa: E731
+        table = eng.illegal_ids()
+        self.assertEqual(set(table), {"t", "tool", "outside"})
+        for state in table.values():
+            self.assertIn(sp(chat.UNTRUSTED), state)           # only ever forced
+        self.assertIn(sp(chat.TOOL_END), table["t"])            # a t call cannot close with the other closer
+        self.assertIn(sp(chat.T_END), table["tool"])
+        self.assertNotIn(sp(chat.TOOL_END), table["tool"])
+        for state in ("t", "tool"):                             # no nested calls, no ending inside one
+            self.assertIn(sp(chat.TOOL_START), table[state])
+            self.assertIn(sp(chat.T_START), table[state])
+            self.assertIn(sp(chat.ASSISTANT_END), table[state])
+        self.assertIn(sp(chat.TOOL_END), table["outside"])
+        self.assertNotIn(sp(chat.TOOL_START), table["outside"])
+
+    def test_a_completed_row_is_inert(self):
+        sp = self.sp
+        # a coin flip at the start: end at once, or call the tool; after its end a live row would call again
+        table = {**self.table, sp(chat.ASSISTANT_START): [(sp(chat.T_START), 0.0), (sp(chat.ASSISTANT_END), 0.0)],
+                 self.y: [(sp(chat.T_END), 0.0)]}
+        eng, seen, cols = self.run_engine(grammar=True, table=table, n=8, temperature=1.0)
+        firsts = cols[0]
+        quick = [i for i, t in enumerate(firsts) if t == sp(chat.ASSISTANT_END)]
+        slow = [i for i, t in enumerate(firsts) if t == sp(chat.T_START)]
+        self.assertTrue(quick and slow, "the seed should give both kinds of row")
+        for i in quick:
+            self.assertEqual(eng.rows[i].tool_calls, [])
+            self.assertTrue(all(c[i] == sp(chat.ASSISTANT_END) for c in cols))
+        self.assertEqual(len(seen), len(slow))
+
+
+class Repairs(unittest.TestCase):
+    def setUp(self):
+        self.convs = [dict(chat_data.conversation(PROGRAM, tool=False), split="train"),
+                      dict(chat_data.conversation(HEADED, tool=True), split="train"),
+                      dict(chat_data.conversation(PROGRAM.replace("double", "twice"), tool=False), split="val")]
+
+    def draft(self, index, sample, program):
+        import repair_data
+        user = self.convs[index]["messages"][0]["content"]
+        return {"index": index, "user_sha256": repair_data.sha256_text(user), "source": "s", "fold": 0,
+                "sample": sample, "draft": program, "verdict": t_tool.call(program, user) if program else None}
+
+    def test_repairs_passes_and_what_is_dropped(self):
+        import repair_data
+        wrong = PROGRAM.replace("y := 2 * x;", "y := x + 1;")                  # parses, fails its examples
+        broken = "t 1\ntask double(x: int) returns (y: int) {"
+        passes_not_proved = PROGRAM.replace("y := 2 * x;", "y := x + x;")
+        drafts = [self.draft(0, 0, wrong), self.draft(0, 1, wrong), self.draft(0, 2, broken),
+                  self.draft(0, 3, PROGRAM.replace("  ", "    ")), self.draft(1, 0, passes_not_proved),
+                  self.draft(1, 1, None), self.draft(1, 2, PROGRAM.replace("y := 2 * x;", "y := 3;"))]
+        rows, summary = repair_data.build(self.convs, drafts, max_repairs=1)
+        self.assertEqual(summary["repair_conversations"], 2)
+        self.assertEqual(summary["pass_conversations"], 1)
+        self.assertEqual(summary["passed_not_proved"], 1)
+        self.assertEqual(summary["repeated_failing_draft"], 1)
+        self.assertEqual(summary["repair_over_cap"], 1)                          # the broken draft: cap of 1
+        self.assertEqual(summary["no_program"], 1)
+        self.assertTrue(all(r["split"] == "train" for r in rows))
+        repair = next(r for r in rows if r["built"] == "repair" and r["draft_sample"] == 0)
+        parts = repair["messages"][1]["content"]
+        self.assertEqual([p["type"] for p in parts], ["t", "t_output", "t", "t_output"])
+        self.assertIs(parts[0]["train"], False)
+        self.assertEqual(parts[0]["text"], wrong)
+        self.assertIn("fail", parts[1]["text"])
+        self.assertEqual(parts[2]["text"], PROGRAM)
+        self.assertTrue(repair_data.verdict_ok(parts[3]["text"]))
+        self.assertEqual(chat.final_program(parts), PROGRAM.strip())
+        passed = next(r for r in rows if r["built"] == "pass")
+        self.assertEqual([p["type"] for p in passed["messages"][1]["content"]], ["t", "t_output"])
+        tok = chat.with_chat_tokens(char_tok())
+        chat.ConversationBatches(rows, tok, 2048, seed=0)                        # they render and fit
+
+    def test_only_training_conversations_and_their_own_prompts(self):
+        import repair_data
+        with self.assertRaises(ValueError):
+            repair_data.build(self.convs, [self.draft(2, 0, PROGRAM)])
+        stale = dict(self.draft(0, 0, PROGRAM), user_sha256="0" * 64)
+        with self.assertRaises(ValueError):
+            repair_data.build(self.convs, [stale])
+
+    def test_gate_and_context_drop_by_name(self):
+        import repair_data
+        wrong = PROGRAM.replace("y := 2 * x;", "y := x + 1;")
+
+        def gate(conv):
+            raise ValueError("cannot train: names a held-out id")
+        rows, summary = repair_data.build(self.convs, [self.draft(0, 0, wrong)], gate=gate)
+        self.assertEqual(rows, [])
+        self.assertEqual(len(summary["refused_by_gate"]), 1)
+        rows, summary = repair_data.build(self.convs, [self.draft(0, 0, wrong)], fits=lambda c: False)
+        self.assertEqual((rows, summary["over_context"]), ([], 1))
+
+    def test_folds_are_stable_and_first_program(self):
+        import repair_data
+        self.assertEqual(repair_data.fold_of(self.convs[0], 5), repair_data.fold_of(dict(self.convs[0]), 5))
+        self.assertEqual(repair_data.first_program([{"type": "text", "text": "a"}, {"type": "t", "text": "b"},
+                                                    {"type": "t", "text": "c"}]), "b\n")
+        self.assertEqual(repair_data.first_program([{"type": "text", "text": " a "}]), "a\n")
+        self.assertIsNone(repair_data.first_program([]))
+
+
+class Judge(unittest.TestCase):
+    def test_acted_repeated_repaired(self):
+        import chat_eval
+        user = "Example: double(3) == 6"
+        wrong = PROGRAM.replace("y := 2 * x;", "y := x + 1;")
+        fail, ok = t_tool.call(wrong, user), t_tool.call(PROGRAM, user)
+
+        def got(calls):
+            return {"program": calls[-1], "calls": calls, "tool_verdicts": [t_tool.call(c, user) for c in calls]}
+        acted = chat_eval.judge(got([wrong, PROGRAM]), user)
+        self.assertTrue(acted["acted_on_failure"] and acted["repaired"] and acted["examples_all_pass"])
+        self.assertFalse(acted["repeated_after_failure"])
+        same = chat_eval.judge(got([wrong, wrong]), user)
+        self.assertTrue(same["repeated_after_failure"] and same["got_failing_verdict"])
+        self.assertFalse(same["acted_on_failure"] or same["repaired"])
+        self.assertFalse(chat_eval.verdict_ok(fail))
+        self.assertTrue(chat_eval.verdict_ok(ok))
+        right_first = chat_eval.judge(got([PROGRAM]), user)
+        self.assertFalse(right_first["got_failing_verdict"] or right_first["repaired"])
 
 
 class Trainer(unittest.TestCase):
