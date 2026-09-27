@@ -2583,23 +2583,24 @@ method CharSeqLit() returns (r: seq<int>)
     assert char_task["body"][0]["assign"] == ["r", {"op": "seq", "args": [
         {"int": 97}, {"int": 98}]}]
 
-    # A display of STRING elements is a display of DISPLAYS in effect
-    # (`expr_kind` types a `StringLit` `seq`, not `int`) -- "string of
-    # anything nested is not [in the fragment]", row 28's own words --
-    # so this refuses by name `nested-seq-string` (row 30, 2026-09-10:
-    # split out of the old unconditional `nested-seq` the same day a
-    # genuine int-row nested display, tested above, started lifting).
+    # Row 43 (2026-09-27, t/FEATURES-TRACK.md nested string sequences): a
+    # display of STRING elements is a nested display whose rows are code
+    # points (row 28 per row), the same `{"seq": "seq"}` a `[[1], [2]]`
+    # display already lifts to; it used to refuse `nested-seq-string`
+    # (row 30, 2026-09-10). Tested in full in test_lift_nested_strings.py.
     nested_string_src = """
-method BadNestedStringLit() returns (r: int)
+method NestedStringLit() returns (r: int)
   ensures r == 0
 {
   var x := ["ab", "cd"];
   r := 0;
 }
 """
-    v2 = _classify_one(nested_string_src, "BadNestedStringLit")
-    assert isinstance(v2, C.Refusal) and v2.reason == "nested-seq-string", (
-        f"expected nested-seq-string refusal, got {v2}")
+    ns_task, ns_rec = _lift_one(nested_string_src, "NestedStringLit")
+    assert ns_task["body"][0]["var"]["type"] == {"seq": "seq"}, ns_task["body"][0]
+    assert ns_task["body"][0]["var"]["init"] == {"op": "seq", "args": [
+        {"op": "seq", "args": [{"int": 97}, {"int": 98}]},
+        {"op": "seq", "args": [{"int": 99}, {"int": 100}]}]}
     print("test_seq_literal_lifted: '[1,2,3]'/'[]' -> op:seq; a nested int "
           "display now lifts too (row 30), three levels deep still "
           "refuses nested-seq-deep; a char-literal element (row 28) "
@@ -2996,21 +2997,18 @@ method BadCmp(s: string, t: string) returns (r: bool)
     assert isinstance(v3, C.Refusal) and v3.reason == "string-lib", (
         f"expected string-lib refusal, got {v3}")
 
-    # "string of anything nested is not [in the fragment]" (row 28's own
-    # words): a `seq<string>` parameter is a row 30 (2026-09-10) refusal
-    # by its own name, `nested-seq-string` -- split out of the old
-    # unconditional `nested-seq` bucket the same day `seq<seq<int>>`
-    # itself stopped refusing at all.
+    # Row 43 (2026-09-27): a `seq<string>` parameter LIFTS, as t's nested
+    # seq of code-point rows (it refused `nested-seq-string`, row 30, from
+    # 2026-09-10 to this date); see test_lift_nested_strings.py.
     nested_string_src = """
-method BadNestedString(s: seq<string>) returns (r: int)
+method NestedString(s: seq<string>) returns (r: int)
   ensures true
 {
   r := 0;
 }
 """
-    v4 = _classify_one(nested_string_src, "BadNestedString")
-    assert isinstance(v4, C.Refusal) and v4.reason == "nested-seq-string", (
-        f"expected nested-seq-string refusal, got {v4}")
+    v4 = _classify_one(nested_string_src, "NestedString")
+    assert isinstance(v4, C.Liftable), f"expected a lift, got {v4}"
 
     # `s in t` (a substring test): measured directly (t7.dfy, task's own
     # scratch notes) NOT to type-check in Dafny at all when both are
@@ -3020,7 +3018,7 @@ method BadNestedString(s: seq<string>) returns (r: int)
     # assertion, since there is no shape to construct.
     print("test_char_string_refusals: c1+c2 -> char-arith; n as char "
           "(unbounded) -> char-cast-unbounded; s < t -> string-lib; "
-          "seq<string> param -> nested-seq")
+          "seq<string> param -> lifts (row 43)")
 
 
 # ===========================================================================
@@ -3367,21 +3365,22 @@ method UpdateRow(m: seq<seq<int>>, i: int, row: seq<int>) returns (r: seq<seq<in
     print("test_nested_seq_row_update: m[i := row] -> op:update, unchanged")
 
 
-def test_nested_seq_string_refused() -> None:
-    """Row 30: `seq<string>` (a row that is itself string-shaped) refuses
-    by its own name, `nested-seq-string`, distinct from the accepted
-    `seq<seq<int>>`/`seq<seq<nat>>` shape."""
+def test_nested_seq_string_lifted() -> None:
+    """Row 43 (2026-09-27): `seq<string>` (a row that is itself string-
+    shaped) lifts as the same `{"seq": "seq"}` a `seq<seq<int>>` does, its
+    rows code points; from row 30 (2026-09-10) to this date it refused by
+    its own name, `nested-seq-string`, which no longer exists."""
     src = """
-method BadSeqOfString(s: seq<string>) returns (r: int)
-  ensures true
+method SeqOfString(s: seq<string>) returns (r: int)
+  ensures r == |s|
 {
-  r := 0;
+  r := |s|;
 }
 """
-    v = _classify_one(src, "BadSeqOfString")
-    assert isinstance(v, C.Refusal) and v.reason == "nested-seq-string", (
-        f"expected nested-seq-string refusal, got {v}")
-    print("test_nested_seq_string_refused: seq<string> param -> nested-seq-string")
+    task, rec = _lift_one(src, "SeqOfString")
+    assert task["params"][0]["type"] == {"seq": "seq"}, task["params"]
+    assert "strings-elements-requires" in _rule_names(rec)
+    print("test_nested_seq_string_lifted: seq<string> param -> nested seq of code-point rows")
 
 
 def test_array2_refused() -> None:
@@ -3769,7 +3768,7 @@ UNIT_TESTS = [
     test_multi_return_refusals,
     test_nested_seq_param_row_forall, test_nested_seq_cell_read_both_bounds,
     test_nested_seq_display_literal, test_nested_seq_row_update,
-    test_nested_seq_string_refused, test_array2_refused,
+    test_nested_seq_string_lifted, test_array2_refused,
     test_quantifier_row31_distributed_and_forall,
     test_quantifier_row31_distributed_or_exists,
     test_quantifier_row31_leftover_conjunct_folds,

@@ -777,9 +777,20 @@ def _view_kind_for_type(t: Optional[Type]) -> Optional[str]:
         return "char"
     if t.kind == "string" or (t.kind == "seq" and len(t.args) == 1 and t.args[0].kind == "char"):
         return "string"
+    if _is_nested_strings(t):
+        return "strings"  # row 43: a `seq<string>`, viewed row by row
     if t.kind == "array":
         return "array"
     return None
+
+
+def _is_nested_strings(t: Optional[Type]) -> bool:
+    """Row 43 (2026-09-27): `seq<string>` or `seq<seq<char>>`, lifted to
+    t's nested seq of code-point rows (`lift_classify._is_nested_seq_of_char`)."""
+    return (t is not None and t.kind == "seq" and len(t.args) == 1
+            and (t.args[0].kind == "string"
+                 or (t.args[0].kind == "seq" and len(t.args[0].args) == 1
+                     and t.args[0].args[0].kind == "char")))
 
 
 def _src_result_text(call_text: str, ret_type: Optional[Type]) -> str:
@@ -821,6 +832,14 @@ def _view_hint_lines(vws: dict, declared) -> list:
         if kind == "string":
             out.append(f"  assert forall k_view: int :: 0 <= k_view < |{n}| ==> "
                        f"{v}[k_view] == ({n}[k_view] as int);")
+        elif kind == "strings":
+            # Row 43: what the nested comprehension means, row by row.
+            out.append(f"  assert |{v}| == |{n}|;")
+            out.append(f"  assert forall i_view: int :: 0 <= i_view < |{n}| ==> "
+                       f"|{v}[i_view]| == |{n}[i_view]|;")
+            out.append(f"  assert forall i_view: int, k_view: int :: 0 <= i_view < |{n}| && "
+                       f"0 <= k_view < |{n}[i_view]| ==> "
+                       f"{v}[i_view][k_view] == ({n}[i_view][k_view] as int);")
         elif kind == "array":
             # The same elementwise statement for decision 1's `(a[..])`
             # view. L_ens/L_inv_k carry it as a requires already
@@ -1188,6 +1207,12 @@ def _view_text(name: str, views: dict) -> str:
     if kind == "string":
         return (f"(seq(|{name}|, (k: int) requires 0 <= k < |{name}| "
                  f"=> {name}[k] as int))")
+    if kind == "strings":
+        # Row 43: the same code-point view, one row at a time, so the
+        # substituted expression has Dafny type `seq<seq<int>>`.
+        return (f"(seq(|{name}|, (i: int) requires 0 <= i < |{name}| => "
+                 f"seq(|{name}[i]|, (k: int) requires 0 <= k < |{name}[i]| "
+                 f"=> {name}[i][k] as int)))")
     if kind == "char":
         return f"({name} as int)"
     return name
@@ -2750,14 +2775,28 @@ def build_checker(task: dict, source: MethodDecl, closure: tuple,
 # build_differential (section 10(a), plus 18.5's third-arm printing).
 # ===========================================================================
 
-def _dafny_literal(v, ty: str) -> str:
+def _dafny_literal(v, ty) -> str:
     if ty == "bool":
         return "true" if v else "false"
     if ty == "int":
         return str(v)
     if ty == "seq":
         return "[" + ", ".join(str(x) for x in v) + "]"
+    if isinstance(ty, dict) and ty.get("seq") == "seq":
+        # Row 43 (2026-09-27; also row 30's own residual, a nested-seq
+        # point could not be printed before): a nested value is a display
+        # of displays, the shape `interp` holds it in.
+        return "[" + ", ".join(_dafny_literal(row, "seq") for row in v) + "]"
     raise ValueError(f"lift_check._dafny_literal: unknown t type {ty!r}")
+
+
+def _dafny_type_text(ty) -> str:
+    """The Dafny spelling of a lifted param's JSON type in the differential
+    harness's point list: `lower_dafny.TYPES` for a flat type, and the
+    nested `seq<seq<int>>` for t's compound `{"seq": "seq"}` (row 43)."""
+    if isinstance(ty, dict) and ty.get("seq") == "seq":
+        return "seq<seq<int>>"
+    return lower_dafny.TYPES[ty]
 
 
 def _param_names_types(task: dict) -> list:
@@ -2916,6 +2955,11 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
         if ret_type_src0.kind == "string" or is_seq_of_char:
             return (f"(seq(|{expr}|, (k: int) requires 0 <= k < |{expr}| "
                      f"=> {expr}[k] as int))")
+        if _is_nested_strings(ret_type_src0):
+            # Row 43: a `seq<string>` result, every row viewed as code points.
+            return (f"(seq(|{expr}|, (i: int) requires 0 <= i < |{expr}| => "
+                     f"seq(|{expr}[i]|, (k: int) requires 0 <= k < |{expr}[i]| "
+                     f"=> {expr}[i][k] as int)))")
         if ret_type_src0.kind == "char":
             return f"({expr} as int)"
         return expr
@@ -2940,11 +2984,11 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
     else:
         if n_params == 1:
             n0, ty0 = names_types[0]
-            pts_ty = lower_dafny.TYPES[ty0]
+            pts_ty = _dafny_type_text(ty0)
             lit_list = [_dafny_literal(env0[n0], ty0) for env0, _real in points]
             call_args = "pts[i]"
         else:
-            field_tys = ", ".join(lower_dafny.TYPES[ty] for _n, ty in names_types)
+            field_tys = ", ".join(_dafny_type_text(ty) for _n, ty in names_types)
             pts_ty = f"({field_tys})"
             lit_list = []
             for env0, _real in points:
@@ -2975,6 +3019,11 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
                                          and sp.type.args[0].kind == "char")))
         char_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
                               if sp.type is not None and sp.type.kind == "char")
+        # Row 43: a `seq<string>` parameter's sampled rows of code points,
+        # each converted back into a Dafny string (`strings-elements-
+        # requires` keeps every sampled value in `as char`'s range).
+        strings_view = frozenset(tp["name"] for sp, tp in zip(source.params, task["params"])
+                                 if _is_nested_strings(sp.type))
         point_exprs = ["pts[i]"] if n_params == 1 else [f"pts[i].{j}" for j in range(n_params)]
         src_args = []
         materialise = []
@@ -3005,6 +3054,12 @@ def _build_differential_with_points(task: dict, source: MethodDecl,
                 src_args.append(f"s{j}")
             elif pn in char_view:
                 src_args.append(f"({pe} as char)")
+            elif pn in strings_view:
+                materialise.append(
+                    f"    var s{j} := seq(|{pe}|, (i: int) requires 0 <= i < |{pe}| => "
+                    f"seq(|{pe}[i]|, (k: int) requires 0 <= k < |{pe}[i]| "
+                    f"=> {pe}[i][k] as char));")
+                src_args.append(f"s{j}")
             else:
                 src_args.append(pe)
         lines.append(f"  var pts: seq<{pts_ty}> := [{', '.join(lit_list)}];")
