@@ -10066,7 +10066,39 @@ def _strip_task(task: dict) -> dict:
     return t
 
 
+
+_SET_OPS_T = {"set", "in", "card", "union", "inter", "diff"}
+
+
+def _uses_sets(obj) -> bool:
+    """True iff `obj` mentions t's set type or one of its six operations
+    anywhere (SPEC.md "Finite sets", 2026-09-27), by the same generic walk
+    the string-library detector makes."""
+    if isinstance(obj, dict):
+        if obj.get("op") in _SET_OPS_T or obj.get("type") == "set":
+            return True
+        return any(_uses_sets(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_uses_sets(v) for v in obj)
+    return obj == "set"
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    if _uses_sets(task) or _uses_sets(body):
+        # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): this column
+        # is core Lean 4 with no Mathlib (measured: the toolchain here is
+        # `leanprover/lean4:v4.33.1` alone, and every dated note in this
+        # file says "core only, no Mathlib"), and core has no finite-set
+        # type -- `Finset` is Mathlib's. A sorted duplicate-free `List Int`
+        # would be a second encoding of the type with its own membership,
+        # cardinality and extensionality proofs to build and measure
+        # before it could be trusted; until that is measured, SPEC.md's
+        # own words apply: "a named refusal, measured first". Abstained by
+        # name, never lowered to an approximation.
+        raise NotImplementedError(
+            "lean lowering: finite sets (SPEC.md 'Finite sets'): core Lean 4 "
+            "has no finite-set type without Mathlib, which this column does "
+            "not carry; the sorted-list encoding is not yet built or measured")
     # SPEC.md "Lemmas (v1)": lemma calls leave the body (see
     # `strip_lemma_calls`); the lemmas themselves are emitted by
     # `Lower.emit_lemmas`. Nothing changes for a task without lemmas.

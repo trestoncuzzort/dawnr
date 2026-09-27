@@ -1306,7 +1306,13 @@ BIN_OPS = {"==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">=",
            "+": "+", "-": "-", "*": "*", "implies": "==>",
            "div": "/", "mod": "%"}
 NARY_OPS = {"and": "&&", "or": "||"}
-TYPES = {"int": "int", "bool": "bool", "seq": "Seq<int>"}
+TYPES = {"int": "int", "bool": "bool", "seq": "Seq<int>",
+         # SPEC.md "Finite sets" (2026-09-27): vstd's own `Set<int>`, in proof
+         # code as everything here is. Measured on this verus (vstd's
+         # `Set::finite` is deprecated with the note "Every Set is always
+         # finite"), so a t set needs no finiteness side condition; see
+         # SET_PRELUDE below for the one lemma vstd's broadcast groups lack.
+         "set": "Set<int>"}
 
 # THE STRING LIBRARY (v1), 2026-09-11 (SPEC.md "The string library (v1)").
 # Every member is total (SPEC.md's own word), so `defined()` needed no new
@@ -1857,6 +1863,64 @@ def _uses_strlib(node) -> bool:
     return False
 
 
+def _uses_sets(node) -> bool:
+    """True iff `node` mentions the set type or one of its six operations
+    anywhere (SPEC.md "Finite sets", 2026-09-27), by the same generic walk
+    `_uses_strlib` makes; a task without sets is byte-identical to before."""
+    if isinstance(node, dict):
+        if node.get("op") in _SET_OPS or node.get("type") == "set":
+            return True
+        return any(_uses_sets(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_uses_sets(v) for v in node)
+    return node == "set"
+
+
+_SET_OPS = {"set", "in", "card", "union", "inter", "diff"}
+
+# SPEC.md "Finite sets" (2026-09-27). vstd's broadcast groups
+# (`vstd::set::group_set_lemmas`, `vstd::set_lib::group_set_lib_default`,
+# `vstd::set_lib::group_set_properties`) carry the cardinality laws of
+# insert, remove, union with intersection (inclusion-exclusion) and
+# difference; measured on this verus, they close `|a + b| + |a * b| == |a|
+# + |b|`, `|{x, x, 1}|` in [1, 2] and `|a - b| + |a * b| == |a|` unaided.
+# What they lack is the bridge from an EMPTY difference to inclusion (`a
+# - b == {}` iff a is a subset of b), which is how t states set equality
+# without a subset operator (`card(diff(a, b)) == 0`); `t_set_diff_empty_
+# subset` states it, proved from `lemma_len0_is_empty` and extensionality,
+# in its own module because a module-level `broadcast use` may not name a
+# lemma of the same module ("cyclic self-reference", measured). The main
+# block's single `broadcast use` (verus allows one per module) brings the
+# three vstd groups and this lemma into scope only when the task uses
+# sets, so every set-free task's output is byte-identical to before.
+SET_PRELUDE_MODULE = """mod t_setlib {
+    use vstd::prelude::*;
+    verus! {
+    broadcast use vstd::set::group_set_lemmas, vstd::set_lib::group_set_lib_default, vstd::set_lib::group_set_properties;
+    pub broadcast proof fn t_set_diff_empty_subset(a: Set<int>, b: Set<int>)
+        ensures (#[trigger] a.difference(b).len() == 0) <==> a.subset_of(b),
+    {
+        if a.difference(b).len() == 0 {
+            a.difference(b).lemma_len0_is_empty();
+            assert forall|x: int| a.contains(x) implies b.contains(x) by {
+                if !b.contains(x) { assert(a.difference(b).contains(x)); }
+            }
+        } else {
+            if a.subset_of(b) {
+                assert(a.difference(b) =~= Set::<int>::empty());
+            }
+        }
+    }
+    } // verus!
+}
+
+"""
+SET_BROADCAST_USE = ("broadcast use vstd::set::group_set_lemmas, "
+                     "vstd::set_lib::group_set_lib_default, "
+                     "vstd::set_lib::group_set_properties, "
+                     "crate::t_setlib::t_set_diff_empty_subset;\n\n")
+
+
 def _is_ground(e) -> bool:
     """True iff `e` (an Expr, or any nested part of one) contains no `var`
     reference anywhere -- a closed term over literals and operators alone.
@@ -2393,6 +2457,13 @@ def expr(e: dict, vty: str | None = None) -> str:
         if not e["_seq"]:
             return "Seq::<int>::empty()"
         return "seq![" + ", ".join(f"({v}int)" for v in e["_seq"]) + "]"
+    if "_set" in e:
+        # SPEC.md "Finite sets" (2026-09-27): a concrete Set<int> witness
+        # value (its sorted elements), the certificate builder's own ground
+        # node, as "_seq" is for a seq.
+        if not e["_set"]:
+            return "Set::<int>::empty()"
+        return "set![" + ", ".join(f"({v}int)" for v in e["_set"]) + "]"
     if "_nested_seq" in e:
         # SPEC.md "Nested sequences" (2026-09-10): the "_seq" node one
         # level up, a concrete Seq<Seq<int>> witness value with each row
@@ -2611,6 +2682,32 @@ def expr(e: dict, vty: str | None = None) -> str:
         # probe_pair_basic.rs); no per-pair-type declaration is needed the
         # way SPARK or Lean need one.
         return f"({args[0]}, {args[1]})"
+    if op == "set":
+        # SPEC.md "Finite sets" (2026-09-27): vstd's `set![..]` display,
+        # `Set::<int>::empty()` for `{}` (the macro has no typed empty form).
+        if not args:
+            return "Set::<int>::empty()"
+        return "set![" + ", ".join(args) + "]"
+    if op == "in":
+        return f"{args[1]}.contains({args[0]})"
+    if op == "card":
+        # `Set::len` is a nat; t's card is an int, so the cast is explicit.
+        return f"({args[0]}.len() as int)"
+    if op in ("union", "diff"):
+        # `union(s, {e})` is `s.insert(e)` and `diff(s, {e})` is
+        # `s.remove(e)`, the same set by extensionality; written that way
+        # because vstd's broadcast cardinality lemmas speak of insert/remove
+        # (measured: `acc.union(set![e]).len() <= acc.len() + 1` is
+        # unproved where `acc.insert(e).len() <= acc.len() + 1` verifies).
+        raw = e.get("args", [])
+        one = (len(raw) == 2 and raw[1].get("op") == "set"
+               and len(raw[1].get("args", [])) == 1)
+        if one:
+            inner = expr(raw[1]["args"][0], vty) if vty is not None else expr(raw[1]["args"][0])
+            return f"{args[0]}.{'insert' if op == 'union' else 'remove'}({inner})"
+        return f"{args[0]}.{'union' if op == 'union' else 'difference'}({args[1]})"
+    if op == "inter":
+        return f"{args[0]}.intersect({args[1]})"
     if op == "split":
         # SPEC.md "The string library (v1)": split(s) (whitespace) and
         # split(s, c) (one code point) are "two arities of one op" --
@@ -2817,6 +2914,10 @@ def _nested_seq_operand_ty(e: dict, scope: dict) -> str | None:
         op, args = e["op"], e.get("args", [])
         if op in ("+", "slice", "update") and args:
             return _nested_seq_operand_ty(args[0], scope)
+        if op in ("set", "union", "inter", "diff"):
+            # SPEC.md "Finite sets" (2026-09-27): a set-valued operator's
+            # result is a set, whatever its operands (a display's are ints).
+            return "Set<int>"
     return None
 
 
@@ -2842,8 +2943,15 @@ def _nested_eq_bridges(e: dict, scope: dict, out: list) -> None:
         op, args = e["op"], e.get("args", [])
         if op in ("==", "!=") and len(args) == 2:
             a, b = args
-            if (_nested_seq_operand_ty(a, scope) == "Seq<Seq<int>>"
-                    and _nested_seq_operand_ty(b, scope) == "Seq<Seq<int>>"):
+            ta, tb = _nested_seq_operand_ty(a, scope), _nested_seq_operand_ty(b, scope)
+            if ((ta == "Seq<Seq<int>>" and tb == "Seq<Seq<int>>")
+                    # SPEC.md "Finite sets" (2026-09-27): `Set` equality is
+                    # the same story as the nested seq's -- measured, the
+                    # set-equality probe's `r = (a == b)` left `r == (|a -
+                    # b| == 0 && |b - a| == 0)` unproved with vstd's ext
+                    # axiom triggering on `=~=` alone; the same bridge
+                    # `assert((a == b) == (a =~= b))` closes it.
+                    or (ta == "Set<int>" and tb == "Set<int>")):
                 out.append((a, b))
         for a in args:
             _nested_eq_bridges(a, scope, out)
@@ -2971,7 +3079,7 @@ def subst(e: dict, m: dict) -> dict:
         if v is None:
             return e
         return {"var": v} if isinstance(v, str) else v
-    if "int" in e or "bool" in e or "_seq" in e or "_nested_seq" in e:
+    if "int" in e or "bool" in e or "_seq" in e or "_nested_seq" in e or "_set" in e:
         return e
     if "ite" in e:
         c = e["ite"]
@@ -3347,6 +3455,8 @@ def _dummy(ty) -> str:
         return expr({"bool": False})
     if ty == "seq":
         return expr({"_seq": []})
+    if ty == "set":
+        return expr({"_set": []})   # SPEC.md "Finite sets" (2026-09-27)
     raise ValueError(f"verus: no dummy literal for type {ty!r}")
 
 
@@ -4574,7 +4684,11 @@ class _V1:
                          else [])
         blocks = (strlib_blocks + rotate_blocks + spec_blocks + lemma_blocks
                   + method_blocks + self.wf + self.helpers + [main])
-        src = ("use vstd::prelude::*;\n\nverus! {\n\n"
+        uses_sets = _uses_sets(task)
+        src = ("use vstd::prelude::*;\n\n"
+               + (SET_PRELUDE_MODULE if uses_sets else "")
+               + "verus! {\n\n"
+               + (SET_BROADCAST_USE if uses_sets else "")
                + "\n".join(blocks)
                + "\n} // verus!\n\nfn main() {}\n")
         if pseudos or lemma_blocks:
@@ -4953,6 +5067,13 @@ def _tlit(v, ty=None):
         t1, t2 = (ty["pair"] if isinstance(ty, dict) and "pair" in ty
                   else (None, None))
         return {"op": "pair", "args": [_tlit(v.a, t1), _tlit(v.b, t2)]}
+    if isinstance(v, frozenset) or (ty == "set" and isinstance(v, list)):
+        # SPEC.md "Finite sets" (2026-09-27): a runtime frozenset is
+        # unmistakably a set; a witness dict's sorted list (interp._j) is
+        # the same shape as a seq's, so that one asks `ty`, as a pair does.
+        if not all(isinstance(x, int) and not isinstance(x, bool) for x in v):
+            raise ValueError(f"witness value {v!r} has no t literal")
+        return {"_set": tuple(sorted(v))}
     if isinstance(v, tuple):
         nested_ty = isinstance(ty, dict) and "seq" in ty
         if not v:
@@ -5179,6 +5300,8 @@ def _to_py(v, ty=None):
         return interp.Pair(_to_py(a, t1), _to_py(b, t2))
     if isinstance(ty, dict) and "seq" in ty:
         return tuple(_to_py(row, "seq") for row in v)
+    if ty == "set" and isinstance(v, list):
+        return frozenset(v)   # SPEC.md "Finite sets" (2026-09-27): interp's own value
     if isinstance(v, list):
         return tuple(v)
     return v
@@ -5519,6 +5642,28 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         body = expr(formula)
     finally:
         _SUFFIX_INT = saved
+    if _uses_sets(formula):
+        # SPEC.md "Finite sets" (2026-09-27): verus's interpreter does not
+        # evaluate a set's cardinality (measured: `assert(set![1int, 2int,
+        # 1int].len() == 2) by (compute_only)` fails with "failed to
+        # simplify down to true ... empty().insert(1).insert(2).insert(1)
+        # .len() == 2"), so a ground formula over sets is discharged by
+        # the SMT arm under vstd's own set lemmas (the same file's single
+        # `broadcast use`, present whenever the task uses sets). Still a
+        # kernel-checked proof of the negated ensures at the witness;
+        # verifiers/verus.py's rule is unchanged.
+        return (
+            "\nverus!{\n\n"
+            "// Ground refutation certificate for the measured twin witness.\n"
+            "// Over a set the interpreter cannot compute a cardinality, so this\n"
+            "// goal is closed by the SMT arm under vstd's set lemmas instead of\n"
+            "// by (compute_only); verifiers/verus.py mints REFUTED only if it is\n"
+            "// accepted, and a file carrying this name can never mint VERIFIED.\n"
+            f"proof fn {CERT_NAME}()\n"
+            "{\n"
+            f"    assert({body});\n"
+            "}\n\n"
+            "} // verus!\n")
     return (
         "\nverus!{\n\n"
         "// Ground refutation certificate for the measured twin witness.\n"
