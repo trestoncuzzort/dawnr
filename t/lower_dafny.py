@@ -2437,6 +2437,8 @@ def _lemma_stmts(body: list, indent: str, self_name: str) -> list[str]:
             c = s["lemma"]
             args = ", ".join(expr(a, self_name) for a in c["args"])
             out.append(f"{indent}{c['name']}({args});")
+        elif "assert" in s:
+            out.append(f"{indent}assert {expr(s['assert'], self_name)};")
         else:
             c = s["if"]
             out.append(f"{indent}if {expr(c['cond'], self_name)} {{")

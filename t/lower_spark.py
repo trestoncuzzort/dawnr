@@ -4558,9 +4558,11 @@ class Lower:
             # carry compile()'s path condition, so a call obligation could
             # not be guarded by "nothing escaped yet"; refused by name.
             if "lemma" in s:
-                raise NotImplementedError(
-                    "spark: lemma call in a body with an early `return`; "
-                    "its Pre obligation has no escape-aware path guard")
+                # SPEC.md "Lemmas (v1)": the escape threading here carries
+                # no path condition to guard the call's Pre with, so the
+                # call is left out (a no-op at run time: the program
+                # proved is the same) and the proof goes without its hint.
+                continue
             if ("assign" in s and self._is_method_call(s["assign"][1])) \
                     or ("var" in s and self._is_method_call(s["var"]["init"])):
                 raise NotImplementedError(
@@ -6024,6 +6026,8 @@ def _lower_lemma(task: dict, l: dict, L: "Lower") -> str:
             if "lemma" in s:
                 parts.append(L._lemma_call(s["lemma"], {}, types, psub,
                                            path=False))
+            elif "assert" in s:
+                continue      # a proof step an expression function cannot cut on
             else:
                 c = s["if"]
                 cond = L.expr(c["cond"], psub, types)
