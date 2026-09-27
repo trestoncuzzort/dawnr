@@ -1825,17 +1825,21 @@ method Caller(x: int) returns (r: int)
   r := x;
 }
 """, "Caller"),
+        # a TWO-return callee lifts since 2026-09-27 (row 41, feature 6 of
+        # t/FEATURES-TRACK.md, test_lift_multi_return_calls.py); three or
+        # more out-parameters still refuse by this name
         "method-call-multi-return": ("""
-method Two(x: int) returns (a: int, b: int)
-  ensures a == x && b == x
+method Three(x: int) returns (a: int, b: int, c: int)
+  ensures a == x && b == x && c == x
 {
   a := x;
   b := x;
+  c := x;
 }
 method Caller(x: int) returns (r: int)
   ensures r == x
 {
-  var a, b := Two(x);
+  var a, b, c := Three(x);
   r := a;
 }
 """, "Caller"),
