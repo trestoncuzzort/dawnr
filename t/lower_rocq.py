@@ -11514,6 +11514,19 @@ def _v0_cert(task: dict, body: list, witness: dict):
 # sites pass it; when a certificate can ground it, the twin file carries
 # t_refutation_certificate instead of an unprovable spec theorem.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    # SPEC.md "Lemmas (v1)": a lemma call is a no-op at run time, and this
+    # lowering does not state lemmas: it proves the program without their
+    # hints (removing a no-op changes no value, so the program it proves
+    # is the same program), with lemma declarations left out of the file.
+    # A program whose proof needs a lemma reads unproved here; nothing a
+    # lemma states is ever used unproved. The Lean lowering's strip is the
+    # same function.
+    if task.get("lemmas"):
+        import lower_lean
+        is_real = body is task.get("body")
+        task = {k: v for k, v in lower_lean._strip_task(task).items()
+                if k != "lemmas"}
+        body = task["body"] if is_real else lower_lean.strip_lemma_calls(body)
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Rocq reserved word, before `lower_v0`/`lower_v1`
     # ever see the task -- see names.py's module docstring. The rename

@@ -6802,6 +6802,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if self.strlib:
             strlib_thms = [(n, "string library lemma") for n in STRLIB_LEMMAS]
         sf_src, sf_thms = self.emit_sfuns()
+        l_src, l_thms = self.emit_lemmas()
         m_src, m_thms = self.emit_methods(seq_src, strlib_src)
         wf_src, wf_thms, wf_k = self.emit_clause_wfs()
         src, thms = self._lower_shape(wf_k)
@@ -6842,8 +6843,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         db_src, db_thms = self.emit_divisor_bound()
         prints = "\n".join(
             f"#print axioms {t}" for t, _ in
-            db_thms + seq_thms + strlib_thms + sf_thms + m_thms + wf_thms
-            + thms + smoke_thms)
+            db_thms + seq_thms + strlib_thms + sf_thms + l_thms + m_thms
+            + wf_thms + thms + smoke_thms)
         parts = [header]
         if db_src.strip():
             parts.append(db_src)
@@ -6853,6 +6854,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             parts.append(strlib_src)
         if sf_src.strip():
             parts.append(sf_src)
+        if l_src.strip():
+            parts.append(l_src)
         if m_src.strip():
             parts.append(m_src)
         if wf_src.strip():
@@ -6956,6 +6959,108 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
                 r"^def\s+(\S+)", src, re.M)]
             self.used |= sub.used
             done.append(m)
+        return "\n".join(out), thms
+
+    # SPEC.md "Lemmas (v1)" (2026-09-27). Each t lemma is a theorem
+    # `{l}_l`, its requires as hypotheses and its ensures as the
+    # conclusion, proved here by the lemma's own proof skeleton turned into
+    # tactics: an `if` is a `by_cases`, a call of an earlier lemma (or of
+    # itself, by well-founded recursion on its `decreases`, the Lean
+    # reference's "Well-Founded Recursion" for theorems as for defs) is a
+    # `have` whose hypotheses grind discharges, and every branch closes
+    # with grind. Lean has no call statement inside the proof of a
+    # program, so the conclusion reaches the task through grind instead:
+    # `grind_pattern {l}_l => t1, ..., tn` over every spec_fun call in the
+    # ensures (a multi-pattern, all terms present), when those calls
+    # mention every parameter; otherwise the theorem is proved but not
+    # handed to grind. Only a proved theorem is ever added, so this can
+    # make no wrong program verify; a lemma grind cannot prove fails the
+    # file (unproved), and `#print axioms` audits it like every theorem.
+    def emit_lemmas(self) -> tuple[str, list]:
+        lemmas = self.task.get("lemmas", [])
+        if not lemmas:
+            return "", []
+        out, thms = [], []
+        sigs = {l["name"]: l for l in lemmas}
+        base = self._grind_base()
+        for l in lemmas:
+            name = f"{l['name']}_l"
+            if name in self.used:
+                raise NotImplementedError(
+                    f"lemma {l['name']!r}: its theorem name {name} is taken")
+            self.used.add(name)
+            ptypes = {p["name"]: p["type"] for p in l["params"]}
+            pb = self.binders([(p["name"], p["type"]) for p in l["params"]])
+            hyps = " ".join(f"(h{i} : {self.prop(r, {}, dict(ptypes))})"
+                            for i, r in enumerate(l["requires"], 1))
+            concl = " ∧ ".join(f"({self.prop(e, {}, dict(ptypes))})"
+                               for e in l["ensures"])
+            ints = [p["name"] for p in l["params"] if p["type"] == "int"]
+            # the nonlinear sign bridge the task's own proofs use: each
+            # product of two int params is nonnegative when both are
+            # (`try`: a fact grind may use, never an assumption)
+            signs = [f"try have _ms_{a}_{b} : (0:Int) ≤ {a} * {b} := "
+                     f"Int.mul_nonneg (by omega) (by omega)"
+                     for i, a in enumerate(ints[:4]) for b in ints[i:4]
+                     if self._has(l["ensures"], "op", "*")]
+            k = [0]
+
+            def tac(stmts, ind):
+                """Tactic lines that close the goal after `stmts`."""
+                lines = []
+                for idx, s in enumerate(stmts):
+                    if "lemma" in s:
+                        c = s["lemma"]
+                        callee = sigs[c["name"]]
+                        cenv = {p["name"]: self.term(a, {}, dict(ptypes))
+                                for p, a in zip(callee["params"], c["args"])}
+                        args = " ".join(f"({cenv[p['name']]})"
+                                        for p in callee["params"])
+                        pre = " ".join(f"(by {base})" for _ in callee["requires"])
+                        k[0] += 1
+                        lines.append(f"{ind}have _lm{k[0]} := "
+                                     f"{c['name']}_l {args} {pre}".rstrip())
+                        continue
+                    c = s["if"]
+                    rest = stmts[idx + 1:]
+                    k[0] += 1
+                    hc = f"_hc{k[0]}"
+                    cond = self.prop(c["cond"], {}, dict(ptypes))
+                    lines.append(f"{ind}by_cases {hc} : {cond}")
+                    for arm in (c["then"], c["else"]):
+                        sub = tac(arm + rest, ind + "  ")
+                        sub[0] = f"{ind}· " + sub[0].lstrip()
+                        lines += sub
+                    return lines
+                lines.append(f"{ind}{base}")
+                return lines
+
+            proof = [f"  {x}" for x in signs] + tac(l["body"], "  ")
+            src = (f"theorem {name} {pb} {hyps} :\n    {concl} := by\n"
+                   + "\n".join(proof) + "\n")
+            if "decreases" in l:
+                dec = self.term(l["decreases"], {}, dict(ptypes))
+                src += f"termination_by ({dec}).toNat\n" + self._dec()
+            out.append(src)
+            thms.append((name, f"lemma {l['name']}"))
+            pats, covered = [], set()
+            for e in l["ensures"]:
+                for c in _lemma_call_nodes(e, []):
+                    t = self.term(c, {}, dict(ptypes))
+                    if t not in pats:
+                        pats.append(t)
+                    _lemma_vars(c, covered)
+            if not (pats and set(ptypes) <= covered):
+                # no spec_fun call covers the parameters (an arithmetic
+                # lemma): the smallest product term that mentions them all
+                prods = sorted(
+                    (self.term(m, {}, dict(ptypes)), m)
+                    for e in l["ensures"] for m in _lemma_mul_nodes(e, [])
+                    if set(ptypes) <= _lemma_vars(m, set()))
+                pats = [prods[0][0]] if prods else []
+                covered = set(ptypes) if prods else covered
+            if pats and set(ptypes) <= covered:
+                out.append(f"grind_pattern {name} => {', '.join(pats)}\n")
         return "\n".join(out), thms
 
     def _lower_shape(self, wf_k: int) -> tuple[str, list]:
@@ -9889,7 +9994,81 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
 # `witness` is the twin's measured witness (harness.twin_cached); the real
 # lowering never receives one. When present and certificatable it adds the
 # t_refutation_certificate theorem, the only door to a lean REFUTED.
+def _lemma_call_nodes(e, out: list) -> list:
+    """Every spec_fun call node under `e` (SPEC.md "Lemmas (v1)")."""
+    if isinstance(e, dict):
+        if "call" in e:
+            out.append(e)
+        for v in e.values():
+            _lemma_call_nodes(v, out)
+    elif isinstance(e, list):
+        for v in e:
+            _lemma_call_nodes(v, out)
+    return out
+
+
+def _lemma_mul_nodes(e, out: list) -> list:
+    """Every `*` node under `e` with no literal operand."""
+    if isinstance(e, dict):
+        if e.get("op") == "*" and not any("int" in a for a in e["args"]):
+            out.append(e)
+        for v in e.values():
+            _lemma_mul_nodes(v, out)
+    elif isinstance(e, list):
+        for v in e:
+            _lemma_mul_nodes(v, out)
+    return out
+
+
+def _lemma_vars(e, out: set) -> set:
+    if isinstance(e, dict):
+        if isinstance(e.get("var"), str):
+            out.add(e["var"])
+        for v in e.values():
+            _lemma_vars(v, out)
+    elif isinstance(e, list):
+        for v in e:
+            _lemma_vars(v, out)
+    return out
+
+
+def strip_lemma_calls(body: list) -> list:
+    """`body` without its lemma-call statements (SPEC.md "Lemmas (v1)": a
+    no-op at run time). The Lean and Rocq lowerings hand each proved
+    lemma to their automation instead of placing it at the call."""
+    out = []
+    for s in body:
+        if "lemma" in s:
+            continue
+        if "if" in s:
+            c = s["if"]
+            s = {**s, "if": {**c, "then": strip_lemma_calls(c["then"]),
+                             "else": strip_lemma_calls(c["else"])}}
+        elif "while" in s:
+            w = s["while"]
+            s = {**s, "while": {**w, "body": strip_lemma_calls(w["body"])}}
+        out.append(s)
+    return out
+
+
+def _strip_task(task: dict) -> dict:
+    if not task.get("lemmas"):
+        return task
+    t = {**task, "body": strip_lemma_calls(task["body"])}
+    if "methods" in t:
+        t["methods"] = [{**m, "body": strip_lemma_calls(m["body"])}
+                        for m in t["methods"]]
+    return t
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    # SPEC.md "Lemmas (v1)": lemma calls leave the body (see
+    # `strip_lemma_calls`); the lemmas themselves are emitted by
+    # `Lower.emit_lemmas`. Nothing changes for a task without lemmas.
+    if task.get("lemmas"):
+        is_real = body is task.get("body")
+        task = _strip_task(task)
+        body = task["body"] if is_real else strip_lemma_calls(body)
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Lean 4 reserved word, before `Lower` ever sees the
     # task -- see names.py's module docstring. `task` is returned

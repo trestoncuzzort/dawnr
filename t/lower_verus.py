@@ -3801,6 +3801,9 @@ class _V1:
         # lowered to its own `proof fn` (see `emit`). Empty for every task
         # without methods, so every guard reading it is a no-op there.
         self.mnames = mnames
+        # SPEC.md "Lemmas (v1)": each lemma's parameter types, filled by
+        # `_lemmas` before any body is lowered.
+        self.lemma_ptys: dict[str, list[str]] = {}
         self.helpers: list[str] = []   # loop helper proof fns
         self.wf: list[str] = []        # definedness (well-formedness) lemmas
         self.loop_ix = 0
@@ -4054,6 +4057,15 @@ class _V1:
                 lines += self.loop(s["while"], scope, ind, wrap,
                                     task_final=(is_last and wrap is None
                                                 and ind == "    "))
+            elif "lemma" in s:
+                # SPEC.md "Lemmas (v1)": a call of the lemma's `proof fn`;
+                # Verus owes its requires here and gives its ensures.
+                c = s["lemma"]
+                ptys = self.lemma_ptys[c["name"]]
+                for a in c["args"]:
+                    self._assert_defined(a, lines, ind)
+                args = ", ".join(expr(a, t) for a, t in zip(c["args"], ptys))
+                lines.append(f"{ind}{c['name']}({args});")
             else:
                 raise ValueError(f"t v1 -> verus: unknown statement {s!r}")
         return lines
@@ -4551,6 +4563,7 @@ class _V1:
                             for p in f["params"]],
                            _spec_fn_domain_context(f), defined(f["body"]))
 
+        lemma_blocks = self._lemmas()
         method_blocks, pseudos = self._methods()
         main = self._main_fn(body)
 
@@ -4559,12 +4572,12 @@ class _V1:
                          if _rotate_witnesses(task)
                          or any(_rotate_witnesses(p) for p in pseudos)
                          else [])
-        blocks = (strlib_blocks + rotate_blocks + spec_blocks + method_blocks
-                  + self.wf + self.helpers + [main])
+        blocks = (strlib_blocks + rotate_blocks + spec_blocks + lemma_blocks
+                  + method_blocks + self.wf + self.helpers + [main])
         src = ("use vstd::prelude::*;\n\nverus! {\n\n"
                + "\n".join(blocks)
                + "\n} // verus!\n\nfn main() {}\n")
-        if pseudos:
+        if pseudos or lemma_blocks:
             # every top-level name the file declares must be distinct: a
             # method, a loop helper or a wf lemma spelled like another
             # (e.g. a method `main`, or `t_lp_...` names overlapping)
@@ -4576,6 +4589,69 @@ class _V1:
                 raise NotImplementedError(
                     f"verus: methods: declared name collision {dup}")
         return src
+
+    def _lemma_body(self, body: list, ind: str) -> list[str]:
+        out = []
+        for s in body:
+            if "lemma" in s:
+                c = s["lemma"]
+                ptys = self.lemma_ptys[c["name"]]
+                args = ", ".join(expr(a, t) for a, t in zip(c["args"], ptys))
+                out.append(f"{ind}{c['name']}({args});")
+            else:
+                c = s["if"]
+                out.append(f"{ind}if {expr(c['cond'])} {{")
+                out += self._lemma_body(c["then"], ind + "    ")
+                out.append(f"{ind}}} else {{")
+                out += self._lemma_body(c["else"], ind + "    ")
+                out.append(f"{ind}}}")
+        return out
+
+    def _lemmas(self) -> list[str]:
+        """SPEC.md "Lemmas (v1)": each lemma is a `proof fn` with no
+        return, its requires/ensures (and decreases when it calls itself)
+        its statement and its if/lemma-call body its proof, verified in
+        this file (Verus guide, "Proof functions": a proof fn is a lemma
+        whose ensures the caller receives). Empty, and so byte-identical
+        output, for a task without lemmas."""
+        out = []
+        for l in self.task.get("lemmas", []):
+            self.lemma_ptys[l["name"]] = [_vty(p["type"]) for p in l["params"]]
+            ps = ", ".join(f"{p['name']}: {_vty(p['type'])}" for p in l["params"])
+            lines = [f"proof fn {l['name']}({ps})"]
+            if l["requires"]:
+                lines.append("    requires")
+                lines += [f"        {expr(e)}," for e in l["requires"]]
+            lines.append("    ensures")
+            lines += [f"        {expr(e)}," for e in l["ensures"]]
+            if "decreases" in l:
+                lines.append(f"    decreases {expr(l['decreases'])},")
+            lines.append("{")
+            # Verus unfolds a recursive spec fn one level by default; a
+            # lemma's induction step routinely needs two (the base case of
+            # sum(a, lo, lo + 1) is a[lo] + sum(a, lo + 1, lo + 1)), which
+            # Dafny's default fuel already gives. `reveal_with_fuel` only
+            # unfolds the definition further: it adds no assumption.
+            contract = l["requires"] + l["ensures"]
+            for sf in self.task.get("spec_funs", []):
+                if (_calls(sf["body"], sf["name"])
+                        and any(_calls(e, sf["name"]) for e in contract)):
+                    lines.append(f"    reveal_with_fuel({sf['name']}, 2);")
+            lines += self._lemma_body(l["body"], "    ")
+            if not l["body"]:
+                # Verus turns nonlinear arithmetic off by default; a
+                # body-less lemma whose statement multiplies two variables
+                # is proved by `nonlinear_arith` from its requires alone,
+                # the same bridge the task's own ensures uses.
+                req_s = "".join(f"        {expr(e)},\n" for e in l["requires"])
+                for e in l["ensures"]:
+                    if _has_nonlinear(e):
+                        lines.append(f"    assert({expr(e)}) by (nonlinear_arith)"
+                                     + (f"\n        requires\n{req_s}    ;"
+                                        if req_s else ";"))
+            lines.append("}\n")
+            out.append("\n".join(lines))
+        return out
 
     def _methods(self) -> tuple[list[str], list[dict]]:
         """SPEC.md "Methods (v1)": each method is its own `proof fn`,
@@ -4613,6 +4689,7 @@ class _V1:
                     f"(loop helper and method would be mutually recursive)")
             pseudo = _method_pseudo_task(self.task, m)
             mv = _V1(pseudo, self.mnames)
+            mv.lemma_ptys = self.lemma_ptys
             mmain = mv._main_fn(m["body"])
             blocks += mv.wf + mv.helpers + [mmain]
             pseudos.append(pseudo)
@@ -5304,6 +5381,8 @@ def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict,
                     if it > interp.MAX_LOOP:
                         raise interp.Budget("loop cap")
                 continue
+            elif "lemma" in s:
+                continue          # SPEC.md "Lemmas (v1)": erased at run time
             else:
                 raise _GiveUp()
             found = check(e)
@@ -5452,6 +5531,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     body = names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = names.remap_witness(witness, renames)
     if task.get("t", 0) == 0:
+        if task.get("lemmas"):
+            raise NotImplementedError("verus: lemmas are v1 only")
         if task.get("methods"):
             raise NotImplementedError("verus: methods are v1 only")
         # v0 used to emit bare literals to keep its output byte-identical to
