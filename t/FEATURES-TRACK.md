@@ -581,7 +581,7 @@ whose only stated properties come from axiom lemmas (`_axiom_only_functions`), a
 uses. An axiom the method's closure never touches still lifts, noted `axiom-in-file` in
 the sidecar (LIFTER-DECISIONS row 51). **Measured** (`t/lifter.py --list` over the union
 of the two staged sets, `--skip-check --jobs 4`, `~/scratch/axiom/out`): DT0258 reads
-`source-axiom` (token `BitwiseOr`, line 150); of the 69 `{:axiom}` files, 3 have a
+`source-axiom` (token `BitwiseOrCommutative`, line 150); of the 69 `{:axiom}` files, 3 have a
 method refused `source-axiom` directly (`DT0258`, `DT0333`, `DT0360`; most of the rest
 also carry an `assume` in the graded method's own body and are caught there first); of
 the 68 `assume`-token files, 35 have a method refused `source-assume`. Of the 74 newly
@@ -597,6 +597,23 @@ sibling method (`vericoding_DD0311`, `DD0520`, `DD0521`, `DD0598`: a common boil
 not refused and gets no note -- the decision names an axiom DECLARATION outside the
 closure for the note, not a stray assume in a method the graded one never calls. Tests:
 `t/test_lift_source_axiom.py`.
+
+**Review round (2026-09-27)** found the closure walk this check used (`_closure`,
+function/lemma callees only) dropped an axiom-attributed callee METHOD entirely instead
+of checking it: `method {:axiom} DoubleIt(...) ensures r==2*x { r := 0; }` called by
+`UsesDoubleIt` (same `ensures`) lifted clean through the real pipeline, carrying
+`DoubleIt`'s false ensures into the task as ground truth -- DT0258's own hazard through a
+method instead of a function+lemma pair. Fixed with `_closure_incl_methods`, a
+`MethodDecl`-inclusive walk used only by this check (`_closure` itself stays
+function/lemma-only for its other three callers, which assume a side-effect-free,
+provable-body closure). `UsesDoubleIt` now refuses `source-axiom`; a sibling method that
+never calls the axiom method still lifts, noted `axiom-in-file`. Also corrected in this
+round: DT0258's own token is `BitwiseOrCommutative`, not `BitwiseOr` as this entry and
+LIFTER-DECISIONS row 51 previously said (a write-up error only -- `classify` itself
+named the right token throughout). See LIFT-2026-09-26.md's review-round section for the
+reproduction and the one item raised that was not a row-51 gap (`{:verify false}` on a
+method's own declaration never reaches `classify`; `lift_resolve.py` refuses it first, a
+pre-existing narrowing outside this diff).
 
 ## The order from here
 
