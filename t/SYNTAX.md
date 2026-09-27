@@ -21,7 +21,7 @@ things about a program nobody wrote. Measured by `python3 t/surface.py
   which recur once per seed.
 - `print(parse(text)) == text` on all 1783, so every task has exactly one
   normal form in the notation.
-- The **22 examples on the `written:` lines of this page parse, unedited**,
+- The **26 examples on the `written:` lines of this page parse, unedited**,
   to the JSON they sit beside (some lines carry more than one, separated by
   `·`). That is what makes this grammar the documented notation rather than
   a new one that resembles it.
@@ -59,6 +59,7 @@ Task     ::= { "t": 0|1, "name": Id,
 Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local type since 2026-09-09 *)
            | {"pair": [Type, Type]}             (* v1, since 2026-09-10; written (T1, T2); T1, T2 int/bool/seq, no pair of pairs *)
            | {"seq": "seq"}                     (* v1, since 2026-09-10; written seq<seq>; one level only, rows are seqs of int *)
+           | "set"                              (* v1, since 2026-09-27; a finite set of ints; SPEC.md "Finite sets" *)
 
 Expr     ::= {"int": integer}                   (* mathematical integer *)
            | {"bool": true|false}                                        (* v1 *)
@@ -78,6 +79,9 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "seq" | "slice"                    (* v1; written [a, b] (any arity, [] empty) and s[a..b];
                                                    "+" on two seqs is concatenation *)
            | "pair" | "fst" | "snd"             (* v1, since 2026-09-10; written (e1, e2), p.0, p.1 *)
+           | "set" | "in" | "card"              (* v1, since 2026-09-27; written {e1, ..., en} (any arity, {} empty),
+           | "union" | "inter" | "diff"         x in s, card(s), union(s, t), inter(s, t), diff(s, t);
+                                                   SPEC.md "Finite sets" *)
            | "split"                            (* v1, since 2026-09-11; seq -> seq<seq>, arity 1 or 2;
                                                    written s.split() and s.split(c) *)
            | "join" | "tostr" | "count" | "find"
@@ -247,6 +251,29 @@ never a pair. Not in v1: a pair of pairs, a seq of pairs, a pair of three.
 (lo, hi);` after it exits) are the committed examples. The twin ladder's
 WRONG-VAR rung gained one move for this construct: it also swaps a
 `pair`'s two components, and swaps `fst` for `snd` in a projection.
+
+### Finite sets (v1)
+
+```json
+{"op": "set",   "args": [{"int": 1}, {"var": "x"}]}
+{"op": "in",    "args": [{"var": "x"}, {"var": "s"}]}
+{"op": "card",  "args": [{"op": "union", "args": [{"var": "s"}, {"var": "u"}]}]}
+{"var": {"name": "d", "type": "set",
+         "init": {"op": "diff", "args": [{"var": "s"}, {"var": "u"}]}}}
+```
+written: `{1, x}` · `x in s` · `card(union(s, u))` · `var d: set := diff(s, u);`
+
+Since 2026-09-27 (SPEC.md "Finite sets (v1)"), a finite set of ints is a
+value: the type `set`, usable as a param, return or local type. `{e1, ...,
+en}` builds one (duplicates collapse, `{}` is the empty set), `x in s` is
+membership, `card(s)` the number of elements, `union(s, u)`, `inter(s, u)`
+and `diff(s, u)` the three operations, all six total. The operations are
+written by name, never as `+`, `*` or `-`, so the notation needs no type
+to read them back. `==` and `!=` on two sets are extensional; `< <= > >=`
+stay int-only (no subset operator; `card(diff(s, u)) == 0` says it). `in`
+sits at the comparison level and does not chain. Not in v1: a set of
+bools, seqs or pairs, a set inside a pair or a seq, a set-typed spec_fun
+parameter or result, a set as a quantifier's range, and the comprehension.
 
 ### Nested sequences (v1)
 
