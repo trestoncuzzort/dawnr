@@ -78,6 +78,30 @@ INCLUDED = "included-model"
 # needs Python 3.10; this is a build tool, not the shipped program, so that is a
 # cheaper dependency here than a hand-kept list of module names.
 EXTERNAL = frozenset({"torch", "tokenizers", "tkinterdnd2", "charset_normalizer"})
+
+# Names locallm's own files reach for from the OTHER half of this repository
+# (t/, the seven-prover pipeline), not from locallm/ or pip. t_tool.py's
+# call() and its own example-drawing helper `import interp` — t/'s
+# interpreter — to run a t program at all: this is dawnr's first tool doing
+# the one thing it exists to do, not an optional extra. dawnr_harness/
+# checker.py's redacted_verdict() similarly imports `surface` and
+# `fuzz_lower`, t/'s own parser and well-formedness checker, to check a
+# program found in untrusted content without quoting it. Every one of these
+# imports is deferred inside a function, the same shape as EXTERNAL's own
+# members, and every one already degrades the same way if the caller's
+# sys.path has no t/ on it: Harness.call wraps a tool's own function in
+# `try/except Exception` ("an exception becomes an error answer, not a
+# crash", DAWNR-HARNESS.md section 2) for t_tool's case, and hooks.py's
+# _run() catches a builtin hook's exception the same way for checker's
+# ("a hook that fails ... is reported to the person, never silently
+# dropped", section 3) — so a release built without t/ on the path answers
+# "t failed: ModuleNotFoundError" rather than crashing. Kept out of EXTERNAL
+# itself because nobody "installs" a sibling source tree, and out of the
+# shipped zip on purpose: bundling them would mean bundling what they need
+# too, which is the seven-prover toolchain this release's whole point (see
+# this file's own module docstring) is to not be.
+CROSS_REPO_OPTIONAL = frozenset({"surface", "fuzz_lower", "interp"})
+
 STDLIB = frozenset(sys.stdlib_module_names)
 
 # The programs a person starts. look.py is imported by home.py rather than run,
@@ -187,52 +211,107 @@ def _imports(path: Path) -> set[str]:
     `import torch` at module scope and the window has to open on a machine that
     has never installed torch. A walk sees that one; importing home.py to ask
     would need tkinter, which is a separate package on Debian and Ubuntu.
+
+    A relative import (`from .tools import Tool`, node.level > 0) is excluded:
+    it resolves inside whatever package the importing file itself lives in,
+    never against `src`, so asking whether "tools" is a sibling of home.py
+    would be the wrong question. Nothing at the top level here uses one; only
+    a package's own internal files do (`_package_files` below).
     """
     names: set[str] = set()
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
         if isinstance(node, ast.Import):
             names.update(a.name.split(".")[0] for a in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
             names.add(node.module.split(".")[0])
     return names
+
+
+def _package_files(pkg_dir: Path, src: Path) -> tuple[list[str], set[str]]:
+    """Every .py file under a local package, and every name its files import
+    from outside it.
+
+    dawnr_harness is a package (a directory with __init__.py), not a single
+    file beside home.py, so closure() cannot ask `is_file()` about it the way
+    it does for a sibling module. Once something imports it, the whole
+    directory ships as one unit — Python's own import machinery resolves
+    what is inside it, so nothing there needs a place of its own in `kept` —
+    but its files can still import a further name the way any sibling can
+    (dawnr_harness/checker.py reaches for locallm/t_tool.py this way), and
+    closure() sends each one through the same file-or-package resolution a
+    top-level import gets, so it is caught to the same depth.
+    """
+    files, imported = [], set()
+    for path in sorted(pkg_dir.rglob("*.py")):
+        files.append(path.relative_to(src).as_posix())
+        imported |= _imports(path)
+    return files, imported
 
 
 def closure(src: Path = HERE, roots: tuple[str, ...] = ENTRY_POINTS) -> list[str]:
     """Every module the released programs import, transitively, sorted by name.
 
-    An import is ours unless the standard library or EXTERNAL claims it, so a
-    sibling that has been renamed or deleted is a refusal and not a silent pass
-    for a third-party package — deciding by "is there a file of that name" would
-    make a missing module look exactly like a missing dependency.
+    An import is ours unless the standard library, EXTERNAL or
+    CROSS_REPO_OPTIONAL claims it, so a sibling that has been renamed or
+    deleted is a refusal and not a silent pass for a third-party package —
+    deciding by "is there a file of that name" would make a missing module
+    look exactly like a missing dependency.
+
+    `pending`/`seen` hold either a ".py" filename or a bare package name
+    (dawnr_harness, no suffix) — a package cannot be asked `is_file()` about,
+    so the two need distinct handling once popped, but the same name earns
+    the same treatment whether the release list names it directly or an
+    import inside some other module's own package reaches for it.
     """
     src = Path(src)
     asked = {name: "the release list" for name in roots}
+    seen: set[str] = set()
     kept: set[str] = set()
     pending = list(roots)
     while pending:
         name = pending.pop()
-        if name in kept:
+        if name in seen:
             continue
-        path = src / name
-        if not path.is_file():
-            raise ReleaseError(
-                f"{name} belongs in the release ({asked[name]} imports it) and "
-                f"there is no such file in {src}")
-        kept.add(name)
-        for found in sorted(_imports(path)):
-            if found in STDLIB or found in EXTERNAL:
+        seen.add(name)
+        if name.endswith(".py"):
+            path = src / name
+            if not path.is_file():
+                raise ReleaseError(
+                    f"{name} belongs in the release ({asked[name]} imports it) and "
+                    f"there is no such file in {src}")
+            kept.add(name)
+            found_names = _imports(path)
+        else:
+            pkg_dir = src / name
+            if not (pkg_dir / "__init__.py").is_file():
+                raise ReleaseError(
+                    f"{name} belongs in the release ({asked[name]} imports it) and "
+                    f"there is no such package in {src}")
+            files, found_names = _package_files(pkg_dir, src)
+            kept.update(files)
+            # A package's own __main__.py or similar naming itself by its
+            # absolute name (`from dawnr_harness import Harness`, run as
+            # `python -m dawnr_harness`) is not an external dependency.
+            found_names.discard(name)
+        for found in sorted(found_names):
+            if found in STDLIB or found in EXTERNAL or found in CROSS_REPO_OPTIONAL:
                 continue
             child = f"{found}.py"
-            if not (src / child).is_file():
+            if (src / child).is_file():
+                candidate = child
+            elif (src / found / "__init__.py").is_file():
+                candidate = found
+            else:
                 raise ReleaseError(
                     f"{name} imports {found}, which is not in the standard "
                     f"library, is not one of the dependencies locallm expects to "
                     f"find installed ({', '.join(sorted(EXTERNAL))}), and is not "
-                    f"a file beside it — either {child} is missing from {src} or "
-                    f"it is a new dependency this build has never heard of")
-            if child not in kept:
-                asked.setdefault(child, name)
-                pending.append(child)
+                    f"a file or package beside it — either {child} (or {found}/) is "
+                    f"missing from {src} or it is a new dependency this build has "
+                    f"never heard of")
+            if candidate not in seen:
+                asked.setdefault(candidate, name)
+                pending.append(candidate)
     return sorted(kept)
 
 
