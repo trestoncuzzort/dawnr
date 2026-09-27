@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_lift_seq_fun.py: LIFTER-DECISIONS row 45 (2026-09-27, SPEC.md
+"""test_lift_seq_fun.py: LIFTER-DECISIONS row 49 (2026-09-27, SPEC.md
 "Seq-valued spec_funs (v1)") -- a Dafny function returning `string`,
 `seq<char>`, `seq<int>` or `seq<nat>` lifts to a spec_fun with a `"seq"`
 result (the string spellings as code points, row 28), where before this

@@ -418,7 +418,7 @@ and `tuple-component` name what t's pair cannot carry. **Measured**: 10 of 27
 lift, 7 pass the check stage; 8 of the other 17 refuse `function-result`
 (a tuple-returning helper). Tests: `t/test_lift_tuples.py`.
 
-### 9. Seq-valued spec_funs (2026-09-27, language and lifter)
+### 13. Seq-valued spec_funs (2026-09-27, language and lifter)
 
 **Refused: 135 methods `function-result`** of the 2026-09-26 lift (a helper
 function returning `string` or `seq<int>`); **305 methods** in the
@@ -431,9 +431,9 @@ synonyms). A spec_fun's result may now be a seq of ints (SPEC.md
 f(..): seq` in the notation): a call is a seq expression wherever an int
 call is an int expression, indexed, measured, sliced, concatenated and
 compared as any seq. The lifter lifts a function returning `string`,
-`seq<char>`, `seq<int>` or `seq<nat>` to one (LIFTER-DECISIONS row 45),
+`seq<char>`, `seq<int>` or `seq<nat>` to one (LIFTER-DECISIONS row 49),
 with the empty seq as the totalising default, and a `function F(..): bool`
-as the bool spec_fun a `predicate` already was (row 46: the 66 `bool`
+as the bool spec_fun a `predicate` already was (row 50: the 66 `bool`
 tokens were an omission of the 2026-09-27 check, not a language gap). Six
 kernels lower the seq result in their own sequence type; Frama-C abstains
 by name (a logic function over the buffer model cannot return a buffer;
@@ -476,11 +476,11 @@ effort is the lowering work across seven kernels plus the lifter.
 Rows 3 to 6 landed 2026-09-27 (Done, above), with nested string sequences,
 Lean strings and tuples beside them; the measured yield of each is in its
 entry. The seq-valued spec_fun (the binding refusal for string programs,
-`function-result`) landed 2026-09-27 as entry 9. Finite sets, datatypes and
+`function-result`) landed 2026-09-27 as entry 13. Finite sets, datatypes and
 higher-order functions remain, and one gap the measurements named ranks
 with them: the in-place sorts' `multiset` permutation specs. A Frama-C
 lowering of the seq-valued spec_fun (ACSL `\list`) is the one open kernel
-column of entry 9.
+column of entry 13.
 
 ## The features ahead: designs and costs
 
