@@ -366,3 +366,93 @@ class SkillPathTraversalAndSymlinks(unittest.TestCase):
                 r = tool.fn({"name": "one", "script": bad}, ctx)
                 self.assertIsInstance(r, ToolResult)
                 self.assertNotIn("leaked", r.text)
+
+
+_GARBAGE = [None, True, False, 0, 1, -5, 4.5, "", "x", [], {}, [1, 2], {"a": 1}, b"bytes"]
+
+
+def hostile_hook_configs(n: int, seed: int) -> list:
+    """Reproducible malformed hook configurations: garbage at every level (the config itself, an event's
+    value, a group, its matcher, its hooks list, a handler's own fields), mixed with a few otherwise-valid
+    skeletons so some cases are accepted rather than refused."""
+    rnd = random.Random(seed)
+
+    def handler():
+        base = {"type": rnd.choice(["builtin", "command", "nope", None, 5]),
+               "name": rnd.choice(["t_check", "missing", None, 5]),
+               "command": rnd.choice(["${PYTHON}", "", None, 5, ["a"]]),
+               "args": rnd.choice([None, ["a", "b"], "not a list", [1, 2], [None]]),
+               "timeout": rnd.choice([1, 0.5, "abc", None, [1], {"a": 1}, -1, True])}
+        return rnd.choice([base, rnd.choice(_GARBAGE)])
+
+    def group():
+        base = {"matcher": rnd.choice([None, "*", "t", "(", "a|b"] + list(_GARBAGE)),
+               "hooks": rnd.choice([[handler() for _ in range(rnd.randint(0, 3))], "not a list", None] + _GARBAGE)}
+        return rnd.choice([base, rnd.choice(_GARBAGE)])
+
+    def event_value():
+        return rnd.choice([[group() for _ in range(rnd.randint(0, 3))]] + _GARBAGE)
+
+    def config():
+        events = rnd.sample(["PreToolUse", "PostToolUse", "Stop", "Nope", "pretooluse"],
+                            k=rnd.randint(0, 3))
+        base = {e: event_value() for e in events}
+        return rnd.choice([base, {"hooks": base}] + _GARBAGE)
+
+    return [config() for _ in range(n)]
+
+
+class HookConfigsWithBadCommands(unittest.TestCase):
+    def test_random_malformed_hook_configs_never_crash_property(self):
+        for cfg in hostile_hook_configs(500, seed=99):
+            try:
+                Hooks(cfg)
+            except HookConfigError:
+                pass                                            # a refusal is the point
+            except Exception as e:                              # noqa: BLE001
+                self.fail(f"Hooks({cfg!r}) raised {type(e).__name__}: {e}, not HookConfigError")
+
+    def test_nonexistent_directory_and_non_executable_commands_are_recorded_errors(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            not_executable = root / "not_a_command.txt"
+            not_executable.write_text("just text", encoding="utf-8")
+            a_directory = root / "a_directory"
+            a_directory.mkdir()
+            for handler in (
+                {"type": "command", "command": str(root / "does-not-exist-at-all")},
+                {"type": "command", "command": str(not_executable)},
+                {"type": "command", "command": str(a_directory)},
+                {"type": "command", "command": str(root / "does-not-exist"), "args": ["x"]},
+            ):
+                hooks = Hooks({"PreToolUse": [{"hooks": [handler]}]})
+                outcomes = hooks.run("PreToolUse", {"tool_name": "t"}, "t")
+                self.assertEqual(len(outcomes), 1)
+                self.assertTrue(outcomes[0].error, handler)      # recorded, never a raised exception
+                self.assertFalse(outcomes[0].blocked)
+
+    def test_hostile_stdout_from_a_command_hook_never_crashes_aggregation(self):
+        """A command hook is free to print anything on exit 0 (garbage, huge output, a fake block/deny it
+        has no business emitting through the wrong field names) -- aggregate_pre/aggregate_post/aggregate_stop
+        must read it defensively, never trust its shape."""
+        from dawnr_harness.hooks import aggregate_post, aggregate_pre, aggregate_stop
+        payloads = [
+            "not json at all", "[1, 2, 3]", "null", "" , "{}",
+            json.dumps({"hookSpecificOutput": "not a dict"}),
+            json.dumps({"hookSpecificOutput": {"permissionDecision": 12345}}),
+            json.dumps({"hookSpecificOutput": {"updatedInput": "not a dict"}}),
+            json.dumps({"decision": ["block"]}),
+            json.dumps({"systemMessage": 12345}),
+            json.dumps({"hookSpecificOutput": {"additionalContext": ["a", "b"]}}),
+            "a" * 20000,
+        ]
+        for payload in payloads:
+            code = f"import sys; sys.stdout.write({payload!r})"
+            h = Hooks({"PreToolUse": [{"hooks": [py_hook(code)]}], "PostToolUse": [{"hooks": [py_hook(code)]}],
+                      "Stop": [{"hooks": [py_hook(code)]}]})
+            pre = aggregate_pre(h.run("PreToolUse", {"tool_name": "t"}, "t"))
+            post = aggregate_post(h.run("PostToolUse", {"tool_name": "t"}, "t"))
+            stop = aggregate_stop(h.run("Stop", {}))
+            self.assertIn(pre.decision, (None, "allow", "ask", "deny"))
+            self.assertIsInstance(post.block, bool)
+            self.assertIsInstance(stop.block, bool)
