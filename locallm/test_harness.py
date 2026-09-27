@@ -188,9 +188,23 @@ class HookTests(unittest.TestCase):
     def test_config_is_validated(self):
         for bad in ({"Nope": []}, {"Stop": [{"hooks": [{"type": "http"}]}]},
                     {"Stop": [{"hooks": [{"type": "builtin", "name": "missing"}]}]},
-                    {"PreToolUse": [{"matcher": "(", "hooks": []}]}, {"Stop": {}}):
+                    {"PreToolUse": [{"matcher": "(", "hooks": []}]}, {"Stop": {}},
+                    {"Stop": [{"hooks": [{"type": "builtin", "name": "t_check", "timeout": "abc"}]}]},
+                    {"Stop": [{"hooks": [{"type": "builtin", "name": "t_check", "timeout": [1, 2]}]}]},
+                    {"Stop": [{"hooks": [{"type": "builtin", "name": "t_check", "timeout": None}]}]}):
             with self.assertRaises(HookConfigError):
                 Hooks(bad)
+
+    def test_bad_timeout_types_raise_hook_config_error_not_a_raw_type_or_value_error(self):
+        """float(h["timeout"]) used to run unguarded: a string that doesn't parse raised ValueError, and a
+        list, dict or null raised TypeError -- neither is a HookConfigError, so a caller that catches only
+        HookConfigError (as the rest of _handler's validation lets it) would see the harness crash on a
+        malformed operator config instead of failing loudly and consistently with every other bad field."""
+        for bad_timeout in ("abc", [1, 2], {"a": 1}, None):
+            with self.assertRaises(HookConfigError):
+                Hooks({"Stop": [{"hooks": [{"type": "builtin", "name": "t_check", "timeout": bad_timeout}]}]})
+        good = Hooks({"Stop": [{"hooks": [{"type": "builtin", "name": "t_check", "timeout": "12.5"}]}]})
+        self.assertEqual(good.groups["Stop"][0][1][0].timeout, 12.5)
 
     def test_exit_2_blocks_with_stderr(self):
         code = "import sys, json; d = json.load(sys.stdin); sys.stderr.write('no ' + d['tool_name']); sys.exit(2)"
