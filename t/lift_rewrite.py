@@ -1127,10 +1127,72 @@ def _assigned_dafny_names(body) -> set[str]:
     return names
 
 
+def _pair_component_ty_of(t: Optional[Type]) -> str:
+    """A pair component's t type for a Dafny out-parameter type (row 29's
+    own mapping): `seq`/`string` are `seq`, `bool` is `bool`, the rest int."""
+    if t is not None and t.kind in ("seq", "string"):
+        return "seq"
+    if t is not None and t.kind == "bool":
+        return "bool"
+    return "int"
+
+
+def _two_return_call(rhs, scope: Scope):
+    """The call node when `rhs` calls a callee this lift carries with two
+    out-parameters (row 41), else None."""
+    if isinstance(rhs, Call) and isinstance(rhs.fn, Ident):
+        rets = scope.method_rets.get(rhs.fn.name)
+        if rets is not None and len(rets) == 2:
+            return rhs
+    return None
+
+
+def _lift_destructuring_call(names: list, decl: bool, declared: list, call, line: int,
+                             scope: Scope, fn_names: dict, self_name: str, task_name: str,
+                             renamer: _Renamer, record: LiftRecord) -> list:
+    """Row 41 (t/FEATURES-TRACK.md feature 6, 2026-09-27): `a, b := M(args);`
+    or `var a, b := M(args);` of a two-out-parameter method. The callee lifts
+    to a pair-returning t method (row 29's own mapping of two returns, SPEC.md
+    "Pairs (v1)"), and the call, which t only allows as the whole right-hand
+    side of one `var` init (SPEC.md "Methods (v1)"), binds that pair to a fresh
+    local; the two names are its projections, `p.0` and `p.1` (Dafny 8.5.2:
+    the call's results are "assigned to as many left-hand sides as it has
+    out-parameters", in order). `decl` is the `var` form; `declared` carries
+    each name's declared `Type` there (None when Dafny inferred it, then the
+    callee's own out-parameter type decides)."""
+    rets = scope.method_rets[call.fn.name]
+    tys = [_pair_component_ty_of(r.type) for r in rets]
+    args = [_lift_expr(a, scope, fn_names, self_name, task_name, record, renamer) for a in call.args]
+    call_e = {"call": {"fun": fn_names.get(call.fn.name, call.fn.name), "args": args}}
+    p_t = renamer.fresh("p", record, "temp")
+    scope.types[p_t] = "pair"
+    out = [{"var": {"name": p_t, "type": {"pair": tys}, "init": call_e}}]
+    for name, proj, ty, ret, dty in zip(names, ("fst", "snd"), tys, rets, declared):
+        proj_e = {"op": proj, "args": [{"var": p_t}]}
+        if decl:
+            tname = renamer.fresh(name, record, "local")
+            scope.renames[name] = tname
+            scope.types[tname] = ty
+            if (dty is not None and dty.kind == "nat") or (dty is None and ret.type is not None
+                                                            and ret.type.kind == "nat"):
+                scope.nat.append(name)
+            out.append({"var": {"name": tname, "type": ty, "init": proj_e}})
+        else:
+            out.append({"assign": [scope.renames[name], proj_e]})
+    record.rewrites.append(Rewrite(rule="multi-return-call-destructured", line=line))
+    return out
+
+
 def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                task_name: str, renamer: _Renamer, record: LiftRecord) -> list:
     cls = s.__class__.__name__
     if cls == "Assign":
+        if (len(s.targets) == 2 and len(s.values) == 1
+                and all(t.kind == "name" for t in s.targets)
+                and _two_return_call(s.values[0], scope) is not None):
+            return _lift_destructuring_call([t.name for t in s.targets], False, [None, None],
+                                            s.values[0], s.line, scope, fn_names, self_name,
+                                            task_name, renamer, record)
         if len(s.targets) > 1:
             # Decision 22: a target can now be `x[i]` as well as `x`
             # (Clover_reverse's `a[i], a[hi-i] := a[hi-i], a[i];`). Every
@@ -1201,6 +1263,11 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
 
     if cls == "VarDeclStmt":
         out = []
+        if (s.init and len(s.init) == 1 and len(s.names) == 2
+                and _two_return_call(s.init[0], scope) is not None):
+            return _lift_destructuring_call([nm.name for nm in s.names], True,
+                                            [nm.type for nm in s.names], s.init[0], s.line,
+                                            scope, fn_names, self_name, task_name, renamer, record)
         if s.init is None:
             for nm in s.names:
                 ty = _t_type_of(nm.type)
@@ -1252,8 +1319,9 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 else:
                     rhs_e = _lift_expr(rhs, scope, fn_names, self_name, task_name, record, renamer)
                     json_ty = None
-                    callee_ret = (scope.method_rets.get(rhs.fn.name)
-                                  if isinstance(rhs, Call) and isinstance(rhs.fn, Ident) else None)
+                    callee_rets = (scope.method_rets.get(rhs.fn.name)
+                                   if isinstance(rhs, Call) and isinstance(rhs.fn, Ident) else None)
+                    callee_ret = callee_rets[0].type if callee_rets and len(callee_rets) == 1 else None
                     if nm.type is not None:
                         ty = _t_type_of(nm.type)
                         json_ty = _t_json_type(nm.type)
@@ -1720,7 +1788,8 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     scope = Scope()
     scope.null_drop_ids = null_drop_ids
     scope.predicates = closure_predicates(closure)
-    scope.method_rets = {cname: cplan.method.returns[0].type
+    # a callee's out-parameters (one, or the two a pair return stands for)
+    scope.method_rets = {cname: tuple(cplan.method.returns)
                          for cname, cplan, _crr in callee_results}
     params_out = []
     for p in method.params:
