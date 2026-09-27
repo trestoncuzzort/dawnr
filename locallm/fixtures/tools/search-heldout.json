@@ -1,0 +1,1009 @@
+{
+"results": [
+{
+"title": "calculateLoss (dafny synthesis task id 452)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_452__calculateLoss/c5bfe6",
+"snippet": "A t task: implement calculateLoss (dafny synthesis task id 452) to its specification."
+},
+{
+"title": "solve (vericoding da0532)",
+"url": "http://tasks.example.org/t/vericoding_da0532__solve/593ad5",
+"snippet": "Distribute N crackers to K users as evenly as possible and find the minimum possible absolute difference between the maximum and minimum number of crackers received by any user."
+},
+{
+"title": "maxArray (vericoding dv0154)",
+"url": "http://tasks.example.org/t/vericoding_dv0154__maxArray/784ca4",
+"snippet": "/* This task involves identifying the maximum value in a non-empty array of integers. The objective is to determine which element in the array is greater than or equal to every other element, ensuring"
+},
+{
+"title": "car race collision",
+"url": "http://tasks.example.org/t/humaneval_dafny_041_car_race_collision__car_race_collision/33e383",
+"snippet": "Imagine a road that's a perfectly straight infinitely long line. n cars are driving left to right; simultaneously, a different set of n cars are driving right to left. The two sets of cars start out b"
+},
+{
+"title": "right angle triangle",
+"url": "http://tasks.example.org/t/humaneval_dafny_157_right_angle_triangle__right_angle_triangle/00559b",
+"snippet": "Given the lengths of the three sides of a triangle. Return True if the three sides form a right-angled triangle, False otherwise. A right-angled triangle is a triangle in which one angle is right angl"
+},
+{
+"title": "compute arith sum",
+"url": "http://tasks.example.org/t/verus_examples_recursion_compute_arith_sum__compute_arith_sum/817fb9",
+"snippet": "A t task: implement compute arith sum to its specification."
+},
+{
+"title": "countLists (dafny synthesis task id 792)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_792__countLists/04be7e",
+"snippet": "A t task: implement countLists (dafny synthesis task id 792) to its specification."
+},
+{
+"title": "swapSimultaneous (vericoding dd0089)",
+"url": "http://tasks.example.org/t/vericoding_dd0089__swapSimultaneous/e9f507",
+"snippet": "A t task: implement swapSimultaneous (vericoding dd0089) to its specification."
+},
+{
+"title": "countEqualNumbers (dafny synthesis task id 801)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_801__countEqualNumbers/3a717a",
+"snippet": "A t task: implement countEqualNumbers (dafny synthesis task id 801) to its specification."
+},
+{
+"title": "computePower (dafny verify tmp tmphq7j0row ai agent verify examples computepower)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_ai_agent_verify_examples_computepower__computePower/bdb47a",
+"snippet": "A t task: implement computePower (dafny verify tmp tmphq7j0row ai agent verify examples computepower) to its specification."
+},
+{
+"title": "triple (vericoding dd0094)",
+"url": "http://tasks.example.org/t/vericoding_dd0094__triple/a9f9cb",
+"snippet": "A t task: implement triple (vericoding dd0094) to its specification."
+},
+{
+"title": "m (clover return seven)",
+"url": "http://tasks.example.org/t/clover_return_seven__m/0f0fb4",
+"snippet": "A t task: implement m (clover return seven) to its specification."
+},
+{
+"title": "multiply (vericoding dd0669)",
+"url": "http://tasks.example.org/t/vericoding_dd0669__multiply/cf6c13",
+"snippet": "A t task: implement multiply (vericoding dd0669) to its specification."
+},
+{
+"title": "plusOne",
+"url": "http://tasks.example.org/t/cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__plusOne/c7c92d",
+"snippet": "A t task: implement plusOne to its specification."
+},
+{
+"title": "swap (swap)",
+"url": "http://tasks.example.org/t/swap/73d251",
+"snippet": "A t task: implement swap (swap) to its specification."
+},
+{
+"title": "swap (vericoding vv0171)",
+"url": "http://tasks.example.org/t/vericoding_vv0171__swap/e41943",
+"snippet": "This task involves creating a function that swaps two integer values. Given two integers, the function should return a pair where the first element is the second input value and the second element is "
+},
+{
+"title": "triple (vericoding dv0179)",
+"url": "http://tasks.example.org/t/vericoding_dv0179__triple/63633b",
+"snippet": "/* This task requires computing three times the given integer. The goal is to determine the product of the input integer and 3. The input consists of: • x: An integer. The output is an integer that re"
+},
+{
+"title": "triangularPrismVolume (dafny synthesis task id 14)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_14__triangularPrismVolume/91ee4a",
+"snippet": "A t task: implement triangularPrismVolume (dafny synthesis task id 14) to its specification."
+},
+{
+"title": "swapFirstAndLast (dafny synthesis task id 625)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_625__swapFirstAndLast/ed772d",
+"snippet": "A t task: implement swapFirstAndLast (dafny synthesis task id 625) to its specification."
+},
+{
+"title": "main v (dafny verify tmp tmphq7j0row dataset c convert examples 15)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v/73ea67",
+"snippet": "A t task: implement main v (dafny verify tmp tmphq7j0row dataset c convert examples 15) to its specification."
+},
+{
+"title": "compute sum limited",
+"url": "http://tasks.example.org/t/verus_examples_guide_overflow_compute_sum_limited__compute_sum_limited/405cb7",
+"snippet": "A t task: implement compute sum limited to its specification."
+},
+{
+"title": "any int",
+"url": "http://tasks.example.org/t/humaneval_dafny_092_any_int__any_int/f194df",
+"snippet": "Create a function that takes 3 numbers. Returns true if one of the numbers is equal to the sum of the other two, and all numbers are integers. Returns false in any other cases."
+},
+{
+"title": "solve (vericoding da0528)",
+"url": "http://tasks.example.org/t/vericoding_da0528__solve/aaeefc",
+"snippet": "Given uncovered heights of two adjacent towers after snowfall, find the snow depth. Towers have triangular number heights: 1, 3, 6, 10, ... (i-th tower height = i*(i+1)/2). Snow covers uniformly to sa"
+},
+{
+"title": "findMax (dafny workout tmp tmp0abkw6f8 starter ex12)",
+"url": "http://tasks.example.org/t/dafny_workout_tmp_tmp0abkw6f8_starter_ex12__findMax/ca9fb3",
+"snippet": "A t task: implement findMax (dafny workout tmp tmp0abkw6f8 starter ex12) to its specification."
+},
+{
+"title": "allElementsEquals",
+"url": "http://tasks.example.org/t/vericoding_dj0080__allElementsEquals/51fa93",
+"snippet": "A t task: implement allElementsEquals to its specification."
+},
+{
+"title": "solve (vericoding da0671)",
+"url": "http://tasks.example.org/t/vericoding_da0671__solve/d58e03",
+"snippet": "Given three integers representing colors, count the number of distinct colors. Input constraints: 1 ≤ a,b,c ≤ 100 Output: number of different kinds of colors (1, 2, or 3)"
+},
+{
+"title": "pow",
+"url": "http://tasks.example.org/t/prog_fun_solutions_tmp_tmp7_gmnz5f_extra_pow__pow/323873",
+"snippet": "A t task: implement pow to its specification."
+},
+{
+"title": "reverse (cmsc433 tmp tmpe3ob3a0o dafny project1 p1 assignment 2)",
+"url": "http://tasks.example.org/t/cmsc433_tmp_tmpe3ob3a0o_dafny_project1_p1_assignment_2__reverse/88a466",
+"snippet": "A t task: implement reverse (cmsc433 tmp tmpe3ob3a0o dafny project1 p1 assignment 2) to its specification."
+},
+{
+"title": "swapArithmetic (clover swap arith)",
+"url": "http://tasks.example.org/t/clover_swap_arith__swapArithmetic/feb42d",
+"snippet": "A t task: implement swapArithmetic (clover swap arith) to its specification."
+},
+{
+"title": "absIt",
+"url": "http://tasks.example.org/t/seng2011_tmp_tmpgk5jq85q_p2__absIt/b9bf74",
+"snippet": "A t task: implement absIt to its specification."
+},
+{
+"title": "maxStrength",
+"url": "http://tasks.example.org/t/vericoding_dv0042__maxStrength/64f2c7",
+"snippet": "/* This task requires writing a Dafny method that given a 0-indexed integer array `nums` representing the scores of students in an exam. A teacher wants to select a non empty group of students such th"
+},
+{
+"title": "lastDigit (vericoding lv0091)",
+"url": "http://tasks.example.org/t/vericoding_lv0091__lastDigit/6a86fd",
+"snippet": "/- -----Description----- This task requires writing a Lean 4 method that extracts the last digit of a given non-negative integer. The method should return the last digit, which is obtained by computin"
+},
+{
+"title": "mfirstMaximum (vericoding dd0112)",
+"url": "http://tasks.example.org/t/vericoding_dd0112__mfirstMaximum/0bd6a5",
+"snippet": "//Algorithm 1: From left to right return the first //Algorithm 2: From right to left return the last //Algorithm: from left to right //Algorithm : from left to right //Algorithm : from right to left"
+},
+{
+"title": "isMonthWith30Days (vericoding dd0791)",
+"url": "http://tasks.example.org/t/vericoding_dd0791__isMonthWith30Days/1cfe21",
+"snippet": "A t task: implement isMonthWith30Days (vericoding dd0791) to its specification."
+},
+{
+"title": "containsConsecutiveNumbers",
+"url": "http://tasks.example.org/t/vericoding_dd0735__containsConsecutiveNumbers/43af65",
+"snippet": "A t task: implement containsConsecutiveNumbers to its specification."
+},
+{
+"title": "doubleQuadruple (clover double quadruple)",
+"url": "http://tasks.example.org/t/clover_double_quadruple__doubleQuadruple/9daad8",
+"snippet": "A t task: implement doubleQuadruple (clover double quadruple) to its specification."
+},
+{
+"title": "argmax",
+"url": "http://tasks.example.org/t/vericoding_ds0003__argmax/ee74e4",
+"snippet": "Finds the index of the maximum element in a non-empty vector of floats."
+},
+{
+"title": "abs (dafny learn tmp tmpn94ir40q r01 functions)",
+"url": "http://tasks.example.org/t/dafny_learn_tmp_tmpn94ir40q_r01_functions__abs/035e5d",
+"snippet": "A t task: implement abs (dafny learn tmp tmpn94ir40q r01 functions) to its specification."
+},
+{
+"title": "sum (vericoding dd0053)",
+"url": "http://tasks.example.org/t/vericoding_dd0053__sum/a46d59",
+"snippet": "A t task: implement sum (vericoding dd0053) to its specification."
+},
+{
+"title": "abs (dafny learn tmp tmpn94ir40q r01 assertions)",
+"url": "http://tasks.example.org/t/dafny_learn_tmp_tmpn94ir40q_r01_assertions__abs/3567d2",
+"snippet": "A t task: implement abs (dafny learn tmp tmpn94ir40q r01 assertions) to its specification."
+},
+{
+"title": "doubleArrayElements",
+"url": "http://tasks.example.org/t/vericoding_dv0138__doubleArrayElements/1c6b5c",
+"snippet": "/* This task involves transforming an array of integers by doubling each element. -----Input----- The input consists of: • s: An array of integers. -----Output----- The output is an array of integers "
+},
+{
+"title": "find min index (vericoding dd0897)",
+"url": "http://tasks.example.org/t/vericoding_dd0897__find_min_index/7cfd34",
+"snippet": "// predicate is_permutation(a:seq<int>, b:seq<int>) // decreases |a| // decreases |b| // { // |a| == |b| && ((|a| == 0 && |b| == 0) || exists i,j : int :: 0<=i<|a| && 0<=j<|b| && a[i] == b[j] && is_pe"
+},
+{
+"title": "sum (mfes 2021 tmp tmpuljn8zd9 fcul exercises 8 sum)",
+"url": "http://tasks.example.org/t/mfes_2021_tmp_tmpuljn8zd9_fcul_exercises_8_sum__sum/ce6b09",
+"snippet": "A t task: implement sum (mfes 2021 tmp tmpuljn8zd9 fcul exercises 8 sum) to its specification."
+},
+{
+"title": "max (dafny tmp tmpmvs2dmry examples1)",
+"url": "http://tasks.example.org/t/dafny_tmp_tmpmvs2dmry_examples1__max/159e73",
+"snippet": "A t task: implement max (dafny tmp tmpmvs2dmry examples1) to its specification."
+},
+{
+"title": "triangleNumber",
+"url": "http://tasks.example.org/t/workshop_tmp_tmp0cu11bdq_lecture_answers_triangle_number__triangleNumber/b36a72",
+"snippet": "A t task: implement triangleNumber to its specification."
+},
+{
+"title": "mlastMaximum",
+"url": "http://tasks.example.org/t/vericoding_dd0113__mlastMaximum/a09ff9",
+"snippet": "//Algorithm 1: From left to right return the first //Algorithm 2: From right to left return the last //Algorithm : from left to right //Algorithm : from right to left"
+},
+{
+"title": "computePower (dafny verify tmp tmphq7j0row generated code computepower)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_generated_code_computepower__computePower/11c715",
+"snippet": "A t task: implement computePower (dafny verify tmp tmphq7j0row generated code computepower) to its specification."
+},
+{
+"title": "isBreakEven (vericoding dd0777)",
+"url": "http://tasks.example.org/t/vericoding_dd0777__isBreakEven/d73328",
+"snippet": "A t task: implement isBreakEven (vericoding dd0777) to its specification."
+},
+{
+"title": "replace (vericoding dd0079)",
+"url": "http://tasks.example.org/t/vericoding_dd0079__replace/76b854",
+"snippet": "A t task: implement replace (vericoding dd0079) to its specification."
+},
+{
+"title": "max (dafny tmp tmpj88zq5zt 2 kontrakte max)",
+"url": "http://tasks.example.org/t/dafny_tmp_tmpj88zq5zt_2_kontrakte_max__max/bb69f8",
+"snippet": "A t task: implement max (dafny tmp tmpj88zq5zt 2 kontrakte max) to its specification."
+},
+{
+"title": "linearSearch (clover linear search1)",
+"url": "http://tasks.example.org/t/clover_linear_search1__linearSearch/c0be62",
+"snippet": "A t task: implement linearSearch (clover linear search1) to its specification."
+},
+{
+"title": "max (humaneval dafny 163 generate integers)",
+"url": "http://tasks.example.org/t/humaneval_dafny_163_generate_integers__max/3ac124",
+"snippet": "Given two positive integers a and b, return the even digits between a and b, in ascending order."
+},
+{
+"title": "swap simultaneous",
+"url": "http://tasks.example.org/t/vericoding_vv0176__swap_simultaneous/c1b700",
+"snippet": "This task requires swapping two integer values. Given two integers as input, the objective is to produce an output where their order is reversed: the first element of the output corresponds to the sec"
+},
+{
+"title": "find (vericoding dd0061)",
+"url": "http://tasks.example.org/t/vericoding_dd0061__find/2362a0",
+"snippet": "A t task: implement find (vericoding dd0061) to its specification."
+},
+{
+"title": "maxArray (vericoding dj0153)",
+"url": "http://tasks.example.org/t/vericoding_dj0153__maxArray/529839",
+"snippet": "A t task: implement maxArray (vericoding dj0153) to its specification."
+},
+{
+"title": "lastDigit (dafny synthesis task id 435)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_435__lastDigit/2929e7",
+"snippet": "A t task: implement lastDigit (dafny synthesis task id 435) to its specification."
+},
+{
+"title": "tail",
+"url": "http://tasks.example.org/t/tail/13c44b",
+"snippet": "A t task: implement tail to its specification."
+},
+{
+"title": "findMax (dafny experiences tmp tmp150sm9qy dafny started tutorial dafny tutorial array)",
+"url": "http://tasks.example.org/t/dafny_experiences_tmp_tmp150sm9qy_dafny_started_tutorial_dafny_tutorial_array__findMax/745114",
+"snippet": "A t task: implement findMax (dafny experiences tmp tmp150sm9qy dafny started tutorial dafny tutorial array) to its specification."
+},
+{
+"title": "problem2",
+"url": "http://tasks.example.org/t/prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p2__problem2/ff2910",
+"snippet": "A t task: implement problem2 to its specification."
+},
+{
+"title": "testArrayElements (clover test array)",
+"url": "http://tasks.example.org/t/clover_test_array__testArrayElements/4d32cf",
+"snippet": "A t task: implement testArrayElements (clover test array) to its specification."
+},
+{
+"title": "is prime",
+"url": "http://tasks.example.org/t/is_prime/3aadd9",
+"snippet": "A t task: implement is prime to its specification."
+},
+{
+"title": "probe names rocq",
+"url": "http://tasks.example.org/t/probe_names_rocq/3041f6",
+"snippet": "A t task: implement probe names rocq to its specification."
+},
+{
+"title": "mult (metodos formais tmp tmpql2hwcsh invariantes multiplicador)",
+"url": "http://tasks.example.org/t/metodos_formais_tmp_tmpql2hwcsh_invariantes_multiplicador__mult/09ac99",
+"snippet": "A t task: implement mult (metodos formais tmp tmpql2hwcsh invariantes multiplicador) to its specification."
+},
+{
+"title": "doubleQuadruple (vericoding dd0059)",
+"url": "http://tasks.example.org/t/vericoding_dd0059__doubleQuadruple/7e0612",
+"snippet": "A t task: implement doubleQuadruple (vericoding dd0059) to its specification."
+},
+{
+"title": "smallestListLength (dafny synthesis task id 95)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_95__smallestListLength/223150",
+"snippet": "A t task: implement smallestListLength (dafny synthesis task id 95) to its specification."
+},
+{
+"title": "probe names verus",
+"url": "http://tasks.example.org/t/probe_names_verus/4d58c3",
+"snippet": "A t task: implement probe names verus to its specification."
+},
+{
+"title": "maxDifference (dafny synthesis task id 145)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_145__maxDifference/9e07c1",
+"snippet": "A t task: implement maxDifference (dafny synthesis task id 145) to its specification."
+},
+{
+"title": "triple (vericoding dv0180)",
+"url": "http://tasks.example.org/t/vericoding_dv0180__triple/0225b4",
+"snippet": "/* This task involves determining the triple of a given integer. The goal is to create a function that, for any integer provided as input, returns a value equal to three times that integer, including "
+},
+{
+"title": "findMax (vericoding dd0521)",
+"url": "http://tasks.example.org/t/vericoding_dd0521__findMax/0ac8e3",
+"snippet": "// shenanigans going through the dafny tutorial"
+},
+{
+"title": "double array elements (vericoding dd0058)",
+"url": "http://tasks.example.org/t/vericoding_dd0058__double_array_elements/8af694",
+"snippet": "A t task: implement double array elements (vericoding dd0058) to its specification."
+},
+{
+"title": "triple p (dafny verify tmp tmphq7j0row test cases function)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_test_cases_function__triple_p/06fa79",
+"snippet": "A t task: implement triple p (dafny verify tmp tmphq7j0row test cases function) to its specification."
+},
+{
+"title": "m (dafny verify tmp tmphq7j0row test cases ghost)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m/f3a837",
+"snippet": "A t task: implement m (dafny verify tmp tmphq7j0row test cases ghost) to its specification."
+},
+{
+"title": "fatorial",
+"url": "http://tasks.example.org/t/t1_mf_tmp_tmpi_sqie4j_exemplos_introducao_ex4__fatorial/90fa74",
+"snippet": "A t task: implement fatorial to its specification."
+},
+{
+"title": "nanpercentile",
+"url": "http://tasks.example.org/t/vericoding_vt0594__nanpercentile/c30889",
+"snippet": "Compute the q-th percentile of the data along the specified axis, ignoring NaN values. Returns the q-th percentile of the array elements. If all values are NaN, returns NaN. The percentile q must be b"
+},
+{
+"title": "createString",
+"url": "http://tasks.example.org/t/vericoding_da0320__createString/a8a8ec",
+"snippet": "A t task: implement createString to its specification."
+},
+{
+"title": "triple (vericoding dd0093)",
+"url": "http://tasks.example.org/t/vericoding_dd0093__triple/edccce",
+"snippet": "A t task: implement triple (vericoding dd0093) to its specification."
+},
+{
+"title": "max (vericoding vd0509)",
+"url": "http://tasks.example.org/t/vericoding_vd0509__max/048b2b",
+"snippet": "// http://verifythus.cost-ic0701.org/common-example/arraymax-in-dafny //max is larger then anything in the array // Note: exists quantifier syntax may vary in different Verus versions // ensures exist"
+},
+{
+"title": "myfun (vericoding dj0040)",
+"url": "http://tasks.example.org/t/vericoding_dj0040__myfun/336134",
+"snippet": "A t task: implement myfun (vericoding dj0040) to its specification."
+},
+{
+"title": "hasOppositeSign",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_58__hasOppositeSign/118ca5",
+"snippet": "A t task: implement hasOppositeSign to its specification."
+},
+{
+"title": "triple (vericoding dv0178)",
+"url": "http://tasks.example.org/t/vericoding_dv0178__triple/f8dc3d",
+"snippet": "/* This task involves computing three times a given integer. Given an integer, the goal is to produce a value that is exactly three times its value. Input: The input consists of a single integer: x: A"
+},
+{
+"title": "probe names upper",
+"url": "http://tasks.example.org/t/probe_names_upper/9040e6",
+"snippet": "A t task: implement probe names upper to its specification."
+},
+{
+"title": "solve (vericoding da0229)",
+"url": "http://tasks.example.org/t/vericoding_da0229__solve/858cdc",
+"snippet": "Given an integer a, count the number of times the digit '1' appears in its octal (base-8) representation. Input: A single integer a where 0 ≤ a ≤ 1,000,000 Output: A single integer representing the co"
+},
+{
+"title": "areaOfLargestTriangleInSemicircle",
+"url": "http://tasks.example.org/t/vericoding_dd0772__areaOfLargestTriangleInSemicircle/79d956",
+"snippet": "A t task: implement areaOfLargestTriangleInSemicircle to its specification."
+},
+{
+"title": "maxArrayReverse",
+"url": "http://tasks.example.org/t/vericoding_vd0483__maxArrayReverse/c1c9c7",
+"snippet": "// 2. // 3. // 5. // 6"
+},
+{
+"title": "mult (formalmethods tmp tmpvda2r3 o dafny invariants ex1)",
+"url": "http://tasks.example.org/t/formalmethods_tmp_tmpvda2r3_o_dafny_invariants_ex1__mult/9cf252",
+"snippet": "A t task: implement mult (formalmethods tmp tmpvda2r3 o dafny invariants ex1) to its specification."
+},
+{
+"title": "multipleReturns (vericoding dd0075)",
+"url": "http://tasks.example.org/t/vericoding_dd0075__multipleReturns/e450f7",
+"snippet": "A t task: implement multipleReturns (vericoding dd0075) to its specification."
+},
+{
+"title": "max (dafny workout tmp tmp0abkw6f8 starter ex01)",
+"url": "http://tasks.example.org/t/dafny_workout_tmp_tmp0abkw6f8_starter_ex01__max/8fa9ce",
+"snippet": "A t task: implement max (dafny workout tmp tmp0abkw6f8 starter ex01) to its specification."
+},
+{
+"title": "nanargmin",
+"url": "http://tasks.example.org/t/vericoding_vt0568__nanargmin/96895b",
+"snippet": "numpy.nanargmin: Return the indices of the minimum values in the specified axis ignoring NaNs. For all-NaN slices ValueError is raised. Warning: the results cannot be trusted if a slice contains only "
+},
+{
+"title": "swap (programmverifikation und synthese tmp tmppurk6ime pvs assignment ex 07 hoangkim ex07 hoangkim)",
+"url": "http://tasks.example.org/t/programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__swap/3ff363",
+"snippet": "A t task: implement swap (programmverifikation und synthese tmp tmppurk6ime pvs assignment ex 07 hoangkim ex07 hoangkim) to its specification."
+},
+{
+"title": "swapFirstAndLast (dafny synthesis task id 591)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_591__swapFirstAndLast/c6a572",
+"snippet": "A t task: implement swapFirstAndLast (dafny synthesis task id 591) to its specification."
+},
+{
+"title": "quotient (dafny synthesis task id 292)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_292__quotient/d468b4",
+"snippet": "A t task: implement quotient (dafny synthesis task id 292) to its specification."
+},
+{
+"title": "reverse (reverse)",
+"url": "http://tasks.example.org/t/reverse/2e13d8",
+"snippet": "A t task: implement reverse (reverse) to its specification."
+},
+{
+"title": "downWhileGreater",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileGreater/36b33f",
+"snippet": "A t task: implement downWhileGreater to its specification."
+},
+{
+"title": "sum to n (vericoding dh0063)",
+"url": "http://tasks.example.org/t/vericoding_dh0063__sum_to_n/3c1d99",
+"snippet": "This verification task implements the computation of the sum of all integers from 1 to n inclusive, where n is a positive integer. The expected implementation should use the well-known mathematical fo"
+},
+{
+"title": "multiply (dafny synthesis task id 127)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_127__multiply/d21d77",
+"snippet": "A t task: implement multiply (dafny synthesis task id 127) to its specification."
+},
+{
+"title": "squareElements",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_8__squareElements/b26017",
+"snippet": "A t task: implement squareElements to its specification."
+},
+{
+"title": "tripleConditions (dafny verify tmp tmphq7j0row test cases function)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_test_cases_function__tripleConditions/59d19f",
+"snippet": "A t task: implement tripleConditions (dafny verify tmp tmphq7j0row test cases function) to its specification."
+},
+{
+"title": "lateralSurfaceArea",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_266__lateralSurfaceArea/6361ea",
+"snippet": "A t task: implement lateralSurfaceArea to its specification."
+},
+{
+"title": "myfun (vericoding dj0041)",
+"url": "http://tasks.example.org/t/vericoding_dj0041__myfun/b46dc2",
+"snippet": "A t task: implement myfun (vericoding dj0041) to its specification."
+},
+{
+"title": "cubeVolume (vericoding dd0682)",
+"url": "http://tasks.example.org/t/vericoding_dd0682__cubeVolume/f2daf2",
+"snippet": "A t task: implement cubeVolume (vericoding dd0682) to its specification."
+},
+{
+"title": "f",
+"url": "http://tasks.example.org/t/dafny_tmp_tmp0wu8wmfr_tests_f1a__f/92a3e4",
+"snippet": "A t task: implement f to its specification."
+},
+{
+"title": "max (dafny synthesis task id 309)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_309__max/55f6a3",
+"snippet": "A t task: implement max (dafny synthesis task id 309) to its specification."
+},
+{
+"title": "max (vericoding ds0033)",
+"url": "http://tasks.example.org/t/vericoding_ds0033__max/f19a45",
+"snippet": "A t task: implement max (vericoding ds0033) to its specification."
+},
+{
+"title": "quotient (vericoding dd0077)",
+"url": "http://tasks.example.org/t/vericoding_dd0077__quotient/8bcf40",
+"snippet": "A t task: implement quotient (vericoding dd0077) to its specification."
+},
+{
+"title": "countNonEmptySubstrings (dafny synthesis task id 238)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_238__countNonEmptySubstrings/35acb0",
+"snippet": "A t task: implement countNonEmptySubstrings (dafny synthesis task id 238) to its specification."
+},
+{
+"title": "max (bbfny tmp tmpw4m0jvl0 enjoying)",
+"url": "http://tasks.example.org/t/bbfny_tmp_tmpw4m0jvl0_enjoying__max/1e850a",
+"snippet": "A t task: implement max (bbfny tmp tmpw4m0jvl0 enjoying) to its specification."
+},
+{
+"title": "solve (vericoding da0366)",
+"url": "http://tasks.example.org/t/vericoding_da0366__solve/0e8dad",
+"snippet": "Given n tasks numbered 1 to n and parameter k, find the starting task that minimizes total \"telling off power\" when Dima performs tasks in circular order and Inna interrupts every k tasks (1st, (k+1)t"
+},
+{
+"title": "squarePyramidSurfaceArea (vericoding dd0752)",
+"url": "http://tasks.example.org/t/vericoding_dd0752__squarePyramidSurfaceArea/e1103a",
+"snippet": "A t task: implement squarePyramidSurfaceArea (vericoding dd0752) to its specification."
+},
+{
+"title": "triple p (stunning palm tree tmp tmpr84c2iwh ch1)",
+"url": "http://tasks.example.org/t/stunning_palm_tree_tmp_tmpr84c2iwh_ch1__triple_p/804ac5",
+"snippet": "A t task: implement triple p (stunning palm tree tmp tmpr84c2iwh ch1) to its specification."
+},
+{
+"title": "elementWiseSubtract (vericoding dj0078)",
+"url": "http://tasks.example.org/t/vericoding_dj0078__elementWiseSubtract/ac86d1",
+"snippet": "A t task: implement elementWiseSubtract (vericoding dj0078) to its specification."
+},
+{
+"title": "nthHexagonalNumber",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_135__nthHexagonalNumber/aa57d7",
+"snippet": "A t task: implement nthHexagonalNumber to its specification."
+},
+{
+"title": "factorial (factorial)",
+"url": "http://tasks.example.org/t/factorial/87064f",
+"snippet": "A t task: implement factorial (factorial) to its specification."
+},
+{
+"title": "compute min3",
+"url": "http://tasks.example.org/t/verus_examples_guide_modes_compute_min3__compute_min3/78ef6f",
+"snippet": "A t task: implement compute min3 to its specification."
+},
+{
+"title": "triangularPrismVolume (vericoding dd0646)",
+"url": "http://tasks.example.org/t/vericoding_dd0646__triangularPrismVolume/2ad6f1",
+"snippet": "A t task: implement triangularPrismVolume (vericoding dd0646) to its specification."
+},
+{
+"title": "foo",
+"url": "http://tasks.example.org/t/program_verification_dataset_tmp_tmpgbdrlnu__dafny_algorithms_and_leetcode_examples_simplemultiplication__foo/8f5820",
+"snippet": "A t task: implement foo to its specification."
+},
+{
+"title": "nonZeroReturn",
+"url": "http://tasks.example.org/t/final_project_dafny_tmp_tmpmcywuqox_final_project_3__nonZeroReturn/734096",
+"snippet": "A t task: implement nonZeroReturn to its specification."
+},
+{
+"title": "maxDafnyLsp",
+"url": "http://tasks.example.org/t/vericoding_dj0154__maxDafnyLsp/4d7afc",
+"snippet": "A t task: implement maxDafnyLsp to its specification."
+},
+{
+"title": "smallestListLength (vericoding dd0663)",
+"url": "http://tasks.example.org/t/vericoding_dd0663__smallestListLength/cf247f",
+"snippet": "A t task: implement smallestListLength (vericoding dd0663) to its specification."
+},
+{
+"title": "cubeSurfaceArea (dafny synthesis task id 441)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_441__cubeSurfaceArea/f2e544",
+"snippet": "A t task: implement cubeSurfaceArea (dafny synthesis task id 441) to its specification."
+},
+{
+"title": "elementWiseDivide (dafny synthesis task id 618)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_618__elementWiseDivide/7703b3",
+"snippet": "A t task: implement elementWiseDivide (dafny synthesis task id 618) to its specification."
+},
+{
+"title": "maxArray (dafny exercise tmp tmpouftptir maxarray)",
+"url": "http://tasks.example.org/t/dafny_exercise_tmp_tmpouftptir_maxarray__maxArray/4cebf5",
+"snippet": "A t task: implement maxArray (dafny exercise tmp tmpouftptir maxarray) to its specification."
+},
+{
+"title": "nthNonagonalNumber (dafny synthesis task id 641)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_641__nthNonagonalNumber/335f06",
+"snippet": "A t task: implement nthNonagonalNumber (dafny synthesis task id 641) to its specification."
+},
+{
+"title": "incrementArray (vericoding dd0271)",
+"url": "http://tasks.example.org/t/vericoding_dd0271__incrementArray/4f576f",
+"snippet": "A t task: implement incrementArray (vericoding dd0271) to its specification."
+},
+{
+"title": "pentagonPerimeter (dafny synthesis task id 171)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_171__pentagonPerimeter/ed7edb",
+"snippet": "A t task: implement pentagonPerimeter (dafny synthesis task id 171) to its specification."
+},
+{
+"title": "mismatch",
+"url": "http://tasks.example.org/t/acsl_mismatch__mismatch/f2256f",
+"snippet": "A t task: implement mismatch to its specification."
+},
+{
+"title": "lookForMin (final project dafny tmp tmpmcywuqox attempts insertion sort normal)",
+"url": "http://tasks.example.org/t/final_project_dafny_tmp_tmpmcywuqox_attempts_insertion_sort_normal__lookForMin/5b3c6d",
+"snippet": "A t task: implement lookForMin (final project dafny tmp tmpmcywuqox attempts insertion sort normal) to its specification."
+},
+{
+"title": "index",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_test_cases_index__index/20cc0c",
+"snippet": "A t task: implement index to its specification."
+},
+{
+"title": "swap bitvectors (vericoding vv0173)",
+"url": "http://tasks.example.org/t/vericoding_vv0173__swap_bitvectors/1c49cb",
+"snippet": "This task requires swapping two 8-bit unsigned integers. Given two unsigned integer inputs, the goal is to produce an output pair where the first element is the original second input and the second el"
+},
+{
+"title": "hoareTripleReqEns (vericoding dd0848)",
+"url": "http://tasks.example.org/t/vericoding_dd0848__hoareTripleReqEns/004dbf",
+"snippet": "/* Dafny include 2 limbaje: * un limbaj pentru specificare MSFOL (ce am discutat până acum) adnotări care să ajute în procesul de verificare * un limbaj pentru scris programe */ // Exemplu de program "
+},
+{
+"title": "subtractSequences (dafny synthesis task id 273)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_273__subtractSequences/41e275",
+"snippet": "A t task: implement subtractSequences (dafny synthesis task id 273) to its specification."
+},
+{
+"title": "swap (clover swap)",
+"url": "http://tasks.example.org/t/clover_swap__swap/80d87d",
+"snippet": "A t task: implement swap (clover swap) to its specification."
+},
+{
+"title": "incrementArray (final project dafny tmp tmpmcywuqox attempts exercise3 increment array)",
+"url": "http://tasks.example.org/t/final_project_dafny_tmp_tmpmcywuqox_attempts_exercise3_increment_array__incrementArray/c10245",
+"snippet": "A t task: implement incrementArray (final project dafny tmp tmpmcywuqox attempts exercise3 increment array) to its specification."
+},
+{
+"title": "reconstructFromMaxSum (dafny verify tmp tmphq7j0row test cases index)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_test_cases_index__reconstructFromMaxSum/b57008",
+"snippet": "A t task: implement reconstructFromMaxSum (dafny verify tmp tmphq7j0row test cases index) to its specification."
+},
+{
+"title": "sum to n (humaneval dafny 060 sum to n)",
+"url": "http://tasks.example.org/t/humaneval_dafny_060_sum_to_n__sum_to_n/a94a59",
+"snippet": "sum_to_n is a function that sums numbers from 1 to n."
+},
+{
+"title": "testArrayElements (vericoding dd0090)",
+"url": "http://tasks.example.org/t/vericoding_dd0090__testArrayElements/4b8cbc",
+"snippet": "A t task: implement testArrayElements (vericoding dd0090) to its specification."
+},
+{
+"title": "triple (clover triple4)",
+"url": "http://tasks.example.org/t/clover_triple4__triple/434468",
+"snippet": "A t task: implement triple (clover triple4) to its specification."
+},
+{
+"title": "linearSearch (vericoding dd0598)",
+"url": "http://tasks.example.org/t/vericoding_dd0598__linearSearch/a0423f",
+"snippet": "// RUN: %dafny /compile:3 /spillTargetCode:2 /compileTarget:cs \"%s\" > \"%t\" // RUN: %dafny /compile:3 /spillTargetCode:2 /compileTarget:js \"%s\" >> \"%t\" // RUN: %dafny /compile:3 /spillTargetCode:2 /com"
+},
+{
+"title": "myfun (vericoding dj0044)",
+"url": "http://tasks.example.org/t/vericoding_dj0044__myfun/52c971",
+"snippet": "A t task: implement myfun (vericoding dj0044) to its specification."
+},
+{
+"title": "tetrahedralNumber",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_80__tetrahedralNumber/358773",
+"snippet": "A t task: implement tetrahedralNumber to its specification."
+},
+{
+"title": "compare",
+"url": "http://tasks.example.org/t/vericoding_dv0135__compare/3948c9",
+"snippet": "/* This task involves determining whether two integer values are equal. The goal is simply to compare the two provided numbers and indicate with a Boolean result whether they are the same. -----Input-"
+},
+{
+"title": "testDouble",
+"url": "http://tasks.example.org/t/dafny_learn_tmp_tmpn94ir40q_r01_functions__testDouble/2b9204",
+"snippet": "A t task: implement testDouble to its specification."
+},
+{
+"title": "nanargmax",
+"url": "http://tasks.example.org/t/vericoding_vt0567__nanargmax/f957b8",
+"snippet": "numpy.nanargmax: Returns the index of the maximum value in a vector, ignoring NaN values. Returns the index of the maximum value among all non-NaN elements in the array. Requires that at least one ele"
+},
+{
+"title": "largest divisor",
+"url": "http://tasks.example.org/t/humaneval_dafny_024_largest_divisor__largest_divisor/ec2c37",
+"snippet": "For a given number n, find the largest number that divides n evenly, smaller than n"
+},
+{
+"title": "tripleConditions (dafny verify tmp tmphq7j0row test cases triple)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_test_cases_triple__tripleConditions/c09126",
+"snippet": "A t task: implement tripleConditions (dafny verify tmp tmphq7j0row test cases triple) to its specification."
+},
+{
+"title": "lookForMin (vericoding dd0275)",
+"url": "http://tasks.example.org/t/vericoding_dd0275__lookForMin/266ed4",
+"snippet": "A t task: implement lookForMin (vericoding dd0275) to its specification."
+},
+{
+"title": "solve (vericoding da0676)",
+"url": "http://tasks.example.org/t/vericoding_da0676__solve/23ec79",
+"snippet": "Given a current rating R and target rating G, find the required performance P such that the new rating equals G, where new rating = (R + P) / 2 = G."
+},
+{
+"title": "mid",
+"url": "http://tasks.example.org/t/dafny_tmp_tmp0wu8wmfr_tests_f1a__mid/4498f7",
+"snippet": "A t task: implement mid to its specification."
+},
+{
+"title": "filter pos",
+"url": "http://tasks.example.org/t/filter_pos/da96ed",
+"snippet": "A t task: implement filter pos to its specification."
+},
+{
+"title": "startAndEndWithSameChar",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_396__startAndEndWithSameChar/45700a",
+"snippet": "A t task: implement startAndEndWithSameChar to its specification."
+},
+{
+"title": "swap (vericoding dd0088)",
+"url": "http://tasks.example.org/t/vericoding_dd0088__swap/5cb6bf",
+"snippet": "A t task: implement swap (vericoding dd0088) to its specification."
+},
+{
+"title": "solve (vericoding da0644)",
+"url": "http://tasks.example.org/t/vericoding_da0644__solve/5b4d59",
+"snippet": "Count the number of \"Takahashi\" dates from 2018-1-1 through 2018-a-b (inclusive). A Takahashi date is one where the month and day numbers are equal (e.g., 1-1, 2-2, 3-3, etc.)."
+},
+{
+"title": "kthElementImpl",
+"url": "http://tasks.example.org/t/vericoding_dv0084__kthElementImpl/38b04c",
+"snippet": "/* This task requires writing a Dafny method that finds the kth element in a given array using 1-based indexing. The method should return the element at the specified position, where the first element"
+},
+{
+"title": "isPrime",
+"url": "http://tasks.example.org/t/vericoding_dd0763__isPrime/788ecb",
+"snippet": "A t task: implement isPrime to its specification."
+},
+{
+"title": "main v (dafny verify tmp tmphq7j0row fine tune examples error data completion 11)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v/a64d2e",
+"snippet": "A t task: implement main v (dafny verify tmp tmphq7j0row fine tune examples error data completion 11) to its specification."
+},
+{
+"title": "swap (clover swap in array)",
+"url": "http://tasks.example.org/t/clover_swap_in_array__swap/a99292",
+"snippet": "A t task: implement swap (clover swap in array) to its specification."
+},
+{
+"title": "solve (vericoding da0278)",
+"url": "http://tasks.example.org/t/vericoding_da0278__solve/66f028",
+"snippet": "Given an integer N (1 ≤ N ≤ 100), count how many divisors of N! have exactly 75 divisors. A number has exactly 75 divisors if and only if its prime factorization has one of these forms: - p^74 (where "
+},
+{
+"title": "swapArithmetic (vericoding dd0086)",
+"url": "http://tasks.example.org/t/vericoding_dd0086__swapArithmetic/f1da7e",
+"snippet": "A t task: implement swapArithmetic (vericoding dd0086) to its specification."
+},
+{
+"title": "isLengthOdd",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_79__isLengthOdd/19daa4",
+"snippet": "A t task: implement isLengthOdd to its specification."
+},
+{
+"title": "sumUpTo",
+"url": "http://tasks.example.org/t/program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_sumto_sol__sumUpTo/39f3e5",
+"snippet": "A t task: implement sumUpTo to its specification."
+},
+{
+"title": "multiply (vericoding dv0085)",
+"url": "http://tasks.example.org/t/vericoding_dv0085__multiply/b73b66",
+"snippet": "/* This task requires writing a Dafny method that multiplies two integers. The method should return the product of the two input numbers. -----Input----- The input consists of: a: The first integer. b"
+},
+{
+"title": "Loops in t",
+"url": "http://wiki.example.net/loops",
+"snippet": "A while loop in t names its invariants and a decreases expression."
+},
+{
+"title": "Sequences in t",
+"url": "http://wiki.example.net/sequences",
+"snippet": "A seq holds integers."
+},
+{
+"title": "Specifications in t",
+"url": "http://wiki.example.net/specifications",
+"snippet": "A task states what it requires of its inputs and what it ensures of its result."
+},
+{
+"title": "Example lines",
+"url": "http://wiki.example.net/examples",
+"snippet": "An Example line names the task, its arguments and the expected result, such as Example: f(3) == 9."
+},
+{
+"title": "Near-miss programs",
+"url": "http://wiki.example.net/twins",
+"snippet": "A twin is a program with one deliberate edit, such as an off-by-one or a negated condition, and an input at which it answers differently.."
+},
+{
+"title": "Divisors",
+"url": "http://wiki.example.net/divisors",
+"snippet": "A divisor of n divides n with no remainder."
+},
+{
+"title": "Strings as sequences",
+"url": "http://wiki.example.net/strings",
+"snippet": "A string reaches a t program as a seq of character codes, so the string ab is the sequence [97, 98].."
+},
+{
+"title": "Booleans",
+"url": "http://wiki.example.net/booleans",
+"snippet": "true and false are values of type bool; t never treats a bool as a number.."
+},
+{
+"title": "main v (dafny verify tmp tmphq7j0row dataset c convert examples 11)",
+"url": "http://tasks.example.org/t/dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_11__main_v/0362b4",
+"snippet": "A t task: implement main v (dafny verify tmp tmphq7j0row dataset c convert examples 11) to its specification."
+},
+{
+"title": "probe names dafny",
+"url": "http://tasks.example.org/t/probe_names_dafny/3d1851",
+"snippet": "A t task: implement probe names dafny to its specification."
+},
+{
+"title": "swap (vericoding dd0085)",
+"url": "http://tasks.example.org/t/vericoding_dd0085__swap/f83b51",
+"snippet": "A t task: implement swap (vericoding dd0085) to its specification."
+},
+{
+"title": "isGreater (vericoding dj0088)",
+"url": "http://tasks.example.org/t/vericoding_dj0088__isGreater/089f2f",
+"snippet": "A t task: implement isGreater (vericoding dj0088) to its specification."
+},
+{
+"title": "append",
+"url": "http://tasks.example.org/t/vericoding_dv0152__append/9bc824",
+"snippet": "/* -----Description----- The problem asks you to construct a new list by adding an extra number to the end of an existing list of numbers. The focus is on understanding what the final list should look"
+},
+{
+"title": "plus one",
+"url": "http://tasks.example.org/t/program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one_details__plus_one/4e7810",
+"snippet": "A t task: implement plus one to its specification."
+},
+{
+"title": "factorial (vericoding dd0635)",
+"url": "http://tasks.example.org/t/vericoding_dd0635__factorial/b36cd2",
+"snippet": "A t task: implement factorial (vericoding dd0635) to its specification."
+},
+{
+"title": "gauss",
+"url": "http://tasks.example.org/t/programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss/60c085",
+"snippet": "A t task: implement gauss to its specification."
+},
+{
+"title": "all nonneg",
+"url": "http://tasks.example.org/t/all_nonneg/3dbeff",
+"snippet": "A t task: implement all nonneg to its specification."
+},
+{
+"title": "myfun (vericoding dj0015)",
+"url": "http://tasks.example.org/t/vericoding_dj0015__myfun/c2e38f",
+"snippet": "A t task: implement myfun (vericoding dj0015) to its specification."
+},
+{
+"title": "kthElement",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_101__kthElement/d81b66",
+"snippet": "A t task: implement kthElement to its specification."
+},
+{
+"title": "squarePerimeter",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_17__squarePerimeter/9a0286",
+"snippet": "A t task: implement squarePerimeter to its specification."
+},
+{
+"title": "allow42",
+"url": "http://tasks.example.org/t/formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__allow42/da770c",
+"snippet": "A t task: implement allow42 to its specification."
+},
+{
+"title": "add by one",
+"url": "http://tasks.example.org/t/program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_add_by_one__add_by_one/277784",
+"snippet": "A t task: implement add by one to its specification."
+},
+{
+"title": "myfun (vericoding dj0038)",
+"url": "http://tasks.example.org/t/vericoding_dj0038__myfun/c32c9c",
+"snippet": "A t task: implement myfun (vericoding dj0038) to its specification."
+},
+{
+"title": "isMonthWith30Days (dafny synthesis task id 762)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_762__isMonthWith30Days/6b2ea5",
+"snippet": "A t task: implement isMonthWith30Days (dafny synthesis task id 762) to its specification."
+},
+{
+"title": "elementWiseDivision (dafny synthesis task id 261)",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_261__elementWiseDivision/b61ea7",
+"snippet": "A t task: implement elementWiseDivision (dafny synthesis task id 261) to its specification."
+},
+{
+"title": "nthUglyNumber",
+"url": "http://tasks.example.org/t/vericoding_dv0057__nthUglyNumber/fa6f0a",
+"snippet": "/* This task requires writing a Dafny method that returns the nth \"ugly number\". Ugly numbers are positive integers whose only prime factors are 2, 3, or 5. The method should generate ugly numbers in "
+},
+{
+"title": "div ent it",
+"url": "http://tasks.example.org/t/tfg_tmp_tmpbvsao41w_algoritmos_dafny_div_ent_it__div_ent_it/c07f96",
+"snippet": "A t task: implement div ent it to its specification."
+},
+{
+"title": "skipNewline",
+"url": "http://tasks.example.org/t/vericoding_da0439__skipNewline/711543",
+"snippet": "Given n grains where each grain weighs between (a-b) and (a+b) grams inclusive, determine if the total weight of all n grains can fall within the range [c-d, c+d] grams inclusive. Input format: first "
+},
+{
+"title": "mmaximum1 (vericoding dd0114)",
+"url": "http://tasks.example.org/t/vericoding_dd0114__mmaximum1/be35dc",
+"snippet": "//Algorithm 1: From left to right return the first //Algorithm 2: From right to left return the last //Algorithm : from left to right //Algorithm : from right to left"
+},
+{
+"title": "carre",
+"url": "http://tasks.example.org/t/m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre/d43b7e",
+"snippet": "A t task: implement carre to its specification."
+},
+{
+"title": "max (software building and verification projects tmp tmp5tm1srrn cvs projeto aula2)",
+"url": "http://tasks.example.org/t/software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__max/d9f91c",
+"snippet": "A t task: implement max (software building and verification projects tmp tmp5tm1srrn cvs projeto aula2) to its specification."
+},
+{
+"title": "arrayToSeq",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_587__arrayToSeq/2ca604",
+"snippet": "A t task: implement arrayToSeq to its specification."
+},
+{
+"title": "abs (dafny tmp tmpmvs2dmry examples1)",
+"url": "http://tasks.example.org/t/dafny_tmp_tmpmvs2dmry_examples1__abs/f350ca",
+"snippet": "A t task: implement abs (dafny tmp tmpmvs2dmry examples1) to its specification."
+},
+{
+"title": "findMax (vericoding dj0020)",
+"url": "http://tasks.example.org/t/vericoding_dj0020__findMax/780266",
+"snippet": "A t task: implement findMax (vericoding dj0020) to its specification."
+},
+{
+"title": "findMin (programmverifikation und synthese tmp tmppurk6ime pvs assignment ex 07 hoangkim ex07 hoangkim)",
+"url": "http://tasks.example.org/t/programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_07_hoangkim_ex07_hoangkim__findMin/956a67",
+"snippet": "A t task: implement findMin (programmverifikation und synthese tmp tmppurk6ime pvs assignment ex 07 hoangkim ex07 hoangkim) to its specification."
+},
+{
+"title": "sumOdds",
+"url": "http://tasks.example.org/t/programmverifikation_und_synthese_tmp_tmppurk6ime_pvs_assignment_ex_04_hoangkim_ex_04_hoangkim__sumOdds/043991",
+"snippet": "A t task: implement sumOdds to its specification."
+},
+{
+"title": "swap bitvectors (vericoding vd0087)",
+"url": "http://tasks.example.org/t/vericoding_vd0087__swap_bitvectors/0b82f4",
+"snippet": "A t task: implement swap bitvectors (vericoding vd0087) to its specification."
+},
+{
+"title": "nthDecagonalNumber",
+"url": "http://tasks.example.org/t/dafny_synthesis_task_id_279__nthDecagonalNumber/12d731",
+"snippet": "A t task: implement nthDecagonalNumber to its specification."
+},
+{
+"title": "swapSimultaneous (clover swap sim)",
+"url": "http://tasks.example.org/t/clover_swap_sim__swapSimultaneous/a99b18",
+"snippet": "A t task: implement swapSimultaneous (clover swap sim) to its specification."
+},
+{
+"title": "getmini",
+"url": "http://tasks.example.org/t/vericoding_dd0454__getmini/d4e6ed",
+"snippet": "/* */ // mini is an index of a // a[mini] is the minimum value // a[mini] is the first min"
+},
+{
+"title": "maxArray (vericoding dd0071)",
+"url": "http://tasks.example.org/t/vericoding_dd0071__maxArray/2cab94",
+"snippet": "A t task: implement maxArray (vericoding dd0071) to its specification."
+}
+]
+}

@@ -119,6 +119,7 @@ class RowState:
         self.tool_tokens = []
         self.completed = False
         self.tool_calls = []          # (program or call text, output text) per call, for the caller
+        self.call_kinds = []          # "t" (a <|t_start|> span) or "tool" (a registry call), per call
         self.session = session        # the harness's per-conversation state (taint, stop blocks)
         self.stops = []               # reasons a Stop hook gave for not ending
         self.ended_in_call = False    # <|assistant_end|> while a call was open (only without the grammar)
@@ -284,6 +285,7 @@ class Engine:
                     else:
                         result = self.harness.call_text(text, context=context, session=row.session)
                     row.tool_calls.append((text, result.text))
+                    row.call_kinds.append(row.tool_kind)
                     row.forced_tokens.extend(self._output_tokens(result))
                     row.tool_tokens = []
                 elif row.in_tool_block:

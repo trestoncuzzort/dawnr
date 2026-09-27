@@ -253,11 +253,31 @@ def render_for_completion(tokenizer, conversation: dict) -> list[int]:
     return ids + [special(tokenizer, ASSISTANT_START)]
 
 
+def call_program(part: dict) -> str | None:
+    """The t program a call part submits for checking, or None for any other part.
+
+    A <|t_start|> span is shorthand for the registry call `t {"program": ...}` (DAWNR-HARNESS.md section 1),
+    and dawnr's own MCP server checks a program the same way (`mcp__<server>__t_check {"program": ...}`),
+    so all three submit a program; any other registry call (a fetch, a search, a skill) does not."""
+    if part.get("type") == "t":
+        return part["text"]
+    if part.get("type") != "tool":
+        return None
+    from dawnr_harness.tools import CallError, parse_call
+    try:
+        name, args = parse_call(part["text"])
+    except CallError:
+        return None
+    if (name == "t" or name.endswith("__t_check")) and isinstance(args.get("program"), str):
+        return args["program"]
+    return None
+
+
 def final_program(content) -> str | None:
-    """The program an assistant message answers with: the last t tool call, or its text."""
+    """The program an assistant message answers with: the last call that submits one (call_program), or its text."""
     if isinstance(content, str):
         return content.strip() or None
-    calls = [p["text"] for p in content if p.get("type") == "t"]
+    calls = [p for p in (call_program(part) for part in content) if p is not None]
     if calls:
         return calls[-1].strip() or None
     text = "".join(p["text"] for p in content if p.get("type") == "text").strip()
