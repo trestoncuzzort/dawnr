@@ -171,7 +171,11 @@ def rename_locals(task: dict, naming: str) -> dict:
     local = locals_of(task)
     # a quantifier inside the body that binds a local's name shadows it there: that local is left alone.
     # One in requires/ensures does not (the body's locals are not in scope there), but its name stays taken.
-    renamable = [n for n in local if n not in _binders(task.get("body", []), set())]
+    # A local named like a parameter, the result, a function or the task itself shadows that name, which t's
+    # scope rule makes ill formed; renaming it would choose which name each use meant, so it is left alone too.
+    declared = ({p.get("name") for p in task.get("params", [])} | {r.get("name") for r in task.get("returns", [])}
+                | {f.get("name") for f in task.get("spec_funs", [])} | {task.get("name")})
+    renamable = [n for n in local if n not in _binders(task.get("body", []), set()) and n not in declared]
     taken = {n.lower() for n in _names(task, set()) if n not in renamable}
     import surface
     taken |= {k.lower() for k in surface.KEYWORDS} | {n.lower() for n in _binders(task, set())}
