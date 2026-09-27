@@ -759,6 +759,341 @@ class GroundingFailsClosed(Temp):
         self.assertGreater(sneaky, 1000)      # and it met many proposals a check of nouns alone would admit
 
 
+class ContradictionsAreReadOverTheWholeUtterance(Temp):
+    """The third round on grounding. grounded() read each clause on its own, so an utterance that contradicts itself
+    grounded either side cleanly: "I like cats, and I don't like cats." admitted "likes cats" and "dislikes cats"
+    alike, and end_session() kept the last one with nothing in report.rejected. Grounding is now decided over
+    everything the person said in the session, every sentence and clause of every message: two statements the
+    patterns read about the same thing (an object word, word for word, or the same slot) that are not the same
+    statement are a contradiction, nothing about that thing is admitted, and the report names it with the two
+    readings. A statement that disagrees with a stored record waits as a question for the person instead of
+    replacing it (extract.py, "the whole utterance", and _apply)."""
+
+    REVIEWER = (("I like cats, and I don't like cats.", ("likes cats", "dislikes cats"), "cats"),
+                ("I want candy, and I avoid candy.", ("wants candy", "avoids candy"), "candy"),
+                ("I prefer tea, and I prefer coffee over tea.", ("prefers tea", "prefers coffee over tea"), "tea"),
+                ("Always answer briefly, and never answer briefly.",
+                 ("wants dawnr to always answer briefly", "wants dawnr to never answer briefly"), "answer briefly"),
+                ("I am a fan of cats, and I don't like cats.", ("is a fan of cats", "dislikes cats"), "cats"))
+
+    def entry(self, report, thing):
+        """The report's entry for a contradiction about `thing`: it must be there, with the two readings."""
+        entries = [e for e in report.rejected if e[1] == f"contradiction: {thing}"]
+        self.assertTrue(entries, report.rejected)
+        self.assertEqual(len(getattr(entries[0], "readings", ())), 2, entries[0])
+        return entries[0]
+
+    def refused(self, statement, evidence, view, thing, kind="preference"):
+        self.assertEqual(admit(Proposal(kind, statement, evidence, origin="model"), view),
+                         (False, f"contradiction: {thing}"), (statement, evidence))
+
+    def test_the_five_reviewer_inputs_through_admit(self):
+        for said, statements, thing in self.REVIEWER:
+            view = SessionView.of(conversation(said))
+            clauses = said.rstrip(".").split(", and ")
+            for statement, clause in zip(statements, clauses):
+                with self.subTest(said=said, statement=statement):
+                    self.refused(statement, said, view, thing)          # the whole sentence as the evidence
+                    self.refused(statement, clause, view, thing)        # or just the clause that says it
+
+    def test_the_five_reviewer_inputs_through_end_session_with_the_rules(self):
+        for i, (said, statements, thing) in enumerate(self.REVIEWER):
+            with self.subTest(said=said):
+                s = self.store(f"r{i}")
+                report = end_session(s, conversation(said), session_id="s1", now=NOW)      # the RuleProposer alone
+                self.assertEqual(sorted(self.entry(report, thing).readings), sorted(statements))
+                self.assertIn(f"contradiction: {thing}", report.summary())
+                self.assertEqual(s.records(("fact", "preference", "pending")), [])
+                # a model proposing both readings changes nothing, and each refusal says why
+                model = [Proposal("preference", st, said, origin="model") for st in statements]
+                report = end_session(s, conversation(said), session_id="s1", proposals=model, now=NOW)
+                self.assertEqual(s.records(("fact", "preference", "pending")), [])
+                for statement in statements:
+                    self.assertIn((statement, f"contradiction: {thing}"), report.rejected)
+                self.assertEqual(sorted(self.entry(report, thing).readings), sorted(statements))
+
+    def test_split_across_two_sentences_and_two_messages(self):
+        cases = ((("I like cats. I don't like cats.",), ("I like cats", "I don't like cats"),
+                  ("likes cats", "dislikes cats"), "cats"),
+                 (("I like cats.", "Noted.", "I don't like cats."), ("I like cats", "I don't like cats"),
+                  ("likes cats", "dislikes cats"), "cats"),
+                 (("I prefer tea.", "Noted.", "Well, I prefer coffee over tea."),
+                  ("I prefer tea", "I prefer coffee over tea"), ("prefers tea", "prefers coffee over tea"), "tea"),
+                 (("Always answer briefly.", "Sure.", "Never answer briefly."),
+                  ("Always answer briefly", "Never answer briefly"),
+                  ("wants dawnr to always answer briefly", "wants dawnr to never answer briefly"), "answer briefly"),
+                 (("I live in Lisbon. I'm learning Rust.", "Nice.", "I live in Porto."),
+                  ("I live in Lisbon", "I live in Porto"), ("lives in Lisbon", "lives in Porto"), "location"))
+        for n, (turns, clauses, statements, thing) in enumerate(cases):
+            with self.subTest(turns=turns):
+                view = SessionView.of(conversation(*turns))
+                kind = "fact" if thing == "location" else "preference"
+                for statement, clause in zip(statements, clauses):
+                    self.refused(statement, clause, view, thing, kind)
+                s = self.store(f"t{n}")
+                report = end_session(s, conversation(*turns), session_id="s1", now=NOW)
+                self.assertEqual(sorted(self.entry(report, thing).readings), sorted(statements))
+                kept = [r["text"] for r in s.records(("fact", "preference", "pending"))]
+                self.assertFalse(set(kept) & set(statements), kept)
+        # what else the person said is still remembered: only the thing they contradicted is withheld
+        self.assertEqual([r["text"] for r in self.store("t4").records(("fact",))], ["is learning Rust"])
+
+    def test_a_statement_read_anywhere_counts_not_only_a_whole_clause(self):
+        """A sentence the gate cannot admit (words after the object, a "No," before it) still says something about
+        the thing, and a clause after a comma or an "although" is read too: each is a statement in the utterance."""
+        for said, first, statement in (("I like cats. I love cats, I hate cats.", "I like cats.", "likes cats"),
+                                        ("I like cats. I love cats although I hate cats.", "I like cats.",
+                                         "likes cats"),
+                                        ("I don't like cats. No, I like cats.", "I don't like cats.", "dislikes cats"),
+                                        ("I like cats. Please remember that I don't like cats.", "I like cats.",
+                                         "likes cats")):
+            with self.subTest(said=said):
+                self.refused(statement, first, SessionView.of(conversation(said)), "cats")
+        # a statement is about what the statements inside its object are about: "remember that my birthday is May 3"
+        # is about the birthday, which the next sentence contradicts
+        view = SessionView.of(conversation("Remember that my birthday is May 3. My birthday is June 5."))
+        self.refused("asked dawnr to remember: their birthday is May 3", "Remember that my birthday is May 3.", view,
+                     "my birthday", kind="fact")
+        self.refused("their birthday is June 5", "My birthday is June 5.", view, "my birthday", kind="fact")
+
+    def test_one_thing_across_relations_and_plurals(self):
+        # "a cat" and "cats" differ word for word, and wanting and disliking are different relations with different
+        # slots ("want cat", "like cat"); the object as the rules key it ("cat") is the same thing
+        view = SessionView.of(conversation("I want a cat. I hate cats."))
+        self.refused("wants a cat", "I want a cat.", view, "cat")
+        self.refused("dislikes cats", "I hate cats.", view, "cat")
+        view = SessionView.of(conversation("I like cats. I don't like cat."))
+        self.refused("likes cats", "I like cats.", view, "cat")
+
+    def test_a_model_cannot_take_back_what_the_person_asked_to_forget(self):
+        s = self.store()
+        model = [Proposal("preference", "likes opera", "I like opera", origin="model")]
+        report = end_session(s, conversation("I like opera. Forget that I like opera."), session_id="s1",
+                             proposals=model, now=NOW)
+        self.assertEqual(s.records(("preference",)), [])
+        self.assertIn(("likes opera", "the person asked, in this session, to forget it"), report.rejected)
+        # said again after the forgetting, it is theirs again, whoever proposes it
+        end_session(s, conversation("Forget that I like opera. I like opera."), session_id="s2", proposals=model,
+                    now=NOW)
+        self.assertEqual([r["text"] for r in s.records(("preference",))], ["likes opera"])
+
+    def test_what_is_not_a_contradiction(self):
+        for statement, evidence, said, kind in (
+                ("likes cats", "I like cats.", "I like cats. I love cats.", "preference"),          # the same
+                ("likes jazz", "I like jazz", "I like jazz, and I'm a big fan of jazz.", "preference"),  # compatible
+                ("is a fan of jazz", "I'm a big fan of jazz", "I like jazz, and I'm a big fan of jazz.", "preference"),
+                ("lives in Lisbon", "I live in Lisbon", "I'm from Lisbon, and I live in Lisbon.", "fact"),
+                ("likes cats", "I like cats", "I like cats, and I don't like dogs.", "preference"),  # other things
+                ("dislikes cats", "I don't like cats.", "Forget that I like cats. I don't like cats.", "preference"),
+                ("asked dawnr to remember: they like cats", "Remember that I like cats.", "Remember that I like cats.",
+                 "fact"),                                                       # a statement said inside another
+                ("asked dawnr to remember: they like cats", "Remember that I like cats.",
+                 "Remember that I like cats. I like cats.", "fact"),            # ... and said again on its own
+                ("likes cats", "I like cats.", "Remember that I like cats. I like cats.", "preference"),
+                ("asked dawnr to remember: they like cats", "Remember that I like cats.",
+                 "Remember that I like cats. Remember that I like cats.", "fact"),
+                ("wants dawnr to always answer briefly", "Always answer briefly.",
+                 "From now on, always answer briefly. Always answer briefly.", "preference")):
+            with self.subTest(said=said, statement=statement):
+                view = SessionView.of(conversation(said))
+                self.assertEqual(admit(Proposal(kind, statement, evidence, origin="model"), view), (True, ""))
+
+    def test_a_stored_record_is_not_overwritten_the_person_is_asked(self):
+        for n, (first, then, old, new) in enumerate((
+                ("I like cats.", "I don't like cats.", "likes cats", "dislikes cats"),                   # polarity
+                ("I prefer tea over coffee.", "I prefer coffee over tea.", "prefers tea over coffee",
+                 "prefers coffee over tea"),                                                            # order
+                ("I prefer tea.", "I prefer coffee over tea.", "prefers tea", "prefers coffee over tea"),  # relation
+                ("I live in Lisbon.", "I live in Porto.", "lives in Lisbon", "lives in Porto"),        # a slot's value
+                ("Remember that my birthday is May 3.", "My birthday is June 5.",                      # said inside
+                 "asked dawnr to remember: their birthday is May 3", "their birthday is June 5"))):
+            with self.subTest(then=then):
+                s = self.store(f"s{n}")
+                end_session(s, conversation(first), session_id="s1", now=NOW)
+                (stored,) = s.records(("fact", "preference"))
+                self.assertEqual(stored["text"], old)
+                report = end_session(s, conversation(then), session_id="s2", now=NOW + DAY)
+                self.assertEqual([r["text"] for r in s.records(("fact", "preference"))], [old])   # not overwritten
+                self.assertEqual((report.added, report.updated), ([], []))
+                self.assertEqual(report.rejected, [(new, f"conflicts with stored record {stored['id']}")])
+                self.assertEqual(sorted(report.rejected[0].readings), sorted((new, old)))
+                (question,) = s.records(("pending",))                    # a pending item, not a fact
+                self.assertEqual((question["text"], question["becomes"], question["conflicts_with"]),
+                                 (new, stored["kind"], [stored["id"]]))
+                self.assertEqual(report.asked, [question])
+                self.assertIn(question["id"], report.summary())
+                self.assertNotIn(new, recall(s, then, budget=4000).text)  # a question is never recalled as memory
+                # saved again in the same session, and said again in a later one: still one question
+                end_session(s, conversation(then), session_id="s2", now=NOW + DAY)
+                end_session(s, conversation(then), session_id="s3", now=NOW + 2 * DAY)
+                self.assertEqual([q["id"] for q in s.records(("pending",))], [question["id"]])
+                self.assertEqual(s.get(question["id"])["sessions"], ["s2", "s3"])
+                # the person answers: what they said now replaces the record, which keeps its id
+                s.answer(question["id"], True, now=NOW + 3 * DAY)
+                self.assertEqual(s.records(("pending",)), [])
+                self.assertEqual(s.get(stored["id"])["text"], new)
+                self.assertEqual(s.get(stored["id"])["sessions"], ["s2", "s3"])
+
+    def test_what_is_not_asked(self):
+        """The same rule across sessions: a statement that says what a stored record says, or a compatible one, is
+        not a question."""
+        for n, (first, then, kept) in enumerate((
+                ("Remember that I like cats.", "I like cats.",
+                 ["asked dawnr to remember: they like cats", "likes cats"]),
+                ("I like cats.", "Remember that I like cats.",
+                 ["asked dawnr to remember: they like cats", "likes cats"]),
+                ("From now on, always answer briefly.", "Always answer briefly.",
+                 ["from now on: always answer briefly", "wants dawnr to always answer briefly"]),
+                ("I like jazz.", "I'm a big fan of jazz.", ["is a fan of jazz"]),                   # reworded in place
+                ("I live in Lisbon.", "I'm from Lisbon.", ["is from Lisbon", "lives in Lisbon"]))):
+            with self.subTest(then=then):
+                s = self.store(f"n{n}")
+                end_session(s, conversation(first), session_id="s1", now=NOW)
+                report = end_session(s, conversation(then), session_id="s2", now=NOW + DAY)
+                self.assertEqual((report.rejected, s.records(("pending",))), ([], []))
+                self.assertEqual(sorted(r["text"] for r in s.records(("fact", "preference"))), kept)
+
+    def test_one_contradiction_per_thing_not_per_pair(self):
+        """The gate and the report need which things are contradicted and a pair to name each, not every pair: a
+        first version compared every two statements, and 10,449 statements in 200 messages made 6.2 million
+        contradictions in 30 s. It also shows what failing closed costs: a word shared by different statements
+        withholds all of them."""
+        many = " ".join(f"Always use q{a}{b}." for a in "bcdfghjklm" for b in "npqrstvwxz")
+        view = SessionView.of(conversation(many))
+        self.assertEqual(len(view.claims()), 100)
+        self.assertEqual([c.object for c in view.contradictions()], ["use"])
+        self.refused("wants dawnr to always use qbn", "Always use qbn.", view, "use")
+        said_again = SessionView.of(conversation(" ".join(["I like cats."] * 300 + ["Remember that I like cats."])))
+        self.assertEqual(said_again.contradictions(), [])
+
+    def test_forget_that_correct_or_an_answer_says_it_explicitly(self):
+        s = self.store()
+        end_session(s, conversation("I like cats."), session_id="s1", now=NOW)
+        (liked,) = s.records(("preference",))
+        # "forget that ...": the stored record goes first, so the new statement asks nothing
+        report = end_session(s, conversation("Forget that I like cats. I don't like cats."), session_id="s2", now=NOW)
+        self.assertEqual(report.forgotten, [liked["id"]])
+        self.assertEqual([r["text"] for r in s.records(("preference",))], ["dislikes cats"])
+        self.assertEqual(s.records(("pending",)), [])
+        # correct: the person rewrites the record; saying the corrected words again is heard again, not asked
+        (disliked,) = s.records(("preference",))
+        s.correct(disliked["id"], "likes cats")
+        report = end_session(s, conversation("I like cats."), session_id="s3", now=NOW)
+        self.assertEqual((report.reinforced, report.rejected), ([disliked["id"]], []))
+        # an answer keeping what was remembered drops the question and changes nothing
+        end_session(s, conversation("I don't like cats."), session_id="s4", now=NOW)
+        (question,) = s.records(("pending",))
+        self.assertIsNone(s.answer(question["id"], False))
+        self.assertEqual([r["text"] for r in s.records(("preference", "pending"))], ["likes cats"])
+        # a "forget that" in conversation also withdraws a question it names
+        end_session(s, conversation("I don't like cats."), session_id="s5", now=NOW)
+        self.assertEqual(len(s.records(("pending",))), 1)
+        end_session(s, conversation("Forget that I dislike cats."), session_id="s6", now=NOW)
+        self.assertEqual(s.records(("pending",)), [])
+        with self.assertRaises(KeyError):
+            s.answer(disliked["id"], True)                               # a record is not a question
+
+    def test_a_model_never_overwrites_the_person_and_asks_nothing(self):
+        s = self.store()
+        end_session(s, conversation("I live in Lisbon."), session_id="s1", now=NOW)
+        (rec,) = s.records(("fact",))
+        s.correct(rec["id"], "lives in Porto")
+        model = [Proposal("fact", "lives in Lisbon", "I live in Lisbon", origin="model")]       # no slot given
+        r = end_session(s, conversation("I live in Lisbon."), session_id="s2", proposers=(), proposals=model)
+        self.assertEqual(s.get(rec["id"])["text"], "lives in Porto")
+        self.assertEqual(r.rejected, [("lives in Lisbon", "the person wrote this one themselves; a model does not "
+                                                          "overwrite it")])
+        self.assertEqual(s.records(("pending",)), [])
+
+    def test_property_nothing_about_a_contradicted_object_is_admitted(self):
+        """Utterances from a grammar, expanded at random (The Fuzzing Book, "Fuzzing with Grammars",
+        fuzzingbook.org/html/Grammars.html): statements about fresh objects, with one contradiction inserted -- two
+        statements about one object that disagree in polarity, order or relation -- in one sentence, two sentences
+        or two messages, in either order, among unrelated statements, fillers and trailing words. Every statement is
+        proposed by a model (with its clause or its whole message as evidence) and by the rules, and so are
+        statements about the object the person never made. Nothing about the contradicted object may be admitted
+        or stored, the report must name the contradiction with its two readings, and the unrelated statements must
+        still be kept (the gate is not refusing everything)."""
+        rng = random.Random(20260928)
+
+        def noun():
+            return "q" + "".join(rng.choice("bcdfghjklmnpqrstvwz") for _ in range(5))   # no vowel: no English word
+
+        forms = {"like": ("I like {o}", "likes {o}", "preference"), "love": ("I really like {o}", "likes {o}",
+                                                                             "preference"),
+                 "dislike": ("I don't like {o}", "dislikes {o}", "preference"),
+                 "hate": ("I hate {o}", "dislikes {o}", "preference"),
+                 "fan": ("I'm a big fan of {o}", "is a fan of {o}", "preference"),
+                 "want": ("I want {o}", "wants {o}", "preference"),
+                 "avoid": ("I avoid {o}", "avoids {o}", "preference"),
+                 "prefer": ("I prefer {o}", "prefers {o}", "preference"),
+                 "over": ("I prefer {o} over {p}", "prefers {o} over {p}", "preference"),
+                 "under": ("I prefer {p} over {o}", "prefers {p} over {o}", "preference"),
+                 "always": ("Always use {o}", "wants dawnr to always use {o}", "preference"),
+                 "never": ("Never use {o}", "wants dawnr to never use {o}", "preference"),
+                 "learn": ("I'm learning {o}", "is learning {o}", "fact"),
+                 "rather": ("I'd rather use {o}", "would rather use {o}", "preference")}
+        against = (("like", "dislike"), ("love", "hate"), ("fan", "dislike"), ("fan", "hate"), ("want", "avoid"),
+                   ("always", "never"), ("over", "under"), ("prefer", "under"), ("prefer", "over"), ("like", "avoid"),
+                   ("learn", "hate"), ("rather", "never"), ("want", "dislike"), ("like", "prefer"))
+        unrelated = ("like", "dislike", "fan", "want", "avoid", "learn", "prefer")
+        joiners = (", and ", " and ", ", but ", " but ", ", also ")
+        fillers = ("", "", "Well, ", "Also, ", "Actually, ", "By the way, ")          # FILLER's own words
+        admitted = kept = unrelated_said = 0
+        for trial in range(400):
+            o, p = noun(), noun()
+            pair = rng.choice(against)
+            a, b = pair if rng.random() < 0.5 else pair[::-1]
+            tail = lambda: rng.choice(("", "", " now", " too"))                                 # noqa: E731
+            # (the clause as the person says it, the statement, its kind)
+            said = [(forms[f][0].format(o=o, p=p) + tail(), forms[f][1].format(o=o, p=p), forms[f][2])
+                    for f in (a, b)]
+            others = []
+            for _ in range(rng.randint(0, 3)):
+                f, n = rng.choice(unrelated), noun()
+                others.append((forms[f][0].format(o=n, p=noun()) + tail(), forms[f][1].format(o=n, p=""),
+                               forms[f][2]))
+            sentence = lambda clause: rng.choice(fillers) + clause + "."                        # noqa: E731
+            place = rng.choice(("one sentence", "two sentences", "two messages"))
+            if place == "one sentence":
+                parts, part = [[said[0][0] + rng.choice(joiners) + said[1][0] + "."]], {said[0][0]: 0, said[1][0]: 0}
+            else:
+                parts, part = [[sentence(said[0][0])], [sentence(said[1][0])]], {said[0][0]: 0, said[1][0]: 1}
+            for clause, _st, _kind in others:
+                part[clause] = rng.randrange(len(parts))
+                parts[part[clause]].insert(rng.randint(0, 1), sentence(clause))
+            messages = [" ".join(ps) for ps in parts] if place == "two messages" else [" ".join(sum(parts, []))]
+            turns = [t for m in messages for t in (m, "Noted.")][:-1]
+            view = SessionView.of(conversation(*turns))
+
+            def evidence(clause):                # the clause as said, or the whole message it was said in
+                return clause if rng.random() < 0.6 else messages[part[clause] if len(messages) > 1 else 0]
+            for clause, statement, kind in said:                         # the two readings that disagree
+                ok, why = admit(Proposal(kind, statement, evidence(clause), origin="model"), view)
+                self.assertFalse(ok, (turns, statement))
+                self.assertTrue(why.startswith("contradiction: ") and o in why.split(), (turns, statement, why))
+            probes = [(forms[f][1].format(o=o, p=p), forms[f][2], evidence(rng.choice(said)[0])) for f in forms]
+            for statement, kind, ev in probes:                           # anything else about the object
+                ok, _why = admit(Proposal(kind, statement, ev, origin="model"), view)
+                self.assertFalse(ok, (turns, statement, ev))
+            for clause, statement, kind in others:                       # what is not about it still counts
+                admitted += admit(Proposal(kind, statement, evidence(clause), origin="model"), view)[0]
+                unrelated_said += 1
+            s = MemoryStore(self.root, f"p{trial}")
+            model = [Proposal(kind, st, evidence(clause), origin="model") for clause, st, kind in said + others]
+            report = end_session(s, conversation(*turns), session_id="s1", proposals=model, now=NOW)
+            texts = [r["text"] for r in s.records(("fact", "preference", "pending"))]
+            self.assertFalse([t for t in texts if o in t.split()], (turns, texts))
+            named = [e for e in report.rejected if e[1].startswith("contradiction: ") and o in e[1].split()]
+            self.assertTrue(named and sorted(named[0].readings) == sorted(st for _c, st, _k in said),
+                            (turns, report.rejected))
+            kept += len(set(texts) & {st for _c, st, _k in others})
+        # every unrelated statement shares no word with anything else said, so every one is admitted and kept: the
+        # gate withholds what the person contradicted, not everything near it (630 of them at this seed)
+        self.assertGreater(unrelated_said, 300)
+        self.assertEqual((admitted, kept), (unrelated_said, unrelated_said))
+
+
 # ----------------------------------------------------------------- recall --
 
 class RecallRespectsTheBudget(Temp):
@@ -860,10 +1195,18 @@ class Extraction(Temp):
         r2 = end_session(s, conversation("I live in Porto. I like jazz. I don't like jazz anymore."),
                          session_id="s2", now=NOW + DAY)
         facts = {r["slot"]: r for r in s.records(("fact", "preference"))}
-        self.assertEqual(facts["location"]["text"], "lives in Porto")
-        self.assertEqual(facts["like jazz"]["text"], "dislikes jazz")     # the person's last word in the slot
+        # Round 3 changed this: a new place no longer silently replaces the stored one (the person is asked), and
+        # "I like jazz. I don't like jazz anymore." says two things about jazz, so neither is kept and neither
+        # replaces "likes jazz". Until then this asserted "lives in Porto", "dislikes jazz" and two updates.
+        self.assertEqual(facts["location"]["text"], "lives in Lisbon")
+        self.assertEqual(facts["like jazz"]["text"], "likes jazz")
         self.assertEqual(len(facts), 2)
-        self.assertEqual(len(r2.updated), 2)
+        self.assertEqual(r2.updated, [])
+        self.assertIn("contradiction: jazz", {why for _statement, why in r2.rejected})
+        (question,) = s.records(("pending",))
+        self.assertEqual((question["text"], question["conflicts_with"]), ("lives in Porto", [facts["location"]["id"]]))
+        s.answer(question["id"], True, now=NOW + DAY)                # the person: yes, Porto now
+        self.assertEqual(s.get(facts["location"]["id"])["text"], "lives in Porto")
         r3 = end_session(s, conversation("I live in Porto."), session_id="s3", now=NOW + 2 * DAY)
         self.assertEqual(r3.reinforced, [facts["location"]["id"]])
         porto = s.get(facts["location"]["id"])
@@ -962,6 +1305,26 @@ class ControlsOnTheCommandLine(Temp):
         self.run_cli("forget-everything", "--yes")
         self.assertFalse(os.path.lexists(self.root / "ann"))
         self.assertEqual(self.run_cli("--help", ok=True).returncode, 0)
+
+    def test_a_pending_question_on_the_command_line(self):
+        s = self.store()
+        end_session(s, conversation("I live in Lisbon."), session_id="s1", now=NOW)
+        (lisbon,) = s.records(("fact",))
+        end_session(s, conversation("I live in Porto."), session_id="s2", now=NOW + DAY)
+        (question,) = s.records(("pending",))
+        listing = self.run_cli("pending").stdout
+        for text in (question["id"], "lives in Porto", lisbon["id"], "lives in Lisbon", "1 question"):
+            self.assertIn(text, listing)
+        self.assertNotIn("Porto", self.run_cli("recall", "where do I live?").stdout)    # not memory, a question
+        self.run_cli("answer", question["id"], "old")                                    # keep what was remembered
+        self.assertEqual(s.records(("pending",)), [])
+        self.assertEqual([r["text"] for r in s.records(("fact",))], ["lives in Lisbon"])
+        end_session(s, conversation("I live in Porto."), session_id="s3", now=NOW + 2 * DAY)
+        (again,) = s.records(("pending",))
+        self.assertIn("lives in Porto", self.run_cli("answer", again["id"], "new").stdout)
+        self.assertEqual([(r["id"], r["text"]) for r in s.records(("fact",))], [(lisbon["id"], "lives in Porto")])
+        self.assertEqual(self.run_cli("answer", "q-0123456789abcdef", "new", ok=False).returncode, 1)
+        self.assertEqual(self.run_cli("answer", lisbon["id"], "new", ok=False).returncode, 1)
 
 
 # ---------------------------------------------------------------- harness --
@@ -1125,6 +1488,47 @@ class ChatPaneShowsMemory(Temp):
                 w = pane.open_memory()
                 self.assertEqual(w.store.person, "default")
                 self.assertTrue(str(w.store.dir).startswith(str(Path(self._tmp.name) / "data")))
+        finally:
+            root.destroy()
+
+    @unittest.skipUnless(os.environ.get("DISPLAY") or sys.platform in ("win32", "darwin"),
+                         "no display; run under xvfb-run -a")
+    def test_the_memory_window_asks_the_pending_question(self):
+        import queue
+        import tkinter as tk
+        from unittest import mock
+        import chat_pane
+        import look
+        from dawnr_memory import window
+        ann = self.store("ann")
+        end_session(ann, conversation("I like cats."), session_id="s1", now=NOW)
+        (liked,) = ann.records(("preference",))
+        end_session(ann, conversation("I don't like cats."), session_id="s2", now=NOW + DAY)
+        (question,) = ann.records(("pending",))
+        root = tk_root(self)
+        try:
+            parent = tk.Frame(root)
+            parent.grid()
+            pane = chat_pane.ChatPane(parent, look.palette(dark=False), queue.Queue(),
+                                      checkpoint_dir=Path(self._tmp.name) / "model", on_status=lambda say: None)
+            chat_pane.save_harness_config(pane.config_path, {"memory": {"root": str(self.root), "person": "ann"}})
+            w = pane.open_memory()
+            kind, _date, text = w.tree.item(question["id"])["values"]
+            self.assertEqual(kind, "question")
+            self.assertIn("dislikes cats", text)
+            self.assertIn("likes cats", text.replace("dislikes cats", ""))
+            self.assertIn("1 question", w.status.cget("text"))
+            w.tree.selection_set([liked["id"]])
+            with mock.patch.object(window.messagebox, "askyesnocancel") as ask:
+                w._answer_dialog()                                   # a record is not a question: nothing asked
+                ask.assert_not_called()
+            w.tree.selection_set([question["id"]])
+            with mock.patch.object(window.messagebox, "askyesnocancel", return_value=True):
+                w._answer_dialog()
+            self.assertEqual(ann.get(liked["id"])["text"], "dislikes cats")
+            self.assertEqual(set(w.tree.get_children()), {r["id"] for r in ann.records()})
+            self.assertNotIn(question["id"], w.tree.get_children())
+            w.win.destroy()
         finally:
             root.destroy()
 

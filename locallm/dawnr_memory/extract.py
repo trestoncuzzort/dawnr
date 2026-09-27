@@ -27,12 +27,19 @@ passes admit():
    it, with no question mark and no negation outside the patterns' own words; one of those clauses, inside the
    evidence, must make exactly this statement (the same relation and polarity, the same object word for word and
    in order); a model's kind and slot must be the pattern's. Anything else is refused as "cannot ground: <why>",
-   true statements in phrasing no pattern reads included (grounded(); the person can still pin a note);
+   true statements in phrasing no pattern reads included (grounded(); the person can still pin a note). And it is
+   decided over everything the person said in the session, never one clause: when any two statements the patterns
+   read anywhere in it are about the same thing and are not the same statement, nothing about that thing is
+   admitted, and the report names it ("contradiction: <thing>", with the two readings);
 4. it is not a secret or an identifier (passwords, keys, card and account numbers, long digit strings, e-mail
    addresses, links), which dawnr does not remember on its own; the person can still pin a note;
 5. a model's proposal in a session that read outside text is refused outright: once untrusted text is in the
    context, what the model proposes may be the page speaking (Beurer-Kellner et al., arXiv:2506.08837, as the
    harness's taint rule reads it), and writing lasting memory is a consequential act.
+
+What passes is then set against what is stored (_apply): the same statement again is heard again, and one that
+disagrees with a stored record about the same thing does not replace it; it waits as a pending question for the
+person (store kind "pending", never recalled), unless they said "forget that ..." or used correct.
 
 The episode, a dated summary of the session, is built from counts and a fixed vocabulary plus keywords from the
 person's own speech, never from a sentence of anyone's: a tool's output cannot reach it at all, and neither the
@@ -40,10 +47,11 @@ assistant's words nor a tool name the model made up (only names the harness's re
 """
 from __future__ import annotations
 
+import functools
 import json
 import re
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Iterable
 
 from .retrieval import STOP_WORDS, confidence_of, s_stem, terms
@@ -279,6 +287,18 @@ class SessionView:
         ev = norm(evidence)
         return bool(ev) and any(ev in s for s in self._normed()[0])
 
+    def claims(self) -> list:
+        """Every statement the patterns read anywhere in what the person said this session (read_claims)."""
+        if getattr(self, "_claims", None) is None:
+            self._claims = read_claims(self.speakable)
+        return self._claims
+
+    def contradictions(self) -> list:
+        """Every two of those that disagree about one thing (find_contradictions): grounding's whole utterance."""
+        if getattr(self, "_contradictions", None) is None:
+            self._contradictions = find_contradictions(self.claims())
+        return self._contradictions
+
 
 # ------------------------------------------------------------- proposals --
 
@@ -383,17 +403,20 @@ _GROUNDING_ONLY = [(re.compile(p, re.I), make, statement, slot, conf, check) for
 _READS = _RULES + _GROUNDING_ONLY
 
 
-def _read(clause: str, rules=_RULES):
-    """What `clause` says under the first pattern of `rules` that matches it: a Reading, a ForgetRequest, or None
-    when none matches or the first that does finds no crisp object."""
+def _reading(clause: str, rules=_RULES):
+    """(what `clause` says under the first pattern of `rules` that matches it, where its object lies in `clause`):
+    (a Reading or a ForgetRequest, (start, end)), or None when none matches or the first that does finds no crisp
+    object."""
     for pattern, make, statement, slot, conf, check in rules:
         m = pattern.match(clause)
         if not m:
             continue
-        x, k = m.group("x").strip(), (m.groupdict().get("k") or "").lower().strip()
+        raw = m.group("x")
+        x, k = raw.strip(), (m.groupdict().get("k") or "").lower().strip()
+        at = m.start("x") + len(raw) - len(raw.lstrip())
         if make == "forget":
             words = [t for t in terms(x) if t not in PRONOUNS]
-            return ForgetRequest(words, clause) if words else None
+            return (ForgetRequest(words, clause), (at, at + len(x))) if words else None
         if check == "raw":
             obj = x.strip(" .!?")
             if not obj or len(obj.split()) > 24:
@@ -412,9 +435,17 @@ def _read(clause: str, rules=_RULES):
         if make == "remember":
             kind = "preference" if obj.lower().startswith("to ") else "fact"
         said = third_person(obj)
-        return Reading(kind, statement.format(x=said, k=k), slot.format(k=k, key=_key(obj)) if slot else None,
-                       conf, statement, k, said, whole)
+        start = at + x.find(obj)                  # obj is x trimmed and cut: it begins at x's first kept character
+        return (Reading(kind, statement.format(x=said, k=k), slot.format(k=k, key=_key(obj)) if slot else None,
+                        conf, statement, k, said, whole), (start, start + len(obj)))
     return None
+
+
+def _read(clause: str, rules=_RULES):
+    """What `clause` says under the first pattern of `rules` that matches it: a Reading, a ForgetRequest, or None
+    when none matches or the first that does finds no crisp object."""
+    got = _reading(clause, rules)
+    return got[0] if got else None
 
 
 class RuleProposer:
@@ -545,76 +576,339 @@ def _read_sentence(sentence: str) -> tuple[list, str]:
     return got, ""
 
 
-def grounded(text: str, evidence: str, contexts: Iterable[str] | None = None) -> tuple[Reading | None, str]:
-    """(the Reading that grounds the statement `text`, "") or (None, "cannot ground: <why>"): the rule in the
-    comment above. `contexts` are the person's own sentences holding `evidence` (SessionView.contexts); without
-    them the evidence's own sentences are read, which is only as good as the quote."""
-    statement = _canonical(text)
-    if not any(form.fullmatch(statement) for form, _template in _FORMS):
-        return None, "cannot ground: the statement is not in a form the patterns make"
-    quoted, readings, trouble = norm(evidence), [], ""
-    for sentence in (contexts if contexts is not None else [evidence[a:b] for a, b in sentence_spans(evidence)]):
-        got, why = _read_sentence(sentence)
-        trouble = trouble or why
-        readings += [r for clause, r in got                      # a whole clause of the quote, not "cats" in "catsup"
-                     if re.search(r"(?<!\w)" + re.escape(norm(clause)) + r"(?!\w)", quoted)]
-    for r in readings:
-        if _canonical(r.text) == statement:
-            return r, ""
-    if not readings:
-        return None, "cannot ground: " + (trouble or "the quoted words hold no whole clause a pattern reads")
-    if any(_canonical(_opposite(r)) == statement for r in readings):
-        differs = "it reverses what they said"
-    elif any(form.fullmatch(statement) for form, template in _FORMS if template in {r.template for r in readings}):
-        differs = "its words or their order are not theirs"
-    else:
-        differs = "they said something else"
-    return None, f"cannot ground: the statement says more than the person's words ({differs})"
-
-
 def _slot(slot) -> str | None:
     return clean_text(slot or "", 80).lower() or None          # as the store keeps it
 
 
+# ------------------------------------------------------- the whole utterance: contradictions --
+
+# Round 3. grounded() read each clause on its own, so an utterance that says two things about one object grounded
+# either of them cleanly: "I like cats, and I don't like cats." admitted "likes cats" and "dislikes cats" alike (and
+# end_session kept the last one and said nothing), and "I prefer tea, and I prefer coffee over tea." brought the
+# order swap back through a second clause. Grounding is now decided over everything the person said in the session,
+# every sentence and every clause of every message. The statements the patterns read anywhere in it are collected
+# -- at every word, so a clause after a comma or an "although" counts, and so does one in a sentence the gate would
+# not admit ("No, I like cats") -- and two of them about the same thing that are not the same statement are a
+# contradiction: nothing about that thing is admitted from the session, and the report names it.
+#
+# "The same thing" follows de Marneffe, Rafferty and Manning ("Finding Contradictions in Text", ACL 2008,
+# aclanthology.org/P08-1118, read 2026-09-27): two texts contradict only when they are about the same event, and
+# "compatible noun phrases between sentences are assumed to be coreferent in the absence of clear countervailing
+# evidence". Two statements are about the same thing when their objects share a word, word for word (not a stem, not
+# a synonym; stop words and pronouns aside), when they fill the same slot (the person's location, their name, "like
+# cat"), or when their slots name the same object as the rules key it ("cat" in "want cat" and "like cat", so a
+# plural does not hide it). Their typology also says why every difference counts: antonymy and negation come from
+# closed sets of words, but a contradiction of structure ("Jacques Santer succeeded Jacques Delors" / "Delors
+# succeeded Santer") or of lexical content needs a model of what sentences mean, which word patterns are not. So the
+# gate does not try to tell a contradiction from a compatible pair: two different statements about one thing are a
+# contradiction unless they are a pair on _COMPATIBLE. The opposite-pair table (_OPPOSITE) only labels a polarity
+# conflict in the report; it decides nothing, so a pair missing from it cannot let a contradiction through, and a
+# pair missing from _COMPATIBLE costs a true memory, never a false one. A statement also says what is said inside its
+# object ("Remember that I like cats" says "likes cats", so it agrees with "I like cats" anywhere in the session),
+# and a statement inside what the person asks to forget is not one they make.
+
+_SHIFTED = frozenset(w for _pattern, replacement in SHIFT for w in replacement.split())
+_OWN = frozenset("i me my mine myself you your yours yourself we us our ours im i'm i've i'd i'll am".split())
+_NOT_A_TOPIC = STOP_WORDS | _OWN | _SHIFTED        # words that name nothing: Lucene's stop set and the pronouns
+_TOPIC_WORD = re.compile(r"[^\W_]+(?:'[^\W_]+)*")
+_WORD_START = re.compile(r"(?<![\w'])\w")
+_COMPATIBLE = (frozenset({("likes {x}", ""), ("is a fan of {x}", "")}),
+               frozenset({("lives in {x}", ""), ("is from {x}", "")}),
+               frozenset({("from now on: {x}", ""), ("wants dawnr to {k} {x}", "always")}))
+_KEYED = tuple(sorted({slot[:-len("{key}")] for _p, _m, _s, slot, _c, _k in _READS if slot and slot.endswith(" {key}")},
+                      key=len, reverse=True))      # "like ", "prefer ", ...: a slot named by its object's words
+_SPECIFIC = sorted(_FORMS, key=lambda form: -len(re.sub(r"\{[kx]\}", "", form[1])))
+
+
+@dataclass(frozen=True)
+class Claim:
+    """A statement the patterns read somewhere in what the person said (read_claims)."""
+    reading: Reading
+    message: int                    # which of the person's messages
+    start: int                      # where its clause starts in that message's speaking part
+    topics: frozenset               # what it is about (_topics), and what the statements inside its object are about
+    says: frozenset                 # its class (_class) and those of the statements said inside its object: "Remember
+    #                                 that I like cats" says "likes cats" too, and is about what that is about
+
+
+@dataclass(frozen=True)
+class Contradiction:
+    """Two statements the person made about one thing that are not the same statement."""
+    object: str                     # the thing, as the reason names it: "cats", "answer briefly", "location"
+    first: Reading
+    second: Reading
+    kind: str                       # "polarity" (_OPPOSITE), "order" (the same words), else "relation"
+    topics: frozenset               # what the two share
+
+
+def _topics(x: str, slot) -> frozenset:
+    """What a statement is about: each word of its object, word for word, less the words that name nothing (the
+    whole object when that leaves none); its slot; and, for a slot named by its object ("like cat", "want cat"),
+    that object as the rules key it, so "wants a cat" and "dislikes cats" are about one thing across relations."""
+    said = norm(x)
+    got = {("word", w) for w in _TOPIC_WORD.findall(said) if w not in _NOT_A_TOPIC} or {("object", said)}
+    slot = _slot(slot)
+    if slot:
+        got.add(("slot", slot))
+        family = next((f for f in _KEYED if slot.startswith(f)), None)
+        if family and slot[len(family):]:
+            got.add(("key", slot[len(family):]))
+    return frozenset(got)
+
+
+def _pieces(text: str) -> list[tuple[int, int]]:
+    """(start, end) of each clause of `text` as grounding splits it: sentences (SENTENCE_END), then "and I", "but
+    my", ... (JOIN)."""
+    out, start = [], 0
+    for end, after in [(m.start(), m.end()) for m in SENTENCE_END.finditer(text)] + [(len(text), len(text))]:
+        a = start
+        for m in JOIN.finditer(text, start, end):
+            out.append((a, m.start()))
+            a = m.end()
+        out.append((a, end))
+        start = after
+    return [(a, b) for a, b in out if text[a:b].strip()]
+
+
+def _read_everywhere(text: str) -> list[tuple[int, Reading, tuple]]:
+    """(where its clause starts, the Reading, where its object lies) for every statement a pattern reads beginning
+    at any word of `text`, except one inside the object of a "forget that ...": the person asks to drop that, they do
+    not say it is so."""
+    found, dropped = [], []
+    for a, b in _pieces(text):
+        piece = text[a:b]
+        for m in _WORD_START.finditer(piece):
+            got = _reading(piece[m.start():], _READS)
+            if got is not None:
+                item, (s, e) = got
+                at = a + m.start()
+                (dropped if isinstance(item, ForgetRequest) else found).append((at, item, (at + s, at + e)))
+    return [f for f in found if not any(s <= f[0] < e for _at, _item, (s, e) in dropped)]
+
+
+def _class(r: Reading) -> tuple:
+    """Statements of one class say one thing: the same statement, or a pair on _COMPATIBLE about the same object."""
+    for n, pair in enumerate(_COMPATIBLE):
+        if (r.template, r.k) in pair:
+            return ("pair", n, norm(r.x))
+    return ("statement", _canonical(r.text))
+
+
+def read_claims(texts: Iterable[str]) -> list[Claim]:
+    """Every statement the patterns read anywhere in `texts` (the person's messages, their speaking parts), in the
+    order said. One that looks like a secret is left out: it is refused as a secret whatever else is said, and a
+    reason must never name its words."""
+    out = []
+    for i, text in enumerate(texts):
+        found = [f for f in _read_everywhere(text) if not sensitive(f[1].text)]
+        for start, reading, (s, e) in found:
+            inside = [inner for at, inner, _where in found if s <= at < e]
+            out.append(Claim(reading, i, start, _topics(reading.x, reading.slot).union(
+                *(_topics(r.x, r.slot) for r in inside)), frozenset(map(_class, [reading] + inside))))
+    return out
+
+
+def _conflict(a: Reading, b: Reading) -> str:
+    """How two statements about one thing disagree, for the report; it decides nothing."""
+    if _canonical(b.text) == _canonical(_opposite(a)) or _canonical(a.text) == _canonical(_opposite(b)):
+        return "polarity"
+    if (a.template, a.k) == (b.template, b.k) and sorted(norm(a.x).split()) == sorted(norm(b.x).split()):
+        return "order"
+    return "relation"
+
+
+def _named(shared: frozenset, r: Reading) -> str:
+    """The thing two statements share, as a reason names it: the shared words in the order `r` says them, else the
+    whole object, the object as the rules key it ("cat"), or the slot ("location")."""
+    words = list(dict.fromkeys(w for w in _TOPIC_WORD.findall(norm(r.x)) if ("word", w) in shared))
+    if words:
+        return " ".join(words)
+    for kind in ("object", "key", "slot"):
+        values = sorted(value for k, value in shared if k == kind)
+        if values:
+            return values[0]
+    return norm(r.x)
+
+
+def find_contradictions(claims: list[Claim]) -> list[Contradiction]:
+    """For each thing the person said something about, the first two statements about it (in the order said) that
+    say nothing in common (_class, with what each says inside its object), in the order said. That is enough to know
+    every thing contradicted -- two statements that disagree about a thing are in its list, so its list holds a pair
+    that disagrees -- and to name each, and it costs a long session what it says about each thing, not the square of
+    everything it says."""
+    by_topic: dict = {}
+    for i, claim in enumerate(claims):
+        for topic in claim.topics:
+            by_topic.setdefault(topic, []).append(i)
+    pairs = set()
+    for held in by_topic.values():
+        if len(held) < 2 or frozenset.intersection(*(claims[i].says for i in held)):
+            continue                                # said one way throughout: nothing disagrees
+        pair = next(((i, j) for n, i in enumerate(held) for j in held[n + 1:]
+                     if not claims[i].says & claims[j].says), None)
+        if pair is not None:
+            pairs.add(pair)
+    out = []
+    for i, j in sorted(pairs):
+        a, b = claims[i].reading, claims[j].reading
+        shared = claims[i].topics & claims[j].topics
+        out.append(Contradiction(_named(shared, a), a, b, _conflict(a, b), shared))
+    return out
+
+
+_UNSHIFT = [(re.compile(p, re.I), r) for p, r in (           # SHIFT backwards, to read a stored object again
+    (r"\bthey are\b", "I am"), (r"\bthey're\b", "I'm"), (r"\bthey've\b", "I've"), (r"\bthey'd\b", "I'd"),
+    (r"\bthey'll\b", "I'll"), (r"\bthey were\b", "I was"), (r"\bthemselves\b", "myself"), (r"\btheirs\b", "mine"),
+    (r"\btheir\b", "my"), (r"\bthem\b", "me"), (r"\bthey\b", "I"), (r"\bdawnr's\b", "your"), (r"\bdawnr\b", "you"))]
+
+
+def _as_reading(text: str, slot=None) -> Reading:
+    """A stored statement as the pattern that most narrowly makes it would have read it; one no pattern makes (a
+    person's own correction) is about every word in it."""
+    statement = _canonical(text)
+    for form, template in _SPECIFIC:
+        m = form.fullmatch(statement)
+        if m:
+            return Reading("", text, slot, 0.0, template, m.groupdict().get("k") or "", m.group("x"), True)
+    return Reading("", text, slot, 0.0, "", "", text, True)
+
+
+def _inside(reading: Reading) -> list[Reading]:
+    """The statements said inside a statement's object, read back in the first person ("asked dawnr to remember:
+    their birthday is May 3" holds "their birthday is May 3")."""
+    inner = reading.x
+    for pattern, replacement in _UNSHIFT:
+        inner = pattern.sub(replacement, inner)
+    return [r for _at, r, _where in _read_everywhere(inner)]
+
+
+def _about(reading: Reading) -> frozenset:
+    """What a statement is about, the statements inside its object included (a Claim's topics)."""
+    return _topics(reading.x, reading.slot).union(*(_topics(r.x, r.slot) for r in _inside(reading)))
+
+
+@functools.lru_cache(maxsize=4096)          # a pure function of its arguments, asked once per stored record per item
+def _stated(text: str, slot=None) -> tuple[Reading, frozenset, frozenset]:
+    """A stored or proposed statement as the contradiction rule reads it, like a Claim: its Reading, what it is about,
+    and what it says. Reading its object back in the first person can only add to both, and it adds only statements
+    its own words make: a wrong guess (a "they" that meant other people) asks about more, and lets through unasked
+    only a statement those words already hold."""
+    reading = _as_reading(text, slot)
+    inside = _inside(reading)
+    return (reading, _about(reading), frozenset(map(_class, [reading] + inside)))
+
+
+def _disagree(a: tuple, b: tuple) -> bool:
+    """The contradiction rule for two statements (_stated): about the same thing, and saying nothing in common."""
+    return bool(a[1] & b[1]) and not a[2] & b[2]
+
+
+def grounded(text: str, evidence: str, contexts: Iterable[str] | None = None,
+             conflicts: list[Contradiction] | None = None) -> tuple[Reading | None, str]:
+    """(the Reading that grounds the statement `text`, "") or (None, why not): the rules in the two comments above.
+    `contexts` are the person's own sentences holding `evidence` (SessionView.contexts); without them the evidence's
+    own sentences are read, which is only as good as the quote. `conflicts` are the contradictions in everything the
+    person said (SessionView.contradictions); without them, those in the contexts."""
+    statement = _canonical(text)
+    if not any(form.fullmatch(statement) for form, _template in _FORMS):
+        return None, "cannot ground: the statement is not in a form the patterns make"
+    contexts = list(contexts) if contexts is not None else [evidence[a:b] for a, b in sentence_spans(evidence)]
+    quoted, readings, trouble = norm(evidence), [], ""
+    for sentence in contexts:
+        got, why = _read_sentence(sentence)
+        trouble = trouble or why
+        readings += [r for clause, r in got                      # a whole clause of the quote, not "cats" in "catsup"
+                     if re.search(r"(?<!\w)" + re.escape(norm(clause)) + r"(?!\w)", quoted)]
+    match = next((r for r in readings if _canonical(r.text) == statement), None)
+    if match is None:
+        if not readings:
+            return None, "cannot ground: " + (trouble or "the quoted words hold no whole clause a pattern reads")
+        if any(_canonical(_opposite(r)) == statement for r in readings):
+            differs = "it reverses what they said"
+        elif any(form.fullmatch(statement) for form, template in _FORMS
+                 if template in {r.template for r in readings}):
+            differs = "its words or their order are not theirs"
+        else:
+            differs = "they said something else"
+        return None, f"cannot ground: the statement says more than the person's words ({differs})"
+    about = _about(match)
+    for c in (conflicts if conflicts is not None else find_contradictions(read_claims(contexts))):
+        if c.topics & about:
+            return None, f"contradiction: {c.object}"
+    return match, ""
+
+
 def admit(p: Proposal, view: SessionView) -> tuple[bool, str]:
     """(stored?, why not): the gate in the module docstring, rule by rule."""
+    ok, why, _reading = _admit(p, view)
+    return ok, why
+
+
+def _admit(p: Proposal, view: SessionView) -> tuple[bool, str, Reading | None]:
+    """admit(), and the Reading that grounds what it admits."""
     if p.kind not in ("fact", "preference"):
-        return False, f"a session can add facts and preferences, not {p.kind!r}"
+        return False, f"a session can add facts and preferences, not {p.kind!r}", None
     if p.origin not in ("rules", "model"):
-        return False, f"proposals come from rules or a model, not {p.origin!r}"
+        return False, f"proposals come from rules or a model, not {p.origin!r}", None
     text, evidence = clean_text(p.text, 10_000), clean_text(p.evidence, 10_000)
     if not text or len(text) > MAX_TEXT[p.kind]:
-        return False, "the statement is empty or too long"
+        return False, "the statement is empty or too long", None
     if not evidence or len(evidence) > MAX_EVIDENCE:
-        return False, "the evidence is empty or too long"
+        return False, "the evidence is empty or too long", None
     if p.origin == "model" and view.tainted:
-        return False, "this session read outside text, so a model's proposal waits for the person to make it"
+        return False, "this session read outside text, so a model's proposal waits for the person to make it", None
     if not view.says(evidence):
-        return False, "the evidence is not the person's own words in this session"
+        return False, "the evidence is not the person's own words in this session", None
     if not view.said_first(evidence):
-        return False, "the evidence was in text that did not come from the person before they said it"
-    reading, why = grounded(text, evidence, view.contexts(evidence))
+        return False, "the evidence was in text that did not come from the person before they said it", None
+    reading, why = grounded(text, evidence, view.contexts(evidence), view.contradictions())
     if reading is None:
-        return False, why
+        return False, why, None
     if p.kind != reading.kind:
-        return False, f"cannot ground: the person's words make it a {reading.kind}, not a {p.kind}"
+        return False, f"cannot ground: the person's words make it a {reading.kind}, not a {p.kind}", None
     if p.slot is not None and _slot(p.slot) != _slot(reading.slot):
-        return False, "cannot ground: the person's words give it another slot"
+        return False, "cannot ground: the person's words give it another slot", None
     if sensitive(text) or sensitive(evidence):
-        return False, "it looks like a secret, an identifier or a link, which dawnr does not remember on its own"
-    return True, ""
+        return False, "it looks like a secret, an identifier or a link, which dawnr does not remember on its own", None
+    return True, "", reading
 
 
 # ---------------------------------------------------------------- update --
+
+# A statement that disagrees with what is stored about the same thing (the contradiction rule above: a shared object
+# word or slot, and neither the same statement nor a compatible pair) does not replace it. Zep invalidates the older
+# fact and "consistently prioritizes new information" (Rasmussen et al., arXiv:2501.13956, sec. 2.2.3), and Mem0's
+# update prompt deletes a contradicted memory ("If the retrieved facts contain information that contradicts the
+# information present in the memory, then you have to delete it", mem0/configs/prompts.py,
+# DEFAULT_UPDATE_MEMORY_PROMPT, read 2026-09-27): in both the newer statement wins, judged by a model. dawnr has no
+# model to judge with, and a newer statement can be a misreading or words the person was steered into, so it takes
+# the shape of Wikidata's single-value constraint instead (wikidata.org/wiki/Help:Property_constraints_portal/
+# Single_value, read 2026-09-27): values that disagree "should not be removed", and a person decides. The stored
+# record stays as it is, and the new statement is kept as a pending question (store kind "pending": never recalled,
+# not a fact) that the person answers in the Memory window or with `python locallm/dawnr_memory answer`. They can
+# also say it explicitly: "forget that ..." in the session removes the stored record first, and correct rewrites it.
+
+
+class Rejected(tuple):
+    """One refused proposal as (statement, why), which is how report.rejected is read. A contradiction or a conflict
+    with a stored record also carries the statements that disagree (`readings`) and how they do (`kind`)."""
+
+    def __new__(cls, statement: str, why: str, readings=(), kind: str = ""):
+        self = super().__new__(cls, (statement, why))
+        self.readings, self.kind = tuple(readings), kind
+        return self
+
 
 @dataclass
 class Report:
     session: str = ""
     added: list = field(default_factory=list)        # records added
-    updated: list = field(default_factory=list)      # records whose statement a newer one in its slot replaced
+    updated: list = field(default_factory=list)      # records a compatible newer statement in their slot reworded
     reinforced: list = field(default_factory=list)   # ids said again in a later session
     forgotten: list = field(default_factory=list)    # ids the person asked, in the session, to forget
-    rejected: list = field(default_factory=list)     # (statement, why) for every proposal the gate refused
+    rejected: list = field(default_factory=list)     # Rejected (statement, why): every proposal the gate or the
+    #                                                  update refused, and every contradiction in what was said
+    asked: list = field(default_factory=list)        # pending questions: statements that disagree with a record
     episode: dict | None = None
     episode_new: bool = False                        # False when a checkpoint only brought the episode up to date
     skipped: str = ""                                # why nothing at all was remembered
@@ -635,30 +929,32 @@ class Report:
             bits.append("forgot " + ", ".join(self.forgotten) + " as asked")
         if self.rejected:
             bits.append(f"did not keep {len(self.rejected)} ({'; '.join(sorted({w for _t, w in self.rejected}))})")
+        if self.asked:
+            bits.append("asks which is right: " + "; ".join(f"{q['id']} {q['text']}" for q in self.asked)
+                        + " (the Memory window, or python locallm/dawnr_memory pending)")
         if self.episode and self.episode_new:
             bits.append(f"session noted as {self.episode['id']}")
         return f"memory{who}: " + "; ".join(bits) if bits else ""
 
 
+def _sessions(record: dict) -> list[str]:
+    """A record's sessions; a hand-edited record may hold anything in the field, so it is read defensively."""
+    sessions = record.get("sessions")
+    return [s for s in sessions if isinstance(s, str)] if isinstance(sessions, list) else []
+
+
 def _apply(store: MemoryStore, p: Proposal, session_id: str, now: float | None, report: Report,
-           same_kind: list[dict]) -> None:
-    """Mem0's update step, keyed by slot: the same statement again is NONE (heard again, once per session), a
-    new statement in a stored slot is UPDATE (the newer words win), anything else is ADD. `same_kind` is the
-    person's records of this kind, read once per session and kept up to date here."""
+           current: dict[str, list]) -> None:
+    """Mem0's update step, keyed by slot, less its newer-wins: the same statement again is NONE (heard again, once
+    per session); one that disagrees with a stored record about the same thing waits as a pending question and
+    changes nothing (the comment above); a compatible one in a stored slot is UPDATE ("is a fan of jazz" rewords
+    "likes jazz"); anything else is ADD. `current` holds the person's facts, preferences and pending questions,
+    read once per session and kept up to date here."""
     stamp = fmt_time(now)
+    same_kind = current[p.kind]
     target = next((r for r in same_kind if norm(r["text"]) == norm(p.text)), None)
-    if target is None and p.slot:
-        target = next((r for r in same_kind if r.get("slot") == p.slot), None)
-    if target is None:
-        record = store.add(p.kind, p.text, origin=p.origin, confidence=p.confidence, now=now, slot=p.slot,
-                           evidence=p.evidence, source_session=session_id)
-        same_kind.append(record)
-        report.added.append(record)
-        return
-    if norm(target["text"]) == norm(p.text):
-        # a hand-edited record may hold anything in these fields: read them defensively
-        sessions = [s for s in target.get("sessions") or [] if isinstance(s, str)] \
-            if isinstance(target.get("sessions"), list) else []
+    if target is not None:
+        sessions = _sessions(target)
         if session_id not in sessions and target.get("source_session") != session_id:
             seen = target.get("seen") if isinstance(target.get("seen"), int) else 1
             target.update(sessions=(sessions + [session_id])[-MAX_SESSIONS:], seen=seen + 1, last_seen=stamp,
@@ -668,8 +964,28 @@ def _apply(store: MemoryStore, p: Proposal, session_id: str, now: float | None, 
             store.put(target)
             report.reinforced.append(target["id"])
         return
+    new = _stated(p.text, _slot(p.slot))
+    against = [r for r in current["fact"] + current["preference"]
+               if _disagree(new, _stated(r["text"], _slot(r.get("slot"))))]         # a hand-edited slot is text
+    if against and p.origin == "model" and any(r.get("origin") == "person" for r in against):
+        report.rejected.append(Rejected(p.text, "the person wrote this one themselves; a model does not overwrite it"))
+        return
+    if against:
+        ids = [r["id"] for r in against]
+        report.rejected.append(Rejected(p.text, "conflicts with stored record " + ", ".join(ids),
+                                        (p.text, *(r["text"] for r in against)),
+                                        _conflict(new[0], _as_reading(against[0]["text"], against[0].get("slot")))))
+        _ask(store, p, ids, session_id, now, report, current["pending"])
+        return
+    target = next((r for r in same_kind if p.slot and r.get("slot") == _slot(p.slot)), None)
+    if target is None:
+        record = store.add(p.kind, p.text, origin=p.origin, confidence=p.confidence, now=now, slot=p.slot,
+                           evidence=p.evidence, source_session=session_id)
+        same_kind.append(record)
+        report.added.append(record)
+        return
     if target.get("origin") == "person" and p.origin == "model":
-        report.rejected.append((p.text, "the person wrote this one themselves; a model does not overwrite it"))
+        report.rejected.append(Rejected(p.text, "the person wrote this one themselves; a model does not overwrite it"))
         return
     target.update(text=clean_text(p.text, MAX_TEXT[p.kind]), evidence=clean_text(p.evidence, MAX_EVIDENCE),
                   source_session=session_id, sessions=[session_id], confidence=round(float(p.confidence), 3),
@@ -678,13 +994,37 @@ def _apply(store: MemoryStore, p: Proposal, session_id: str, now: float | None, 
     report.updated.append(target)
 
 
+def _ask(store: MemoryStore, p: Proposal, ids: list[str], session_id: str, now: float | None, report: Report,
+         questions: list[dict]) -> None:
+    """Keep `p` as a pending question for the person, one per statement however often it is said: a later session
+    saying it again adds itself to the question, a checkpoint of the same session changes nothing."""
+    same = next((q for q in questions if norm(q["text"]) == norm(p.text) and q.get("becomes") == p.kind), None)
+    if same is None:
+        question = store.add("pending", p.text, origin=p.origin, confidence=p.confidence, now=now, slot=p.slot,
+                             evidence=p.evidence, source_session=session_id, becomes=p.kind, conflicts_with=ids)
+        questions.append(question)
+        report.asked.append(question)
+        return
+    sessions, stamp = _sessions(same), fmt_time(now)
+    fresh = session_id not in sessions and same.get("source_session") != session_id
+    if fresh:
+        seen = same.get("seen") if isinstance(same.get("seen"), int) else 1
+        same.update(sessions=(sessions + [session_id])[-MAX_SESSIONS:], seen=seen + 1, last_seen=stamp,
+                    evidence=clean_text(p.evidence, MAX_EVIDENCE))
+        report.asked.append(same)
+    if fresh or same.get("conflicts_with") != ids:
+        same.update(conflicts_with=ids, updated=stamp)
+        store.put(same)
+
+
 def _names(request: ForgetRequest, text: str, slot: str | None) -> bool:
     """Does a "forget that ..." name this statement: are all its words in the statement or its slot?"""
     return set(request.words) <= set(terms(text)) | set(terms(slot or ""))
 
 
 def _forget(store: MemoryStore, request: ForgetRequest, report: Report, existing: dict[str, list]) -> None:
-    """The person asked, in their own words, to forget something: every fact or preference holding all its words."""
+    """The person asked, in their own words, to forget something: every fact, preference or pending question
+    holding all its words."""
     for records in existing.values():
         for record in list(records):
             if _names(request, record["text"], record.get("slot")):
@@ -777,35 +1117,62 @@ def end_session(store: MemoryStore, transcript, *, session_id: str, index: str =
     for proposer in (proposers if proposers is not None else (RuleProposer(),)):
         items.extend(proposer.propose(view))
     items.extend(proposals)
-    # In the order said: the person's last word per slot (or per statement) wins, a "forget that" drops what this
-    # session said before it, and a statement after a "forget that" naming it withdraws the forgetting.
+    # In the order said: a "forget that" drops what this session said before it, and the same words said after it
+    # withdraw the forgetting. Two statements about one thing that disagree never both reach here (the gate refuses
+    # everything about a thing the session contradicts), so the last word per slot is a rewording, not a reversal.
     chosen: dict = {}
     forgets: list[ForgetRequest] = []
     for item in items:
         if isinstance(item, ForgetRequest):
             if item.origin != "rules":
-                report.rejected.append(("forget " + " ".join(item.words), "only the person's own words ask to forget"))
+                report.rejected.append(Rejected("forget " + " ".join(item.words),
+                                                "only the person's own words ask to forget"))
             elif not view.said_first(item.evidence):
-                report.rejected.append(("forget " + " ".join(item.words), "not the person's own words"))
+                report.rejected.append(Rejected("forget " + " ".join(item.words), "not the person's own words"))
             else:
                 chosen = {k: p for k, p in chosen.items() if not _names(item, p.text, p.slot)}
                 forgets.append(item)
             continue
         if not isinstance(item, Proposal):
             continue
-        ok, why = admit(item, view)
+        ok, why, reading = _admit(item, view)
         if not ok:
-            report.rejected.append((item.text, why))
+            report.rejected.append(_refused(item.text, why, view))
             continue
-        forgets = [f for f in forgets if not _names(f, item.text, item.slot)]
+        if item.slot is None and reading.slot is not None:
+            item = replace(item, slot=reading.slot)          # a model that named no slot gets the pattern's
+        if item.origin != "rules" and any(_names(f, item.text, item.slot) for f in forgets):
+            # a model's proposals come after all the person's words, so one naming what the person asked to forget
+            # (and did not say again after) is what they took back; it must not withdraw their forgetting
+            report.rejected.append(Rejected(item.text, "the person asked, in this session, to forget it"))
+            continue
+        forgets = [f for f in forgets if not _names(f, item.text, None)]
         key = (item.kind, item.slot) if item.slot else (item.kind, norm(item.text))
         chosen.pop(key, None)
         chosen[key] = item
-    existing = {kind: store.records((kind,)) for kind in ("fact", "preference")}
+    _report_contradictions(view, report)
+    current = {kind: store.records((kind,)) for kind in ("fact", "preference", "pending")}
+    for request in forgets:             # first: what the person asked to forget is not current, so it asks nothing
+        _forget(store, request, report, current)
     for item in chosen.values():
-        _apply(store, item, session_id, now, report, existing[item.kind])
-    for request in forgets:
-        _forget(store, request, report, existing)
+        _apply(store, item, session_id, now, report, current)
     said = [i.evidence for i in items if isinstance(i, (Proposal, ForgetRequest))]
     _episode(store, view, session_id, known_tools, now, report, skip=said)
     return report
+
+
+def _refused(statement: str, why: str, view: SessionView) -> Rejected:
+    """A refusal as the report keeps it; a contradiction carries its two readings."""
+    c = next((c for c in view.contradictions() if why == f"contradiction: {c.object}"), None)
+    return Rejected(statement, why, (c.first.text, c.second.text), c.kind) if c else Rejected(statement, why)
+
+
+def _report_contradictions(view: SessionView, report: Report) -> None:
+    """A contradiction is never silent: each thing the person said two things about is in report.rejected, even
+    when nothing proposed a statement about it."""
+    named = {why for _statement, why in report.rejected}
+    for c in view.contradictions():
+        why = f"contradiction: {c.object}"
+        if why not in named:
+            named.add(why)
+            report.rejected.append(Rejected(c.first.text, why, (c.first.text, c.second.text), c.kind))

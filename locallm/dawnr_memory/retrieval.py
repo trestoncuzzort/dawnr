@@ -34,7 +34,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable
 
-from .store import MemoryStore, clean_text, parse_time
+from .store import RECALLED, MemoryStore, clean_text, parse_time
 
 TOKEN = re.compile(r"\w+")
 # Lucene's EnglishAnalyzer.ENGLISH_STOP_WORDS_SET, word for word
@@ -173,14 +173,16 @@ def recall(source, query: str = "", *, budget: int, count: Callable[[str], int] 
            now: float | None = None, half_life_days: float = HALF_LIFE_DAYS, weights=(1.0, 1.0, 1.0)) -> Recall:
     """What to tell dawnr about a person at the start of a session, within `budget` tokens as `count` counts them.
 
-    `source` is the person's MemoryStore (whose recall switch is honoured) or their records."""
+    `source` is the person's MemoryStore (whose recall switch is honoured) or their records. A pending question
+    (something the person said that disagrees with a stored record, store.RECALLED) is not memory and is never
+    recalled."""
     if isinstance(source, MemoryStore):
         if not source.settings()["recall"]:
-            records = source.records()
+            records = source.records(RECALLED)
             return Recall(considered=len(records), left_out=len(records))
-        records = source.records()
+        records = source.records(RECALLED)
     else:
-        records = list(source)
+        records = [r for r in source if r.get("kind") in RECALLED]
     result = Recall(considered=len(records))
     notes = sorted((r for r in records if r.get("kind") == "note"), key=lambda r: (str(r.get("created", "")), r["id"]))
     others = rank([r for r in records if r.get("kind") != "note"], query, now=now, half_life_days=half_life_days,

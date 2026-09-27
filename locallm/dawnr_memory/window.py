@@ -1,11 +1,12 @@
 """window.py: the person's memory in a window -- every record dawnr keeps of them, and their controls over it.
 
 The same controls as `python locallm/dawnr_memory` (DAWNR-MEMORY.md section 5), for a person who never opens a
-terminal: the records, newest first; forget the selected ones; correct one in their own words; pin a note; export
-everything to a file only they can read; forget everything (asked first: nothing can undo it); and the two
-switches, remembering and recalling. Opened from the chat card's "Memory..." button (chat_pane.py).
+terminal: the records, newest first; forget the selected ones; correct one in their own words; answer a pending
+question (something they said that disagrees with what dawnr remembers, listed as a "question" with both sides);
+pin a note; export everything to a file only they can read; forget everything (asked first: nothing can undo it);
+and the two switches, remembering and recalling. Opened from the chat card's "Memory..." button (chat_pane.py).
 
-Every action is a method that takes its input as arguments (forget, correct, pin, export, forget_everything,
+Every action is a method that takes its input as arguments (forget, correct, answer, pin, export, forget_everything,
 set_switch) and the dialogs only gather that input, so a test drives the window without clicking through modal
 dialogs, the split chat_pane.py makes between its approver and its dialog. The list is a ttk.Treeview with
 extended selection; input comes from tkinter.simpledialog.askstring, tkinter.filedialog.asksaveasfilename and
@@ -73,8 +74,8 @@ class MemoryWindow:
         buttons = tk.Frame(body, bg=C["paper"])
         buttons.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(GAP, 0))
         actions = (("Forget selected", self._forget_selected), ("Correct…", self._correct_dialog),
-                   ("Pin a note…", self._pin_dialog), ("Export…", self._export_dialog),
-                   ("Forget everything…", self._forget_everything_dialog))
+                   ("Answer…", self._answer_dialog), ("Pin a note…", self._pin_dialog),
+                   ("Export…", self._export_dialog), ("Forget everything…", self._forget_everything_dialog))
         for i, (label, command) in enumerate(actions):
             button(buttons, C, label, command).grid(row=0, column=i, padx=(0 if i == 0 else GAP, 0))
         button(buttons, C, "Close", self.win.destroy, primary=True).grid(row=0, column=len(actions),
@@ -89,13 +90,35 @@ class MemoryWindow:
         records = self.store.records()
         for r in records:
             date = str(r.get("date") or r.get("last_seen") or r.get("updated") or "")[:10]
-            self.tree.insert("", "end", iid=r["id"], values=(r["kind"], date, r["text"]))
+            pending = r["kind"] == "pending"
+            self.tree.insert("", "end", iid=r["id"], values=("question" if pending else r["kind"], date,
+                                                             self.question(r) if pending else r["text"]))
         count = f"{len(records)} record{'s' if len(records) != 1 else ''}"
+        asks = sum(1 for r in records if r["kind"] == "pending")
+        if asks:
+            count += f", {asks} question{'s' if asks != 1 else ''} to answer (select one, then Answer…)"
         self.status.configure(text=f"{said}  {count}." if said else f"{count}.")
         return len(records)
 
     def selected(self) -> list[str]:
         return list(self.tree.selection())
+
+    def question(self, record: dict) -> str:
+        """A pending question as the person reads it: what they said, and what dawnr remembers instead."""
+        ids = record.get("conflicts_with") if isinstance(record.get("conflicts_with"), list) else []
+        olds = []
+        for i in ids:
+            try:
+                olds.append(self.store.get(i) if isinstance(i, str) else None)
+            except StoreError:                  # an unreadable record: shown as gone, the list still opens
+                olds.append(None)
+        remembered = "; ".join(o["text"] for o in olds if o) or "nothing now"
+        return f"you said: {record['text']}  |  remembered: {remembered}"
+
+    def answer(self, question_id: str, take_new: bool) -> dict | None:
+        record = self.store.answer(question_id, take_new)
+        self.refresh("Answered.")
+        return record
 
     def forget(self, ids) -> int:
         gone = sum(1 for i in ids if self.store.forget(i))
@@ -148,6 +171,18 @@ class MemoryWindow:
         text = simpledialog.askstring("Correct", "In your own words:", initialvalue=record["text"], parent=self.win)
         if text and text.strip():
             self.correct(ids[0], text)
+
+    def _answer_dialog(self):
+        ids = self.selected()
+        record = self.store.get(ids[0]) if len(ids) == 1 else None
+        if record is None or record["kind"] != "pending":
+            self.status.configure(text="Select one question to answer.")
+            return
+        choice = messagebox.askyesnocancel(
+            "Which is right?", self.question(record).replace("  |  ", "\n") + "\n\nYes: remember what you said. "
+            "No: keep what dawnr remembers.", parent=self.win)
+        if choice is not None:
+            self.answer(record["id"], choice)
 
     def _pin_dialog(self):
         text = simpledialog.askstring("Pin a note", "A note dawnr reads first, every conversation:", parent=self.win)
