@@ -512,3 +512,78 @@ torch, skips without it), and `locallm/test_tool_conversations.py` (the
 recording reproduced, the replay inside a real Harness, the notes server and
 the guard hook for real, the disguises, no output span supervised, the
 evaluation's judge).
+
+## 10. Use dawnr from other tools
+
+`locallm/dawnr_api.py` serves a chat-trained checkpoint as the subset of
+OpenAI's chat completions API (platform.openai.com/docs/api-reference/chat)
+that an agent framework, IDE plugin or eval harness expects from "an
+OpenAI-compatible endpoint" -- standard library only
+(`http.server.ThreadingHTTPServer`), one model instance behind a lock (no two
+generations at once), bound to 127.0.0.1 by default:
+
+    python locallm/dawnr_api.py --model <dir> [--harness my-harness.json] [--api-key TOKEN]
+
+    curl http://127.0.0.1:8080/v1/models
+    curl http://127.0.0.1:8080/v1/chat/completions -d '{
+      "messages": [{"role": "user", "content": "..."}], "stream": true}'
+
+`GET /v1/models`, `GET /v1/models/{id}` and `POST /v1/chat/completions`
+(`messages`, `temperature`, `max_tokens`/`max_completion_tokens`, `stream` as
+server-sent events, `stop`, `seed`) work as OpenAI's own reference describes
+(mirrored here from openai/openai-python's type definitions, since the docs
+page is a JS shell and the published openapi.yaml is 2.7MB -- the change that
+added this server carries the research receipt). `--harness` puts the same
+harness this file describes around the model, exactly as `chat_cli.py`'s
+`--harness` does; with none given, only the t tool is offered, offline, as
+everywhere else in this repository.
+
+**A client's `tools` are offered the same way an operator's tools are.**
+dawnr's call syntax already has one form for every tool,
+`<|tool_start|> name {json} <|tool_end|>` (section 1), used until now only for
+tools the operator configured. An OpenAI-style `tools` array in the request
+is added into the harness's own registry for the lifetime of that one request
+(removed again once it answers, under the same lock that already serializes
+generation, so one request's tools are never visible to another's). What
+differs from an operator's tool: the harness never gets to force a client
+tool's result back into the model's context. Its arguments are checked
+against the JSON Schema the client supplied -- the same check every registry
+tool gets, `dawnr_harness.tools.validate`, before the tool ever "runs" -- and
+the moment a *validated* call closes, generation stops there, before the
+harness would force anything back into the stream. The call is returned to
+the caller as `tool_calls`, exactly as OpenAI's own API stops generation for
+a function call rather than answering it itself. An operator's OWN registry
+tools (the t checker, skills, web, MCP) are unaffected: they still run in
+band under the harness's existing policy the instant their call closes, and
+none of that ever reaches the client -- an OpenAI-style caller did not ask
+for them and does not know their schemas, so only the model's own text
+becomes the response `content`. A client's tool RESULT (its `tool`-role
+message, sent back on the next request) is folded into the conversation as a
+`tool_output` part marked **untrusted** (section 7's mark, the same one a
+fetched web page's text gets): computation this server did not run and
+cannot vouch for is exactly what "untrusted" means here, whether it came
+from a web page or from the other tool driving this API.
+
+**Deviations from the reference**, because dawnr's engine cannot do
+everything OpenAI's own service does: no `function_call`/`function` role
+(deprecated in OpenAI's own spec); `n` must be 1 (dawnr answers one choice at
+a time); no `logprobs`, penalty or bias fields, image or audio content, or
+`service_tier`; `tool_choice` is `"auto"` or `"none"`, never `"required"` or
+a named tool (the engine's grammar, section 1 of engine.py's own docstring,
+has no way to force one specific call); `top_p` is accepted and ignored (the
+engine samples by temperature and top_k only); a reply that ran past its
+wall-clock deadline or its call budget (`--max-calls`) is reported as
+`finish_reason: "length"`, since OpenAI's enum has no "timeout" value. Every
+request is served strictly one at a time, so this is not a high-throughput
+endpoint -- it exists so another tool can point an OpenAI client at dawnr,
+not to replace a real serving stack.
+
+Tests: `python -m unittest locallm/test_dawnr_api.py` (needs torch; a
+scripted stub model, seconds): the conversions (a system message folding
+into the first user turn, a client's tool result becoming an untrusted
+`tool_output` part all the way down to the token the model reads), a client
+tool call stopping generation without forcing anything back, dawnr's own
+registry tool calls never reaching visible content, and, over a real HTTP
+connection: `GET /v1/models`, a full tool-call-then-continue round trip,
+streaming (the SSE framing and the usage chunk), the bearer-token check, and
+the request-size and `n` limits.
