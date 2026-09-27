@@ -2474,6 +2474,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # still has its function lifted, and printed for the checker). --
     source_method, source_closure = method, closure
     method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
+    datatype_kind = _datatype_kind(module)  # row 48: names datatype-typed binders/params/returns/members
     lets = lift_let.expand_scope(method, closure, method_names)
     issues += lets.issues
     # A binder is a local whose type the substitution erases: one t cannot carry
@@ -2487,6 +2488,9 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             if isinstance(n, LetExpr) and n.op == ":=":
                 for b in n.binders:
                     bad = _type_issue(b.type) if b.type is not None else None
+                    if bad == "datatype":  # row 48
+                        bad = (f"datatype-{datatype_kind}" if datatype_kind is not None
+                               else _id_type_gap(module, b.type) or bad)
                     if bad not in (None, "nat-seq-elements", "array") and lift_let.binder_uses(n, b.name):
                         issues.append((n.line, bad, b.name))
     for line in lets.lines:
@@ -2620,7 +2624,6 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
 
     # -- param / return types --------------------------------------------
     array_params: list[Param] = []
-    datatype_kind = _datatype_kind(module)  # row 48: names datatype-typed params/returns/members
     for p in method.params:
         if p.type is not None and p.type.kind == "array":
             if p.type.nullable or not _is_array_of_int(p.type):
