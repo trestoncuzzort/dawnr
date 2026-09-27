@@ -144,7 +144,9 @@ in a value:
 | `{int}` | one non-negative integer |
 | `{path}...`, `{arg}...` | any number, last in the rule only |
 
-No value may begin with `-`. A rule's permission is `allow` or `ask` (default
+No value may begin with `-`. An `{arg}` is not checked as a path: a rule whose
+program opens its argument as a file must say `{path}`, or the program can be
+pointed anywhere. A rule's permission is `allow` or `ask` (default
 `ask`); `run_command` itself is denied until the operator allows it, so both
 the tool and a rule must be granted. The first rule an argv matches is the one
 used; an argv no rule matches is refused with the list of allowed shapes. A
@@ -217,7 +219,8 @@ registry call). It stops at the first of:
 
 Predictions in `locallm/PREDICT-agent-2026-09-27.md`, committed before the code;
 the numbers from `DAWNR_AGENT_MEASURE=<file> python -m unittest
-locallm/test_dawnr_agent.py` on the desktop, 2026-09-27 (49 tests, 2.7 s).
+locallm/test_dawnr_agent.py` on the desktop, 2026-09-27 (73 tests, 2 skipped by
+design, 3.6 s on Python 3.14; the same pass on Python 3.10).
 
 | prediction | the number that would falsify it | measured |
 |---|---|---|
@@ -227,6 +230,17 @@ locallm/test_dawnr_agent.py` on the desktop, 2026-09-27 (49 tests, 2.7 s).
 | the loop never exceeds its budget | one run over | **0 of 60** random budgets (0 to 20 steps) with random planners |
 | denied means never started | one process start | **0 of 11** refused commands started |
 | plan approval asks less than step approval | more than one ask for an unchanged plan | a five-step plan: **1** plan approval; asking per step after the first read: **3** |
+
+Measured beyond the registered six, the same day: the containment sweep again
+with the descriptor walk switched off, so the path-string walk that Windows uses
+ran on Linux (every containment test but the two races, which that walk does not
+claim): **0 escapes**, the same counts; 3,000 hostile argvs against four real
+rules with a runner that records instead of starting anything: 221 matched a
+rule, and every one that reached the runner had the pinned program, the rule's
+literal tokens, no value of the model's beginning with `-`, and every `{path}`
+inside a root (**0 violations**); a file whose *name* is an instruction, seen in
+a listing, fooled the planner and ran nothing, while the same command, asked for
+by the person before anything untrusted was read, ran.
 
 Weaker than it looks, said plainly: the sweep's generated paths mostly end in
 refusals (31 of 5,000 reads opened a real file), so the property is tested far
@@ -248,6 +262,8 @@ skips.
   ask, and run under the sandbox. The allowlist is not a sandbox; bubblewrap is.
 - **A `{path}` is checked, then opened by the program by name.** A concurrent
   process could swap it in between; the sandbox bounds what it could then reach.
+  An `{arg}` is not a path at all, to the agent: a rule that lets a program open
+  an `{arg}` lets it open anything the program can.
 - **Without bubblewrap, `"network": false` and `"writes": false` are the
   operator's claims.**
 - **Hard links.** A file hard-linked into a root from elsewhere is in the root
@@ -322,7 +338,10 @@ unknown or malformed key fails when the configuration loads.
 `--approve` runs a plan only if its dry run now has exactly that digest, so an
 approval given after one dry run cannot carry over to a plan or a file that has
 changed. `chat_cli.py --harness harness.json` asks for each plan once on the
-terminal; the Tk chat pane still asks per step.
+terminal; the Tk chat pane still asks per step. The skill
+`acting-on-the-machine` (in `locallm/dawnr_harness/skills/`) states these
+conventions for a model, loaded on demand like any skill; `docs/USER-GUIDE.md`
+walks through one plan end to end.
 
 Tests: `python -m unittest locallm/test_dawnr_agent.py` (standard library; set
 `TMPDIR` to keep its temporary machines off `/tmp`; the sandbox test skips where
