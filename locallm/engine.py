@@ -33,8 +33,8 @@ character tokenizer, characters of the tool's answer that the vocabulary
 lacks are dropped when it is encoded (data.CharTokenizer.encode), as they are
 from any text; byte-level BPE loses nothing.
 
-Added for dawnr: a grammar on the chat tokens (on by default). The first
-pipeline run ended 28 of 100 dev answers with <|assistant_end|> inside an
+Added for dawnr: a grammar on the chat tokens (off by default: see below).
+The first pipeline run ended 28 of 100 dev answers with <|assistant_end|> inside an
 open <|t_start|> call, so the tool never ran on them. Outlines
 (Willard and Louf, arXiv:2307.09702) guides generation by masking, at each
 step, the logits of tokens illegal in the current state of a finite-state
@@ -45,8 +45,11 @@ tokens never appear inside an assistant turn, so neither is ever sampled.
 A call can therefore end only by <|t_end|>, after which the tool runs. Each
 row counts the steps where the model's own top token was illegal
 (grammar_overrides), since the closed-call rate is guaranteed by the mask and
-says nothing by itself. Engine(..., grammar=False) is the unmasked engine,
-kept to measure the difference. A completed row is inert: it is fed
+says nothing by itself. It is off by default because it failed the rule
+registered for it (FINDINGS-repair-2026-09-26.md): it closed every call, but
+with the last call taken as the answer, dev well formed fell by 2 on the mean;
+it passed post hoc with the best-verdict answer (chat_eval.py), and
+Engine(..., grammar=True) turns it on. A completed row is inert: it is fed
 <|assistant_end|> with mask 0 and no tool runs for it, so extra samples in a
 batch cannot add tool calls after their own end.
 
@@ -120,7 +123,7 @@ class RowState:
 
 class Engine:
 
-    def __init__(self, model, tokenizer, tool=None, harness=None, grammar=True, max_calls=None):
+    def __init__(self, model, tokenizer, tool=None, harness=None, grammar=False, max_calls=None):
         if not chat.has_chat_tokens(tokenizer):
             raise ValueError("the engine needs a tokenizer carrying the chat tokens (chat.with_chat_tokens)")
         self.model = model
