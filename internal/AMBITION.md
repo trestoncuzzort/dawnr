@@ -198,7 +198,7 @@ is judged by the same rule: nothing is trusted without evidence.
 | to hear and speak | speech recognition, text to speech | not started |
 | to see | vision encoders, multimodal models | later |
 | to fit small hardware | quantisation, distillation, mixture of experts | partly: runs with no PyTorch, on a CPU |
-| to be understood from inside | interpretability, sparse autoencoders | planned |
+| to be understood from inside | interpretability, sparse autoencoders | **started**: a dictionary over one residual-stream layer's activations runs end to end on a real checkpoint and real training-split text (`locallm/dawnr_interp/`, arXiv:2309.08600's recipe); whether any feature tracks specifications rather than boilerplate is not yet answered past one exploratory, not pre-registered, first pass (its README) |
 | to improve itself safely | the data engine: generate, verify, keep only what is proved, retrain | **built** |
 
 ### dawnr's harness: reaching past itself
