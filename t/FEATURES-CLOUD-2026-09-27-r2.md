@@ -1,0 +1,223 @@
+# The cloud features track, round 2, 2026-09-27
+
+The operator asked for a second round of the t features track on the same
+cloud machine, without stopping: confirm the seven kernels still give the
+committed conformance table, then work the round-2 list in order (the four
+refusal buckets the round-1 census left and finite sets), each measured on
+the staged corpora the way round 1 measured (baseline refusals by reason,
+then pass-the-gate / lift / checked), with a decision row, a Done entry and
+tests per feature; and, outranking the features, grade the 2026-09-27
+features re-lift in all seven kernels once its data branch appeared. This
+file is the record, in the shape of round 1's `t/FEATURES-CLOUD-2026-09-27.md`.
+Every count names the run that produced it; the runs live under the
+measuring machine's `lift-runs/` directory (not committed).
+
+Branch `cloud/features-r2`, from `r12-blockers` (1b3c4cc). Commits, in
+order: a4322ab (the return default, feature B2), aa78327 (sequence elements
+named, B1), 8083e2a (zero-return methods named, B3, with decision rows 46
+and 47 and Done 9 and 10), a9a4426 (merge of `cloud/features-r2-sets`:
+66f8e4c the set type, core and three lowerings, bf9d70b the Rocq lowering,
+the two committed tasks and Done 11), a22a1ad (decision row 45 and Done 12),
+then the grading table and this report.
+
+## Phase 0: the committed conformance table still holds
+
+`python3 t/conformance.py --jobs 3` on the merged base before any change:
+66 tasks (53 probes, 13 metamorphic), kernels present 7 of 7, tripwire bugs
+0. The run shared the four cores with a lifter census (load 25 to 34) and
+showed 10 FAIL cells: the two committed Frama-C timeouts (`fz_p_biglen`,
+`fz_p_seqlen`, the same two `t/CONFORMANCE.md` records) and eight SPARK
+real-side timeouts (`fz_p_ret_first`, `fz_p_ret_falsens`,
+`fz_p_seqeq_false`, `fz_p_nest_cell`, `fz_p_nest_rowlen`, `fz_p_nest_lit`,
+`fz_p_nest_eq`, `fz_p_str_tab`). The eight SPARK cells re-run one at a time
+on the quieter machine (`verifiers.spark.verify` on the run's own `.ads`
+files) read verified, refuted, refuted, verified, verified, verified,
+verified, verified, in 21 to 70 s each: exactly the committed table. So the
+suite's outcome is the committed one, 2 FAIL cells, both Frama-C, and the
+SPARK timeouts were load, as round 1 found. Kernel versions are round 1's
+(dafny 4.11.0, verus 0.2026.08.30, gnatprove 16.1.0, Frama-C 33.0, lean
+4.33.1, rocq 9.2, F* 2026.08.30); the machine still has no dotnet, so the
+lifter's differential arm reads `arm-unavailable` throughout and "checked"
+below means the equivalence lemmas verified with that arm unavailable.
+
+## The census the round started from
+
+The 1886 staged Dafny files of the 2026-09-26 lift, re-lifted on this
+machine with the MERGED lifter (`r12-blockers` after round 1) and the check
+stage skipped (`lift-runs/r2-base0-skipcheck`, 2404 s wall at 4 jobs):
+2068 gradable methods, 850 lifted. The refusals the operator's list named,
+and the ones above them:
+
+| reason | methods |
+|---|---:|
+| `function-result` (a seq-returning helper function; being built elsewhere, not touched here) | 305 |
+| `nested-seq-other` (B1) | 113 |
+| `parse:higher-order` | 91 |
+| `set` (B4) | 77 |
+| `datatype` | 73 (+56 files the parser refuses) |
+| `return-not-assigned-on-all-paths` (B2) | 69 |
+| `array` | 56 |
+| `zero-returns` (B3) | 39 |
+
+The four counts match the operator's brief exactly (113, 69, 39, 77).
+
+## What landed
+
+Soundness held as the brief required: no assume, admit, sorry or axiom
+anywhere; nothing discharges a goal without a proof; the grader, the twin
+generator, the lift check filter (`t/loop_filter.py`) and the corpus gates
+are untouched; no test was weakened or deleted. Every committed task,
+method, lemma and conformance fixture lowers byte for byte as before in
+all seven kernels, real and twin (`sha256` of `tlib.lower` over the 48
+fixture tasks, taken on the base worktree and after every feature: 0
+differing cells each time; the merged tree adds the two set tasks and
+changes nothing else). Every commit cites the design it copies or says
+`INVENTED:` and what was searched.
+
+| feature | track entry, decision row | what changed | kernels |
+|---|---|---|---|
+| B1 nested-seq-other | Done 9, row 46 | lifter: a `seq<X>` whose element t has no value for refuses under X's own name (`seq-of-real`, `seq-of-datatype`, `seq-of-bitvector`, `seq-of-pair`, `seq-of-bool`, `seq-of-set`, `seq-of-map`); a cast inside a display is an int element, so `[c as char]` lifts when the cast is safe | none |
+| B2 return-not-assigned-on-all-paths | Done 12, row 45 | lifter: the body opens with the return type's default and the check stage runs `dafny verify --filter-symbol M` on the source method (`verify-source`), refusing `return-default-unverified` unless dafny's own definite-assignment check accepts it; `char` returns refuse `return-default-char` | none |
+| B3 zero-returns | Done 10, row 47 | lifter: the bare name is retired for why decision 22's shape did not apply: a named mutation issue stands alone, a `modifies` without an index assignment refuses `array-mutation` (`modifies-via-call` or `modifies-no-index-assign`), a method with neither return nor `modifies` refuses `lemma-shaped` | none |
+| B4 finite sets | Done 11, SPEC.md "Finite sets (v1)" | the type `set` and six total operations (display, `in`, `card`, `union`, `inter`, `diff`), the notation, check_wf, interp, nine probes, two committed tasks; lowered in dafny, verus, fstar, rocq; lean, framac, spark abstain by name | 4 lower, 3 abstain |
+| B5 datatypes | not started | | |
+
+The measurement of B2 changed a belief written in `t/LIFTER-DESIGN.md`
+section 4.7: Dafny does not "accept such a method with an unspecified
+return value". Measured on dafny 4.11.0, definite assignment of an
+out-parameter is a verification obligation ("out-parameter 'r', which is
+subject to definite-assignment rules, might be uninitialized at this return
+point"): a `while true { .. r := i; return; }` body, an if-case and a `break`
+followed by a guarded assignment all verify while the syntactic walk refused
+them, and a method that truly leaves the return unassigned verifies only
+under `--relax-definite-assignment`, which nothing here passes. The section
+now says so.
+
+### Finite sets, per kernel
+
+Measured on this machine with the nine `fz_p_set_*` probes (expected verdict
+on the real, twin refuted where a twin exists) and the two committed tasks
+`tasks/set_toggle.t` and `tasks/set_collect.t`:
+
+| kernel | representation | probes | tasks |
+|---|---|---|---|
+| dafny | `set<int>`; the empty display let-bound to a typed name (`\|{}\|` is underspecified, a false-ranged comprehension is rejected as not finite, measured) | 9 of 9, twins refuted | 2 verified, twins refuted |
+| verus | `vstd::set::Set<int>`; `insert`/`remove` for a singleton union/difference; vstd's three broadcast groups plus one prelude lemma (empty difference is inclusion) in its own module; `==` bridged to `=~=`; the ground certificate over sets closed by the SMT arm (`compute_only` cannot evaluate a cardinality, measured) | 9 of 9, twins refuted | 2 verified, twins refuted |
+| fstar | `FStar.FiniteSet.Base` with `FStar.FiniteSet.Ambient`; a task using sets is lowered in the Ghost effect (`cardinality` is GTot, equality the ghost decision of `equal`); union with a singleton spelled `insert` | 9 of 9, twins refuted | 2 verified, twins refuted |
+| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality, each fact posed once behind the prelude's persistent marker | 9 of 9 real; 8 twins refuted, `fz_p_set_eq`'s twin at the 180 s wall | both verified; set_collect's twin refuted, set_toggle's twin unproved (no certificate for a set-valued return yet) |
+| lean | none: core Lean 4 without Mathlib has no finite set | abstain by name | abstain |
+| framac | none: C has no set value | abstain by name | abstain |
+| spark | none yet: `SPARK.Containers.Functional.Sets` exists but has no difference function and its cardinality laws are unmeasured here | abstain by name | abstain |
+
+The corpus-facing half of finite sets is not built: the lifter does not yet
+map Dafny's `set<int>` onto the type, and the comprehension `set i | lo <=
+i < hi && P(i)` (39 of the 77 methods, always under `|..|` as a count) is
+not in v1 (SPEC.md says how it will be stated: a defunctionalised
+predicate, so that SPARK and Frama-C can name it).
+
+Tests, all without a prover unless `--slow`: `t/test_lift_seq_elements.py`
+(3), `t/test_lift_return_default.py` (6, plus 2 slow: one accepted source
+checked end to end, one refused `return-default-unverified` with dafny's own
+message), `t/test_lift_zero_returns.py` (2). The set probes and tasks were
+run through each kernel directly (the tables above). The lifter suites
+(`pytest t/test_lift_*.py`): 334 passed, 15 failed after the last lifter
+change, the same 15 as before the first (14 need a corpus directory or a lab
+machine this machine does not have; one, `test_lift_acsl`'s WP end-to-end,
+timed out under load 25 and is environment-bound). Whole suite: see below.
+
+## Phase 2: the corpora, per feature
+
+The baseline is the merged-base census above (`r2-base0-skipcheck`); each
+feature's files were re-lifted with the new code, skip-check first, then
+with the check stage on for the methods that lifted.
+
+| feature | refused (baseline) | pass the gate | lift | checked | what still refuses |
+|---|---:|---:|---:|---:|---|
+| B1 nested-seq-other | 113 | 113 (every method now carries a name) | 0 | 0 | 84 `seq-of-real`, 20 `seq-of-datatype`, 5 `seq-of-bitvector`, 2 `seq-of-bool`, 1 `seq-of-pair`, 1 `char-cast-unbounded`: none is a t value, so none can lift |
+| B2 return-not-assigned-on-all-paths | 69 | 8 | 4 | 1 | 61 `assume` (specification stubs, foreseen by the track's table); 4 refuse elsewhere (`array`, `unbounded-quantifier`, `seq-typing`, `array-mutation`); of the 4 that lift, dafny accepts all four sources (`verify-source` exit 0), 1 checks (ChooseOdd), 3 fail lemmas unrelated to the default (`L_inv_1` twice, a closure function's well-formedness once) |
+| B3 zero-returns | 39 | 39 (every method now carries a name) | 0 | 0 | 34 `array-mutation` (23 of them the DJ family writing two arrays; 6 `modifies-via-call`; 5 `modifies-no-index-assign`), 4 `lemma-shaped`, 1 `array` |
+| B4 set | 77 | 0 (no lifter mapping yet) | 0 | 0 | 39 comprehensions, 30 displays, 8 typed names |
+
+Two of the four buckets were, on measurement, buckets of names rather than
+of liftable programs: nothing in `nested-seq-other` is a t value, and
+nothing in `zero-returns` is a task under SPEC.md's own rule for a method
+with no return (its mutated array is the return, or it is a lemma). What
+the work bought there is a census that ranks the real gaps: reals (84 more
+than the `real` bucket showed), datatypes (20 more), a pair-of-seqs return
+for the 23 two-array methods, a range analysis for `(lit + e) as char`.
+
+## Task A: the 2026-09-27 features re-lift, graded
+
+The data branch `data/features-lift-2026-09-27` appeared during the round
+(d50caae, 140 tasks past the check stage under
+`t/out/lifted-tasks-2026-09-27-features/`). Graded from this branch's
+lowerings with `T_SPARK_JOBS=1 python3 t/run_par.py --jobs 4 --tasks <the
+data worktree's task directory> --out lift-runs/features-grade --table
+t/COVERAGE-lifted-2026-09-27-features.md`; the table is committed on this
+branch, the tasks stay on the data branch.
+
+The run (140 tasks, seven kernels, three flake runs per side) was still in
+progress when this report was first committed; its clean-in-seven and
+clean-in-six counts, with the gap kernel named, follow in the commit that
+adds the table.
+
+## What is left, and why
+
+- **Finite sets, the corpus half.** The lifter's mapping of Dafny `set<int>`
+  (a typed parameter or return, a display, `in`, `|s|`, `+`, `*`, `-`) onto
+  the new type would reach 38 of the 77 methods; the other 39 are the
+  comprehension, which needs the defunctionalised predicate SPEC.md names.
+  Three kernels abstain: Lean needs a sorted duplicate-free `List Int`
+  encoding proved equivalent (core has no `Finset`); Frama-C needs a
+  sorted-array encoding with WP proofs; SPARK needs the
+  `Functional_Sets` instantiation and a difference function the library
+  lacks. Two Rocq cells are open: `fz_p_set_eq`'s twin runs to the wall
+  (the real verifies), and `set_toggle`'s twin has no certificate because
+  the value certificate's closing step does not reach a set-valued return.
+- **Two arrays written in one method.** 23 vericoding DJ methods
+  (`a[i] := 0` and `sum[0] := total` under `modifies a, sum`) are one
+  construct short: a task returning a pair of seqs, which t's pair already
+  holds. Named in row 47, not built.
+- **`(lit + e) as char` under a `requires` bound on `e`.** The int-to-string
+  helpers (`IntToString`, `int_to_string`) refuse `char-cast-unbounded`
+  where a two-line interval analysis would prove the cast in range.
+- **`function-result`, 305 methods**, is the binding refusal of the census
+  and is being built elsewhere (`feat/seq-spec-fun`); this branch did not
+  touch it, as instructed.
+- **Datatypes (B5)** were not started: 73 methods and 56 parser-refused
+  files remain, the largest untouched bucket after `function-result`.
+- **The differential arm** still needs dotnet; `dafny run --target:py`
+  works on this machine (measured while checking Dafny's auto-init
+  defaults: 0, false, [], "", 'D' for char) and would give the check stage
+  its third arm here, but the check filter was out of scope.
+
+## The whole suite against round 1's 51
+
+The whole suite (`pytest t --ignore=t/test_lab_gui.py`, which needs
+tkinter) was still running on the merged tree when this report was first
+committed; its counts against round 1's 51 environment-bound failures
+follow in the same later commit.
+
+## How to reproduce
+
+- Conformance: `T_PROVER_MEMCAP=0 python3 t/conformance.py --jobs 3`; the
+  SPARK re-measurement is `verifiers.spark.verify` on each timed-out
+  probe's `.ads` under the run's workdir, one at a time.
+- The census: `python3 t/lifter.py --dir <staged> --out <dir> --jobs 4
+  --force --skip-check` from the merged base (the baseline) and from this
+  branch; tally the `*.outcome.json` by refusal reason and join the two by
+  (source, method).
+- Per feature: re-lift the baseline's files for the reason with
+  `--list <files> --corpus-dir /`, skip-check, then without `--skip-check`
+  for the methods that lifted; `verify-source` exit codes are in each
+  `.lift.json` sidecar.
+- Finite sets: `python3 t/surface.py --check` (26 of 26 written examples,
+  1846 of 1846 corpus tasks round-trip), the `fz_p_set_*` probes and the
+  two `tasks/set_*.t` files lowered with `lower_<kernel>.lower` and
+  verified with `verifiers.<kernel>.verify`, real and twin (`harness.
+  twin_cached`, `harness.real_witness`), as `t/conformance.py` does.
+- Byte identity: hash `tlib.lower(task, kernel, twin_body=...)` for every
+  file under `t/tasks`, `t/methods`, `t/methods_probe`, `t/lemmas`,
+  `t/lemmas_probe` and all seven kernels before and after.
+- Task A: the `run_par.py` line above, from this branch, against the data
+  worktree's task directory.
