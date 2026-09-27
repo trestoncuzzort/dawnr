@@ -50,6 +50,15 @@ kept to measure the difference. A completed row is inert: it is fed
 <|assistant_end|> with mask 0 and no tool runs for it, so extra samples in a
 batch cannot add tool calls after their own end.
 
+A call budget (max_calls, off by default, with the grammar only): once a row
+has made max_calls calls, <|t_start|> is illegal for it, so a model that
+retries forever must end or write text. s1's budget forcing
+(Muennighoff et al., arXiv:2501.19393) ends a segment when its token budget is
+spent; this budget is of tool calls. A model trained on repair conversations
+retried until its tokens ran out on 82 of 100 dev answers
+(FINDINGS-repair-2026-09-26.md). Each row counts the steps where the budget
+refused the model's top token (budget_refusals).
+
 ----------------------------------------------------------------------------
 nanochat's notice (for the parts of RowState and Engine.generate ported here):
 
@@ -106,11 +115,12 @@ class RowState:
         self.stops = []               # reasons a Stop hook gave for not ending
         self.ended_in_call = False    # <|assistant_end|> while a call was open (only without the grammar)
         self.grammar_overrides = 0    # sampled steps whose unmasked top token was illegal
+        self.budget_refusals = 0      # sampled steps whose top token was <|t_start|> past the call budget
 
 
 class Engine:
 
-    def __init__(self, model, tokenizer, tool=None, harness=None, grammar=True):
+    def __init__(self, model, tokenizer, tool=None, harness=None, grammar=True, max_calls=None):
         if not chat.has_chat_tokens(tokenizer):
             raise ValueError("the engine needs a tokenizer carrying the chat tokens (chat.with_chat_tokens)")
         self.model = model
@@ -125,6 +135,9 @@ class Engine:
         self.harness = harness
         self.harness_tokens = chat.has_harness_tokens(tokenizer)
         self.grammar = grammar
+        if max_calls is not None and (not grammar or max_calls < 0):
+            raise ValueError("a call budget needs the grammar and a count of at least 0")
+        self.max_calls = max_calls
 
     def _output_tokens(self, result) -> list[int]:
         """A harness answer as forced tokens: one output span per part, untrusted ones marked."""
@@ -218,6 +231,14 @@ class Engine:
                 for i, row in enumerate(rows):
                     if not row.completed and not row.forced_tokens and bool(illegal[i, top[i]]):
                         row.grammar_overrides += 1
+                if self.max_calls is not None:
+                    spent = [not r.in_tool_block and len(r.tool_calls) >= self.max_calls for r in rows]
+                    for i, row in enumerate(rows):
+                        if spent[i]:
+                            openers = [t_start] + ([tool_start] if tool_start is not None else [])
+                            illegal[i, openers] = True           # the budget counts every kind of call
+                            if not row.completed and not row.forced_tokens and top[i] in openers:
+                                row.budget_refusals += 1
                 logits = logits.masked_fill(illegal, float("-inf"))
             sampled = _next_token(logits, temperature, top_k, rng)[:, 0].tolist()
             column, masks = [], []

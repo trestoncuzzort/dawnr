@@ -29,7 +29,17 @@ a program that passes every example (repaired); and the calls themselves:
 opened, closed, ended inside a call by <|assistant_end|>, out of tokens inside
 a call, and the grammar's overrides (engine.py). `--no-grammar` evaluates with
 the unmasked engine, to measure what the grammar changes on the same
-checkpoint.
+checkpoint; `--max-calls N` gives the engine a budget of N tool calls.
+
+Which program is the answer: `--answer last` (the default, and the rule the
+first repair runs registered) takes the last call, else the text.
+`--answer best-verdict` takes the call whose t-tool verdict ranks highest
+(every example passes, then parses and well formed, then parses), the latest
+among equals, else the text: the reply's calls are samples the tool already
+ran on the user's own examples, and AlphaCode (arXiv:2203.07814) filters its
+samples by their behaviour on the problem's example tests. `--rescore ROWS`
+recomputes every number from an earlier run's rows under `--answer` without
+generating anything (the rows hold every call and verdict).
 
 The held-out evaluation problems are never asked: an id in the split's
 eval_ids is refused by name.
@@ -61,7 +71,26 @@ def ask(engine, tok, user: str, max_tokens: int) -> dict:
             "tool_verdicts": [c[1] for c in row.tool_calls], "ended": row.completed,
             "unclosed_call": row.in_tool_block or row.ended_in_call, "ended_in_call": row.ended_in_call,
             "budget_in_call": row.in_tool_block and not row.completed,
-            "grammar_overrides": row.grammar_overrides, "new_tokens": len(results[0])}
+            "grammar_overrides": row.grammar_overrides, "budget_refusals": row.budget_refusals,
+            "new_tokens": len(results[0])}
+
+
+def verdict_rank(verdict: str) -> int:
+    """3 nothing wrong, 2 parses and well formed, 1 parses, 0 does not."""
+    lines = verdict.split("\n")
+    return 3 if verdict_ok(verdict) else 2 if "well formed: yes" in lines else 1 if "parses: yes" in lines else 0
+
+
+def answer_program(got: dict, policy: str) -> str | None:
+    """The program that answers: the last call or text ("last"), or the best-verdict call ("best-verdict")."""
+    if policy == "last":
+        return got["program"]
+    if policy != "best-verdict":
+        raise ValueError(f"unknown answer policy {policy!r}")
+    ranked = [(verdict_rank(v), i) for i, v in enumerate(got["tool_verdicts"])]
+    if not ranked:
+        return got["program"]
+    return got["calls"][max(ranked)[1]].strip() or None
 
 
 def verdict_ok(verdict: str) -> bool:
@@ -72,7 +101,8 @@ def verdict_ok(verdict: str) -> bool:
 
 
 def judge(got: dict, user: str) -> dict:
-    """The final program under the t tool on the prompt's examples, and what the answer did with its verdicts."""
+    """got["program"] (the answer) under the t tool on the prompt's examples, and what the reply did with its
+    verdicts."""
     import t_tool
     verdict = t_tool.call(got["program"], user) if got["program"] else "parses: no: no program"
     lines = verdict.split("\n")
@@ -105,10 +135,26 @@ def tally(counts, got: dict, judged: dict) -> None:
     counts["tool_calls_total"] += got["tool_calls"]
     counts["grammar_overrides"] += got["grammar_overrides"]
     counts["answers_overridden"] += got["grammar_overrides"] > 0
+    counts["budget_refusals"] += got.get("budget_refusals", 0)
+    counts["answer_not_last"] += (got["program"] or "").strip() != (got["last_program"] or "").strip()
 
 
-ROW_KEYS = ("program", "tool_calls", "calls", "tool_verdicts", "ended", "unclosed_call", "ended_in_call",
-            "budget_in_call", "grammar_overrides", "new_tokens")
+ROW_KEYS = ("program", "last_program", "tool_calls", "calls", "tool_verdicts", "ended", "unclosed_call",
+            "ended_in_call", "budget_in_call", "grammar_overrides", "budget_refusals", "new_tokens")
+GOT_KEYS = ("tool_calls", "calls", "tool_verdicts", "ended", "unclosed_call", "ended_in_call", "budget_in_call",
+            "grammar_overrides", "new_tokens")
+
+
+def from_row(row: dict) -> dict:
+    """An earlier run's answer as ask() returned it, for --rescore."""
+    got = {k: row[k] for k in GOT_KEYS}
+    got["program"] = row.get("last_program", row["program"])
+    got["budget_refusals"] = row.get("budget_refusals", 0)
+    return got
+
+
+def answered(got: dict, policy: str) -> dict:
+    return dict(got, program=answer_program(got, policy), last_program=got["program"])
 
 
 def main(argv=None) -> int:
@@ -121,8 +167,14 @@ def main(argv=None) -> int:
     ap.add_argument("--val", type=int, default=0, help="how many validation conversations to ask (0: all)")
     ap.add_argument("--max-tokens", type=int, default=400)
     ap.add_argument("--no-grammar", action="store_true", help="the unmasked engine (engine.py's grammar off)")
+    ap.add_argument("--max-calls", type=int, default=None, help="a budget of tool calls per answer (with the grammar)")
+    ap.add_argument("--answer", choices=("last", "best-verdict"), default="last")
+    ap.add_argument("--rescore", type=Path, default=None,
+                    help="an earlier run's .rows.jsonl: recompute its numbers under --answer, generate nothing")
     ap.add_argument("--device", default=None)
     a = ap.parse_args(argv)
+    if a.max_calls is not None and a.no_grammar:
+        ap.error("--max-calls works through the grammar; it cannot be combined with --no-grammar")
 
     import chat
     import loop_filter
@@ -132,14 +184,32 @@ def main(argv=None) -> int:
     from checkpoint import load_checkpoint
     from engine import Engine
 
-    model, tok, _ = load_checkpoint(a.model, a.device)
-    if not chat.has_chat_tokens(tok):
-        raise SystemExit(f"{a.model} has no chat tokens; chat_eval judges chat-trained checkpoints")
-    engine = Engine(model, tok, grammar=not a.no_grammar)
     eval_ids = {int(i) for i in json.loads(a.split.read_text(encoding="utf-8"))["eval_ids"]}
     started = time.monotonic()
-    out: dict = {"model": str(a.model), "max_tokens": a.max_tokens, "decoding": "greedy",
-                 "grammar": not a.no_grammar}
+    if a.rescore:
+        earlier = json.loads(a.rescore.with_name(a.rescore.name.replace(".rows.jsonl", ".json")).read_text())
+        old_rows = [json.loads(line) for line in a.rescore.read_text(encoding="utf-8").splitlines() if line.strip()]
+        dev_rows = {r["task_id"]: r for r in old_rows if r["set"] == "dev"}
+        val_rows = [r for r in old_rows if r["set"] == "val"]
+        out: dict = {"model": earlier["model"], "max_tokens": earlier["max_tokens"], "decoding": "greedy",
+                     "grammar": earlier.get("grammar", True), "max_calls": earlier.get("max_calls"),
+                     "answer": a.answer, "rescored_from": str(a.rescore)}
+
+        def reply(user, key):
+            row = dev_rows[key] if isinstance(key, int) else val_rows[key[1]]
+            if isinstance(key, tuple) and row.get("source") != key[0]:
+                raise SystemExit(f"{a.rescore}: validation row {key[1]} is {row.get('source')}, not {key[0]}")
+            return answered(from_row(row), a.answer)
+    else:
+        model, tok, _ = load_checkpoint(a.model, a.device)
+        if not chat.has_chat_tokens(tok):
+            raise SystemExit(f"{a.model} has no chat tokens; chat_eval judges chat-trained checkpoints")
+        engine = Engine(model, tok, grammar=not a.no_grammar, max_calls=a.max_calls)
+        out = {"model": str(a.model), "max_tokens": a.max_tokens, "decoding": "greedy",
+               "grammar": not a.no_grammar, "max_calls": a.max_calls, "answer": a.answer}
+
+        def reply(user, key):
+            return answered(ask(engine, tok, user, a.max_tokens), a.answer)
     rows_path = a.out.with_suffix(".rows.jsonl")
     a.out.parent.mkdir(parents=True, exist_ok=True)
     rows_file = rows_path.open("w", encoding="utf-8")
@@ -151,10 +221,12 @@ def main(argv=None) -> int:
             raise SystemExit(f"dev ids overlap the held-out evaluation ids: {sorted(leak)[:5]}")
         pool = se.pool("v5")
         tiers, counts = Counter(), Counter()
+        if a.rescore and set(dev) != set(dev_rows):
+            raise SystemExit(f"{a.rescore} holds other dev problems than --dev {a.dev} asks")
         for tid in dev:
             entry = pool[tid]
             user = loop_locallm.problem_head(entry, with_examples=True).rstrip("\n")
-            got = ask(engine, tok, user, a.max_tokens)
+            got = reply(user, tid)
             sig = rl_reward.local_signals(tid, got["program"] or "", entry)
             tier = rl_reward.tier(sig)
             tiers[tier] += 1
@@ -173,10 +245,12 @@ def main(argv=None) -> int:
         val = [c for c in convs if c.get("split") == "val"]
         if a.val:
             val = val[:a.val]
+        if a.rescore and len(val) != len(val_rows):
+            raise SystemExit(f"{a.rescore} holds {len(val_rows)} validation rows, not {len(val)}")
         counts = Counter()
-        for c in val:
+        for n, c in enumerate(val):
             user = c["messages"][0]["content"]
-            got = ask(engine, tok, user, a.max_tokens)
+            got = reply(user, (c.get("source"), n))
             judged = judge(got, user)
             tally(counts, got, judged)
             exact = (got["program"] or "").strip() == chat.final_program(c["messages"][1]["content"]).strip()
