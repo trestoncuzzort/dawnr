@@ -100,7 +100,7 @@ following:
   p-value of at most 0.05.
 - Ten dawnr training seeds, with at least nine clean-count wins over the
   fixed Phi responses and an exact sign-test result.
-- Manual review of every LocalLLM-only clean answer.
+- Manual review of every dawnr-only clean answer.
 
 Missing any gate is a non-win. Development can continue, but the panel cannot
 be reinterpreted afterward.
