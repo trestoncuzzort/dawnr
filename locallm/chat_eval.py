@@ -44,6 +44,13 @@ generating anything (the rows hold every call and verdict).
 
 The held-out evaluation problems are never asked: an id in the split's
 eval_ids is refused by name.
+
+Each validation row also carries "tool": chat_data.py's own per-conversation flag for whether
+the proved answer needed the tool. This is the held-out tool-conversation subset
+locallm/dawnr_report.py's scorecard reports separately ("tool use"): filtering a run's
+.rows.jsonl to "tool": true isolates conversations no training document answers where using
+the tool was part of a correct answer, instead of mixing them into the whole validation
+average.
 """
 from __future__ import annotations
 
@@ -260,9 +267,9 @@ def main(argv=None) -> int:
             tally(counts, got, judged)
             exact = (got["program"] or "").strip() == chat.final_program(c["messages"][1]["content"]).strip()
             counts["exact_program"] += exact
-            rows_file.write(json.dumps({"set": "val", "source": c.get("source"), "verdict": judged["verdict"],
-                                        "exact_program": exact, **{k: judged[k] for k in COUNTED},
-                                        **{k: got[k] for k in ROW_KEYS}}) + "\n")
+            rows_file.write(json.dumps({"set": "val", "source": c.get("source"), "tool": bool(c.get("tool", False)),
+                                        "verdict": judged["verdict"], "exact_program": exact,
+                                        **{k: judged[k] for k in COUNTED}, **{k: got[k] for k in ROW_KEYS}}) + "\n")
         out["val"] = dict(counts)
     rows_file.close()
     out["seconds"] = round(time.monotonic() - started, 1)
