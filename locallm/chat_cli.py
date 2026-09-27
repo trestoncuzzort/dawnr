@@ -75,6 +75,9 @@ def main(argv=None) -> int:
         from dawnr_harness import build_harness
         from dawnr_harness.__main__ import terminal_approver
         harness = build_harness(a.harness, approver=terminal_approver if interactive else None)
+        if getattr(harness, "agent", None) is not None and interactive:    # DAWNR-AGENT.md: a plan is asked once
+            from dawnr_agent.__main__ import terminal_plan_approver
+            harness.agent.plan_approver = terminal_plan_approver
         for problem in harness.problems:
             print(f"[harness] {problem}")
         if not chat.has_harness_tokens(tok) and len(harness.registry) > 1:
