@@ -9721,8 +9721,38 @@ def _always_returns(body: list) -> bool:
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call
 # sites pass it; when it is certifiable, the emitted file carries the
 # refutation certificate (see the section above).
+
+_SET_OPS_T = {"set", "in", "card", "union", "inter", "diff"}
+
+
+def _uses_sets(obj) -> bool:
+    """True iff `obj` mentions t's set type or one of its six operations
+    anywhere (SPEC.md "Finite sets", 2026-09-27), by the same generic walk
+    the string-library detector makes."""
+    if isinstance(obj, dict):
+        if obj.get("op") in _SET_OPS_T or obj.get("type") == "set":
+            return True
+        return any(_uses_sets(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_uses_sets(v) for v in obj)
+    return obj == "set"
+
+
 def lower(task: dict, body: list, witness: dict | None = None,
           _unit: dict | None = None) -> str:
+    if _uses_sets(task) or _uses_sets(body):
+        # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): C has no
+        # set value. ACSL's logic sets (`\union`, `\inter`, `\subset`)
+        # are sets of terms for frame clauses, not a value a C function
+        # can return, and an executable encoding (a sorted duplicate-free
+        # int array with ACSL predicates for membership and cardinality,
+        # plus C loops for union/intersection/difference each carrying
+        # its own proof) is a library this column does not have yet.
+        # SPEC.md names this a refusal; abstained by name.
+        raise NotImplementedError(
+            "framac lowering: finite sets (SPEC.md 'Finite sets'): C has no "
+            "set value and ACSL logic sets are not a returnable value; the "
+            "sorted-array encoding with WP proofs is not built")
     """`_unit` is internal (SPEC.md "Methods (v1)", `_lower_method`):
     when given, `task` is an already-sanitized task-shaped view of one
     method, only its contract and C function are returned, and what its
