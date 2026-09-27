@@ -23,6 +23,13 @@ outcome never depends on scheduling; a "builtin" handler type runs one of the
 harness's own Python hooks (the t checker is the first) under the same JSON
 contract; and a hook can tighten the operator's policy but never loosen a
 deny or offline mode (runtime.py applies that).
+
+Two session events for dawnr's memory (DAWNR-MEMORY.md), Claude Code's again:
+SessionStart (matcher: how the session started; additionalContext only,
+nothing blocks; exit 2's stderr goes to the person) and SessionEnd (matcher:
+why it ended; side effects only). dawnr fires SessionStart when the first
+message of a conversation arrives rather than at launch, so a hook can rank
+what it recalls by that message.
 """
 from __future__ import annotations
 
@@ -35,10 +42,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-EVENTS = ("PreToolUse", "PostToolUse", "Stop")
+EVENTS = ("PreToolUse", "PostToolUse", "Stop", "SessionStart", "SessionEnd")
 TOOL_EVENTS = ("PreToolUse", "PostToolUse")
+SESSION_EVENTS = ("SessionStart", "SessionEnd")      # matchers on the session's source / end reason
 DEFAULT_TIMEOUT = 60.0
 MAX_REASON = 2048
+MAX_SESSION_CONTEXT = 16384                         # the memory budget, not this cap, is what normally binds
 _EXACT = re.compile(r"^[A-Za-z0-9_\-, |]+$")
 
 BUILTINS: dict[str, Callable[[dict], dict]] = {}
@@ -191,7 +200,7 @@ class Hooks:
     def run(self, event: str, payload: dict, match_value: str | None = None) -> list[Outcome]:
         outcomes = []
         for matcher, handlers in self.groups.get(event, []):
-            if event in TOOL_EVENTS and not matches(matcher, match_value):
+            if (event in TOOL_EVENTS or event in SESSION_EVENTS) and not matches(matcher, match_value):
                 continue
             for h in handlers:
                 outcomes.append(self._run(h, dict(payload, hook_event_name=event)))
@@ -314,6 +323,29 @@ def aggregate_stop(outcomes: list[Outcome]) -> StopDecision:
         if o.blocked or _decision(o.output) == "block":
             d.block = True
             d.reason = d.reason or (o.reason if o.blocked else _reason(o.output)) or f"{o.handler} blocked the stop"
+        if isinstance(o.output.get("systemMessage"), str):
+            d.messages.append(o.output["systemMessage"][:MAX_REASON])
+    return d
+
+
+@dataclass
+class SessionDecision:
+    contexts: list = field(default_factory=list)     # SessionStart: context for the model
+    messages: list = field(default_factory=list)     # for the person, never the model
+    errors: list = field(default_factory=list)
+
+
+def aggregate_session(outcomes: list[Outcome]) -> SessionDecision:
+    """SessionStart and SessionEnd: nothing blocks; exit 2's reason is shown to the person only."""
+    d = SessionDecision()
+    for o in outcomes:
+        if o.error:
+            d.errors.append(f"{o.handler}: {o.error}")
+        if o.blocked:
+            d.messages.append(f"{o.handler}: {o.reason}")
+        s = _specific(o.output)
+        if isinstance(s.get("additionalContext"), str) and s["additionalContext"].strip():
+            d.contexts.append(s["additionalContext"][:MAX_SESSION_CONTEXT])
         if isinstance(o.output.get("systemMessage"), str):
             d.messages.append(o.output["systemMessage"][:MAX_REASON])
     return d

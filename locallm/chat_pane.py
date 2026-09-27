@@ -149,6 +149,7 @@ class TokenEvents:
         self._tool_start = sp(chat.TOOL_START) if self._harness else None
         self._tool_end = sp(chat.TOOL_END) if self._harness else None
         self._untrusted = sp(chat.UNTRUSTED) if self._harness else None
+        self._memory = sp(chat.MEMORY) if chat.has_memory_tokens(tokenizer) else None
         self._state = "text"           # "text" | "call" | "output-open" | "output"
         self._call_kind: str | None = None
 
@@ -157,6 +158,8 @@ class TokenEvents:
             self._state = "output"
             if token == self._untrusted:
                 return [("output_start", {"untrusted": True})]
+            if token == self._memory:                                   # dawnr's memory (DAWNR-MEMORY.md)
+                return [("output_start", {"untrusted": False, "memory": True})]
             events = [("output_start", {"untrusted": False})]
             if token == self._output_end:
                 self._state = "text"
@@ -183,6 +186,9 @@ class TokenEvents:
     def _text(self, token: int, kind: str) -> list[tuple[str, object]]:
         s = self._decode([token])
         return [(kind, s)] if s else []
+
+
+MEMORY_LABEL = "remembered from earlier conversations"
 
 
 def trust_label(untrusted: bool) -> str:
@@ -229,7 +235,8 @@ def run_chat(make_events: Callable[[], Iterable[tuple[str, object]]],
 
 def chat_reply_events(bundle: EngineBundle, model, tokenizer, harness,
                       prompt_tokens: list[int], *, max_tokens: int | None = None,
-                      temperature: float = 0.7, top_k: int | None = 40, seed: int = 42):
+                      temperature: float = 0.7, top_k: int | None = 40, seed: int = 42,
+                      session=None, messages: list | None = None):
     """Drive engine.Engine.generate for one row, yielding TokenEvents pieces.
 
     Needs torch (through `bundle`, from chat_engine()) — not unit tested
@@ -253,13 +260,25 @@ def chat_reply_events(bundle: EngineBundle, model, tokenizer, harness,
     events = TokenEvents(tokenizer)
     produced: list[int] = []
     for column, _masks in eng.generate(prompt_tokens, max_tokens=max_tokens,
-                                       temperature=temperature, top_k=top_k, seed=seed):
+                                       temperature=temperature, top_k=top_k, seed=seed,
+                                       sessions=None if session is None else [session]):
         token = column[0]
         if token == end_id:
             break
         produced.append(token)
         yield from events.feed(token)
-    yield ("final_parts", bundle.engine.reply_parts(tokenizer, produced))
+    parts = bundle.engine.reply_parts(tokenizer, produced)
+    yield ("final_parts", parts)
+    if session is not None and messages is not None and hasattr(harness, "session_end"):
+        # a window has no reliable end of conversation, so what it remembers is saved after every reply; the
+        # memory hook is idempotent per session (dawnr_memory.end_session), DAWNR-MEMORY.md section 6
+        harness.session_end(session, transcript=messages + [{"role": "assistant", "content": parts}],
+                            reason="checkpoint")
+    notes = getattr(harness, "messages", None)
+    if isinstance(notes, list):
+        for note in notes:
+            yield ("note", note)
+        notes.clear()
 
 
 def make_approver(q: queue.Queue, answered: threading.Event,
@@ -406,6 +425,7 @@ class ChatPane:
         self._ready = False
         self.messages: list[dict] = []
         self.stop_evt = threading.Event()
+        self._session = None                   # one harness session per conversation (taint, memory)
         self._ask_evt = threading.Event()
         self._ask_answer: dict = {}
         self._ask_win: tk.Toplevel | None = None
@@ -539,12 +559,16 @@ class ChatPane:
         config = load_harness_config(self.config_path) if self.config_path else dict(DEFAULT_CONFIG)
         approver = make_approver(self.q, self._ask_evt, self._ask_answer)
         harness = self.bundle.build_harness(config, approver=approver)
+        if self._session is None and callable(getattr(harness, "session", None)):
+            self._session = harness.session()
         self.stop_evt.clear()
         self.busy(say_replying())
         bundle, model, tokenizer = self.bundle, self.model, self.tokenizer
+        session, messages = self._session, list(self.messages)
         threading.Thread(
             target=run_chat,
-            args=(lambda: chat_reply_events(bundle, model, tokenizer, harness, prompt_tokens),
+            args=(lambda: chat_reply_events(bundle, model, tokenizer, harness, prompt_tokens,
+                                            session=session, messages=messages),
                  self.q, self.stop_evt),
             daemon=True).start()
 
@@ -581,8 +605,8 @@ class ChatPane:
             self._open_call_body = None
         elif ev == "output_start":
             untrusted = bool(data.get("untrusted"))
-            self._open_output_body = self._add_block(
-                trust_label(untrusted), "unsettled" if untrusted else "muted")
+            label = MEMORY_LABEL if data.get("memory") else trust_label(untrusted)
+            self._open_output_body = self._add_block(label, "unsettled" if untrusted else "muted")
         elif ev == "output_text":
             self._insert(data, (self._open_output_body,))
         elif ev == "output_end":
@@ -597,6 +621,8 @@ class ChatPane:
                     self._insert(styled, (body,))
                     self._toggle(body, body.replace("body", "mark"))  # shown open: it is the answer now
                 self.learning.replied(self.messages)
+        elif ev == "note":                     # the harness speaking to the person (memory, hooks), not the model
+            self._insert(f"\n[{data}]", ("error",) if str(data).startswith("hook error") else ())
 
     def _on_done(self, payload: dict):
         self._insert("\n", ())
@@ -676,6 +702,18 @@ class ChatPane:
                 bg=C["paper"], fg=C["muted"], font=SANS(CAPTION_SIZE), wraplength=420,
                 justify="left", anchor="w").grid(row=1, column=0, sticky="w",
                                                  pady=(look.SPACE.item, 0))
+        remember = tk.BooleanVar(value=config.get("memory") not in (None, False))
+        tk.Checkbutton(body, text="Remember me across conversations",
+                      variable=remember, bg=C["paper"], fg=C["ink"],
+                      activebackground=C["paper"], activeforeground=C["ink"],
+                      selectcolor=C["card"], highlightthickness=0,
+                      font=SANS(BODY_SIZE), anchor="w").grid(row=2, column=0, sticky="w",
+                                                            pady=(look.SPACE.item, 0))
+        tk.Label(body, text="Kept only on this machine, in a folder only you can open. List, correct or "
+                            "erase it any time: python locallm/dawnr_memory --help (DAWNR-MEMORY.md).",
+                bg=C["paper"], fg=C["muted"], font=SANS(CAPTION_SIZE), wraplength=420,
+                justify="left", anchor="w").grid(row=3, column=0, sticky="w",
+                                                 pady=(look.SPACE.item, 0))
         btns = tk.Frame(body, bg=C["paper"])
         btns.grid(row=4, column=0, sticky="e", pady=(look.SPACE.item, 0))
         learn = self.learning.settings() if self.learning is not None else None
@@ -696,6 +734,10 @@ class ChatPane:
         def do_save():
             if self.config_path is not None:
                 config["offline"] = not allow_network.get()
+                if not remember.get():
+                    config.pop("memory", None)
+                elif config.get("memory") in (None, False):
+                    config["memory"] = {"person": "default"}
                 save_harness_config(self.config_path, config)
             if learn is not None:
                 try:

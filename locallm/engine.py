@@ -67,6 +67,12 @@ With the harness tokens (dawnr_harness) the grammar has a third state: inside a
 call only text and <|t_end|>, no call opens inside another, <|untrusted|> is
 never sampled, and the call budget counts both kinds of call.
 
+dawnr's memory (DAWNR-MEMORY.md): before the first reply of a conversation the
+harness's SessionStart hooks may recall what dawnr remembers of the person; it
+opens the reply as forced <|output_start|><|memory|> ... <|output_end|> tokens
+within the memory budget (dawnr_memory/span.py), withheld from a model without
+the <|memory|> token, and <|memory|> is never sampled.
+
 ----------------------------------------------------------------------------
 nanochat's notice (for the parts of RowState and Engine.generate ported here):
 
@@ -105,6 +111,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import chat  # noqa: E402
+from dawnr_memory.span import session_start_ids  # noqa: E402
 from model import _next_token  # noqa: E402
 
 
@@ -176,6 +183,8 @@ class Engine:
             never.append(sp(chat.UNTRUSTED))
             openers.append(sp(chat.TOOL_START))
             closers["tool"] = sp(chat.TOOL_END)
+        if chat.has_memory_tokens(self.tokenizer):
+            never.append(sp(chat.MEMORY))
         inside = never + [sp(chat.ASSISTANT_END)] + openers
         table = {kind: inside + [c for other, c in closers.items() if other != kind] for kind in closers}
         table["outside"] = never + list(closers.values())
@@ -222,6 +231,11 @@ class Engine:
                             for i in range(num_samples)]
         for row in rows:
             row.session.new_turn()
+        memory = session_start_ids(self.harness, self.tokenizer, tokens, rows[0].session, room)
+        if memory:                    # what dawnr remembers of the person opens its first reply (DAWNR-MEMORY.md)
+            for row in rows:
+                row.forced_tokens.extend(memory)
+            max_tokens = min(max_tokens + len(memory), room)
         if self.grammar:
             vocab = logits.size(-1)
             masks_by_state = {}
@@ -337,6 +351,8 @@ def plain_text(tokenizer, tokens: list[int]) -> str:
     specials = {chat.special(tokenizer, n) for n in chat.CHAT_TOKENS}
     if chat.has_harness_tokens(tokenizer):
         specials |= {chat.special(tokenizer, n) for n in chat.HARNESS_TOKENS}
+    if chat.has_memory_tokens(tokenizer):
+        specials |= {chat.special(tokenizer, n) for n in chat.MEMORY_TOKENS}
     out, run = [], []
     for t in tokens:
         if t in specials:
@@ -353,9 +369,10 @@ def reply_parts(tokenizer, new_tokens: list[int]) -> list[dict]:
 
     The output span right after a t call is "t_output"; any other (after a
     registry call, a harness note, a Stop hook's reason) is "tool_output";
-    one opened by <|untrusted|> carries "untrusted": True.
+    one opened by <|untrusted|> carries "untrusted": True; one opened by <|memory|> is a "memory" part.
     """
     names = chat.CHAT_TOKENS + (chat.HARNESS_TOKENS if chat.has_harness_tokens(tokenizer) else ())
+    names += chat.MEMORY_TOKENS if chat.has_memory_tokens(tokenizer) else ()
     sp = {chat.special(tokenizer, n): n for n in names}
     parts, run, kind, untrusted, last_call = [], [], "text", False, None
 
@@ -377,6 +394,8 @@ def reply_parts(tokenizer, new_tokens: list[int]) -> list[dict]:
             run, untrusted = [], False
         elif name == chat.UNTRUSTED and kind in ("t_output", "tool_output") and not run:
             untrusted = True
+        elif name == chat.MEMORY and kind in ("t_output", "tool_output") and not run:
+            kind = "memory"
         elif name in (chat.T_END, chat.TOOL_END, chat.OUTPUT_END):
             flush()
             if name == chat.OUTPUT_END:
