@@ -1523,6 +1523,8 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import harness                                   # noqa: E402
+import interp                                    # noqa: E402
+import lower_dafny                               # noqa: E402
 import lower_verus                               # noqa: E402
 import names                                     # noqa: E402
 from verifiers import fstar as fstar_backend     # noqa: E402
@@ -2055,6 +2057,21 @@ class Ctx:
             # tree that bottoms out at one.
             items = "; ".join(str(int(v)) for v in e["_seq"])
             return f"(Seq.createL #int [{items}])"
+        if "ite" in e:
+            # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a seq
+            # spec_fun's body is an `ite` whose branches are seqs (the
+            # recursion's base case `[]` against its step), rendered as
+            # F*'s own `if`, exactly as `zx`/`bx` render an int/bool one.
+            c = e["ite"]
+            return (f"(if {self.bx(c['cond'], env, local)} then "
+                    f"{self.sx(c['then'], env, local)} else "
+                    f"{self.sx(c['else'], env, local)})")
+        if "call" in e:
+            # A call of a seq-valued spec_fun (SPEC.md "Seq-valued
+            # spec_funs (v1)"): `call` renders every argument by its
+            # formal's own type, so nothing here differs from an int
+            # call; only the position it lands in does.
+            return self.call(e, env, local)
         op = e.get("op")
         if op == "at":
             # SPEC.md "Nested sequences" (2026-09-10): a seq position
@@ -3535,14 +3552,28 @@ def emit_spec_fun(cx: Ctx, sf: dict) -> str:
     for n in local:
         _ck(n)
     binders = " ".join(f"({p['name']}:{TY[p['type']]})" for p in sf["params"])
+    # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a spec_fun whose
+    # result is a seq is the same `let rec ... : Tot (Seq.seq int)
+    # (decreases m)` an int one is, its body rendered by `sx` (F* tutorial,
+    # "Lemmas and proofs by induction": a total recursive function over
+    # any type; `FStar.Seq` is the same sequence the params already use).
     body = (cx.bx(sf["body"], {}, local) if sf["result"] == "bool"
+            else cx.sx(sf["body"], {}, local) if sf["result"] == "seq"
             else cx.zx(sf["body"], {}, local))
+    # `Tot Seq.seq int (decreases n)` parses as `Tot` applied to three
+    # arguments ("Effect Prims.Tot does not take a requires or ensures
+    # clause", measured 2026-09-27 on double_all, F* 2026.08.30); the
+    # two-token seq type is parenthesized, the one-token int/bool types
+    # are spelled exactly as before.
+    rty = TY[sf["result"]]
+    if " " in rty:
+        rty = f"({rty})"
     if has_self_call(sf["body"], sf["name"]):
         dec = cx.zx(sf["decreases"], {}, local)
         return (f"let rec {sf['name']} {binders}\n"
-                f"  : Tot {TY[sf['result']]} (decreases {dec})\n"
+                f"  : Tot {rty} (decreases {dec})\n"
                 f"= {body}\n")
-    return f"let {sf['name']} {binders} : Tot {TY[sf['result']]} = {body}\n"
+    return f"let {sf['name']} {binders} : Tot {rty} = {body}\n"
 
 
 def _call_terms(e, out: list) -> list:
@@ -4991,6 +5022,23 @@ def gen_loop_chain(cx: Ctx, task: dict, segs: list, suffix: list) -> str:
 #     certificate alone.
 # So the certificate discriminates in both directions, which a give-up signal
 # never did.
+#
+# Seq-valued spec_funs (SPEC.md "Seq-valued spec_funs (v1)", 2026-09-27, the
+# review's seeded faults): `assert_norm` cannot evaluate a seq-valued call,
+# `Seq.seq` being abstract (`new val` in FStar.Seq.Base.fsti), so the
+# residual goes to Z3, whose only index and length facts are the SMTPat'd
+# lemmas (lemma_index_app1/app2, lemma_index_create, lemma_index_slice,
+# lemma_len_*), which fire only on an index term the goal never contains.
+# Measured on F* 2026.08.30: `~ (Seq.equal [0; 2] (dbl [0; 1] 2))`, the
+# swapped-concatenation fault, and `~ (Seq.equal [1; 0] (Seq.append (tl
+# [0; 1]) (Seq.create 1 0)))`, the slice fault, both read Error 19
+# "incomplete quantifiers" up to fuel 8. `_seq_rungs` below states every
+# seq-valued call the formula reaches and every ground seq operator around
+# it as `assert (Seq.equal <term> <literal>)` ahead of the assert_norm,
+# innermost first, the rungs lower_dafny.py's `seq_ladder` supplies (one
+# ladder, not two readings of it); with them both faults read refuted. A
+# task whose certificate reaches no seq-valued call gets no rung, so every
+# committed lowering before double_all is byte-identical.
 
 CERT_NAME = "t_refutation_certificate"
 
@@ -5116,6 +5164,28 @@ def _ensures_undef_formula(task: dict, w: dict) -> dict | None:
         return None
 
 
+def _seq_rungs(cx: Ctx, task: dict, formula: dict) -> list[str]:
+    """The seq rungs of a ground certificate formula (module comment above
+    CERT_NAME), one `assert (Seq.equal <term> <literal>);` line per rung
+    of `lower_dafny.seq_ladder`, rendered by this file's own `sx`. A rung
+    the ladder cannot value or `sx` cannot render is dropped, never the
+    certificate: a missing rung can only lose a refutation."""
+    funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    try:
+        rungs = lower_dafny.seq_ladder(formula, funs)
+    except (ValueError, KeyError, TypeError, IndexError, interp.Undef,
+            interp.Budget, RecursionError):
+        return []
+    out = []
+    for node, v in rungs:
+        try:
+            out.append(f"  assert (Seq.equal {cx.sx(node, {}, {})} "
+                       f"{cx.sx({'_seq': v}, {}, {})});\n")
+        except (KeyError, TypeError, ValueError, NotImplementedError):
+            continue
+    return out
+
+
 def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate lemma for a measured twin
     witness, or None when the witness is not ground-certificatable.
@@ -5141,6 +5211,7 @@ def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
     try:
         body = cx.prop(formula, {}, {})
         uneq = _seq_uneq_ground_pairs(cx, formula)
+        rungs = _seq_rungs(cx, task, formula)
         helpers = []
         for i, (a, b) in enumerate(uneq):
             sa, sb = cx.sx(a, {}, {}), cx.sx(b, {}, {})
@@ -5164,7 +5235,8 @@ def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
         + "// discharges this one lemma, and a file carrying this name\n"
         + "// can never mint VERIFIED." + "\n"
         + f"let {CERT_NAME} () : Lemma ({body})\n"
-        + "= " + ("\n" + "".join(helpers) if helpers else "")
+        + "= " + ("\n" + "".join(rungs) + "".join(helpers)
+                  if helpers or rungs else "")
         + f"  assert_norm ({body})\n")
 
 

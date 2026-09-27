@@ -1535,6 +1535,23 @@ def stmts(body: list, indent: str, ctx: _Ctx) -> str:
 #      interpreter-chosen assert ladder anyway (`assert f(args) == v;`,
 #      callees before callers, cap 64): the kernel checks every step, so a
 #      wrong hint can only lose the certificate.
+#      2026-09-27 (SPEC.md "Seq-valued spec_funs (v1)", the review's seeded
+#      faults): a SEQ-valued spec_fun's call is laddered the same way, its
+#      result bound to a fresh `seq<int>` local (`t_v<k>`, fresh against
+#      every name in the task) since an inline literal is type-
+#      underspecified; and once the certificate grounds one such call,
+#      every seq-typed ground operator subterm of the formula (`+`, slice,
+#      update, fill, a string member) gets a rung too, innermost first
+#      (`_seq_op_rungs`). Measured on 4.11.0: `dbl(s, 2)` unfolded past
+#      the default fuel reads unproved unaided (the seeded swapped-
+#      concatenation fault), and so does a literal against a ground
+#      append, `[1, 0] != [0] + [0]`, with no spec_fun in sight (nothing
+#      relates an append to a display without an index term to trigger
+#      on; the seeded slice fault); with the rungs both read refuted. The
+#      operator rungs are gated on a seq-valued fact so every committed
+#      lowering is byte-identical; the append gap they close is older
+#      than the gate (FEATURES-SEQFUN-2026-09-27.md, "The seeded faults").
+#      lower_fstar.py takes the same rungs from `seq_ladder` below.
 # Seq witness values are let-bound by their own names (`var s: seq<int> :=
 # [];`) in the ensures, and again in the lemma body when the assert ladder
 # names them: an inline `[]` is "the type of this expression is
@@ -1973,6 +1990,71 @@ def _name_seqs(e: dict, names: dict, used: dict,
     return e
 
 
+def _seq_op_rungs(e: dict, funs: dict, st) -> list[tuple[dict, list]]:
+    """Every seq-typed ground operator subterm of a pruned certificate
+    formula, innermost first, paired with the interpreter's value (a flat
+    list of ints): the rungs step 3's 2026-09-27 note describes. Calls are
+    not listed (the facts ladder states them), nor `seq` displays (already
+    the kernel's own literal shape), nor a subterm the evaluator cannot
+    value (skipped, not refused: a missing rung can only lose the
+    certificate). A subterm the evaluation never reached is absent from a
+    pruned formula, so nothing here evaluates an untaken branch."""
+    out: list = []
+    seen: set = set()
+
+    def walk(n: dict) -> None:
+        if "call" in n:
+            for a in n["call"]["args"]:
+                walk(a)
+            return
+        if "op" not in n:
+            return
+        for a in n.get("args", []):
+            walk(a)
+        if n["op"] == "seq":
+            return
+        try:
+            v = _ev(n, {}, funs, st, {}, None)[1]
+        except (ValueError, KeyError, TypeError, IndexError, interp.Undef,
+                interp.Budget, RecursionError):
+            return
+        if not (isinstance(v, list) and all(
+                isinstance(x, int) and not isinstance(x, bool) for x in v)):
+            return
+        key = json.dumps(n, sort_keys=True)
+        if key not in seen:
+            seen.add(key)
+            out.append((n, v))
+
+    walk(e)
+    return out
+
+
+def seq_ladder(formula: dict, funs: dict) -> list[tuple[dict, list]]:
+    """The seq rungs of a ground certificate formula, for a column that
+    carries no ladder of its own (lower_fstar.py): every seq-valued
+    spec_fun call the formula's evaluation reaches, callees before callers
+    as `_ev` records them, each as a call node over literal arguments, then
+    `_seq_op_rungs` over the pruned formula; each paired with the value the
+    kernel is asked to re-prove. Empty when the evaluation reaches no
+    seq-valued call, so a column that consults it emits nothing new for a
+    task without one (every committed lowering before double_all). Raises
+    what `_ev` raises; the caller reads that as "no rungs"."""
+    st = interp.St()
+    facts: dict = {}
+    pruned, _ = _ev(formula, {}, funs, st, facts, [])
+    if not any(isinstance(v, list) for v in facts.values()):
+        return []
+    rungs: list = []
+    for (fn, keys), v in facts.items():
+        if not isinstance(v, list):
+            continue
+        args = [{"_seq": list(k)} if tag == "seq" else _tlit(k)
+                for tag, k in keys]
+        rungs.append(({"call": {"fun": fn, "args": args}}, v))
+    return rungs + _seq_op_rungs(pruned, funs, st)
+
+
 def _seq_lit(v: tuple) -> str:
     return "[" + ", ".join(str(x) for x in v) + "]"
 
@@ -2337,6 +2419,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         for h in hoist + [pruned]:
             seen.setdefault(json.dumps(h, sort_keys=True), h)
         formula = _conj(list(seen.values()))
+        raw_formula = formula          # literals inline, for the seq rungs
         seq_names: dict = {}
         nseq_names: dict = {}
         for n, v in (list(names.items())
@@ -2365,22 +2448,65 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         formula = _name_seqs(formula, seq_names, used, nseq_names, nused)
         ladder: list[str] = []
         ladder_seqs: dict = {}
+        # Step 3's 2026-09-27 note: a seq-valued fact names its result (and
+        # any seq argument no witness name carries) with a fresh `t_v<k>`,
+        # bound in the lemma body beside the witness seqs; a task with no
+        # seq-valued fact takes the older path unchanged (a seq argument
+        # with no witness name skips its rung, as before).
+        seq_facts = any(isinstance(v, list) for v in facts.values())
+        taken = _collect_names(task) if seq_facts else set()
+        fresh = [0]
+
+        def seq_name(val: tuple) -> str:
+            n = seq_names.get(val)
+            if n is None:
+                while f"t_v{fresh[0]}" in taken:
+                    fresh[0] += 1
+                n = f"t_v{fresh[0]}"
+                fresh[0] += 1
+                seq_names[val] = n
+            ladder_seqs[val] = n
+            return n
+
+        def name_rung(e: dict) -> dict:
+            if "_seq" in e:
+                return {"var": seq_name(tuple(e["_seq"]))}
+            if "_seq2" in e:
+                raise KeyError("nested literal in a seq rung")
+            if "call" in e:
+                c = e["call"]
+                return {"call": {"fun": c["fun"],
+                                 "args": [name_rung(a) for a in c["args"]]}}
+            if "op" in e:
+                return {"op": e["op"],
+                        "args": [name_rung(a) for a in e.get("args", [])]}
+            return e
+
         if len(facts) <= _LADDER_CAP:
             for (fn, keys), v in facts.items():
-                if isinstance(v, list):
-                    continue
                 args = []
                 for tag, val_k in keys:
                     if tag == "seq":
-                        if val_k not in seq_names:
+                        if val_k not in seq_names and not seq_facts:
                             break
-                        ladder_seqs[val_k] = seq_names[val_k]
-                        args.append(seq_names[val_k])
+                        args.append(seq_name(val_k))
                     else:
                         args.append(expr(_tlit(val_k)))
                 else:
+                    rhs = (seq_name(tuple(v)) if isinstance(v, list)
+                           else expr(_tlit(v)))
                     ladder.append(f"  assert {fn}({', '.join(args)}) == "
-                                  f"{expr(_tlit(v))};")
+                                  f"{rhs};")
+            if seq_facts:
+                ops = _seq_op_rungs(raw_formula, funs, st)
+                if len(facts) + len(ops) <= _LADDER_CAP:
+                    for node, v in ops:
+                        try:
+                            lhs = expr(name_rung(node))
+                        except KeyError:
+                            continue
+                        ladder.append(f"  assert {lhs} == "
+                                      f"{seq_name(tuple(v))};")
         body = expr(formula)
     except (ValueError, KeyError, TypeError, IndexError, interp.Undef,
             interp.Budget, RecursionError):
