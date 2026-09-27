@@ -83,6 +83,7 @@ class SleepConfig:
     max_steps: int = 300                # ... and never more than this (the step cap)
     warmup: int = 5
     grad_clip: float = 1.0
+    max_step_tokens: int = 5120         # padded tokens per forward pass; a larger batch is accumulated in parts
     eval_every: int = 10
     patience: int = 4                   # checks without improvement (train.EarlyStopper counts checks)
     min_delta: float = 0.005            # train.EARLY_STOP_MIN_DELTA
@@ -397,7 +398,7 @@ def train_adapter(model, tokenizer, train_rows: Rows, val_rows: Rows | None, rep
     stopper = core_train.EarlyStopper(min_delta=cfg.min_delta, patience=cfg.patience)
     rng = random.Random(cfg.seed)
     order: list[int] = []
-    best_state, curve, accepted_step = None, [], None
+    best_state, curve, accepted_step, split_steps = None, [], None, 0
     model.train()
     step, reason = 0, "finished"
     while step < planned:
@@ -421,19 +422,37 @@ def train_adapter(model, tokenizer, train_rows: Rows, val_rows: Rows | None, rep
         lr = core_train.cosine_lr(step, cfg.warmup, planned, cfg.lr, cfg.lr / 10)
         for group in optimizer.param_groups:
             group["lr"] = lr
-        if autocast is not None:
-            with autocast:
-                _, loss = model(x, y)
-        else:
-            _, loss = model(x, y)
-        if anchor_t is not None:
-            penalty = sum((f * (p - a) ** 2).sum() for p, a, f in anchor_t)
-            loss = loss + cfg.ewc_lambda / 2 * penalty
-        if not math.isfinite(float(loss.detach())):
+        # a batch over the token budget is split into micro-batches of whole rows, each weighted by its share of
+        # the batch's supervised tokens, so the summed gradient is the whole batch's (Hugging Face, "Fixing
+        # Gradient Accumulation", huggingface.co/blog/gradient_accumulation); within the budget it is one pass
+        optimizer.zero_grad(set_to_none=True)
+        n_total = max(int((y != -1).sum()), 1)
+        rows_per = x.size(0) if x.size(0) * x.size(1) <= cfg.max_step_tokens else \
+            max(1, cfg.max_step_tokens // x.size(1))
+        split_steps += rows_per < x.size(0)
+        loss_value, broke = 0.0, False
+        for start in range(0, x.size(0), rows_per):
+            xs, ys = x[start:start + rows_per], y[start:start + rows_per]
+            n = int((ys != -1).sum())
+            if not n:
+                continue
+            if autocast is not None:
+                with autocast:
+                    _, part = model(xs, ys)
+            else:
+                _, part = model(xs, ys)
+            part = part * (n / n_total) if rows_per < x.size(0) else part
+            if anchor_t is not None and start == 0:
+                penalty = sum((f * (p - a) ** 2).sum() for p, a, f in anchor_t)
+                part = part + cfg.ewc_lambda / 2 * penalty
+            if not math.isfinite(float(part.detach())):
+                broke = True
+                break
+            part.backward()
+            loss_value += float(part.detach())
+        if broke:
             reason = "non_finite_train"
             break
-        optimizer.zero_grad(set_to_none=True)
-        loss.backward()
         if cfg.grad_clip:
             torch.nn.utils.clip_grad_norm_(params, cfg.grad_clip)
         optimizer.step()
@@ -441,7 +460,7 @@ def train_adapter(model, tokenizer, train_rows: Rows, val_rows: Rows | None, rep
         if step % cfg.eval_every == 0 or step == planned:
             val = mean_loss(model, val_rows, device, autocast=autocast) if val_rows is not None and len(val_rows) \
                 else None
-            point = {"step": step, "batch_loss": round(float(loss.detach()), 5), "lr": lr,
+            point = {"step": step, "batch_loss": round(loss_value, 5), "lr": lr,
                      "person_val": None if val is None else round(val, 5)}
             stop, candidate = False, True
             if val is not None:
@@ -473,6 +492,7 @@ def train_adapter(model, tokenizer, train_rows: Rows, val_rows: Rows | None, rep
     for name, rows in (extra_evals or {}).items():
         after[name] = mean_loss(model, rows, device, autocast=autocast)
     record = {"config": asdict(cfg), "planned_steps": planned, "steps": step, "stop": reason,
+              "split_steps": split_steps,
               "best_step": accepted_step, "best_val_step": stopper.best_step, "curve": curve, "rows": {
                   "person_train": len(train_rows), "person_val": len(val_rows) if val_rows is not None else 0,
                   "replay_pool": len(replay) if replay is not None else 0, "person_rows_per_batch": person_n,

@@ -511,6 +511,22 @@ class Sleep(unittest.TestCase):
         self.assertEqual(record["base_fingerprint"], fp)
         self.assertEqual(record["best_step"], min((p for p in record["curve"]), key=lambda p: p["person_val"])["step"])
 
+    def test_a_batch_over_the_token_budget_is_accumulated_to_the_same_step(self):
+        from dawnr_learning import sleep as S
+        from model import remove_lora
+        model, tok = tiny()
+        rows, _ = person_rows(tok, 4)
+        states = []
+        for budget in (10 ** 9, 1):                     # one pass, then one row per pass
+            cfg = S.SleepConfig(r=2, lr=1e-2, batch_size=4, replay_frac=0.0, min_steps=3, max_steps=3,
+                                eval_every=3, dropout=0.0, guard_tolerance=None, max_step_tokens=budget)
+            state, record = S.train_adapter(model, tok, rows, None, None, cfg, "cpu")
+            states.append(state)
+            self.assertEqual(record["split_steps"], 0 if budget > 1 else 3)
+            remove_lora(model)
+        for key, a in states[0]["tensors"].items():
+            self.assertTrue(torch.allclose(a, states[1]["tensors"][key], atol=1e-5), key)
+
     def test_the_guard_refuses_an_adapter_that_hurts_plain_text(self):
         from dawnr_learning import sleep as S
         from model import has_lora
