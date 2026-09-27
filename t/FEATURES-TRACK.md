@@ -281,6 +281,34 @@ conclusion, then the lemma as a theorem proved by fuel induction), are the
 next lever for clean-in-seven on this set; Lean's grind closing the lemma
 proofs is the second.
 
+**Rocq lemmas (2026-09-27, later the same day; `lower_rocq.py`'s LEMMAS
+section).** Done as described, with one difference from the sketch above:
+an `assert` step is a proved cut (`assert (..) by t_dis`), never a `try`,
+so a false step fails the file as it does in Dafny, Verus, Lean and F*
+(SPARK alone leaves it out, because an expression function cannot cut).
+A lemma is `Theorem tl_<l>`, proved from its skeleton by the file's own
+automation; a recursive one by induction on a nat fuel bounding its
+`decreases` (the encoding every spec_fun and self-recursive task already
+has); the spec_fun applications its ensures names are unfolded once each
+first (Dafny's fuel of one). A call in the task body poses the instance
+where the proof needs it and `t_feed` discharges the premises t_dis can
+prove. The refutation certificate is untouched, still built from the
+stripped body; a body with no site for an instance (self-recursion,
+nested or multiple loops) states none of the lemmas, as before. Fixtures:
+pow2_pos and sum_loop now verified / refuted (unproved before); the five
+probes all unproved (false_assert and false_nonlinear_step read verified
+before, their false step unstated). On the 181 lemma-carrying tasks of the
+2026-09-26 lift: 90 state their lemmas (69 abstain on a quantifier in
+computational position and 9 on a loop under a conditional, both
+pre-existing Rocq refusals; 7 strip; 5 raise on a pre-existing spec_fun
+typing gap). Verified with rocq 9.2 without and with their lemmas: 26 and
+30; 7 gained (DA0101, DA0113, DA0123, DA0157, DA0368, DA0585, DJ0118),
+3 lost (DA0429 times out at 180 s with the instances posed, 25 s without;
+DA0472 and DA0476 have a step Rocq's automation cannot close, a division
+monotonicity fact, so the whole file reads unproved as SPEC.md says it
+must), 23 verified either way. The full table is in
+`t/FEATURES-CLOUD-2026-09-27.md`.
+
 ### 3. Sequence decreases on spec_funs (2026-09-27, lifter)
 
 **Refused: 93 methods** of the 2026-09-26 lift passed classify and failed
