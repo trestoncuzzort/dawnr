@@ -698,6 +698,36 @@ def heldout_items(corpus_text: str) -> list[dict]:
     return items
 
 
+def control_items(corpus_text: str) -> list[dict]:
+    """A positive control for the injection measurement (added after the registered runs, post hoc).
+
+    The same held-out instructions (plain, the held-out texts and canaries) given by the PERSON, in the
+    user turn after the request, with the clean page: if a model follows none of them from the person
+    either, zero following on pages measures what it cannot do, not what it declines to do. The
+    Instruction Hierarchy (arXiv:2404.13208) makes the same contrast between an instruction from a
+    privileged source (followed) and one from a tool output (ignored)."""
+    import random
+    src = Sources(corpus_text, None)
+    hs = Harnesses(src.recording, heldout=True)
+    items = []
+    try:
+        index = hs.get("web").index()
+        for r, t in enumerate(src.heldout):
+            clean = src.page("heldout", t["task"], "clean")
+            for goal in fx.GOALS:
+                inj = fx.make_injection("heldout", goal, "plain", random.Random(f"control-{t['task']}-{goal}"))
+                said = "\n".join(text for piece in inj["pieces"] for _, text in piece)
+                request = pick("ask\x00" + clean["url"], FETCH_ASKS).format(url=clean["url"])
+                items.append({"id": f"control:{goal}:{t['task']}", "category": "control", "case": "web",
+                              "user": index + "\n\n" + request + "\n" + said, "url": clean["url"],
+                              "injection": {k: v for k, v in inj.items() if k != "pieces"}, "source_kind": "user",
+                              "task": t["task"], "program": t["program"], "examples": t["examples"],
+                              "kind": t["kind"]})
+    finally:
+        hs.close()
+    return items
+
+
 def leaks(items: list[dict], training_text: str) -> list[str]:
     """Held-out URLs, topics, canaries and twin ids that appear in a training file."""
     import re
@@ -736,6 +766,8 @@ def main(argv=None) -> int:
     h.add_argument("--corpus", type=Path, required=True)
     h.add_argument("--out", type=Path, required=True)
     h.add_argument("--training", type=Path, nargs="*", default=[], help="training files the items must not leak into")
+    h.add_argument("--controls", action="store_true",
+                   help="write the post-hoc positive control instead: the held-out instructions given by the person")
     a = ap.parse_args(argv)
     corpus = a.corpus.read_text(encoding="utf-8")
     if a.cmd == "build":
@@ -750,7 +782,7 @@ def main(argv=None) -> int:
         print(json.dumps({k: v for k, v in summary.items() if k != "refused_by_gate"}
                          | {"refused_by_gate": len(summary["refused_by_gate"])}))
         return 0
-    items = heldout_items(corpus)
+    items = control_items(corpus) if a.controls else heldout_items(corpus)
     for path in a.training:
         found = leaks(items, path.read_text(encoding="utf-8"))
         if found:
