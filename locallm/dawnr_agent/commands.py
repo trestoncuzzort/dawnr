@@ -27,9 +27,12 @@ replace it), a working directory inside a root, a scrubbed environment (the
 operator's secrets in the harness's own environment are not inherited), a
 new session so the whole process group is killed at the deadline (Stack
 Overflow q/4789837: killing only the child leaves its children), output kept
-up to a cap by reader threads while the rest is drained and dropped (the
-documentation warns that communicate() buffers everything), and every
-process of the group killed when the call returns, so nothing outlives it.
+up to a cap through a selector (reader threads on Windows) while the rest is
+drained and dropped (the documentation warns that communicate() buffers
+everything), every process of the group killed when the command exits, and
+the call back half a second later whatever the command left behind. A child
+that put itself in a new session escapes the group kill; under the sandbox
+its process namespace ends with the command, without it the child lives on.
 
 The network is off unless the harness is online, and a rule counts as
 reaching the network unless the operator marks it "network": false. That
@@ -231,8 +234,14 @@ def _exited(proc, timeout: float) -> bool:
         delay = min(delay * 2, 0.05)
 
 
+GRACE = 0.5      # seconds to keep reading after the command exits: what it wrote is already in the pipes
+
+
 def run_argv(argv: list, *, cwd: str, env: dict, timeout: float, max_output: int) -> dict:
-    """Run argv with no shell; {"exit", "seconds", "timed_out", "stdout", "stderr", "bytes_out", "bytes_err"}."""
+    """Run argv with no shell; {"exit", "seconds", "timed_out", "stdout", "stderr", "bytes_out", "bytes_err"}.
+
+    The call returns GRACE seconds after the command exits (or at its deadline) at the latest, whatever it left
+    behind: a descendant that holds the output pipes open does not hold the call (it once held it 10 s)."""
     kwargs = dict(stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd, env=env,
                   close_fds=True)
     if os.name == "nt":
@@ -241,24 +250,74 @@ def run_argv(argv: list, *, cwd: str, env: dict, timeout: float, max_output: int
         kwargs["start_new_session"] = True
     started = time.monotonic()
     proc = subprocess.Popen(argv, **kwargs)
+    if os.name == "nt":
+        return _collect_threads(proc, started, timeout, max_output)
+    import selectors
+    kept = {proc.stdout.fileno(): bytearray(), proc.stderr.fileno(): bytearray()}
+    total = dict.fromkeys(kept, 0)
+    sel = selectors.DefaultSelector()
+    for fd in kept:
+        os.set_blocking(fd, False)
+        sel.register(fd, selectors.EVENT_READ)
+    deadline, ended, timed_out = started + timeout, None, False
+    try:
+        while True:
+            now = time.monotonic()
+            if ended is None:
+                if _exited(proc, 0):
+                    ended = now
+                elif now >= deadline:
+                    timed_out, ended = True, now
+                if ended is not None:
+                    _kill_group(proc)     # at the deadline, or whatever the command left running
+            if ended is not None and (now - ended > GRACE or not sel.get_map()):
+                break
+            for key, _ in sel.select(timeout=0.05):
+                try:
+                    chunk = os.read(key.fd, 65536)
+                except BlockingIOError:
+                    continue
+                except OSError:
+                    chunk = b""
+                if not chunk:
+                    sel.unregister(key.fd)
+                    continue
+                room = max_output - len(kept[key.fd])
+                if room > 0:
+                    kept[key.fd] += chunk[:room]
+                total[key.fd] += len(chunk)
+    finally:
+        sel.close()
+        _kill_group(proc)
+        proc.wait()
+        for s in (proc.stdout, proc.stderr):
+            try:
+                s.close()
+            except OSError:
+                pass
+    out_fd, err_fd = list(kept)
+    return {"exit": proc.returncode, "seconds": (ended or time.monotonic()) - started, "timed_out": timed_out,
+            "stdout": bytes(kept[out_fd]).decode("utf-8", errors="replace"),
+            "stderr": bytes(kept[err_fd]).decode("utf-8", errors="replace"),
+            "bytes_out": total[out_fd], "bytes_err": total[err_fd]}
+
+
+def _collect_threads(proc, started: float, timeout: float, max_output: int) -> dict:
+    """Windows: pipes cannot be selected, so reader threads, with the same bound on waiting for them."""
     box: dict = {}
     threads = [threading.Thread(target=_reader, args=(proc.stdout, max_output, box, "out"), daemon=True),
                threading.Thread(target=_reader, args=(proc.stderr, max_output, box, "err"), daemon=True)]
     for t in threads:
         t.start()
     timed_out = not _exited(proc, timeout)
-    _kill_group(proc)                     # at the deadline, or whatever the command left running: dies with the call
+    ended = time.monotonic()
+    _kill_group(proc)
     proc.wait()
     for t in threads:
-        t.join(timeout=5)
-    for s in (proc.stdout, proc.stderr):
-        try:
-            s.close()
-        except OSError:
-            pass
+        t.join(timeout=max(0.0, GRACE - (time.monotonic() - ended)))
     out, n_out = box.get("out", (b"", 0))
     err, n_err = box.get("err", (b"", 0))
-    return {"exit": proc.returncode, "seconds": time.monotonic() - started, "timed_out": timed_out,
+    return {"exit": proc.returncode, "seconds": ended - started, "timed_out": timed_out,
             "stdout": out.decode("utf-8", errors="replace"), "stderr": err.decode("utf-8", errors="replace"),
             "bytes_out": n_out, "bytes_err": n_err}
 

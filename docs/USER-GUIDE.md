@@ -421,9 +421,9 @@ python3 -m unittest locallm/test_harness_chat.py    # the harness's chat tokens 
 python3 -m unittest locallm/test_dawnr_agent.py    # the agent: containment, commands, plans, the loop, injection
 ```
 
-The agent's suite is standard library only: 73 tests, 2 skipped by design (two
-race tests that the Windows-style path walk does not claim), 3.6 seconds here;
-its sandbox test also skips on a machine where bubblewrap cannot run.
+The agent's suite is standard library only: 74 tests, 2 skipped by design (two
+race tests that the Windows-style path walk does not claim), 6.6 seconds here;
+its sandbox tests also skip on a machine where bubblewrap cannot run.
 
 The first is standard library only and passed all 46 tests here in about 4
 seconds. The second needs `torch`; without it, every test in it reports
