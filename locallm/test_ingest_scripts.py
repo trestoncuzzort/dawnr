@@ -41,7 +41,18 @@ import tempfile
 import unittest
 import zipfile
 
-import home
+try:
+    import home
+except ModuleNotFoundError as exc:
+    # tkinter is an optional stdlib package, absent on a stock python3 (see
+    # test_launchers.py) and on some CI Pythons. Abstain by name rather than
+    # let import fail the whole module.
+    if exc.name != "tkinter":
+        raise
+    home = None
+    _HOME_IMPORT_ERROR = str(exc)
+else:
+    _HOME_IMPORT_ERROR = None
 import ingest
 import look
 
@@ -226,6 +237,7 @@ class Fixtures:
         return p
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class OneTextSavedThreeWays(Fixtures, unittest.TestCase):
     """The headline: UTF-8, UTF-8 with a BOM and UTF-16 are one string.
 
@@ -282,6 +294,7 @@ class OneTextSavedThreeWays(Fixtures, unittest.TestCase):
                          "an extra row of the embedding table")
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class AnAlphabetThatIsNotLatin(Fixtures, unittest.TestCase):
     """Arabic and Chinese, read whole, with the counts a person can check."""
 
@@ -322,6 +335,7 @@ class AnAlphabetThatIsNotLatin(Fixtures, unittest.TestCase):
         self.assertTrue(ingest.can_train_on(p))
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class AccentsSurviveALegacyEncoding(Fixtures, unittest.TestCase):
     """cp1252, counted before and after."""
 
@@ -351,6 +365,7 @@ class AccentsSurviveALegacyEncoding(Fixtures, unittest.TestCase):
                          "anywhere said how many")
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class WhatIsRefusedAndHowItIsSaid(Fixtures, unittest.TestCase):
     """A refusal is only worth having if the sentence tells somebody what to do."""
 
@@ -420,6 +435,7 @@ class WhatIsRefusedAndHowItIsSaid(Fixtures, unittest.TestCase):
         self.assertGreater(got.dropped, 0)
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class ZipContainersGiveUpTheirText(Fixtures, unittest.TestCase):
     """.docx and .epub, assembled here rather than mocked."""
 
@@ -452,6 +468,7 @@ class ZipContainersGiveUpTheirText(Fixtures, unittest.TestCase):
         self.assertEqual(got.say.word, "Damaged")
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class WhatTheAlphabetJudgementSays(unittest.TestCase):
     """say_vocabulary has to be useful on Chinese and quiet on English."""
 
@@ -502,6 +519,7 @@ class OffThread:
         return self.q.get_nowait()[1]
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class WhatTheFrontPageSaysAboutAScript(Fixtures, unittest.TestCase):
     """The two things step 1 puts on screen about an encoding.
 
@@ -574,6 +592,7 @@ class WhatTheFrontPageSaysAboutAScript(Fixtures, unittest.TestCase):
         self.assertIn("BOM", facts)
 
 
+@unittest.skipIf(home is None, _HOME_IMPORT_ERROR)
 class AFolderOfDifferentScripts(Fixtures, unittest.TestCase):
     """read_corpus over a folder holding Arabic, Chinese, English and a PDF."""
 
