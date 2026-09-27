@@ -121,13 +121,11 @@ its line changes here.
   Dafny programs are lifted into t, proved equivalent to their sources and
   graded in all seven kernels, and now Verus, Lean and C/ACSL corpora too.
   *State:* the proved corpus went from 194 documents (66,569 characters) to
-  **358 (171,182)** on 2026-09-26: Dafny lifts 136, Verus 21, Lean 5, ACSL 2
-  (`t/LIFT-2026-09-26.md`, `t/LIFT-VERICODING-VERUS-LEAN.md`,
-  `t/LIFT-ACSL-BY-EXAMPLE.md`). With graded trust (`--min-kernels 6`: six
-  provers clean, none contradicting, the gap recorded per document) it is
-  **470 documents (260,157 characters)**; the 112 admitted with a gap miss
-  Lean 35, Rocq 35, Frama-C 28, SPARK 10, others 4. Those three lowerings
-  are the next lever.
+  358 on 2026-09-26, and after the Lean, Rocq and Frama-C lowering fixes were
+  regraded over every lifted set, to **431 documents (241,628 characters) clean
+  in all seven kernels** on 2026-09-27, with no document lost. With graded trust
+  (six kernels clean, none contradicting, the gap recorded) it is **515
+  (307,609)**, 84 of them with a gap. Tables: `t/COVERAGE-lifted-*-regrade-2026-09-27.md`.
 - **Denoising training.** Corrupt spans of each training document and train
   the model to restore them (fill in the middle, arXiv:2207.14255). *State:*
   measured twice, and the two disagree. From scratch on the 302 proved
@@ -190,13 +188,13 @@ is judged by the same rule: nothing is trusted without evidence.
 
 | dawnr needs | the machine-learning idea | where it stands |
 |---|---|---|
-| a brain that understands language and code | transformer pretraining from random weights | **built**: the locallm core; the weight-decay sweep is running |
+| a brain that understands language and code | transformer pretraining from random weights | **built**: the locallm core; the weight-decay sweep is running. It has no general-English layer underneath (pretrained directly on ~150 MB of source code); surveyed, budgeted and decontaminated but not yet run (`internal/PRETRAIN-DAWNR-GENERAL.md`) |
 | to learn, not memorise | regularisation, denoising (fill in the middle), early stopping, more verified data | **in progress** |
 | to know when it is right | verification as the judge, calibration, uncertainty, refusal | **the seven-kernel proof engine is this**; calibration not started |
 | to get better at reasoning | reinforcement learning with the verifier as the reward | **built, waiting on data**: tiered proof reward inspected by hand, GRPO trainer (Dr. GRPO advantages hold; plain GRPO unlearned). The model solves 0.6% of problems outside its corpus, too few to reinforce, so new verified data comes first (`t/RL-DESIGN-2026-09-26.md`) |
 | to know what it was not trained on | retrieval, embeddings, a vector index | not started |
 | to remember the person and past work | long-term memory, continual learning without forgetting | not started (replay against forgetting exists in the fine-tune) |
-| to do things, not only talk | tool use, agents, planning | **started**: a chat pipeline adapted from nanochat (`DAWNR-PIPELINE.md`) runs end to end; the model can call the t interpreter on its own draft mid-answer. It does not yet repair after a failed check (0 of 100 dev problems pass); repair conversations are next |
+| to do things, not only talk | tool use, agents, planning | **started**: a chat pipeline adapted from nanochat (`DAWNR-PIPELINE.md`) runs end to end; the model can call the t interpreter on its own draft mid-answer, and every call closes. Repair conversations from its own cross-fitted drafts taught it to act on a failed check (a new program after 55-70% of failing verdicts) but not yet to fix more answers than seed noise (+1.2 of 133 at six fresh seeds; `locallm/FINDINGS-repair-2026-09-26.md`); next: the tool checks the user's specification is kept, repairs as edits, RL through the engine |
 | to hear and speak | speech recognition, text to speech | not started |
 | to see | vision encoders, multimodal models | later |
 | to fit small hardware | quantisation, distillation, mixture of experts | partly: runs with no PyTorch, on a CPU |
@@ -211,11 +209,14 @@ a harness, the way an agent runtime wraps a language model:
 
 | dawnr needs | the idea | where it stands |
 |---|---|---|
-| to act through tools | a tool-calling engine: the model emits a call, the runtime executes it, the result returns into the context | **started**: the chat engine runs the t interpreter mid-answer |
-| to reach other systems | the Model Context Protocol (MCP): dawnr as an MCP client using any MCP server's tools and resources, and as an MCP server so other agents can use its checker | not started |
-| to reach the internet | search and fetch as tools | not started |
-| to know how to do specialised tasks | skills: packaged instructions and scripts loaded only when a task needs them | not started |
-| to enforce rules no matter what the model says | hooks: deterministic scripts the runtime runs before and after tool calls; the proof check is dawnr's first hook | not started |
+| to act through tools | a tool-calling engine: the model emits a call, the runtime executes it, the result returns into the context | **built, untrained**: a tool registry with a permission per tool (allow, ask, deny) and a call syntax in the chat format; the t interpreter is its first tool (`DAWNR-HARNESS.md`) |
+| to reach other systems | the Model Context Protocol (MCP): dawnr as an MCP client using any MCP server's tools and resources, and as an MCP server so other agents can use its checker | **built** (tools only): a standard-library stdio client for both protocol eras and dawnr's checker as a server, tested against each other |
+| to reach the internet | search and fetch as tools | **built, off by default**: fetch and search behind the policy, untrusted and marked; search needs an operator-chosen backend |
+| to know how to do specialised tasks | skills: packaged instructions and scripts loaded only when a task needs them | **built**: the Agent Skills folder format, an index line per skill, loading on demand; the first skill is `t-repair` |
+| to enforce rules no matter what the model says | hooks: deterministic scripts the runtime runs before and after tool calls; the proof check is dawnr's first hook | **built**: Claude Code's hook contract; the checker checks every t program from outside and blocks a failing final answer once |
+
+None of the harness is learned yet: today's checkpoints can use only the t
+tool. `DAWNR-HARNESS.md` section 8 lists the conversations each piece needs.
 
 The rule that keeps this compatible with the north star: **the network is a
 tool, never a dependency.** dawnr works fully offline; when a network, MCP
