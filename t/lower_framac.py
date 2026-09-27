@@ -3817,6 +3817,13 @@ def _seq_len_render(e: dict, ctx) -> str:
     if e.get("op") == "slice":
         _, lo, hi = e["args"]
         return f"(({term(hi, ctx)}) - ({term(lo, ctx)}))"
+    if e.get("op") == "+":
+        # Concatenation in ACSL TERM position (framac track, 2026-09-26,
+        # removeKthElement's `ensures new_list == list[0..k-1] +
+        # list[k..len(list)]`): `len(a + b) == len(a) + len(b)`, SPEC.md's
+        # own definition, a formula exactly like `slice`'s case above.
+        a, b = e["args"]
+        return f"(({_seq_len_render(a, ctx)}) + ({_seq_len_render(b, ctx)}))"
     if e.get("op") == "at":
         # `len(m[i])` (SPEC.md "Nested sequences", 2026-09-10): `m[i]` is
         # a ROW, itself a seq value, and this backend has no C VALUE for
@@ -3879,6 +3886,15 @@ def _seq_at_render(e: dict, k_render: str, ctx) -> str:
     if e.get("op") == "slice":
         s, lo, _ = e["args"]
         return f"{seq_var(s, ctx.env)}[({term(lo, ctx)}) + ({k_render})]"
+    if e.get("op") == "+":
+        # Concatenation (framac track, 2026-09-26): element `k` of `a + b`
+        # is `a[k]` below `len(a)` and `b[k - len(a)]` from there on, the
+        # definition itself, a case split in logic, never a buffer.
+        a, b = e["args"]
+        na = _seq_len_render(a, ctx)
+        return (f"(({k_render}) < ({na}) ? "
+                f"({_seq_at_render(a, k_render, ctx)}) : "
+                f"({_seq_at_render(b, f'({k_render}) - ({na})', ctx)}))")
     if e.get("op") == "seq":
         # FRAMAC-NESTED, added 2026-09-14 (DESIGN-framac-nested-seq.md
         # section 4, `fz_p_str_lowernonletter`'s own `ensures r ==
@@ -4320,6 +4336,32 @@ def pred(e: dict, ctx: Ctx) -> str:
             # unchanged, see its own `==`/`!=` case above).
             an = _seq_len_render(args[0], ctx)
             bn = _seq_len_render(args[1], ctx)
+            cat = [j for j in (1, 0) if args[j].get("op") == "+"]
+            if cat and args[1 - cat[0]].get("op") != "+":
+                # A CONCATENATION on one side (framac track, 2026-09-26;
+                # removeKthElement's `new_list == list[0..k-1] +
+                # list[k..len(list)]`): the same predicate with the index
+                # range split at each piece's boundary, one `\forall` per
+                # piece, instead of one `\forall` over `_seq_at_render`'s
+                # `k < len(a) ? a[k] : b[k - len(a)]`. Equivalent by the
+                # definition of concatenation; the split form is what WP
+                # could prove from the per-piece copy loops
+                # (`_exact_concat_lines`), where the case-split form ended
+                # in Stepout on the ensures (measured on the lab,
+                # 2026-09-26).
+                c_e, o_e = args[cat[0]], args[1 - cat[0]]
+                parts = [f"({an} == {bn})"]
+                off = "0"
+                for p in _concat_pieces(c_e):
+                    pn = _seq_len_render(p, ctx)
+                    parts.append(
+                        f"(\\forall integer __k; ({off}) <= __k && __k < "
+                        f"({off}) + ({pn}) ==> "
+                        f"{_seq_at_render(o_e, '__k', ctx)} == "
+                        f"{_seq_at_render(p, f'__k - ({off})', ctx)})")
+                    off = f"({off}) + ({pn})"
+                eq = "(" + " && ".join(parts) + ")"
+                return eq if op == "==" else f"(!{eq})"
             eq = (f"(({an} == {bn}) && "
                  f"(\\forall integer __k; 0 <= __k && __k < {an} "
                  f"==> {_seq_at_render(args[0], '__k', ctx)} == "
@@ -5619,7 +5661,131 @@ def _ret_capacity(task: dict, ret: str, body: list) -> dict | None:
             got = bound_of(inv["args"][1])
             if got is not None:
                 return got
+
+    # 3. LITERAL-ONLY WRITES (framac track, 2026-09-26; vericoding da0054
+    #    and da0488, `if ... { result := [89, 101, 115] } else { result :=
+    #    [78, 111] }`): when EVERY write to `ret` anywhere in the body is a
+    #    `seq` literal, the longest literal bounds the final length, since
+    #    a literal assignment replaces the whole value. Any other write (a
+    #    copy, a slice, an append, an update, a `return` of it) leaves this
+    #    source unused. The bound only sizes the buffer; each literal store
+    #    still carries the `seq` case's own `assert n <= r_n`.
+    lits: list = []
+
+    def literal_writes(stmts) -> bool:
+        for s in stmts:
+            if "assign" in s and s["assign"][0] == ret:
+                v = s["assign"][1]
+                if not (isinstance(v, dict) and v.get("op") == "seq"):
+                    return False
+                lits.append(len(v.get("args", ())))
+            elif "return" in s and s["return"][0] == ret:
+                return False
+            elif "if" in s:
+                if not (literal_writes(s["if"].get("then", []))
+                        and literal_writes(s["if"].get("else", []))):
+                    return False
+            elif "while" in s:
+                if not literal_writes(s["while"].get("body", [])):
+                    return False
+        return True
+    if literal_writes(body) and lits:
+        return {"int": max(lits)}
     return None
+
+
+def _concat_pieces(e: dict) -> list:
+    """`a + b + ...` flattened left to right into its operands."""
+    if isinstance(e, dict) and e.get("op") == "+":
+        return [p for a in e["args"] for p in _concat_pieces(a)]
+    return [e]
+
+
+def _exact_concat_lines(target: str, e: dict, ctx: Ctx, indent: str,
+                        funs: dict, task_name: str) -> list:
+    """`target := p0 + p1 + ...` into an EXACT-length output buffer
+    (framac track, 2026-09-26; replaceLastElement's `first[0..n-1] +
+    second`, removeKthElement's `list[0..k-1] + list[k..n]`).
+
+    ACSL by Example's verified `copy` (github.com/fraunhoferfokus/
+    acsl-by-example, StandardAlgorithms/Mutating/copy.c) repeated per
+    piece at a running offset: each piece is a bare seq variable, a slice
+    of one, or a literal; a variable or slice is one copy loop whose
+    invariant states the destination range written so far equals the
+    source range and whose `loop assigns` names ONLY that piece's own
+    destination range, so WP's frame keeps every earlier piece's
+    equality; a literal is individual stores. Before any write, one
+    assert ties the pieces' total length to the buffer's `requires`-
+    pinned size (`{target}_n`), and each slice's own bounds are asserted
+    exactly as the single-slice case does -- nothing is assumed.
+
+    Refused by name: a piece whose source is `target` itself (the copy's
+    \\separated precondition would not hold: an in-place concatenation
+    reads cells it has already overwritten), or any other operand shape."""
+    out = []
+    xn = f"{target}_n"
+    pieces = _concat_pieces(e)
+    lens, specs = [], []
+    for p in pieces:
+        if "var" in p or p.get("op") == "slice":
+            base = p if "var" in p else p["args"][0]
+            src = seq_var(base, ctx.env)
+            if src == target:
+                raise NotImplementedError(
+                    "seq concatenation reading its own target buffer "
+                    "(in-place) is not implemented by this lowering")
+            if "var" in p:
+                lo_c, n_c = "0", ctx.seq_len.get(src, f"{src}_n")
+            else:
+                _, lo, hi = p["args"]
+                out += at_asserts(lo, ctx, indent, funs, task_name)
+                out += at_asserts(hi, ctx, indent, funs, task_name)
+                lo_c = cexpr(lo, ctx.env, funs, task_name)
+                hi_c = cexpr(hi, ctx.env, funs, task_name)
+                out.append(f"{indent}/*@ assert 0 <= ({lo_c}) && ({lo_c}) "
+                           f"<= ({hi_c}) && ({hi_c}) <= {src}_n; */")
+                n_c = f"(({hi_c}) - ({lo_c}))"
+            specs.append(("copy", src, lo_c, n_c))
+            lens.append(n_c)
+        elif p.get("op") == "seq":
+            for a in p.get("args", ()):
+                out += at_asserts(a, ctx, indent, funs, task_name)
+            specs.append(("lit", p.get("args", ()), None, None))
+            lens.append(str(len(p.get("args", ()))))
+        else:
+            raise NotImplementedError(
+                f"seq concatenation operand {p!r}: only a bare seq "
+                f"variable, a slice of one, or a `seq` literal is "
+                f"implemented as a piece of an EXACT-length concatenation")
+    total = " + ".join(f"({n})" for n in lens) or "0"
+    out.append(f"{indent}/*@ assert {total} == {xn}; */")
+    off = "0"
+    for (kind, src, lo_c, n_c), n in zip(specs, lens):
+        if kind == "copy":
+            out += [
+                f"{indent}/*@",
+                f"{indent}  loop invariant 0 <= __k <= {n_c};",
+                # Indexed by the DESTINATION position `__t` itself (not an
+                # offset from the piece start), so a goal reading
+                # `{target}[i]` matches this fact without the prover having
+                # to invert `off + t`; measured on removeKthElement, where
+                # the offset form left the second piece's fact unproved.
+                f"{indent}  loop invariant \\forall integer __t; "
+                f"({off}) <= __t < ({off}) + __k ==> {target}[__t] == "
+                f"{src}[({lo_c}) + (__t - ({off}))];",
+                f"{indent}  loop assigns __k, "
+                f"{target}[({off}) .. ({off}) + ({n_c}) - 1];",
+                f"{indent}  loop variant {n_c} - __k;",
+                f"{indent}*/",
+                f"{indent}for (int __k = 0; __k < {n_c}; __k++) "
+                f"{target}[({off}) + __k] = {src}[({lo_c}) + __k];",
+            ]
+        else:
+            for k, a in enumerate(src):
+                vc = cexpr(a, ctx.env, funs, task_name)
+                out.append(f"{indent}{target}[({off}) + {k}] = {vc};")
+        off = f"({off}) + ({n})"
+    return out
 
 
 def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
@@ -5782,12 +5948,10 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
             return seq_assign_lines(target, args[1], ctx, indent, funs,
                                     task_name)
         if cap is None:
-            raise NotImplementedError(
-                "seq concatenation assigned to an EXACT-length return "
-                "(its length already pinned by `requires` from "
-                "`_seq_len_track`) is not implemented by this lowering; "
-                "only the append idiom into a CAPACITY-tracked buffer "
-                "(`_ret_capacity`) is measured")
+            # EXACT-length concatenation (framac track, 2026-09-26): see
+            # `_exact_concat_lines`. It used to abstain here.
+            return out + _exact_concat_lines(target, e, ctx, indent, funs,
+                                             task_name)
         left, right = args
         if not ("var" in left and left["var"] == target):
             raise NotImplementedError(
@@ -6071,6 +6235,16 @@ def _fold_local_append_into_ret(body: list, ret: str) -> list | None:
         return None
     if not _only_append_writes(rest, local):
         return None
+    # 2026-09-26 (framac track; vericoding vt0025/vt0029/vt0362): the
+    # declaration's `:= []` is KEPT, as `ret := []` at the declaration's
+    # own position, not dropped. Dropping it left the capacity length
+    # local (`{ret}_len`) uninitialized at the loop's entry, so the
+    # invariant `len(v) == i` could never be established there and each
+    # real program read TIMEOUT. `ret := []` is exactly what the local's
+    # declaration means after the rename, and the `seq` literal case of
+    # `seq_assign_lines` lowers it to `{ret}_len = 0;`.
+    rest = (body[:decl_idx] + [{"assign": [local, init]}]
+            + body[decl_idx + 1:-1])
     return t_names.rename_body(rest, {local: ret})
 
 
@@ -7785,6 +7959,57 @@ class _CertSkip(Exception):
     file is emitted without one (never a hard failure)."""
 
 
+# SPEC_FUN CALLS IN THE REPLAY (framac track, 2026-09-26). `certificate()`
+# fills `_CEV_SPEC` with the task's spec_funs for the duration of one
+# certificate build, so `_cev` can evaluate a spec_fun call at ground
+# arguments by evaluating its body (the same ground semantics `_cev` gives
+# every other operator). Every evaluation with all-int arguments is logged
+# in `_CEV_TRACE`, callee before caller, and `_flush_trace` turns the log
+# into ACSL asserts `f(args) == value` placed before the goal that needs
+# them: each one is a kernel goal, provable from the logic definition and
+# the asserts before it by one unfolding, so a recursive spec_fun's value
+# at the witness (factorial(10) for factorialOfLastDigit's off-by-one twin)
+# is established step by step rather than left to the prover to unfold ten
+# levels deep on its own. As everywhere in the certificate, a wrong value
+# here is a failed assert, never a minted refutation.
+_CEV_SPEC: dict = {}
+_CEV_TRACE: list = []
+_CEV_SEEN: set = set()
+MAX_CEV_CALLS = 4000
+MAX_CEV_TRACE = 300
+_CEV_CALLS = [0]
+
+
+def _cev_call(c: dict, st: dict):
+    f = _CEV_SPEC.get(c["fun"])
+    if f is None:
+        raise _CertSkip("call in executable position")
+    _CEV_CALLS[0] += 1
+    if _CEV_CALLS[0] > MAX_CEV_CALLS:
+        raise _CertSkip("spec_fun evaluation exceeds its call cap")
+    vals = [_cev(a, st) for a in c["args"]]
+    v = _cev(f["body"], {p["name"]: x for p, x in zip(f["params"], vals,
+                                                      strict=True)})
+    key = (f["name"], tuple(vals))
+    if (all(p["type"] == "int" for p in f["params"])
+            and all(isinstance(x, int) and not isinstance(x, bool)
+                    for x in vals)
+            and f["result"] in ("int", "bool") and key not in _CEV_SEEN):
+        _CEV_SEEN.add(key)
+        _CEV_TRACE.append((f["name"], vals, v, f["result"]))
+    return v
+
+
+def _flush_trace(out: list, ind: str) -> None:
+    if len(_CEV_SEEN) > MAX_CEV_TRACE:
+        raise _CertSkip("spec_fun evaluation trace exceeds its cap")
+    for fname, vals, v, res in _CEV_TRACE:
+        args = ", ".join(_int_lit(x) for x in vals)
+        rhs = ("\\true" if v else "\\false") if res == "bool" else _int_lit(v)
+        out.append(f"{ind}/*@ assert {fname}({args}) == {rhs}; */")
+    _CEV_TRACE.clear()
+
+
 def _cev(e: dict, st: dict):
     """Ground evaluation of an EXECUTABLE t expression at concrete state,
     used only to pick branches and count loop iterations. Every decision it
@@ -7802,7 +8027,7 @@ def _cev(e: dict, st: dict):
         i = e["ite"]
         return _cev(i["then"] if _cev(i["cond"], st) else i["else"], st)
     if "call" in e:
-        raise _CertSkip("call in executable position")
+        return _cev_call(e["call"], st)
     if "forall" in e or "exists" in e:
         raise _CertSkip("quantifier in executable position")
     op, args = e["op"], e.get("args", [])
@@ -7884,6 +8109,15 @@ def _cev(e: dict, st: dict):
     raise _CertSkip(f"no ground evaluation for operator {op!r}")
 
 
+def _has_ite(x) -> bool:
+    """True iff an `ite` node occurs anywhere under `x`."""
+    if isinstance(x, dict):
+        return "ite" in x or any(_has_ite(v) for v in x.values())
+    if isinstance(x, list):
+        return any(_has_ite(v) for v in x)
+    return False
+
+
 def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
                 asserts: list, ind: str) -> str:
     """cexpr(), specialized for the certificate replay: every `div`/`mod`
@@ -7933,14 +8167,31 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
         a_c = _cert_cexpr(e["args"][0], ctx, st, funs, name, asserts, ind)
         b_c = _cert_cexpr(e["args"][1], ctx, st, funs, name, asserts, ind)
         return f"(({a_c}) {'&' if e['op'] == 'and' else '|'} ({b_c}))"
-    if not _has_divmod(e):
+    if not _has_divmod(e) and not _has_ite(e):
         return cexpr(e, ctx.env, funs, name)
     if "ite" in e:
-        raise _CertSkip("`ite` in executable position within the "
-                        "certificate replay")
+        # BRANCH-FREE ITE (framac track, 2026-09-26; acsl clamp's
+        # boundary-swap twin, `result := if v < lower then lower else if
+        # upper < v then upper else v`). An `ite` used to reach
+        # `cexpr` whole when no div/mod was inside it, as a C `?:` whose
+        # untaken arm is dead code at ground values: -wp-smoke-tests
+        # flagged it, the certificate's own audit has no exemption for a
+        # doomed smoke goal, and the twin read UNPROVED. Resolved here the
+        # way `_cert_stmts` resolves an `if`: the condition's decision is
+        # asserted (a kernel goal) and only the taken arm is rendered.
+        i = e["ite"]
+        asserts += at_asserts(i["cond"], ctx, ind)
+        g = pred(i["cond"], ctx)
+        taken = _cev(i["cond"], st)
+        _flush_trace(asserts, ind)
+        asserts.append(f"{ind}/*@ assert {g if taken else f'(!{g})'}; */")
+        return _cert_cexpr(i["then"] if taken else i["else"], ctx, st, funs,
+                           name, asserts, ind)
     if "call" in e:
-        raise _CertSkip("call in executable position within the "
-                        "certificate replay")
+        if any(_has_divmod(a) or _has_ite(a) for a in e["call"]["args"]):
+            raise _CertSkip("call with a div/mod or `ite` argument within "
+                            "the certificate replay")
+        return cexpr(e, ctx.env, funs, name)
     op, args = e["op"], e.get("args", [])
     if op in DIVMOD:
         x_e, y_e = args
@@ -8036,9 +8287,23 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
                 for x in args)
         return f"((!({a})) || ({b}))"
     if op in ("and", "or"):
-        glue = " && " if op == "and" else " || "
-        return "(" + glue.join(_cert_cexpr(a, ctx, st, funs, name, asserts,
-                                           ind) for a in args) + ")"
+        # BRANCH-FREE SHORT CIRCUIT (framac track, 2026-09-26;
+        # is_equal_to_sum_even's twin, `b := n % 2 == 0 and n > 8`): a C
+        # `&&`/`||` is a branch after normalization, and at ground values
+        # one of its arms is dead code the smoke tests doom, so the
+        # certificate read UNPROVED. Each operand's truth is asserted in
+        # order, left to right, exactly as t evaluates it, stopping at the
+        # first operand that decides the result (so a later operand whose
+        # definedness depends on an earlier one is never rendered past a
+        # false guard); the value is then the literal that decision gives.
+        for a in args:
+            g = pred(a, ctx)
+            v = _cev(a, st)
+            _flush_trace(asserts, ind)
+            asserts.append(f"{ind}/*@ assert {g if v else f'(!{g})'}; */")
+            if bool(v) == (op == "or"):
+                return "1" if op == "or" else "0"
+        return "0" if op == "or" else "1"
     if op in ARITH or op in CMP:
         o = ARITH.get(op) or CMP[op]
         a = _cert_cexpr(args[0], ctx, st, funs, name, asserts, ind)
@@ -8155,6 +8420,7 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             out += dm_asserts
             out.append(f"{ind}{n} = {rhs};")
             st[n] = _cev(e, st)
+            _flush_trace(out, ind)
         elif "return" in s:
             n, e = s["return"]
             out += at_asserts(e, ctx, ind)
@@ -8163,6 +8429,7 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             out += dm_asserts
             out.append(f"{ind}{n} = {rhs};")
             st[n] = _cev(e, st)
+            _flush_trace(out, ind)
             return ctx, True
         elif "var" in s:
             v = s["var"]
@@ -8174,11 +8441,13 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             out += dm_asserts
             out.append(f"{ind}{v['name']} = {rhs};")
             st[v["name"]] = _cev(v["init"], st)
+            _flush_trace(out, ind)
         elif "if" in s:
             c = s["if"]
             out += at_asserts(c["cond"], ctx, ind)
             g = pred(c["cond"], ctx)
             taken = _cev(c["cond"], st)
+            _flush_trace(out, ind)
             out.append(f"{ind}/*@ assert {g if taken else f'(!{g})'}; */")
             ctx, stopped = _cert_stmts(c["then"] if taken else c["else"],
                                        ctx, st, name, out, count)
@@ -8204,7 +8473,9 @@ def _cert_stmts(body: list, ctx: Ctx, st: dict, name: str,
             stopped = False
             while True:
                 out += at_asserts(w["cond"], ctx, ind)
-                if not _cev(w["cond"], st):
+                go = _cev(w["cond"], st)
+                _flush_trace(out, ind)
+                if not go:
                     out.append(f"{ind}/*@ assert (!{g}); */")
                     break
                 count[0] += 1
@@ -8464,6 +8735,22 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
     except (_CertSkip, NotImplementedError, ValueError, KeyError,
             TypeError, RecursionError):
         return None
+    # 2026-09-26: the spec_fun values the final assert names at ground
+    # arguments (an `ensures` call whose arguments evaluate at the final
+    # state), established by the same kernel-checked unfolding trace the
+    # replay uses. A call that does not evaluate here (a quantified
+    # variable in its arguments, a seq argument) adds nothing.
+    for e in task["ensures"]:
+        for c in _call_nodes(e):
+            try:
+                _cev({"call": c}, st)
+            except (_CertSkip, ValueError, KeyError, TypeError,
+                    RecursionError, IndexError):
+                pass
+    try:
+        _flush_trace(body_out, "  ")
+    except _CertSkip:
+        _CEV_TRACE.clear()
     ctx = Ctx(env, funs, ret=None, label="Here")
     pieces = []
     for e in task["ensures"]:
@@ -8474,6 +8761,20 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
              f"  /*@ assert {CERT_GOAL}: !({' && '.join(pieces)}); */",
              "  return;", "}", ""]
     return "\n".join(lines)
+
+
+def _call_nodes(e) -> list:
+    """Every `call` node under `e`, innermost first."""
+    out: list = []
+    if isinstance(e, dict):
+        for v in e.values():
+            out += _call_nodes(v)
+        if "call" in e and isinstance(e["call"], dict):
+            out.append(e["call"])
+    elif isinstance(e, list):
+        for v in e:
+            out += _call_nodes(v)
+    return out
 
 
 # ---------------------------------------- definedness, as a t formula -----
@@ -9233,6 +9534,21 @@ def certificate(task: dict, twin_body: list, w: dict,
         return None
     if CERT_FN in used or CERT_GOAL in used:
         return None                    # a task name would collide or forge
+    _CEV_SPEC.clear()
+    _CEV_SPEC.update({f["name"]: f for f in task.get("spec_funs", [])})
+    _CEV_TRACE.clear()
+    _CEV_SEEN.clear()
+    _CEV_CALLS[0] = 0
+    try:
+        return _certificate(task, twin_body, w, env, funs, used)
+    finally:
+        _CEV_SPEC.clear()
+        _CEV_TRACE.clear()
+        _CEV_SEEN.clear()
+
+
+def _certificate(task: dict, twin_body: list, w: dict,
+                 env: dict, funs: dict, used: set) -> str | None:
     kind = w.get("_kind")
     if kind == "undefined" and w.get("_site") == "ensures":
         # 2026-09-12: an ensures undefined at the witness. The body has a

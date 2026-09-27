@@ -122,6 +122,27 @@ def main() -> int:
     check("mirror disagreeing with the logic function is not verified",
           out != Outcome.VERIFIED, out)
 
+    # The twin's certificate replays the spec_fun call at the witness and
+    # establishes its value by a kernel-checked unfolding trace
+    # (`_cev_call`/`_flush_trace`). The twin is refuted; a certificate
+    # whose trace claims a wrong value is rejected, never minted.
+    task = harness.load(WORK / "fact_real.t")
+    tb, _op, w = harness.twin_cached(task)
+    twin = WORK / "fact_twin.c"
+    twin.write_text(lower_framac.lower(task, tb, witness=w), encoding="utf-8")
+    tsrc = twin.read_text(encoding="utf-8")
+    check("twin carries an unfolding trace", "assert factorial(" in tsrc, tsrc)
+    out, _ = _verify(twin)
+    check("twin with a recursive spec_fun call is refuted",
+          out == Outcome.REFUTED, out)
+    m = re.search(r"assert factorial\((\d+)\) == (\d+);", tsrc)
+    bad = WORK / "fact_twin_badtrace.c"
+    bad.write_text(tsrc.replace(m.group(0), f"assert factorial({m.group(1)}) "
+                                f"== {int(m.group(2)) + 1};"), encoding="utf-8")
+    out, _ = _verify(bad)
+    check("a certificate with a wrong trace value is not a refutation",
+          out != Outcome.REFUTED, out)
+
     out, _ = _verify(_lower(DIGITS, "lastDigit(a) * lastDigit(b)", "digits_real"))
     check("assigns \\nothing caller of a mirror verifies",
           out == Outcome.VERIFIED, out)
