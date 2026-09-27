@@ -10,6 +10,7 @@ skipped without it, as test_tool_conversations.py skips its rendering suite.
 """
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -235,6 +236,45 @@ class Gate(unittest.TestCase):
                       mc.leaks(items, f"a training row mentions {mfx.HELDOUT_NAMES[0]} in passing"))
         self.assertTrue(any("canary" in f for f in mc.leaks(items, f"leaked: {mfx.canary('heldout', 'k')}")))
         self.assertEqual([], mc.leaks(items, "an ordinary training row with none of that"))
+
+    @unittest.skipUnless(SPLIT.is_file(), "needs the split file on this machine")
+    def test_a_val_split_task_id_is_flagged_by_leaks_but_is_not_a_boundary_violation(self):
+        # tool_fixtures.corpus_tasks calls a document this module's "heldout" side exactly when chat_data.py's
+        # own split_documents(by="hash", seed=1337) puts it on chat_data.py's "val" side -- so a held-out task's
+        # id legitimately turns up, as plain text, inside chat_data.py's own base conversations, and leaks() is
+        # right to flag it wherever a mid-training file carries both (28 such hits reproduced 2026-09-27 against
+        # the tool track's own arm-A file, dawnr-tools/B-s1337/3-conversations/conversations.jsonl, none of them
+        # a preference-name or canary leak, all pre-existing chat_data.py rows -- see memory-conversations-
+        # results-2026-09-27.json's leak_check). That string match is not the training boundary: chat_data.gate
+        # (eval_ids/dev_ids, split-v5.json) is, and does not refuse this row; and chat_train.load_conversations
+        # routes a split=="val" row away from train_rows, the only source loss.backward()/optimizer.step() read
+        # from (chat_train.py's training loop), so it is never a gradient target either.
+        import chat_data
+        import chat_train
+        import memory_conversations as mc
+        task_name = "probe_val_split_task_never_an_eval_or_dev_id"
+        program = f"t 1\ntask {task_name}(x: int) returns (y: int)\n  ensures y == x\n{{\n  y := x;\n}}\n"
+        val_row = mc.row("Implement this in t.", [{"type": "text", "text": program}],
+                         split="val", built="base", source=task_name)
+        train_row = mc.row("Implement another in t.", [{"type": "text", "text": program.replace(task_name, "other")}],
+                           split="train", built="base", source="other")
+        val_text, train_text = json.dumps(val_row, ensure_ascii=False), json.dumps(train_row, ensure_ascii=False)
+
+        items = [{"id": "x", "task": task_name, "canary": "unrelated-canary-never-in-this-text"}]
+        self.assertEqual([f"task {task_name}"], mc.leaks(items, val_text))          # leaks() is right to catch it
+
+        chat_data.gate(train_text + "\n\n" + val_text, "a val-split base row plus a train row", SPLIT)  # not refused
+
+        tmp = Path(tempfile.mkstemp(suffix=".jsonl")[1])
+        try:
+            tmp.write_text(train_text + "\n" + val_text + "\n", encoding="utf-8")
+            train, val = chat_train.load_conversations(tmp)
+        finally:
+            tmp.unlink()
+        self.assertEqual(1, len(train))
+        self.assertEqual(1, len(val))
+        self.assertEqual("val", val[0]["split"])                 # the only side that ever reaches masked_loss(),
+        self.assertEqual("train", train[0]["split"])              # never train_rows.get_batch()'s backward() pass
 
 
 @unittest.skipIf(torch is None, "needs torch")
