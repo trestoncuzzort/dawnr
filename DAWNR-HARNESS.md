@@ -314,9 +314,15 @@ sends about itself (descriptions, annotations, instructions).
 6. **Checked before relied on.** Any t program that arrives from outside gets
    the checker's verdict beside it, and the final answer's program is checked
    before the reply may end.
-7. **Everything is logged**: each call's tool, arguments, decision and why,
-   trust, size and time, in memory and, when configured, as JSONL; a hook
-   that fails or times out is reported to the person, never silently dropped.
+7. **Everything is logged**: each call's tool, arguments, the operator's raw
+   permission (allow/ask/deny) alongside the actual decision (which also
+   distinguishes a hook's deny from the policy's own, and a PostToolUse
+   block, "withheld", from an ordinary run), why, trust, size and time, in
+   memory and, when configured, as JSONL, one call to one line even when its
+   arguments hold attacker-reachable text (every non-ASCII codepoint is
+   escaped, since a raw U+2028 or U+2029 reads as a line break to more than
+   one common line-based reader); a hook that fails or times out is reported
+   to the person, never silently dropped.
 
 What this cannot do: stop the model from being persuaded, in its own words,
 by text it read. OWASP says it plainly: no fool-proof prevention of prompt
