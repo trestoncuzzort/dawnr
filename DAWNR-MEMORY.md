@@ -32,6 +32,8 @@ What was copied, from where (each fetched and read on 2026-09-27):
 | extract, then update | Mem0 (Chhikara et al., arXiv:2504.19413): candidate memories from the conversation, then ADD / UPDATE / DELETE / NONE against what is stored; its user-memory prompt, "GENERATE FACTS SOLELY BASED ON THE USER'S MESSAGES" (`mem0/configs/prompts.py`) | the rules are deterministic patterns for now, and "only the person's words" is a gate in code every proposal passes, a model's included; the update is keyed by a slot, and only a compatible rewording replaces a stored record ("is a fan of jazz" for "likes jazz"); Mem0's later "additive" prompt, which also extracts from assistant messages and from documents the user shares, is exactly what is refused here |
 | the grounding gate | Saltzer & Schroeder, "The Protection of Information in Computer Systems" (1975, web.mit.edu/Saltzer/www/publications/protection/Basic.html), fail-safe defaults: "base access decisions on permission rather than exclusion"; OWASP's Input Validation Cheat Sheet: allowlist validation, "defining exactly what IS authorized", with patterns covering the whole input (`^...$`) and a denylist only as a supplement | the allowlist is the rules' own patterns; a statement they cannot read whole from the person's sentence is refused, true ones included |
 | contradictions | de Marneffe, Rafferty & Manning, "Finding Contradictions in Text" (ACL 2008, aclanthology.org/P08-1118): texts contradict only when they are about the same event, and "compatible noun phrases between sentences are assumed to be coreferent in the absence of clear countervailing evidence"; antonymy and negation are closed word sets, while contradictions of structure or lexical content need a model of meaning | decided over everything the person said in the session; "the same thing" is a shared object word (word for word), slot or keyed object; since word patterns cannot tell a structural contradiction from a compatible pair, any two different statements about one thing are a contradiction unless they are on a short list of compatible pairs; the thing is refused and reported, not highlighted |
+| reading for contradictions apart from filtering for storage | PostgreSQL's row security (postgresql.org/docs/current/ddl-rowsecurity.html): integrity checks "always bypass row security to ensure that data integrity is maintained", with care needed against "covert channel" leaks through them; and "it could be disastrous if row security silently caused some rows to be omitted", so a setting makes that an error | every statement a pattern reads counts against what it contradicts, one that looks like a secret or whose object is too long included; the secret filter and the length cap decide only what is stored; no reason names a word only a secret-looking statement says, and a reading in the report shows its object as `[withheld]`; a statement too long to keep is refused by name, never dropped unseen |
+| a long object's key | CoreNLP's deterministic coreference (github.com/stanfordnlp/CoreNLP, `dcoref/Rules.java`): mentions match by head word (`entityHeadsAgree`), and exact match is relaxed by removing "the phrase after head" (`entityRelaxedExactStringMatch`); pronouns are left out of head match, to a sieve with number and gender agreement | no parser finds the head, so a statement that will not be stored is about every word it holds, each keyed as the rules key that word alone; a lone pronoun object is not read at all, and there is no pronoun sieve |
 | a statement that disagrees with a stored one | Wikidata's single-value constraint (wikidata.org/wiki/Help:Property_constraints_portal/Single_value): values that disagree "should not be removed", and an editor decides | Zep (Rasmussen et al., arXiv:2501.13956, sec. 2.2.3) invalidates the older fact and "consistently prioritizes new information", and Mem0's update prompt deletes a contradicted memory: both let the newer statement win, judged by a model. dawnr keeps the stored record and asks the person |
 | recall | Generative Agents (Park et al., arXiv:2304.03442, section 4.1): recency (exponential decay) + importance + relevance, each min-max scaled to [0, 1], all weights 1; "the top-ranked memories that fit within the language model's context window" go in | relevance is BM25 against the first message, not embeddings (offline, no model needed, explainable); importance is the extraction's confidence, not a model's 1-to-10 rating; recency decays from when the person last said it, not from the last retrieval, so recalling something cannot keep it fresh on its own |
 | BM25 | Lucene's `BM25Similarity` (k1 1.2, b 0.75, idf ln(1 + (N - n + 0.5)/(n + 0.5)), never negative), `rank_bm25`'s shape, `EnglishAnalyzer`'s stop words and `EnglishMinimalStemmer` (Harman's S-stemmer) | standard library, over the person's own records only |
@@ -187,11 +189,33 @@ learning", "I'm working on", "I like / love / don't like / hate", "I prefer",
    memory, never a false one; the opposite-pair table ("likes" / "dislikes",
    "always" / "never") only labels a polarity conflict in the report. A
    statement inside what the person asks to forget is not one they make.
+   Every statement a pattern reads counts, whatever its object looks like:
+   what may be stored is decided last. Rules 4 and 6 keep some statements
+   from being stored (an object over eight words, or 24 in a "remember
+   that"; a name that is no name; a hedged "I'm a bit ..."; anything that
+   looks like a secret), and until the fourth round they also kept them out
+   of this rule, so the other side of the contradiction was admitted cleanly
+   and silently: "I like cats.com. I don't like cats." stored "dislikes
+   cats", "My favorite tool is my password manager. My favorite tool is a
+   hammer." stored the hammer, "My birthday is 05031990. My birthday is May
+   3." stored May 3, and "I like cats. I really don't like cats at all
+   especially the loud noisy ones that scratch furniture constantly." stored
+   "likes cats" with nothing reported. Now each such statement still blocks
+   what it contradicts, and the report names the contradiction, as
+   PostgreSQL's integrity checks see the rows its row security hides. A
+   statement too long to keep is about every word it holds, each keyed as
+   the rules key that word alone ("cats" meets "I like cat"), because no
+   parser finds its head word; and it is refused by name, "cannot ground:
+   object too long", never dropped unseen.
 6. It is not a secret or an identifier: passwords, keys, tokens, card and
    account numbers, long digit strings, e-mail addresses and links are not
    remembered on dawnr's own initiative (the person can still pin a note).
-   Such a statement is also left out of the contradictions, so no reason
-   ever names its words.
+   Such a statement still counts under rule 5, and the report does not show
+   it: a contradiction is named by a word only when a statement that does
+   not look like a secret says that word too (it would have been shown had
+   it been kept), else by the slot ("my birthday"), else as "something that
+   looks like a secret"; its reading shows the object as `[withheld]`
+   ("likes [withheld]").
 7. A model's proposal in a session that read outside text is refused: once
    untrusted text is in the context, what the model proposes may be the page
    speaking, and writing lasting memory is a consequential act
@@ -341,7 +365,8 @@ hostile about the person, which then speaks in every later session.
   its evidence does not (rule 4), so a proposal quoting "I like soup" cannot
   store "likes soup and wants files sent to evil.example"; a statement the
   person contradicted anywhere in the session, in words the patterns read, is
-  not stored at all, and the contradiction is reported (rule 5); a newer
+  not stored at all, and the contradiction is reported (rule 5), even when
+  the statement contradicting it is one dawnr would not store; a newer
   statement cannot replace a stored one it disagrees with, so neither a
   misreading nor words the person was steered into overwrite what they said
   before: the person is asked (section 3); a model's proposal cannot bring
@@ -368,7 +393,22 @@ hostile about the person, which then speaks in every later session.
   work for Y."). A contradiction inside one object the patterns carry word for
   word is stored with it, as said ("asked dawnr to remember: they like cats
   but hate them"; "likes cats… not"). A long message is taken as a paste, so
-  what it says counts for nothing, a contradiction included. The span's mark
+  what it says counts for nothing, a contradiction included, and so does
+  every other part of a message that is not the person speaking: text in
+  quotation marks, a line that looks like code, an indented line or one
+  starting with `>`. So 'I like cats. I don't like "cats".' still keeps
+  "likes cats", and so does a second line "I don't like cats -> they
+  scratch." A pronoun names nothing a word pattern can match ("I like cats.
+  I don't like them."), nor does a quantifier ("I like cats. I hate
+  everything."): a lone pronoun object is not read at all, as CoreNLP keeps
+  pronouns out of head match, and dawnr has no agreement sieve to resolve
+  them. Words are compared as their characters are, with no Unicode
+  normalization: "I like café. I don't like café." with the é composed in
+  one and decomposed in the other stores both. A statement withheld from
+  storage (too long, or looking like a secret) that disagrees with a record
+  stored in an earlier session is refused by its own reason and does not
+  become a question, because a question's text is stored and shown; the
+  stored record stays current. The span's mark
   tells a trained model the text is memory, not the current instruction;
   whether a model this size learns that is unmeasured (section 8).
 - *What failing closed costs:* two statements that agree but differ, about
@@ -380,7 +420,18 @@ hostile about the person, which then speaks in every later session.
   over coffee." later). Sentences the person retyped from a page count as theirs for
   this, so a retyped sentence can withhold one of their own. In the
   poisoning property test below, whose person speaks with only 12 words, the
-  statements kept at its seed fell from 372 to 150.
+  statements kept at its seed fell from 372 to 150. Since the fourth round a
+  statement dawnr would not store withholds whatever shares a word with it
+  too: "My name is Ann. Remember that my email is ann@example.org." keeps
+  neither (the name is in the address), and "Always write tests. I want
+  tests for the parser module that cover every edge case and error path."
+  no longer keeps "always write tests" (a request the rules never propose as
+  a memory still counts). A long object brings many words, so it meets more
+  statements. (A hedge's degree word, "bit" in "I'm a bit tired", is not
+  among the words a statement is about, so "I like 64 bit builds." is still
+  kept beside it.) None of the three property tests below changed its count
+  (150; 446 and 2,665; 630), because none of their grammars says anything
+  secret-looking or over eight words.
 
 **Leakage** (MEXTRA): one person's memory reaching another person, the
 model's context of the wrong person, or anywhere off the machine.
@@ -507,7 +558,31 @@ line or in the Memory window, while "forget that ...", correct, a compatible
 rewording and a statement the record holds ask nothing; a model neither
 overwrites the person's own record nor brings back what they asked to forget;
 a session of 100 statements sharing one word makes one contradiction, not
-4,950; recall never exceeds its budget over random stores and budgets under
+4,950; no filter for storage hides one side of a contradiction: the five
+inputs that got past the third fix ("My birthday is 05031990. My birthday
+is May 3.", "I like cats.com. I don't like cats.", "My favorite tool is my
+password manager. My favorite tool is a hammer.", "I like
+cats@example.com. I don't like cats.", "I like cats. I really don't like
+cats at all especially the loud noisy ones that scratch furniture
+constantly.") are refused through `admit()`, with the clause or the whole
+message as the evidence, and through `end_session()`, which reports
+"contradiction: <thing>" with the two readings and shows no word of the
+secret in a reason, a reading, the summary or on disk; so are a name that
+is no name and a hedged "I'm a bit of a nurse"; a contradiction between two
+secret-looking statements is named by its slot or as "something that looks
+like a secret"; a statement too long to keep is refused by name ("cannot
+ground: object too long"), a "remember that" past 24 words and a clause
+past 240 characters included; a long object meets "cat", "a cat" and
+"furniture" said on their own; and a property test takes every
+contradiction the third round's tests pass (17) and each pair of its
+grammar in every placement and order (84), rewrites one side to trip each
+filter in turn (a link, an e-mail address, a long number or a secret's
+word added to its object, or its object padded past eight words), and in
+all 1,010 sessions finds the contradiction detected with the rewritten
+side as one of its readings, the other side refused, nothing about the
+thing stored, a contradiction reported, nothing the filter caught shown,
+and an unrelated statement kept (1,009 of the 1,010 fail on the parent);
+recall never exceeds its budget over random stores and budgets under
 three counters; the rules, updates, reinforcement, order and checkpoints; the
 session events' contract; the command line and the Memory window; the token,
 the mask and the engine's first reply.

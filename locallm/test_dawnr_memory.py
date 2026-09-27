@@ -775,6 +775,25 @@ class ContradictionsAreReadOverTheWholeUtterance(Temp):
                 ("Always answer briefly, and never answer briefly.",
                  ("wants dawnr to always answer briefly", "wants dawnr to never answer briefly"), "answer briefly"),
                 ("I am a fan of cats, and I don't like cats.", ("is a fan of cats", "dislikes cats"), "cats"))
+    # the property test's grammar: each form as (the clause as the person says it, its statement, its kind), and the
+    # pairs of forms that disagree about one object
+    FORMS = {"like": ("I like {o}", "likes {o}", "preference"),
+             "love": ("I really like {o}", "likes {o}", "preference"),
+             "dislike": ("I don't like {o}", "dislikes {o}", "preference"),
+             "hate": ("I hate {o}", "dislikes {o}", "preference"),
+             "fan": ("I'm a big fan of {o}", "is a fan of {o}", "preference"),
+             "want": ("I want {o}", "wants {o}", "preference"),
+             "avoid": ("I avoid {o}", "avoids {o}", "preference"),
+             "prefer": ("I prefer {o}", "prefers {o}", "preference"),
+             "over": ("I prefer {o} over {p}", "prefers {o} over {p}", "preference"),
+             "under": ("I prefer {p} over {o}", "prefers {p} over {o}", "preference"),
+             "always": ("Always use {o}", "wants dawnr to always use {o}", "preference"),
+             "never": ("Never use {o}", "wants dawnr to never use {o}", "preference"),
+             "learn": ("I'm learning {o}", "is learning {o}", "fact"),
+             "rather": ("I'd rather use {o}", "would rather use {o}", "preference")}
+    AGAINST = (("like", "dislike"), ("love", "hate"), ("fan", "dislike"), ("fan", "hate"), ("want", "avoid"),
+               ("always", "never"), ("over", "under"), ("prefer", "under"), ("prefer", "over"), ("like", "avoid"),
+               ("learn", "hate"), ("rather", "never"), ("want", "dislike"), ("like", "prefer"))
 
     def entry(self, report, thing):
         """The report's entry for a contradiction about `thing`: it must be there, with the two readings."""
@@ -1019,23 +1038,7 @@ class ContradictionsAreReadOverTheWholeUtterance(Temp):
         def noun():
             return "q" + "".join(rng.choice("bcdfghjklmnpqrstvwz") for _ in range(5))   # no vowel: no English word
 
-        forms = {"like": ("I like {o}", "likes {o}", "preference"), "love": ("I really like {o}", "likes {o}",
-                                                                             "preference"),
-                 "dislike": ("I don't like {o}", "dislikes {o}", "preference"),
-                 "hate": ("I hate {o}", "dislikes {o}", "preference"),
-                 "fan": ("I'm a big fan of {o}", "is a fan of {o}", "preference"),
-                 "want": ("I want {o}", "wants {o}", "preference"),
-                 "avoid": ("I avoid {o}", "avoids {o}", "preference"),
-                 "prefer": ("I prefer {o}", "prefers {o}", "preference"),
-                 "over": ("I prefer {o} over {p}", "prefers {o} over {p}", "preference"),
-                 "under": ("I prefer {p} over {o}", "prefers {p} over {o}", "preference"),
-                 "always": ("Always use {o}", "wants dawnr to always use {o}", "preference"),
-                 "never": ("Never use {o}", "wants dawnr to never use {o}", "preference"),
-                 "learn": ("I'm learning {o}", "is learning {o}", "fact"),
-                 "rather": ("I'd rather use {o}", "would rather use {o}", "preference")}
-        against = (("like", "dislike"), ("love", "hate"), ("fan", "dislike"), ("fan", "hate"), ("want", "avoid"),
-                   ("always", "never"), ("over", "under"), ("prefer", "under"), ("prefer", "over"), ("like", "avoid"),
-                   ("learn", "hate"), ("rather", "never"), ("want", "dislike"), ("like", "prefer"))
+        forms, against = self.FORMS, self.AGAINST
         unrelated = ("like", "dislike", "fan", "want", "avoid", "learn", "prefer")
         joiners = (", and ", " and ", ", but ", " but ", ", also ")
         fillers = ("", "", "Well, ", "Also, ", "Actually, ", "By the way, ")          # FILLER's own words
@@ -1092,6 +1095,241 @@ class ContradictionsAreReadOverTheWholeUtterance(Temp):
         # gate withholds what the person contradicted, not everything near it (630 of them at this seed)
         self.assertGreater(unrelated_said, 300)
         self.assertEqual((admitted, kept), (unrelated_said, unrelated_said))
+
+
+class StorageFiltersDoNotHideContradictions(Temp):
+    """The fourth round on grounding. Two filters removed one side of a contradiction before the check could see it,
+    and the other side was then admitted cleanly and silently: read_claims() left out every reading that looked like
+    a secret, an identifier or a link, and _object() made no reading at all of an object over eight words. So "I like
+    cats.com. I don't like cats." stored "dislikes cats" and reported no contradiction, and "I like cats. I really
+    don't like cats at all especially the loud noisy ones that scratch furniture constantly." stored "likes cats" with
+    report.rejected empty. Filtering for storage and reading for contradiction are two different things (extract.py,
+    "what may be stored is decided last"): every reading the patterns make is in the contradiction check, whatever its
+    object looks like, and the secret filter and the length cap decide only what may be stored. A withheld reading
+    still blocks its opposite and is reported, and nothing in the report shows a secret-looking statement's words; an
+    object too long to keep is about every word it holds, and is refused by name, never dropped."""
+
+    # (what the person said, the clause of the side no filter caught, its statement, its kind, the thing the
+    # contradiction is named by, words of the caught side that nothing may show or store)
+    REVIEWER = (("My birthday is 05031990. My birthday is May 3.", "My birthday is May 3.", "their birthday is May 3",
+                 "fact", "my birthday", ("05031990",)),
+                ("I like cats.com. I don't like cats.", "I don't like cats.", "dislikes cats", "preference", "cats",
+                 ("cats.com",)),
+                ("My favorite tool is my password manager. My favorite tool is a hammer.",
+                 "My favorite tool is a hammer.", "their favorite tool is a hammer", "preference", "favorite tool",
+                 ("password", "manager")),
+                ("I like cats@example.com. I don't like cats.", "I don't like cats.", "dislikes cats", "preference",
+                 "cats", ("cats@example.com", "example")),
+                ("I like cats. I really don't like cats at all especially the loud noisy ones that scratch furniture "
+                 "constantly.", "I like cats.", "likes cats", "preference", "cats", ()))
+    LONG = "dislikes cats at all especially the loud noisy ones that scratch furniture constantly"
+
+    def entry(self, report, thing):
+        """The report's entry for a contradiction about `thing`: it must be there, with the two readings."""
+        entries = [e for e in report.rejected if e[1] == f"contradiction: {thing}"]
+        self.assertTrue(entries, report.rejected)
+        self.assertEqual(len(getattr(entries[0], "readings", ())), 2, entries[0])
+        return entries[0]
+
+    def assert_hidden(self, report, s, hidden, context=None):
+        """No reason, no reading, nothing the person is shown and nothing on disk holds these words."""
+        shown = [why for _statement, why in report.rejected]
+        shown += [r for e in report.rejected for r in getattr(e, "readings", ())]
+        shown += [report.summary(), disk_text(s.dir)]
+        for word in hidden:
+            for text in shown:
+                self.assertNotIn(word.casefold(), text.casefold(), (context, word, text))
+
+    def test_the_five_reviewer_inputs_through_admit(self):
+        for said, clause, statement, kind, thing, _hidden in self.REVIEWER:
+            view = SessionView.of(conversation(said))
+            for evidence in (clause, said):                          # the clause that says it, or the whole message
+                with self.subTest(said=said, evidence=evidence):
+                    self.assertEqual(admit(Proposal(kind, statement, evidence, origin="model"), view),
+                                     (False, f"contradiction: {thing}"))
+
+    def test_the_five_reviewer_inputs_through_end_session(self):
+        for n, (said, clause, statement, kind, thing, hidden) in enumerate(self.REVIEWER):
+            with self.subTest(said=said):
+                s = self.store(f"r{n}")
+                report = end_session(s, conversation(said), session_id="s1", now=NOW)      # the RuleProposer alone
+                self.assertEqual(s.records(("fact", "preference", "pending")), [])
+                self.assertIn(statement, self.entry(report, thing).readings)
+                self.assertIn(f"contradiction: {thing}", report.summary())
+                self.assert_hidden(report, s, hidden)
+                # a model proposing the side no filter caught changes nothing, and is told why
+                model = [Proposal(kind, statement, clause, origin="model")]
+                report = end_session(s, conversation(said), session_id="s1", proposals=model, now=NOW)
+                self.assertEqual(s.records(("fact", "preference", "pending")), [])
+                self.assertIn((statement, f"contradiction: {thing}"), report.rejected)
+                self.assertIn(statement, self.entry(report, thing).readings)
+                self.assert_hidden(report, s, hidden)
+        self.assertIn((self.LONG, "cannot ground: object too long"), report.rejected)   # the long side, by name
+
+    def test_an_object_too_long_to_keep_is_refused_by_name_never_dropped(self):
+        said = "I really don't like cats at all especially the loud noisy ones that scratch furniture constantly."
+        s = self.store()
+        report = end_session(s, conversation(said), session_id="s1", now=NOW)
+        self.assertEqual(s.records(("fact", "preference", "pending")), [])
+        self.assertEqual(report.rejected, [(self.LONG, "cannot ground: object too long")])
+        self.assertIn("cannot ground: object too long", report.summary())
+        self.assertEqual(admit(Proposal("preference", self.LONG, said, origin="model"), SessionView.of(
+            conversation(said))), (False, "cannot ground: object too long"))
+        # a "remember that" past its 24 words, and objects whose statements are past the store's 200 characters, one
+        # of them in a clause past 240 characters
+        words = [f"q{a}{b}z" for a in "bcdfg" for b in "hjklm"]                    # 25 words that are no English
+        for n, said in enumerate(("Remember that " + " ".join(words) + ".",
+                                  "I prefer " + " ".join(w * 3 for w in words[:16]) + ".",
+                                  "I prefer " + " ".join(w * 3 for w in words[:20]) + ".")):
+            with self.subTest(said=said):
+                s = self.store(f"x{n}")
+                report = end_session(s, conversation(said), session_id="s1", now=NOW)
+                self.assertEqual([why for _statement, why in report.rejected], ["cannot ground: object too long"])
+                self.assertEqual(s.records(("fact", "preference", "pending")), [])
+        # a model's statement past the store's limit is known by its opening words, with no pattern run over it all
+        view = SessionView.of(conversation("I like cats."))
+        for text in ("their favorite " + "a" * 9985, "likes " + "cats " * 1000):
+            self.assertEqual(admit(Proposal("preference", text, "I like cats.", origin="model"), view),
+                             (False, "cannot ground: object too long"))
+
+    def test_a_long_object_is_about_every_word_it_holds(self):
+        """No parser finds the head of a long object, so it is keyed on every word it holds, each as the rules key
+        that word alone: "cats" in it meets "cat" and "a cat" said on their own, and so does any other word in it."""
+        long = "I really don't like cats at all especially the loud noisy ones that scratch furniture constantly."
+        for clause, statement, thing in (("I like cat.", "likes cat", "cat"), ("I want a cat.", "wants a cat", "cat"),
+                                         ("I like furniture.", "likes furniture", "furniture")):
+            for said in (clause + " " + long, long + " " + clause):
+                with self.subTest(said=said):
+                    self.assertEqual(admit(Proposal("preference", statement, clause, origin="model"),
+                                           SessionView.of(conversation(said))), (False, f"contradiction: {thing}"))
+
+    def test_every_reading_the_patterns_make_counts_not_only_a_crisp_one(self):
+        """_object's other filters kept a reading out of the check the same way: a name that is no name, and a hedged
+        "I'm a bit of a ...". They are not kept either, and still count against the other side."""
+        for n, (said, clause, statement, thing) in enumerate((
+                ("My name is Ann. My name is 42.", "My name is Ann.", "name is Ann", "name"),
+                ("Call me Annie. Call me @annie99.", "Call me Annie.", "wants to be called Annie", "called"),
+                ("I'm a nurse. I'm a bit of a nurse.", "I'm a nurse.", "is a nurse", "nurse"))):
+            with self.subTest(said=said):
+                self.assertEqual(admit(Proposal("fact", statement, clause, origin="model"),
+                                       SessionView.of(conversation(said))), (False, f"contradiction: {thing}"))
+                s = self.store(f"n{n}")
+                report = end_session(s, conversation(said), session_id="s1", now=NOW)
+                self.assertEqual(s.records(("fact", "preference", "pending")), [])
+                self.assertIn(statement, self.entry(report, thing).readings)
+
+    def test_a_contradiction_is_never_named_by_a_secrets_words(self):
+        """PostgreSQL's integrity checks see rows its row security hides, and its manual warns of the covert channel
+        that opens. Here: a word both statements share is named only when one of them says it in the clear; when both
+        look like secrets, the thing is named by its slot or not at all."""
+        for n, (said, thing, hidden) in enumerate((
+                ("Remember that my api key is hunter2. Remember that my api key is hunter3.",
+                 "something that looks like a secret", ("hunter", "api", "key")),
+                ("I like 12345678. I don't like 12345678.", "something that looks like a secret", ("12345678",)),
+                ("My favorite password is blue. My favorite password is red.", "something that looks like a secret",
+                 ("password", "blue", "red")),
+                ("My birthday is 05031990. My birthday is 06041991.", "my birthday", ("05031990", "06041991")))):
+            with self.subTest(said=said):
+                s = self.store(f"s{n}")
+                report = end_session(s, conversation(said), session_id="s1", now=NOW)
+                self.assertEqual(s.records(("fact", "preference", "pending")), [])
+                self.entry(report, thing)
+                self.assert_hidden(report, s, hidden)
+
+    def test_property_every_contradiction_survives_a_side_that_trips_a_filter(self):
+        """Every contradiction the third round's tests pass, and each pair of its grammar in every placement and
+        order, with one side rewritten to trip each storage filter in turn: a link, an e-mail address, a long number
+        or a secret's word added to its object, or its object padded past eight words. The rewritten side is not
+        kept and must still be seen: a contradiction is found with it as one of the two readings, the other side is
+        refused, nothing about the thing is stored, the report names a contradiction, no reason, reading, summary or
+        file shows what the filter caught, and an unrelated statement in the same session is kept (the gate does not
+        refuse everything)."""
+        rng = random.Random(20260929)
+
+        def noun():
+            return "q" + "".join(rng.choice("bcdfghjklmnpqrstvwz") for _ in range(5))   # no vowel: no English word
+
+        def trip(clause, how):
+            """(`clause` with words added to its object that trip one filter, those words)."""
+            if how == "past eight words":
+                return clause + " " + " ".join(noun() for _ in range(8)), ""
+            added = {"a link": rng.choice(("www.{}.org", "{}.com", "example.net/{}")).format(noun()),
+                     "an e-mail address": noun() + "@example.org",
+                     "a long number": rng.choice(("05031990", "4111 1111 1111 1111", "0044-20-7946-0958")),
+                     "a secret's word": rng.choice(("and passwords", "with api keys", "or pin codes", "and secrets",
+                                                    "with tokens"))}[how]
+            self.assertTrue(extract_mod.sensitive(added), added)
+            return clause + " " + added, added
+
+        # (the turns, {A} and {B} standing for the two sides; each side as (its clause, its statement, its kind))
+        cats = ("I like cats", "likes cats", "preference")
+        not_cats = ("I don't like cats", "dislikes cats", "preference")
+        hate = ("I hate cats", "dislikes cats", "preference")
+        tea = ("I prefer tea", "prefers tea", "preference")
+        coffee = ("I prefer coffee over tea", "prefers coffee over tea", "preference")
+        brief = ("Always answer briefly", "wants dawnr to always answer briefly", "preference")
+        may = ("Remember that my birthday is May 3", "asked dawnr to remember: their birthday is May 3", "fact")
+        cases = [(("{A}, and {B}.",), cats, not_cats),
+                 (("{A}, and {B}.",), ("I want candy", "wants candy", "preference"),
+                  ("I avoid candy", "avoids candy", "preference")),
+                 (("{A}, and {B}.",), tea, coffee),
+                 (("{A}, and {B}.",), brief, ("never answer briefly", "wants dawnr to never answer briefly",
+                                              "preference")),
+                 (("{A}, and {B}.",), ("I am a fan of cats", "is a fan of cats", "preference"), not_cats),
+                 (("{A}. {B}.",), cats, not_cats),
+                 (("{A}.", "Noted.", "{B}."), cats, not_cats),
+                 (("{A}.", "Noted.", "Well, {B}."), tea, coffee),
+                 (("{A}.", "Sure.", "{B}."), brief, ("Never answer briefly", "wants dawnr to never answer briefly",
+                                                     "preference")),
+                 (("{A}. I'm learning Rust.", "Nice.", "{B}."), ("I live in Lisbon", "lives in Lisbon", "fact"),
+                  ("I live in Porto", "lives in Porto", "fact")),
+                 (("{A}. I love cats, {B}.",), cats, hate),
+                 (("{A}. I love cats although {B}.",), cats, hate),
+                 (("{A}. No, {B}.",), not_cats, cats),
+                 (("{A}. {B}.",), cats, ("Please remember that I don't like cats",
+                                         "asked dawnr to remember: they don't like cats", "fact")),
+                 (("{A}. {B}.",), may, ("My birthday is June 5", "their birthday is June 5", "fact")),
+                 (("{A}. {B}.",), ("I want a cat", "wants a cat", "preference"), hate),
+                 (("{A}. {B}.",), cats, ("I don't like cat", "dislikes cat", "preference"))]
+        forms = ContradictionsAreReadOverTheWholeUtterance.FORMS           # the third round's grammar, every pair
+        for a, b in ContradictionsAreReadOverTheWholeUtterance.AGAINST:
+            for turns in (("{A}, and {B}.",), ("{A}. {B}.",), ("{A}.", "Noted.", "{B}.")):
+                for pair in ((a, b), (b, a)):
+                    o, p = noun(), noun()
+                    cases.append((turns,) + tuple(tuple(part.format(o=o, p=p) for part in forms[f]) for f in pair))
+        lead = set("i don t like really hate m a big fan of want avoid prefer over always never use learning d rather "
+                   "am please remember that my is live in".split())
+        checked = kept = 0
+        for turns, *sides in cases:
+            thing = set(re.findall(r"[a-z0-9]+", (sides[0][0] + " " + sides[1][0]).lower())) - lead
+            for side in (0, 1):
+                (clause, statement, kind) = sides[1 - side]
+                for how in ("a link", "an e-mail address", "a long number", "a secret's word", "past eight words"):
+                    tripped, added = trip(sides[side][0], how)
+                    said = {"A": sides[0][0], "B": sides[1][0]}
+                    said["AB"[side]] = tripped
+                    unrelated = noun()
+                    messages = [t.format(**said) for t in turns]
+                    messages[0] = f"I'm learning {unrelated}. " + messages[0]
+                    context = (messages, how)
+                    view = SessionView.of(conversation(*messages))
+                    mark = (added or tripped.split()[-1]).casefold()        # what only the rewritten side says
+                    self.assertTrue(any(mark in r.text.casefold() for c in view.contradictions()
+                                        for r in (c.first, c.second)), (context, view.contradictions()))
+                    self.assertFalse(admit(Proposal(kind, statement, clause, origin="model"), view)[0], context)
+                    s = MemoryStore(self.root, f"p{checked}")
+                    report = end_session(s, conversation(*messages), session_id="s1", now=NOW,
+                                         proposals=[Proposal(kind, statement, clause, origin="model")])
+                    texts = [r["text"] for r in s.records(("fact", "preference", "pending"))]
+                    self.assertFalse([t for t in texts if set(re.findall(r"[a-z0-9]+", t.lower())) & thing],
+                                     (context, texts))
+                    self.assertTrue(any(why.startswith("contradiction: ") for _t, why in report.rejected),
+                                    (context, report.rejected))
+                    self.assert_hidden(report, s, (added,) if added else (), context)
+                    kept += f"is learning {unrelated}" in texts
+                    checked += 1
+        # 17 cases the third round's tests pass and 84 from its grammar, each side, each of five filters
+        self.assertEqual((checked, kept), (1010, 1010))
 
 
 # ----------------------------------------------------------------- recall --
