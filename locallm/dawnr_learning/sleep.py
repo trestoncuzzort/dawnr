@@ -546,12 +546,15 @@ def replay_and_probe(path: Path, n_probe: int, seed: int) -> tuple[list[dict], l
 
 def sleep_person(store, model_dir: Path, *, cfg: SleepConfig | None = None, replay: Path | None = None,
                  guard_text: Path | None = None, split: Path | None = None, device: str | None = None,
-                 guard_chars: int = 400_000, behavior_prompts: int = 8, log=print) -> dict:
+                 guard_chars: int = 400_000, behavior_prompts: int = 24, log=print) -> dict:
     """One sleep for one person from files: load the base, gather and gate the examples, train, guard, save.
 
     With `replay` (the base's chat_data.py conversations) the behaviour guard
     asks `behavior_prompts` of its training-side prompts, which are then kept
-    out of the replay rows."""
+    out of the replay rows; without it, the person's own validation examples.
+    Twenty-four, not eight: arm A's 8-prompt guard missed an adapter that halved
+    the correct held-out answers (DAWNR-LEARNING.md, section 7). The person's
+    style profile is refreshed at the end of every sleep."""
     import torch  # noqa: F401
     from checkpoint import load_checkpoint
     from train import pick_device
@@ -603,6 +606,14 @@ def sleep_person(store, model_dir: Path, *, cfg: SleepConfig | None = None, repl
         pool, probe = replay_and_probe(replay, behavior_prompts, cfg.seed)
         replay_rows = Rows(tokenizer, pool, block) if cfg.replay_frac > 0 else None
         behavior = BehaviorGuard(probe) if probe else None
+        record["behavior_prompts_from"] = "the base's training-side conversations"
+    elif val_ex:
+        # no base conversations on this machine: the guard asks the person's own held-out prompts (their
+        # validation examples, never trained on in this sleep), so dawnr must not get worse at their own tasks
+        prompts = [next(m["content"] for m in reversed(e["messages"][:-1]) if m.get("role") == "user")
+                   for e in val_ex]
+        behavior = BehaviorGuard([p for p in prompts if isinstance(p, str)][:behavior_prompts])
+        record["behavior_prompts_from"] = "the person's own validation examples"
     guard = None
     if guard_text is not None:
         with Path(guard_text).open(encoding="utf-8") as f:
@@ -622,6 +633,11 @@ def sleep_person(store, model_dir: Path, *, cfg: SleepConfig | None = None, repl
         record["manifest"] = adapters.save_adapter(state, directory, manifest, cfg.max_adapter_bytes, fisher=fisher)
         record["result"] = "saved"
     remove_lora(model)
+    try:                                              # the no-weights learner, refreshed at every sleep
+        from . import style_profile
+        record["profile"] = style_profile.refresh(store)
+    except Exception as e:                            # noqa: BLE001  (recorded, never silent)
+        record["profile"] = {"error": f"{type(e).__name__}: {e}"}
     sleeps = store.dir / "sleeps"
     sleeps.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
