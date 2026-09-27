@@ -615,6 +615,29 @@ reproduction and the one item raised that was not a row-51 gap (`{:verify false}
 method's own declaration never reaches `classify`; `lift_resolve.py` refuses it first, a
 pre-existing narrowing outside this diff).
 
+### 15. Datatype refusals named by what they touch (2026-09-27, lifter)
+
+**Refused: 78 methods `datatype` and 56 files `parse:datatype`** on the 1886
+staged files. Read at the source, 42 of the 78 touched no datatype: `.0`/`.1`
+on an element of a `seq<(int, int)>`, `Length0`/`Length1` on an `array2`,
+`.Floor` on a real, `type` synonyms, members of imported modules. Row 48
+names each by what it is and names a real datatype use by the shape of the
+file's declarations, read from the skipped declaration's tokens:
+`datatype-enum`, `-record`, `-sum`, `-real`, `-generic`, `-recursive`; the
+parser splits `match` by its first case pattern into `match-literal` and
+`datatype`. **Measured** (re-lift of the 78): 18 `seq-of-pair`, 17
+`datatype-real`, 9 `function-result`, 8 `type-decl`, 8 `datatype-record`, 5
+`tuple-projection`, 4 `datatype-generic`, 3 `array2`, 2 `datatype-sum`, 1
+each `datatype-enum`, `set`, `opaque-type`, `real`; 0 lift. Of the 56 files,
+41 match on constructors and 15 on literals (12 int, 2 char, 1 string). The
+reach of a non-recursive datatype without reals or type parameters is
+therefore 11 methods and at most 8 files, against a declaration form in
+seven kernels and twin moves over constructors ("The features ahead: 10.
+Datatypes"); it was not built this round, and the numbers say what to build
+first instead: `match-literal` as an if-chain (7 int matches with a `_`
+default lift exactly) and a record of ints as an n-ary pair (8 methods).
+Tests: `t/test_lift_datatypes.py` (7).
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
@@ -663,6 +686,10 @@ Candidates: Dafny `datatype`, Rust `enum`, OCaml/Haskell variants, Lean
 non-recursive, then recursive, algebraic datatypes with `match`, Dafny's
 syntax. Cost: a declaration form in all seven kernels (Frama-C and SPARK
 through records with discriminants), twin moves over constructors.
+Measured reach (Done 15, 2026-09-27): a non-recursive datatype without
+reals or type parameters unlocks 11 methods and at most 8 files of the
+staged corpora; 17 of the datatype methods carry a real field and 4 a type
+parameter, so those two gaps come first.
 
 ### 11. Higher-order functions
 

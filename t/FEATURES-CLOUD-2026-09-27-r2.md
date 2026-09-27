@@ -80,7 +80,7 @@ changes nothing else). Every commit cites the design it copies or says
 | B2 return-not-assigned-on-all-paths | Done 12, row 45 | lifter: the body opens with the return type's default and the check stage runs `dafny verify --filter-symbol M` on the source method (`verify-source`), refusing `return-default-unverified` unless dafny's own definite-assignment check accepts it; `char` returns refuse `return-default-char` | none |
 | B3 zero-returns | Done 10, row 47 | lifter: the bare name is retired for why decision 22's shape did not apply: a named mutation issue stands alone, a `modifies` without an index assignment refuses `array-mutation` (`modifies-via-call` or `modifies-no-index-assign`), a method with neither return nor `modifies` refuses `lemma-shaped` | none |
 | B4 finite sets | Done 11, SPEC.md "Finite sets (v1)" | the type `set` and six total operations (display, `in`, `card`, `union`, `inter`, `diff`), the notation, check_wf, interp, nine probes, two committed tasks; lowered in dafny, verus, fstar, rocq; lean, framac, spark abstain by name | 4 lower, 3 abstain |
-| B5 datatypes | not started | | |
+| B5 datatypes | Done 15, row 48 | lifter: the blanket `datatype` refusal is split by what the method touches (`seq-of-pair`, `tuple-projection`, `array2`, `real`, `type-decl`, `opaque-type`, `member-access`) and a real datatype use is named by the shape of the file's declarations (`datatype-enum`, `-record`, `-sum`, `-real`, `-generic`, `-recursive`), read from the skipped declaration's tokens; the parser names a `match` on a literal `match-literal`; no t datatype built (measured reach: 11 methods, at most 8 files) | none |
 
 The measurement of B2 changed a belief written in `t/LIFTER-DESIGN.md`
 section 4.7: Dafny does not "accept such a method with an unspecified
@@ -137,14 +137,21 @@ with the check stage on for the methods that lifted.
 | B2 return-not-assigned-on-all-paths | 69 | 8 | 4 | 1 | 61 `assume` (specification stubs, foreseen by the track's table); 4 refuse elsewhere (`array`, `unbounded-quantifier`, `seq-typing`, `array-mutation`); of the 4 that lift, dafny accepts all four sources (`verify-source` exit 0), 1 checks (ChooseOdd), 3 fail lemmas unrelated to the default (`L_inv_1` twice, a closure function's well-formedness once) |
 | B3 zero-returns | 39 | 39 (every method now carries a name) | 0 | 0 | 34 `array-mutation` (23 of them the DJ family writing two arrays; 6 `modifies-via-call`; 5 `modifies-no-index-assign`), 4 `lemma-shaped`, 1 `array` |
 | B4 set | 77 | 0 (no lifter mapping yet) | 0 | 0 | 39 comprehensions, 30 displays, 8 typed names |
+| B5 datatype | 78 methods, 56 files | 78 (every method now carries a name); 56 (every file) | 0 | 0 | methods: 18 `seq-of-pair`, 17 `datatype-real`, 9 `function-result`, 8 `type-decl`, 8 `datatype-record`, 5 `tuple-projection`, 4 `datatype-generic`, 3 `array2`, 2 `datatype-sum`, 1 each `datatype-enum`, `set`, `opaque-type`, `real`; files: 41 `datatype` (constructor patterns), 15 `match-literal` (12 int, 7 with a `_` default; 2 char; 1 string) |
 
-Two of the four buckets were, on measurement, buckets of names rather than
-of liftable programs: nothing in `nested-seq-other` is a t value, and
+Three of the five buckets were, on measurement, buckets of names rather
+than of liftable programs: nothing in `nested-seq-other` is a t value,
 nothing in `zero-returns` is a task under SPEC.md's own rule for a method
-with no return (its mutated array is the return, or it is a lemma). What
-the work bought there is a census that ranks the real gaps: reals (84 more
-than the `real` bucket showed), datatypes (20 more), a pair-of-seqs return
-for the 23 two-array methods, a range analysis for `(lit + e) as char`.
+with no return (its mutated array is the return, or it is a lemma), and 42
+of the 78 `datatype` methods touch no datatype (26 of them project a pair
+out of a sequence element). What the work bought there is a census that
+ranks the real gaps: reals (84 more than the `real` bucket showed, plus 17
+real-valued datatypes), a seq of pairs (18 + 1 methods), a pair-of-seqs
+return for the 23 two-array methods, `match` on an int as an if-chain (7
+files with a `_` default), a record of ints as an n-ary pair (8 methods), a
+range analysis for `(lit + e) as char`. A t datatype proper, non-recursive
+and without reals or type parameters, would reach 11 methods and at most 8
+files; that is why it was named and not built.
 
 ## Task A: the 2026-09-27 features re-lift, graded
 
@@ -187,8 +194,15 @@ adds the table.
 - **`function-result`, 305 methods**, is the binding refusal of the census
   and is being built elsewhere (`feat/seq-spec-fun`); this branch did not
   touch it, as instructed.
-- **Datatypes (B5)** were not started: 73 methods and 56 parser-refused
-  files remain, the largest untouched bucket after `function-result`.
+- **A t datatype (B5)** was measured and not built: after row 48's names,
+  a non-recursive datatype without reals or type parameters reaches 11
+  methods (8 `datatype-record`, 2 `-sum`, 1 `-enum`) and at most 8 of the
+  56 `match` files, against a declaration form in seven kernels and twin
+  moves over constructors. 17 datatype methods carry a real field and 4 a
+  type parameter; 41 of the 56 files match on constructors. The two cheaper
+  levers the census exposed are `match-literal` on an int with a `_`
+  default as an if-chain (7 files, an exact rewrite) and a record of ints
+  as an n-ary pair (t's pair covers two fields already).
 - **The differential arm** still needs dotnet; `dafny run --target:py`
   works on this machine (measured while checking Dafny's auto-init
   defaults: 0, false, [], "", 'D' for char) and would give the check stage
