@@ -42,9 +42,11 @@ so far" below is also this module's own confirmation of that).
 Tests are flat in `locallm/` (this project's convention for every subpackage, see
 `dawnr_harness`'s own tests): `test_dawnr_interp_sae.py`,
 `test_dawnr_interp_activations.py`, `test_dawnr_interp_spec_probe.py`,
-`test_dawnr_interp_browser.py`. All CPU, all seconds; `test_dawnr_interp_sae.py`
-also checks the one property this whole recipe exists for -- that training recovers
-a small planted dictionary from data generated to need one.
+`test_dawnr_interp_browser.py` test the four pieces each on their own, and
+`test_dawnr_interp_run_sae.py` runs the command line itself end to end against a
+tiny synthetic checkpoint. All CPU, all seconds; `test_dawnr_interp_sae.py` also
+checks the one property this whole recipe exists for -- that training recovers a
+small planted dictionary from data generated to need one.
 
 ## What has been measured so far (2026-09-27)
 
