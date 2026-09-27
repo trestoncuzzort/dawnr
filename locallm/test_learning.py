@@ -239,6 +239,14 @@ class Persons(unittest.TestCase):
         self.assertIn("var k1: int := 0\n", k)                                # no semicolons
         self.assertNotIn(";", k)
 
+    def test_a_local_that_shadows_a_parameter_is_never_renamed(self):
+        import surface
+        shadow = PROGRAM.replace("var i_v: int := 0;", "var n: int := 0;").replace("i_v", "n")
+        for naming in P.NAMINGS:
+            task = P.rename_locals(surface.parse(shadow), naming)
+            self.assertEqual(P.locals_of(task), ["n"], naming)
+            self.assertEqual(surface.canon(task), surface.canon(surface.parse(shadow)), naming)
+
     def test_formatting_keeps_the_tree_and_if_form_round_trips(self):
         import surface
         cy = P.restyle_program(BRANCHY, P.PERSONS["cy"])
@@ -685,6 +693,11 @@ class SleepPerson(unittest.TestCase):
             self.assertEqual(record["result"], "saved", record.get("result"))
             self.assertEqual(record["rows"]["replay_pool"], 2)                 # two prompts went to the guard
             self.assertEqual(record["behavior"]["asked"], 2)
+            self.assertEqual(record["profile"]["inferred"]["naming"]["value"], "k-numbered")   # refreshed too
+            alone = S.sleep_person(s, d, cfg=cfg, guard_text=guard, split=SPLIT, device="cpu", guard_chars=2000,
+                                   log=None)                                    # no base conversations here
+            self.assertEqual(alone["behavior_prompts_from"], "the person's own validation examples")
+            self.assertEqual(alone["behavior"]["asked"], alone["rows"]["person_val"])
             identity = A.base_identity(d)
             self.assertTrue(A.status(s, identity)["fresh"])
             self.assertEqual(len(list((s.dir / "sleeps").glob("sleep-*.json"))), 1)
