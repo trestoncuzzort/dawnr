@@ -280,7 +280,10 @@ class Emit(unittest.TestCase):
             manifest = (out / "grade" / "MANIFEST.tsv").read_text(encoding="utf-8").splitlines()
             self.assertEqual(len(manifest) - 1, report["twins"])
             # A program with a `timeout` column is not verified in all seven, so it is not a source.
-            self.assertNotIn("min_max", {l.split("\t")[0] for l in index[1:]})
+            # (count_vowels since 2026-09-27: the committed table's regrade on the desktop read
+            # min_max's Rocq cell verified / refuted, so min_max is a source now; count_vowels'
+            # row still carries a timeout in spark and fstar.)
+            self.assertNotIn("count_vowels", {l.split("\t")[0] for l in index[1:]})
 
     def test_refusal_is_loud_without_skip_refused(self):
         with tempfile.TemporaryDirectory() as d:
