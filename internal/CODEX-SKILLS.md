@@ -1,14 +1,14 @@
 # Skills and agents pulled from the lab workstation
 
-The full text of everything indexed here lives in `/home/t/lab-pull/claude`: 145 skills under
-`/home/t/lab-pull/claude/skills/<name>/SKILL.md`, each with its bundled references and scripts beside it, and 33
-agent definitions at `/home/t/lab-pull/claude/agents/<name>.md`. That is 1,172 files, about 18 MB.
+The full text of everything indexed here lives in `~/lab-pull/claude`: 145 skills under
+`~/lab-pull/claude/skills/<name>/SKILL.md`, each with its bundled references and scripts beside it, and 33
+agent definitions at `~/lab-pull/claude/agents/<name>.md`. That is 1,172 files, about 18 MB.
 
 They were pulled from the lab workstation on 2026-09-19. They are third-party material. Each carries its own licence
 and its own author: 63 of the 145 skills declare a licence in their frontmatter (MIT, Apache-2.0, BSD-3-Clause,
 CC BY-NC-SA 4.0, and four marked proprietary with a `LICENSE.txt` beside the skill) and the other 82 declare
 none. So they are indexed here rather than copied into this repository. Read them where they sit. Nothing under
-`/home/t/lab-pull/claude` is changed by this repository, and nothing from it is redistributed here.
+`~/lab-pull/claude` is changed by this repository, and nothing from it is redistributed here.
 
 To hand one to another agent, give it the path. A skill is its whole directory, and `SKILL.md` names the reference
 files it expects to find alongside itself, so pass the directory or the `SKILL.md` path, not the description below.
