@@ -449,7 +449,8 @@ def _closure_fn_kinds(method: MethodDecl, closure: tuple[Decl, ...]) -> dict[str
 
 
 def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
-                    method_kinds: Optional[dict] = None) -> dict[str, str]:
+                    method_kinds: Optional[dict] = None,
+                    multi_kinds: Optional[dict] = None) -> dict[str, str]:
     """Name -> `int`/`bool`/`seq` for rows 25-27's own questions: every
     parameter and the one return by declared type (the method's own and
     every closure function's -- a `+`/slice/literal can sit inside a
@@ -497,7 +498,16 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
     for root in [method] + list(closure):
         for n in walk(root):
             if isinstance(n, VarDeclStmt):
-                if n.init:
+                if (n.init and len(n.init) == 1 and len(n.names) >= 2 and multi_kinds
+                        and isinstance(n.init[0], Call) and isinstance(n.init[0].fn, Ident)
+                        and n.init[0].fn.name in multi_kinds):
+                    # Row 41 (2026-09-27): `var a, b := M(x);` of a two-return
+                    # method types each name from M's own out-parameters.
+                    for nm, k in zip(n.names, multi_kinds[n.init[0].fn.name]):
+                        k = _declared_kind(nm.type) or k
+                        if k is not None:
+                            env[nm.name] = k
+                elif n.init:
                     for nm, rhs in zip(n.names, n.init):
                         k = _declared_kind(nm.type)
                         if k is None and isinstance(rhs, Expr):
@@ -2208,24 +2218,42 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
         if bad_a is not None or bad_b is not None:
             bad_name = ret_a.name if bad_a is not None else ret_b.name
             issues.append((method.line, "multi-return-nested", bad_name))
-        elif method.body is not None and any(
-                isinstance(n, Assign) and len(n.targets) != len(n.values)
-                for n in walk(method.body)):
-            # A destructuring assign (`a, b := M(x);`, ONE value for TWO
-            # targets, Dafny's own multi-return call-assignment sugar)
-            # is not a shape `lift_rewrite._lift_stmt`'s general
-            # multi-target Assign handling maps (it `zip`s targets
-            # against values pairwise and would silently drop `b`'s
-            # assignment) -- refused rather than mis-lifted; the only
-            # way past every OTHER refusal (a call to a different
-            # method already refuses `multi-method`/`calls-other-
-            # method` elsewhere) is a SELF-recursive multi-return call,
-            # absent from the corpus population this row measured.
-            issues.append((method.line, "multi-return-nested", "destructuring-assign"))
         else:
             pair_returns = (ret_a, ret_b)
     elif len(method.returns) > 1:
         issues.append((method.line, "multi-return-arity", method.name or "?"))
+
+    # A destructuring assign or declaration (`a, b := M(x);`, `var a, b :=
+    # M(x);`: one value for two targets, Dafny's multi-return call sugar,
+    # Reference Manual 8.5.2) lifts when the value is a call of another
+    # two-return method (t/FEATURES-TRACK.md feature 6, 2026-09-27; decided
+    # by `_method_calls` below, row 41). Any other shape -- a self-recursive
+    # multi-return call, three or more targets, a target that is not a name
+    # -- is not one `lift_rewrite._lift_stmt` maps (its multi-target Assign
+    # zips targets against values pairwise and would silently drop an
+    # assignment), so it is refused rather than mis-lifted. Before feature 6
+    # this refused every two-return method with any destructuring assign.
+    if method.body is not None:
+        # other methods by out-parameter count; a destructuring call of one
+        # with as many targets as out-parameters is `_method_calls`'s to
+        # decide (two lift, three or more refuse `method-call-multi-return`)
+        other_arity = {d.name: len(d.returns) for d in module.decls
+                       if isinstance(d, MethodDecl) and d.name and d.name != method.name}
+
+        def _call_of_other(v, n_targets: int) -> bool:
+            return (isinstance(v, Call) and isinstance(v.fn, Ident)
+                    and other_arity.get(v.fn.name) == n_targets)
+
+        for n in walk(method.body):
+            if isinstance(n, Assign) and len(n.targets) != len(n.values):
+                ok = (len(n.values) == 1 and all(t.kind == "name" for t in n.targets)
+                      and _call_of_other(n.values[0], len(n.targets)))
+                if not ok:
+                    issues.append((n.line, "multi-return-nested", "destructuring-assign"))
+            elif isinstance(n, VarDeclStmt) and n.init and len(n.names) != len(n.init):
+                ok = len(n.init) == 1 and _call_of_other(n.init[0], len(n.names))
+                if not ok:
+                    issues.append((n.line, "multi-return-nested", "destructuring-assign"))
 
     ret_param = method.returns[0] if len(method.returns) == 1 else None
 
@@ -2319,7 +2347,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # parameter, a seq local/parameter/return, a slice-of-a-slice) now
     # lifts the same way a plain seq does, per SPEC.md's own note that
     # `a[..]` on an array parameter "is the parameter itself, unchanged".
-    kind_env = _build_kind_env(method, closure, _method_return_kinds(module))
+    kind_env = _build_kind_env(method, closure, _method_return_kinds(module),
+                               _method_return_kind_lists(module))
     char_names, char_seq_names = _build_char_names(method, closure)
     mutated_array_name = array_mutation.name if array_mutation is not None else None
     for root in scope_roots:
@@ -2664,6 +2693,15 @@ def _method_return_kinds(module: Module) -> dict[str, str]:
     return kinds
 
 
+def _method_return_kind_lists(module: Module) -> dict[str, list]:
+    """dafny method name -> the kinds of its out-parameters, in order, for
+    every method with two or more (row 41: `var a, b := M(x);` types `a` and
+    `b` from them); a kind `expr_kind` does not know is None in its slot."""
+    return {d.name: [_declared_kind(r.type) for r in d.returns]
+            for d in module.decls
+            if isinstance(d, MethodDecl) and d.name and len(d.returns) >= 2}
+
+
 def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
                   ) -> tuple[list, list[tuple[int, str, str]]]:
     """Row 37 (2026-09-26, SPEC.md "Methods (v1)"): every call of ANOTHER
@@ -2699,16 +2737,26 @@ def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
                 and n.fn.name in by_name and n.fn.name != method.name)
 
     whole_rhs: set[int] = set()
+    # Row 41 (t/FEATURES-TRACK.md feature 6, 2026-09-27): `a, b := M(args);`
+    # and `var a, b := M(args);`, Dafny's call of a two-out-parameter method
+    # (Reference Manual 8.5.2: "assigned to as many left-hand sides as it
+    # has out-parameters"), keyed by the number of targets the call must
+    # match; `lift_rewrite` binds the callee's pair return to a fresh local
+    # and projects it (`p.0`, `p.1`) into the two names.
+    arity_at: dict[int, int] = {}
     for s in walk(method.body):
         rhs = None
-        if (isinstance(s, Assign) and len(s.targets) == 1 and len(s.values) == 1
-                and s.targets[0].kind == "name"):
+        if (isinstance(s, Assign) and len(s.values) == 1
+                and all(t.kind == "name" for t in s.targets) and 1 <= len(s.targets) <= 2):
             rhs = s.values[0]
+            n_targets = len(s.targets)
         elif (isinstance(s, VarDeclStmt) and not s.ghost and s.init
-                and len(s.names) == 1 and len(s.init) == 1):
+                and len(s.init) == 1 and 1 <= len(s.names) <= 2):
             rhs = s.init[0]
+            n_targets = len(s.names)
         if rhs is not None and is_other_call(rhs):
             whole_rhs.add(id(rhs))
+            arity_at[id(rhs)] = n_targets
 
     seen: set[str] = set()
     for n in walk(method.body):
@@ -2722,7 +2770,7 @@ def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
         if len(callee.returns) == 0:
             issues.append((n.line, "method-call-no-return", name))
             continue
-        if len(callee.returns) > 1:
+        if len(callee.returns) > 2:
             issues.append((n.line, "method-call-multi-return", name))
             continue
         if callee.type_params:
@@ -2730,6 +2778,13 @@ def _method_calls(module: Module, method: MethodDecl, stack: tuple, memo: dict
             continue
         if id(n) not in whole_rhs or any(is_other_call(x) for a in n.args for x in walk(a)):
             issues.append((n.line, "method-call-position", name))
+            continue
+        if arity_at.get(id(n)) != len(callee.returns):
+            # `x := Two(a);` (one name for two out-parameters) is a Dafny
+            # type error; the source verified, so this is a shape the
+            # parser read but Dafny never accepts. Refused by the call's
+            # own name for completeness.
+            issues.append((n.line, "method-call-multi-return", name))
             continue
         if name in stack:
             issues.append((n.line, "method-mutual-recursion", name))
