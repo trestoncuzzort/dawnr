@@ -50,8 +50,11 @@ has landed. Two released corpora of verified Dafny programs (vericoding-benchmar
 HumanEval-Dafny) were lifted into t, checked for equivalence with their sources, and graded in
 all seven kernels: 108 are clean in all seven and pass every contamination gate, so the proved
 corpus of lifted and committed documents goes from 194 to 302 documents (66,569 to 128,793
-characters; [`t/LIFT-2026-09-26.md`](t/LIFT-2026-09-26.md)). The lift's twin refusals re-decided
-on drawn inputs, and the files it refused for let expressions, are being graded next.
+characters; [`t/LIFT-2026-09-26.md`](t/LIFT-2026-09-26.md)). With the recovered twins, the
+let-expression files, a corrected equivalence checker, and new Verus, Lean and C/ACSL front ends
+([`t/LIFT-VERICODING-VERUS-LEAN.md`](t/LIFT-VERICODING-VERUS-LEAN.md),
+[`t/LIFT-ACSL-BY-EXAMPLE.md`](t/LIFT-ACSL-BY-EXAMPLE.md)) it is **358 documents (171,182
+characters)**, every one clean in all seven kernels and past every contamination gate.
 
 A lab worktree from 2026-09-22 holds a comparison rig for a pinned BF16
 [Phi-4-mini-instruct](https://huggingface.co/microsoft/Phi-4-mini-instruct)
