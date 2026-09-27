@@ -72,6 +72,17 @@ exclusion before the count means anything.
   code idioms) rather than problem-specific text, and tighten the n-gram extraction (strip pure
   numeric/punctuation n-grams, as GPT-3's own filtering notes) before reporting a document count.
 
+## What actually happened
+
+**Tokenizer: the prediction was wrong.** Measured 2.9256 and 2.9233 chars/token on two
+independent 50M-character FineWeb-Edu samples and 2.7302 on TinyStories -- all *above*
+the 2.4994-2.5224 code-side baseline, not "close to or below" it as predicted. The
+measured value also fell into a gap the decision rule's bins did not cover (2.9-3.0,
+between "extend" and "keep"); resolved as **keep**, since English is compressed at least
+as well as the code the tokenizer was trained on, the opposite of what would justify
+extending it. Full numbers and reasoning: `internal/PRETRAIN-DAWNR-GENERAL.md`, section
+5.
+
 ## What these two predictions are for
 
 Both numbers get written into `internal/PRETRAIN-DAWNR-GENERAL.md` next to what was actually

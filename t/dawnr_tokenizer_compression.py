@@ -29,10 +29,14 @@ Usage:
 """
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
-LOCALLM = Path(__file__).resolve().parent.parent / "locallm"
+# Default: this script's own repo layout (t/ beside locallm/). --locallm-dir
+# overrides it for a standalone copy run somewhere else (e.g. a lab checkout
+# path), so the script does not have to live inside a full checkout to run.
+LOCALLM = Path(os.environ.get("DAWNR_LOCALLM_DIR", str(Path(__file__).resolve().parent.parent / "locallm")))
 sys.path.insert(0, str(LOCALLM))
 
 
