@@ -219,7 +219,7 @@ registry call). It stops at the first of:
 
 Predictions in `locallm/PREDICT-agent-2026-09-27.md`, committed before the code;
 the numbers from `DAWNR_AGENT_MEASURE=<file> python -m unittest
-locallm/test_dawnr_agent.py` on the desktop, 2026-09-27 (74 tests, 2 skipped by
+locallm/test_dawnr_agent.py` on the desktop, 2026-09-27 (75 tests, 2 skipped by
 design, 6.6 s on Python 3.14; the same pass on Python 3.10).
 
 | prediction | the number that would falsify it | measured |

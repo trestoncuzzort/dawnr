@@ -911,6 +911,16 @@ class Plans(Env):
         self.assertEqual(out.stopped, "step 1 refused")
         self.assertFalse((self.proj / "two.txt").exists())
 
+    def test_a_dry_run_that_breaks_refuses_the_step_rather_than_run_it_unseen(self):
+        h, a = self.build(permissions={"fs_write": "allow"})
+        plan = self.plan(("fs_write", {"path": "project/x.txt", "content": "x"}))
+        with mock.patch.object(a, "preview", side_effect=RuntimeError("a bug in a preview")):
+            dry = preview_plan(a, h, plan, h.session())
+        self.assertTrue(dry.refused)
+        out = execute(h, dry, approved=True, session=h.session())
+        self.assertEqual(out.steps_run, 0)
+        self.assertFalse((self.proj / "x.txt").exists())
+
     def test_a_refused_step_means_nothing_runs_and_the_person_can_refuse(self):
         h, a = self.build(permissions={"fs_write": "allow"})
         plan = self.plan(("fs_write", {"path": "project/one.txt", "content": "1\n"}),
