@@ -8,6 +8,9 @@ where each one stands.
 
 ## The north star: dawnr, a model you could trust on a spaceship
 
+**dawnr is the track this project is on** (the operator, 2026-09-26). Work is
+chosen by which row of the dawnr table it moves.
+
 A model trained so well that it could do its job on a spaceship: no network,
 no one to ask, small hardware, and a mistake that cannot be taken back. That
 sets the bar for everything below.
