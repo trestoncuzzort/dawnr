@@ -83,6 +83,13 @@ jobs:
           fi
 
       - name: t/ unit tests that need neither provers nor torch
+        # t/ is the research pipeline and runs on POSIX by design: its interpreter
+        # timeouts are SIGALRM/setitimer, its stall checks read /proc, its verifiers
+        # kill process groups, and its data queue is bash (t/RUN-ON-LINUX.md: native
+        # Windows is not a t platform). On windows-latest at 05e8e1ae that was 132
+        # failures and 6 errors across 19 files, all of those kinds; so this step runs
+        # on Linux and macOS, and the Windows job proves the product suites above.
+        if: runner.os != 'Windows'
         working-directory: t
         run: |
           # Each excluded test was run and read individually (not guessed)
