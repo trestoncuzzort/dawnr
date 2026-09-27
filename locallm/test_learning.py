@@ -269,7 +269,7 @@ class Profile(unittest.TestCase):
         return out
 
     def test_infers_each_persons_mechanical_taste_and_applies_it(self):
-        from dawnr_learning import profile as PR
+        from dawnr_learning import style_profile as PR
         for name in ("ada", "bo", "cy", "di"):
             person = P.PERSONS[name]
             prof = {"inferred": PR.infer(self.examples(person)), "pinned": {}}
@@ -287,7 +287,7 @@ class Profile(unittest.TestCase):
             self.assertEqual(P.style_report(person, shown)["features"]["naming"], 1.0)
 
     def test_undecided_until_enough_agreeing_votes_and_pins_win(self):
-        from dawnr_learning import profile as PR
+        from dawnr_learning import style_profile as PR
         two = PR.infer(self.examples(P.PERSONS["bo"], n=2))
         self.assertEqual(two, {})                                     # 2 votes < MIN_VOTES
         mixed = self.examples(P.PERSONS["bo"], 2) + self.examples(P.PERSONS["di"], 2)
@@ -300,7 +300,7 @@ class Profile(unittest.TestCase):
 
     def test_an_ill_formed_answer_is_shown_as_written(self):
         """A local that shadows a parameter is ill formed; renaming it would decide which name each use meant."""
-        from dawnr_learning import profile as PR
+        from dawnr_learning import style_profile as PR
         shadow = PROGRAM.replace("var i_v: int := 0;", "var n: int := 0;").replace("i_v", "n")
         verdict = F.check_target([{"role": "user", "content": USER}], shadow)
         self.assertIn("well formed: no", verdict["verdict"])
@@ -308,7 +308,7 @@ class Profile(unittest.TestCase):
         self.assertEqual(PR.apply(prof, shadow, USER), shadow)
 
     def test_refresh_reads_the_store_and_keeps_pins(self):
-        from dawnr_learning import profile as PR
+        from dawnr_learning import style_profile as PR
         with tempfile.TemporaryDirectory() as tmp:
             s = F.PersonStore("cy", tmp)
             for ex in self.examples(P.PERSONS["cy"]):

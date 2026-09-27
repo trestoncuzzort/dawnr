@@ -140,7 +140,7 @@ def main(argv=None) -> int:
             return 2
         print(f"erased {store.erase_all()} file(s) kept about {store.person}")
     elif a.cmd == "profile":
-        from dawnr_learning import profile as PR
+        from dawnr_learning import style_profile as PR
         prof = PR.refresh(store)
         for item in a.pin:
             dim, _, raw = item.partition("=")

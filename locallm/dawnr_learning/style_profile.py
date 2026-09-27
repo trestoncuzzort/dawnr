@@ -1,4 +1,4 @@
-"""profile.py: the mechanical part of a person's taste, inferred from their own edits, visible and editable.
+"""style_profile.py: the mechanical part of a person's taste, inferred from their own edits, visible and editable.
 
 The adapter (sleep.py) can learn anything a person's examples show, but a
 small model pays for it: the pilot of 2026-09-27 (DAWNR-LEARNING.md) fitted a
