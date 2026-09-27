@@ -153,7 +153,11 @@ class Hooks:
         if not isinstance(h, dict):
             raise HookConfigError(f"{event}: a handler is an object")
         kind = h.get("type")
-        timeout = float(h.get("timeout", DEFAULT_TIMEOUT))
+        raw_timeout = h.get("timeout", DEFAULT_TIMEOUT)
+        try:
+            timeout = float(raw_timeout)
+        except (TypeError, ValueError):
+            raise HookConfigError(f"{event}: \"timeout\" must be a number, not {raw_timeout!r}") from None
         if kind == "builtin":
             if h.get("name") not in BUILTINS:
                 raise HookConfigError(f"{event}: no builtin hook {h.get('name')!r} (have {', '.join(sorted(BUILTINS))})")
