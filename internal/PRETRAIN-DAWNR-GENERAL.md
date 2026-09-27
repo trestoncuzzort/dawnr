@@ -296,3 +296,224 @@ aliases were caught by the RL spec-pool gate), the fresh CodeContests confirmati
 Phi comparison, and any later evaluation set. The 53 flagged documents must then be excluded by
 document id at assembly time, with a check that proves it. Until both are done, no English shard is
 training data.
+
+**Both are done; section 7 is the measurement.**
+
+## 7. Widening, reassembly and tokenization (2026-09-27)
+
+### 7.1 Widened protected set and rerun
+
+`t/dawnr_ngram_decontam.py`'s protected set grew from 332 to **13,945**: the same 232 eval + 100
+dev MBPP ids, plus **3 HumanEval ids** `t/loop_filter.decontamination()` already excludes as
+same-task or behavioural duplicates of a held-out problem (`humaneval:13`, `humaneval:23`,
+`humaneval:57` -- read live from the policy, not hardcoded), plus **13,610 CodeContests problems'**
+name+description (13,328 train + 117 valid + 165 test, `nl/data/codecontests_*.jsonl.gz`),
+standing in for the not-yet-frozen confirmation panel held for the Phi comparison
+(`t/freeze_confirmation_panel.py`, `t/v7_panel.py`: unmerged on the `r12-phi-win` worktree, and
+its exact 200 ids depend on that branch's own v7 pool and exposure manifest, so the whole
+candidate pool -- a superset any frozen 200 cannot exceed -- is protected instead of a guess).
+Distinct 13-grams: **4,004,898**, up from 20,858 -- a 192x growth against a 42x growth in
+protected ids, because CodeContests' problem statements run to an average 1,795 characters
+against MBPP's tens to a couple hundred words.
+
+**Prediction (`t/PREDICT-2026-09-27-dawnr-english-widened.md`): 53 to 3,000 flagged documents.
+Result: 6,793 of 12,417,226 (0.054706%, up from 0.000427% at the narrow protected set, a 128x
+increase against a 42x growth in protected ids) -- above the predicted ceiling, a wrong
+prediction the file records as such.**
+Per that file's own decision rule for exceeding 3,000, a sample of the flagged documents was read
+(`~/scratch/dawnr-english/decontam-widened-2026-09-27/examples.jsonl`, 354 recorded: 352
+CodeContests-only, 1 CodeContests+MBPP, 1 MBPP-only) before excluding anything. The pattern is
+the one section 4 already found at the narrow scale, not a new phenomenon: the large majority are
+generic numeric or alphabetic boilerplate several unrelated problems independently share ("x x x
+x x x x x x x x x x", "0 1 2 3 4 5 6 7 8 9 10 11 12", "a b c d e f g h i j k l m") or a famous
+quotation used as contest flavor text and coincidentally discussed on an unrelated page ("or not
+to be that is the question..." -- the matched page is an article *about* the phrase's popularity,
+not about the problem), and a smaller share are genuine problem-statement mirrors: a
+Game-of-Thrones-themed problem ("Sam has been teaching Jon the Game of Stones...") and a
+near-verbatim decimal-conversion statement ("Alexander is learning how to convert numbers from
+the decimal system to any other, however, he doesn't know English letters...") both found
+phrased almost identically on independent pages -- the same tutorial/mirror overlap section 4's
+binary-search example already corroborated, now at CodeContests' larger scale. **Why the
+prediction undercounted:** the estimate weighed CodeContests' 41x more problems and 1,795-average
+characters against FineWeb-Edu's educational-content skew, but did not have a rate for
+competitive-programming text specifically and so guessed low; the 4,004,898 distinct 13-grams (192x
+the narrow set, not the roughly-worked 10-20x implicit in the 3,000 ceiling) is the actual driver.
+Read as intended, not as a broken filter: it is correctly finding both boilerplate and genuine
+overlap, exactly the two categories section 4 already named, and every match is excluded
+regardless of category -- "the filter's job is to keep protected content out, not to adjudicate
+intent" (section 4).
+
+### 7.2 Exclusion by id, with the proof
+
+`t/dawnr_english_corpus.py` (new module) re-reads every shard file itself, independently
+re-deriving each document's id the same way `dawnr_ngram_decontam.py`'s scan functions do (not by
+importing them), and for every file it processes checks two things before trusting either: the
+flagged ids it actually re-encounters in that file exactly equal
+`dawnr_ngram_decontam.py`'s own `flagged_ids.json` entry for the same file, and its own exclusion
+count agrees with `report.json`'s per-file "contaminated" count. Either mismatch raises rather
+than warns. Both checks passed on every file this assembly run processed (`manifest.json`'s
+`proof` key); a drift between the two scripts' id derivations, or a shard file changed on disk
+between the two runs, would have stopped the run instead of silently admitting a flagged document.
+
+### 7.3 Tokenized shards
+
+`t/dawnr_english_corpus.py` tokenizes every kept document with the core's frozen BPE
+(`t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337/tokenizer.json`, the same file section 5
+measured, sha256 confirmed identical across every arm of the r12 sweep) and writes flat uint16
+shard files (nanoGPT's `data/openwebtext/prepare.py` design, `github.com/karpathy/nanoGPT`: safe
+because vocab 8,192 is under 2**16), a document's tokens never split across two shards. Run
+against `~/data/dawnr-english` with `--max-tokens 400000000 --shard-tokens 50000000`:
+
+| | |
+|---|---:|
+| files processed | 1 (`000_00000.parquet` only) |
+| documents scanned | 726,000 |
+| documents excluded (flagged) | 594 |
+| documents kept | 725,406 |
+| kept characters | 3,444,818,965 |
+| total tokens | **1,173,846,939** |
+| chars/token | 2.9346 |
+| shard files written | 24 (23 at 50,000,000 tokens, 1 at 23,980,935) |
+| wall time | 1,069.6 s (~17.8 min, single CPU-bound process) |
+
+**The 594-document exclusion count is an exact, independent match to the decontamination
+report's own per-file count for this file** (section 4/7.1's `report.json`, `000_00000.parquet`:
+594 contaminated of 726,000) -- the proof in 7.2 held on real data, not only in the unit tests.
+
+**Total tokens (1.17B) is far past the requested 400,000,000**, because the budget is only
+checked between whole input files (7.2's proof needs a file finished, not cut off) and this one
+file alone holds more than the entire request. This is not a problem for section 6's pilot: arm
+B's stage 1 needs 300,015,104 tokens (7.4) out of the 1,173,846,939 available, so the trainer's
+`Corpus` (`locallm/data.py`, the same class `train_distributed.py` and `train.py` both use) draws
+its random windows from a slice of one file, comfortably inside a single epoch, with headroom to
+spare -- no second input file was needed and none was opened.
+
+The measured chars/token, 2.9346, sits inside the 2.92-2.93 range section 5 already measured on
+raw FineWeb-Edu (expected: excluding 594 of 726,000 documents from one file cannot move a
+corpus-wide average by a measurable amount) and stays above the code-side baseline
+(2.4994-2.5224) -- a consistency check on the tokenizer and the exclusion pass passing, not a new
+finding. Section 5's "keep the tokenizer as is" stands.
+
+An `--emit-text-corpus` run of the same command also wrote the identical kept, decontaminated
+documents as plain joined text (`pilot-english.txt`, 3.4 GB, `train.py --data`'s format), so the
+assembled corpus is usable with no changes to `locallm/train.py`, `locallm/train_distributed.py`
+or `locallm/data.py`.
+
+### 7.4 Making the pre-registered pilot runnable
+
+Not launched (no GPU training happened for this section, per the machine budget below and this
+track's own scope). What follows is section 6's three arms turned into exact commands against
+today's actual tools, checked against `--help` output and this repository's own r12 sweep command
+(`internal/PRETRAIN-R12-2026-09-25.md`), not assumed to exist.
+
+**Why `train_distributed.py`, not `train.py`, even on one GPU.** `train.py` never resumes and has
+no `--tokenizer-file`: it always fits a fresh BPE from whatever `--data` it is given
+(`data.build_tokenizer` at line 627), which would give arm B and arm C their own new tokenizer
+instead of the core's frozen one section 6 requires ("matching the core exactly, so a difference
+is attributable to data, not shape"). `train_distributed.py --tokenizer-file <path>` copies and
+verifies a frozen tokenizer instead, and runs single-GPU cleanly at `--nproc-per-node=1` (still
+`torch.distributed.run`, just world size 1). Arm B's second stage needs to *continue* a checkpoint
+onto new data with the tokenizer already fixed by `--init`, which is `continue_from_checkpoint.py`
+-- documented elsewhere as "locallm's SFT" (`DAWNR-PIPELINE.md`) and normally paired with
+`--doc-batches` for that use (`t/RUN-NEXT-locallm-r12.md`), but reading the script itself shows
+`--doc-batches` gates only which batching class wraps the always-built `Corpus`
+(`continue_from_checkpoint.py:585,601`): without it, a continued run draws the same random-window
+batches base pretraining does. That is the mode arm B's stage 2 needs -- more pretraining on code,
+not a document-per-row fine-tune -- so `--doc-batches` is deliberately left off here.
+
+**Token accounting, computed once and used for every arm.** Single desktop GPU, no DDP, so tokens
+per optimizer step is just `--batch-size x --block-size` -- 8 x 2048 = **16,384**, a quarter of the
+r12 sweep's 65,536 (that sweep ran 4-way DDP, `--nproc-per-node=4`, so its per-step total was 4x
+one rank's). Matching section 6's token targets on *this* hardware means recomputing steps from
+tokens, not copying the sweep's step counts:
+
+| arm | stage | tokens (target) | steps (tokens / 16,384) |
+|---|---|---:|---:|
+| B | 1: English (pilot, section 2/6) | 300,015,104 | 18,311 |
+| B | 2: code (the r12 recipe's own total token count) | 734,003,200 | 44,800 |
+| C | code only, matched to B's total | 1,034,018,304 | 63,111 (= 18,311 + 44,800) |
+
+Arm A is the current core, unchanged -- nothing to run.
+
+**Machine budget, checked, not assumed (2026-09-27):** the desktop's one RTX 4080 (16 GB) has a
+base-model pretraining job resident; `nvidia-smi` before running is mandatory, and every command
+below goes through `flock ~/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G <cmd>`
+(caps this project's own system-RAM footprint; GPU VRAM is a separate budget the resident job sets
+day to day). While that job holds most of the card, keep a new job's own VRAM small and its
+wall-clock short: run the calibration step first, and if it is tight, add
+`--gradient-checkpointing` (train_distributed.py has it; continue_from_checkpoint.py does not, so
+its own lever is a smaller `--batch-size`, with `--steps` scaled up to hold the token target
+fixed).
+
+**Prerequisite: the code corpus and the frozen tokenizer are lab-only today.** Neither
+`t/out/source-corpus-2026-09-19-v2/train.txt` (153,093,619 bytes) nor
+`t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337/tokenizer.json` exists yet on the desktop
+checkout, only on the lab where the r12 sweep ran; copy both, plus this section's assembled
+`pilot-english.txt`, over before any of the commands below can run.
+
+**Calibration (run this first, per section 6: "batch size and throughput are measured at the
+start of the run itself, not assumed"):**
+
+```
+flock ~/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G \
+  ~/.venv-locallm/bin/python -m torch.distributed.run --standalone --nproc-per-node=1 \
+  locallm/train_distributed.py \
+  --data t/out/dawnr-english-pilot-2026-09-27/pilot-english.txt \
+  --tokenizer-file t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337/tokenizer.json \
+  --architecture gpt --preset core-medium --vocab-size 8192 --block-size 2048 \
+  --n-layer 12 --n-head 12 --n-embd 768 --gradient-checkpointing \
+  --batch-size 8 --grad-accum 1 --dropout 0.0 --lr 0.001 --weight-decay 0.8 --warmup-steps 560 \
+  --steps 20 --seed 1337 --deterministic --bf16 \
+  --out t/out/dawnr-english-pilot-2026-09-27/calibration
+```
+
+Confirms batch size 8 fits in whatever VRAM is actually free and gives a real tokens/s to check
+the 30-minute budget against before committing to a full arm.
+
+**Arm B, stage 1 (English, from random weights):**
+
+```
+flock ~/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G \
+  ~/.venv-locallm/bin/python -m torch.distributed.run --standalone --nproc-per-node=1 \
+  locallm/train_distributed.py \
+  --data t/out/dawnr-english-pilot-2026-09-27/pilot-english.txt \
+  --tokenizer-file t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337/tokenizer.json \
+  --architecture gpt --preset core-medium --vocab-size 8192 --block-size 2048 \
+  --n-layer 12 --n-head 12 --n-embd 768 --gradient-checkpointing \
+  --batch-size 8 --grad-accum 1 --dropout 0.0 --lr 0.001 --weight-decay 0.8 --warmup-steps 560 \
+  --steps 18311 --seed 1337 --deterministic --bf16 \
+  --out t/out/dawnr-english-pilot-2026-09-27/arm-b-stage1-english
+```
+
+**Arm B, stage 2 (continue stage 1's checkpoint onto the existing code corpus):**
+
+```
+flock ~/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G \
+  ~/.venv-locallm/bin/python locallm/continue_from_checkpoint.py \
+  --init t/out/dawnr-english-pilot-2026-09-27/arm-b-stage1-english \
+  --data t/out/source-corpus-2026-09-19-v2/train.txt \
+  --split t/out/loop/split-v5.json \
+  --block-size 2048 --batch-size 8 --lr 0.001 --warmup 560 --dropout 0.0 \
+  --steps 44800 --seed 1337 --deterministic \
+  --out t/out/dawnr-english-pilot-2026-09-27/arm-b-stage2-code
+```
+
+**Arm C (matched total tokens, code only, from random weights):**
+
+```
+flock ~/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G \
+  ~/.venv-locallm/bin/python -m torch.distributed.run --standalone --nproc-per-node=1 \
+  locallm/train_distributed.py \
+  --data t/out/source-corpus-2026-09-19-v2/train.txt \
+  --tokenizer-file t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337/tokenizer.json \
+  --architecture gpt --preset core-medium --vocab-size 8192 --block-size 2048 \
+  --n-layer 12 --n-head 12 --n-embd 768 --gradient-checkpointing \
+  --batch-size 8 --grad-accum 1 --dropout 0.0 --lr 0.001 --weight-decay 0.8 --warmup-steps 560 \
+  --steps 63111 --seed 1337 --deterministic --bf16 \
+  --out t/out/dawnr-english-pilot-2026-09-27/arm-c-matched-code
+```
+
+**Before any of these launch:** a dated prediction note with these exact token/step counts and
+the calibration's measured throughput, committed first -- section 6's own rule, unchanged. This
+section only makes the commands exist and checks them against the tools as they are today; it
+does not pre-register the run itself, and none of the above has been executed.
