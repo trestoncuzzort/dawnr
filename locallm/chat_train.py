@@ -87,6 +87,9 @@ def main(argv=None) -> int:
     ap.add_argument("--harness-tokens", action="store_true",
                     help="add the harness tokens even when no conversation needs them, so a model trained without "
                          "tool conversations has the same ids as one trained with them (a control arm)")
+    ap.add_argument("--gradient-checkpointing", action="store_true",
+                    help="recompute each block's activations in the backward pass (torch.utils.checkpoint, RNG "
+                         "preserved, so dropout masks are the same): less memory, the same batch and gradients")
     a = ap.parse_args(argv)
 
     import torch
@@ -100,7 +103,8 @@ def main(argv=None) -> int:
     torch.manual_seed(a.seed)
     ck = torch.load(a.init / "ckpt.pt", map_location="cpu", weights_only=True)
     ck.pop("optimizer", None)
-    config = GPTConfig(**{**ck["config"], "dropout": a.dropout})
+    config = GPTConfig(**{**ck["config"], "dropout": a.dropout,
+                          **({"gradient_checkpointing": True} if a.gradient_checkpointing else {})})
     model = GPT(config)
     model.load_state_dict(ck["model"])
     tokenizer = load_tokenizer(a.init / "tokenizer.json")
@@ -202,6 +206,8 @@ def main(argv=None) -> int:
             save_state(step)
     metrics.close()
     model.eval()
+    # checkpointing is how the run used memory, not part of the model: the saved config loads as every other arm's
+    model.config.gradient_checkpointing = bool(ck["config"].get("gradient_checkpointing", False))
     torch.save({"model": model.state_dict(), "config": asdict(model.config),
                 "tokenizer_fingerprint": tokenizer_fingerprint(tokenizer),
                 "training": {"stage": "chat", "steps": step}}, a.out / "ckpt.pt")

@@ -244,7 +244,8 @@ def stage_chat(st: Stage, a, init: Path, conversations: Path, steps: int, lr: fl
     run_logged([sys.executable, "chat_train.py", "--init", str(init), "--conversations", str(conversations),
                 "--out", str(out), "--steps", str(steps), "--lr", str(lr), "--batch-size", str(a.chat_batch),
                 "--block-size", str(a.block_size), "--seed", str(a.seed), "--eval-every", str(a.eval_every),
-                "--resume"] + (["--harness-tokens"] if a.harness_tokens else []), st.dir / "log.txt")
+                "--resume"] + (["--harness-tokens"] if a.harness_tokens else [])
+               + (["--gradient-checkpointing"] if a.gradient_checkpointing else []), st.dir / "log.txt")
     run = json.loads((out / "run.json").read_text(encoding="utf-8"))
     ident = run["identities"]
     return {"model": str(out), "initial": run["initial"], "final": run["final"], "seconds": run["seconds"],
@@ -283,6 +284,9 @@ def main(argv=None) -> int:
     ap.add_argument("--harness-tokens", action="store_true",
                     help="give the chat model the harness tokens even when no conversation uses them (a control "
                          "arm evaluated on tool conversations)")
+    ap.add_argument("--gradient-checkpointing", action="store_true",
+                    help="the chat stages recompute activations in the backward pass: less GPU memory, the same "
+                         "batch and gradients (chat_train.py)")
     ap.add_argument("--mid-steps", type=int, default=300)
     ap.add_argument("--mid-lr", type=float, default=3e-4)
     ap.add_argument("--sft-conversations", type=Path, default=None)
@@ -347,7 +351,8 @@ def main(argv=None) -> int:
     mid = step("mid", {"base_ckpt": base_model / "ckpt.pt" if base_model else None, "conversations": conv_file,
                        "steps": a.mid_steps, "lr": a.mid_lr, "batch": a.chat_batch, "block_size": a.block_size,
                        "seed": a.seed, "chat_train": HERE / "chat_train.py", "chat": HERE / "chat.py",
-                       **({"harness_tokens": True} if a.harness_tokens else {})},
+                       **({"harness_tokens": True} if a.harness_tokens else {}),
+                       **({"gradient_checkpointing": True} if a.gradient_checkpointing else {})},
                lambda st: stage_chat(st, a, base_model, conv_file, a.mid_steps, a.mid_lr))
     mid_model = Path(mid["result"]["model"]) if mid.get("result") else None
 
