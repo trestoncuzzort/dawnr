@@ -74,6 +74,14 @@ exclusion before the count means anything.
 
 ## What actually happened
 
+**Decontamination: the prediction held.** 53 of 12,417,226 downloaded documents flagged
+(0.000427%), inside the pre-registered 1-10,000 range. Reading the 53 by hand split them
+into generic numeric/algorithmic boilerplate (~40, the exact phenomenon GPT-3's own
+top-13-gram list warns about, e.g. the Roman-numeral value table) and genuine shared
+problem-statement or solution-idiom phrasing (~10, including a binary-search match that
+independently corroborates an id this project's own decontamination policy already
+excludes). Full breakdown: `internal/PRETRAIN-DAWNR-GENERAL.md`, section 4.
+
 **Tokenizer: the prediction was wrong.** Measured 2.9256 and 2.9233 chars/token on two
 independent 50M-character FineWeb-Edu samples and 2.7302 on TinyStories -- all *above*
 the 2.4994-2.5224 code-side baseline, not "close to or below" it as predicted. The
