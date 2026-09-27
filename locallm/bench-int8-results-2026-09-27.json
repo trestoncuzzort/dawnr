@@ -1,0 +1,77 @@
+{
+  "date": "2026-09-27",
+  "prompt": "task ",
+  "tokens": 200,
+  "repeats": 3,
+  "checkpoint": "t/runs/2026-09-17/home-4080/models/model-r4",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "plain_generate": {
+    "float32": {
+      "seconds_total_median_of_3": 22.945282059998135,
+      "ms_per_token": 114.72641029999068,
+      "weight_bytes": 43505664,
+      "peak_rss_kb_one_process": 109944,
+      "weight_bytes_ratio": 1.0
+    },
+    "quantize": {
+      "seconds_total_median_of_3": 30.43661007900664,
+      "ms_per_token": 152.1830503950332,
+      "weight_bytes": 10962064,
+      "peak_rss_kb_one_process": 81152,
+      "agreement_vs_float32": {
+        "length_compared": 205,
+        "matches": 205,
+        "agreement": 1.0,
+        "first_divergence": 205
+      },
+      "weight_bytes_ratio": 0.25196866320670336
+    },
+    "quantize_kv": {
+      "seconds_total_median_of_3": 23.964550570002757,
+      "ms_per_token": 119.82275285001379,
+      "weight_bytes": 43505664,
+      "peak_rss_kb_one_process": 107416,
+      "agreement_vs_float32": {
+        "length_compared": 205,
+        "matches": 205,
+        "agreement": 1.0,
+        "first_divergence": 205
+      },
+      "weight_bytes_ratio": 1.0
+    },
+    "quantize+quantize_kv": {
+      "seconds_total_median_of_3": 31.08103845399455,
+      "ms_per_token": 155.40519226997276,
+      "weight_bytes": 10962064,
+      "peak_rss_kb_one_process": 77980,
+      "agreement_vs_float32": {
+        "length_compared": 205,
+        "matches": 205,
+        "agreement": 1.0,
+        "first_divergence": 205
+      },
+      "weight_bytes_ratio": 0.25196866320670336
+    }
+  },
+  "torch": {
+    "float32": {
+      "seconds_total_median_of_3": 0.6780629910062999,
+      "ms_per_token": 3.3903149550314993,
+      "linear_weight_bytes": 42593280,
+      "weight_bytes_ratio": 1.0
+    },
+    "quantized": {
+      "seconds_total_median_of_3": 0.8500589660106925,
+      "ms_per_token": 4.250294830053463,
+      "linear_weight_bytes": 10731592,
+      "weight_bytes_ratio": 0.2519550501863205,
+      "modules_quantized": 25,
+      "agreement_vs_float32": {
+        "length_compared": 205,
+        "matches": 205,
+        "agreement": 1.0,
+        "first_divergence": 205
+      }
+    }
+  }
+}
