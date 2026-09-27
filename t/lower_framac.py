@@ -6968,10 +6968,18 @@ def _lemma_text(l: dict, funs: dict) -> str:
                 out += body(c["else"], ind + "  ")
                 out.append(f"{ind}}}")
         return out
-    # inside the ghost function every call is already ghost code, so the
-    # `/*@ ghost ... */` wrapper of a call statement is dropped there
-    lines = [x.replace("/*@ ghost ", "").replace("; */", ";") if "/*@ ghost " in x
-             else x for x in body(l["body"], "    ")]
+    # Inside the ghost function every call is already ghost code, so the
+    # `/*@ ghost ... */` wrapper of a call statement is dropped there, and
+    # an annotation (`at_asserts`' definedness asserts) is written in the
+    # ghost-code form `/@ ... @/`: a `*/` would close the ghost block
+    # (measured: vericoding_DA0484 read malformed).
+    def ghostly(x: str) -> str:
+        if "/*@ ghost " in x:
+            return x.replace("/*@ ghost ", "").replace("; */", ";")
+        if "/*@" in x:
+            return x.replace("/*@", "/@").replace("*/", "@/")
+        return x
+    lines = [ghostly(x) for x in body(l["body"], "    ")]
     return ("/*@ ghost\n  /@\n" + "\n".join(clauses) + "\n  @/\n"
             + f"  void {l['name']}_t({', '.join(cparams) or 'void'}) {{\n"
             + "".join(x + "\n" for x in lines)
