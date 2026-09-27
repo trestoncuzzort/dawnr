@@ -122,10 +122,16 @@ its line changes here.
   graded in all seven kernels, and now Verus, Lean and C/ACSL corpora too.
   *State:* the proved corpus went from 194 documents (66,569 characters) to
   358 on 2026-09-26, and after the Lean, Rocq and Frama-C lowering fixes were
-  regraded over every lifted set, to **431 documents (241,628 characters) clean
-  in all seven kernels** on 2026-09-27, with no document lost. With graded trust
-  (six kernels clean, none contradicting, the gap recorded) it is **515
-  (307,609)**, 84 of them with a gap. Tables: `t/COVERAGE-lifted-*-regrade-2026-09-27.md`.
+  regraded over every lifted set, to 431 documents on 2026-09-27, with no
+  document lost; and after the features track (seven lifter features, lemmas
+  in Rocq, seq-valued spec_funs) was merged and the staged corpora re-lifted
+  and graded the same day, to **454 documents (273,206 characters) clean in
+  all seven kernels**, 140 with an English head. With graded trust (six
+  kernels clean, none contradicting, the gap recorded) it is **552 (361,864)**,
+  98 of them with a gap. Tables: `t/COVERAGE-lifted-*-regrade-2026-09-27.md`
+  and `t/out/COVERAGE-lifted-2026-09-27-features.md` (graded on the desktop at
+  two cells, so its timeouts understate; the same 140 tasks are being graded
+  again on a less constrained machine).
 - **Denoising training.** Corrupt spans of each training document and train
   the model to restore them (fill in the middle, arXiv:2207.14255). *State:*
   measured twice, and the two disagree. From scratch on the 302 proved
