@@ -9832,6 +9832,29 @@ def lower(task: dict, body: list, witness: dict | None = None,
     env = {p["name"]: p["type"] for p in task["params"]}
     env[ret] = rett
 
+    for f in task.get("spec_funs", []):
+        if f["result"] == "seq":
+            # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a named
+            # abstain, SPEC.md's rule for a kernel that cannot state a
+            # construct. This lowering models every seq as a C buffer
+            # (`int *s, integer s_n`, the module docstring's seq value
+            # machinery) and states a spec_fun as an ACSL logic function
+            # over that buffer (`spec_fun_acsl`); a logic function has no
+            # buffer to return, and every `==`/`len`/`at` site on a seq
+            # value here is a buffer comparison or read, so the result
+            # would need ACSL's own `\list<integer>` (`\Nil`, `\Cons`,
+            # `^`, `\nth`, `\length`; ACSL manual, "Logic specifications",
+            # frama-c.com/download/acsl.pdf) and a bridge predicate
+            # between a buffer and a `\list` at every such site. That
+            # bridge is the open design (t/FEATURES-SEQFUN-2026-09-27.md);
+            # until it is measured, the column abstains by name rather
+            # than emit an obligation WP cannot state.
+            raise NotImplementedError(
+                f"framac: spec_fun {f['name']!r} returns a seq; this "
+                "lowering models a seq as a C buffer (int *, integer n) and "
+                "an ACSL logic function cannot return one (the \\list "
+                "route is not built; SPEC.md \"Seq-valued spec_funs (v1)\")")
+
     funs = {}
     for f in task.get("spec_funs", []):
         # "executable" (framac-closure, 2026-09-14): whether this

@@ -3771,6 +3771,79 @@ def probes() -> list[dict]:
         "letter ranges (65-90, 97-122) and 1000000 is far outside ASCII "
         "entirely; SPEC.md's own words say lower leaves every non-letter "
         "code point unchanged, so the literal is a fixed point")
+
+    # --- SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a spec_fun whose
+    # result is a seq. `tl(s)` is the tail of a non-empty seq and `[]`
+    # otherwise (total by its own guard, so the body's slice is defined
+    # under its path condition); `dbl(s, n)` is the first n elements
+    # doubled, the recursive shape count_matches' own `count` has, seq-
+    # valued. Four probes: the result measured, indexed, built by the body
+    # (a non-recursive spec_fun), and one false ensures through the
+    # recursive one. Frama-C abstains on all four by name (SPEC.md's own
+    # lowering status), which conformance grades as an honest N/A-shaped
+    # abstain, never a verdict.
+    _SF_TL = {"name": "tl", "params": [{"name": "s", "type": "seq"}],
+              "result": "seq", "decreases": I(0),
+              "body": ITE(OP(">=", LEN("s"), I(1)),
+                          SLICE("s", I(1), LEN("s")), SEQ())}
+    _SF_DBL = {"name": "dbl", "params": [{"name": "s", "type": "seq"},
+                                         {"name": "n", "type": "int"}],
+               "result": "seq", "decreases": V("n"),
+               "body": ITE(OP("or", OP("<=", V("n"), I(0)),
+                                    OP(">", V("n"), LEN("s"))),
+                           SEQ(),
+                           CAT(CALL("dbl", V("s"), OP("-", V("n"), I(1))),
+                               SEQ(OP("*", I(2), AT("s", OP("-", V("n"), I(1)))))))}
+    add({"t": 1, "name": "fz_p_sf_seq_len", "gate": "recursion",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("len", CALL("tl", V("s"))))],
+         "spec_funs": [_SF_TL],
+         "body": [IFS(OP(">=", LEN("s"), I(1)),
+                      [ASG("r", OP("-", LEN("s"), I(1)))],
+                      [ASG("r", I(0))])]},
+        "verified",
+        "len(tl(s)) is len(s) - 1 when len(s) >= 1 and 0 otherwise, the "
+        "body's own case split; COLLAPSE-IF (the unconditional then) reads "
+        "-1 at s = [], expected refuted")
+    add({"t": 1, "name": "fz_p_sf_seq_at", "gate": "recursion",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [OP(">=", LEN("s"), I(2))],
+         "ensures": [OP("==", V("r"), OP("at", CALL("tl", V("s")), I(0)))],
+         "spec_funs": [_SF_TL],
+         "body": [ASG("r", AT("s", I(1)))]},
+        "verified",
+        "tl(s)[0] == s[1] whenever len(s) >= 2 (the slice's own index "
+        "shift); OFF-BY-ONE on the body's index reads s[0] or s[2], "
+        "expected refuted at s = [0, 1]")
+    add({"t": 1, "name": "fz_p_sf_seq_build", "gate": "recursion",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [OP(">=", LEN("s"), I(1))],
+         "ensures": [OP("==", V("r"), CAT(CALL("tl", V("s")),
+                                          SEQ(AT("s", I(0))))),
+                     OP("==", LEN("r"), LEN("s"))],
+         "spec_funs": [_SF_TL],
+         "body": [ASG("r", CAT(SLICE("s", I(1), LEN("s")), SEQ(AT("s", I(0)))))]},
+        "verified",
+        "r rotates s left by one: the body's slice IS tl(s) under the "
+        "requires, so the ensures holds by the spec_fun's own definition; "
+        "WRONG-CONSTANT/OFF-BY-ONE on the slice bounds or the index expected "
+        "refuted at s = [0, 1]")
+    add({"t": 1, "name": "fz_p_sf_seq_false", "gate": "recursion",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), CALL("dbl", V("s"), LEN("s")))],
+         "spec_funs": [_SF_DBL],
+         "body": [ASG("r", V("s"))]},
+        "refuted",
+        "dbl(s, len(s)) doubles every element, so r == s is false at s = "
+        "[1] (dbl([1], 1) == [2]); a kernel that verifies this read the "
+        "recursive seq spec_fun as something other than its definition",
+        adversarial=True)
     return P
 
 
