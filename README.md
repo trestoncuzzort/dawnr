@@ -43,7 +43,7 @@ trusted because what it writes is checked.
 | learning instead of memorising | the main open problem: on problems it was not trained on, the model rarely succeeds; early stopping, best checkpoints and denoising are in place, and more data is the lever |
 | reinforcement learning with the provers as the reward | built and tested; waits until the model succeeds often enough on new problems to have something to reinforce |
 | the model's own verified answers as new data (expert iteration) | running with a local teacher model |
-| a chat pipeline (format, fine-tuning, tools, report card), adapted from nanochat | being built; its first tool is the proof engine itself |
+| a chat pipeline (format, mid-training, tools, report card), adapted from nanochat | runs end to end ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md)); its first tool is the t interpreter, which the model calls on its own draft; it does not yet act on a failed check |
 | retrieval, memory, tool use, speech, vision | not started; in the order [AMBITION.md](AMBITION.md) gives |
 
 The honest headline: the machinery that makes dawnr trustworthy works; the
