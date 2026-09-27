@@ -222,9 +222,17 @@ def held_out_gate(examples: list[dict], split_path: Path | str | None = None) ->
     t_dir = str(_T_DIR)
     if t_dir not in sys.path:
         sys.path.insert(0, t_dir)
-    import loop_filter
-    split_path = Path(split_path) if split_path is not None else DEFAULT_SPLIT
-    eval_ids = {int(i) for i in json.loads(split_path.read_text(encoding="utf-8"))["eval_ids"]}
+    examples = list(examples)
+    try:
+        import loop_filter
+        split_path = Path(split_path) if split_path is not None else DEFAULT_SPLIT
+        eval_ids = {int(i) for i in json.loads(split_path.read_text(encoding="utf-8"))["eval_ids"]}
+    except (ImportError, OSError, ValueError, KeyError) as e:
+        # Fail closed. A release built without t/ beside it (release.py keeps loop_filter out of the
+        # zip on purpose) has no way to tell a held-out problem from any other, so nothing is
+        # trainable until it does; the reason is recorded on every example, never silent.
+        why = f"held-out gate unavailable ({type(e).__name__}: {e}); nothing is learned without it"
+        return [], [{"id": ex["id"], "why": why} for ex in examples]
     dev = loop_filter.r12_dev_ids(split_path=split_path)
     policy = loop_filter.decontamination()
     kept, refused = [], []

@@ -137,7 +137,7 @@ def build(text: str, *, split_seed: int = 1337, val_frac: float = 0.1, tool_rate
 def gate(text: str, label: str, split: Path) -> None:
     """The trainers' own gates: held-out ids under any alias, same-task sources, dev-split ids."""
     import loop_filter
-    from continue_from_checkpoint import refuse_unless_trainable
+    from heldout_gate import refuse_unless_trainable
     eval_ids = {int(i) for i in json.loads(split.read_text(encoding="utf-8"))["eval_ids"]}
     refuse_unless_trainable(text, label, eval_ids, split, loop_filter.r12_dev_ids(split_path=split))
 
