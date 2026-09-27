@@ -4677,6 +4677,18 @@ def _pair_types_needed(task: dict, body: list, env: dict, funs: dict
     return list(seen.keys())
 
 
+# EXECUTABLE `len` OF A CAPACITY-TRACKED RETURN (framac track, 2026-09-26;
+# vericoding vt0025 logspace / vt0362 spacing, `while len(v) < num` with `v`
+# folded into the return). `cexpr` has no `Ctx`, so `len(r)` in C always
+# rendered `r_n`, the buffer's CAPACITY, never its current length `r_len`:
+# the loop guard became `while (result_n < num)`, a different program from
+# the t one (here it never iterated, and the real read TIMEOUT). `lower()`
+# fills this with the body's own `ctx.seq_len` (return name -> its length
+# local) while `stmts()` renders the body, so the C reads the same length
+# the ACSL side already does.
+_EXEC_SEQ_LEN: dict = {}
+
+
 def cexpr(e: dict, env: dict, funs: dict, task_name: str,
          _div_style: str = "bf") -> str:
     """`_div_style` picks how a `div`/`mod` node renders: "bf" (the
@@ -4863,7 +4875,8 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
             # own shape) never needs the buffer itself, only a closed-form
             # count -- see `_seq_val_len_c`.
             return _seq_val_len_c(a0, env, funs, task_name, _div_style)
-        return f"{seq_var(a0, env)}_n"
+        v = seq_var(a0, env)
+        return _EXEC_SEQ_LEN.get(v, f"{v}_n")
     if op == "at":
         # NAMED REFUSAL, added 2026-09-10: a nested seq's ROW reaching
         # `at` in executable position directly (not `len`'s own operand,
@@ -10352,9 +10365,19 @@ def lower(task: dict, body: list, witness: dict | None = None,
             off += len(row)
         body_lines.append(f"  {ret}_off[{len(nested_return_rows)}] = {off};")
     else:
-        body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here",
-                                     seq_len=body_seq_len),
-                           name, "  ")
+        # EXECUTABLE `len` OF A CAPACITY-TRACKED RETURN (framac track,
+        # 2026-09-26): see `_EXEC_SEQ_LEN`. Scoped to this body's own
+        # statements, restored after (a method's own `lower()` call nests).
+        prev_len = dict(_EXEC_SEQ_LEN)
+        _EXEC_SEQ_LEN.clear()
+        _EXEC_SEQ_LEN.update(body_seq_len)
+        try:
+            body_lines = stmts(body, Ctx(env, funs, ret=None, label="Here",
+                                         seq_len=body_seq_len),
+                               name, "  ")
+        finally:
+            _EXEC_SEQ_LEN.clear()
+            _EXEC_SEQ_LEN.update(prev_len)
     # `certificate` reads the witness `w` against this SAME renamed
     # task/body/env/funs/used, `w`'s own keys already renamed to match
     # (`t_names.remap_witness`, above) -- see that function's own
