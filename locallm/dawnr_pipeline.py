@@ -338,7 +338,11 @@ def main(argv=None) -> int:
                      "found 0.6% of problems solvable, too few to reinforce; RL through engine.py is the next port"})
     step("eval", {"model": chat_model / "ckpt.pt" if chat_model else None, "conversations": conv_file,
                   "dev": a.dev, "max_tokens": a.max_tokens, "chat_eval": HERE / "chat_eval.py",
-                  "t_tool": HERE / "t_tool.py", "engine": HERE / "engine.py", "chat": HERE / "chat.py"},
+                  "t_tool": HERE / "t_tool.py", "engine": HERE / "engine.py", "chat": HERE / "chat.py",
+                  # the engine's t tool runs through the harness's registry (DAWNR-HARNESS.md)
+                  "harness_runtime": HERE / "dawnr_harness" / "runtime.py",
+                  "harness_tools": HERE / "dawnr_harness" / "tools.py",
+                  "harness_checker": HERE / "dawnr_harness" / "checker.py"},
          lambda st: stage_eval(st, a, chat_model, conv_file))
 
     def report_body(st):

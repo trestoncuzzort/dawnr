@@ -21,6 +21,13 @@ Where dawnr differs, and why:
   grow_embeddings() gives the new rows the mean of the existing rows (Hewitt,
   "Initializing New Word Embeddings for Pretrained Language Models"), as
   continue_from_checkpoint.add_fim_sentinels does.
+* dawnr's harness (DAWNR-HARNESS.md) adds three more, appended the same way
+  and only when asked for (with_harness_tokens), so checkpoints trained
+  before it keep their ids: <|tool_start|> ... <|tool_end|> around a call to
+  any tool in the registry (`name {json arguments}`), and <|untrusted|> as the
+  first token of an output span whose text came from outside. Text cannot
+  produce any of them, so a fetched page can neither close its span nor forge
+  the mark (spotlighting, arXiv:2403.14720, done with tokens).
 * No <|bos|>: every row holds one conversation and starts at its first token
   (data.DocumentBatches' rule), so nothing needs delimiting.
 * A system message is refused, not merged into the user turn: dawnr has none.
@@ -66,7 +73,11 @@ T_START, T_END = "<|t_start|>", "<|t_end|>"            # the assistant calls the
 OUTPUT_START, OUTPUT_END = "<|output_start|>", "<|output_end|>"   # the tool's answer
 CHAT_TOKENS = (USER_START, USER_END, ASSISTANT_START, ASSISTANT_END, T_START, T_END, OUTPUT_START, OUTPUT_END)
 
-PART_TYPES = ("text", "t", "t_output")
+TOOL_START, TOOL_END = "<|tool_start|>", "<|tool_end|>"   # the assistant calls a registry tool: name {json}
+UNTRUSTED = "<|untrusted|>"                                 # opens an output span whose text came from outside
+HARNESS_TOKENS = (TOOL_START, TOOL_END, UNTRUSTED)
+
+PART_TYPES = ("text", "t", "t_output", "tool", "tool_output")
 IGNORE_INDEX = -1            # model.GPT's cross-entropy ignores -1 (data.IGNORE_INDEX)
 
 
@@ -85,6 +96,32 @@ def with_chat_tokens(tokenizer):
     from data import BPETokenizer, CharTokenizer
     present = tuple(getattr(tokenizer, "sentinels", ()))
     missing = tuple(name for name in CHAT_TOKENS if name not in present)
+    if not missing:
+        return tokenizer
+    if isinstance(tokenizer, CharTokenizer):
+        return CharTokenizer(tokenizer.chars, present + missing)
+    if isinstance(tokenizer, BPETokenizer):
+        return BPETokenizer(tokenizer.backend, tokenizer.training, present + missing)
+    raise TypeError(f"unsupported tokenizer type: {type(tokenizer).__name__}")
+
+
+def has_harness_tokens(tokenizer) -> bool:
+    return all(name in tuple(getattr(tokenizer, "sentinels", ())) for name in HARNESS_TOKENS)
+
+
+def needs_harness_tokens(conversations) -> bool:
+    """True when an assistant turn calls a registry tool or reads an untrusted output."""
+    return any(isinstance(m.get("content"), list)
+               and any(p.get("type") == "tool" or p.get("untrusted") for p in m["content"])
+               for c in conversations for m in c["messages"] if m.get("role") == "assistant")
+
+
+def with_harness_tokens(tokenizer):
+    """The chat tokens (with_chat_tokens), then the harness's, each appended only if missing."""
+    from data import BPETokenizer, CharTokenizer
+    tokenizer = with_chat_tokens(tokenizer)
+    present = tuple(tokenizer.sentinels)
+    missing = tuple(name for name in HARNESS_TOKENS if name not in present)
     if not missing:
         return tokenizer
     if isinstance(tokenizer, CharTokenizer):
@@ -172,9 +209,19 @@ def render_conversation(tokenizer, conversation: dict) -> tuple[list[int], list[
                     add(special(tokenizer, T_START), 1)
                     add(tokenizer.encode(text), 1)
                     add(special(tokenizer, T_END), 1)
+                elif kind == "tool":
+                    if not has_harness_tokens(tokenizer):
+                        raise ValueError("a tool part needs the harness tokens (chat.with_harness_tokens)")
+                    add(special(tokenizer, TOOL_START), 1)
+                    add(tokenizer.encode(text), 1)
+                    add(special(tokenizer, TOOL_END), 1)
                 else:
-                    # the tool writes this at inference time: never supervised
+                    # the tool (or the harness) writes this at inference time: never supervised
                     add(special(tokenizer, OUTPUT_START), 0)
+                    if part.get("untrusted"):
+                        if not has_harness_tokens(tokenizer):
+                            raise ValueError("an untrusted output needs the harness tokens (chat.with_harness_tokens)")
+                        add(special(tokenizer, UNTRUSTED), 0)
                     add(tokenizer.encode(text), 0)
                     add(special(tokenizer, OUTPUT_END), 0)
         else:
@@ -246,7 +293,7 @@ class ConversationBatches:
             self.target_tokens += sum(mask[1:])
             self.tool_calls += sum(1 for m in conv["messages"] if m["role"] == "assistant"
                                    and isinstance(m["content"], list)
-                                   for p in m["content"] if p.get("type") == "t")
+                                   for p in m["content"] if p.get("type") in ("t", "tool"))
         self.x = torch.tensor(rows_x, dtype=torch.long).to(device)
         self.y = torch.tensor(rows_y, dtype=torch.long).to(device)
         self._generator = torch.Generator().manual_seed(seed)
