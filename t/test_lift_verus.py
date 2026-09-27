@@ -288,7 +288,7 @@ class Corpus(unittest.TestCase):
         r = lv.render(self.TEXT, target="lemma_sq", lemma=True)
         self.assertIsNone(r.refusal, r.refusal)
         self.assertIn("method lemma_sq(x: int) returns (ok: bool)", r.dafny)
-        self.assertIn("ensures (sq(x) > 0)", r.dafny)
+        self.assertIn("ensures (ok <==> (((sq(x) > 0))))", r.dafny)
         self.assertIn("ok := true;", r.dafny)
 
     def test_generic_lemma_refused(self):
