@@ -1,11 +1,11 @@
-"""measure_profile.py: the same protocol as measure.py, with the style profile as the learner instead of an adapter.
+"""measure_style_profile.py: the same protocol as measure.py, with the style profile as the learner instead of an adapter.
 
-    python3 locallm/dawnr_learning/measure_profile.py --model <chat checkpoint dir> \
+    python3 locallm/dawnr_learning/measure_style_profile.py --model <chat checkpoint dir> \
         --conversations <its chat_data.py JSONL> --out <the run dir measure.py wrote base.json to> --arm P \
         [--persons ada,bo,cy,di] [--sessions 4] [--per-session 10] [--heldout-train 20] [--dev 100]
 
 The base answers every prompt once (its answers do not depend on the person:
-no weights change), and the person's profile (profile.py), re-inferred from
+no weights change), and the person's profile (style_profile.py), re-inferred from
 their store after every session, rewrites each answer before the person sees
 it. Everything else is measure.py's: the same problems (the same registered
 set and problem seed), the same reactions and scores, the same fixed probe for
@@ -31,7 +31,7 @@ for p in (str(LOCALLM), str(ROOT / "t")):
 
 from dawnr_learning import measure as M  # noqa: E402
 from dawnr_learning import persons as P  # noqa: E402
-from dawnr_learning import profile as PR  # noqa: E402
+from dawnr_learning import style_profile as PR  # noqa: E402
 from dawnr_learning.feedback import PersonStore, final_program  # noqa: E402
 
 
