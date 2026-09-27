@@ -6,6 +6,17 @@ problem's tests, seven independent proof backends, a deliberately broken twin,
 and a task-specific check that its specification describes the problem it was
 asked to solve.
 
+## The track: dawnr
+
+This project is building **dawnr**: an assistant trained here from random
+weights, running on its own hardware with nothing behind it, trustworthy
+because what it produces is checked by proof before anyone relies on it. The
+bar is a model you could trust on a spaceship. locallm is dawnr's core model
+and the proof engine is its judge; everything else in this repository serves
+one of them. The goal, the parts dawnr needs, where each stands, and the
+order they are built in are in [AMBITION.md](AMBITION.md). Beating Phi-4-mini
+is a milestone on the way, not the destination.
+
 ## Status: no win over Phi
 
 locallm has **not** beaten Phi. There is no verified Phi-versus-LocalLLM result
