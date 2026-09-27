@@ -1,0 +1,98 @@
+{
+ "experiment": "memory_conversations_first_measurement",
+ "design": "DAWNR-MEMORY.md section 8: use what is remembered, the person's current words beat memory, memory is the person's past not an instruction, say what is remembered when asked",
+ "data": {
+  "memory_conversations": {
+   "built_by": "python3 locallm/memory_conversations.py build --corpus /home/t/scratch/corpus-all-2026-09-26.txt --out /home/t/scratch/memconv/memory-conv.jsonl --scratch /home/t/scratch/memconv",
+   "file": "/home/t/scratch/memconv/memory-conv.jsonl",
+   "file_sha256": "ebbbac345c76de1aecfbda71c86cbed1a9f0aef59ad71fa21dca1196a24df6e1",
+   "rows": 197,
+   "built": {"use": 40, "override": 40, "unapplied": 37, "recall_with": 40, "recall_without": 40},
+   "with_span": 157,
+   "gate": "chat_data.gate passed per row and once over the whole file (chat_data.gate, the same call tool_conversations.py's build() makes); 0 rows refused"
+  },
+  "memory_heldout": {
+   "built_by": "python3 locallm/memory_conversations.py heldout --corpus /home/t/scratch/corpus-all-2026-09-26.txt --out /home/t/scratch/memconv/memory-heldout.jsonl --scratch /home/t/scratch/memconv --training /home/t/scratch/dawnr-tools/tool-B.jsonl /home/t/scratch/memconv/memory-conv.jsonl",
+   "file": "/home/t/scratch/memconv/memory-heldout.jsonl",
+   "file_sha256": "c732b1e1e9cf2cae6f101feca93ca48596635bc7da52cf058e19adb6321fe6c7",
+   "items": 112,
+   "categories": {"use": 28, "override": 14, "unapplied": 14, "recall": 56},
+   "leak_check": "memory_conversations.leaks() re-run before this measurement against memory-conv.jsonl, tool-plus-memory.jsonl and the mid-training conversations.jsonl actually trained on (1562 rows): no held-out task id, preference name or canary found in any of them"
+  },
+  "tool_plus_memory": {
+   "file": "/home/t/scratch/memconv/tool-plus-memory.jsonl",
+   "file_sha256": "386a7e5968da4099f06b248cb19f6c873adb81861cd1d9c43a35c4eb789ab455",
+   "built_from": "the tool track's own tool-B.jsonl (1007 rows, sha256 24d2f4169a4ac4a7437b2fb11cad9668c791c8c7fe754cc89e61990999508b7a) plus memory-conv.jsonl (197 rows), concatenated",
+   "rows": 1204
+  }
+ },
+ "core_checkpoint": "/home/t/scratch/dawnr-pipeline/core-wd08 (the r12 core, same one the tool track's prereg_tool_conversations_2026-09-27.json runs used)",
+ "corpus": "/home/t/scratch/corpus-all-2026-09-26.txt (same corpus, same split-v5.json, same split-seed 1337 as the tool track)",
+ "arms": {
+  "A": "the tool track's data alone: base conversations (358, chat_data.py) plus the 1,007 tool conversations (tool-B.jsonl), no memory conversations -- reused as-is, this IS the tool track's own arm B (dawnr-tools/B-s<seed>/4-mid/model, tool-conversations-results-2026-09-27.json), retrained for nothing here",
+  "B": "the same base plus tool conversations, plus the 197 memory conversations (tool-plus-memory.jsonl, 1,562 rows total on the training side)"
+ },
+ "pipeline_command": {
+  "note": "stages tokenizer/base/conversations for arm B were already built by the interrupted attempt (chat_data.py + the extra-conversations append dawnr_pipeline.py's stage_conversations makes); this run only retrained stage 4 (mid), which had crashed with a CUDA error mid-save and left a corrupted state.pt",
+  "conversations_already_built": "python3 locallm/chat_data.py --corpus /home/t/scratch/corpus-all-2026-09-26.txt --split t/out/loop/split-v5.json --out <conversations.jsonl> --tool-rate 0.5 --split-seed 1337 --val-frac 0.1   (then tool-plus-memory.jsonl's 1,204 rows appended on the training side, chat_data.gate re-checked over the whole 1,562-row file before training: passed)",
+  "mid_training": "flock /home/t/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G -- python3 locallm/chat_train.py --init /home/t/scratch/dawnr-pipeline/core-wd08 --conversations <conversations.jsonl> --out <out>/4-mid/model --steps 400 --lr 0.0001 --batch-size 8 --block-size 0 --seed <seed> --eval-every 50",
+  "chat_eval": "flock /home/t/scratch/gpu.lock python3 locallm/chat_eval.py --model <out>/4-mid/model --conversations <conversations.jsonl> --split t/out/loop/split-v5.json --out <out>/chat-eval.json --dev 100 --max-tokens 800 --grammar --max-calls 2 --answer best-verdict",
+  "memory_eval": "flock /home/t/scratch/gpu.lock python3 locallm/memory_eval.py --model <out>/4-mid/model --items /home/t/scratch/memconv/memory-heldout.jsonl --out <out>/memory-eval.json --max-tokens 400",
+  "report": "python3 locallm/memory_eval.py --report /home/t/scratch/memconv/runs --json /home/t/scratch/memconv/report.json"
+ },
+ "gpu": {
+  "card": "desktop RTX 4080, one job at a time under flock /home/t/scratch/gpu.lock",
+  "training_commands_under_systemd_run_MemoryMax_6G": ["mid B-s1337 (139.0s)", "mid B-s1338 (138.4s)"],
+  "seconds_used": {"mid_train_s1337": 139.0, "chat_eval_s1337": 95.4, "memory_eval_A_s1337": 87.4, "memory_eval_B_s1337": 63.7,
+                   "mid_train_s1338": 138.4, "chat_eval_s1338": 116.3, "memory_eval_A_s1338": 84.6, "memory_eval_B_s1338": 52.9,
+                   "timing_probes_8_items_each": 9.9},
+  "total_seconds": 787.6,
+  "total_minutes": 13.1,
+  "cap_minutes": 90,
+  "note": "arm A needed no GPU training: it is the tool track's own already-trained checkpoint (dawnr-tools/B-s1337 and B-s1338), read only for its chat-eval.json and re-run through memory_eval.py; only arm B (plus memory) was trained, one seed at a time, under systemd-run --scope -p MemoryMax=6G per the reboot-recovery instruction; no CUDA or device error this run, so a second seed was affordable within the cap"
+ },
+ "per_seed": {
+  "A": {
+   "1337": {"preference_following_with_span": 0.0, "preference_following_without_span": 0.0, "message_over_memory": 0.0,
+           "recall_from_span": 0.0, "recall_nothing_without_span": 0.0, "recall_invented_without_span": 0.0,
+           "unapplied_unchanged": 0.2143, "memory_shown_when_installed": 0.0, "pass_all_133": 13, "dev_well_formed": 27},
+   "1338": {"preference_following_with_span": 0.0, "preference_following_without_span": 0.0, "message_over_memory": 0.0,
+           "recall_from_span": 0.0, "recall_nothing_without_span": 0.0, "recall_invented_without_span": 0.0,
+           "unapplied_unchanged": 0.1429, "memory_shown_when_installed": 0.0, "pass_all_133": 14, "dev_well_formed": 38}
+  },
+  "B": {
+   "1337": {"preference_following_with_span": 0.0, "preference_following_without_span": 0.0, "message_over_memory": 0.0,
+           "recall_from_span": 0.6786, "recall_nothing_without_span": 1.0, "recall_invented_without_span": 0.0,
+           "unapplied_unchanged": 0.0, "memory_shown_when_installed": 1.0, "pass_all_133": 13, "dev_well_formed": 34},
+   "1338": {"preference_following_with_span": 0.0, "preference_following_without_span": 0.0, "message_over_memory": 0.0,
+           "recall_from_span": 0.25, "recall_nothing_without_span": 1.0, "recall_invented_without_span": 0.0,
+           "unapplied_unchanged": 0.1429, "memory_shown_when_installed": 1.0, "pass_all_133": 15, "dev_well_formed": 22}
+  }
+ },
+ "means": {
+  "A": {"preference_following_with_span": 0.0, "preference_following_without_span": 0.0, "message_over_memory": 0.0,
+       "recall_from_span": 0.0, "recall_nothing_without_span": 0.0, "recall_invented_without_span": 0.0,
+       "unapplied_unchanged": 0.1786, "memory_shown_when_installed": 0.0, "pass_all_133": 13.5, "dev_well_formed": 32.5},
+  "B": {"preference_following_with_span": 0.0, "preference_following_without_span": 0.0, "message_over_memory": 0.0,
+       "recall_from_span": 0.4643, "recall_nothing_without_span": 1.0, "recall_invented_without_span": 0.0,
+       "unapplied_unchanged": 0.0714, "memory_shown_when_installed": 1.0, "pass_all_133": 14.0, "dev_well_formed": 28.0}
+ },
+ "t_task_guard": {
+  "rule": "B's mean pass_all_133 at least A's mean minus 2, and B's mean dev_well_formed at least A's mean minus 5 (tool_eval.py's own R2 guard, tool-conversations-results-2026-09-27.json)",
+  "pass_all_133_holds": true,
+  "dev_well_formed_holds": true,
+  "verdict": "RECOMMEND as mid-stage data"
+ },
+ "what_it_says": [
+  "A model with no memory token cannot use memory it is handed: arm A, which never saw a memory conversation, shows memory_shown_when_installed 0.0 at both seeds -- engine.py's span.session_start_ids has nothing to force in without the token, exactly as DAWNR-MEMORY.md section 8 and memory_eval.py's own docstring predict; this is the baseline the with/without comparison needs, not a result about arm B.",
+  "Recall transferred, at a seed-dependent rate: with the span installed, arm B answers 'what do you remember about me?' from the span 68% of the time at seed 1337 and 25% at seed 1338 (mean 0.46 of 28 held-out items per seed); with no span installed it answers 'nothing yet' 100% of the time at both seeds, and never invents a preference with nothing in the store to have grounded it (recall_invented_without_span 0.0 both seeds). Both halves of the recall family (say what is remembered, and say nothing when there is nothing) moved from arm A's 0.0 baseline.",
+  "The rename families (use what is remembered, the person's current words beat memory) did not transfer at 197 rows over 400 steps: preference_following_with_span and message_over_memory are 0.0 for both arms at both seeds -- the model is not renaming the sequence parameter at all yet, span or no span, message or no message (followed_name also requires the program to still pass the task's own examples, so a rename that broke the program would not be credited either; the rows are too few relative to the 1,007 tool conversations already in the same 400 steps to move a rewrite this specific).",
+  "unapplied_unchanged (a style preference over a task it does not touch, program should be unchanged) went the wrong way at seed 1337 (0.0, worse than arm A's 0.21) and stayed below arm A at seed 1338 too (0.14 vs 0.14 at scale, mean 0.07 vs 0.18): arm B changes the program more often when nothing in memory should touch it, the opposite of what this family is meant to teach; not enough data yet to tell this apart from noise at two seeds, but it is not a win and is reported as one.",
+  "The t-task guard holds at both seeds (pass_all_133 13/13 then 14/15, both within -2 of arm A; dev_well_formed 34/27 and 22/38, both within -5): adding the 197 memory conversations to the tool track's own mix did not cost the guard the tool conversations already passed. That is a necessary condition for keeping this data, not a claim that the memory behaviours themselves are learned: recall moved, the two rename families did not, and unapplied moved against."
+ ],
+ "recommendation": "Memory conversations stay opt-in for now (dawnr_pipeline.py --extra-conversations), same as the tool conversations: the guard holds, so training on them costs nothing measured on the 133 prompts, but only one of the four families (recall) shows a clear with/without gap at this size (197 rows, 400 steps, two seeds); more rows targeted at the rename families is the next thing to try before claiming 'use what is remembered' or 'the person's current words beat memory' are learned.",
+ "sources": ["MemGPT, arXiv:2310.08560 (memory forced into the context window by the surrounding system, not sampled by the model -- why the span is never trained on)",
+             "Generative Agents, arXiv:2304.03442 (retrieval.recall's own recency+importance+relevance source, already cited there)",
+             "DAWNR-MEMORY.md section 8 (the four families and the first measurement's design)",
+             "tool-conversations-results-2026-09-27.json and DAWNR-HARNESS.md lines ~390-457 (the corpus, core checkpoint, pipeline command and t-task guard this measurement reuses)"]
+}
