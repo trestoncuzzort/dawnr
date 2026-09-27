@@ -2313,6 +2313,18 @@ class Liftable:
     # `callees` carry the rest of the call graph; `lift_rewrite.rewrite` lifts
     # them callees-first into the task's `methods`.
     callees: tuple = ()
+    # Row 45 (2026-09-27, t/FEATURES-TRACK.md, return default): the dafny
+    # name of the single out-parameter section 4.7's SYNTACTIC check could
+    # not see assigned on every path (`_assigns_ret_all_paths`), `None`
+    # when it could. `lift_rewrite.rewrite` opens such a body with the
+    # return's type default and logs `return-default-init`; `lift_check`
+    # then verifies the SOURCE method under dafny's own definite-assignment
+    # rule (a semantic check, not a syntactic one -- measured on dafny
+    # 4.11.0: a `while true { .. r := i; return; .. }` body and an if-case
+    # both pass it while this syntactic check refuses them) and refuses
+    # `return-default-unverified` when dafny does not accept it, so the
+    # default is only ever kept where dafny proved it is never observed.
+    ret_default: Optional[str] = None
 
 
 def _first(issues: list[tuple[int, str, str]]) -> tuple[int, str, str]:
@@ -2655,21 +2667,38 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                     issues.append((n.line, "as-cast", "as"))
 
     # -- definite assignment of the return, every path (section 4.7) -----
+    # Row 45 (2026-09-27): no longer a refusal on its own. Dafny checks
+    # definite assignment of an out-parameter SEMANTICALLY (a Boogie
+    # obligation, "out-parameter 'r' ... might be uninitialized at this
+    # return point"; Reference Manual 5.3.1.2, auto-initialization and
+    # definite assignment), so a method this syntactic walk cannot see
+    # assigning `r` on every path (an assignment inside `while true`,
+    # under a `break`, in an if-case) may still be accepted by dafny, and
+    # one dafny rejects is caught by `lift_check`'s own `verify-source`
+    # step (refused `return-default-unverified`). The one return type
+    # with no t default is `char` (dafny's own default is 'D'; t has no
+    # char value to name it by), refused `return-default-char`.
+    ret_default: Optional[str] = None
     if ret_param is not None and method.body is not None:
         if not _assigns_ret_all_paths(method.body, ret_param.name):
-            issues.append((method.line, "return-not-assigned-on-all-paths",
-                            ret_param.name))
+            if ret_param.type is not None and ret_param.type.kind == "char":
+                issues.append((method.line, "return-default-char", ret_param.name))
+            else:
+                ret_default = ret_param.name
     # Row 29: the SAME check, once per out-parameter -- `_assigns_ret_
     # all_paths` already treats a `return e1, e2;` (any non-empty
     # ReturnStmt.values) as assigning whichever single `ret_name` it is
     # asked about, so calling it twice (once per component name) is
     # correct with no change to the helper itself.
+    # Row 45: a pair component already opens the body with decision 13's
+    # `default-init` (see `lift_rewrite.rewrite`), so an unassigned one
+    # needs only the same `verify-source` gate; `ret_default` names the
+    # first such component so the rewrite logs `return-default-init`.
     if pair_returns is not None and method.body is not None:
         ret_a, ret_b = pair_returns
-        if not _assigns_ret_all_paths(method.body, ret_a.name):
-            issues.append((method.line, "return-not-assigned-on-all-paths", ret_a.name))
-        if not _assigns_ret_all_paths(method.body, ret_b.name):
-            issues.append((method.line, "return-not-assigned-on-all-paths", ret_b.name))
+        for comp in (ret_a, ret_b):
+            if not _assigns_ret_all_paths(method.body, comp.name) and ret_default is None:
+                ret_default = comp.name
 
     # -- self-recursion shape (section 4.5's `r := M(args)` row) ---------
     issues += _self_call_positions(method)
@@ -2793,7 +2822,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     for cname, _cplan in callee_plans:
         rewrites.append(Rewrite(rule="method-lifted", line=_cplan.method.line))
     return Liftable(method=source_method, closure=source_closure, rewrites=rewrites,
-                    pair_returns=pair_returns, callees=tuple(callee_plans))
+                    pair_returns=pair_returns, callees=tuple(callee_plans),
+                    ret_default=ret_default)
 
 
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,

@@ -405,11 +405,30 @@ self-call; the guard is one uniform rule with one uniform lemma.
 ### 4.7 Definite assignment
 
 t requires every path to end in an assignment of the return (SYNTAX.md).
-The lifter checks it on the t body (an `if` without else on the last path,
-aula2.dfy m1 lines 55 to 57 `if (x > 0 && y > 0 && y > x) { z := x-1; }`,
-leaves z unassigned) and refuses `return-not-assigned-on-all-paths`. Dafny
-accepts such a method with an unspecified return value; t has no havoc
-value, so this is a refusal and not a rewrite.
+The lifter checks it syntactically on the source body (`_assigns_ret_all_
+paths`: an `if` without else on the last path, aula2.dfy m1 lines 55 to 57
+`if (x > 0 && y > 0 && y > x) { z := x-1; }`, leaves z unassigned; a loop
+body is never counted). Until 2026-09-27 a failed check refused
+`return-not-assigned-on-all-paths`, on the reading that Dafny accepts such a
+method with an unspecified return value and t has no havoc value. Measured
+on dafny 4.11.0, that reading was wrong in both directions: Dafny checks
+definite assignment of an out-parameter as a verification obligation
+("out-parameter 'r', which is subject to definite-assignment rules, might be
+uninitialized at this return point"), so a method the syntactic walk cannot
+see assigning `r` (an assignment inside `while true` before a `return`, an
+if-case, a loop `break` followed by a guarded assignment) verifies, and a
+method that truly leaves `r` unassigned on a path does not (only
+`--relax-definite-assignment`, which nothing here passes, accepts it).
+LIFTER-DECISIONS.md row 45 therefore lifts: the body opens with the return
+type's default (0, false, `[]`, a pair of those -- the value dafny's compilers
+supply an auto-initialised variable, Reference Manual 5.3.1.2), logged
+`return-default-init`, and `lift_check` runs section 18.1's `verify-source`
+invocation on that one method (`dafny verify FILE --allow-warnings
+--filter-symbol M`); a method dafny does not accept refuses
+`return-default-unverified`. On every kept task the default is therefore
+never observed on any path, and the lift is exact. A `char` return refuses
+`return-default-char` (dafny's default is 'D'; t has no char value to name
+it by).
 
 ### 4.8 Names
 
@@ -472,7 +491,7 @@ records the rprint line of the first offending token.
 | `calls-other-method` | a call of a method other than itself | none (folded into multi-method by the census) |
 | `self-call-lazy` | a self-call under a lazily evaluated operator or a quantifier body | none (lower_dafny abstains on it) |
 | `uninitialized-local` | `var x: T;` first assigned inside a branch or loop | none |
-| `return-not-assigned-on-all-paths` | section 4.7 | none |
+| `return-default-unverified`, `return-default-char` | section 4.7 (row 45: the return unassigned on a path the syntactic walk sees, and dafny's own definite-assignment check rejects the method, or the return is a char) | none |
 | `ghost-var` | a ghost local read by executable code | ghost-var was a hint |
 | `function-contract` | a function `reads` clause | frame-clause (burden) |
 | `uninferable-decreases` | a loop with no decreases line in rprint, or a spec_fun/self-recursive task whose decreases candidates (section 6) are all rejected by the kernel-side check | while-no-decreases (burden) |
