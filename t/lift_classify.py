@@ -374,6 +374,66 @@ def _tuple_issue(t: Type) -> Optional[str]:
     return None
 
 
+def _id_type_gap(module, ty: Optional[Type]) -> Optional[str]:
+    """Row 48: an `id` type that is not one of the file's datatypes is
+    named by the declaration that introduces it (`class`, `trait`, `type`,
+    `newtype`: the SkippedDecl's own gap name), or `opaque-type` when the
+    file declares nothing by that name (an import or a Dafny built-in)."""
+    if ty is None or ty.kind != "id" or ty.args:
+        return None
+    for d in module.decls:
+        if isinstance(d, SkippedDecl):
+            words = d.text.split()
+            if len(words) >= 2 and words[1] == ty.name:
+                return d.gap_name
+    return "opaque-type"
+
+
+_DATATYPE_KIND_ORDER = ("recursive", "generic", "real", "sum", "record", "enum")
+
+
+def _datatype_kind(module) -> Optional[str]:
+    """Row 48 (2026-09-27): the shape a member access on this file's
+    datatypes needs, read from every skipped `datatype`/`codatatype`
+    declaration's token text. Per declaration: `recursive` when a
+    constructor's fields mention the type's own name, `generic` when the
+    type takes parameters, `real` when a field is real-valued, `enum` when
+    every constructor is nullary, `record` for one constructor with fields,
+    `sum` otherwise. A file with several datatypes is named by the hardest
+    kind present (the order above), since the member is not resolved to its
+    type here; None when the file declares no datatype (the member belongs
+    to a class, map or module import instead)."""
+    kinds: set[str] = set()
+    for d in module.decls:
+        if not (isinstance(d, SkippedDecl) and d.keyword.split()[-1] in ("datatype", "codatatype")):
+            continue
+        words = d.text.split()
+        if "=" not in words:
+            continue
+        eq = words.index("=")
+        head, body = words[1:eq], words[eq + 1:]
+        name = head[0] if head else ""
+        generic = "<" in head
+        ctors = " ".join(body).split(" | ")
+        fields = [c[c.index("("):] for c in ctors if "(" in c]
+        if any(re.search(r"\b" + re.escape(name) + r"\b", f) for f in fields if name):
+            kinds.add("recursive")
+        elif generic:
+            kinds.add("generic")
+        elif any(re.search(r"\breal\b", f) for f in fields):
+            kinds.add("real")
+        elif not fields:
+            kinds.add("enum")
+        elif len(ctors) == 1:
+            kinds.add("record")
+        else:
+            kinds.add("sum")
+    for k in _DATATYPE_KIND_ORDER:
+        if k in kinds:
+            return k
+    return None
+
+
 def _tuple_names(method: MethodDecl, closure: tuple) -> frozenset:
     """Row 44: every name declared with an accepted tuple type (a param, the
     return, a closure function's param, a typed local), whose `.0`/`.1`
@@ -2560,6 +2620,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
 
     # -- param / return types --------------------------------------------
     array_params: list[Param] = []
+    datatype_kind = _datatype_kind(module)  # row 48: names datatype-typed params/returns/members
     for p in method.params:
         if p.type is not None and p.type.kind == "array":
             if p.type.nullable or not _is_array_of_int(p.type):
@@ -2569,6 +2630,9 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             continue
         reason = _type_issue(p.type)
         if reason is not None:
+            if reason == "datatype":  # row 48
+                reason = (f"datatype-{datatype_kind}" if datatype_kind is not None
+                          else _id_type_gap(module, p.type) or reason)
             issues.append((p.line, reason, p.name))
 
     if ret_param is not None:
@@ -2599,6 +2663,9 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             pass  # decision 22: an allocated array return is a seq return
         else:
             reason = _type_issue(rt)
+            if reason == "datatype":  # row 48
+                reason = (f"datatype-{datatype_kind}" if datatype_kind is not None
+                          else _id_type_gap(module, rt) or reason)
             if reason is not None and not (rt is not None and rt.kind == "nat"):
                 issues.append((ret_param.line, reason, ret_param.name))
 
@@ -2636,7 +2703,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     for root in scope_roots:
         for n in walk(root):
             _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids,
-                                  tuple_names)
+                                  tuple_names, datatype_kind)
 
     # -- sequences: literal, concat, slice (rows 25-27, 2026-09-09) ------
     # `SeqDisplay`/`Slice`/a `+` on seqs used to be unconditional
@@ -2916,7 +2983,8 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
                            closure_names: set[str],
                            method_names: set[str] = frozenset(),
                            accepted_ids: frozenset[int] = frozenset(),
-                           tuple_names: frozenset = frozenset()) -> None:
+                           tuple_names: frozenset = frozenset(),
+                           datatype_kind: Optional[str] = None) -> None:
     """One generic pass catching every section-5 row that is a plain
     "does this construct appear anywhere" test. Rows needing context
     (self-recursion shape, tail returns, quantifier bounds, decreases,
@@ -3004,10 +3072,31 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         issues.append((n.line, "as-cast", "is"))
     elif isinstance(n, Member) and n.name != "Length":
         # Row 44: `.0`/`.1` on a name declared with an accepted tuple type
-        # is a pair projection; any other member is a datatype's.
-        if not (n.name in ("0", "1") and isinstance(n.base, Ident)
-                and n.base.name in tuple_names):
-            issues.append((n.line, "datatype", n.name))
+        # is a pair projection. Row 48 (2026-09-27) names everything else
+        # by what it is (measured on the 78 methods the old blanket
+        # `datatype` covered: 42 of them touched no datatype at all):
+        # `.0`/`.1` on an indexed element is a seq of pairs (row 46's
+        # name), on any other expression a tuple projection t's pair does
+        # not reach yet; `Length0`/`Length1` are array2's; `Floor` is
+        # real's; a `Ctor?` discriminator or a field on a file that
+        # declares datatypes is named by the datatype's shape; a member on
+        # a file with no datatype is a class, map or module member.
+        if n.name in ("0", "1"):
+            if not (isinstance(n.base, Ident) and n.base.name in tuple_names):
+                if isinstance(n.base, Index):
+                    issues.append((n.line, "seq-of-pair", n.name))
+                else:
+                    issues.append((n.line, "tuple-projection", n.name))
+        elif n.name in ("Length0", "Length1"):
+            issues.append((n.line, "array2", n.name))
+        elif n.name == "Floor":
+            issues.append((n.line, "real", n.name))
+        elif datatype_kind is None:
+            issues.append((n.line, "member-access", n.name))
+        elif n.name.endswith("?"):
+            issues.append((n.line, f"datatype-{datatype_kind}", "discriminator " + n.name))
+        else:
+            issues.append((n.line, f"datatype-{datatype_kind}", "field " + n.name))
     elif isinstance(n, VarDeclStmt) and n.ghost:
         issues.append((n.line, "ghost-local", "ghost var"))
     elif isinstance(n, CallStmt):
