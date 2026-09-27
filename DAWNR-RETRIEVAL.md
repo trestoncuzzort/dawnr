@@ -139,7 +139,20 @@ document above the exact source at the very top position even where recall@5 is 
 falsifying number is anything below 0.5, which would mean something is broken in the ranking itself,
 not merely imprecise at the tightest k.
 
-**Measured:** recall@1 = MEASURED/37 = MEASURED_FRAC
+**Measured:** recall@1 = 35/37 = 0.946 -- above the predicted 0.85, well clear of the 0.5 that would
+have meant something broken. Both misses match the predicted reason exactly, a near-duplicate
+sibling document outranking the exact source at the very top position:
+
+- query "Write a function to find the surface area of a cuboid." returned doc24, "Write a function
+  to find the **lateral** surface area of cuboid", ahead of doc26, the expected exact match;
+- query "Write a function to find maximum of two numbers." returned doc20, "Write a **python**
+  function to find the maximum of two numbers.", ahead of doc46, the expected exact match.
+
+Both misses are still in the corpus and still find their own document at k=5 (the exploratory run
+above): BM25 is doing the right thing given only surface lexical overlap between near-duplicate
+problem statements: exactly the case a corpus with template-sibling problems (largest/smallest,
+odd/even -- t/DECONTAMINATION-2026-09-21.md names the same phenomenon among the held-out ids) will
+produce, and exactly the case dense embeddings, measured, might or might not improve on.
 
 **Dense embeddings (BM25+RRF vs. BM25 alone): not run in this session.** No `torch` install and no
 trained locallm checkpoint were available in the environment this track was built in (`python3 -c
