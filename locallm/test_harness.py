@@ -21,10 +21,12 @@ import http.server
 import json
 import os
 import socket
+import subprocess
 import sys
 import tempfile
 import textwrap
 import threading
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -518,6 +520,7 @@ SILENT_LEGACY = r'''
 import json, sys
 for line in sys.stdin:
     msg = json.loads(line)
+    method = msg.get("method")
     if msg.get("method") == "initialize":
         sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": "s1", "method": "roots/list"}) + "\n")
         sys.stdout.flush()
@@ -537,6 +540,11 @@ for line in sys.stdin:
             continue
         sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {
             "content": [{"type": "text", "text": "roots answered correctly: " + str(ok)}]}}) + "\n")
+    elif "id" in msg:
+        # a real legacy server still answers a request it does not implement (resources/list, say) with a
+        # proper JSON-RPC error rather than silence -- only a notification (no "id") goes unanswered
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": msg["id"],
+                                     "error": {"code": -32601, "message": "method not found: " + str(method)}}) + "\n")
     sys.stdout.flush()
 '''
 
@@ -557,8 +565,74 @@ for line in sys.stdin:
     elif msg.get("method") == "tools/call":
         sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {
             "content": [{"type": "text", "text": PAGE}]}}) + "\n")
+    elif "id" in msg:
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": msg["id"],
+                                     "error": {"code": -32601, "message": "method not found"}}) + "\n")
     sys.stdout.flush()
 ''' % (INJECTION,)
+
+# a legacy-era server that also answers resources/list, resources/read and prompts/list: its one resource's
+# description carries INSTRUCTION, the same probe test_mcp_result_never_leaks... uses, to check that the
+# harness-authored resources_list/resources_read/prompts_list tools never put a server's own words in the
+# index (only in an already-untrusted call result), the same rule as a tool's own description.
+RESOURCE_PROMPT_SERVER = r'''
+import base64, json, sys
+for line in sys.stdin:
+    msg = json.loads(line)
+    mid, method = msg.get("id"), msg.get("method")
+    if method == "initialize":
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid, "result": {
+            "protocolVersion": "2025-06-18", "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
+            "serverInfo": {"name": "rp", "version": "0"}}}) + "\n")
+    elif method == "tools/list":
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid, "result": {"tools": []}}) + "\n")
+    elif method == "resources/list":
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid, "result": {"resources": [
+            {"uri": "config://settings", "name": "settings", "description": %r}]}}) + "\n")
+    elif method == "resources/read":
+        uri = (msg.get("params") or {}).get("uri")
+        if uri == "config://settings":
+            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid, "result": {"contents": [
+                {"uri": uri, "mimeType": "text/plain", "text": "debug=true"}]}}) + "\n")
+        elif uri == "blob://thing":
+            blob = base64.b64encode(b"binarydata").decode()
+            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid, "result": {"contents": [
+                {"uri": uri, "mimeType": "application/octet-stream", "blob": blob}]}}) + "\n")
+        else:
+            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid,
+                                         "error": {"code": -32602, "message": "no such resource " + str(uri)}}) + "\n")
+    elif method == "prompts/list":
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid, "result": {"prompts": [
+            {"name": "greet", "description": "A friendly greeting", "arguments": [{"name": "who"}]}]}}) + "\n")
+    elif mid is not None:
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid,
+                                     "error": {"code": -32601, "message": "method not found: " + str(method)}}) + "\n")
+    sys.stdout.flush()
+''' % (INSTRUCTION,)
+
+# answers tools/list forever, one tool per page, each page after a real delay -- a server that never stops
+# paginating and never errors, only ever a little slow, used to check the pagination deadline (mcp_client.py's
+# _paginate) bounds the total wall-clock a "slow drip" of otherwise-valid pages can cost register_server.
+SLOW_PAGES_SERVER = r'''
+import json, sys, time
+for line in sys.stdin:
+    msg = json.loads(line)
+    mid, method = msg.get("id"), msg.get("method")
+    if method == "initialize":
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid, "result": {
+            "protocolVersion": "2025-06-18", "capabilities": {"tools": {}},
+            "serverInfo": {"name": "slow-pages", "version": "0"}}}) + "\n")
+    elif method == "tools/list":
+        time.sleep(0.4)
+        n = int((msg.get("params") or {}).get("cursor") or "0")
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid, "result": {
+            "tools": [{"name": "t" + str(n), "inputSchema": {"type": "object"}}],
+            "nextCursor": str(n + 1)}}) + "\n")   # never stops on its own
+    elif mid is not None:
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid,
+                                     "error": {"code": -32601, "message": "method not found"}}) + "\n")
+    sys.stdout.flush()
+'''
 
 
 class MCPClientAndServer(unittest.TestCase):
@@ -620,6 +694,113 @@ class MCPClientAndServer(unittest.TestCase):
             self.assertTrue(any("remote" in p and "offline" in p for p in h.problems))
             self.assertIn("Parse, type check", h.index())
             self.assertFalse(h.call("mcp__dawnr__t_check", {"program": PROGRAM}).is_error)
+
+    def test_tools_only_server_gets_no_resources_or_prompts_tools(self):
+        """dawnr's own server (mcp_server.py) answers only tools/list and tools/call: a real, working
+        tools-only server, not a fixture rigged to fail. resources/list and prompts/list must not appear in
+        its registry entries just because the client can now ask for them."""
+        with mcp_client.StdioClient([PY, SERVER], name="dawnr") as c:
+            reg = Registry()
+            added, skipped = mcp_client.register_server(reg, "dawnr", c, permission="allow", network=False)
+            self.assertEqual(added, ["mcp__dawnr__t_check"])
+            self.assertEqual(skipped, [])
+
+    def test_resources_and_prompts_are_registered_and_stay_untrusted(self):
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / "rp.py"
+            script.write_text(RESOURCE_PROMPT_SERVER, encoding="utf-8")
+            with mcp_client.StdioClient([PY, str(script)], name="rp", probe_timeout=0.5, timeout=5) as c:
+                reg = Registry()
+                added, skipped = mcp_client.register_server(reg, "rp", c, permission="allow", network=False)
+                self.assertEqual(sorted(added), ["mcp__rp__prompts_list", "mcp__rp__resources_list",
+                                                "mcp__rp__resources_read"])
+                self.assertEqual(skipped, [])
+                h = Harness(reg, Policy(), Hooks(DEFAULT_HOOKS))
+                # the server's own words (here, in a resource's description) are never in the index: only
+                # dawnr's own fixed tool descriptions are (tool poisoning, DAWNR-HARNESS.md section 5, same
+                # rule as a regular mcp__ tool's description behind `describe`)
+                self.assertNotIn(INSTRUCTION, h.index())
+                self.assertIn("mcp__rp__resources_list(): List resources", h.index())
+
+                listing = h.call("mcp__rp__resources_list", {})
+                self.assertEqual(listing.trust, "untrusted")
+                self.assertIn("config://settings", listing.text)
+                self.assertIn(INSTRUCTION, listing.text)          # untrusted call *result* may carry it
+
+                text_read = h.call("mcp__rp__resources_read", {"uri": "config://settings"})
+                self.assertEqual((text_read.text, text_read.trust, text_read.is_error),
+                                 ("debug=true", "untrusted", False))
+
+                blob_read = h.call("mcp__rp__resources_read", {"uri": "blob://thing"})
+                self.assertEqual(blob_read.trust, "untrusted")
+                self.assertNotIn("binarydata", blob_read.text)     # a blob is reported, never decoded in-context
+                self.assertIn("16 base64 characters", blob_read.text)
+
+                missing = h.call("mcp__rp__resources_read", {"uri": "nope://x"})
+                self.assertTrue(missing.is_error)
+                self.assertIn("no such resource", missing.text)
+
+                prompts = h.call("mcp__rp__prompts_list", {})
+                self.assertEqual(prompts.trust, "untrusted")
+                self.assertIn("greet", prompts.text)
+
+    def test_pagination_has_an_overall_deadline(self):
+        with tempfile.TemporaryDirectory() as d:
+            script = Path(d) / "slow.py"
+            script.write_text(SLOW_PAGES_SERVER, encoding="utf-8")
+            with mcp_client.StdioClient([PY, str(script)], name="slow", probe_timeout=0.5, timeout=1.0) as c:
+                start = time.monotonic()
+                tools = c.list_tools(max_pages=20, max_tools=256)
+                elapsed = time.monotonic() - start
+        # unbounded before the fix: this server never stops, so 20 pages at 0.4s each is 8s and climbing;
+        # the deadline (one request's worth, self.timeout=1.0s here) must cut it off well before that
+        self.assertLess(elapsed, 3.0)
+        self.assertGreaterEqual(len(tools), 1)
+        self.assertLess(len(tools), 20)                        # did not run to max_pages
+
+    def test_close_never_raises_even_when_the_process_wont_die(self):
+        """Simulates the condition confirmed directly against StdioClient before this fix: terminate()'s
+        wait always times out and kill() itself raises OSError (cpython's own Popen.terminate on Windows
+        re-raises PermissionError when GetExitCodeProcess still reports STILL_ACTIVE --
+        github.com/python/cpython Lib/subprocess.py). close() must still return, never raise: it is a
+        cleanup path called from __exit__ and Harness.close(), and a cleanup that can throw is unsafe to
+        rely on."""
+        class FakeStream:
+            def close(self):
+                pass
+
+        class FakeProc:
+            def __init__(self):
+                self.stdin, self.stdout, self.stderr = FakeStream(), FakeStream(), FakeStream()
+
+            def wait(self, timeout=None):
+                raise subprocess.TimeoutExpired(cmd="fake", timeout=timeout)
+
+            def terminate(self):
+                pass
+
+            def kill(self):
+                raise OSError("[WinError 5] Access is denied")
+
+        c = mcp_client.StdioClient(["true"], name="fake")
+        c.proc = FakeProc()
+        c.close()                                              # must not raise
+        self.assertTrue(c._closed)
+
+    def test_a_stuck_server_is_still_killed_within_bounded_time(self):
+        """A real process that ignores SIGTERM (installs a handler for it) but not SIGKILL: close() must
+        fall through terminate() to kill() and return promptly, not hang for as long as the server does."""
+        code = ("import signal, time\n"
+               "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+               "time.sleep(60)\n")
+        c = mcp_client.StdioClient([PY, "-c", code], name="stuck", probe_timeout=0.3, timeout=0.3)
+        c.start()
+        time.sleep(0.2)                                        # let the signal handler install
+        start = time.monotonic()
+        c.close()
+        elapsed = time.monotonic() - start
+        self.assertLess(elapsed, 10.0)
+        self.assertIsNotNone(c.proc.poll())                     # actually reaped, not left running
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
