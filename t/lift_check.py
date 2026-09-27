@@ -123,6 +123,7 @@ from lift_ast import (
 
 import fuzz_lower
 import lift_let
+from lift_classify import expr_kind
 import interp
 import harness
 import lower_dafny
@@ -831,6 +832,72 @@ def _body(hints: list) -> list:
     return ["{"] + hints + ["}"] if hints else ["{ }"]
 
 
+def _is_len_json(e: dict) -> bool:
+    return isinstance(e, dict) and e.get("op") == "len"
+
+
+def _seq_measure(e, names: list, types: list, crename: dict) -> bool:
+    """Feature 3 of t/FEATURES-TRACK.md (seq `decreases`, 2026-09-27): is
+    the SOURCE measure `e` a sequence (a `seq<..>`/`string`-typed name, a
+    slice, a display, a concatenation of those)? `lift_rewrite` lifts such a
+    component as `len(component)`, so the equality lemma compares
+    `|component|` on the source side (a bare `s == |s|` would not even
+    type-check). `names`/`types` are the lemma's parameters (true names) and
+    their source types; `crename` maps source names onto them."""
+    kinds = {}
+    for n, t in zip(names, types):
+        if t is None:
+            continue
+        if t.kind in ("seq", "string"):
+            kinds[n] = "seq"
+        elif t.kind in ("int", "nat", "char"):
+            kinds[n] = "int"
+        elif t.kind == "bool":
+            kinds[n] = "bool"
+    return expr_kind(e, lambda name: kinds.get(crename.get(name, name))) == "seq"
+
+
+def _slice_bridge_lines(fd: FunctionDecl, rename: dict) -> list:
+    """Feature 3 of t/FEATURES-TRACK.md (seq `decreases`, 2026-09-27): proved
+    bridges between the two spellings of a one-sided slice. The source
+    writes `s[1..]` / `s[..k]`; the lift carries the three-argument form
+    (SPEC.md "Sequences: literals, concatenation, slices (v1)"), which
+    `lower_dafny` prints as `s[1..|s|]` / `s[0..k]`. Dafny translates the
+    two differently (`Seq#Drop`/`Seq#Take` against a `Take` of a `Drop`) and
+    does not equate them unprompted: `L_fun_sum` for `Sum(s) = s[0] +
+    Sum(s[1..])` read unproved under every induction hint tried (dafny
+    4.11.0, 2026-09-27) and verifies once the equality is stated over the
+    function's own sequence parameters. Each statement is proved by Dafny
+    in an empty `forall` body, so nothing about the lift is assumed; it is
+    emitted only for a function whose body has a one-sided slice, so every
+    other checker file is byte for byte what it was."""
+    if fd.body is None:
+        return []
+    drop = take = False
+    for n in _walk_exprs(fd.body):
+        if isinstance(n, Slice) and not (n.lo is None and n.hi is None):
+            if n.hi is None:
+                drop = True
+            if n.lo is None:
+                take = True
+    if not (drop or take):
+        return []
+    names = {p.name for p in fd.params}
+    k = "k_bridge"
+    while k in names:
+        k += "_"
+    out = []
+    for p in fd.params:
+        if p.type is None or p.type.kind not in ("seq", "string"):
+            continue
+        n = rename.get(p.name, p.name)
+        if drop:
+            out.append(f"  forall {k}: int | 0 <= {k} <= |{n}| ensures {n}[{k}..|{n}|] == {n}[{k}..] {{ }}")
+        if take:
+            out.append(f"  forall {k}: int | 0 <= {k} <= |{n}| ensures {n}[0..{k}] == {n}[..{k}] {{ }}")
+    return out
+
+
 def _induction_hint(fd: FunctionDecl, f: dict, rename: dict):
     """`(decreases_text, body_lines)` for `L_fun_F` when F calls itself,
     else `(None, [])`: the induction hypothesis, stated as a forall
@@ -853,8 +920,15 @@ def _induction_hint(fd: FunctionDecl, f: dict, rename: dict):
     d = decs[0].exprs[0]
     int_params = {p.name for p in fd.params
                   if p.type is not None and (p.type.kind in ("int", "nat"))}
+    # Feature 3 (seq `decreases`, 2026-09-27): a bare seq/string-typed
+    # parameter as the measure (Dafny's default for a function over a
+    # sequence) is ordered by length on both sides, `|s_ih| < |s|`, the
+    # order `lift_rewrite._seq_measure_to_len` lifts it to.
+    seq_params = {p.name for p in fd.params
+                  if p.type is not None and p.type.kind in ("seq", "string")}
+    by_length = isinstance(d, Ident) and d.name in seq_params
     if isinstance(d, Ident):
-        if d.name not in int_params:
+        if d.name not in int_params and not by_length:
             return None, []
     elif not isinstance(d, (Binary, Unary, Cardinality, IntLit)):
         return None, []
@@ -869,6 +943,8 @@ def _induction_hint(fd: FunctionDecl, f: dict, rename: dict):
     req2 = _conj_text([sp.expr for sp in fd.specs if isinstance(sp, RequiresClause)], ren2)
     d_now = _print_expr(d, rename)
     d_ih = _print_expr(d, ren2)
+    if by_length:
+        d_now, d_ih = f"|{d_now}|", f"|{d_ih}|"
     fn_src = rename.get(fd.name, fd.name)
     src_call = _src_result_text(f"{fn_src}({args2})", fd.ret_type)
     guard = _and([nat2, req2, f"(0 <= {d_ih} < {d_now})"])
@@ -2087,6 +2163,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             if call.fn.name != fd.name and call.fn.name not in callee_names:
                 callee_names.append(call.fn.name)
         lines.extend(_body(_view_hint_lines(fd_views, {p.name for p in fd.params})
+                           + _slice_bridge_lines(fd, rename)
                            + [fun_hints[n] for n in callee_names] + ih_lines))
         lines.append("")
 
@@ -2612,6 +2689,11 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
             lemma_names.append(name)
             src_dec = _print_expr(dec_specs[0].exprs[0], loop_crename)
             lifted_dec = _t_expr(task_loops[k]["decreases"], views)
+            if (_is_len_json(task_loops[k]["decreases"])
+                    and _seq_measure(dec_specs[0].exprs[0], full_names, full_types, loop_crename)):
+                # Feature 3 (seq `decreases`, 2026-09-27): the lift is
+                # `len(s)`, so the source side is `|s|` (see `_seq_measure`).
+                src_dec = f"|{src_dec}|"
             lines.append(f"lemma {name}({ps_inv})")
             # Same ordering, same reason as `L_inv_k`'s own `requires`
             # above: `extra_fact` can index with the enclosing `for`'s

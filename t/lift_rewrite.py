@@ -822,6 +822,29 @@ def _expr_eq(a: Expr, b: Expr) -> bool:
     return False  # conservative: anything more complex counts as "different"
 
 
+def _seq_measure_to_len(e: Expr, lifted: dict, scope: Scope, record: LiftRecord, line: int) -> dict:
+    """t/FEATURES-TRACK.md feature 3 ("Sequence decreases on spec_funs",
+    2026-09-27): a `decreases` component that is itself a sequence. Dafny
+    orders sequences in its built-in well-founded order (Reference Manual,
+    "Well-founded orders": a sequence is smaller than another when it is a
+    proper prefix, a proper suffix or the middle of one -- the `Seq#Rank`
+    axioms over `Seq#Take`/`Seq#Drop` in Source/DafnyCore/DafnyPrelude.bpl,
+    github.com/dafny-lang/dafny), so every step Dafny can prove is to a
+    STRICTLY SHORTER sequence, and rprint materialises exactly this measure
+    (`decreases s`, the parameters in order) for every function over a seq
+    that states none. t's measures are ints (SPEC.md gate 3; check_wf's
+    `spec-fun-decreases-int`, which refused 32 of the 108 re-lifted tasks of
+    2026-09-27 at the check stage). Lift the component as `len(component)`:
+    it decreases exactly where Dafny's did, and the kernels prove the
+    decrease rather than trust it (the check stage's L_dec/L_fun lemmas
+    compare `|component|` against the lift). Recorded `decreases-seq-length`
+    per component. A component of any other kind is returned unchanged."""
+    if _rw_seq_kind(e, scope) == "seq":
+        record.rewrites.append(Rewrite(rule="decreases-seq-length", line=line))
+        return {"op": "len", "args": [lifted]}
+    return lifted
+
+
 def _loop_decreases(w: WhileStmt, dc: DecreasesClause, scope: Scope, fn_names, self_name,
                      task_name, record, renamer) -> dict:
     exprs = dc.exprs
@@ -830,7 +853,8 @@ def _loop_decreases(w: WhileStmt, dc: DecreasesClause, scope: Scope, fn_names, s
         origin = "rprint-inferred" if (not isinstance(w.cond, type(None))
                                         and _looks_rprint_inferred(e, w.cond)) else "stated"
         record.decreases_origin[f"loop@{w.line}"] = origin
-        return _lift_expr(e, scope, fn_names, self_name, task_name, record, renamer)
+        return _seq_measure_to_len(e, _lift_expr(e, scope, fn_names, self_name, task_name, record, renamer),
+                                   scope, record, dc.line)
     assigned = set()
     for n in walk(w.body):
         if isinstance(n, Assign):
@@ -841,10 +865,12 @@ def _loop_decreases(w: WhileStmt, dc: DecreasesClause, scope: Scope, fn_names, s
     if len(kept) == 1:
         record.decreases_origin[f"loop@{w.line}"] = "projected"
         record.rewrites.append(Rewrite(rule="decreases-tuple-reduced", line=dc.line))
-        return _lift_expr(kept[0], scope, fn_names, self_name, task_name, record, renamer)
+        return _seq_measure_to_len(kept[0], _lift_expr(kept[0], scope, fn_names, self_name, task_name, record, renamer),
+                                   scope, record, dc.line)
     record.decreases_origin[f"loop@{w.line}"] = "guess:sum"
     record.rewrites.append(Rewrite(rule="guess:sum", line=dc.line))
-    lifted = [_lift_expr(e, scope, fn_names, self_name, task_name, record, renamer) for e in kept]
+    lifted = [_seq_measure_to_len(e, _lift_expr(e, scope, fn_names, self_name, task_name, record, renamer),
+                                  scope, record, dc.line) for e in kept]
     out = lifted[0]
     for nxt in lifted[1:]:
         out = {"op": "+", "args": [out, nxt]}
@@ -879,17 +905,23 @@ def _function_decreases(d: FunctionDecl, fn_scope: Scope, fn_names, record, rena
     exprs = dc.exprs
     if len(exprs) == 1:
         record.decreases_origin[d.name or "?"] = "stated"
-        return _lift_expr(exprs[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer)
+        return _seq_measure_to_len(
+            exprs[0], _lift_expr(exprs[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer),
+            fn_scope, record, dc.line)
     param_names = [p.name for p in d.params]
     dropped = unchanged_at_every_call(param_names, calls, len(exprs))
     kept = [exprs[i] for i in range(len(exprs)) if i not in dropped]
     if len(kept) == 1:
         record.decreases_origin[d.name or "?"] = "projected"
         record.rewrites.append(Rewrite(rule="decreases-tuple-reduced", line=dc.line))
-        return _lift_expr(kept[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer)
+        return _seq_measure_to_len(
+            kept[0], _lift_expr(kept[0], fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer),
+            fn_scope, record, dc.line)
     record.decreases_origin[d.name or "?"] = "guess:sum"
     record.rewrites.append(Rewrite(rule="guess:sum", line=dc.line))
-    lifted = [_lift_expr(e, fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer) for e in kept]
+    lifted = [_seq_measure_to_len(
+                  e, _lift_expr(e, fn_scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer),
+                  fn_scope, record, dc.line) for e in kept]
     out = lifted[0]
     for nxt in lifted[1:]:
         out = {"op": "+", "args": [out, nxt]}
@@ -2413,7 +2445,9 @@ def _method_level_decreases(method: MethodDecl, scope: Scope, fn_names: dict,
     dc = dcs[0]
     exprs = dc.exprs
     if len(exprs) == 1:
-        return _lift_expr(exprs[0], scope, fn_names, method.name, task_name, record, renamer), "stated"
+        return _seq_measure_to_len(
+            exprs[0], _lift_expr(exprs[0], scope, fn_names, method.name, task_name, record, renamer),
+            scope, record, dc.line), "stated"
     # Mirror `_function_decreases`'s projection test (decision 11): a
     # component is kept only when it CHANGES at every self-call (i.e. is
     # not passed through unchanged), found by walking the method's own
@@ -2428,14 +2462,17 @@ def _method_level_decreases(method: MethodDecl, scope: Scope, fn_names: dict,
     kept = [exprs[i] for i in range(len(exprs)) if i not in dropped]
     if len(kept) == 1:
         record.rewrites.append(Rewrite(rule="decreases-tuple-reduced", line=dc.line))
-        return _lift_expr(kept[0], scope, fn_names, method.name, task_name, record, renamer), "projected"
+        return _seq_measure_to_len(
+            kept[0], _lift_expr(kept[0], scope, fn_names, method.name, task_name, record, renamer),
+            scope, record, dc.line), "projected"
     if len(kept) == 0:
         # classify's pre-check (section 5's `lexicographic-decreases`) is
         # supposed to have refused this already; fall back to summing
         # every stated component rather than crashing if it did not.
         kept = list(exprs)
     record.rewrites.append(Rewrite(rule="guess:sum", line=dc.line))
-    lifted = [_lift_expr(e, scope, fn_names, method.name, task_name, record, renamer) for e in kept]
+    lifted = [_seq_measure_to_len(e, _lift_expr(e, scope, fn_names, method.name, task_name, record, renamer),
+                                  scope, record, dc.line) for e in kept]
     out = lifted[0]
     for nxt in lifted[1:]:
         out = {"op": "+", "args": [out, nxt]}
