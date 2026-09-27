@@ -2633,6 +2633,18 @@ def _collect_names(x, out: set) -> None:
             _collect_names(v, out)
 
 
+def _divmod_by_nonliteral(x) -> bool:
+    """True iff `x` holds a div/mod whose divisor is not an int literal."""
+    if isinstance(x, dict):
+        if x.get("op") in ("div", "mod", "%", "/") and len(x.get("args", [])) == 2 \
+                and "int" not in x["args"][1]:
+            return True
+        return any(_divmod_by_nonliteral(v) for v in x.values())
+    if isinstance(x, list):
+        return any(_divmod_by_nonliteral(v) for v in x)
+    return False
+
+
 def _has_call(x, op_name: str, arity: int | None = None) -> bool:
     """True iff `x` contains an Expr node `{"op": op_name, "args": [...]}`
     with exactly `arity` args (any arity when None). `_has(x, "op", o)`
@@ -3594,7 +3606,13 @@ class Lower:
             # matching that so the lowering REJECTS the token rather
             # than abstaining on it.
             raise ValueError(f"t has no operator {op!r}")
-        if op in ("==", "!=") or op in CMP_OPS or op in ("and", "or", "not"):
+        # 2026-09-26: `implies` joins them (vericoding VA0399's spec_fun
+        # body returns `a ==> b` as a Bool and abstained here); core
+        # Lean's `instDecidableForall`-style instance for `p → q` over two
+        # decidable Props makes `decide` exact for it too, and `dcond`
+        # already owns its short-circuit definedness.
+        if (op in ("==", "!=") or op in CMP_OPS
+                or op in ("and", "or", "not", "implies")):
             # BOOLEANS AS COMPUTATIONAL VALUES (2026-09-10): a
             # comparison/equality/logical op reaching term() (as opposed
             # to prop(), which already renders every one of these as a
@@ -4567,9 +4585,19 @@ class Lower:
                     return
                 if x.get("op") in DIV_MOD:
                     a, b = x["args"]
-                    pair = (self.term(a, env, types),
-                            self.term(b, env, types))
-                    if pair not in seen:
+                    try:
+                        pair = (self.term(a, env, types),
+                                self.term(b, env, types))
+                    except KeyError:
+                        # 2026-09-26: a `var` declared inside an `if`
+                        # branch (vericoding DA0203's `remaining`) has no
+                        # entry in the OUTER `types`, the same scoping gap
+                        # the quantifier skip above names; its `have` line
+                        # would name a variable not in scope where the
+                        # prelude sits, so the pair is skipped (it was a
+                        # LOWER-ERROR before). Only a hint is lost.
+                        pair = None
+                    if pair is not None and pair not in seen:
                         seen.add(pair)
                         out.append(pair)
                 for v in x.values():
@@ -5515,6 +5543,135 @@ class Lower:
         if self.seq_eq_comp:
             names.append("t_seq_ext")
         return ", ".join(names + [f"{f}_s" for f in self.sfuns])
+
+    # THE MATCHING LOOP (2026-09-26, six-of-seven corpus: lean was the one
+    # missing kernel on 35 documents, 16 of them TIMEOUT or UNPROVED in a
+    # single-loop `_t_loop_spec`). Measured on getEven's own preservation
+    # goal (scratch probes, lean 4.33.1, 400000 heartbeats):
+    # grind turns every universally quantified HYPOTHESIS into E-matching
+    # theorems with one pattern per candidate subterm, including the bare
+    # arithmetic guard `0 ≤ #j`. Any fact `0 ≤ t` then instantiates the
+    # hypothesis at `t`; a requires like `∀ k, s[k] ≥ 0` (element ranges,
+    # the char range 0..1114111 of every string task) or an invariant over
+    # `s[j] % 2` (whose remainder grind knows is `≥ 0`) produces a NEW such
+    # fact with a new term, and the chain runs until the declaration's
+    # whole heartbeat budget is gone -- `grind`'s diagnostics show
+    # `s[(s[(s[j]! % 2).toNat]! % 2).toNat]!` nine levels deep, and a
+    # timeout is not a failure `first` can recover from, so no later
+    # alternative ever ran. The Lean reference manual's grind chapter
+    # (lean-lang.org/doc/reference/latest/The--grind--tactic/, E-matching
+    # section) is explicit that E-matching only instantiates what its
+    # patterns meet and that exploding searches are out of its scope. The
+    # fix does the instantiation by hand, the way an SMT user supplies
+    # triggers: every quantified hypothesis (requires conjunct or
+    # invariant, one or two leading binders) is instantiated at the
+    # goal's own bound variable(s) and at every Int state variable and
+    # parameter, the quantified originals are CLEARED, and the ordinary
+    # closer runs on what is now a ground problem (0.4 s where plain grind
+    # timed out). Sound by construction: instantiating and clearing
+    # hypotheses only ever weakens the context, every `have` is checked
+    # by the kernel, and the closer still has to close the goal. Offered
+    # FIRST (a timeout in the old chain would otherwise pre-empt it), with
+    # the old chain intact behind it; `None` when no hypothesis is
+    # quantified, so such tasks are byte-identical.
+    def _inst_script(self, state_nt: list, params_nt: list, invs: list,
+                     has_pre: bool) -> str | None:
+        def depth(e) -> int:
+            d = 0
+            while isinstance(e, dict) and "forall" in e:
+                d += 1
+                e = e["forall"]["body"]
+            return d
+
+        def leaves(e, path: str) -> list:
+            # `prop` renders an n-ary `and` right-nested, `(a ∧ b ∧ c)`,
+            # so conjunct i of n is `.2`*i then `.1` (the last has none)
+            if isinstance(e, dict) and e.get("op") == "and":
+                args = e["args"]
+                return [x for i, a in enumerate(args) for x in leaves(
+                    a, path + ".2" * i + (".1" if i < len(args) - 1
+                                          else ""))]
+            return [(path, e)]
+
+        roots = []               # (hypothesis name, its conjunct leaves)
+        reqs = self.task.get("requires", []) if has_pre else []
+        if reqs:
+            roots.append(("hpre", leaves({"op": "and", "args": reqs}
+                                         if len(reqs) > 1 else reqs[0],
+                                         "hpre")))
+        roots += [(f"hinv{k + 1}", leaves(iv, f"hinv{k + 1}"))
+                  for k, iv in enumerate(invs)]
+        quant = []               # (hypothesis term, binder depth)
+        readd, clears = [], []
+        for name, lv in roots:
+            ds = [depth(e) for _, e in lv]
+            if not any(ds):
+                continue
+            quant += [(p, d) for (p, _), d in zip(lv, ds) if 1 <= d <= 2]
+            if max(ds) <= 2:
+                # the root goes; its quantifier-free conjuncts come back
+                readd += [p for (p, _), d in zip(lv, ds) if d == 0]
+                clears.append(name)
+        if not quant:
+            return None
+        # the goal's own leading binders, whatever mix of `∀ x : Int` and
+        # `P →` they are (an ensures `r = -1 → ∀ i, ...` starts with a
+        # hypothesis): each gets a name, and an instantiation at a name
+        # that turned out to be a proof fails inside its own `try`
+        goal_vars = [f"_x{i}" for i in range(1, 7)]
+        terms = goal_vars + [v for v, ty in list(state_nt) + list(params_nt)
+                             if ty == "int"]
+        haves = []
+        for h, d in quant:
+            if d == 1:
+                haves += [f"(try have := {h} {t})" for t in terms]
+            else:
+                haves += [f"(try have := fun _g1 _g2 => {h} {t1} _g1 _g2 {t2})"
+                          for t1 in terms for t2 in terms]
+        if len(haves) > 300:
+            return None
+        lines = [f"(try intro {x})" for x in goal_vars] + ["(try intros)"] \
+            + haves
+        lines += [f"(try have := {p})" for p in readd]
+        lines += [f"(try clear {h})" for h in clears]
+        # a conjunction goal (the exit goal is the whole ensures list) is
+        # split first, so each conjunct gets its own bound variable. The
+        # length alternative: `↑(rev ++ [x]).length = i + 1` from
+        # `↑rev.length = i` is NOT closed by grind (measured, lean 4.33.1,
+        # with and without `List.length_append` as a hint: the Nat->Int
+        # cast of the append length is never split), while the
+        # length-lemma rewrite plus omega closes it (HumanEval 088's and
+        # vericoding DJ0160's reverse, both append-one loops).
+        alts = [self._gr(), "(simp only [List.length_append, "
+                "List.length_cons, List.length_nil, List.length_set, "
+                "List.length_replicate] at *; omega)"]
+        if self.seq_mut:
+            # a read after an update at a LITERAL index (cumSum's
+            # `(result.set i v)[(0 : Int).toNat]! = a[0]!`): grind
+            # normalizes `(0 : Int).toNat` to the Nat literal before
+            # `t_seq_update_get`'s `j.toNat` pattern can meet it, so the
+            # read is rewritten first, bounds discharged by omega
+            # (measured: grind with the lemma fails, the rewrite then
+            # grind closes, 0.35 s)
+            alts.append("((simp (disch := omega) only [t_seq_update_get]); "
+                        + self._gr() + ")")
+        closer = "(first | " + " | ".join(alts) + ")"
+        return ("((repeat' apply And.intro) <;> (" + "; ".join(lines)
+                + "; " + closer + "))")
+
+    def _gr_bounded(self) -> str:
+        """The fallback behind `_inst_script`: `grind` (and the seq-hint
+        `grind only`) with E-matching capped at 100 instances (grind's
+        `instances` option; the reference manual's E-matching section),
+        so a FALSE goal with a quantified hypothesis in scope fails in
+        about a second instead of running the matching loop into the
+        heartbeat limit. 100 measured enough for every clean document
+        that needed E-matching past the ground script (see
+        `lower_loop`'s call site)."""
+        alts = [f"grind (instances := 100){self.ga}"]
+        if self.seq_mut or self.seq_new or self.seq_eq_comp:
+            alts.append(f"grind (instances := 100) only [{self._seq_hints()}]")
+        return alts[0] if len(alts) == 1 else "(first | " + " | ".join(alts) + ")"
 
     def _gr(self, nodes: list | None = None, env: dict | None = None,
            types: dict | None = None) -> str:
@@ -6506,8 +6663,31 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             d = self.dcond(f["body"], {}, dict(ptypes))
             if d is not None:
                 tname = f"{f['name']}_s_wf"
-                tac = self._close([f["body"]], {}, dict(ptypes),
-                                  self._grind_base())
+                # 2026-09-26: this theorem sits right after its OWN def,
+                # before the spec_funs declared later in the task; citing
+                # one of those in the grind hint list is an unknown
+                # constant (vericoding DA0508, a helper declared before
+                # its caller: its real read UNPROVED on the elaboration
+                # error). The hint list is narrowed to what is already
+                # declared for exactly this theorem, then restored.
+                later = {g["name"] + "_s" for g in
+                         self.task["spec_funs"][
+                             self.task["spec_funs"].index(f) + 1:]}
+                saved = (self.ga, self.ga_wo_sfuns, self.sfun_names_ga)
+                if later:
+                    def _drop(ga: str) -> str:
+                        ns = [n for n in ga.strip(" []").split(", ")
+                              if n and n not in later]
+                        return "" if not ns else " [" + ", ".join(ns) + "]"
+                    self.ga = _drop(self.ga)
+                    self.ga_wo_sfuns = _drop(self.ga_wo_sfuns)
+                    self.sfun_names_ga = [n for n in self.sfun_names_ga
+                                          if n not in later]
+                try:
+                    tac = self._close([f["body"]], {}, dict(ptypes),
+                                      self._grind_base())
+                finally:
+                    self.ga, self.ga_wo_sfuns, self.sfun_names_ga = saved
                 out.append(f"theorem {tname} {pb} :\n    {d} := by\n"
                            f"  {tac}\n")
                 thms.append((tname, "definedness of spec_fun "
@@ -6933,7 +7113,17 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             + f"  | grind [{self.name}_t"
             + (", " + ", ".join(f"{f}_s" for f in self.sfuns)
                if self.sfuns else "") + "]\n"
-            + ("  | decide\n" if not self.task["params"] else ""))
+            + ("  | decide\n" if not self.task["params"] else "")
+            # 2026-09-26 (vericoding DS0029 lcmInt, `result := 0` against
+            # `result % a == 0`): grind's linear-integer solver only
+            # reasons about `%` by a numeral, so `0 % a = 0` with a
+            # variable divisor is out of its reach, while `simp`'s
+            # `Int.zero_emod`/`Int.emod_self` family closes it. Offered
+            # LAST, and only when an ensures takes div/mod by a
+            # non-literal, so no other task's text changes.
+            + ("  | ((try unfold " + self.name + "_t" + dsimp.replace(
+                "\n     ", "; ") + "); simp_all)\n"
+               if _divmod_by_nonliteral(self.task["ensures"]) else ""))
         thms.append((f"{self.name}_t_spec", "the contract"))
         return "\n".join(out), thms
 
@@ -8047,6 +8237,33 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             rc_alts.append(f"({'; '.join(mb_lines)}; {self._gr()})")
         rec_closer = (self._gr() if len(rc_alts) == 1
                       else "(first | " + " | ".join(rc_alts) + ")")
+        # THE MATCHING LOOP (2026-09-26, `_inst_script`): the ground
+        # instantiation goes FIRST, behind a plain `assumption` (the
+        # `hpre` goal `apply` leaves is literally a hypothesis, and the
+        # script clears `hpre`). What follows it is `_gr_bounded`, not
+        # the old unbounded chain: a TWIN's preservation goal is false,
+        # the ground script fails on it fast, and the old chain then ran
+        # the same matching loop into a timeout, and TIMEOUT outranks the
+        # refutation certificate in verifiers/lean.py (7 twins read
+        # `verified / timeout` for exactly this, getEven x3, myfun,
+        # squareNums, arrayUpToN, DA0508). The bounded grind still does
+        # what only E-matching can (a skolem from a negated `∀`, an index
+        # like `len - 1 - j`): measured on the 83 clean documents whose
+        # lowering this changes, the two that needed the old chain
+        # (acsl mismatch, cmsc433 reverse) close on it. A body shape that
+        # carries the hand-built append-one alternative keeps its whole
+        # old chain behind the script instead. The param/state product
+        # bridge is NOT carried over: measured, with it behind the script
+        # (bounded grind or not) myfun's twin still ran into the
+        # heartbeat limit on the `i * i` facts it adds, and without it
+        # none of the 83 clean documents changed verdict.
+        inst = self._inst_script(state_nt, params_nt, invs, has_pre)
+        if inst is not None:
+            if pres_alt is not None:
+                rec_closer = f"(first | assumption | {inst} | {rec_closer})"
+            else:
+                rec_closer = (f"(first | assumption | {inst} | "
+                              f"{self._gr_bounded()})")
         then_tac = (
             f"all_goals (first | (apply {self.name}_t_loop_spec <;> "
             f"{rec_closer}) | {dite_else_tac if can_dite else self._gr()})"
@@ -8114,6 +8331,14 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         exit_alt = self._seq_append1_exit_script(invs)
         if exit_alt is not None:
             exit_tac = f"first | ({exit_tac}) | {exit_alt}"
+        if inst is not None:
+            # the exit goal (ensures from invariants + negated guard) is
+            # where getEven's own matching loop was measured first; same
+            # rule as the preservation closer above
+            exit_tac = (f"first | {inst} | ({exit_tac})"
+                        if (exit_alt is not None
+                            or self._divisor_bound_plan is not None)
+                        else f"first | {inst} | {self._gr_bounded()}")
         out.append(
             f"theorem {self.name}_t_loop_spec {pb} {sb}{hpre}{hinvs}"
             f"{hfrs} :\n"
@@ -9252,10 +9477,42 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         parts = [(self.prop(r, ptenv, types),
                   self._prove(r, ptenv, pvenv, types))
                  for r in self.task.get("requires", [])]
+        # 2026-09-26 (six-of-seven corpus, lean the missing kernel): only
+        # the state the loop itself READS OR WRITES has to be bound before
+        # the replay. The return variable is usually assigned only AFTER
+        # the loop (`result := sum` behind a summing loop, find_min's
+        # `minIdx`), so it is in neither env yet; requiring it abstained
+        # on every such twin (vericoding dv0073 and vd0432 read
+        # `verified / unproved` on 2026-09-26 for exactly this) although
+        # the loop never touches it.
+        used: set = set()
+        _collect_names(wh, used)
+        live = [n for n in state if n in used]
         for _ in range(MAX_UNDEF_UNROLL):
-            if any(n not in venv or n not in tenv for n in state):
+            if any(n not in venv or n not in tenv for n in live):
                 return None
-            guard_now = self._cev(wh["cond"], venv)
+            try:
+                guard_now = interp.ev(wh["cond"], venv, self.cert_funs,
+                                      interp.St())
+            except interp.Undef:
+                # 2026-09-26: the GUARD itself is where interp.py raises
+                # Undef (a compare-flipped `i <= len(a) && a[i] != key`
+                # reads `a[len(a)]` on the iteration that should have
+                # stopped: mfirstCero, MFES find). Its own definedness
+                # proposition -- `dcond`, short-circuit `&&` included --
+                # instantiated at the same ground state the replay has
+                # reached is then false, and is proved false by the same
+                # ground `_closer()` the body-level case below uses. The
+                # guard parts already appended say every earlier
+                # iteration was entered, so the certificate is still "the
+                # twin reaches an undefined operation at this input".
+                d = self.dcond(wh["cond"], tenv, types)
+                if d is None:
+                    return None
+                parts.append((f"(¬{d})", self._closer()))
+                return parts
+            except (interp.Budget, RecursionError):
+                return None
             if guard_now is not True:
                 # the guard was already false (or undecidable): interp's
                 # own Undef did not come from entering this loop again, so
