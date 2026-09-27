@@ -103,7 +103,9 @@ def main(argv=None) -> int:
     tokenizer = load_tokenizer(a.init / "tokenizer.json")
     if tokenizer.vocab_size != config.vocab_size:
         raise ValueError("the init's tokenizer and embedding table disagree on vocabulary size")
-    tokenizer = chat.with_chat_tokens(tokenizer)
+    # conversations that call registry tools or read untrusted output need the harness tokens too (DAWNR-HARNESS.md)
+    harness = chat.needs_harness_tokens(train_convs + val_convs)
+    tokenizer = chat.with_harness_tokens(tokenizer) if harness else chat.with_chat_tokens(tokenizer)
     added = chat.grow_embeddings(model, tokenizer.vocab_size)
     model.to(device)
     if a.block_size == 0:
@@ -122,6 +124,7 @@ def main(argv=None) -> int:
                   "config": asdict(model.config), "parameters": sum(p.numel() for p in model.parameters()),
                   "train": train_rows.record(), "val": val_rows.record() if val_rows else None,
                   "seed": a.seed, "block_size": a.block_size, "batch_size": a.batch_size, "steps": a.steps,
+                  **({"harness_tokens": list(chat.HARNESS_TOKENS)} if harness else {}),
                   "lr": a.lr, "warmup": a.warmup, "weight_decay": a.weight_decay, "dropout": a.dropout,
                   "grad_clip": a.grad_clip, "device": device,
                   "source": "nanochat render_conversation masking (github.com/karpathy/nanochat)"}
