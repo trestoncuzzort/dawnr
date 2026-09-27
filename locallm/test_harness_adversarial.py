@@ -12,7 +12,6 @@ oversized and malformed JSON-RPC on the wire; skills with path traversal and sym
 bad commands; web redirects to private ranges, huge bodies, slow drips and wrong content types; injection
 text in every field that reaches the model.
 """
-import base64
 import http.server
 import json
 import os
@@ -35,10 +34,8 @@ from dawnr_harness import mcp_client, skills as skills_mod, web  # noqa: E402
 from dawnr_harness.hooks import HookConfigError, Hooks  # noqa: E402
 from dawnr_harness.mcp_common import METHOD_NOT_FOUND  # noqa: E402
 from dawnr_harness.runtime import DEFAULT_HOOKS, Harness  # noqa: E402
-from dawnr_harness.tools import CallContext, Policy, Registry, Session, Tool, ToolResult, validate  # noqa: E402
-from test_harness import INSTRUCTION, PY, SERVER, echo_tool, py_hook  # noqa: E402
-
-PY = PY  # re-exported for readability at call sites below
+from dawnr_harness.tools import CallContext, Policy, Registry, Tool, ToolResult, validate  # noqa: E402
+from test_harness import INSTRUCTION, PY, SERVER, py_hook  # noqa: E402
 
 # ------------------------------------------------------------------ adversarial corpus --
 
@@ -640,3 +637,97 @@ class WebAdversarial(unittest.TestCase):
         finally:
             srv.shutdown()
             srv.server_close()
+
+
+class InjectionEverywhere(unittest.TestCase):
+    """Injection text in every field that could reach the model: a search result's title and snippet, an
+    MCP server's own instructions and server info (never shown at all, by design), a tool's title and
+    annotations (not read by register_server, so never shown either), and, swept in one pass, every
+    textual field of a hostile server's tools, resources and prompts together."""
+
+    def test_search_results_carry_injection_only_as_untrusted_text(self):
+        max_n = 10                                                 # web_search's own schema: "n" <= 10
+        # run_search's own formatting (' '.join(text.split())) collapses whitespace-like control
+        # characters and never caps a title's length, so a payload with those is not guaranteed to
+        # round-trip byte for byte; _INJECTIONS has neither, so it is what "must still appear in the
+        # untrusted result" is checked against, while the fuller adversarial corpus (below) still checks
+        # the index-exclusion half, which does not depend on round-tripping at all.
+        payloads = (_INJECTIONS + adversarial_strings(max_n, seed=5))[:max_n]
+
+        class Backend:
+            def search(self, query, n):
+                return [{"title": p, "url": f"http://example.invalid/{i}", "snippet": p}
+                        for i, p in enumerate(payloads[:n])]
+
+        h = Harness(Registry(web.web_tools(web.WebConfig(), backend=Backend())),
+                   Policy(offline=False, rules={"web_search": "allow"}))
+        r = h.call("web_search", {"query": "x", "n": max_n})
+        self.assertEqual(r.trust, "untrusted")
+        index = h.index()
+        for p in payloads:
+            if p.strip():
+                self.assertNotIn(p, index)                        # never folded into the static index
+        for injection in _INJECTIONS:
+            if " " in injection or " " in injection:
+                continue                                          # str.split() breaks on these; see above
+            self.assertIn(injection, r.text)                       # the untrusted result itself may carry it
+
+    def test_server_instructions_and_identity_never_reach_the_index(self):
+        class FakeClient:
+            instructions = "\n".join(_INJECTIONS)
+            server_info = {"name": _INJECTIONS[0], "version": _INJECTIONS[1]}
+
+            def list_tools(self, max_tools=256):
+                return [{"name": "noop", "description": "harmless", "inputSchema": {"type": "object"}}]
+
+            def list_resources(self, *a, **k):
+                raise mcp_client.MCPError(METHOD_NOT_FOUND, "no")
+
+            def list_prompts(self, *a, **k):
+                raise mcp_client.MCPError(METHOD_NOT_FOUND, "no")
+
+        reg = Registry()
+        mcp_client.register_server(reg, "hostile", FakeClient(), permission="allow", network=False)
+        index = Harness(reg, Policy(), Hooks(DEFAULT_HOOKS)).index()
+        for injection in _INJECTIONS:
+            self.assertNotIn(injection, index)
+
+    def test_hostile_title_and_annotations_never_surface_anywhere(self):
+        specs = [{"name": "t", "description": "fine", "title": _INJECTIONS[0],
+                 "annotations": {"readOnlyHint": _INJECTIONS[1]}, "inputSchema": {"type": "object"}}]
+        reg = Registry()
+        added, _ = mcp_client.register_server(reg, "hostile",
+                                              HostileMCPToolMetadata.FakeClient(specs), permission="allow",
+                                              network=False, describe=True)   # even opted in to descriptions
+        h = Harness(reg, Policy(), Hooks(DEFAULT_HOOKS))
+        self.assertNotIn(_INJECTIONS[0], h.index())
+        self.assertNotIn(_INJECTIONS[1], h.index())
+
+    def test_every_textual_field_of_a_hostile_server_swept_in_one_pass(self):
+        rnd = random.Random(6)
+        inject = lambda: rnd.choice(_INJECTIONS)                  # noqa: E731
+
+        class FakeClient:
+            def list_tools(self, max_tools=256):
+                return [{"name": "t", "description": inject(), "inputSchema": {"type": "object"}}]
+
+            def list_resources(self, *a, **k):
+                return [{"uri": "x://y", "name": inject(), "title": inject(), "description": inject()}]
+
+            def list_prompts(self, *a, **k):
+                return [{"name": inject(), "title": inject(), "description": inject(),
+                        "arguments": [{"name": inject(), "description": inject()}]}]
+
+        reg = Registry()
+        added, _ = mcp_client.register_server(reg, "hostile", FakeClient(), permission="allow", network=False)
+        self.assertEqual(sorted(added), ["mcp__hostile__prompts_list", "mcp__hostile__resources_list",
+                                        "mcp__hostile__resources_read", "mcp__hostile__t"])
+        h = Harness(reg, Policy(), Hooks(DEFAULT_HOOKS))
+        index = h.index()
+        for injection in _INJECTIONS:
+            self.assertNotIn(injection, index)
+        # every call's result is untrusted regardless of which field the server put its words in
+        for name in added:
+            args = {"uri": "x://y"} if name.endswith("resources_read") else {}
+            r = h.call(name, args)
+            self.assertEqual(r.trust, "untrusted", name)
