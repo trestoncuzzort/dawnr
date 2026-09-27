@@ -37,3 +37,8 @@ What these would mean together, stated before the result: on this base, what
 an adapter changes in dawnr's writing and what it costs in correctness move
 together, and a guard strict enough to keep the second keeps nearly all of the
 first.
+
+**Correction, before arm C started.** The background of prediction 1 miscounted:
+ada's first sleep of arm A seed 1 was not stopped (it ran its 30 steps, passing
+8, 7 and 7 of 8), so 10 of those 11 sleeps were stopped, not 11. The
+predictions themselves are unchanged.
