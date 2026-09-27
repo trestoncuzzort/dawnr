@@ -892,9 +892,14 @@ step_build() {
   local V5=${R12_BUILD_TAGS:-'$(ls -d qwen3.8-27b-fp8 qwen3.8-27b-fp8-v3 qwen3.8-27b-fp8-v3-s2 qwen2.5-coder-14b-* qwen3-coder-30b-* deepseek-coder-v2-16b-* 2>/dev/null) student-r4-train locallm-r4-train qwen235-train qwen235-train-p4 prover-train2 qwen2.5-coder-1.5b-r0hf qwen2.5-coder-1.5b-r0hf-v3 qwen2.5-coder-1.5b-r1-samp-s1 qwen3.8-27b-fp8-np1024'}
   local V6='qwen235-v6new-r12 qwen235-v6new-p4'
   # the relabeled rows (t/relabel.py, 2026-09-25) join the r12 pool file when their file is on the lab,
-  # capped per problem; the file is one of the sentinel's inputs, so a regenerated one rebuilds the pool
+  # capped per problem; the file is one of the sentinel's inputs, so a regenerated one rebuilds the pool.
+  # R12_SKIP_RELABEL=1 leaves them out even when the file exists: loop_dataset.py --relabel-rows refuses
+  # the whole build, not just the offending row, when a relabel row names a problem the decontamination
+  # policy has since listed (2026-09-27: task_id 204207, listed after this file was built), and the
+  # relabeled rows are an enrichment on top of the strict-gate positives, not a required input.
   local RELABEL=t/out/loop/relabel-2026-09-25.jsonl RELABEL_ARGS="" RELABEL_INPUT=""
-  if lab "test -f $RELABEL"; then RELABEL_ARGS="--relabel-rows $RELABEL --relabel-cap 3"; RELABEL_INPUT=$RELABEL
+  if [ "${R12_SKIP_RELABEL:-0}" = 1 ]; then echo "== build-r12: R12_SKIP_RELABEL=1; the pool gets no relabeled rows"
+  elif lab "test -f $RELABEL"; then RELABEL_ARGS="--relabel-rows $RELABEL --relabel-cap 3"; RELABEL_INPUT=$RELABEL
   else echo "== build-r12: no $RELABEL on the lab; the pool gets no relabeled rows"; fi
   if ! check_or_refuse build-r12 t/out/loop/split-v5.json t/decontamination-2026-09-21.json t/decontamination-behavioural-2026-09-25.json $RELABEL_INPUT t/out/loop/sft-r12.jsonl; then
     admit

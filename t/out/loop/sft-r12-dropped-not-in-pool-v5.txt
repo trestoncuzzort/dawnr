@@ -1,0 +1,59 @@
+# sft-r12.jsonl rows whose task_id is absent from pool v5 (checked against every pool version:
+# also absent from v3, so not a pool-choice mismatch -- these ids simply are not yet part of
+# any current pool file, most likely unindexed APPS problems from an older/wider teacher round).
+# Dropped here rather than fed to loop_locallm.py corpus, which refuses an SFT row it cannot
+# resolve (an incomplete input is named, never silently dropped -- corpus builder comment).
+200124
+200277
+200288
+201623
+202425
+202465
+202510
+202527
+202642
+202705
+202746
+202930
+202933
+202935
+202937
+202963
+202992
+203048
+203189
+203252
+203271
+203286
+203369
+203370
+203381
+203508
+203510
+203580
+203582
+203588
+203693
+203779
+203795
+203812
+203831
+203869
+203876
+203973
+204017
+204150
+204222
+204280
+204310
+204352
+204360
+204367
+204380
+204390
+204431
+204459
+204481
+204573
+204686
+204740
