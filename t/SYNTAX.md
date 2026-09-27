@@ -104,7 +104,7 @@ Stmt     ::= {"assign": [Id, Expr]}
 
 SpecFun  ::= {"name": Id,
               "params": [ {"name": Id, "type": "int"|"seq"}* ],
-              "result": "int"|"bool",
+              "result": "int"|"bool"|"seq",     (* "seq": v1, since 2026-09-27; a seq of ints, one level *)
               "decreases": Expr,                (* int-valued, over the params *)
               "body": Expr}                     (* may call itself and EARLIER spec_funs *)
 
@@ -357,7 +357,10 @@ is provable under one reading and not the other.
 written: `gcds(a, b)`
 
 A `spec_fun` is a pure total function defined by well-founded recursion
-(`ite`-expression body, its own `decreases`), usable anywhere an Expr is. A
+(`ite`-expression body, its own `decreases`), usable anywhere an Expr is; its
+result is an int, a bool or (since 2026-09-27, SPEC.md "Seq-valued spec_funs
+(v1)") a seq of ints, and a seq-valued call is a seq expression like any
+other (`len`, `at`, slice, `+`, `==`). A
 task body may call **itself** (direct recursion only) if the task carries a
 top-level `decreases`; the contract at the call site is the task's own
 `requires`/`ensures`, which is modular reasoning with no unrolling. The spec

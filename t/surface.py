@@ -123,7 +123,7 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
     Type     ::= BaseType | "(" BaseType "," BaseType ")"  (* pair: v1, since 2026-09-10; no pair of pairs *)
                | "seq" "<" "seq" ">"                       (* nested seq: v1, since 2026-09-10; one level only *)
     BaseType ::= "int" | "bool" | "seq"
-    SpecFun  ::= "spec" "fun" Id "(" Params ")" ":" ("int"|"bool")
+    SpecFun  ::= "spec" "fun" Id "(" Params ")" ":" ("int"|"bool"|"seq")  (* seq result: v1, since 2026-09-27 *)
                  "decreases" Expr "=" Expr
     InlineFun ::= "inline" "fun" Id "(" Params ")" ":" Type "=" Expr ";"?
     Block    ::= "{" Stmt* "}"
@@ -743,7 +743,9 @@ class Parser:
         self.eat("kw", "fun")
         fn = {"name": self.name("SpecFun"), "params": self.params("SpecFun")}
         self.eat("sym", ":")
-        fn["result"] = self.vtype(("int", "bool"))
+        # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a spec_fun may
+        # return a seq of ints, the same elementary "seq" a param has.
+        fn["result"] = self.vtype(("int", "bool", "seq"))
         self.production = "SpecFun"        # vtype() left it on "Type"
         self.eat("kw", "decreases")
         fn["decreases"] = self.expr()
