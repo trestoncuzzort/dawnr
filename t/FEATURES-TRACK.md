@@ -501,6 +501,24 @@ existing moves (`wrong-var` over two set names, `off-by-one` on an int,
 `collapse-if`, `compare-flip`) found a refuting twin for every probe that
 has one.
 
+### 12. A return unassigned on a path opens with its default (2026-09-27, lifter)
+
+**Refused: 69 methods `return-not-assigned-on-all-paths`** on the 1886
+staged files. The refusal rested on a reading of Dafny that was wrong both
+ways (row 45): Dafny checks definite assignment of an out-parameter as a
+verification obligation, so a method the syntactic walk refuses (`while
+true { .. r := i; return; }`, an if-case, a `break` then a guarded
+assignment) verifies, and one that truly leaves the return unassigned does
+not. The body now opens with the return type's default and the check stage
+keeps the task only when `dafny verify --filter-symbol M` accepts the source
+method (`verify-source`), refusing `return-default-unverified` otherwise;
+`char` returns refuse `return-default-char`. **Measured**: 61 of the 69 are
+`assume` stubs (the table above foresaw them), 4 lift (all four sources
+accepted by dafny), 1 of the 4 passes the check stage, 3 fail it on
+unrelated lemmas; 4 refuse elsewhere. Tests:
+`t/test_lift_return_default.py` (6, plus 2 slow: one accepted source, one
+refused `return-default-unverified` with dafny's own message).
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
@@ -527,6 +545,10 @@ the in-place sorts' `multiset` permutation specs.
 ## The features ahead: designs and costs
 
 ### 9. Finite sets
+
+Landed 2026-09-27 as Done 11 above (the type and six operations in four
+kernels, three abstaining by name; the comprehension and the lifter's mapping
+remain). The plan as it stood:
 
 Candidates: Dafny `set<int>` with comprehension and `|s|`; SPARK
 `Ada.Containers.Functional_Sets`; Why3 `fset`; Lean `Finset`; Rocq
