@@ -2495,6 +2495,15 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                         issues.append((n.line, bad, b.name))
     for line in lets.lines:
         rewrites.append(Rewrite(rule="let-substituted", line=line))
+    # Row 49 (2026-09-27): a `match` on int literals the parser desugared
+    # into an if-chain is logged here, once per match, at the match's line.
+    for n in walk(method):
+        if isinstance(n, (IfStmt, IfExpr)) and getattr(n, "origin", "") == "match-literal":
+            rewrites.append(Rewrite(rule="match-literal-if-chain", line=n.line))
+    for d in closure:
+        for n in walk(d):
+            if isinstance(n, (IfStmt, IfExpr)) and getattr(n, "origin", "") == "match-literal":
+                rewrites.append(Rewrite(rule="match-literal-if-chain", line=n.line))
     method, closure = lets.method, lets.closure
 
     scope_roots: list[Node] = [method] + list(closure)

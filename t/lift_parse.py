@@ -52,6 +52,7 @@ the recognised top-level start words, or EOF.
 from __future__ import annotations
 
 import bisect
+import copy
 import re
 from typing import NamedTuple, Optional, Union
 
@@ -465,6 +466,80 @@ class _Parser:
         if base in SKIPPED_BASE_WORDS:
             return self._parse_skipped(modifiers, base, start_line)
         raise LiftParseError(base or "<eof>", self.cur.line)
+
+    def _parse_match(self, line: int, as_expr: bool):
+        """Row 49 (2026-09-27): `match Expr [{] (case Pattern => Body)+ [}]`
+        over int literals with a `_` default is an if-chain over `==`, exactly
+        (Reference Manual "Match expressions": cases are tried in order, the
+        first matching one is taken, `_` matches everything), so it is
+        desugared here into the IfStmt/IfExpr nodes every later stage already
+        handles, each carrying `origin="match-literal"` for the rewrite log.
+        The subject is copied into every guard (it is an expression, so
+        re-evaluation is harmless; a copy keeps node identities distinct).
+        Cases after the `_` are unreachable in Dafny and dropped. Anything
+        else refuses by name: a constructor pattern `datatype`, a char or
+        string literal `match-literal` (t compares neither yet), no `_`
+        `match-no-default` (exhaustiveness would rest on the precondition)."""
+        what = "match expression" if as_expr else "match statement"
+        self.advance()  # match
+        subject = self.parse_expr()
+        braced = self.at("{")
+        if braced:
+            self.advance()
+        cases = []          # (literal Expr, body)
+        default = None      # body of `_`
+        while self.at("case"):
+            self.advance()
+            tok = self.cur
+            pat = None
+            if tok.text == "_":
+                self.advance()
+                if self.at(":"):
+                    self.advance()
+                    self.parse_type()
+            elif tok.kind == "int":
+                self.advance()
+                pat = IntLit(tok.line, int(tok.text))
+            elif tok.text == "-" and self.tokens[self.pos + 1].kind == "int":
+                self.advance()
+                t2 = self.advance()
+                pat = IntLit(tok.line, -int(t2.text))
+            elif tok.kind in ("char", "string"):
+                raise LiftParseError("match", line, what, reason="match-literal")
+            else:
+                raise LiftParseError("match", line, what, reason="datatype")
+            self.expect("=>")
+            if as_expr:
+                body = self.parse_expr()
+            else:
+                stmts = []
+                while not (self.at("case") or self.at("}") or self.at_eof()):
+                    stmts.append(self.parse_stmt())
+                body = tuple(stmts)
+            if pat is None:
+                if default is None:
+                    default = body
+            elif default is None:
+                cases.append((pat, body))
+        if braced:
+            self.expect("}")
+        if default is None:
+            raise LiftParseError("match", line, what, reason="match-no-default")
+        node = default
+        for pat, body in reversed(cases):
+            cond = Chain(pat.line, ops=("==",), operands=(copy.deepcopy(subject), pat))
+            if as_expr:
+                node = IfExpr(pat.line, cond, body, node)
+            else:
+                node = IfStmt(pat.line, cond, body, node)
+        if not cases:
+            # `match e { case _ => B }` is just B
+            if as_expr:
+                return node
+            return BlockStmt(line, node)
+        node.origin = "match-literal"
+        node.line = line
+        return node
 
     def _match_reason(self) -> str:
         """Row 48 (2026-09-27): the gap a `match` names. The first `case`
@@ -949,7 +1024,7 @@ class _Parser:
             # (measured: the subject's own first token -- "l", "xs", "t",
             # "n", a case-value identifier -- was the token every one of
             # the 154 parse-refusal "match" files reported before this).
-            raise LiftParseError("match", line, "match statement", reason=self._match_reason())
+            return self._parse_match(line, as_expr=False)
         if self.at("var"):
             return self._parse_var_stmt(line)
         if self.at("ghost") and self.tokens[self.pos + 1].text == "var":
@@ -1666,7 +1741,7 @@ class _Parser:
             # `match Expr { case ... }` used as an expression (a function
             # or predicate body, or nested in one): same construct as the
             # statement form, same reason.
-            raise LiftParseError("match", line, "match expression", reason=self._match_reason())
+            return self._parse_match(line, as_expr=True)
         if tok.text == "null":
             # The heap null literal: section 3's Atom has no such literal
             # (t has no heap, so no reference type ever needs one), and
