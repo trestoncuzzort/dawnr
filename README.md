@@ -39,7 +39,7 @@ trusted because what it writes is checked.
 |---|---|
 | core model (`locallm/`): a GPT trained from scratch | built; pretraining sweep done |
 | proof engine (`t/`): `t`, seven provers, twins, specification checks | built and hardened |
-| data engine: lifting verified Dafny, Verus, Lean and C programs into `t` | **358 proved documents** (from 194 that morning), all clean in seven provers |
+| data engine: lifting verified Dafny, Verus, Lean and C programs into `t` | **470 proved documents** (from 194 that morning): 358 clean in all seven provers, 112 in six with the missing prover recorded |
 | learning instead of memorising | the main open problem: on problems it was not trained on, the model rarely succeeds; early stopping, best checkpoints and denoising are in place, and more data is the lever |
 | reinforcement learning with the provers as the reward | built and tested; waits until the model succeeds often enough on new problems to have something to reinforce |
 | the model's own verified answers as new data (expert iteration) | running with a local teacher model |
