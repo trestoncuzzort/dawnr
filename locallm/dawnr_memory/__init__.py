@@ -5,9 +5,10 @@ Standard-library Python 3.10+. A folder per person in the app's data folder, own
 a gate nothing from outside can pass (extract.py); the person's own pinned notes; recall at the start of a session
 inside a token budget, by recency, importance and BM25 relevance to their first message (retrieval.py), rendered as a
 <|output_start|><|memory|> ... span (span.py); wired into dawnr's harness as the SessionStart and SessionEnd hooks
-(harness_hooks.py). The person's controls, list, show, correct, pin, forget, forget a session, export and forget
-everything, are MemoryStore's methods, `python locallm/dawnr_memory --help`, and the chat card's Memory window
-(window.py, Tk, imported only when opened).
+(harness_hooks.py). The person's controls, list, show, correct, pin, forget, forget a session, answer a pending
+question (something they said that disagrees with a stored record), export and forget everything, are MemoryStore's
+methods, `python locallm/dawnr_memory --help`, and the chat card's Memory window (window.py, Tk, imported only when
+opened).
 
 The harness imports harness_hooks only when its configuration has a "memory" key; nothing here imports it.
 """

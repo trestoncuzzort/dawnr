@@ -17,7 +17,9 @@ using it":
   record, correct it, erase it, erase a whole session, export everything and
   erase everything; they can switch remembering and recalling off, and keep a
   single conversation off the record. Nothing is stored silently: each session
-  ends with a line saying what was kept.
+  ends with a line saying what was kept, what was not and why (a
+  contradiction by name), and what dawnr asks them; and nothing stored is
+  replaced by something that disagrees with it unless the person says so.
 - **Nothing from outside becomes a fact about the person.** A fetched page, a
   tool's output, an MCP result, the assistant's own words, recalled memory and
   text the person pasted are never taken as the person speaking. This is
@@ -27,8 +29,10 @@ What was copied, from where (each fetched and read on 2026-09-27):
 
 | piece | copied from | what differs |
 |---|---|---|
-| extract, then update | Mem0 (Chhikara et al., arXiv:2504.19413): candidate memories from the conversation, then ADD / UPDATE / DELETE / NONE against what is stored; its user-memory prompt, "GENERATE FACTS SOLELY BASED ON THE USER'S MESSAGES" (`mem0/configs/prompts.py`) | the rules are deterministic patterns for now, and "only the person's words" is a gate in code every proposal passes, a model's included; the update is keyed by a slot (a newer statement in the same slot replaces the older); Mem0's later "additive" prompt, which also extracts from assistant messages and from documents the user shares, is exactly what is refused here |
+| extract, then update | Mem0 (Chhikara et al., arXiv:2504.19413): candidate memories from the conversation, then ADD / UPDATE / DELETE / NONE against what is stored; its user-memory prompt, "GENERATE FACTS SOLELY BASED ON THE USER'S MESSAGES" (`mem0/configs/prompts.py`) | the rules are deterministic patterns for now, and "only the person's words" is a gate in code every proposal passes, a model's included; the update is keyed by a slot, and only a compatible rewording replaces a stored record ("is a fan of jazz" for "likes jazz"); Mem0's later "additive" prompt, which also extracts from assistant messages and from documents the user shares, is exactly what is refused here |
 | the grounding gate | Saltzer & Schroeder, "The Protection of Information in Computer Systems" (1975, web.mit.edu/Saltzer/www/publications/protection/Basic.html), fail-safe defaults: "base access decisions on permission rather than exclusion"; OWASP's Input Validation Cheat Sheet: allowlist validation, "defining exactly what IS authorized", with patterns covering the whole input (`^...$`) and a denylist only as a supplement | the allowlist is the rules' own patterns; a statement they cannot read whole from the person's sentence is refused, true ones included |
+| contradictions | de Marneffe, Rafferty & Manning, "Finding Contradictions in Text" (ACL 2008, aclanthology.org/P08-1118): texts contradict only when they are about the same event, and "compatible noun phrases between sentences are assumed to be coreferent in the absence of clear countervailing evidence"; antonymy and negation are closed word sets, while contradictions of structure or lexical content need a model of meaning | decided over everything the person said in the session; "the same thing" is a shared object word (word for word), slot or keyed object; since word patterns cannot tell a structural contradiction from a compatible pair, any two different statements about one thing are a contradiction unless they are on a short list of compatible pairs; the thing is refused and reported, not highlighted |
+| a statement that disagrees with a stored one | Wikidata's single-value constraint (wikidata.org/wiki/Help:Property_constraints_portal/Single_value): values that disagree "should not be removed", and an editor decides | Zep (Rasmussen et al., arXiv:2501.13956, sec. 2.2.3) invalidates the older fact and "consistently prioritizes new information", and Mem0's update prompt deletes a contradicted memory: both let the newer statement win, judged by a model. dawnr keeps the stored record and asks the person |
 | recall | Generative Agents (Park et al., arXiv:2304.03442, section 4.1): recency (exponential decay) + importance + relevance, each min-max scaled to [0, 1], all weights 1; "the top-ranked memories that fit within the language model's context window" go in | relevance is BM25 against the first message, not embeddings (offline, no model needed, explainable); importance is the extraction's confidence, not a model's 1-to-10 rating; recency decays from when the person last said it, not from the last retrieval, so recalling something cannot keep it fresh on its own |
 | BM25 | Lucene's `BM25Similarity` (k1 1.2, b 0.75, idf ln(1 + (N - n + 0.5)/(n + 0.5)), never negative), `rank_bm25`'s shape, `EnglishAnalyzer`'s stop words and `EnglishMinimalStemmer` (Harman's S-stemmer) | standard library, over the person's own records only |
 | the session events | Claude Code's hooks (code.claude.com/docs/en/hooks): `SessionStart` (matcher on how the session started, `additionalContext`, cannot block) and `SessionEnd` (matcher on why it ended, side effects only) | `SessionStart` fires when the person's first message arrives, not at launch, so a hook can rank what it recalls by that message; dawnr's two handlers are `builtin` ones |
@@ -40,7 +44,7 @@ What was copied, from where (each fetched and read on 2026-09-27):
 
 ## 1. What is remembered
 
-Four kinds of record, one JSON file each:
+Four kinds of record, one JSON file each, and one kind of question:
 
 | kind | what | made by | example `text` |
 |---|---|---|---|
@@ -48,6 +52,7 @@ Four kinds of record, one JSON file each:
 | fact | something true about the person | extraction from their own words; the person's corrections | `lives in Lisbon`, `works as a nurse`, `asked dawnr to remember: their sister's birthday is May 3` |
 | preference | how they like things done | extraction from their own words; the person's corrections | `prefers tabs to spaces`, `from now on: answer in short sentences`, `wants dawnr to always explain dawnr's steps` |
 | note | what the person pinned | only the person | `Answer in short sentences.` |
+| pending | a question: something the person said that disagrees with a stored fact or preference; not a fact, never recalled, until they answer it | the update step (section 3) | `lives in Porto`, with `becomes: fact` and `conflicts_with: [f-...]` |
 
 A fact or preference carries the words that established it (`evidence`,
 verbatim from the person's message), the session that established it
@@ -65,6 +70,7 @@ to dawnr later, where "I" would be dawnr.
                                         facts/f-<16 hex>.json
                                         preferences/p-<16 hex>.json
                                         notes/n-<16 hex>.json
+                                        pending/q-<16 hex>.json
 
 The data folder is `$XDG_DATA_HOME` (if absolute) or `~/.local/share` on Linux
 and other Unix, `~/Library/Application Support` on macOS, `%LOCALAPPDATA%` on
@@ -79,7 +85,7 @@ reserves.
   own permissions); a folder owned by another account is refused.
 - **One person per store.** A `MemoryStore` is bound to one person when it is
   made. Every path it touches is built from that person's validated id, a
-  kind's fixed folder name and a record id that must match `[efpn]-[0-9a-f]{16}`:
+  kind's fixed folder name and a record id that must match `[efpnq]-[0-9a-f]{16}`:
   nothing from a record, a transcript or a caller becomes a path unchecked. An
   id from another person's memory names a file that does not exist in this
   one, so show, correct and forget cannot reach across; a symbolic link where a
@@ -151,21 +157,71 @@ learning", "I'm working on", "I like / love / don't like / hate", "I prefer",
    Protection of Information in Computer Systems", 1975, fail-safe defaults:
    a mechanism that excludes "tends to fail by allowing access"). The person
    can always pin a note by hand.
-5. It is not a secret or an identifier: passwords, keys, tokens, card and
+5. It is decided over everything the person said in the session, never one
+   clause. Rule 4 read each clause on its own, so an utterance that
+   contradicts itself grounded either side: "I like cats, and I don't like
+   cats." admitted "likes cats" and "dislikes cats" alike, and the session
+   kept the last one and reported nothing; "I prefer tea, and I prefer
+   coffee over tea." brought the order swap back through a second clause.
+   Now every statement the patterns read anywhere in the person's messages
+   is collected: at every word, so a clause after a comma or an "although"
+   counts, and so does one in a sentence rule 4 would not admit ("No, I like
+   cats"), in a question, or said inside another ("Remember that I don't
+   like cats"). Two of them are about the same thing when their objects
+   share a word, word for word (stop words and pronouns aside), when they
+   fill the same slot (the person's location, name, "favorite editor"), or
+   when their slots name the same object as the rules key it ("cat" in
+   "wants a cat" and "dislikes cats"); a statement is also about what the
+   statements inside its object are about. Two statements about one thing
+   that are not the same statement are a contradiction, whether they differ
+   in polarity, in order or in relation, and nothing about that thing is
+   admitted from the session; the report names it ("contradiction: cats")
+   with the two readings, whether or not anything proposed it. The gate does
+   not try to tell a contradiction from a compatible pair, because word
+   patterns cannot (de Marneffe et al. 2008: a contradiction of structure or
+   of lexical content needs a model of meaning), except for a short list of
+   pairs that agree ("likes" and "is a fan of" the same thing, "lives in"
+   and "is from" the same place, "from now on: X" and "always X"), and a
+   statement agrees with what it says inside its object ("Remember that I
+   like cats" and "I like cats"). A pair missing from that list costs a true
+   memory, never a false one; the opposite-pair table ("likes" / "dislikes",
+   "always" / "never") only labels a polarity conflict in the report. A
+   statement inside what the person asks to forget is not one they make.
+6. It is not a secret or an identifier: passwords, keys, tokens, card and
    account numbers, long digit strings, e-mail addresses and links are not
    remembered on dawnr's own initiative (the person can still pin a note).
-6. A model's proposal in a session that read outside text is refused: once
+   Such a statement is also left out of the contradictions, so no reason
+   ever names its words.
+7. A model's proposal in a session that read outside text is refused: once
    untrusted text is in the context, what the model proposes may be the page
    speaking, and writing lasting memory is a consequential act
    (arXiv:2506.08837, as the harness's taint rule reads it).
 
-**The update** (Mem0's step, keyed by slot): the same statement said in a new
-session raises its confidence (1 - (1 - c)/2) and records the session; a new
-statement in a stored slot replaces the old one, evidence included (the
-person's newer words win; a model never overwrites what the person wrote
-themselves); anything else is added. Within one session only the person's
-last word per slot counts. "Forget that I live in Lisbon" removes every fact or
-preference holding all of its content words; "forget everything" in
+**The update** (Mem0's step, keyed by slot, less its newer-wins): the same
+statement said in a new session raises its confidence (1 - (1 - c)/2) and
+records the session. A statement that disagrees with a stored fact or
+preference, by the same rule as a contradiction (about the same thing, and
+neither the same statement, nor a compatible one, nor one it holds), does
+not replace it: the stored record stays, the proposal is refused as
+"conflicts with stored record <id>", and the statement is kept as a pending
+question (kind `pending`, never recalled, not a fact) that the person answers
+in the Memory window or with `answer <id> new|old`: `new` puts their words in
+place of the record, which keeps its id; `old` keeps what was remembered.
+Saying it again in a later session adds to the same question rather than
+asking twice. Zep and Mem0 let the newer statement win (a model judges the
+contradiction); dawnr has no model to judge with, and a newer statement can be
+a misreading or words the person was steered into, so it follows Wikidata's
+single-value constraint instead: the values that disagree are kept and a person
+decides. The person can also say it outright: "forget that I like cats" in the
+session removes the stored record before anything new is set against it, and
+`correct` rewrites a record in their words. A compatible statement in a stored
+slot rewords it ("is a fan of jazz" for "likes jazz"); a model never overwrites
+what the person wrote themselves, and never asks about it either. Anything else
+is added. Within one session two statements about one thing never both pass
+the gate (rule 5), so the last word per slot is only ever a rewording. "Forget
+that I live in Lisbon" removes every fact, preference or pending question
+holding all of its content words, and a model's proposal cannot bring back
+what the person asked, in the same session, to forget; "forget everything" in
 conversation removes nothing (the explicit control does that).
 
 **The episode** is built from counts and a fixed vocabulary plus up to eight
@@ -224,18 +280,23 @@ span in it, so later turns see the same memory without recalling again.
 | pin something | `pin "Answer in short sentences."`: recalled first, never changed by extraction |
 | erase a record | `forget <id> [<id> ...]`: the file is removed, and any temporary copy of it |
 | erase what one session added | `forget-session <episode id or session id>`: its episode and every fact it established |
+| see what dawnr asks them | `pending`: each thing they said that disagrees with a stored record, and the record it disagrees with |
+| answer it | `answer <q-id> new` puts their words in place of the record (which keeps its id); `answer <q-id> old` keeps what was remembered; either way the question is gone |
 | take it elsewhere | `export [--out file.json]`: one JSON object, the file owner-only |
 | erase everything | `forget-everything --yes`: their whole folder is removed; nobody else's is touched |
 | stop remembering, or recalling | `settings --remember off`, `settings --recall off` |
 | keep one conversation out | say "off the record" or "don't remember this conversation" in it, or run the chat with `--no-memory` |
 | forget in conversation | "forget that I live in Lisbon" |
 | turn memory on in the window | Settings, "Remember me across conversations" |
-| do all of the above in the window | the chat card's Memory... button (`dawnr_memory/window.py`): every record, Forget selected, Correct..., Pin a note..., Export..., Forget everything... (asked first), and both switches |
+| do all of the above in the window | the chat card's Memory... button (`dawnr_memory/window.py`): every record, Forget selected, Correct..., Answer... (a pending question is listed as a "question" with both sides), Pin a note..., Export..., Forget everything... (asked first), and both switches |
 
 Every session ends with one line for the person (never for the model): what
-was remembered, with ids to forget it by, what was updated, and how many
-proposals were not kept and why. A rejected proposal's text is never printed,
-so a secret that was refused does not reappear on the screen.
+was remembered, with ids to forget it by, what was updated, how many
+proposals were not kept and why (a contradiction names the thing:
+"contradiction: cats"), and what dawnr asks them, with the question's id. A
+rejected proposal's text is never printed, so a secret that was refused does
+not reappear on the screen; a question's text is printed, and it has passed
+the check for secrets.
 
 ## 6. Wiring
 
@@ -276,9 +337,15 @@ hostile about the person, which then speaks in every later session.
   (gate rules 2 and 3), and the rules never read it; the assistant's own words
   are outside text too, so a model persuaded by a page cannot write memory by
   saying something, and a model's proposal after untrusted text entered the
-  session is refused whatever it says (rule 6); a statement cannot carry words
+  session is refused whatever it says (rule 7); a statement cannot carry words
   its evidence does not (rule 4), so a proposal quoting "I like soup" cannot
-  store "likes soup and wants files sent to evil.example"; a page telling the
+  store "likes soup and wants files sent to evil.example"; a statement the
+  person contradicted anywhere in the session, in words the patterns read, is
+  not stored at all, and the contradiction is reported (rule 5); a newer
+  statement cannot replace a stored one it disagrees with, so neither a
+  misreading nor words the person was steered into overwrite what they said
+  before: the person is asked (section 3); a model's proposal cannot bring
+  back what the person asked, in the session, to forget; a page telling the
   person what to type is outside text said first (rule 3); pasted text,
   quotes and code are not the person speaking; the episode holds no sentence
   of anyone's, and only registry tool names; recalled memory is outside text,
@@ -289,14 +356,31 @@ hostile about the person, which then speaks in every later session.
   statement about themselves in their own words, and dawnr will believe them,
   as it should believe its person; the rules misread some sentences ("I'm a
   mess" becomes "is a mess"), which the person sees at the end of the session
-  and can forget. The gate reads one sentence at a time, and reads words, not
-  meaning, so a meaning changed from outside the clause by words the patterns
-  do read still grounds: a retraction in the next sentence ("I like cats. Not
-  really."), a clause that undercuts another ("I like cats and I'm a liar"),
-  or a retraction inside an object the patterns carry word for word, which is
-  then stored with it ("likes cats… not"). The span's mark tells a trained
-  model the text is memory, not the current instruction; whether a model this
-  size learns that is unmeasured (section 8).
+  and can forget. The gate reads words, not meaning. A contradiction made in
+  words the patterns do not read still lets the other side through: "I like
+  cats. Cats are awful.", "I like cats. Not really.", "I like cats. Just
+  kidding." (rule 4 refuses a sentence it cannot read whole, not the other
+  sentences around it), and so does a clause that undercuts another without
+  saying anything about the same thing ("I like cats and I'm a liar"). So does
+  one between different words for one thing ("I like cats. I hate felines.",
+  "I like e-mail. I don't like email.", "I'm a vegan. I love steak."), and
+  one between relations the rules keep in different slots ("I work at X. I
+  work for Y."). A contradiction inside one object the patterns carry word for
+  word is stored with it, as said ("asked dawnr to remember: they like cats
+  but hate them"; "likes cats… not"). A long message is taken as a paste, so
+  what it says counts for nothing, a contradiction included. The span's mark
+  tells a trained model the text is memory, not the current instruction;
+  whether a model this size learns that is unmeasured (section 8).
+- *What failing closed costs:* two statements that agree but differ, about
+  one thing, are withheld as a contradiction: a shared word is enough ("I
+  don't like long answers. From now on, keep answers short." keeps neither,
+  and neither does "Always use tabs. Always use type hints."), and so is one
+  thing in two relations ("I like tea. I prefer tea over coffee."). Across
+  sessions the same pairs become questions ("likes tea" stored, "I prefer tea
+  over coffee." later). Sentences the person retyped from a page count as theirs for
+  this, so a retyped sentence can withhold one of their own. In the
+  poisoning property test below, whose person speaks with only 12 words, the
+  statements kept at its seed fell from 372 to 150.
 
 **Leakage** (MEXTRA): one person's memory reaching another person, the
 model's context of the wrong person, or anywhere off the machine.
@@ -396,8 +480,34 @@ every admitted statement literally in the person's sentence (its verb, its
 object word for word, and around it only a filler, a trailing "now" or
 "though", or a whole clause), while at the committed seed the gate admits
 446 of them (the test requires more than 250) and refuses 2,665 that a
-nouns-only check would admit (it requires more than 1,000); recall never
-exceeds its budget over random stores and budgets under three counters; the
-rules, updates, reinforcement, order and checkpoints; the
+nouns-only check would admit (it requires more than 1,000); contradictions
+are decided over the whole session: the five inputs that got past the second
+fix ("I like cats, and I don't like cats.", "I want candy, and I avoid
+candy.", "I prefer tea, and I prefer coffee over tea.", "Always answer
+briefly, and never answer briefly.", "I am a fan of cats, and I don't like
+cats.") are refused through `admit()`, with the sentence or the clause as the
+evidence, and through `end_session()` with the real rules, which report
+"contradiction: <thing>" with the two readings; so are contradictions split
+across two sentences or two messages, a plural across relations ("wants a
+cat" / "dislikes cats"), a statement read after a comma, an "although", a "No,"
+or inside a "remember that", and a statement about what a contradicted one
+holds ("remember that my birthday is May 3" / "my birthday is June 5"); what
+is not a contradiction still passes (the same statement, a compatible pair, a
+statement said inside another, one inside a "forget that"); a property test
+draws 400 utterances from a grammar with one contradiction inserted at random
+(polarity, order or relation; one sentence, two sentences or two messages;
+either order; among unrelated statements, fillers and trailing words) and
+finds nothing about the contradicted object admitted or stored, the
+contradiction reported with its two readings, and every one of the 630
+unrelated statements admitted and kept; a statement that disagrees with a
+stored record (polarity, order, relation, a slot's value, a record said
+inside a "remember that") leaves it as it was and becomes one pending
+question however often it is said, never recalled, answered on the command
+line or in the Memory window, while "forget that ...", correct, a compatible
+rewording and a statement the record holds ask nothing; a model neither
+overwrites the person's own record nor brings back what they asked to forget;
+a session of 100 statements sharing one word makes one contradiction, not
+4,950; recall never exceeds its budget over random stores and budgets under
+three counters; the rules, updates, reinforcement, order and checkpoints; the
 session events' contract; the command line and the Memory window; the token,
 the mask and the engine's first reply.
