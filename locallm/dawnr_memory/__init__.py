@@ -6,7 +6,8 @@ a gate nothing from outside can pass (extract.py); the person's own pinned notes
 inside a token budget, by recency, importance and BM25 relevance to their first message (retrieval.py), rendered as a
 <|output_start|><|memory|> ... span (span.py); wired into dawnr's harness as the SessionStart and SessionEnd hooks
 (harness_hooks.py). The person's controls, list, show, correct, pin, forget, forget a session, export and forget
-everything, are MemoryStore's methods and `python locallm/dawnr_memory --help`.
+everything, are MemoryStore's methods, `python locallm/dawnr_memory --help`, and the chat card's Memory window
+(window.py, Tk, imported only when opened).
 
 The harness imports harness_hooks only when its configuration has a "memory" key; nothing here imports it.
 """
