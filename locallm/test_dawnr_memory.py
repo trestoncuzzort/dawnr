@@ -507,6 +507,70 @@ class NothingFromOutsideBecomesAFact(Temp):
         self.assertTrue(any("memory for ann" in m for m in h.messages))
 
 
+class GroundingChecksRelationNotOnlyNouns(Temp):
+    """grounded() must refuse a proposal whose relation or order is not the evidence's, even when every noun is
+    shared: a bag-of-words check alone cannot tell "dislikes cats" from "I like cats." (both share "cats", and
+    "dislikes"/"likes" are both the rules' own phrasing), or "prefers coffee over tea" from "I prefer tea over
+    coffee" (both share "coffee" and "tea"). See extract.py's grounded()."""
+
+    def test_a_dislike_is_not_grounded_by_a_like(self):
+        # the exact finding: a model proposing the opposite of what the person said, over their own words
+        view = SessionView.of(conversation("I like cats."))
+        liked = Proposal("preference", "likes cats", "I like cats.", origin="model")
+        self.assertEqual(admit(liked, view), (True, ""))
+        inverted = Proposal("preference", "dislikes cats", "I like cats.", origin="model")
+        ok, why = admit(inverted, view)
+        self.assertFalse(ok)
+        self.assertIn("says more", why)
+
+    def test_a_preference_order_cannot_be_swapped(self):
+        view = SessionView.of(conversation("I prefer tea over coffee."))
+        straight = Proposal("preference", "prefers tea over coffee", "I prefer tea over coffee.", origin="model")
+        self.assertEqual(admit(straight, view), (True, ""))
+        swapped = Proposal("preference", "prefers coffee over tea", "I prefer tea over coffee.", origin="model")
+        self.assertFalse(admit(swapped, view)[0])
+
+    def test_negation_is_not_invisible_to_grounding(self):
+        s = self.store()
+        end_session(s, conversation("I don't like cats."), session_id="s1", now=NOW)
+        self.assertEqual({r["text"] for r in s.records(("preference",))}, {"dislikes cats"})  # the rules read it right
+        view = SessionView.of(conversation("I don't like cats."))
+        opposite = Proposal("preference", "likes cats", "I don't like cats.", origin="model")
+        self.assertFalse(admit(opposite, view)[0])
+        matching = Proposal("preference", "dislikes cats", "I don't like cats.", origin="model")
+        self.assertEqual(admit(matching, view), (True, ""))
+
+    def test_property_flipping_a_grounded_proposals_polarity_or_order_is_rejected(self):
+        """Random nouns, every relation the rules can name: whatever the rules ground, flipping just the
+        predicate word (or swapping a "prefer A over B"'s A and B) while keeping the very same evidence must be
+        refused. The mutation asserts something new; grounding must notice, not just check the nouns again."""
+        rng = random.Random(11)
+        nouns = ["".join(rng.choice(string.ascii_lowercase) for _ in range(6)) for _ in range(40)]
+        verb_and_flip = {"like": ("likes", "dislikes"), "dislike": ("dislikes", "likes"),
+                         "want": ("wants", "avoids"), "avoid": ("avoids", "wants")}
+        checked = 0
+        for _ in range(80):
+            shape = rng.choice(("like", "dislike", "want", "avoid", "order"))
+            a = rng.choice(nouns)
+            if shape == "order":
+                b = rng.choice(nouns)
+                while b == a:
+                    b = rng.choice(nouns)
+                evidence = f"I prefer {a} over {b}."
+                good, bad = f"prefers {a} over {b}", f"prefers {b} over {a}"
+            else:
+                stated, flipped = verb_and_flip[shape]
+                evidence = f"I {shape} {a}."
+                good, bad = f"{stated} {a}", f"{flipped} {a}"
+            view = SessionView.of(conversation(evidence))
+            self.assertEqual(admit(Proposal("preference", good, evidence, origin="model"), view), (True, ""),
+                             (shape, evidence, good))
+            ok, why = admit(Proposal("preference", bad, evidence, origin="model"), view)
+            self.assertFalse(ok, (shape, evidence, bad, why))
+            checked += 1
+        self.assertEqual(checked, 80)
+
+
 # ----------------------------------------------------------------- recall --
 
 class RecallRespectsTheBudget(Temp):
