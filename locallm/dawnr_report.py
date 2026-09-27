@@ -44,6 +44,21 @@ def _pct(n, d):
     return "-" if not d else f"{n} of {d} ({100.0 * n / d:.1f}%)"
 
 
+def _acting(counts: dict, n: int) -> list[str]:
+    """What the answers did with the tool's verdicts (chat_eval.judge), when the eval recorded it."""
+    if "got_failing_verdict" not in counts:
+        return []
+    failed = counts["got_failing_verdict"]
+    return [f"- final program passes every example of the prompt: {_pct(counts['examples_all_pass'], n)}",
+            f"- got a failing verdict: {_pct(failed, n)}; of those, a later call with a different program "
+            f"{_pct(counts['acted_on_failure'], failed)}, the same program again "
+            f"{_pct(counts['repeated_after_failure'], failed)}; first verdict failed and the final program passes "
+            f"every example: {counts['repaired']}",
+            f"- ended inside a call by <|assistant_end|>: {counts.get('ended_in_call', 0)}; out of tokens inside a "
+            f"call: {counts.get('budget_in_call', 0)}; the grammar overrode the model's top token "
+            f"{counts.get('grammar_overrides', 0)} times in {counts.get('answers_overridden', 0)} answers"]
+
+
 def heldout_section(tag: str, split: Path) -> list[str]:
     cmd = [sys.executable, str(ROOT / "t" / "score_heldout.py"), "--split", str(split), tag]
     r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
@@ -93,7 +108,12 @@ def build(run: Path, heldout_tag: str | None = None, split: Path | None = None) 
                   f"- prompts: {conv['problem_heads']} with a Problem head, {conv['spec_prompts']} from the "
                   f"specification; {conv['with_examples']} with Example lines",
                   f"- tool conversations: {conv['tool_conversations']}; the tool's own verdicts on them: "
-                  f"{conv['tool_example_pass']} examples pass, {conv['tool_example_other']} otherwise", ""]
+                  f"{conv['tool_example_pass']} examples pass, {conv['tool_example_other']} otherwise"]
+        if conv.get("extra"):
+            x = conv["extra"]
+            lines.append(f"- added on the training side: {x['rows']} conversations from `{x['file']}` "
+                         f"({', '.join(f'{v} {k}' for k, v in sorted(x['built'].items()))})")
+        lines.append("")
     for name in ("mid", "sft"):
         rec = s[name]
         r = rec.get("result", {})
@@ -115,7 +135,9 @@ def build(run: Path, heldout_tag: str | None = None, split: Path | None = None) 
         lines += ["## RL", "", f"{rl.get('status')}: {rl.get('result', {}).get('why', '')}", ""]
     ev = s["eval"].get("result", {})
     if ev:
-        lines += ["## Evaluation (chat_eval.py, greedy, the t tool live)", ""]
+        grammar = {True: "the chat-token grammar on", False: "the grammar off"}.get(ev.get("grammar"), "")
+        lines += [f"## Evaluation (chat_eval.py, greedy, the t tool live{', ' + grammar if grammar else ''}, "
+                  f"up to {ev.get('max_tokens')} new tokens)", ""]
         dev = ev.get("dev")
         if dev:
             n = dev["asked"]
@@ -127,8 +149,9 @@ def build(run: Path, heldout_tag: str | None = None, split: Path | None = None) 
                       f"**{_pct(dev['tests_passed'], n)}**",
                       f"- used the tool: {_pct(dev['used_tool'], n)}; opened a call and ended without closing "
                       f"it: {_pct(dev.get('unclosed_call', 0), n)}; ended with <|assistant_end|>: "
-                      f"{_pct(dev['ended'], n)}",
-                      f"- proof tiers: {dev['proof']}", ""]
+                      f"{_pct(dev['ended'], n)}"]
+            lines += _acting(dev, n)
+            lines += [f"- proof tiers: {dev['proof']}", ""]
         val = ev.get("val")
         if val:
             n = val["asked"]
@@ -138,7 +161,8 @@ def build(run: Path, heldout_tag: str | None = None, split: Path | None = None) 
                       f"exactly {_pct(val.get('exact_program', 0), n)}",
                       f"- used the tool {_pct(val.get('used_tool', 0), n)}; opened a call without closing it "
                       f"{_pct(val.get('unclosed_call', 0), n)}; ended "
-                      f"{_pct(val.get('ended', 0), n)}", ""]
+                      f"{_pct(val.get('ended', 0), n)}"]
+            lines += _acting(val, n) + [""]
         lines += [f"Rows: `{ev.get('rows')}`", ""]
     if heldout_tag:
         lines += heldout_section(heldout_tag, split or ROOT / "t" / "out" / "loop" / "split-v5.json")

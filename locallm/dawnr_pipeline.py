@@ -18,7 +18,10 @@ Python so that each stage can record what it ran on and be tested:
                    as given; then the held-out loss on the validation-side
                    documents, which no stage ever trains on.
   3 conversations  chat_data.py: the proved corpus as conversations, the same
-                   hash split, a share with real t-tool calls.
+                   hash split, a share with real t-tool calls; with
+                   --extra-conversations (repair_data.py's repair and pass
+                   conversations), those are appended on the training side
+                   after the same gates.
   4 mid            chat_train.py: the chat tokens added, the format and the
                    tool taught, loss on the assistant only.
   5 sft            chat_train.py again from mid on --sft-conversations when
@@ -212,8 +215,25 @@ def stage_conversations(st: Stage, a) -> dict:
                 "--out", str(out), "--tool-rate", str(a.tool_rate), "--split-seed", str(a.split_seed),
                 "--val-frac", str(a.val_frac)], st.dir / "log.txt")
     summary = json.loads(out.with_suffix(".summary.json").read_text(encoding="utf-8"))
-    return {"file": str(out), **{k: v for k, v in summary.items() if k != "skipped"},
-            "skipped": len(summary["skipped"])}
+    result = {"file": str(out), **{k: v for k, v in summary.items() if k != "skipped"},
+              "skipped": len(summary["skipped"])}
+    if a.extra_conversations:
+        import chat_data
+        from collections import Counter
+        text = a.extra_conversations.read_text(encoding="utf-8")
+        extra = [json.loads(line) for line in text.splitlines() if line.strip()]
+        wrong_side = [r.get("source") for r in extra if r.get("split") != "train"]
+        if wrong_side:
+            raise SystemExit(f"--extra-conversations holds {len(wrong_side)} rows not on the training side "
+                             f"(first: {wrong_side[0]}); only training conversations are added")
+        chat_data.gate("\n\n".join(json.dumps(r, ensure_ascii=False) for r in extra),
+                       f"extra conversations {a.extra_conversations}", a.split)
+        with out.open("a", encoding="utf-8") as f:
+            for r in extra:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        result["extra"] = {"file": str(a.extra_conversations), "rows": len(extra),
+                           "built": dict(Counter(r.get("built", "?") for r in extra))}
+    return result
 
 
 def stage_chat(st: Stage, a, init: Path, conversations: Path, steps: int, lr: float) -> dict:
@@ -257,6 +277,8 @@ def main(argv=None) -> int:
     ap.add_argument("--block-size", type=int, default=0,
                     help="chat row length and held-out row length; 0: chat_train's automatic choice, the model's context")
     ap.add_argument("--tool-rate", type=float, default=0.5)
+    ap.add_argument("--extra-conversations", type=Path, default=None,
+                    help="training-side conversations to add to the mid stage's data (repair_data.py build)")
     ap.add_argument("--mid-steps", type=int, default=300)
     ap.add_argument("--mid-lr", type=float, default=3e-4)
     ap.add_argument("--sft-conversations", type=Path, default=None)
@@ -277,6 +299,8 @@ def main(argv=None) -> int:
     a.corpus, a.out, a.split = a.corpus.resolve(), a.out.resolve(), a.split.resolve()
     if a.core:
         a.core = a.core.resolve()
+    if a.extra_conversations:
+        a.extra_conversations = a.extra_conversations.resolve()
     a.out.mkdir(parents=True, exist_ok=True)
     stages = {name: Stage(a.out, i + 1, name) for i, name in enumerate(STAGES)}
 
@@ -312,7 +336,7 @@ def main(argv=None) -> int:
                          "core_ckpt": a.core / "ckpt.pt" if a.core else None, "block_size": a.block_size},
                 lambda st: stage_base(st, a, sides, tok["result"]))
     conv = step("conversations", {**common, "tool_rate": a.tool_rate, "chat_data": HERE / "chat_data.py",
-                                  "t_tool": HERE / "t_tool.py"},
+                                  "t_tool": HERE / "t_tool.py", "extra_conversations": a.extra_conversations},
                 lambda st: stage_conversations(st, a))
     base_model = Path(base["result"]["model"]) if base.get("result") else None
     conv_file = Path(conv["result"]["file"]) if conv.get("result") else None

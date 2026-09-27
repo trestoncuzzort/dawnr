@@ -33,6 +33,23 @@ character tokenizer, characters of the tool's answer that the vocabulary
 lacks are dropped when it is encoded (data.CharTokenizer.encode), as they are
 from any text; byte-level BPE loses nothing.
 
+Added for dawnr: a grammar on the chat tokens (on by default). The first
+pipeline run ended 28 of 100 dev answers with <|assistant_end|> inside an
+open <|t_start|> call, so the tool never ran on them. Outlines
+(Willard and Louf, arXiv:2307.09702) guides generation by masking, at each
+step, the logits of tokens illegal in the current state of a finite-state
+machine. The assistant turn here is a two-state machine: inside a call only
+text and <|t_end|> are legal; outside one only text, <|t_start|> and
+<|assistant_end|>. The tool-output pair is only ever forced, and the turn
+tokens never appear inside an assistant turn, so neither is ever sampled.
+A call can therefore end only by <|t_end|>, after which the tool runs. Each
+row counts the steps where the model's own top token was illegal
+(grammar_overrides), since the closed-call rate is guaranteed by the mask and
+says nothing by itself. Engine(..., grammar=False) is the unmasked engine,
+kept to measure the difference. A completed row is inert: it is fed
+<|assistant_end|> with mask 0 and no tool runs for it, so extra samples in a
+batch cannot add tool calls after their own end.
+
 ----------------------------------------------------------------------------
 nanochat's notice (for the parts of RowState and Engine.generate ported here):
 
@@ -87,11 +104,13 @@ class RowState:
         self.tool_calls = []          # (program or call text, output text) per call, for the caller
         self.session = session        # the harness's per-conversation state (taint, stop blocks)
         self.stops = []               # reasons a Stop hook gave for not ending
+        self.ended_in_call = False    # <|assistant_end|> while a call was open (only without the grammar)
+        self.grammar_overrides = 0    # sampled steps whose unmasked top token was illegal
 
 
 class Engine:
 
-    def __init__(self, model, tokenizer, tool=None, harness=None):
+    def __init__(self, model, tokenizer, tool=None, harness=None, grammar=True):
         if not chat.has_chat_tokens(tokenizer):
             raise ValueError("the engine needs a tokenizer carrying the chat tokens (chat.with_chat_tokens)")
         self.model = model
@@ -105,6 +124,7 @@ class Engine:
             harness = Harness.with_t_tool(tool)
         self.harness = harness
         self.harness_tokens = chat.has_harness_tokens(tokenizer)
+        self.grammar = grammar
 
     def _output_tokens(self, result) -> list[int]:
         """A harness answer as forced tokens: one output span per part, untrusted ones marked."""
@@ -120,6 +140,24 @@ class Engine:
             out.extend(self.tokenizer.encode(text))
             out.append(sp(chat.OUTPUT_END))
         return out
+
+    def illegal_ids(self) -> dict[str, list[int]]:
+        """The chat-token grammar: ids illegal inside a t call, inside a harness tool call, and outside any call.
+
+        Output spans, <|untrusted|> and the turn tokens are only ever forced, never sampled. Inside a call
+        only text and that call's own closer are legal; outside one, no closer is legal."""
+        sp = lambda name: chat.special(self.tokenizer, name)                 # noqa: E731
+        never = [sp(x) for x in (chat.OUTPUT_START, chat.OUTPUT_END, chat.USER_START, chat.USER_END,
+                                 chat.ASSISTANT_START)]
+        openers, closers = [sp(chat.T_START)], {"t": sp(chat.T_END)}
+        if self.harness_tokens:
+            never.append(sp(chat.UNTRUSTED))
+            openers.append(sp(chat.TOOL_START))
+            closers["tool"] = sp(chat.TOOL_END)
+        inside = never + [sp(chat.ASSISTANT_END)] + openers
+        table = {kind: inside + [c for other, c in closers.items() if other != kind] for kind in closers}
+        table["outside"] = never + list(closers.values())
+        return table
 
     @torch.no_grad()
     def generate(self, tokens, num_samples=1, max_tokens=None, temperature=1.0, top_k=None, seed=42, sessions=None):
@@ -162,12 +200,32 @@ class Engine:
                             for i in range(num_samples)]
         for row in rows:
             row.session.new_turn()
+        if self.grammar:
+            vocab = logits.size(-1)
+            masks_by_state = {}
+            for state, bad in self.illegal_ids().items():
+                m = torch.zeros(vocab, dtype=torch.bool, device=device)
+                m[bad] = True
+                masks_by_state[state] = m
 
         generated = 0
         while generated < max_tokens and not all(r.completed for r in rows):
-            sampled = _next_token(logits.float(), temperature, top_k, rng)[:, 0].tolist()
+            logits = logits.float()
+            if self.grammar:
+                illegal = torch.stack([masks_by_state[(r.tool_kind or "t") if r.in_tool_block else "outside"]
+                                       for r in rows])
+                top = logits.argmax(dim=-1).tolist()
+                for i, row in enumerate(rows):
+                    if not row.completed and not row.forced_tokens and bool(illegal[i, top[i]]):
+                        row.grammar_overrides += 1
+                logits = logits.masked_fill(illegal, float("-inf"))
+            sampled = _next_token(logits, temperature, top_k, rng)[:, 0].tolist()
             column, masks = [], []
             for i, row in enumerate(rows):
+                if row.completed:
+                    column.append(assistant_end)
+                    masks.append(0)
+                    continue
                 forced = len(row.forced_tokens) > 0
                 token = row.forced_tokens.popleft() if forced else sampled[i]
                 if token == assistant_end and not forced and stop_hooks and not row.in_tool_block:
@@ -183,6 +241,7 @@ class Engine:
                 row.current_tokens.append(token)
                 if token == assistant_end:
                     row.completed = True
+                    row.ended_in_call = row.in_tool_block
                 if token == t_start or (tool_start is not None and token == tool_start):
                     row.in_tool_block, row.tool_tokens = True, []
                     row.tool_kind = "t" if token == t_start else "tool"

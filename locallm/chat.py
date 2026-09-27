@@ -34,6 +34,13 @@ Where dawnr differs, and why:
 * render_conversation never truncates. ConversationBatches refuses a
   conversation longer than the block by name, as PairBatches refuses a pair,
   because a cut conversation can end inside the program being taught.
+* A text or tool-call part may carry "train": false, and then its text is
+  context, not a target. A repair conversation (repair_data.py) holds a draft
+  that failed the tool's check: the draft is the input to the repair, as the
+  incorrect proof is in SAFE's self-debugging triples (arXiv:2410.15756), so
+  the model is not trained to write it; the tokens that open and close the
+  call around it still are, because calling the tool and closing the call are
+  what the conversation teaches.
 
 ----------------------------------------------------------------------------
 nanochat's notice (for the parts of render_conversation and
@@ -203,11 +210,14 @@ def render_conversation(tokenizer, conversation: dict) -> tuple[list[int], list[
                 kind, text = part.get("type"), part.get("text")
                 if kind not in PART_TYPES or not isinstance(text, str):
                     raise ValueError(f"unknown assistant part {part!r}")
+                trained = part.get("train", True)
+                if not isinstance(trained, bool) or (kind == "t_output" and "train" in part):
+                    raise ValueError(f"'train' is a bool on a text or t part, never on tool output: {part!r}")
                 if kind == "text":
-                    add(tokenizer.encode(text), 1)
+                    add(tokenizer.encode(text), int(trained))
                 elif kind == "t":
                     add(special(tokenizer, T_START), 1)
-                    add(tokenizer.encode(text), 1)
+                    add(tokenizer.encode(text), int(trained))
                     add(special(tokenizer, T_END), 1)
                 elif kind == "tool":
                     if not has_harness_tokens(tokenizer):
