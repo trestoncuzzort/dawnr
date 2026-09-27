@@ -121,13 +121,11 @@ its line changes here.
   Dafny programs are lifted into t, proved equivalent to their sources and
   graded in all seven kernels, and now Verus, Lean and C/ACSL corpora too.
   *State:* the proved corpus went from 194 documents (66,569 characters) to
-  **358 (171,182)** on 2026-09-26: Dafny lifts 136, Verus 21, Lean 5, ACSL 2
-  (`t/LIFT-2026-09-26.md`, `t/LIFT-VERICODING-VERUS-LEAN.md`,
-  `t/LIFT-ACSL-BY-EXAMPLE.md`). With graded trust (`--min-kernels 6`: six
-  provers clean, none contradicting, the gap recorded per document) it is
-  **470 documents (260,157 characters)**; the 112 admitted with a gap miss
-  Lean 35, Rocq 35, Frama-C 28, SPARK 10, others 4. Those three lowerings
-  are the next lever.
+  358 on 2026-09-26, and after the Lean, Rocq and Frama-C lowering fixes were
+  regraded over every lifted set, to **431 documents (241,628 characters) clean
+  in all seven kernels** on 2026-09-27, with no document lost. With graded trust
+  (six kernels clean, none contradicting, the gap recorded) it is **515
+  (307,609)**, 84 of them with a gap. Tables: `t/COVERAGE-lifted-*-regrade-2026-09-27.md`.
 - **Denoising training.** Corrupt spans of each training document and train
   the model to restore them (fill in the middle, arXiv:2207.14255). *State:*
   measured twice, and the two disagree. From scratch on the 302 proved
