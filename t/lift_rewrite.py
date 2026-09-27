@@ -160,6 +160,22 @@ def _t_json_type(t: Optional[Type]) -> object:
     return _t_type_of(t)
 
 
+def _type_default(ty: object) -> dict:
+    """Row 45: the t value dafny's compilers give an auto-initialised
+    variable of the type `ty` (a task's own JSON type entry): `0`, `false`,
+    the empty sequence at any nesting, and a pair of its components'
+    defaults. Measured on dafny 4.11.0 (`dafny run --target:py
+    --relax-definite-assignment`): int 0, nat 0, bool false, seq<int> [],
+    string "", (int, bool) (0, false)."""
+    if ty == "bool":
+        return {"bool": False}
+    if ty == "seq" or (isinstance(ty, dict) and "seq" in ty):
+        return {"op": "seq", "args": []}
+    if isinstance(ty, dict) and "pair" in ty:
+        return {"op": "pair", "args": [_type_default(ty["pair"][0]), _type_default(ty["pair"][1])]}
+    return {"int": 0}
+
+
 def _rw_seq_kind(e: Expr, scope: "Scope") -> Optional[str]:
     """Rows 25-27's `expr_kind` (`lift_classify.py`), reusing the live
     `Scope` this module already threads through the lift as the lookup:
@@ -2185,6 +2201,22 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             body_out.append({"var": {"name": nm, "type": ty, "init": default}})
             record.rewrites.append(Rewrite(rule="default-init", line=method.line))
             record.clauses_added.append(ClauseAdded(rule="default-init", text=f"{nm} := {default}"))
+    if getattr(plan, "ret_default", None) is not None:
+        # Row 45 (2026-09-27, t/FEATURES-TRACK.md, return default): section
+        # 4.7's syntactic walk could not see the return assigned on every
+        # path, so the body opens with the return type's own default (the
+        # value dafny's compilers supply an auto-initialised out-parameter,
+        # measured on dafny 4.11.0's Python target: 0, false, [], "", (0,
+        # false)); `lift_check` keeps the task only where dafny's own
+        # definite-assignment check accepts the SOURCE method, so on every
+        # kept task the default is provably never observed. A pair return
+        # already has both components defaulted just above; this only logs.
+        if pair_returns is None:
+            default = _type_default(returns_out[0]["type"])
+            body_out.append({"assign": [t_ret, default]})
+            record.clauses_added.append(ClauseAdded(rule="return-default-init",
+                                                    text=f"{t_ret} := {default}"))
+        record.rewrites.append(Rewrite(rule="return-default-init", line=method.line))
     for s in desugared:
         body_out.extend(_lift_stmt(s, body_scope, fn_names, method.name, task_name, renamer, record))
 

@@ -3136,6 +3136,35 @@ def _run_dafny(args: list, timeout_s: float):
         return _TIMEOUT_SENTINEL, out + err
 
 
+def _verify_source_method(source_path: Path, name: str, timeout_s: float):
+    """Row 45's `verify-source` step: `dafny verify SOURCE --allow-warnings
+    --filter-symbol NAME` (section 18.1's third invocation, narrowed to the
+    one method; `--filter-symbol` selects every symbol whose qualified name
+    CONTAINS the string, so a longer-named sibling may ride along -- a
+    failure there refuses too, conservatively). Returns `(ok, exit_code,
+    token)`: `ok` only when dafny exits 0 and its finish line counts at
+    least one verified symbol and no error; `token` names why not (the
+    exit code, `no-symbol` when nothing matched, `timeout`, or
+    `no-source` when the record's source path is not a readable file --
+    a unit test's placeholder name)."""
+    if not source_path.is_file():
+        return False, -1, "no-source"
+    exit_code, out = _run_dafny(["verify", str(source_path), "--allow-warnings",
+                                 "--filter-symbol", name], timeout_s)
+    if exit_code == _TIMEOUT_SENTINEL:
+        return False, exit_code, "timeout"
+    fin = _FINISH_RE.search(out)
+    if fin is None:
+        return False, exit_code, f"exit {exit_code}: no finish line"
+    n_verified, n_errors = int(fin.group(1)), int(fin.group(2))
+    if exit_code == 0 and n_errors == 0 and n_verified >= 1:
+        return True, exit_code, ""
+    if n_verified == 0 and n_errors == 0:
+        return False, exit_code, "no-symbol"
+    first = next((ln.strip() for ln in out.splitlines() if "Error:" in ln), "")
+    return False, exit_code, f"exit {exit_code}: {first[:160]}"
+
+
 def _symbol_outcomes(out: str) -> list:
     lines = out.splitlines()
     blocks = []
@@ -3551,6 +3580,29 @@ def check(task: dict, source: MethodDecl, closure: tuple,
         record.twin_witness = witness
     else:
         record.warnings.append(f"twin-refused:{tag_or_reason}")
+
+    # (3b) Row 45 (2026-09-27, t/FEATURES-TRACK.md, return default): a task
+    # whose body opens with the return's type default because section 4.7's
+    # syntactic walk could not see the return assigned on every path
+    # (`return-default-init`) is kept only where dafny's OWN definite-
+    # assignment check accepts the source method -- section 18.1's
+    # `verify-source` invocation, run here on that one symbol. Dafny checks
+    # it semantically ("out-parameter 'r', which is subject to definite-
+    # assignment rules, might be uninitialized at this return point" is a
+    # verification error, measured on 4.11.0), so a pass means the default
+    # is never observed on any path and the lift is exact; a failure (or a
+    # file that does not verify for any other reason) refuses
+    # `return-default-unverified`, never a silent lift.
+    if any(rw.rule == "return-default-init" for rw in record.rewrites):
+        ok, exit_code, token = _verify_source_method(Path(record.source_path),
+                                                     source.name or "", timeout_s)
+        record.dafny_exit_codes["verify-source"] = exit_code
+        if not ok:
+            refusal = Refusal(reason="return-default-unverified", token=token,
+                              line=source.line, stage="check")
+            return CheckOutput(checker_dfy="", differential_dfy="", record=record,
+                               refusal=refusal, interp_points=n_points,
+                               interp_first_value=first_value)
 
     # (4) build the checker and verify it.
     checker_text, lemma_names = _build_checker_parts(task, source, closure, record)
