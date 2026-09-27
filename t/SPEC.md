@@ -1039,6 +1039,84 @@ proof asserts a false step, around a correct program; false_nonlinear_step:
 the same with a false nonlinear step under a guard). Per-kernel verdicts are in
 t/FEATURES-TRACK.md.
 
+### Finite sets (v1)
+
+Stated 2026-09-27 (t/FEATURES-TRACK.md "The features ahead: 9. Finite
+sets"). Measured first, on the 1886 staged Dafny files of the 2026-09-26
+lift: 89 methods refuse `set` in the round-1 baseline, and the shapes are
+three (`t/FEATURES-CLOUD-2026-09-27-r2.md` has the round-2 count and the
+per-shape split): the cardinality of a bounded comprehension, `|set i: int
+| 0 <= i < |s| && P(s[i])|`, used as a count in an `ensures` (the dominant
+shape, humaneval 018/026/064/069/073/098/108/126 and the vericoding
+`solve`s); a `set<int>` return built up by a loop (`common`); and
+membership in a display, `s[i] in {'G', 'T', '.', '#'}`. So t takes a
+finite set of ints as a value, with the six operations every kernel's own
+library states directly; the comprehension is the wave after (below).
+
+New type: `"set"`, a finite set of ints, written `set`. A parameter,
+return or local type. Not in v1: a set of bools, seqs or pairs, a set as a
+pair component or as a seq element, a set-typed spec_fun parameter or
+result, a set as a quantifier's range, and the comprehension `set i | lo
+<= i < hi && P(i)` (its predicate needs a binder every kernel would have to
+close over; it is stated separately when it lands, as a defunctionalised
+predicate, so that SPARK and Frama-C can name it).
+
+New Expr forms:
+
+```
+{"op": "set",   "args": [Expr, ...]}          // {e1, ..., en}; the set of the values; {} the empty set
+{"op": "in",    "args": [IntExpr, SetExpr]}   // x in s; membership
+{"op": "card",  "args": [SetExpr]}            // card(s); the number of elements
+{"op": "union", "args": [SetExpr, SetExpr]}   // union(s, t)
+{"op": "inter", "args": [SetExpr, SetExpr]}   // inter(s, t)
+{"op": "diff",  "args": [SetExpr, SetExpr]}   // diff(s, t); the elements of s not in t
+```
+
+`set` denotes the set of its arguments' values, so duplicates collapse:
+`card({1, 1}) == 1`, and `{}` is the empty set. `in` is membership, `card`
+the number of elements (a non-negative int), `union`, `inter` and `diff`
+the usual operations. Every one of the six is TOTAL: a display is defined
+iff every element is, and the other five iff their operands are; the
+library adds no undefined case, as the string library adds none. `==`
+and `!=` on two sets are extensional (the same members), the polymorphic
+`==` again; `< <= > >=` stay int-only, so a set has no order and v1 has
+no subset operator (`card(diff(s, t)) == 0` says it). An `in` whose left
+operand is not an int or whose right is not a set, a `card` of a non-set,
+a `union`/`inter`/`diff` on anything but two sets, and a display with a
+non-int element are ill-typed; so is `+`, `-` or `*` on a set (t writes the
+operations by name, never by overloading the arithmetic symbols, so the
+notation stays unambiguous without a type). Nothing else changes: the loop
+frame rule havocs a set variable by name, a bound variable is still an
+int, and a quantifier ranges over `[lo, hi)` as before, so "every element
+of `s` satisfies P" is written over a seq of candidates or as `card(inter(
+s, ...))`, never over the set itself.
+
+The interpreter's value is a finite set of ints (Python's frozenset,
+shown as its sorted list in a witness); the domain ladder for a set-typed
+name is the seq ladder's tuples read as sets, duplicates collapsed, so the
+near corner (the empty set, then singletons) comes first. The twin ladder
+needs no new move: `wrong-var` swaps two set-typed names, `off-by-one`
+reaches an int inside a display or a `card` comparison, `collapse-if` and
+the invariant drops as before. The fuzz probes `fz_p_set_*` in
+`t/fuzz_lower.py` state the six operations' laws (duplicates collapse,
+inclusion-exclusion, `diff` against `inter`, extensional equality, an
+adversarial union count) and a loop that builds a set from a seq.
+
+Each lowering uses its kernel's own finite set and records it in a dated
+note: dafny `set<int>` (display, `in`, `|s|`, `+`, `*`, `-`); verus
+`vstd::set::Set<int>` in proof code (`set![..]`, `contains`, `len` under
+`finite`, `union`, `intersect`, `difference`); fstar `FStar.FiniteSet.Base`
+(`mem`, `cardinality`, `union`, `intersection`, `difference`, with
+`FStar.FiniteSet.Ambient` for the SMT); rocq Stdlib 9.2's `MSetList.Make
+(Z_as_OT)` (`mem`, `cardinal`, `union`, `inter`, `diff`, `equal`); spark
+`SPARK.Containers.Functional.Sets` over `Big_Integer` (`Contains`,
+`Length`, `Union`, `Intersection`; the library has no difference function,
+so `diff` is a named refusal there until one is built and proved); lean
+(core, no Mathlib, which has no finite set) and framac (C has no set
+value) a named refusal, measured first, or a sorted duplicate-free list
+proved equivalent. A kernel that cannot state an operation soundly
+abstains by name; none totalises or approximates it.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice
