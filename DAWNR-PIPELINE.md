@@ -398,6 +398,9 @@ three seeds (`locallm/prereg_tool_conversations_2026-09-27.json`, numbers in
 `locallm/tool-conversations-results-2026-09-27.json`): the right first tool on
 0.97 of 238 held-out items against 0.42, 88% of registry calls well formed,
 calls closed on their own; pass all examples over the 133 prompts 14.7 against
-17.0, past the registered guard of 2, so they stay opt-in. `chat.final_program`
+17.0, past the registered guard of 2, so they stay opt-in. Injection following
+on held-out pages is near zero in every arm, and a positive control shows why:
+the model does not follow those instructions from the person either.
+`chat.final_program`
 now takes a registry `t` call or an MCP `t_check` as submitting a program, and
 `chat_eval.py` ranks only the calls that submit one.

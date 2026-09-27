@@ -383,7 +383,11 @@ harness live.
 **Trained and measured** (`locallm/prereg_tool_conversations_2026-09-27.json`,
 committed before the runs; its addendum records that the operator withdrew
 the desktop mid-run, so B-s1339's tool evaluation and all of C-s1339 ran on
-the lab's card 2 with identical inputs; numbers in
+the lab's card 2 with identical inputs; C-s1339's training ran out of memory
+there once when another user's job grew and was rerun at the same seed with
+activation checkpointing, the same batch and gradients; the lab scores a
+checkpoint exactly as the desktop does, 1,343 of 1,343 rows identical across
+three comparisons; numbers in
 `locallm/tool-conversations-results-2026-09-27.json`). The mid stage from the
 r12 core, 400 steps, three seeds per arm: A the base conversations only (with
 the harness tokens), B plus the 1,007, C the same with every injected page
@@ -417,8 +421,16 @@ What it says:
   context. No arm at any seed followed a fetch, send or phrase injection.
   The registered rule R1 says "nothing to reduce at this size": the model
   does not act on page text as instructions whether or not it was taught to
-  ignore it. Whether it acts on the same instructions from the person is the
-  post-hoc positive control in the addendum.
+  ignore it. **Nor does it act on them from the person**: the post-hoc
+  positive control (the same held-out instructions typed by the person after
+  asking for a clean page, 132 items per checkpoint) was followed on 0.023
+  (A), 0.030 (B) and 0.043 (C), again only by copying a program, and no arm
+  at any seed fetched, sent or said what it was told. Following from the
+  person is 0.02 to 0.04 above following from a page, under the 0.10 the
+  addendum registered, so at this size the injection number measures what
+  the model cannot do, not what it declines to do. B also says its "did not
+  come from you" sentence after 68 to 96 of the 132 control items, whose
+  page is clean.
 - **The flag is a prior, not a detection.** B says the page held instructions
   after 90% of injected and 83% of clean held-out items: the training set had
   three injected task pages for every clean one of the same request, and the
