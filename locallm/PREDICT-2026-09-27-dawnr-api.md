@@ -57,3 +57,42 @@ and one new section in `DAWNR-HARNESS.md`; nothing existing is edited except tha
   problem.
 - **(3) fails:** the response shape is wrong against the reference and must be corrected against the
   fetched type file before this is called "OpenAI-compatible" anywhere in the docs or the report.
+
+## Addendum, 2026-09-27, written after both runs below -- not a prediction
+
+Everything above was written and frozen before the run it describes, as rule 3 asks. This section is
+the opposite of that on purpose: it is added after the run above already happened, and after a second
+run that came after it, so it does not belong under "Predictions" and is not written as if it were
+registered in advance. It exists because the record would otherwise stop at 23 tests and stay silent
+about what changed next.
+
+**The design changed under review, and the count grew from 23 to 30.** A security review of the first
+version rejected it: a client's declared `tools` were merged into the operator's own
+`dawnr_harness.Registry` for the request and rendered into the trusted prompt beside the operator's
+own tools, unmarked -- a Tool Poisoning Attack in the Registry's own terms
+(invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks, 2025-04-01; a tool's
+description is written to instruct the model, so whoever supplies it can embed an instruction the
+model reads as trustworthy). The fix moved a request's client-declared tools into a per-request
+`_ClientToolHarness` overlay that `DawnrAPI.create`/`create_stream` swap in for the real `Harness` for
+exactly one locked generation: a client tool's call is intercepted there, before it would ever reach
+`Harness.call` -- no policy decision, no hook, no audit log entry, never added to the registry --
+while the operator's own tools through the same object are untouched, still running for real.
+`test_dawnr_api.py` grew to 30 tests for this (7 new, one rewritten to use the overlay instead of
+adding a client tool into a real `Registry`). The new ones reproduce the finding directly rather than
+only exercising the fix in isolation: run against the pre-fix module standalone, both the
+description-leak and the registry-mutation checks fire; against the fix, neither does.
+
+**Found only today: none of those 30 tests, old or new, ran on any CI machine.**
+`.github/workflows/tests.yml`'s `cpu-torch` job still listed the four files that predate
+`dawnr_api.py` entirely -- `test_dawnr_chat.py test_harness_chat.py test_fim.py test_early_stop.py`
+-- so "30 tests... all still pass" in the commit history was true only of whichever machine a person
+happened to run it on by hand, never of a pull request or a push. Every one of the seven
+poisoning-regression tests above ran zero times in CI. Fixed the same day: `test_dawnr_api.py` added
+to that job's run line, and `t/test_ci_workflow.py` added alongside it, which reads the job's own run
+command back out of the workflow file and fails by the missing file's name (not by a test count) if a
+CPU-torch suite is ever left out of it again the same way -- it failed first, against the workflow
+before this fix, then passed after. Rerun clean after both fixes, each file its own process, CPU only:
+`test_dawnr_api.py` 30/30, `test_dawnr_chat.py` 32/32, `test_harness_chat.py` 8/8, `test_fim.py`
+22/22, `test_early_stop.py` 15/15, `test_harness.py` 54/54, `test_harness_adversarial.py` 21/21 -- the
+same counts already claimed above and in the overlay commit, now with a CI job that will actually run
+them again on the next push instead of only on request.

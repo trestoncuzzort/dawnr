@@ -137,7 +137,7 @@ jobs:
           )
           python -m pytest -v "${IGNORE[@]}" "${DESELECT[@]}" .
 
-  # ubuntu-only: installs CPU torch and runs the four locallm suites whose
+  # ubuntu-only: installs CPU torch and runs the five locallm suites whose
   # own docstrings say they need it (CPU, seconds each).
   cpu-torch:
     name: cpu-torch (py${{ matrix.python-version }})
@@ -163,7 +163,7 @@ jobs:
         # numpy is not in locallm/requirements.txt (torch does not require
         # it to run), but test_fim.py's own golden-hash fixture calls
         # tensor.numpy() and torch raises RuntimeError without it installed
-        # -- measured by running this job's four files against a torch+
+        # -- measured by running this job's files against a torch+
         # pytest-only environment before writing this step.
         run: |
           python -m pip install --upgrade pip pytest numpy
@@ -172,6 +172,6 @@ jobs:
       - name: locallm CPU-torch suites
         working-directory: locallm
         run: |
-          python -m pytest -v test_dawnr_chat.py test_harness_chat.py test_fim.py test_early_stop.py \
+          python -m pytest -v test_dawnr_chat.py test_dawnr_api.py test_harness_chat.py test_fim.py test_early_stop.py \
             test_dawnr_interp_sae.py test_dawnr_interp_activations.py test_dawnr_interp_spec_probe.py \
             test_dawnr_interp_browser.py test_dawnr_interp_run_sae.py
