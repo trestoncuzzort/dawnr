@@ -576,6 +576,37 @@ class Trainer(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 chat_train.main(args + ["--resume"])
 
+    def test_gradient_checkpointing_changes_memory_not_the_weights(self):
+        """The same run with activations recomputed in the backward pass (dropout on, so the RNG must be
+        replayed) ends at the same weights, and saves the config every other run saves."""
+        import chat_train
+        tok = char_tok()
+        torch.manual_seed(0)
+        model = GPT(GPTConfig(vocab_size=tok.vocab_size, block_size=512, n_layer=2, n_head=2, n_embd=16))
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            init = d / "init"
+            init.mkdir()
+            torch.save({"model": model.state_dict(), "config": model.config.__dict__,
+                        "tokenizer_fingerprint": data.tokenizer_fingerprint(tok)}, init / "ckpt.pt")
+            tok.save(init / "tokenizer.json")
+            rows = [dict(chat_data.conversation(HEADED, tool=True), split="train"),
+                    dict(chat_data.conversation(PROGRAM, tool=False), split="train")]
+            convs = d / "c.jsonl"
+            convs.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+            finals = []
+            for flag in ([], ["--gradient-checkpointing"]):
+                out = d / ("ckpt" if flag else "plain")
+                args = ["--init", str(init), "--conversations", str(convs), "--out", str(out), "--steps", "3",
+                        "--batch-size", "2", "--eval-every", "3", "--device", "cpu", "--lr", "1e-2", "--warmup", "1",
+                        "--dropout", "0.1"] + flag
+                self.assertEqual(chat_train.main(args), 0)
+                saved = torch.load(out / "ckpt.pt", map_location="cpu", weights_only=True)
+                self.assertFalse(saved["config"]["gradient_checkpointing"])
+                finals.append(saved["model"])
+            for name, tensor in finals[0].items():
+                self.assertTrue(torch.allclose(tensor, finals[1][name], atol=1e-6), name)
+
 
 class Driver(unittest.TestCase):
     def test_stage_skips_only_for_identical_inputs(self):
