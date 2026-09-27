@@ -42,13 +42,20 @@ class ToolResult:
     text: str
     is_error: bool = False
     trust: str = "trusted"
-    notes: list[str] = field(default_factory=list)     # the harness's own annotations: trusted, separate spans
+    notes: list[str] = field(default_factory=list)      # the harness's own annotations about a trusted call
+    untrusted_notes: list[str] = field(default_factory=list)  # ... about a call whose input or output is untrusted
     source: str = ""
     data: dict | None = None                            # side data for the caller, never rendered
 
     def spans(self) -> list[tuple[bool, str]]:
-        """(untrusted?, text) per output span, the tool's first, then each note."""
-        return [(self.trust == "untrusted", self.text)] + [(False, n) for n in self.notes]
+        """(untrusted?, text) per output span: the tool's own text, then each trusted note, then each note that
+        annotates an untrusted call. A note inherits the call's trust rather than always being marked trusted
+        (runtime.py): the harness's own commentary on a page or an MCP result can itself quote a few words of
+        that page's text (dawnr_harness/checker.py's verdicts), and OWASP LLM01:2025 is that outside text is
+        marked and segregated, never blended into a trusted span unmarked."""
+        return ([(self.trust == "untrusted", self.text)]
+                + [(False, n) for n in self.notes]
+                + [(True, n) for n in self.untrusted_notes])
 
 
 @dataclass

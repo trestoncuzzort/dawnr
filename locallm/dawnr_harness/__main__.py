@@ -57,6 +57,8 @@ def main(argv=None) -> int:
             print(f"[{label}{', error' if r.is_error else ''}]\n{r.text}")
             for note in r.notes:
                 print(f"[harness note]\n{note}")
+            for note in r.untrusted_notes:
+                print(f"[harness note, untrusted]\n{note}")
             for m in h.messages:
                 print(f"[message] {m}", file=sys.stderr)
             return 1 if r.is_error else 0
