@@ -3342,6 +3342,12 @@ def exec_flow(cx: Ctx, stmts: list, env: dict, local: dict, dummy: str,
                     "fstar lowering: a loop under a conditional, or after a "
                     "conditional that returns, is not lowered yet")
             env.update(lb(s["while"], env, local))
+        elif "lemma" in s:
+            # SPEC.md "Lemmas (v1)": the lemma is a proved `Lemma` with an
+            # SMT pattern (`_lemma_src`), so its conclusion reaches every
+            # query in which its pattern terms occur; the call itself
+            # computes nothing and leaves `env` unchanged.
+            continue
         else:
             raise ValueError(f"t -> fstar: no statement {list(s)!r}")
     return env, "false", dummy
@@ -3537,6 +3543,118 @@ def emit_spec_fun(cx: Ctx, sf: dict) -> str:
                 f"  : Tot {TY[sf['result']]} (decreases {dec})\n"
                 f"= {body}\n")
     return f"let {sf['name']} {binders} : Tot {TY[sf['result']]} = {body}\n"
+
+
+def _call_terms(e, out: list) -> list:
+    """Every spec_fun call node under `e`, outermost first."""
+    if isinstance(e, dict):
+        if "call" in e:
+            out.append(e)
+        for v in e.values():
+            _call_terms(v, out)
+    elif isinstance(e, list):
+        for v in e:
+            _call_terms(v, out)
+    return out
+
+
+def _free_vars(e, out: set) -> set:
+    if isinstance(e, dict):
+        v = e.get("var")
+        if isinstance(v, str):
+            out.add(v)
+        for x in e.values():
+            _free_vars(x, out)
+    elif isinstance(e, list):
+        for x in e:
+            _free_vars(x, out)
+    return out
+
+
+def _lemma_body_src(cx: "Ctx", body: list, local: dict, ptys: dict) -> str:
+    if not body:
+        return "()"
+    parts = []
+    for s in body:
+        if "lemma" in s:
+            c = s["lemma"]
+            args = " ".join(_render(cx, a, t, {}, local)
+                            for a, t in zip(c["args"], ptys[c["name"]]))
+            parts.append(f"{c['name']} {args}")
+        else:
+            c = s["if"]
+            parts.append(f"(if {cx.bx(c['cond'], {}, local)} then "
+                         f"{_lemma_body_src(cx, c['then'], local, ptys)} else "
+                         f"{_lemma_body_src(cx, c['else'], local, ptys)})")
+    return "; ".join(parts) if len(parts) == 1 else "(" + "; ".join(parts) + ")"
+
+
+def _lemma_src(cx: "Ctx", l: dict, ptys: dict) -> str:
+    """SPEC.md "Lemmas (v1)": one t lemma as an F* `Lemma` (F* tutorial,
+    "Lemmas and proofs by induction": a total function returning unit whose
+    type states the fact; a recursive call in its body is the induction
+    hypothesis, with `decreases`). F* proves it in this file.
+
+    F* has no call statement to place inside this lowering's functional
+    encoding of a t body, so the lemma's conclusion reaches the task's
+    proof through an SMT pattern instead (F* tutorial, "Understanding how
+    F* uses Z3", "Quantifiers and patterns": `SMTPat` makes a proved
+    lemma's conclusion available to Z3 whenever the pattern's terms
+    appear). The pattern is every spec_fun call in the ensures together
+    (a conjunctive multi-pattern), when those calls mention every
+    parameter; otherwise the lemma is still proved but carries no
+    pattern, and a caller that needs it reads unproved. Either way only a
+    proved fact is added: a false lemma fails its own proof, and the file
+    fails with it."""
+    local = {p["name"]: p["type"] for p in l["params"]}
+    for p in l["params"]:
+        t = p["type"]
+        if isinstance(t, dict):
+            raise NotImplementedError(
+                "fstar lowering: a lemma with a pair or nested-seq parameter "
+                "is not lowered yet")
+    binders = (" ".join(f"({p['name']}:{TY[p['type']]})" for p in l["params"])
+               or "(_u:unit)")
+    req = _conj([cx.prop(e, {}, local) for e in l["requires"]])
+    ens = _conj([cx.prop(e, {}, local) for e in l["ensures"]])
+    selfrec = any(n == l["name"] for n in _lemma_names(l["body"]))
+    head = "let rec" if selfrec else "let"
+    dec = ""
+    if selfrec:
+        # the task decreases' own shift (module docstring, note 2): F*'s
+        # order on int needs the NEW measure nonnegative; +1 is harmless
+        dec = f" (decreases ({cx.zx(l['decreases'], {}, local)} + 1))"
+    terms, seen = [], set()
+    for e in l["ensures"]:
+        for c in _call_terms(e, []):
+            txt = _render(cx, c, _fun_result(cx, c), {}, local)
+            if txt not in seen:
+                seen.add(txt)
+                terms.append((txt, c))
+    covered = set()
+    for _, c in terms:
+        _free_vars(c, covered)
+    pat = ""
+    if terms and set(local) <= covered:
+        pat = "\n  [" + "; ".join(f"SMTPat {t}" for t, _ in terms) + "]"
+    return (f"{head} {l['name']} {binders}\n"
+            f"  : Lemma (requires {req}) (ensures {ens}){dec}{pat}\n"
+            f"= {_lemma_body_src(cx, l['body'], local, ptys)}\n")
+
+
+def _fun_result(cx: "Ctx", c: dict) -> str:
+    f = cx.funs.get(_ck(c["call"]["fun"])) or cx.funs.get(c["call"]["fun"])
+    return f["result"] if f else "int"
+
+
+def _lemma_names(body: list) -> list:
+    out = []
+    for s in body:
+        if "lemma" in s:
+            out.append(s["lemma"]["name"])
+        elif "if" in s:
+            out += _lemma_names(s["if"]["then"]) + _lemma_names(s["if"]["else"])
+    return out
 
 
 def param_binders(task: dict) -> tuple[str, str]:
@@ -5531,6 +5649,15 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # SPEC.md "Methods (v1)": each method, in order, as its own opaque
     # `Pure` definition ahead of the task (`_method_src`). No methods, no
     # change: this loop is empty for every task without them.
+    # SPEC.md "Lemmas (v1)": each lemma, in order, as a proved `Lemma`
+    # with its SMT pattern (`_lemma_src`), ahead of the methods and task.
+    lemma_ptys = {l["name"]: [p["type"] for p in l["params"]]
+                  for l in r_task.get("lemmas", [])}
+    for l in r_task.get("lemmas", []):
+        l_src = _lemma_src(cx, l, lemma_ptys)
+        parts.extend(cx.extra_defs[extra_cursor:])
+        extra_cursor = len(cx.extra_defs)
+        parts.append(l_src)
     for m in r_task.get("methods", []):
         mcx, m_src = _method_src(r_task, m, cx._used)
         parts.extend(mcx.extra_defs)
