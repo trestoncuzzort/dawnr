@@ -689,7 +689,7 @@ class Pane(unittest.TestCase):
             d, model = self.checkpoint(tmp)
             pane = PaneLearning(Path(tmp) / "people")
             self.assertFalse(pane.enabled())
-            self.assertIsNone(pane.attach_adapter(model, d))
+            self.assertIsNone(pane.sync(model, d))
             conv = [{"role": "user", "content": USER}, {"role": "assistant", "content": PROGRAM}]
             pane.replied(conv)
             self.assertIn("Learning is off", pane.thumbs(True))
@@ -698,8 +698,8 @@ class Pane(unittest.TestCase):
             self.assertEqual(pane.settings(), {"enabled": True, "person": "ada"})
             pane.replied(conv)                                                   # base not identified yet
             self.assertEqual(F.PersonStore("ada", Path(tmp) / "people").records(), [])
-            said = pane.attach_adapter(model, d)
-            self.assertIn("No adapter yet", said)
+            self.assertIn("No adapter yet", pane.sync(model, d))
+            self.assertIsNone(pane.sync(model, d))                               # nothing changed: nothing said
             self.assertFalse(has_lora(model))
             pane.replied(conv)
             self.assertIn("Kept", pane.thumbs(True))
@@ -707,10 +707,106 @@ class Pane(unittest.TestCase):
             rows = F.PersonStore("ada", Path(tmp) / "people").records()
             self.assertEqual([r["feedback"] for r in rows], ["up"])
             self.assertEqual(len(rows[0]["model"]["ckpt_sha256"]), 64)             # kept with the weights that wrote it
+            # an adapter for ada is used while ada is the person, and comes off when learning is turned off
+            from dawnr_learning import adapters as A
+            from model import add_lora, lora_state, remove_lora
+            add_lora(model, r=2)
+            state = lora_state(model)
+            remove_lora(model)
+            examples, _ = F.PersonStore("ada", Path(tmp) / "people").training_examples()
+            A.save_adapter(state, A.adapter_dir(F.PersonStore("ada", Path(tmp) / "people"), A.base_identity(d)),
+                           {"base": A.base_identity(d), "examples": [{"id": e["id"], "hash": e["hash"]}
+                                                                    for e in examples]})
+            pane.save_settings(True, "bo")
+            self.assertIn("No adapter yet", pane.sync(model, d))                 # bo has none
+            pane.save_settings(True, "ada")
+            self.assertIn("Using what it learned from 1", pane.sync(model, d))
+            self.assertTrue(has_lora(model))
             self.assertIn("off", pane.save_settings(False, "ada"))
+            self.assertIn("Learning is off", pane.sync(model, d))
+            self.assertFalse(has_lora(model))
             self.assertIsNone(pane.user_turn("that's wrong"))
             with self.assertRaises(ValueError):
                 pane.save_settings(True, "../elsewhere")
+
+
+def _display() -> bool:
+    import os
+    return bool(os.environ.get("DISPLAY")) or sys.platform in ("win32", "darwin")
+
+
+@unittest.skipIf(not _display(), "no display; run under xvfb-run -a")
+class LearningWindow(unittest.TestCase):
+    """The chat window's hooks with test doubles (test_chat_pane_window's): the buttons exist, learning is off
+    by default, and a model that cannot be identified records nothing and says so."""
+
+    def setUp(self):
+        import queue
+        import tkinter as tk
+        import chat_pane
+        import look
+        self.chat_pane, self.tk = chat_pane, tk
+        self.saved = list(chat_pane._ENGINE)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = tk.Tk()
+        self.parent = tk.Frame(self.root)
+        self.parent.grid()
+        self.q = queue.Queue()
+        self.people = Path(self.tmp.name) / "people"
+        self.pane = chat_pane.ChatPane(self.parent, look.palette(dark=False), self.q,
+                                       checkpoint_dir=Path(self.tmp.name), on_status=lambda say: None,
+                                       people_root=self.people)
+
+    def tearDown(self):
+        for cb in self.root.tk.call("after", "info"):
+            self.root.after_cancel(cb)
+        self.root.destroy()
+        self.tmp.cleanup()
+        self.chat_pane._ENGINE[:] = self.saved
+
+    def labels(self):
+        out, stack = [], [self.parent]
+        while stack:
+            w = stack.pop()
+            stack += w.winfo_children()
+            if getattr(w, "_label", None):
+                out.append(w._label)
+        return out
+
+    def run_reply(self):
+        import chat
+        from test_chat_pane import FakeTokenizer, toks
+        from test_chat_pane_window import fake_bundle
+        import time
+        tok = FakeTokenizer(chat.CHAT_TOKENS)
+        bundle, _e, _h = fake_bundle(tok, toks(tok, "ok", chat.ASSISTANT_END),
+                                     final_parts=[{"type": "text", "text": "ok"}])
+        self.chat_pane._ENGINE[:] = [(bundle, "")]
+        self.pane.refresh()
+        self.pane.entry.insert(0, "hello")
+        self.pane.send()
+        end = time.monotonic() + 5
+        while time.monotonic() < end and self.pane.b_stop._enabled:
+            while not self.q.empty():
+                self.pane.handle(*self.q.get_nowait())
+            self.root.update()
+            time.sleep(0.01)
+        while not self.q.empty():
+            self.pane.handle(*self.q.get_nowait())
+        return self.pane.transcript.get("1.0", "end-1c")
+
+    def test_buttons_exist_and_learning_is_off_by_default(self):
+        for label in ("Good", "Not this", "Correct…"):
+            self.assertIn(label, self.labels())
+        text = self.run_reply()
+        self.assertNotIn("Learning is", text)                       # off: not a word, not a record
+        self.assertFalse(self.people.exists())
+
+    def test_turned_on_with_an_unidentifiable_model_records_nothing_and_says_so(self):
+        self.pane.learning.save_settings(True, "ada")
+        text = self.run_reply()
+        self.assertIn("could not be identified, so nothing is recorded", text)
+        self.assertEqual(F.PersonStore("ada", self.people).records(), [])
 
 
 if __name__ == "__main__":
