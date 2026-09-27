@@ -91,7 +91,39 @@ class PaneLearning:
         except Exception as e:                                   # noqa: BLE001  (said, never silent)
             return f"Learning is on, but this model could not be identified, so nothing is recorded: {e}"
         self.model_identity, self.attached_for = identity, want
-        return adapters.describe(status)
+        said = adapters.describe(status)
+        try:                                                     # the profile is refreshed once per window session
+            from . import style_profile as PR
+            prof = PR.refresh(rec.store)
+            if PR.effective(prof):
+                said += " Your style: " + "; ".join(line for line in PR.describe(prof)
+                                                    if not line.endswith("not known yet")) + "."
+        except Exception as e:                                   # noqa: BLE001  (said, never silent)
+            said += f" (Your style profile could not be read: {e}.)"
+        return said
+
+    def in_style(self, messages: list[dict]) -> str | None:
+        """Put the last answer in the person's style (their profile, style_profile.py) when that changes it.
+
+        The conversation's last message is replaced by the rewritten answer, so
+        what is recorded, rated and continued from is what the person saw; the
+        rewritten program is returned for the window to show, or None when the
+        profile is empty, learning is off, or nothing changes. A rewrite the t
+        tool fails where the original passed is never used (style_profile.apply)."""
+        rec = self._recorder() if self.model_identity is not None else None
+        if rec is None or len(messages) < 2 or messages[-1].get("role") != "assistant":
+            return None
+        from . import style_profile as PR
+        from .feedback import content_text
+        prof = PR.load(rec.store.dir)
+        if not PR.effective(prof):
+            return None
+        user = next((m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), "")
+        styled = PR.apply(prof, messages[-1]["content"], user if isinstance(user, str) else "")
+        if content_text(styled) == content_text(messages[-1]["content"]):
+            return None
+        messages[-1] = {"role": "assistant", "content": styled}
+        return final_program(styled)
 
     def user_turn(self, text: str) -> str | None:
         rec = self._recorder() if self.model_identity is not None else None

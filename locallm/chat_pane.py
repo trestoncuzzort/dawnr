@@ -591,6 +591,11 @@ class ChatPane:
         elif ev == "final_parts":
             self.messages.append({"role": "assistant", "content": data})
             if self.learning is not None:
+                styled = self.learning.in_style(self.messages)        # the person's profile, if it changes it
+                if styled:
+                    body = self._add_block("in your style (your profile)", "muted")
+                    self._insert(styled, (body,))
+                    self._toggle(body, body.replace("body", "mark"))  # shown open: it is the answer now
                 self.learning.replied(self.messages)
 
     def _on_done(self, payload: dict):

@@ -742,6 +742,28 @@ class Pane(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pane.save_settings(True, "../elsewhere")
 
+    def test_the_reply_is_shown_in_the_persons_style_once_the_profile_knows_it(self):
+        from dawnr_learning.pane import PaneLearning
+        with tempfile.TemporaryDirectory() as tmp:
+            d, model = self.checkpoint(tmp)
+            people = Path(tmp) / "people"
+            s = F.PersonStore("bo", people)
+            for i in range(4):
+                prog, user = PROGRAM.replace("count_up", f"count_up{i}"), USER.replace("count_up", f"count_up{i}")
+                rid = s.add_answer([{"role": "user", "content": user}], prog)
+                s.edit(rid, P.person_answer(P.PERSONS["bo"], prog, user))
+            pane = PaneLearning(people)
+            pane.save_settings(True, "bo")
+            said = pane.sync(model, d)
+            self.assertIn("Your style: local names: k-numbered (4 of 4 of your examples)", said)
+            conv = [{"role": "user", "content": USER}, {"role": "assistant", "content": PROGRAM}]
+            shown = pane.in_style(conv)
+            self.assertEqual(shown, P.restyle_program(PROGRAM, P.PERSONS["bo"]))
+            self.assertEqual(conv[-1]["content"], shown)                        # what is kept is what was shown
+            pane.replied(conv)
+            self.assertEqual(s.records()[-1]["answer"], shown)
+            self.assertIsNone(pane.in_style(conv))                              # already in style: nothing to do
+
 
 def _display() -> bool:
     import os
