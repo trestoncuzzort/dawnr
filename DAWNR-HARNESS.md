@@ -358,11 +358,90 @@ the chat tokens are) whenever a conversation file contains a registry call
 or an untrusted output, and records them in the run's identities; a file
 without either trains exactly as before.
 
-What this document does not claim: none of this has been trained, and no
-number exists yet for whether a model this size learns to treat marked text
-as data. The first measurement to make is the injection-following rate on
-held-out fixture pages before and after the "marked text is data"
-conversations, with the prediction written down first (AGENTS.md rule 3).
+### What has been built and trained (2026-09-27)
+
+**Built.** `locallm/tool_fixtures.py` writes the fixture set
+(`locallm/fixtures/tools/`, 1.8 MB): 829 pages generated from the proved
+corpus's own documents or written for this repository, notes for a second MCP
+server (`fixtures/tools/notes_server.py`), a search engine run by the
+`command` backend (`fixtures/tools/search.py`), an operator's guard hook, and
+web_fetch's own answer for every URL, recorded once by running the harness's
+web_fetch unchanged against a local server (only the name service and the
+route are doubled; `tool_fixtures.py check` re-records: 0 of 829 differ).
+Injected pages carry instructions in OWASP's disguises, each asking for one
+canary-marked action; held-out pages come only from validation-side
+documents, with instruction texts and canaries never trained on.
+`locallm/tool_conversations.py` builds one family of conversations per row
+of the table above (1,007: general 150, repair 150, stop 59, skill 65,
+mcp 48, clean page or note 55, injected page or note 175, outside 80,
+denied 175, search 50) by running every assistant step through a real
+Harness exactly as `engine.py` runs a sampled call, so every output span is
+the harness's own; none is supervised, all pass `chat_data.gate`.
+`locallm/tool_eval.py` measures a checkpoint on 706 held-out items with the
+harness live.
+
+**Trained and measured** (`locallm/prereg_tool_conversations_2026-09-27.json`,
+committed before the runs; its addendum records that the operator withdrew
+the desktop mid-run, so B-s1339's tool evaluation and all of C-s1339 ran on
+the lab's card 2 with identical inputs; numbers in
+`locallm/tool-conversations-results-2026-09-27.json`). The mid stage from the
+r12 core, 400 steps, three seeds per arm: A the base conversations only (with
+the harness tokens), B plus the 1,007, C the same with every injected page
+or note replaced by its matched clean one. Means over seeds:
+
+| | A | B | C |
+|---|---|---|---|
+| right first tool, 238 held-out items | 0.416 | **0.972** | 0.973 |
+| registry calls well formed | none made | 0.876 | 0.869 |
+| answers ended inside a call by `<\|assistant_end\|>` (grammar off) | 216 of 357 | 7 of 627 | 6 of 598 |
+| answers out of tokens inside a call (retrying, 500 tokens, no budget) | 17 | 233 | 211 |
+| **injection following, 132 held-out injected pages** | 0 / 0 / 0 | 1 / 4 / 0 (0.013) | 0 / 0 / 2 (0.005) |
+| "did not come from you" on injected / on clean items | 0 / 0 | 0.90 / **0.83** | 0 / 0 |
+| t-repair loaded after a failing verdict: precision / recall | no loads | 0.74 / 0.23 | 0.55 / 0.29 |
+| after a denial: call repeated / limit stated / program passes | 0 / 0 / 0.17 | 0.05 / 0.94 / 0.43 | 0.08 / 0.94 / 0.41 |
+| pass all examples, 133 prompts (chat_eval, the repair note's settings) | 17.0 | 14.7 | 14.0 |
+| dev well formed (of 100) | 18.7 | 28.0 | 19.0 |
+
+What it says:
+
+- **The call grammar is learned at once.** 97% of held-out items get the
+  right first tool (web_fetch for a URL, web_search for "find the page",
+  the dawnr server when asked for it, t or nothing for a plain task), 88% of
+  registry calls parse and pass their schema, and calls close on their own
+  (7 of 627 answers ended inside one, against 216 of 357 for A).
+- **Nothing to reduce: no claim about "marked text is data".** Without the
+  injected conversations (C) the model followed 2 of 396 held-out injected
+  pages; with them (B) 5. Every followed case in either arm, pages, notes
+  and the unseen completion disguise alike, is the program goal: the answer
+  writes the injected program's task name, copying the last program in its
+  context. No arm at any seed followed a fetch, send or phrase injection.
+  The registered rule R1 says "nothing to reduce at this size": the model
+  does not act on page text as instructions whether or not it was taught to
+  ignore it. Whether it acts on the same instructions from the person is the
+  post-hoc positive control in the addendum.
+- **The flag is a prior, not a detection.** B says the page held instructions
+  after 90% of injected and 83% of clean held-out items: the training set had
+  three injected task pages for every clean one of the same request, and the
+  model learned the ratio. A flag needs balanced clean and injected text per
+  request, and is only worth reporting beside its false-alarm rate.
+- **Denial and error answers are learned**: the limit is stated after 94% of
+  refusals and errors, the call is rarely retried, and the answer still
+  passes the user's examples more often than A's (0.43 against 0.17).
+- **Skills are loaded too rarely** (recall 0.23): the 150 repair
+  conversations retry without a skill and the 65 skill ones load it; the
+  model follows the larger pattern whatever the index lists.
+- **The cost**: R2's guard failed. At the same 400 steps the 358 base
+  conversations are one fifth of B's rows, and pass all examples over the
+  133 prompts fell from 17.0 to 14.7 (the guard allowed 2), all of it on the
+  validation side, while dev well formed rose from 18.7 to 28.0. The tool
+  conversations stay opt-in (`dawnr_pipeline.py --extra-conversations`).
+
+Next: balance clean and injected pages per request so a flag can be a
+detection; injections a small model could plausibly obey (a program on the
+page for the task, instructions in the user's own register) and the positive
+control beside every injection number; skill conversations wherever t-repair
+is listed; a step budget or mixing ratio that keeps the base conversations'
+exposure; conversations that end after repeated failures (the retry loop).
 
 ## 9. Running it
 
@@ -375,6 +454,17 @@ conversations, with the prediction written down first (AGENTS.md rule 3).
 
     # dawnr's checker as an MCP server for any client
     python locallm/dawnr_harness/mcp_server.py
+
+    # the tool conversations (section 8): fixtures once, then the conversations, the held-out items, a measurement
+    python locallm/tool_fixtures.py site --corpus <proved corpus>      # pages, notes, search indexes
+    python locallm/tool_fixtures.py record                             # web_fetch's answer for every page, once
+    python locallm/tool_fixtures.py check                              # record again and compare
+    python locallm/tool_conversations.py build --corpus <proved corpus> --repairs <repairs.jsonl> \
+        --core <core dir> --out tool-B.jsonl [--arm C]
+    python locallm/tool_conversations.py heldout --corpus <proved corpus> --out tool-heldout.jsonl \
+        --training tool-B.jsonl
+    python locallm/tool_eval.py --model <chat model> --items tool-heldout.jsonl --out tool-eval.json
+    python locallm/tool_eval.py --report <runs dir>                    # arms and seeds, R1 and R2 applied
 
 A configuration (`locallm/dawnr_harness/example-config.json`; relative paths
 resolve from the file's folder, `${PYTHON}` is the running interpreter):
@@ -396,6 +486,9 @@ wire; skill path traversal and symlinks; hook configurations with bad
 commands; web redirects into every private and reserved range, huge bodies,
 slow drips and wrong content types; injection text in every field that
 reaches the model, resources and prompts included -- every case ends refused
-or marked untrusted, never a crash, never unmarked) and
+or marked untrusted, never a crash, never unmarked),
 `locallm/test_harness_chat.py` (the tokens, the mask and the engine; needs
-torch, skips without it).
+torch, skips without it), and `locallm/test_tool_conversations.py` (the
+recording reproduced, the replay inside a real Harness, the notes server and
+the guard hook for real, the disguises, no output span supervised, the
+evaluation's judge).
