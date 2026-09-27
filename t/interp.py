@@ -567,6 +567,23 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         # SPEC.md "Pairs" (2026-09-10): (a, b), a value defined iff both
         # components are (every argument above is already evaluated).
         return Pair(a[0], a[1])
+    if op == "set":
+        # SPEC.md "Finite sets" (2026-09-27): {e1, ..., en}, the set of the
+        # values (duplicates collapse), every element evaluated above so the
+        # display is defined iff all are. A frozenset: hashable (the domain
+        # ladders dedup through a set) and `type(v).__name__` is
+        # "frozenset", so `_tv` never confuses a set with a seq (a tuple).
+        return frozenset(a)
+    if op == "in":
+        return a[0] in a[1]
+    if op == "card":
+        return len(a[0])
+    if op == "union":
+        return a[0] | a[1]
+    if op == "inter":
+        return a[0] & a[1]
+    if op == "diff":
+        return a[0] - a[1]
     if op == "fst":
         # p.0: always defined on a pair (check_wf refuses a non-pair operand
         # before this ever runs).
@@ -960,7 +977,11 @@ def ladders(task: dict) -> dict:
                          + [2, -2, 3, -3] + list(STR_ALPHA))[:ALPHA])
     seqs = _seq_ladder(alpha)
     return {"int": ints, "seq": seqs, "bool": BOOLS,
-            "nested_seq": _nested_seq_ladder(seqs)}
+            "nested_seq": _nested_seq_ladder(seqs),
+            # SPEC.md "Finite sets" (2026-09-27): the seq ladder's tuples
+            # read as sets, duplicates collapsed, so the near corner (the
+            # empty set, then the singletons) comes first as it does for seqs.
+            "set": tuple(_dedup([frozenset(t) for t in seqs]))}
 
 
 PAIR_SHELL = 24          # 2-argument shell cap, the same magnitude
@@ -1030,6 +1051,10 @@ def _j(v):
         # SPEC.md "Pairs": shown as a 2-list, recursing so a seq component
         # (itself a tuple) prints as a list too rather than as a raw tuple.
         return [_j(v.a), _j(v.b)]
+    if isinstance(v, frozenset):
+        # SPEC.md "Finite sets" (2026-09-27): shown as its sorted list; the
+        # declared type says it is a set, as it says a pair's 2-list is a pair.
+        return sorted(v)
     if isinstance(v, tuple):
         # SPEC.md "Nested sequences" (2026-09-10): a row is itself a tuple,
         # so a bare `list(v)` here would print a nested seq as a list of

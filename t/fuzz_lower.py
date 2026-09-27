@@ -483,6 +483,21 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return args[0].a
     if op == "snd":
         return args[0].b
+    if op == "set":
+        # SPEC.md "Finite sets" (2026-09-27): the six total operations, a
+        # CLONE of interp.ev's own arms (a frozenset, never a tuple, so this
+        # file's own `==` keeps a set distinct from a same-shaped seq).
+        return frozenset(args)
+    if op == "in":
+        return args[0] in args[1]
+    if op == "card":
+        return len(args[0])
+    if op == "union":
+        return args[0] | args[1]
+    if op == "inter":
+        return args[0] & args[1]
+    if op == "diff":
+        return args[0] - args[1]
     if op == "split":
         return (_str_split_ws(args[0]) if len(args) == 1
                 else _str_split_sep(args[0], args[1]))
@@ -761,6 +776,10 @@ def _j(v):
         # CLONE of interp.py's own `_j`, checked BEFORE the tuple case below
         # since interp.Pair is deliberately not a tuple.
         return [_j(v.a), _j(v.b)]
+    if isinstance(v, frozenset):
+        # SPEC.md "Finite sets" (2026-09-27): its sorted list, a CLONE of
+        # interp.py's own `_j`.
+        return sorted(v)
     if isinstance(v, tuple):
         # SPEC.md "Nested sequences" (2026-09-10): a row is itself a tuple,
         # so recurse rather than stopping at `list(v)`, which would leave
@@ -3689,6 +3708,109 @@ def probes() -> list[dict]:
         "and a seq<seq> with no rows, resolved by the declared type at "
         "the assignment; r's declared type is seq<seq>, so the `expect` "
         "hint types [] as the empty nested seq, len 0")
+
+    # --- SPEC.md "Finite sets (v1)" (2026-09-27): the six total operations
+    # and their laws, each a probe a lowering that mistranslates one of
+    # them fails. Duplicates collapse in a display.
+    add({"t": 1, "name": "fz_p_set_dup",
+         "params": [{"name": "x", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("implies", OP("==", V("x"), I(1)), OP("==", V("r"), I(1))),
+                     OP("implies", OP("!=", V("x"), I(1)), OP("==", V("r"), I(2)))],
+         "body": [ASG("r", OP("card", OP("set", V("x"), V("x"), I(1))))]},
+        "verified",
+        "SPEC.md 'Finite sets': {x, x, 1} has one or two members "
+        "(duplicates collapse), so card is 1 when x == 1 and 2 otherwise")
+    add({"t": 1, "name": "fz_p_set_dup_bad",
+         "params": [{"name": "x", "type": "int"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), I(3))],
+         "body": [ASG("r", OP("card", OP("set", V("x"), V("x"), I(1))))]},
+        "refuted",
+        "a lowering that keeps duplicates (a seq under the set's name) "
+        "proves card {x, x, 1} == 3; SPEC.md says at most 2", adversarial=True)
+    # Membership distributes over intersection with a singleton: stated over
+    # membership alone (the cardinality form `|s * {x}| == 1` is a fact
+    # Dafny's own set axioms do not close unaided, measured 2026-09-27, and
+    # a probe measures the lowering, not the kernel's completeness).
+    add({"t": 1, "name": "fz_p_set_mem",
+         "params": [{"name": "x", "type": "int"}, {"name": "s", "type": "set"}],
+         "returns": [{"name": "r", "type": "bool"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("in", V("x"), OP("inter", V("s"), OP("set", V("x"), I(7)))))],
+         "body": [ASG("r", OP("in", V("x"), V("s")))]},
+        "verified",
+        "x in s iff x in (s * {x, 7}): membership through an intersection "
+        "with a display that holds x")
+    # Inclusion-exclusion, general over two set parameters.
+    add({"t": 1, "name": "fz_p_set_inclexcl",
+         "params": [{"name": "a", "type": "set"}, {"name": "b", "type": "set"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("+", OP("card", V("a")), OP("card", V("b"))))],
+         "body": [ASG("r", OP("+", OP("card", OP("union", V("a"), V("b"))),
+                              OP("card", OP("inter", V("a"), V("b")))))]},
+        "verified",
+        "|a + b| + |a * b| == |a| + |b|, the law every finite-set library states")
+    add({"t": 1, "name": "fz_p_set_union_bad",
+         "params": [{"name": "a", "type": "set"}, {"name": "b", "type": "set"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("+", OP("card", V("a")), OP("card", V("b"))))],
+         "body": [ASG("r", OP("card", OP("union", V("a"), V("b"))))]},
+        "refuted",
+        "|a + b| == |a| + |b| fails as soon as the two overlap (a = b = {0}); "
+        "a lowering whose union concatenates verifies it", adversarial=True)
+    # Difference against intersection: a splits into the part in b and the rest.
+    add({"t": 1, "name": "fz_p_set_diff",
+         "params": [{"name": "a", "type": "set"}, {"name": "b", "type": "set"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", OP("+", V("r"), OP("card", OP("inter", V("a"), V("b")))),
+                        OP("card", V("a")))],
+         "body": [ASG("r", OP("card", OP("diff", V("a"), V("b"))))]},
+        "verified",
+        "|a - b| + |a * b| == |a|")
+    # Extensional equality, stated through the operations.
+    add({"t": 1, "name": "fz_p_set_eq",
+         "params": [{"name": "a", "type": "set"}, {"name": "b", "type": "set"}],
+         "returns": [{"name": "r", "type": "bool"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"),
+                        AND(OP("==", OP("card", OP("diff", V("a"), V("b"))), I(0)),
+                            OP("==", OP("card", OP("diff", V("b"), V("a"))), I(0))))],
+         "body": [ASG("r", OP("==", V("a"), V("b")))]},
+        "verified",
+        "two sets are equal iff neither has an element the other lacks: "
+        "SPEC.md's extensional == against two empty differences")
+    add({"t": 1, "name": "fz_p_set_empty",
+         "params": [], "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), I(0))],
+         "body": [ASG("r", OP("card", OP("set")))]},
+        "verified",
+        "card {} == 0: the empty display is the empty set")
+    # A loop that collects a seq's elements into a set: the frame rule
+    # havocs a set local by name, the invariant bounds its size.
+    add({"t": 1, "name": "fz_p_set_collect", "gate": "loops",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("<=", V("r"), LEN("s")), OP(">=", V("r"), I(0))],
+         "body": [{"var": {"name": "acc", "type": "set", "init": OP("set")}},
+                  {"var": {"name": "i", "type": "int", "init": I(0)}},
+                  {"while": {"cond": OP("<", V("i"), LEN("s")),
+                             "invariants": [OP("<=", I(0), V("i")), OP("<=", V("i"), LEN("s")),
+                                            OP("<=", OP("card", V("acc")), V("i"))],
+                             "decreases": OP("-", LEN("s"), V("i")),
+                             "body": [ASG("acc", OP("union", V("acc"), OP("set", AT("s", V("i"))))),
+                                      ASG("i", OP("+", V("i"), I(1)))]}},
+                  ASG("r", OP("card", V("acc")))]},
+        "verified",
+        "collecting len(s) elements into a set gives at most len(s) members; "
+        "|acc + {e}| <= |acc| + 1 is the step")
 
     # --- SPEC.md "The string library (v1)": `split(s)`'s own stated edge
     # case, "split("") == []" verbatim, true by construction, no
