@@ -1,0 +1,9 @@
+{
+  "offline": true,
+  "permissions": {"t": "allow", "skill": "allow", "mcp__dawnr__*": "allow"},
+  "skills": ["skills"],
+  "mcp_servers": {
+    "dawnr": {"command": "${PYTHON}", "args": ["mcp_server.py"], "network": false, "describe": true}
+  },
+  "web": {"search": {"backend": "searxng", "url": "http://127.0.0.1:8888"}}
+}
