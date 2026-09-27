@@ -1,0 +1,169 @@
+name: tests
+
+on:
+  push:
+    branches: [r12-blockers, main]
+  pull_request:
+    branches: [r12-blockers, main]
+
+jobs:
+  # No provers (dafny/verus/spark/framac/lean/rocq/fstar), no torch, no GPU.
+  # t/ and locallm/ are both designed to run without any of those -- the
+  # tests that genuinely need one already abstain by name (self-skip with a
+  # reason) when the binary or module is missing. The exclusions below are
+  # the remainder: tests whose own design assumes a prover, external data
+  # this checkout does not carry, or lab-machine infrastructure, without yet
+  # abstaining cleanly on their own.
+  standard-library:
+    name: standard-library (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.12"]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: check out the repository
+        uses: actions/checkout@v4
+
+      - name: pull the small nl/data corpora
+        # nl/data/*.jsonl.gz (mbpp + humaneval) is git-lfs and totals ~176KB;
+        # t/spec_experiment.py's problem pool reads it. The rest of this
+        # repository's LFS content is model checkpoints (*.pt, *.safetensors,
+        # ...), left alone here on purpose -- pulling those would turn this
+        # job from modest into slow for no benefit to these suites.
+        run: |
+          git lfs install --local
+          git lfs pull --include="nl/data/*.jsonl.gz"
+
+      - name: set up python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            t/requirements.txt
+
+      - name: install test dependencies
+        # pytest is the CI runner (it collects both this project's plain
+        # `test_*` functions and its unittest.TestCase files in one pass;
+        # the project's own convention is `python3 test_x.py` per file, see
+        # AGENTS.md). datasets is t/requirements.txt's one dependency.
+        run: python -m pip install --upgrade pip pytest -r t/requirements.txt
+
+      - name: best-effort tkinter and a virtual display (Linux)
+        # actions/setup-python's Linux interpreters do not bundle tkinter,
+        # and apt's python3-tk targets the system interpreter, not
+        # necessarily this one -- so this is best-effort, not load-bearing.
+        # The tests that touch tkinter (test_home.py, test_ingest_scripts.py,
+        # one test in test_early_stop.py) skip cleanly by name when it is
+        # not importable, on any OS, with or without a display.
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y python3-tk xvfb
+
+      - name: locallm standard-library suites
+        working-directory: locallm
+        run: |
+          FILES="test_harness.py test_plain_generate.py test_home.py test_release.py test_ingest_any.py test_ingest_scripts.py test_launchers.py"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a python -m pytest -v $FILES
+          else
+            python -m pytest -v $FILES
+          fi
+
+      - name: t/ unit tests that need neither provers nor torch
+        working-directory: t
+        run: |
+          # Each excluded test was run and read individually (not guessed)
+          # before landing here; see the branch's commit history for the
+          # per-file reasoning. Binary-absent and corpus-absent tests
+          # elsewhere in t/ already self-skip and need no entry here.
+          IGNORE=(
+            # tkinter event-loop teardown crashes the whole run, whatever
+            # drives it (internal/HANDOFF-2026-09-20-antigravity.md)
+            --ignore=test_lab_gui.py
+            # sources t/lab_mode.sh (bash) to test lab<->desktop grading
+            # sync; shells out to rsync for one of its eight tests and
+            # is not meant to be portable to windows-latest
+            --ignore=test_lab_mode.py
+          )
+          DESELECT=(
+            # needs the dafny binary
+            --deselect "test_cli.py::VerifyTest::test_directory_form_writes_table"
+            # needs the framac binary
+            --deselect "test_cli.py::FailurePathTest::test_single_file_verify_reports_abstain"
+            # needs the lab's full t/out/spec-experiment grading history;
+            # t/out is gitignored and only a small fixture is committed
+            --deselect "test_kernel_disagreement.py::DetectorTests::test_it_reads_the_real_tables_without_dropping_rows"
+            # needs the dafny binary (the lifter re-verifies as it lifts)
+            --deselect "test_lift_corpora.py::LiftCorporaTests::test_a_humaneval_index_that_names_a_gated_problem_is_refused_before_anything_else"
+            --deselect "test_lift_corpora.py::LiftCorporaTests::test_a_humaneval_task_whose_pool_problem_it_passes_is_curated_by_test"
+            --deselect "test_lift_corpora.py::LiftCorporaTests::test_a_program_that_passes_every_point_of_a_held_out_problem_is_refused_as_its_twin"
+            --deselect "test_lift_corpora.py::LiftCorporaTests::test_the_lifted_tasks_carry_their_source_english_and_the_refused_program_is_named"
+            --deselect "test_lift_corpora.py::LiftCorporaTests::test_the_report_is_written_from_the_meta_files"
+            # needs t-corpora/, a sibling checkout this repository does not carry
+            --deselect "test_lift_front.py::test_ast_shape_on_abs"
+            --deselect "test_lift_front.py::test_77_infragment_parse_clean"
+            --deselect "test_lift_front.py::test_seeds_front_end"
+            --deselect "test_lift_front.py::test_785_parse_or_refuse"
+            --deselect "test_lift_front.py::test_77_fixpoint"
+            # needs the dafny binary
+            --deselect "test_lift_front.py::test_resolve_18_1_small"
+            --deselect "test_lift_front.py::test_source_disagreement_598"
+            --deselect "test_lift_front.py::test_resolve_18_1_full"
+            # needs t-corpora/, a sibling checkout this repository does not carry
+            --deselect "test_lift_report.py::test_lift_file_stub_no_crash"
+            --deselect "test_lift_report.py::test_resumability_no_recompute"
+            --deselect "test_lift_report.py::test_lifter_cli_list_resumable"
+            --deselect "test_lift_report.py::test_build_table_and_report_totals"
+            --deselect "test_lift_rules.py::test_seed_acceptance"
+            --deselect "test_lift_rules.py::test_infragment"
+            # needs the dafny binary
+            --deselect "test_lsp.py::test_transcript_replays"
+            # needs the dafny binary (module docstring: "Runs dafny only")
+            --deselect "test_tlib.py::test_second_call_same_process_runs_no_kernel"
+            --deselect "test_tlib.py::test_second_process_reads_the_same_cache"
+          )
+          python -m pytest -v "${IGNORE[@]}" "${DESELECT[@]}" .
+
+  # ubuntu-only: installs CPU torch and runs the four locallm suites whose
+  # own docstrings say they need it (CPU, seconds each).
+  cpu-torch:
+    name: cpu-torch (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - name: check out the repository
+        uses: actions/checkout@v4
+
+      - name: set up python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            locallm/requirements.txt
+
+      - name: install CPU torch and test dependencies
+        # numpy is not in locallm/requirements.txt (torch does not require
+        # it to run), but test_fim.py's own golden-hash fixture calls
+        # tensor.numpy() and torch raises RuntimeError without it installed
+        # -- measured by running this job's four files against a torch+
+        # pytest-only environment before writing this step.
+        run: |
+          python -m pip install --upgrade pip pytest numpy
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: locallm CPU-torch suites
+        working-directory: locallm
+        run: python -m pytest -v test_dawnr_chat.py test_harness_chat.py test_fim.py test_early_stop.py
