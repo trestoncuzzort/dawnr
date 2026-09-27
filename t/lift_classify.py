@@ -296,7 +296,7 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
     if t.kind in ("map", "imap"):
         return "map"
     if t.kind == "tuple":
-        return "tuple"
+        return _tuple_issue(t)  # row 44: a two-component tuple is t's pair
     if t.kind == "bv":
         return "bitvector"
     if t.kind == "object":
@@ -314,6 +314,46 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
             return "array2"
         return "generics" if t.args else "datatype"
     return "type-decl"
+
+
+def _tuple_issue(t: Type) -> Optional[str]:
+    """Row 44 (2026-09-27, t/FEATURES-TRACK.md, tuples): a Dafny tuple type
+    `(T1, T2)` is t's pair (SPEC.md "Pairs (v1)") when it has exactly two
+    components, each a type row 29 already carries as a pair component
+    (`_pair_component_issue`: int, nat, bool, seq, string); `tuple-arity`
+    for any other arity (t has no triple), `tuple-component` otherwise
+    (a real, a char, an array, a nested tuple, ...)."""
+    if len(t.args) != 2:
+        return "tuple-arity"
+    if any(_pair_component_issue(a) is not None for a in t.args):
+        return "tuple-component"
+    return None
+
+
+def _tuple_names(method: MethodDecl, closure: tuple) -> frozenset:
+    """Row 44: every name declared with an accepted tuple type (a param, the
+    return, a closure function's param, a typed local), whose `.0`/`.1`
+    projections lift as `fst`/`snd`."""
+    names = set()
+
+    def note(name: Optional[str], t: Optional[Type]) -> None:
+        if name and t is not None and t.kind == "tuple" and _tuple_issue(t) is None:
+            names.add(name)
+
+    for p in method.params:
+        note(p.name, p.type)
+    for r in method.returns:
+        note(r.name, r.type)
+    for d in closure:
+        if isinstance(d, FunctionDecl):
+            for p in d.params:
+                note(p.name, p.type)
+    for root in [method] + list(closure):
+        for n in walk(root):
+            if isinstance(n, VarDeclStmt):
+                for nm in n.names:
+                    note(nm.name, nm.type)
+    return frozenset(names)
 
 
 def _pair_component_issue(t: Optional[Type]) -> Optional[str]:
@@ -394,6 +434,8 @@ def _declared_kind(t: Optional[Type]) -> Optional[str]:
         return "seq"  # row 28: string is seq<int> by another name
     if t.kind == "array" and not t.nullable and _is_array_of_int(t):
         return "seq"
+    if t.kind == "tuple" and _tuple_issue(t) is None:
+        return "pair"  # row 44: a tuple-typed name; its components are `#0`/`#1`
     return None
 
 
@@ -442,7 +484,13 @@ def expr_kind(e: Expr, lookup) -> Optional[str]:
         return "int"
     if isinstance(e, Cardinality):
         return "int"
+    if isinstance(e, TupleExpr):
+        return "pair" if len(e.elems) == 2 else None  # row 44: a pair literal
     if isinstance(e, Member):
+        if e.name in ("0", "1") and isinstance(e.base, Ident):
+            # Row 44: a tuple projection has its component's kind
+            # (`_build_kind_env`'s `<name>#0`/`#1` entries), else unknown.
+            return lookup(e.base.name + "#" + e.name)
         return "int"  # `.Length`; anything else is refused `datatype` elsewhere
     if isinstance(e, IfExpr):
         tk, ek = expr_kind(e.then, lookup), expr_kind(e.else_, lookup)
@@ -560,6 +608,13 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
         if (t is not None and t.kind == "seq" and len(t.args) == 1
                 and t.args[0].kind in ("seq", "string")):
             env[name + "#row"] = "seq"
+        if t is not None and t.kind == "tuple" and _tuple_issue(t) is None:
+            # Row 44 (2026-09-27, tuples): the two components of a tuple-
+            # typed name, `p.0`/`p.1`, under the same unspellable key idea.
+            for idx, ct in enumerate(t.args):
+                k = _declared_kind(ct)
+                if k is not None:
+                    env[f"{name}#{idx}"] = k
 
     for p in method.params:
         _row(p.name, p.type)
@@ -2461,12 +2516,14 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     closure_names = {d.name for d in closure if d.name}
     method_names = {d.name for d in module.decls if isinstance(d, MethodDecl) and d.name}
     null_checks = scan_null_checks(method)
+    tuple_names = _tuple_names(method, closure)  # row 44
     accepted_ids = (_array_mutation_accepted_ids(method, array_mutation, ret_param)
                      | frozenset(id(m) for _, _, m in null_checks)
                      | _dropped_function_decreases_set_ids(closure))
     for root in scope_roots:
         for n in walk(root):
-            _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids)
+            _scan_node_for_issues(n, issues, method.name, closure_names, method_names, accepted_ids,
+                                  tuple_names)
 
     # -- sequences: literal, concat, slice (rows 25-27, 2026-09-09) ------
     # `SeqDisplay`/`Slice`/a `+` on seqs used to be unconditional
@@ -2727,7 +2784,8 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,
                            closure_names: set[str],
                            method_names: set[str] = frozenset(),
-                           accepted_ids: frozenset[int] = frozenset()) -> None:
+                           accepted_ids: frozenset[int] = frozenset(),
+                           tuple_names: frozenset = frozenset()) -> None:
     """One generic pass catching every section-5 row that is a plain
     "does this construct appear anywhere" test. Rows needing context
     (self-recursion shape, tail returns, quantifier bounds, decreases,
@@ -2807,11 +2865,18 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     elif isinstance(n, Comprehension) and n.kind == "seq":
         issues.append((n.line, "seq-comprehension", "seq-comprehension"))
     elif isinstance(n, TupleExpr):
-        issues.append((n.line, "tuple", "(...)"))
+        # Row 44 (2026-09-27): a two-element tuple literal is t's pair
+        # literal (SPEC.md "Pairs (v1)"); any other arity has no t value.
+        if len(n.elems) != 2:
+            issues.append((n.line, "tuple-arity", f"({len(n.elems)})"))
     elif isinstance(n, TypeTest):
         issues.append((n.line, "as-cast", "is"))
     elif isinstance(n, Member) and n.name != "Length":
-        issues.append((n.line, "datatype", n.name))
+        # Row 44: `.0`/`.1` on a name declared with an accepted tuple type
+        # is a pair projection; any other member is a datatype's.
+        if not (n.name in ("0", "1") and isinstance(n.base, Ident)
+                and n.base.name in tuple_names):
+            issues.append((n.line, "datatype", n.name))
     elif isinstance(n, VarDeclStmt) and n.ghost:
         issues.append((n.line, "ghost-local", "ghost var"))
     elif isinstance(n, CallStmt):
