@@ -84,6 +84,9 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=1337)
     ap.add_argument("--device", default=None)
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--harness-tokens", action="store_true",
+                    help="add the harness tokens even when no conversation needs them, so a model trained without "
+                         "tool conversations has the same ids as one trained with them (a control arm)")
     a = ap.parse_args(argv)
 
     import torch
@@ -104,7 +107,7 @@ def main(argv=None) -> int:
     if tokenizer.vocab_size != config.vocab_size:
         raise ValueError("the init's tokenizer and embedding table disagree on vocabulary size")
     # conversations that call registry tools or read untrusted output need the harness tokens too (DAWNR-HARNESS.md)
-    harness = chat.needs_harness_tokens(train_convs + val_convs)
+    harness = a.harness_tokens or chat.needs_harness_tokens(train_convs + val_convs)
     tokenizer = chat.with_harness_tokens(tokenizer) if harness else chat.with_chat_tokens(tokenizer)
     added = chat.grow_embeddings(model, tokenizer.vocab_size)
     model.to(device)
