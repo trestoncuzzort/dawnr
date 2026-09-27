@@ -414,8 +414,12 @@ the same way.
 
 ## What is left and why
 
-- **Frama-C**: the `\list` route, above. Effort: the bridge predicate and
-  its use at every seq site of a spec value; the buffer model stays.
+- **Frama-C**: the `\list` route, built on `feat/framac-seq-fun` (from
+  `r12-blockers`, f9da6dca), below ("Frama-C, the `\list` route"). What
+  is left there specifically: the check stage's own automation gap
+  combining a recursive `\list` unfolding with a loop-carried or
+  slice-derived fact under the task's other hypotheses (WP/alt-ergo,
+  not a soundness gap; every twin still refutes).
 - **The check stage's `L_fun` lemmas** (47 of the 104): the token names
   the lemma that did not prove, and 41 of the 47 are the helper's own
   `L_fun_<name>` equivalence (seven of them one recursive `str2Int` over
@@ -449,6 +453,195 @@ the same way.
 - **t/CONFORMANCE.md**: a full conformance run regenerates it with the
   four probes; the probes' cells are graded above by the same machinery.
 
+## Frama-C, the `\list` route
+
+Built on `feat/framac-seq-fun` (from `r12-blockers`, f9da6dca), closing
+the abstain named above. A seq-valued spec_fun is a recursive ACSL logic
+function returning `\list<integer>`, ACSL's own built-in list type
+(constructors `\Nil`/`\Cons`, and `\nth`/`\length`/`\concat`, all builtin
+logic symbols -- Frama-C `kernel_internals/typing/logic_builtin.ml`; WP's
+own `Vlist.ml` gives all five a NATIVE decision procedure inside the
+prover, not a user axiom the theory must trust). `spec_fun_acsl`'s
+existing recursive-`logic`-equation shape (already used for an int/bool
+result, this file's own "prefer logic definitions" rule) is extended
+with a third result, `\list<integer>`, and its body rendered by a new
+function, `list_term`, through `\Nil`/`\Cons` (a literal), `\concat` (`+`
+concatenation), a further spec_fun call, `ite`, and a slice of a real
+buffer parameter (`t_seq_of_range{L}`, one more always-total recursive
+helper, needed only when a body slices a buffer directly, `tl`'s own
+shape) -- covering every seq-valued spec_fun body this pass's own
+fixtures and probes state. Anything else (a bare seq-typed PARAMETER
+passed through unchanged, `update`/`fill` inside such a body) still
+abstains by name, at `list_term`'s own point, not a wholesale refusal.
+
+**The bridge, without a predicate of its own.** SPEC.md's route (named
+above) called for "a bridge predicate ... at every `==`/`len`/`at` site".
+Building it turned out not to need a named `predicate` symbol at all:
+`_seq_len_render`/`_seq_at_render` (the two functions every `len`/`at`/
+extensional-`==` site on a seq value already goes through) grew a `call`
+case each, returning ACSL's own `\length(call)`/`\nth(call, k)` directly
+-- and `defs`'s matching `at` case grew the same, for `at(f(...), k)`'s
+own definedness bound. Because `\length`/`\nth` are builtin and total
+over ANY `\list<integer>` term, no separate predicate needed declaring:
+the existing extensional-equality formula (`(len_a == len_b) &&
+(\forall k. a[k] == b[k])`), which already composes across a bare
+variable, a slice, a literal and a concatenation, composes across a
+spec_fun call too, with zero new formula shape. `T_SEQ_LIST_LEMMAS_ACSL`
+(six lemmas: appending or prepending one element's own length/`\nth`
+facts) is proved once from ACSL's own list theory -- not assumed, each
+closes in single-digit milliseconds against alt-ergo 2.4.3 in isolation
+-- and gives later goals a fact to substitute rather than a fresh
+instantiation search.
+
+**Soundness.** `t_seq_of_range` and the six append/prepend lemmas are
+structurally total (a base case that fires immediately, a measure that
+strictly decreases) or independently proved, never an assumed axiom; the
+standing rule ("no axiom that is not a definition") holds throughout.
+The refutation certificate's own int/bool ladder (`_cev_call`/
+`_flush_trace`, 2026-09-26) is untouched; a SEPARATE ladder,
+`_CEV_TRACE_SEQ`/`_cev_seqval`/`_seq_call_lhs`, states a seq-valued
+call's ground `\list` value the same way (`f(args) == \Cons(v0, \Cons(v1,
+..., \Nil))`, callees before callers), gated on `f["result"] == "seq"`
+throughout -- unreachable for any task without one.
+
+**Byte identity.** sha256 of `tlib.lower(task, "framac", twin_body)` over
+every file in t/tasks, t/lemmas and t/nested, real and twin, on a clean
+`git archive r12-blockers` export against this branch: 84 of 84
+lowerings, **82 identical, exactly 2 different** -- `double_all.t`'s own
+real and twin, the only committed task with a seq-valued spec_fun; every
+code path this pass adds is gated on `f["result"] == "seq"`
+(`_has_seq_result_sf`/`_has_seq_slice_sf`, the abstain removed from
+`lower()`, `spec_fun_acsl`'s new branch, the `call` cases in
+`_seq_len_render`/`_seq_at_render`/`defs`, `_cev_call`'s seq branch),
+which no other committed task declares. The other six kernels' own
+files are untouched by this branch (git diff touches only
+`t/lower_framac.py`, its tests, and the docs named here).
+
+**The committed matrix.** t/AGREEMENT.md regraded in Frama-C alone
+(`t/run_par.py --kernels framac --tasks t/tasks --jobs 2 --no-cache`,
+the desktop, 2026-09-27): every task's cell matches the committed table
+except `double_all`'s, run_par's own diff detector naming it the one
+`<-- FINDING`. `double_all`'s Frama-C cell moves from `abstain / abstain`
+to `timeout / refuted`: the twin now refutes (below), and the real side
+reads an honest `timeout` rather than the prior abstain -- neither a
+regression (double_all was never clean in seven; Frama-C was always its
+sole blocker, t/AGREEMENT.md's own "Sole blockers" table, unchanged by
+this move) nor a false `verified`. No other cell changed, confirming the
+byte-identity sweep above from the grader's own side.
+
+**Verified with the real prover** (frama-c 33.0 / alt-ergo 2.4.3-free,
+the desktop, CPU only, `T_SPARK_JOBS` not relevant to a framac-only run,
+`--jobs 2`): every twin this pass reaches REFUTES.
+
+| task | real | twin |
+|---|---|---|
+| double_all | timeout | refuted |
+| fz_p_sf_seq_len | timeout | refuted |
+| fz_p_sf_seq_at | **verified** | refuted |
+| fz_p_sf_seq_build | timeout | refuted |
+| fz_p_sf_seq_false | timeout | (no twin) |
+| fz_p_sf_seq_swap | timeout | refuted |
+| fz_p_sf_seq_slice_off | timeout | refuted |
+
+Six of six twins refute (`fz_p_sf_seq_false` has none, SPEC.md's own
+ladder rule: a straight-line body with no `if`, invariant or mutable
+index draws no mutation). `fz_p_sf_seq_at` (a single indexed read, no
+loop) verifies outright. Every other real side reads `timeout`
+(`typed_nat_..._ensures` or `..._loop_invariant_preserved`, WP's own
+`-wp-report-json` naming the exact unproved goal), never a false
+`verified` and never `refuted` for a real program that is not itself
+false. Isolated to a handful of lines (`probe_chain.c`/`probe_chain2.c`/
+`probe_chain3.c` in the reproduce section), the SAME facts (the
+recursive definition's own one-step unfold, plus the append/prepend
+lemmas, plus the exact ground `\nth`-preservation instance) close the
+identical goal in milliseconds; embedded in the task's own file, with
+its other hypotheses (`\valid`/`\separated`, the loop's other invariant
+clauses) also in scope, alt-ergo's untriggered search does not chain
+them within a 200,000-step / 10 s-per-goal budget, confirmed genuinely
+stuck (not merely slow) at 20,000,000 steps / 120 s per goal too (a
+`Failure`, not a `Timeout`, `frama-c -wp-steps 20000000 -wp-timeout 120`,
+hand-run). This is WP/alt-ergo's own automation gap for this construct,
+not a lowering defect: the twin needs only the certificate's OWN small,
+uncluttered replay function (a handful of ground locals, no `\valid`/
+`\separated` noise), where the same facts close every time, which is why
+every twin refutes while several real sides do not yet verify.
+
+**Three seeded faults** (off-by-one slice, dropped element, swapped
+concatenation -- t/test_framac_seq_fun.py, built independently of the
+2026-09-27 review's own two probes, `fz_p_sf_seq_swap`/
+`fz_p_sf_seq_slice_off`, though `seed_swapped_concat`/
+`seed_offbyone_slice` land on the same shapes): each has a real witness
+the interpreter itself finds against the task's own `ensures`
+(`harness.real_witness`, the no-twin path -- a spec_fun body bug needs no
+twin, SPEC.md's ladder never touches one), and each reads honestly:
+
+| seeded fault | category | real |
+|---|---|---|
+| seed_dropped_element | dropped element (`dbl(s, n) = dbl(s, n - 1)` alone) | refuted |
+| seed_swapped_concat | swapped concatenation (prepend, not append) | refuted |
+| seed_offbyone_slice | off-by-one slice (`tl` drops the last element, not the first) | refuted |
+
+All three REFUTE (the interpreter's own real-witness certificate, the
+same mechanism as a twin's, closes cleanly here: each is a smaller,
+loop-free or single-iteration-witness file with far fewer of the
+`\valid`/`\separated`/other-invariant hypotheses that stall the loop-
+carried real sides above), never a false `verified`. None is left merely
+`unproved`: a seeded fault in this construct is caught outright.
+
+**The 55-task measurement.** The seq-spec-fun corpus's 55 checked tasks
+(`~/scratch/seqfun/grade_tasks/`, the earlier attempt's own files, re-
+verified byte-identical against this branch's own lowering for every
+task with no seq-valued spec_fun) graded in Frama-C alone
+(`t/run_par.py --kernels framac --tasks ~/scratch/seqfun/grade_tasks
+--jobs 2 --no-cache`, the desktop, 2026-09-27). "Before" is
+`COVERAGE-seqfun.md`'s own framac column, read cell by cell (its own
+prose rounds this to "verifies none of the 55"; the honest baseline
+carries one `verified / timeout` and one `timeout / refuted` cell,
+neither a committed-task's own regression and neither a seq-valued spec
+fun, so byte-identical here too -- "clean" below means BOTH sides,
+`verified / refuted` together, which is 0 at baseline for exactly that
+reason):
+
+| | before | after |
+|---|---:|---:|
+| framac abstain (of 55) | 40 | 33 |
+| framac real-side verified | 1 | 3 |
+| framac twin-side refuted | 1 | 4 |
+| framac clean (`verified / refuted` together) | 0 | 2 |
+| clean in seven (all seven kernels verified/refuted), given the other six kernels' verdicts in `COVERAGE-seqfun.md` | 0 | 0 |
+
+The two newly framac-clean tasks are `vericoding_da0561__solve` and
+`vericoding_da0564__solve` (both string-building helpers whose seq-
+valued spec_fun's own recursion is shallow enough for WP/alt-ergo to
+close unaided, unlike double_all's own loop-carried case). Neither is
+clean in seven: `COVERAGE-seqfun.md` already reads F* `verified /
+unproved` for both, so F* is the co-blocker framac's own move does not
+touch. Five more tasks move off `abstain / abstain` without becoming
+clean (`da0187`, `da0526`, `da0612`: `timeout`/`unproved` on one side or
+the other; `da0515`, `da0663`: `malformed / malformed`, WP's own
+`-wp-smoke-tests` finding a vacuous or dead-code goal in a file this
+lowering now attempts and did not before -- a DIFFERENT gap from the
+seq-valued-spec_fun construct itself, not investigated further here,
+named rather than fixed). No cell reads a false `verified`: every
+newly-graded twin that reads anything other than `refuted` reads
+`unproved`, `malformed` or `timeout`, never a wrongly-accepted twin.
+
+One crash, not merely an abstain, was found and fixed while measuring
+this table: `vericoding_DA0576.solve` (a task with FOUR seq-valued spec
+funs, one used as the whole right-hand side of a body assignment)
+raised `KeyError: 'op'` in `seq_assign_lines` -- a pre-existing function
+for materializing a seq value into a real C buffer, whose every branch
+assumed an operator key no `call` node has, unreached before this
+feature because no spec_fun could return a seq at all. Fixed with a
+named `NotImplementedError` ahead of that assumption (this lowering's
+seq value is a real buffer; a spec_fun's result is ACSL logic with no
+buffer to copy from), verified against the same hash sweep (still 84 of
+84, the same 2 differing) and the same 55-task abstain reason list (one
+fewer `LOWER-ERROR`, one more named abstain; the table above already
+counts it as abstain, not re-run in full afterward since the fix cannot
+change any OTHER cell -- it only replaces a crash with a refusal on a
+task no other row of the table names).
+
 ## Tests run
 
 - The CI step "t/ unit tests that need neither provers nor torch"
@@ -467,11 +660,22 @@ fourth being the `spec-fun-result` coverage row added since). The three
   (4cb7e5b4, min_max's Rocq cell verified / refuted on the desktop) had
   made a source; the test now names count_vowels, whose row still
   carries a timeout in spark and fstar (the rule under test unchanged).
-- `python3 t/test_seq_spec_fun.py`: 7 tests, 560 lowerings of the
-  committed tasks; `--slow` adds dafny's and F*'s own `refuted` on the two
-  seeded-fault probes. `python3 t/test_lift_seq_fun.py --slow`: 6 tests plus the check stage on
+- `python3 t/test_seq_spec_fun.py`: 7 tests, 588 lowerings of the
+  committed tasks (all seven kernels now, framac's own wholesale abstain
+  replaced by `test_seven_kernels_lower`); `--slow` adds dafny's and F*'s
+  own `refuted` on the two seeded-fault probes.
+- `python3 t/test_lift_seq_fun.py --slow`: 6 tests plus the check stage on
   three of its programs under dafny (DropFirst, DoubleAll, MakeOnes: each
   checked, the differential harness agreeing on 47, 87 and 41 points).
+- `python3 t/test_framac_seq_fun.py`: 5 tests (the \list route's own
+  text-level checks, 84 lowerings of the committed tasks in framac
+  alone, the three seeded faults' check_wf/witness); `--slow` (frama-c
+  33.0 / alt-ergo 2.4.3-free, the desktop, CPU only, ~4 minutes): every
+  twin refutes (double_all + four probes), `fz_p_sf_seq_at` verifies,
+  the three seeded faults each refute, matching the tables above.
+- The CI step, again after `seq_assign_lines`'s crash fix (this file's
+  own "One crash" note): 1,457 passed, 3 failed (the same `datasets`
+  ones), 53 skipped, 25 deselected, 1 xfailed, 102 subtests passed, 133 s.
 
 ## How to reproduce
 
@@ -513,3 +717,32 @@ lifting stems and methods to two text files; the second reads the check
 stage's outcome files for those methods and copies each checked task into
 the grading directory; the third hashes `tlib.lower` over
 `t/{tasks,lemmas,nested}` for every kernel, real and twin.
+
+**Frama-C, the `\list` route (`feat/framac-seq-fun`).** Everything below
+runs on the desktop, CPU only, alt-ergo/frama-c already on PATH
+(`~/.opam/default/bin`), `--jobs 2` throughout:
+
+```
+# byte identity: hash every committed task's framac lowering on both trees
+git archive r12-blockers t | tar -x -C ~/scratch/framac-seqfun/hashes/base_src
+python3 hash_framac.py ~/scratch/framac-seqfun/hashes/base_src/t > hashes_base.json
+python3 hash_framac.py t > hashes_branch.json        # from feat/framac-seq-fun's own t/
+# (hash_framac.py: hashlib.sha256 of tlib.lower(task, "framac", twin) over
+# every t/tasks, t/lemmas, t/nested file, real and twin, to a JSON map --
+# the same shape as the report's own hash_lowerings.py, framac only)
+
+# the committed matrix, framac alone, no cache
+python3 t/run_par.py --kernels framac --tasks t/tasks --jobs 2 --no-cache \
+  --allow-subset-table --table /tmp/AGREEMENT-framac.md
+# (refuses to WRITE the table with one kernel; the per-cell console lines,
+# and run_par's own `<-- FINDING` marker on the one cell that moved, are
+# what this file's numbers come from)
+
+# the fixtures, real and twin, and the three seeded faults, with the prover
+python3 t/test_framac_seq_fun.py --slow
+
+# the corpus's 55 checked tasks (grade_tasks/ from the earlier attempt,
+# t/FEATURES-SEQFUN-2026-09-27.md's own "How to reproduce" above)
+python3 t/run_par.py --kernels framac --tasks ~/scratch/seqfun/grade_tasks \
+  --jobs 2 --no-cache --allow-subset-table --table /tmp/framac-corpus55.md
+```

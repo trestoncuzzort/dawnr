@@ -4,15 +4,17 @@ language side, no prover: the notation parses and prints a `spec fun ..:
 seq`, check_wf accepts a seq result and refuses a nested or pair one by
 name, the interpreter evaluates a seq-valued call (indexed, measured,
 sliced, concatenated, compared), the twin ladder finds a witnessed twin for
-the committed task, six lowerings emit text for the fixtures (real and
-twin) and Frama-C abstains by name, and every committed task's lowering is
-unchanged by the construct (t/tasks, t/lemmas, t/nested: the same text
-before and after, per kernel, real and twin, checked against the file's
-own no-seq-spec_fun tasks). Since the 2026-09-27 review: the dafny and F*
-refutation certificates ladder every seq-valued spec_fun call and every
-ground seq operator around it (lower_dafny.py, certificate step 3), checked
-on the review's two seeded spec_fun faults as text here and, with
-`--slow`, as the two kernels' own verdicts.
+the committed task, seven lowerings emit text for the fixtures (real and
+twin: framac's own \\list route, t/FEATURES-SEQFUN-2026-09-27.md "Frama-C,
+the \\list route", landed 2026-09-27, is t/test_framac_seq_fun.py's to
+check in depth), and every committed task's lowering is unchanged by the
+construct (t/tasks, t/lemmas, t/nested: the same text before and after,
+per kernel, real and twin, checked against the file's own no-seq-spec_fun
+tasks). Since the 2026-09-27 review: the dafny and F* refutation
+certificates ladder every seq-valued spec_fun call and every ground seq
+operator around it (lower_dafny.py, certificate step 3), checked on the
+review's two seeded spec_fun faults as text here and, with `--slow`, as
+the two kernels' own verdicts.
 
 Run: python3 t/test_seq_spec_fun.py [--slow]   (or pytest)
 """
@@ -125,7 +127,12 @@ def _lower_all(task: dict, twin: bool) -> dict:
     return out
 
 
-def test_six_kernels_lower_and_framac_abstains() -> None:
+def test_seven_kernels_lower() -> None:
+    """Since the \\list route (2026-09-27, t/FEATURES-SEQFUN-2026-09-27.md
+    "Frama-C, the \\list route"): all seven kernels now lower every
+    fixture, real and twin (framac's own coverage -- the \\list route's
+    named residual abstains, not a wholesale one -- is
+    t/test_framac_seq_fun.py's, not this file's, to check)."""
     tasks = {"double_all": _committed()}
     tasks.update(_probes())
     for name, task in tasks.items():
@@ -133,11 +140,7 @@ def test_six_kernels_lower_and_framac_abstains() -> None:
         for twin in ((False, True) if has_twin else (False,)):
             got = _lower_all(task, twin)
             for k in KERNELS:
-                if k == "framac":
-                    assert isinstance(got[k], NotImplementedError), (name, k, got[k])
-                    assert "returns a seq" in str(got[k]), got[k]
-                else:
-                    assert isinstance(got[k], str) and got[k], (name, k, got[k])
+                assert isinstance(got[k], str) and got[k], (name, k, got[k])
     # the kernels' own spellings of the result type
     real = _lower_all(tasks["double_all"], False)
     assert "function dbl(s: seq<int>, n: int): seq<int>" in real["dafny"]
@@ -147,7 +150,8 @@ def test_six_kernels_lower_and_framac_abstains() -> None:
     assert "Fixpoint sf_dbl_fuel (fuel : nat) (s : Z -> Z) (s_len : Z) (n : Z) : ((Z -> Z) * Z)" in real["rocq"]
     assert "(fst (sf_dbl" in real["rocq"] and "cbn [fst snd]" in real["rocq"]
     assert ": Tot (Seq.seq int) (decreases n)" in real["fstar"]
-    print("test_six_kernels_lower_and_framac_abstains: ok")
+    assert "logic \\list<integer> dbl{L}(int *s, integer s_n, integer n) =" in real["framac"]
+    print("test_seven_kernels_lower: ok")
 
 
 def test_committed_tasks_lower_as_before() -> None:
@@ -262,7 +266,7 @@ def run(slow: bool = False) -> None:
     test_check_wf_accepts_seq_and_refuses_the_rest()
     test_interp_evaluates_a_seq_valued_call()
     test_twin_ladder_finds_a_witness()
-    test_six_kernels_lower_and_framac_abstains()
+    test_seven_kernels_lower()
     test_committed_tasks_lower_as_before()
     test_certificate_seq_rungs()
     test_kernels_refute_the_seeded_faults(slow)

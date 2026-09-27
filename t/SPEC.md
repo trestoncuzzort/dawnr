@@ -1183,6 +1183,14 @@ append with no index term to trigger on. The rungs are hints the kernel
 re-proves; a task whose certificate reaches no seq-valued call gets none,
 so every committed lowering is unchanged.
 
+Frama-C's own certificate carries the same idea in ACSL, since 2026-09-27
+(`_cev_seqval`/`_CEV_TRACE_SEQ`/`_seq_call_lhs` in lower_framac.py): every
+seq-valued spec_fun call the certificate's ground replay reaches is
+asserted equal to its own ground `\list<integer>` value (`\Cons(v0,
+\Cons(v1, ..., \Nil))`), callees before callers, kept entirely separate
+from the pre-existing int/bool ladder (a different pair of globals, its
+own flush) so a task with no seq-valued spec_fun is byte-identical.
+
 Lowering status (2026-09-27; verdicts on the fixtures in
 t/FEATURES-SEQFUN-2026-09-27.md): six kernels state the construct with
 their own sequence type in the function's signature, exactly as they state
@@ -1193,12 +1201,34 @@ f_s .. : List Int` with `termination_by`; Rocq a fuel Fixpoint returning
 the file's own `((Z -> Z) * Z)` function-and-length pair, read back by
 `fst`/`snd` at a call (the representation `lower_rocq.py`'s 2026-09-09
 note chose over `list Z`); F* `let rec f .. : Tot (Seq.seq int)
-(decreases m)`). Frama-C abstains by name: it models every seq as a C
-buffer `(int *s, integer s_n)` and a spec_fun as an ACSL logic function
-over that buffer, and a logic function cannot return a buffer; the
-`\list<integer>` route (ACSL's own logic lists, with a bridge predicate
-between a buffer and a list at every `==`/`len`/`at` site) is the open
-design, not built. The lifter's mapping is LIFTER-DECISIONS.md row 49.
+(decreases m)`). Frama-C, since 2026-09-27 (t/FEATURES-SEQFUN-2026-09-27.md
+"Frama-C, the \list route"): a seq-valued spec_fun is a recursive ACSL
+logic function returning `\list<integer>` (ACSL's own built-in
+constructors `\Nil`/`\Cons` and its own `\concat`, kernel_internals/
+typing/logic_builtin.ml -- WP's Vlist.ml gives all three, plus `\nth`/
+`\length`, a native decision procedure, not a user axiom), the same
+recursive-`logic`-equation shape this file already gives an int/bool
+result. Every `==`/`len`/`at` site where a buffer-typed seq value meets
+such a call bridges through ACSL's own `\length`/`\nth` directly
+(`_seq_len_render`/`_seq_at_render`/`defs`'s own `call` cases): no
+separate bridge PREDICATE is declared, since `\length l`/`\nth l k`
+already relate `l` to whatever a buffer's own `_n`/index expression is
+compared against. A slice of a real buffer inside such a body converts
+through one more recursive helper (`t_seq_of_range`, structurally total,
+so it needs no termination lemma to be sound); the append/prepend facts
+a one-element-at-a-time recursive step needs (`T_SEQ_LIST_LEMMAS_ACSL`)
+are proved once, from ACSL's own list theory, not assumed. What the
+route does not reach (a seq-typed spec_fun PARAMETER passed through
+unchanged, `update`/`fill` inside such a body, anything outside a
+literal/`+`/`ite`/call/slice-of-buffer) still abstains by name. Measured
+(the desktop, CPU only, frama-c 33 / alt-ergo 2.4.3): every twin this
+pass tested refutes (double_all, the four `fz_p_sf_seq_*` probes with a
+twin, and the three faults seeded into a spec_fun's own body for this
+pass); on the real side, `fz_p_sf_seq_at` verifies outright and the rest
+read an honest `unproved`/`timeout` (WP/alt-ergo's own automation gap
+combining the recursive unfolding with a loop-carried or slice-derived
+`\list` fact under the task's other hypotheses, not a soundness gap).
+The lifter's mapping is LIFTER-DECISIONS.md row 49.
 
 ## The twins
 
