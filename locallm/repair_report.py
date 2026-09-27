@@ -3,8 +3,8 @@
     python3 locallm/repair_report.py --runs <dir holding A-s<seed>/ and B-s<seed>/> [--json out.json]
 
 Reads, for each arm and seed, the pipeline's eval stage (`7-eval/stage.json`,
-the engine with its chat-token grammar) and `eval-nogrammar.json` (the same
-checkpoint through the unmasked engine, chat_eval.py --no-grammar), and
+which ran with the chat-token grammar, then the engine's default) and
+`eval-nogrammar.json` (the same checkpoint through the unmasked engine), and
 applies the rules FINDINGS-repair-2026-09-26.md registered before the runs:
 
 * repair data (B against A, grammar on): the primary is "pass all examples"

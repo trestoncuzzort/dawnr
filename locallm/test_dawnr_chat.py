@@ -413,13 +413,14 @@ class Grammar(unittest.TestCase):
         table = {**self.table, self.y: [(sp(chat.T_END), 0.0)],
                  sp(chat.OUTPUT_END): [(sp(chat.T_START), 0.0), (sp(chat.ASSISTANT_END), -1.0)]}
         from engine import Engine
-        eng = Engine(TableModel(self.tok, table), self.tok, max_calls=2, tool=lambda p, c: "parses: no")
+        eng = Engine(TableModel(self.tok, table), self.tok, grammar=True, max_calls=2,
+                     tool=lambda p, c: "parses: no")
         list(eng.generate(self.prompt, max_tokens=200, temperature=0.0))
         row = eng.rows[0]
         self.assertEqual(len(row.tool_calls), 2)
         self.assertTrue(row.completed)
         self.assertEqual(row.budget_refusals, 1)
-        unbounded = Engine(TableModel(self.tok, table), self.tok, tool=lambda p, c: "parses: no")
+        unbounded = Engine(TableModel(self.tok, table), self.tok, grammar=True, tool=lambda p, c: "parses: no")
         list(unbounded.generate(self.prompt, max_tokens=200, temperature=0.0))
         self.assertGreater(len(unbounded.rows[0].tool_calls), 2)
         self.assertFalse(unbounded.rows[0].completed)

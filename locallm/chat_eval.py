@@ -27,9 +27,10 @@ answer that got a failing verdict made a later call with a different program
 (acted on it) or the same one again; whether a failing first verdict ended in
 a program that passes every example (repaired); and the calls themselves:
 opened, closed, ended inside a call by <|assistant_end|>, out of tokens inside
-a call, and the grammar's overrides (engine.py). `--no-grammar` evaluates with
-the unmasked engine, to measure what the grammar changes on the same
-checkpoint; `--max-calls N` gives the engine a budget of N tool calls.
+a call, and the grammar's overrides (engine.py). `--grammar` evaluates with
+engine.py's chat-token grammar (off by default, as in the engine), to measure
+what it changes on the same checkpoint; `--max-calls N` (with `--grammar`)
+gives the engine a budget of N tool calls.
 
 Which program is the answer: `--answer last` (the default, and the rule the
 first repair runs registered) takes the last call, else the text.
@@ -166,15 +167,15 @@ def main(argv=None) -> int:
     ap.add_argument("--dev", type=int, default=100, help="how many dev problems to ask (0: none)")
     ap.add_argument("--val", type=int, default=0, help="how many validation conversations to ask (0: all)")
     ap.add_argument("--max-tokens", type=int, default=400)
-    ap.add_argument("--no-grammar", action="store_true", help="the unmasked engine (engine.py's grammar off)")
+    ap.add_argument("--grammar", action="store_true", help="engine.py's chat-token grammar (off by default)")
     ap.add_argument("--max-calls", type=int, default=None, help="a budget of tool calls per answer (with the grammar)")
     ap.add_argument("--answer", choices=("last", "best-verdict"), default="last")
     ap.add_argument("--rescore", type=Path, default=None,
                     help="an earlier run's .rows.jsonl: recompute its numbers under --answer, generate nothing")
     ap.add_argument("--device", default=None)
     a = ap.parse_args(argv)
-    if a.max_calls is not None and a.no_grammar:
-        ap.error("--max-calls works through the grammar; it cannot be combined with --no-grammar")
+    if a.max_calls is not None and not a.grammar:
+        ap.error("--max-calls works through the grammar; add --grammar")
 
     import chat
     import loop_filter
@@ -204,9 +205,9 @@ def main(argv=None) -> int:
         model, tok, _ = load_checkpoint(a.model, a.device)
         if not chat.has_chat_tokens(tok):
             raise SystemExit(f"{a.model} has no chat tokens; chat_eval judges chat-trained checkpoints")
-        engine = Engine(model, tok, grammar=not a.no_grammar, max_calls=a.max_calls)
+        engine = Engine(model, tok, grammar=a.grammar, max_calls=a.max_calls)
         out = {"model": str(a.model), "max_tokens": a.max_tokens, "decoding": "greedy",
-               "grammar": not a.no_grammar, "max_calls": a.max_calls, "answer": a.answer}
+               "grammar": a.grammar, "max_calls": a.max_calls, "answer": a.answer}
 
         def reply(user, key):
             return answered(ask(engine, tok, user, a.max_tokens), a.answer)
