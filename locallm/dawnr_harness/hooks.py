@@ -56,6 +56,10 @@ class HookConfigError(ValueError):
     pass
 
 
+def _type_name(value) -> str:
+    return "null" if value is None else f"a {type(value).__name__}"
+
+
 def matches(matcher: str | None, value: str | None) -> bool:
     if matcher in (None, "", "*"):
         return True
@@ -128,6 +132,9 @@ class Hooks:
 
     def __init__(self, config: dict | None = None, base_dir: str | Path | None = None):
         config = config or {}
+        if not isinstance(config, dict):
+            raise HookConfigError(f"a hook configuration is a {{event: [group, ...]}} object, not "
+                                  f"{_type_name(config)}")
         if "hooks" in config and isinstance(config["hooks"], dict):
             config = config["hooks"]
         self.base_dir = Path(base_dir).resolve() if base_dir else Path.cwd()
@@ -142,6 +149,8 @@ class Hooks:
                 if not isinstance(g, dict) or not isinstance(g.get("hooks"), list):
                     raise HookConfigError(f"{event}: each group is {{\"matcher\": ..., \"hooks\": [...]}}")
                 matcher = g.get("matcher")
+                if matcher is not None and not isinstance(matcher, str):
+                    raise HookConfigError(f"{event}: \"matcher\" is a string, not {_type_name(matcher)}")
                 if matcher not in (None, "", "*") and not _EXACT.match(matcher):
                     try:
                         re.compile(matcher)
