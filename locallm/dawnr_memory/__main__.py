@@ -7,11 +7,15 @@
     python locallm/dawnr_memory --person ann correct f-0123456789abcdef "lives in Porto"
     python locallm/dawnr_memory --person ann forget f-0123456789abcdef [more ids]
     python locallm/dawnr_memory --person ann forget-session 3f2a9c1b7d4e
+    python locallm/dawnr_memory --person ann pending
+    python locallm/dawnr_memory --person ann answer q-0123456789abcdef new|old
     python locallm/dawnr_memory --person ann export [--out ann.json]
     python locallm/dawnr_memory --person ann forget-everything --yes
     python locallm/dawnr_memory --person ann settings [--remember off] [--recall off]
 
-Everything runs on this machine and reads or writes only the named person's folder.
+Everything runs on this machine and reads or writes only the named person's folder. `pending` lists what dawnr asks
+the person: something they said that disagrees with what it remembers, kept as a question and not as a fact until
+they answer it (`new` keeps what they said, `old` what was remembered).
 """
 from __future__ import annotations
 
@@ -61,6 +65,10 @@ def main(argv=None) -> int:
     p.add_argument("ids", nargs="+")
     p = sub.add_parser("forget-session", help="delete what one session added")
     p.add_argument("session", help="the session's episode id (e-...) or its session id")
+    sub.add_parser("pending", help="what dawnr asks you: things you said that disagree with what it remembers")
+    p = sub.add_parser("answer", help="answer a pending question: new keeps what you said, old what is remembered")
+    p.add_argument("id")
+    p.add_argument("which", choices=("new", "old"))
     p = sub.add_parser("export", help="everything, as JSON")
     p.add_argument("--out", type=Path, default=None, help="write to this file (only you can read it) instead")
     p = sub.add_parser("forget-everything", help="delete this person's whole memory")
@@ -112,6 +120,24 @@ def main(argv=None) -> int:
             session = str(episode.get("session") or "")
         gone = store.forget_session(session) if session else []
         print(f"forgot {len(gone)} record(s) from session {session or a.session}: {', '.join(gone) or 'none'}")
+    elif a.cmd == "pending":
+        questions = store.records(("pending",))
+        for q in questions:
+            print(f"{q['id']}  you said: {q['text']}")
+            ids = q.get("conflicts_with") if isinstance(q.get("conflicts_with"), list) else []
+            for rid in ids:
+                old = store.get(rid) if isinstance(rid, str) else None
+                print(f"    dawnr remembers {rid}: {old['text'] if old else '(no longer remembered)'}")
+            print(f"    answer {q['id']} new: keep what you said; answer {q['id']} old: keep what is remembered")
+        print(f"{len(questions)} question(s) for {store.person}")
+    elif a.cmd == "answer":
+        try:
+            record = store.answer(a.id, a.which == "new")
+        except KeyError as e:
+            print(e.args[0], file=sys.stderr)
+            return 1
+        print(f"remembered {record['id']}: {record['text']}" if record
+              else f"kept what was remembered; {a.id} answered")
     elif a.cmd == "export":
         text = json.dumps(store.export(), ensure_ascii=False, indent=1, sort_keys=True) + "\n"
         if a.out is None:

@@ -13,6 +13,8 @@ memory folder outright.
     <root>/<person>/facts/f-<16 hex>.json       something true about the person, with the words that said so
     <root>/<person>/preferences/p-<16 hex>.json how they like things done, with the words that said so
     <root>/<person>/notes/n-<16 hex>.json       what the person pinned themselves
+    <root>/<person>/pending/q-<16 hex>.json     a question for the person: something they said that disagrees
+                                                with a stored record; not a fact, and never recalled
 
 Why a file per record and not one database file: the person can read their memory with any text editor, and
 forgetting a record removes the one file that held it -- no page of a database, journal or index is left holding
@@ -50,16 +52,17 @@ from pathlib import Path
 
 SCHEMA = 1
 FORMAT = "dawnr-memory"
-KINDS = ("episode", "fact", "preference", "note")
-FOLDERS = {"episode": "episodes", "fact": "facts", "preference": "preferences", "note": "notes"}
-PREFIX = {"episode": "e", "fact": "f", "preference": "p", "note": "n"}
+KINDS = ("episode", "fact", "preference", "note", "pending")
+RECALLED = ("episode", "fact", "preference", "note")          # a pending question is not memory: never recalled
+FOLDERS = {"episode": "episodes", "fact": "facts", "preference": "preferences", "note": "notes", "pending": "pending"}
+PREFIX = {"episode": "e", "fact": "f", "preference": "p", "note": "n", "pending": "q"}
 _KIND_OF = {p: k for k, p in PREFIX.items()}
-RECORD_ID = re.compile(r"([efpn])-[0-9a-f]{16}")
+RECORD_ID = re.compile(r"([efpnq])-[0-9a-f]{16}")
 PERSON = re.compile(r"[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?")
 SESSION = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 # device names Windows reserves in every folder: a person called "con" would be a folder nobody can open there
 RESERVED = frozenset({"con", "prn", "aux", "nul"} | {f"com{i}" for i in range(10)} | {f"lpt{i}" for i in range(10)})
-MAX_TEXT = {"episode": 600, "fact": 200, "preference": 200, "note": 2000}
+MAX_TEXT = {"episode": 600, "fact": 200, "preference": 200, "note": 2000, "pending": 200}
 MAX_EVIDENCE = 300
 MAX_SESSIONS = 20                 # sessions listed on one fact; the oldest drop off
 MAX_FILE = 64 * 1024              # a record file bigger than this was not written by dawnr and is not read
@@ -71,7 +74,8 @@ DEFAULT_SETTINGS = {"remember": True, "recall": True}
 ORIGINS = ("rules", "model", "person")
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 FIELDS = {"slot", "evidence", "source_session", "sessions", "last_seen", "seen", "session", "date", "turns",
-          "tools", "check", "tainted"}
+          "tools", "check", "tainted", "becomes", "conflicts_with"}
+STATEMENTS = ("fact", "preference")    # what a session can add, and what a pending question becomes when answered
 
 
 class StoreError(Exception):
@@ -408,13 +412,18 @@ class MemoryStore:
                 break
         record = {"schema": SCHEMA, "id": record_id, "kind": kind, "text": text, "origin": origin,
                   "confidence": round(min(1.0, max(0.0, float(confidence))), 3), "created": stamp, "updated": stamp}
-        if kind in ("fact", "preference"):
+        if kind in STATEMENTS or kind == "pending":
             session = fields.get("source_session")
             record.update(slot=clean_text(fields.get("slot") or "", 80).lower() or None,
                           evidence=clean_text(fields.get("evidence", ""), MAX_EVIDENCE),
                           source_session=session,
                           sessions=list(fields.get("sessions") or ([session] if session else [])),
                           last_seen=stamp, seen=int(fields.get("seen", 1)))
+            if kind == "pending":
+                if fields.get("becomes") not in STATEMENTS:
+                    raise ValueError(f"a pending question becomes one of {STATEMENTS}, not {fields.get('becomes')!r}")
+                record.update(becomes=fields["becomes"], conflicts_with=[str(i) for i in fields.get(
+                    "conflicts_with") or [] if RECORD_ID.fullmatch(str(i)) and str(i)[0] in "fp"])
         else:
             record.update({k: v for k, v in fields.items() if k in FIELDS})
         return self.put(record)
@@ -440,6 +449,48 @@ class MemoryStore:
             record.update(evidence=f"corrected by the person on {stamp[:10]}", last_seen=stamp, source_session=None,
                           sessions=[])
         return self.put(record)
+
+    def answer(self, question_id, take_new: bool, now: float | None = None) -> dict | None:
+        """The person's answer to a pending question. take_new: what they said becomes the record, in place of the
+        one it disagreed with (which keeps its id; any other it disagreed with is forgotten); otherwise what was
+        remembered stays as it is. Either way the question is removed. Returns the record now held, or None."""
+        question = self.get(question_id)
+        if question is None or question["kind"] != "pending":
+            raise KeyError(f"no pending question {question_id!r} for {self.person}")
+        record = None
+        if take_new:
+            kind = question.get("becomes")
+            if kind not in STATEMENTS:
+                raise ValueError(f"question {question_id} does not say whether it is a fact or a preference")
+            ids = question.get("conflicts_with") if isinstance(question.get("conflicts_with"), list) else []
+            olds = [r for r in (self.get(i) for i in ids if isinstance(i, str))
+                    if r is not None and r["kind"] in STATEMENTS]
+            sessions = [s for s in question.get("sessions") or [] if isinstance(s, str)] \
+                if isinstance(question.get("sessions"), list) else []
+            origin = question.get("origin") if question.get("origin") in ("rules", "model") else "rules"
+            try:
+                confidence = round(min(1.0, max(0.0, float(question.get("confidence", 0.5)))), 3)
+            except (TypeError, ValueError):
+                confidence = 0.5
+            stamp = fmt_time(now)
+            keep = next((r for r in olds if r["kind"] == kind), None)
+            if keep is None:
+                record = self.add(kind, question["text"], origin=origin, confidence=confidence, now=now,
+                                  slot=question.get("slot"), evidence=question.get("evidence") or "",
+                                  source_session=question.get("source_session"), sessions=sessions,
+                                  seen=max(1, len(sessions)))
+            else:
+                keep.update(text=clean_text(question["text"], MAX_TEXT[kind]), origin=origin, confidence=confidence,
+                            slot=clean_text(question.get("slot") or "", 80).lower() or None,
+                            evidence=clean_text(question.get("evidence") or "", MAX_EVIDENCE),
+                            source_session=question.get("source_session"), sessions=sessions[-MAX_SESSIONS:],
+                            seen=max(1, len(sessions)), last_seen=stamp, updated=stamp)
+                record = self.put(keep)
+            for old in olds:
+                if old is not keep:
+                    self.forget(old["id"])
+        self.forget(question_id)
+        return record
 
     def set_settings(self, **changes) -> dict:
         unknown = set(changes) - set(DEFAULT_SETTINGS)
