@@ -27,12 +27,17 @@ passes admit():
    it, with no question mark and no negation outside the patterns' own words; one of those clauses, inside the
    evidence, must make exactly this statement (the same relation and polarity, the same object word for word and
    in order); a model's kind and slot must be the pattern's. Anything else is refused as "cannot ground: <why>",
-   true statements in phrasing no pattern reads included (grounded(); the person can still pin a note). And it is
-   decided over everything the person said in the session, never one clause: when any two statements the patterns
-   read anywhere in it are about the same thing and are not the same statement, nothing about that thing is
-   admitted, and the report names it ("contradiction: <thing>", with the two readings);
+   true statements in phrasing no pattern reads included (grounded(); the person can still pin a note). An object
+   over MAX_OBJECT_WORDS words (MAX_RAW_WORDS in a "remember that") is never stored; the rules still propose it, so
+   it is refused by name, "cannot ground: object too long", not dropped unseen. And it is decided over everything
+   the person said in the session, never one clause: when any two statements the patterns read anywhere in it are
+   about the same thing and are not the same statement, nothing about that thing is admitted, and the report names
+   it ("contradiction: <thing>", with the two readings). Every statement a pattern reads counts, whatever its object
+   looks like: one that rules 3 and 4 keep from being stored, too long or looking like a secret, still blocks what
+   it contradicts;
 4. it is not a secret or an identifier (passwords, keys, card and account numbers, long digit strings, e-mail
-   addresses, links), which dawnr does not remember on its own; the person can still pin a note;
+   addresses, links), which dawnr does not remember on its own; the person can still pin a note. It still counts
+   under rule 3, and no reason names its words and no reading shows its object ("likes [withheld]");
 5. a model's proposal in a session that read outside text is refused outright: once untrusted text is in the
    context, what the model proposes may be the page speaking (Beurer-Kellner et al., arXiv:2506.08837, as the
    harness's taint rule reads it), and writing lasting memory is a consequential act.
@@ -58,10 +63,18 @@ from .retrieval import STOP_WORDS, confidence_of, s_stem, terms
 from .store import MAX_EVIDENCE, MAX_SESSIONS, MAX_TEXT, SESSION, MemoryStore, clean_text, fmt_time
 
 MAX_MESSAGE = 2000            # a longer message is taken as a paste, not as the person speaking
-MAX_CLAUSE = 240
-MAX_OBJECT_WORDS = 8
+MAX_CLAUSE = 240              # the longest clause the episode's keywords count
+MAX_OBJECT_WORDS = 8          # the longest object that may be stored; a longer one is still read (_reading)
+MAX_RAW_WORDS = 24            # the same for what a "remember that ..." carries word for word
 MAX_KEYWORDS = 8
 MAX_PROPOSALS = 64
+# why a reading may not be stored although a pattern made it (Reading.withheld); a secret is apart (Reading.secret)
+TOO_LONG = "object too long"
+NOT_A_NAME = "the object is not a name"
+HEDGED = "the object is a hedge (\"a bit ...\"), not what they are"
+SECRET = "it looks like a secret, an identifier or a link, which dawnr does not remember on its own"
+WITHHELD = "[withheld]"                              # a secret-looking object, as the report shows it
+SECRET_THING = "something that looks like a secret"  # a contradiction whose every name would show one
 
 FENCE = re.compile(r"```.*?(?:```|\Z)", re.S)
 QUOTED = re.compile(r"\"[^\"\n]{0,2000}\"|“[^”\n]{0,2000}”|«[^»\n]{0,2000}»")
@@ -151,13 +164,14 @@ def split_speech(message: str) -> tuple[str, list[str]]:
     return text.replace("’", "'"), [r for r in removed if r.strip()]
 
 
-def clauses(text: str) -> list[str]:
-    """Sentences, split again before "and I" / "but my", with leading fillers ("hi,", "btw") removed."""
+def clauses(text: str, longest: int = MAX_CLAUSE) -> list[str]:
+    """Sentences, split again before "and I" / "but my", with leading fillers ("hi,", "btw") removed; none longer
+    than `longest` characters."""
     out = []
     for sentence in SENTENCE_END.split(text):
         for piece in JOIN.split(sentence):
             piece = FILLER.sub("", piece.strip()).strip(" ,:-")
-            if 2 <= len(piece) <= MAX_CLAUSE:
+            if 2 <= len(piece) <= longest:
                 out.append(piece)
     return out
 
@@ -331,13 +345,18 @@ class Reading:
     x: str                          # the object, in the third person, word for word
     whole: bool                     # the pattern read the clause to its end: nothing after the object was cut off
                                     # but end marks and the trailing words the rules drop ("now", "too", ...)
+    withheld: str = ""              # why it may not be stored although the pattern read it (TOO_LONG, NOT_A_NAME,
+                                    # HEDGED), "" when it may; it is still read, and still counts (read_claims)
+    secret: bool = False            # the statement looks like a secret, an identifier or a link (sensitive()): it
+                                    # is not stored either, it still counts, and the report never shows its object
 
 
 def _object(x: str) -> str | None:
-    """The object of a pattern, cut at the clause's first conjunction or comma, or None when it is not crisp."""
+    """The object of a pattern, cut at the clause's first conjunction or comma, or None when it names nothing (a lone
+    "it", "that", "something", ...). How long it is decides only whether it may be stored (_reading)."""
     x = TRAILING.sub("", CUT.split(x, 1)[0].strip(" .!?'\"()[]"))
     words = x.split()
-    if not words or len(words) > MAX_OBJECT_WORDS:
+    if not words:
         return None
     if len(words) == 1 and words[0].lower() in {"it", "this", "that", "them", "these", "those", "something",
                                                   "anything", "everything", "nothing", "stuff", "things"}:
@@ -405,8 +424,9 @@ _READS = _RULES + _GROUNDING_ONLY
 
 def _reading(clause: str, rules=_RULES):
     """(what `clause` says under the first pattern of `rules` that matches it, where its object lies in `clause`):
-    (a Reading or a ForgetRequest, (start, end)), or None when none matches or the first that does finds no crisp
-    object."""
+    (a Reading or a ForgetRequest, (start, end)), or None when none matches or the first that does finds an object
+    that names nothing. An object the store may not keep -- too long, no name, a hedge, a secret -- is still read:
+    the Reading says why it is withheld (withheld, secret), and only what may be stored is decided by that."""
     for pattern, make, statement, slot, conf, check in rules:
         m = pattern.match(clause)
         if not m:
@@ -417,33 +437,38 @@ def _reading(clause: str, rules=_RULES):
         if make == "forget":
             words = [t for t in terms(x) if t not in PRONOUNS]
             return (ForgetRequest(words, clause), (at, at + len(x))) if words else None
+        withheld = ""
         if check == "raw":
             obj = x.strip(" .!?")
-            if not obj or len(obj.split()) > 24:
+            if not obj:
                 return None
+            withheld = TOO_LONG if len(obj.split()) > MAX_RAW_WORDS else ""
             whole = True
         else:
             obj = _object(x)
             if obj is None:
                 return None
-            if check == "name" and not NAME.fullmatch(obj):
-                return None
-            if check == "identity" and obj.split()[0].lower() in HEDGES:
-                return None
+            if len(obj.split()) > MAX_OBJECT_WORDS:
+                withheld = TOO_LONG
+            elif check == "name" and not NAME.fullmatch(obj):
+                withheld = NOT_A_NAME
+            elif check == "identity" and obj.split()[0].lower() in HEDGES:
+                withheld = HEDGED
             whole = obj == TRAILING.sub("", x.strip(" .!?'\"()[]"))     # _object cut nothing but what is dropped
         kind = make
         if make == "remember":
             kind = "preference" if obj.lower().startswith("to ") else "fact"
         said = third_person(obj)
+        text = statement.format(x=said, k=k)
         start = at + x.find(obj)                  # obj is x trimmed and cut: it begins at x's first kept character
-        return (Reading(kind, statement.format(x=said, k=k), slot.format(k=k, key=_key(obj)) if slot else None,
-                        conf, statement, k, said, whole), (start, start + len(obj)))
+        return (Reading(kind, text, slot.format(k=k, key=_key(obj)) if slot else None, conf, statement, k, said,
+                        whole, withheld, sensitive(text)), (start, start + len(obj)))
     return None
 
 
 def _read(clause: str, rules=_RULES):
     """What `clause` says under the first pattern of `rules` that matches it: a Reading, a ForgetRequest, or None
-    when none matches or the first that does finds no crisp object."""
+    when none matches or the first that does finds an object that names nothing."""
     got = _reading(clause, rules)
     return got[0] if got else None
 
@@ -455,8 +480,8 @@ class RuleProposer:
     def propose(self, view: SessionView) -> list:
         out: list = []
         for said in view.speakable:
-            for clause in clauses(said):
-                item = self._one(clause)
+            for clause in clauses(said, longest=MAX_MESSAGE):       # however long: a statement too long to keep is
+                item = self._one(clause)                           # refused by name, never dropped unseen
                 if item is not None:
                     out.append(item)
         return out[:MAX_PROPOSALS]
@@ -465,6 +490,8 @@ class RuleProposer:
     def _one(clause: str):
         got = _read(clause)
         if isinstance(got, Reading):
+            if got.withheld in (NOT_A_NAME, HEDGED):  # "my name is 42", "I'm a bit tired": nothing to keep or refuse,
+                return None                           # though they still count against what they contradict
             return Proposal(got.kind, got.text, clause, got.slot, got.confidence, "rules")
         return got
 
@@ -538,6 +565,9 @@ def _form(template: str) -> re.Pattern:
 
 _FORMS = [(_form(t), t) for t in dict.fromkeys(statement for _p, make, statement, *_rest in _READS
                                                 if make != "forget")]
+# each form's own words before its first {k} or {x} ("likes ", "their favorite "): a statement too long to store is
+# known by these alone, with no pattern run over all of it
+_OPENINGS = tuple(sorted({template.split("{", 1)[0] for _form_, template in _FORMS}, key=len, reverse=True))
 _OPPOSITE = {"likes {x}": "dislikes {x}", "is a fan of {x}": "dislikes {x}", "dislikes {x}": "likes {x}",
              "wants {x}": "avoids {x}", "avoids {x}": "wants {x}"}
 
@@ -555,10 +585,14 @@ def _opposite(r: Reading) -> str:
 
 
 def _read_sentence(sentence: str) -> tuple[list, str]:
-    """([(clause, Reading), ...], "") when the patterns read all of one sentence, else ([], why not)."""
+    """([(clause, Reading), ...], "") when the patterns read all of one sentence whole and what it says may be kept;
+    else (what they read of it, why not), nothing read when a question, a negation outside their words or a clause no
+    pattern reads spoils the whole sentence. A clause read to its end whose object is withheld (too long, no name, a
+    hedge) is among what is returned, so that its own statement is refused by that name, and like a clause cut short
+    it keeps the rest of its sentence from grounding anything."""
     if "?" in sentence:
         return [], "the person's sentence is a question"
-    got = []
+    got, why = [], ""
     for part in SENTENCE_END.split(sentence):
         for piece in JOIN.split(part):
             piece = piece.strip()
@@ -569,11 +603,13 @@ def _read_sentence(sentence: str) -> tuple[list, str]:
             clause = piece[len(lead):].strip(" ,:-")
             if not clause:
                 continue
-            reading = _read(clause, _READS) if len(clause) <= MAX_CLAUSE else None
-            if not isinstance(reading, Reading) or not reading.whole:
+            reading = _read(clause, _READS)
+            if not isinstance(reading, Reading):
                 return [], "the person's sentence has words no pattern reads"
             got.append((clause, reading))
-    return got, ""
+            if not reading.whole or reading.withheld:
+                why = why or "the person's sentence has words no pattern reads"
+    return got, why
 
 
 def _slot(slot) -> str | None:
@@ -606,6 +642,32 @@ def _slot(slot) -> str | None:
 # pair missing from _COMPATIBLE costs a true memory, never a false one. A statement also says what is said inside its
 # object ("Remember that I like cats" says "likes cats", so it agrees with "I like cats" anywhere in the session),
 # and a statement inside what the person asks to forget is not one they make.
+#
+# Round 4: what may be stored is decided last. Two filters still took one side of a contradiction away before the
+# check could see it, and the other side was then admitted cleanly and silently: read_claims() left out every reading
+# that looked like a secret, an identifier or a link ("I like cats.com. I don't like cats." stored "dislikes cats";
+# "My favorite tool is my password manager. My favorite tool is a hammer." stored the hammer), and _object() made no
+# reading of an object over eight words ("I like cats. I really don't like cats at all especially the loud noisy ones
+# that scratch furniture constantly." stored "likes cats", with nothing in report.rejected). Its other filters, a name
+# that is no name and a hedged "I'm a bit of ...", did the same ("My name is Ann. My name is 42." stored the name).
+# Filtering for storage and reading for contradiction are two different things, as PostgreSQL keeps them
+# (postgresql.org/docs/current/ddl-rowsecurity.html, read 2026-09-27): "Referential integrity checks, such as unique
+# or primary key constraints and foreign key references, always bypass row security to ensure that data integrity is
+# maintained". So every reading a pattern makes is a claim here, whatever its object looks like, and the secret filter
+# and the object caps (Reading.secret and .withheld) decide only what may be stored: a withheld reading still blocks
+# every statement it contradicts, and the report names that contradiction. The same page warns of "covert channel"
+# leaks through such checks, and so a reason never names a word only a secret-looking statement says (_named), and a
+# reading the report shows has a secret's object withheld (_shown). It says too that "it could be disastrous if row
+# security silently caused some rows to be omitted": a statement too long to keep is refused by name ("cannot ground:
+# object too long"), never dropped unseen.
+#
+# A long object has no crisp key. CoreNLP's deterministic coreference matches two mentions by their head words, and
+# relaxes exact match by removing "the phrase after head" ("[Mr. Bickford] <- [Mr. Bickford , an 18-year mediation
+# veteran]"; Rules.entityHeadsAgree and entityRelaxedExactStringMatch, github.com/stanfordnlp/CoreNLP, read
+# 2026-09-27). dawnr has no parser to find the head, so a reading that will not be stored is about every word it
+# holds, each keyed as the rules key that word alone ("cats" as "cat"): whichever word is its head, it meets a short
+# statement about that word. CoreNLP leaves pronouns out of head match, to a later sieve with number and gender
+# agreement; so does dawnr, with no such sieve: an object that is a lone pronoun names nothing and is not read.
 
 _SHIFTED = frozenset(w for _pattern, replacement in SHIFT for w in replacement.split())
 _OWN = frozenset("i me my mine myself you your yours yourself we us our ours im i'm i've i'd i'll am".split())
@@ -641,12 +703,17 @@ class Contradiction:
     topics: frozenset               # what the two share
 
 
-def _topics(x: str, slot) -> frozenset:
+def _topics(x: str, slot, every_word: bool = False) -> frozenset:
     """What a statement is about: each word of its object, word for word, less the words that name nothing (the
     whole object when that leaves none); its slot; and, for a slot named by its object ("like cat", "want cat"),
-    that object as the rules key it, so "wants a cat" and "dislikes cats" are about one thing across relations."""
+    that object as the rules key it, so "wants a cat" and "dislikes cats" are about one thing across relations.
+    With `every_word` (a reading that will not be stored, whose object has no crisp key), each of its words is also
+    keyed on its own, as the rules key a one-word object."""
     said = norm(x)
-    got = {("word", w) for w in _TOPIC_WORD.findall(said) if w not in _NOT_A_TOPIC} or {("object", said)}
+    words = [w for w in _TOPIC_WORD.findall(said) if w not in _NOT_A_TOPIC]
+    got = {("word", w) for w in words} or {("object", said)}
+    if every_word:
+        got |= {("key", key) for key in map(_key, words) if key}
     slot = _slot(slot)
     if slot:
         got.add(("slot", slot))
@@ -654,6 +721,13 @@ def _topics(x: str, slot) -> frozenset:
         if family and slot[len(family):]:
             got.add(("key", slot[len(family):]))
     return frozenset(got)
+
+
+def _topics_of(r: Reading) -> frozenset:
+    """What a reading is about (_topics): one withheld from storage, or a secret, is about every word it holds, less
+    a hedge's own degree word ("bit" in "a bit tired"), which names no thing."""
+    x = r.x.split(None, 1)[-1] if r.withheld == HEDGED else r.x
+    return _topics(x, r.slot, every_word=bool(r.withheld or r.secret))
 
 
 def _pieces(text: str) -> list[tuple[int, int]]:
@@ -696,15 +770,16 @@ def _class(r: Reading) -> tuple:
 
 def read_claims(texts: Iterable[str]) -> list[Claim]:
     """Every statement the patterns read anywhere in `texts` (the person's messages, their speaking parts), in the
-    order said. One that looks like a secret is left out: it is refused as a secret whatever else is said, and a
-    reason must never name its words."""
+    order said: every one, whatever its object looks like. One that looks like a secret or that is too long to keep
+    is not stored (admit()), and still counts against every statement it contradicts; the report shows no secret's
+    words (_named, _shown)."""
     out = []
     for i, text in enumerate(texts):
-        found = [f for f in _read_everywhere(text) if not sensitive(f[1].text)]
+        found = _read_everywhere(text)
         for start, reading, (s, e) in found:
             inside = [inner for at, inner, _where in found if s <= at < e]
-            out.append(Claim(reading, i, start, _topics(reading.x, reading.slot).union(
-                *(_topics(r.x, r.slot) for r in inside)), frozenset(map(_class, [reading] + inside))))
+            out.append(Claim(reading, i, start, _topics_of(reading).union(*map(_topics_of, inside)),
+                             frozenset(map(_class, [reading] + inside))))
     return out
 
 
@@ -717,17 +792,47 @@ def _conflict(a: Reading, b: Reading) -> str:
     return "relation"
 
 
-def _named(shared: frozenset, r: Reading) -> str:
-    """The thing two statements share, as a reason names it: the shared words in the order `r` says them, else the
-    whole object, the object as the rules key it ("cat"), or the slot ("location")."""
-    words = list(dict.fromkeys(w for w in _TOPIC_WORD.findall(norm(r.x)) if ("word", w) in shared))
+def _hidden(a: Reading, b: Reading) -> frozenset:
+    """The words a reason about `a` and `b` may not name: the words (and their keys) of a secret-looking one's object
+    that the other does not also say in the clear. (A pattern's own choice word, "birthday" in "their birthday is
+    ...", holds no value; when it is a secret's name, "password", the name looks like a secret and is not used.)"""
+    def said(r):
+        words = _TOPIC_WORD.findall(norm(r.x))
+        return set(words) | {key for key in map(_key, words) if key}
+    if not (a.secret or b.secret):
+        return frozenset()
+    return frozenset(set().union(*(said(r) for r in (a, b) if r.secret))
+                     - set().union(*(said(r) for r in (a, b) if not r.secret)))
+
+
+def _named(shared: frozenset, a: Reading, b: Reading) -> str:
+    """The thing two statements share, as a reason names it: the shared words in the order the first of them (the
+    first said in the clear, when one is a secret) says them, else the whole object, the object as the rules key it
+    ("cat"), or the slot ("location"). A name never holds a word only a secret-looking statement says, nor looks
+    like a secret itself: when every name would, the thing is SECRET_THING."""
+    hidden = _hidden(a, b)
+
+    def fits(name: str) -> bool:
+        words = _TOPIC_WORD.findall(norm(name))
+        return bool(words) and not sensitive(name) and not (set(words) | set(map(_key, words))) & hidden
+    r = b if a.secret and not b.secret else a
+    words = [w for w in dict.fromkeys(_TOPIC_WORD.findall(norm(r.x))) if ("word", w) in shared and fits(w)]
     if words:
         return " ".join(words)
     for kind in ("object", "key", "slot"):
-        values = sorted(value for k, value in shared if k == kind)
+        values = sorted(value for k, value in shared if k == kind and fits(value))
         if values:
             return values[0]
-    return norm(r.x)
+    return norm(r.x) if fits(r.x) else SECRET_THING
+
+
+def _shown(r: Reading) -> str:
+    """A statement as the report shows it: a secret-looking one with its object withheld ("likes [withheld]"), or
+    withheld whole when even that would look like a secret."""
+    if not r.secret:
+        return r.text
+    masked = r.template.replace("{k}", r.k).replace("{x}", WITHHELD) if r.template else WITHHELD
+    return WITHHELD if sensitive(masked) else masked
 
 
 def find_contradictions(claims: list[Claim]) -> list[Contradiction]:
@@ -752,7 +857,7 @@ def find_contradictions(claims: list[Claim]) -> list[Contradiction]:
     for i, j in sorted(pairs):
         a, b = claims[i].reading, claims[j].reading
         shared = claims[i].topics & claims[j].topics
-        out.append(Contradiction(_named(shared, a), a, b, _conflict(a, b), shared))
+        out.append(Contradiction(_named(shared, a, b), a, b, _conflict(a, b), shared))
     return out
 
 
@@ -784,7 +889,7 @@ def _inside(reading: Reading) -> list[Reading]:
 
 def _about(reading: Reading) -> frozenset:
     """What a statement is about, the statements inside its object included (a Claim's topics)."""
-    return _topics(reading.x, reading.slot).union(*(_topics(r.x, r.slot) for r in _inside(reading)))
+    return _topics_of(reading).union(*map(_topics_of, _inside(reading)))
 
 
 @functools.lru_cache(maxsize=4096)          # a pure function of its arguments, asked once per stored record per item
@@ -813,12 +918,18 @@ def grounded(text: str, evidence: str, contexts: Iterable[str] | None = None,
     if not any(form.fullmatch(statement) for form, _template in _FORMS):
         return None, "cannot ground: the statement is not in a form the patterns make"
     contexts = list(contexts) if contexts is not None else [evidence[a:b] for a, b in sentence_spans(evidence)]
-    quoted, readings, trouble = norm(evidence), [], ""
+    quoted, readings, held, trouble = norm(evidence), [], [], ""
     for sentence in contexts:
         got, why = _read_sentence(sentence)
         trouble = trouble or why
-        readings += [r for clause, r in got                      # a whole clause of the quote, not "cats" in "catsup"
-                     if re.search(r"(?<!\w)" + re.escape(norm(clause)) + r"(?!\w)", quoted)]
+        inside = [r for clause, r in got                         # a whole clause of the quote, not "cats" in "catsup"
+                  if re.search(r"(?<!\w)" + re.escape(norm(clause)) + r"(?!\w)", quoted)]
+        held += [r for r in inside if r.withheld]
+        if not why:
+            readings += inside
+    kept_back = next((r for r in held if _canonical(r.text) == statement), None)
+    if kept_back is not None:                    # read, and counted against what it contradicts, but never stored
+        return None, f"cannot ground: {kept_back.withheld}"
     match = next((r for r in readings if _canonical(r.text) == statement), None)
     if match is None:
         if not readings:
@@ -852,6 +963,8 @@ def _admit(p: Proposal, view: SessionView) -> tuple[bool, str, Reading | None]:
         return False, f"proposals come from rules or a model, not {p.origin!r}", None
     text, evidence = clean_text(p.text, 10_000), clean_text(p.evidence, 10_000)
     if not text or len(text) > MAX_TEXT[p.kind]:
+        if norm(text[:80]).startswith(_OPENINGS):   # a pattern's statement: its own words are few, its object long
+            return False, f"cannot ground: {TOO_LONG}", None
         return False, "the statement is empty or too long", None
     if not evidence or len(evidence) > MAX_EVIDENCE:
         return False, "the evidence is empty or too long", None
@@ -869,7 +982,7 @@ def _admit(p: Proposal, view: SessionView) -> tuple[bool, str, Reading | None]:
     if p.slot is not None and _slot(p.slot) != _slot(reading.slot):
         return False, "cannot ground: the person's words give it another slot", None
     if sensitive(text) or sensitive(evidence):
-        return False, "it looks like a secret, an identifier or a link, which dawnr does not remember on its own", None
+        return False, SECRET, None
     return True, "", reading
 
 
@@ -1162,17 +1275,17 @@ def end_session(store: MemoryStore, transcript, *, session_id: str, index: str =
 
 
 def _refused(statement: str, why: str, view: SessionView) -> Rejected:
-    """A refusal as the report keeps it; a contradiction carries its two readings."""
+    """A refusal as the report keeps it; a contradiction carries its two readings, as the report shows them."""
     c = next((c for c in view.contradictions() if why == f"contradiction: {c.object}"), None)
-    return Rejected(statement, why, (c.first.text, c.second.text), c.kind) if c else Rejected(statement, why)
+    return Rejected(statement, why, (_shown(c.first), _shown(c.second)), c.kind) if c else Rejected(statement, why)
 
 
 def _report_contradictions(view: SessionView, report: Report) -> None:
     """A contradiction is never silent: each thing the person said two things about is in report.rejected, even
-    when nothing proposed a statement about it."""
+    when nothing proposed a statement about it, and even when one of the two is withheld from storage."""
     named = {why for _statement, why in report.rejected}
     for c in view.contradictions():
         why = f"contradiction: {c.object}"
         if why not in named:
             named.add(why)
-            report.rejected.append(Rejected(c.first.text, why, (c.first.text, c.second.text), c.kind))
+            report.rejected.append(Rejected(_shown(c.first), why, (_shown(c.first), _shown(c.second)), c.kind))
