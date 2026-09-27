@@ -24,6 +24,7 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.parse
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -456,3 +457,186 @@ class HookConfigsWithBadCommands(unittest.TestCase):
             self.assertIn(pre.decision, (None, "allow", "ask", "deny"))
             self.assertIsInstance(post.block, bool)
             self.assertIsInstance(stop.block, bool)
+
+
+class _Redirector(http.server.BaseHTTPRequestHandler):
+    """/go?to=<url> redirects to exactly that URL; anything else answers plain text (a fetchable body of
+    its own, so the "no redirect happened" case in a test is distinguishable from "refused")."""
+
+    def log_message(self, *a):
+        pass
+
+    def do_GET(self):
+        if self.path.startswith("/go?to="):
+            target = self.path[len("/go?to="):]
+            self.send_response(302)
+            self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+        else:
+            body = b"ok"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+
+class WebAdversarial(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Redirector)
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+        cls.port = cls.server.server_address[1]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def _fetch_from_a_public_looking_host(self, path: str, **cfg_kwargs):
+        """Resolves one fake public hostname to this test's own local server, so a redirect Location can
+        be checked as "did a legitimately-reachable page redirect somewhere it should not" rather than
+        exercising the already-covered "the very first host is private" refusal."""
+        hostname = "public-looking.example.test"
+        real_getaddrinfo = socket.getaddrinfo
+
+        def fake_getaddrinfo(host, port, *a, **k):
+            if host == hostname:
+                return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
+            return real_getaddrinfo(host, port, *a, **k)
+
+        real_create_connection = socket.create_connection
+
+        def fake_create_connection(address, *a, **k):
+            host, port = address[0], address[1]
+            if host == "93.184.216.34":
+                return real_create_connection(("127.0.0.1", self.port), *a, **k)
+            return real_create_connection(address, *a, **k)
+
+        from unittest import mock
+        with mock.patch("socket.getaddrinfo", fake_getaddrinfo), \
+             mock.patch("socket.create_connection", fake_create_connection):
+            return web.fetch(f"http://{hostname}:{self.port}{path}", web.WebConfig(**cfg_kwargs))
+
+    def test_redirect_to_every_private_or_reserved_range_is_refused_property(self):
+        targets = [
+            "http://127.0.0.1/", "http://127.0.0.1:9999/", "http://localhost/",
+            "http://10.0.0.1/", "http://172.16.0.5/", "http://192.168.1.1/",
+            "http://169.254.169.254/latest/meta-data/",                       # the classic cloud-metadata SSRF target
+            "http://224.0.0.1/", "http://240.0.0.1/", "http://0.0.0.0/",
+            "http://[::1]/", "http://[fe80::1]/", "http://[fc00::1]/",
+        ]
+        for target in targets:
+            with self.assertRaises(web.FetchRefused, msg=target):
+                self._fetch_from_a_public_looking_host("/go?to=" + target, timeout=5)
+
+    def test_huge_body_property(self):
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                n = int(self.path.strip("/") or 0)
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain")
+                self.send_header("Content-Length", str(n))
+                self.end_headers()
+                self.wfile.write(b"z" * n)
+
+        srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            rnd = random.Random(7)
+            cfg = web.WebConfig(max_bytes=10_000, allow_private_hosts=True, timeout=5)
+            for _ in range(12):
+                n = rnd.choice([0, 1, cfg.max_bytes - 1, cfg.max_bytes, cfg.max_bytes + 1,
+                               cfg.max_bytes * 5, cfg.max_bytes * 50])
+                page = web.fetch(f"http://127.0.0.1:{srv.server_address[1]}/{n}", cfg)
+                self.assertLessEqual(page["bytes"], cfg.max_bytes)
+                self.assertEqual(page["truncated"], n > cfg.max_bytes)
+        finally:
+            srv.shutdown()
+            srv.server_close()
+
+    def test_slow_drip_is_bounded(self):
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("127.0.0.1", 0))
+        srv.listen(1)
+        port = srv.getsockname()[1]
+        body_len, drip_delay, cfg_timeout = 30, 0.3, 1.0
+
+        def serve_one():
+            conn, _ = srv.accept()
+            try:
+                conn.recv(65536)
+                header = (f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {body_len}\r\n"
+                         "Connection: close\r\n\r\n")
+                conn.sendall(header.encode())
+                for _ in range(body_len):
+                    conn.sendall(b"x")
+                    time.sleep(drip_delay)
+            except OSError:
+                pass                          # the client is expected to give up and disconnect early
+            finally:
+                conn.close()
+
+        threading.Thread(target=serve_one, daemon=True).start()
+        try:
+            cfg = web.WebConfig(timeout=cfg_timeout, allow_private_hosts=True, max_bytes=10_000)
+            start = time.monotonic()
+            page = web.fetch(f"http://127.0.0.1:{port}/", cfg)
+            elapsed = time.monotonic() - start
+            # unbounded before the fix: this drip alone takes body_len * drip_delay = 9s; a wall-clock
+            # deadline of cfg_timeout must cut the fetch off well before that, not merely before it hangs
+            self.assertLess(elapsed, body_len * drip_delay / 2)
+            self.assertTrue(page["truncated"])
+        finally:
+            srv.close()
+
+    def test_wrong_content_types_are_refused_property(self):
+        wrong_types = ["image/png", "image/jpeg", "audio/mpeg", "video/mp4", "application/octet-stream",
+                       "application/zip", "application/pdf", "font/woff2", "multipart/form-data",
+                       "application/x-made-up-type"]
+        # neither a missing Content-Type nor an unusually-cased text/* one belongs in this list:
+        # get_content_type() (email.message.Message, which http.client's headers use) defaults an absent
+        # header to "text/plain" rather than to something binary, and lowercases whatever it does get, so
+        # "TEXT/HTML" reads back as "text/html" -- both confirmed directly, and both exercised as the
+        # positive case below rather than asserted here as "wrong"
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                qs = urllib.parse.urlsplit(self.path).query
+                ctype = urllib.parse.parse_qs(qs).get("ctype", [""])[0]
+                body = b"content"
+                self.send_response(200)
+                if ctype:
+                    self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+        srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            cfg = web.WebConfig(allow_private_hosts=True, timeout=5)
+            base = f"http://127.0.0.1:{srv.server_address[1]}/?ctype="
+            for ctype in wrong_types:
+                url = base + urllib.parse.quote(ctype, safe="")
+                with self.assertRaises(web.FetchRefused, msg=ctype):
+                    web.fetch(url, cfg)
+            # allowed, not "wrong": unusual casing and no header at all (both decode this fixture's plain
+            # ASCII body correctly); a charset parameter is allowed too, but is not asserted on the body
+            # here, since declaring "utf-16" for bytes that are actually ASCII (this fixture always sends
+            # the same b"content") is a mismatch of the test's own making, not something to assert past
+            for allowed in ("TEXT/HTML", "text/plain", ""):
+                self.assertEqual(web.fetch(base + urllib.parse.quote(allowed, safe=""), cfg)["text"], "content")
+            self.assertFalse(web.fetch(base + urllib.parse.quote("text/html; charset=utf-16", safe=""),
+                                       cfg)["truncated"])
+        finally:
+            srv.shutdown()
+            srv.server_close()
