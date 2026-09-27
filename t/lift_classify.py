@@ -820,51 +820,54 @@ def _plus1(e: Expr) -> Expr:
     return Binary(e.line, "+", e, IntLit(e.line, 1))
 
 
+_REL_FLIP = {">": "<", ">=": "<="}
+
+
+def _normalize_chain(c: Expr) -> Expr:
+    """A relational chain written right to left (`|s| > i >= 0`, `n > k`) as
+    its `<`/`<=` mirror (`0 <= i < |s|`, `k < n`): every rule below reads
+    only `<`/`<=` chains, and the corpora write both spellings (2026-09-27:
+    `i >= 0 && i < |res|` is the HumanEval-Dafny house style, 8 of the 40
+    quantifiers refused `unbounded-quantifier` in the first 720 methods of
+    the vericoding + HumanEval-Dafny lift). A chain already in `<`/`<=`
+    form, a mixed one, or one with `==`/`!=`/`in` is returned unchanged."""
+    if not isinstance(c, Chain):
+        return c
+    if all(op in ("<", "<=") for op in c.ops):
+        return c
+    if all(op in (">", ">=") for op in c.ops):
+        return Chain(c.line, tuple(_REL_FLIP[op] for op in reversed(c.ops)),
+                     tuple(reversed(c.operands)))
+    return c
+
+
+def _top_conjuncts(e: Expr) -> list:
+    return list(e.args) if isinstance(e, NaryBool) and e.op == "&&" else [e]
+
+
+def _conj(parts: list, line: int) -> Optional[Expr]:
+    if not parts:
+        return None
+    return parts[0] if len(parts) == 1 else NaryBool(line, "&&", tuple(parts))
+
+
 def _bound_range(binder: str, guard: Expr) -> Optional[tuple[Expr, Expr, Optional[Expr]]]:
-    """`lo <= k < hi` and its three half-open siblings (section 4.4), for
-    exactly the named binder, optionally AND'ed with more conjuncts.
-    Returns (lo, hi, extra) where `extra` is the conjunction of whatever
-    else was in the guard (None if nothing else was), or None if no
-    conjunct bounds `binder` this way."""
-    conjuncts = list(guard.args) if isinstance(guard, NaryBool) and guard.op == "&&" else [guard]
-    for i, c in enumerate(conjuncts):
-        if isinstance(c, Chain) and len(c.ops) == 2 and len(c.operands) == 3:
-            lo_op, hi_op = c.ops
-            lo, mid, hi = c.operands
-            if _is_ident(mid, binder) and lo_op in ("<", "<=") and hi_op in ("<", "<="):
-                lo2 = _plus1(lo) if lo_op == "<" else lo
-                hi2 = _plus1(hi) if hi_op == "<=" else hi
-                rest = [x for j, x in enumerate(conjuncts) if j != i]
-                extra = None
-                if rest:
-                    extra = rest[0] if len(rest) == 1 else NaryBool(rest[0].line, "&&", tuple(rest))
-                return (lo2, hi2, extra)
-    # Integrator addition 2026-09-05: the SAME range, written as two
-    # separate single-comparison conjuncts (`lo <= k && k < hi`) rather
-    # than one written chain (`lo <= k < hi`) -- the shape
-    # `lower_dafny.lower` always prints and dafny's own rprint never
-    # recombines into a chain, measured via the 18.4 inverse test: every
-    # one of 13/31 sampled tasks with a quantifier hit `unbounded
-    # -quantifier` on the round trip before this was added, all for this
-    # one reason.
-    lo_i = hi_i = None
-    lo = hi = None
-    for i, c in enumerate(conjuncts):
-        if not (isinstance(c, Chain) and len(c.ops) == 1 and len(c.operands) == 2):
-            continue
-        op = c.ops[0]
-        a, b = c.operands
-        if op in ("<", "<=") and _is_ident(b, binder) and lo_i is None:
-            lo_i, lo = i, (_plus1(a) if op == "<" else a)
-        elif op in ("<", "<=") and _is_ident(a, binder) and hi_i is None:
-            hi_i, hi = i, (_plus1(b) if op == "<=" else b)
-    if lo_i is not None and hi_i is not None and lo_i != hi_i:
-        rest = [x for j, x in enumerate(conjuncts) if j not in (lo_i, hi_i)]
-        extra = None
-        if rest:
-            extra = rest[0] if len(rest) == 1 else NaryBool(rest[0].line, "&&", tuple(rest))
-        return (lo, hi, extra)
-    return None
+    """`lo <= k < hi` (one chain, or two comparisons, either spelling) for
+    exactly the named binder, optionally AND'ed with more conjuncts:
+    (lo, hi, extra) with `extra` the conjunction of whatever else was in
+    the guard (None if nothing else), or None if no conjunct bounds `binder`
+    this way. Kept for callers that bound one binder in a guard; the
+    quantifier rules below use `_bind_binders` directly."""
+    conjuncts = _top_conjuncts(guard)
+    got = _bind_binders([binder], conjuncts, None, set())
+    if got is None:
+        return None
+    bound, used, chain_extras, _rules = got
+    lo, hi, mem = bound[binder]
+    if mem is not None:
+        return None
+    rest = [c for i, c in enumerate(conjuncts) if i not in used] + chain_extras
+    return (lo, hi, _conj(rest, guard.line))
 
 
 def _bound_membership(binder: str, guard: Expr) -> Optional[Expr]:
@@ -874,6 +877,333 @@ def _bound_membership(binder: str, guard: Expr) -> Optional[Expr]:
         a, b = guard.operands
         if _is_ident(a, binder):
             return b
+    return None
+
+
+def _chain_bounds(unbound: set, c: Chain, nat_names: set):
+    """Every binder in one `<`/`<=` chain, bounded at once (t/FEATURES-TRACK.md
+    feature 5, generalising row 31's `0 <= i < j < hi` pair): `0 <= x < y <
+    z < w < |s|`, the sortedness invariant `0 <= k1 < i <= k2 < n`, or a
+    single binder inside a longer chain, `0 <= k < i <= n`. A binder's lower
+    bound is its left neighbour (plus one after `<`; a leftmost `nat` binder
+    reads 0); its upper bound is the nearest operand to its right that is
+    not a binder, plus one when every relation between them is `<=`. Reading
+    the quantifier as nested single-binder ranges in chain order is exact:
+    an outer value the chain would have excluded (no room for the binders to
+    its right) gets an empty inner range, true for a forall and false for an
+    exists, the same widening row 31 relied on. The chain's relations between
+    two non-binder operands (`i <= n` in `0 <= k < i <= n`) are returned as
+    `extras` and stay in the body. Returns (bounds, extras) or None when a
+    binder occurs twice or lacks a bound."""
+    ops, xs = c.ops, c.operands
+
+    def is_binder(x) -> bool:
+        return isinstance(x, Ident) and x.name in unbound
+
+    pos: dict = {}
+    for i, x in enumerate(xs):
+        if is_binder(x):
+            if x.name in pos:
+                return None
+            pos[x.name] = i
+    if not pos:
+        return None
+    bounds: dict = {}
+    for name, i in pos.items():
+        if i == 0:
+            if name not in nat_names:
+                return None
+            lo = IntLit(c.line, 0)
+        else:
+            lo = xs[i - 1] if ops[i - 1] == "<=" else _plus1(xs[i - 1])
+        j = i + 1
+        while j < len(xs) and is_binder(xs[j]):
+            j += 1
+        if j >= len(xs):
+            return None
+        strict = any(op == "<" for op in ops[i:j])
+        hi = xs[j] if strict else _plus1(xs[j])
+        bounds[name] = (lo, hi)
+    extras = [Chain(c.line, (ops[k],), (xs[k], xs[k + 1]))
+              for k in range(len(ops)) if not (is_binder(xs[k]) or is_binder(xs[k + 1]))]
+    return bounds, extras
+
+
+def _subst_many(e, mapping: dict):
+    """Simultaneous substitution of several identifiers (a predicate's
+    parameters by a call's arguments), so `P(b, a)` for `P(a, b)` never
+    substitutes through itself."""
+    if isinstance(e, Ident):
+        return mapping.get(e.name, e)
+    if dataclasses.is_dataclass(e):
+        changes = {}
+        for f in dataclasses.fields(e):
+            val = getattr(e, f.name)
+            if isinstance(val, tuple):
+                newval = tuple(_subst_many(v, mapping) for v in val)
+            elif dataclasses.is_dataclass(val):
+                newval = _subst_many(val, mapping)
+            else:
+                newval = val
+            if newval is not val:
+                changes[f.name] = newval
+        return dataclasses.replace(e, **changes) if changes else e
+    return e
+
+
+def _bind_binders(names: list, conjuncts: list, predicates: Optional[dict], nat_names: set):
+    """Bound every binder in `names` from the conjunct list of a quantifier's
+    guard, antecedent or body. Four rules, in this order, each over the
+    binders the earlier ones left unbound:
+
+    1. membership, `k in s` (decision 2): `s`, the binder reading `s[j]`;
+    2. a `<`/`<=` chain of two or more relations holding the binder
+       (`_chain_bounds`, either spelling via `_normalize_chain`);
+    3. two single comparisons, a lower one (`lo <= k`, `lo < k`, or `k >= lo`,
+       `k > lo`) and an upper one (`k < hi`, `k <= hi`, `hi > k`, `hi >= k`);
+       a `nat` binder with only an upper bound reads `0` for its lower one
+       (feature 5's one-sided range: the binder's own type is the bound
+       Dafny used);
+    4. a call of a closure predicate `P(.., k, ..)` with the binder as a bare
+       argument whose body is a conjunction that bounds that parameter by
+       rules 1 to 3 (feature 5's range through a predicate): the range, with
+       P's parameters replaced by the call's arguments, bounds `k`, and the
+       call itself stays in the body, so the quantifier is unchanged where
+       `P(k)` holds and vacuous elsewhere, exactly as the source. The check
+       stage proves the equivalence on every program (L_req/L_ens/L_inv).
+
+    Returns (bound: name -> (lo, hi, mem), used conjunct indices, the
+    chains' binder-free relations to keep, rule names) or None when some
+    binder stays unbound (`unbounded-quantifier`, the caller's refusal)."""
+    unbound = set(names)
+    bound: dict = {}
+    used: set = set()
+    rules: set = set()
+    extras: list = []
+    norm = [_normalize_chain(c) for c in conjuncts]
+    # 1. membership
+    for i, c in enumerate(norm):
+        if isinstance(c, Chain) and len(c.ops) == 1 and c.ops[0] == "in":
+            a, b = c.operands
+            if isinstance(a, Ident) and a.name in unbound and not _mentions_ident(b, a.name):
+                bound[a.name] = (None, None, b)
+                unbound.discard(a.name)
+                used.add(i)
+                rules.add("in-desugared")
+    # 2. chains
+    for i, c in enumerate(norm):
+        if i in used or not isinstance(c, Chain) or len(c.ops) < 2:
+            continue
+        if not all(op in ("<", "<=") for op in c.ops):
+            continue
+        got = _chain_bounds(unbound, c, nat_names)
+        if got is None:
+            continue
+        bs, ex = got
+        for name, (lo, hi) in bs.items():
+            bound[name] = (lo, hi, None)
+            unbound.discard(name)
+        used.add(i)
+        extras.extend(ex)
+        if len(bs) > 1 or len(c.ops) > 2:
+            rules.add("quantifier-bounded-chain")
+    # 3. single comparisons
+    for name in list(names):
+        if name not in unbound:
+            continue
+        lo_i = hi_i = None
+        lo = hi = None
+        for i, c in enumerate(norm):
+            if i in used or not (isinstance(c, Chain) and len(c.ops) == 1
+                                 and c.ops[0] in ("<", "<=")):
+                continue
+            a, b = c.operands
+            if _is_ident(b, name) and lo_i is None and not _mentions_ident(a, name):
+                lo_i, lo = i, (_plus1(a) if c.ops[0] == "<" else a)
+            elif _is_ident(a, name) and hi_i is None and not _mentions_ident(b, name):
+                hi_i, hi = i, (_plus1(b) if c.ops[0] == "<=" else b)
+        if hi_i is not None and lo_i is None and name in nat_names:
+            lo = IntLit(norm[hi_i].line, 0)
+            rules.add("quantifier-bounded-nat")
+        if hi_i is not None and lo is not None:
+            bound[name] = (lo, hi, None)
+            unbound.discard(name)
+            used.add(hi_i)
+            if lo_i is not None:
+                used.add(lo_i)
+    # 4. a predicate whose body bounds its parameter
+    if unbound and predicates:
+        for name in list(names):
+            if name not in unbound:
+                continue
+            for c in norm:
+                if not (isinstance(c, Call) and isinstance(c.fn, Ident) and c.fn.name in predicates):
+                    continue
+                pd = predicates[c.fn.name]
+                if pd.body is None or len(pd.params) != len(c.args):
+                    continue
+                for j, a in enumerate(c.args):
+                    if not _is_ident(a, name):
+                        continue
+                    pn = pd.params[j]
+                    pnat = {pn.name} if pn.type is not None and pn.type.kind == "nat" else set()
+                    inner = _bind_binders([pn.name], _top_conjuncts(pd.body), None, pnat)
+                    if inner is None:
+                        continue
+                    lo, hi, mem = inner[0][pn.name]
+                    mapping = {q.name: arg for q, arg in zip(pd.params, c.args)}
+                    sub = lambda e: None if e is None else _subst_many(e, mapping)
+                    bound[name] = (sub(lo), sub(hi), sub(mem))
+                    unbound.discard(name)
+                    rules.add("quantifier-bounded-predicate")
+                    if mem is not None:
+                        rules.add("in-desugared")
+                    break
+                if name not in unbound:
+                    break
+    if unbound:
+        return None
+    return bound, used, extras, rules
+
+
+def _order_binders(binders: tuple, bound: dict) -> Optional[list]:
+    """Nest the binders so that each one's bounds mention only binders
+    nested outside it (`0 <= j < i < n` nests `i` inside `j`): the declared
+    order where it works, else the first order that does; None on a cycle."""
+    names = [b.name for b in binders]
+    deps = {}
+    for n in names:
+        lo, hi, mem = bound[n]
+        deps[n] = {m for m in names if m != n and any(
+            e is not None and _mentions_ident(e, m) for e in (lo, hi, mem))}
+    out: list = []
+    done: set = set()
+    while len(out) < len(names):
+        progressed = False
+        for n in names:
+            if n in done or not deps[n] <= done:
+                continue
+            lo, hi, mem = bound[n]
+            out.append((n, lo, hi, mem))
+            done.add(n)
+            progressed = True
+        if not progressed:
+            return None
+    return out
+
+
+def _eliminate_defined_binders(q: Quantifier) -> Optional[Quantifier]:
+    """Row 33 (2026-09-14), widened 2026-09-27 (feature 5): a binder pinned
+    by an equality is substituted away wherever Dafny puts the equation --
+    the range guard (`| _t#0 == i + 1`, the resolver's companion binder), an
+    unguarded `exists` body's own conjunction (`exists c :: c == F(s) && r ==
+    G(c)`, vericoding DA0491) or an unguarded `forall`'s antecedent (`forall
+    c :: c == F(s) ==> P(c)`). `exists x :: x == E && P(x)` and `forall x ::
+    x == E ==> P(x)` are both `P(E)`, so a quantifier all of whose binders
+    are pinned collapses to its body, which the caller lifts as a plain
+    expression. Returns the quantifier with the pinned binders gone (possibly
+    none left), or None when nothing applies... never None: the input itself
+    when no equation is found."""
+    while q.binders:
+        where = "range"
+        found = _binder_defining_equality(q.binders, q.range)
+        if found is None and q.range is None:
+            if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
+                found = _binder_defining_equality(q.binders, q.body)
+                where = "body"
+            elif q.kind == "forall" and isinstance(q.body, Implies):
+                found = _binder_defining_equality(q.binders, q.body.left)
+                where = "antecedent"
+        if found is None:
+            break
+        name, repl, remaining = found
+        new_binders = tuple(b for b in q.binders if b.name != name)
+        if where == "range":
+            new_body = _subst_ast(q.body, name, repl)
+            new_range = _subst_ast(remaining, name, repl) if remaining is not None else None
+            q = dataclasses.replace(q, binders=new_binders, range=new_range, body=new_body)
+        elif where == "body":
+            rest = (_subst_ast(remaining, name, repl) if remaining is not None
+                    else BoolLit(q.line, True))
+            q = dataclasses.replace(q, binders=new_binders, body=rest)
+        else:
+            right = _subst_ast(q.body.right, name, repl)
+            new_body = (right if remaining is None
+                        else Implies(q.line, _subst_ast(remaining, name, repl), right))
+            q = dataclasses.replace(q, binders=new_binders, body=new_body)
+    return q
+
+
+def closure_predicates(closure: tuple) -> dict:
+    """Feature 5: the closure's bodied predicates (and bool-valued
+    functions) by name, the `predicates` argument of `bound_quantifier`."""
+    return {d.name: d for d in closure
+            if isinstance(d, FunctionDecl) and d.name and d.body is not None
+            and (d.is_predicate or (d.ret_type is not None and d.ret_type.kind == "bool"))}
+
+
+def bound_quantifier(q: Quantifier, predicates: Optional[dict] = None):
+    """Section 4.4's quantifier-bounding rules, unified into one contract:
+    on success, returns {"binders": [(name, lo, hi, membership_seq), ...],
+    "body": Expr, "rules": set} where `body` is the FULLY RESOLVED predicate
+    to lift at the innermost level (every `&&`/`==>` combination already
+    folded in), each binder's `lo`/`hi` are `None` exactly when
+    `membership_seq` is not (the `k in s` row: `lo`/`hi` become `0`/`len(s)`
+    and `body` must still be substituted `k -> s[j]` by the caller using the
+    returned fresh binder position), the binders are listed outermost first
+    (`_order_binders`: each one's bounds mention only earlier ones), and an
+    EMPTY binder list means every binder was pinned by an equality and the
+    quantifier IS its body (`_eliminate_defined_binders`). `rules` names the
+    rules that fired, for the sidecar. Returns None when some binder has no
+    finite range this reads (the caller refuses `unbounded-quantifier`).
+
+    `predicates` (t/FEATURES-TRACK.md feature 5, 2026-09-27) maps the
+    closure's predicate names to their `FunctionDecl`s, for the range
+    through a predicate rule of `_bind_binders`; None disables that rule.
+
+    The shapes read, each the source's own conjunction of constraints plus a
+    residual body: a guard (`| C :: B`); an unguarded forall with an
+    antecedent (`C ==> B`); an unguarded exists whose body is one
+    conjunction (`C && B'`, the constraints and the residual mixed, every
+    unused conjunct kept as body); and the resolver's distributed forms
+    (`_extract_unguarded_range`, row 31). Whatever the constraints do not
+    bound stays in the body: `extra ==> B` for a forall, `extra && B` for an
+    exists, so the lifted quantifier says exactly what the source said."""
+    q = _eliminate_defined_binders(q)
+    if not q.binders:
+        return {"binders": [], "body": q.body, "rules": {"quantifier-eliminated"}}
+    nat_names = {b.name for b in q.binders if b.type is not None and b.type.kind == "nat"}
+    names = [b.name for b in q.binders]
+    shapes = []
+    if q.range is not None:
+        shapes.append((_top_conjuncts(q.range), q.body))
+    else:
+        if q.kind == "forall" and isinstance(q.body, Implies):
+            shapes.append((_top_conjuncts(q.body.left), q.body.right))
+        if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
+            shapes.append((list(q.body.args), None))
+        extracted = _extract_unguarded_range(q.kind, q.body)
+        if extracted is not None:
+            rng, new_body = extracted
+            shapes.append((_top_conjuncts(rng), new_body))
+    for conjuncts, residual in shapes:
+        got = _bind_binders(names, conjuncts, predicates, nat_names)
+        if got is None:
+            continue
+        bound, used, chain_extras, rules = got
+        rest = [c for i, c in enumerate(conjuncts) if i not in used] + chain_extras
+        extra = _conj(rest, q.line)
+        if q.kind == "forall":
+            body = residual if extra is None else Implies(q.line, extra, residual)
+        elif residual is None:
+            body = extra if extra is not None else BoolLit(q.line, True)
+        else:
+            body = residual if extra is None else NaryBool(q.line, "&&", (extra, residual))
+        ordered = _order_binders(q.binders, bound)
+        if ordered is None:
+            return None
+        rules = set(rules) | {"quantifier-bounded"}
+        return {"binders": ordered, "body": body, "rules": rules}
     return None
 
 
@@ -1049,192 +1379,6 @@ def _binder_defining_equality(binders: tuple, guard: Optional[Expr]):
                     remaining = rest[0] if len(rest) == 1 else NaryBool(c.line, "&&", tuple(rest))
                 return (lhs.name, rhs, remaining)
     return None
-
-
-def bound_quantifier(q: Quantifier):
-    """Section 4.4's quantifier-bounding rules, unified into one contract:
-    on success, returns {"binders": [(name, lo, hi, membership_seq), ...],
-    "body": Expr} where `body` is the FULLY RESOLVED predicate to lift at
-    the innermost level (every `&&`/`==>` combination already folded in),
-    and each binder's `lo`/`hi` are `None` exactly when `membership_seq`
-    is not (the `k in s` row, section 4.4's third quantifier row: `lo`/`hi`
-    become `0`/`len(s)` and `body` must still be substituted `k -> s[j]`
-    by the caller using the returned fresh binder position). Returns None
-    when the range is not one of section 4.4's bounded shapes (the caller
-    refuses `unbounded-quantifier`).
-
-    Row 33 (2026-09-14): before any of the shapes below are tried, a
-    binder pinned by an equality filter clause (`| _t#0 == i + 1`, row 31's
-    own carve-out -- "a binder defined by an equation rather than bounded
-    by an inequality") is eliminated by substitution: the quantifier over
-    `_t#0` with body `P(_t#0)` becomes the quantifier over the REMAINING
-    binders with body `P(i + 1)`, `_t#0` itself gone. This can repeat (an
-    equality can define more than one binder) and always runs before the
-    single/multi-binder range logic below, so every existing shape keeps
-    reading exactly the range/body it already read once the equality
-    binder(s) are gone; a quantifier with no equality-filter conjunct at
-    all falls through unchanged, byte for byte. A binder with no defining
-    equation and no range stays refused `unbounded-quantifier` by the same
-    path as before -- this only ever REMOVES a binder, never invents a
-    bound for one that has neither an equation nor a range."""
-    while True:
-        found = _binder_defining_equality(q.binders, q.range)
-        if found is None:
-            break
-        name, repl, remaining_guard = found
-        new_binders = tuple(b for b in q.binders if b.name != name)
-        if len(new_binders) == 0:
-            # The whole quantifier collapses to a closed boolean with no
-            # binders left -- not a shape any in-corpus program has ever
-            # exercised (every measured equality-filter binder has at
-            # least one companion binder left), and t's own forall/exists
-            # node has no zero-binder form to build here; left refused
-            # rather than guessed.
-            return None
-        new_body = _subst_ast(q.body, name, repl)
-        if remaining_guard is not None:
-            remaining_guard = _subst_ast(remaining_guard, name, repl)
-        q = dataclasses.replace(q, binders=new_binders, range=remaining_guard, body=new_body)
-
-    if len(q.binders) == 0:
-        return None
-
-    if len(q.binders) == 1:
-        b = q.binders[0]
-        guard = q.range
-        if guard is None:
-            # Unguarded: the range lives inside body as `lo<=k<hi ==> P`
-            # (forall) or `lo<=k<hi && P` (exists), or (row 31) distributed
-            # across body's own top-level `&&`/`||` -- see
-            # `_extract_unguarded_range`.
-            if q.kind == "forall" and isinstance(q.body, Implies):
-                # Row 31: `l in lists ==> P` -- a membership antecedent, not
-                # a numeric range -- binds `l` the same way a GUARDED `k in
-                # s` would (decision 2); tried before `_bound_range` since
-                # a membership chain never parses as one.
-                mem = _bound_membership(b.name, q.body.left)
-                if mem is not None:
-                    return {"binders": [(b.name, None, None, mem)], "body": q.body.right}
-                got = _bound_range(b.name, q.body.left)
-                if got is not None:
-                    lo, hi, extra = got
-                    # Row 31: a leftover conjunct in the antecedent (e.g.
-                    # `1 <= d <= a && 1 <= d <= b && ...`) used to bail here
-                    # even though the GUARDED branch below folds the very
-                    # same shape back into the body via `Implies` -- there
-                    # is no reason the unguarded form should be stricter.
-                    body = Implies(q.line, extra, q.body.right) if extra is not None \
-                        else q.body.right
-                    return {"binders": [(b.name, lo, hi, None)], "body": body}
-            if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
-                got = _bound_range(b.name, q.body)
-                if got is None:
-                    return None
-                lo, hi, extra = got
-                body = extra if extra is not None else BoolLit(q.line, True)
-                return {"binders": [(b.name, lo, hi, None)], "body": body}
-            extracted = _extract_unguarded_range(q.kind, q.body)
-            if extracted is not None:
-                rng, new_body = extracted
-                got = _bound_range(b.name, rng)
-                if got is not None:
-                    lo, hi, extra = got
-                    body = Implies(q.line, extra, new_body) if (extra is not None and q.kind == "forall") \
-                        else (NaryBool(q.line, "&&", (extra, new_body)) if extra is not None else new_body)
-                    return {"binders": [(b.name, lo, hi, None)], "body": body}
-            return None
-        mem = _bound_membership(b.name, guard)
-        if mem is not None:
-            return {"binders": [(b.name, None, None, mem)], "body": q.body}
-        got = _bound_range(b.name, guard)
-        if got is None:
-            return None
-        lo, hi, extra = got
-        if extra is not None:
-            body = Implies(q.line, extra, q.body) if q.kind == "forall" \
-                else NaryBool(q.line, "&&", (extra, q.body))
-        else:
-            body = q.body
-        return {"binders": [(b.name, lo, hi, None)], "body": body}
-
-    # Multiple binders: each finds its own chain conjunct in a top-level
-    # "&&" range guard (section 4.4's "two binders" row, generalised to N).
-    # Row 31: an unguarded N-binder quantifier reads its range from `body`
-    # the same way the single-binder case above does (`_extract_unguarded_
-    # range`, which also covers the plain `Implies` shape directly).
-    guard = q.range
-    working_body = q.body
-    exists_plain_and = False
-    if guard is None:
-        if q.kind == "exists" and isinstance(q.body, NaryBool) and q.body.op == "&&":
-            # Row 31: an unguarded N-binder `exists` never wraps its range
-            # in `Implies` (that's a `forall` thing) -- dafny prints it as
-            # ONE flat `&&` of range chains and predicate conjuncts
-            # together, same shape the single-binder branch above already
-            # reads directly via `_bound_range(b.name, q.body)`.
-            guard = q.body
-            exists_plain_and = True
-        else:
-            extracted = _extract_unguarded_range(q.kind, q.body)
-            if extracted is None:
-                return None
-            guard, working_body = extracted
-    conjuncts = list(guard.args) if isinstance(guard, NaryBool) and guard.op == "&&" else [guard]
-    used = [False] * len(conjuncts)
-    result_binders = []
-    i_b = 0
-    while i_b < len(q.binders):
-        b = q.binders[i_b]
-        found = None
-        for i, c in enumerate(conjuncts):
-            if used[i]:
-                continue
-            if isinstance(c, Chain) and len(c.ops) == 2 and len(c.operands) == 3:
-                lo_op, hi_op = c.ops
-                lo, mid, hi = c.operands
-                if _is_ident(mid, b.name) and lo_op in ("<", "<=") and hi_op in ("<", "<="):
-                    lo2 = _plus1(lo) if lo_op == "<" else lo
-                    hi2 = _plus1(hi) if hi_op == "<=" else hi
-                    found = (lo2, hi2)
-                    used[i] = True
-                    break
-        if found is not None:
-            result_binders.append((b.name, found[0], found[1], None))
-            i_b += 1
-            continue
-        # Row 31: `0 <= i < j < hi`, one chain binding TWO consecutive
-        # binders at once (`_ordered_pair_bound`) -- tried only when the
-        # single-conjunct match above found nothing for this binder.
-        if i_b + 1 < len(q.binders):
-            b2 = q.binders[i_b + 1]
-            pair_found = None
-            for i, c in enumerate(conjuncts):
-                if used[i] or not isinstance(c, Chain):
-                    continue
-                pair = _ordered_pair_bound(b.name, b2.name, c)
-                if pair is not None:
-                    pair_found = (i, pair)
-                    break
-            if pair_found is not None:
-                i, (bound1, bound2) = pair_found
-                used[i] = True
-                result_binders.append((b.name, bound1[0], bound1[1], None))
-                result_binders.append((b2.name, bound2[0], bound2[1], None))
-                i_b += 2
-                continue
-        return None
-    rest = [c for i, c in enumerate(conjuncts) if not used[i]]
-    extra = None
-    if rest:
-        extra = rest[0] if len(rest) == 1 else NaryBool(rest[0].line, "&&", tuple(rest))
-    if exists_plain_and:
-        body = extra if extra is not None else BoolLit(q.line, True)
-    elif extra is not None:
-        body = Implies(q.line, extra, working_body) if q.kind == "forall" \
-            else NaryBool(q.line, "&&", (extra, working_body))
-    else:
-        body = working_body
-    return {"binders": result_binders, "body": body}
 
 
 # ---------------------------------------------------------------------------
@@ -2324,16 +2468,23 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
         rewrites.append(Rewrite(rule="null-check-dropped", line=null_checks[0][1].line))
 
     # -- quantifier boundedness -------------------------------------------
+    # Feature 5 (2026-09-27): the closure's predicates, for the range
+    # through a predicate rule; the same dict `lift_rewrite` reads off
+    # `Scope.predicates`, so the two stages bound every quantifier alike.
+    predicates = closure_predicates(closure)
     for root in scope_roots:
         for n in walk(root):
             if isinstance(n, Quantifier):
-                got = bound_quantifier(n)
+                got = bound_quantifier(n, predicates)
                 if got is None:
                     issues.append((n.line, "unbounded-quantifier", n.kind))
                 else:
                     has_mem = any(mem is not None for _, _, _, mem in got["binders"])
                     rewrites.append(Rewrite(rule="in-desugared" if has_mem
                                              else "quantifier-bounded", line=n.line))
+                    for rule in sorted(got.get("rules", ())):
+                        if rule not in ("in-desugared", "quantifier-bounded"):
+                            rewrites.append(Rewrite(rule=rule, line=n.line))
 
     # -- mutual recursion ---------------------------------------------------
     mr = _mutual_recursion_issue(closure)
