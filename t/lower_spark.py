@@ -6056,7 +6056,40 @@ def _lower_lemma(task: dict, l: dict, L: "Lower") -> str:
             f"   {sig} is\n     ({body_expr(l['body'])});\n")
 
 
+
+_SET_OPS_T = {"set", "in", "card", "union", "inter", "diff"}
+
+
+def _uses_sets(obj) -> bool:
+    """True iff `obj` mentions t's set type or one of its six operations
+    anywhere (SPEC.md "Finite sets", 2026-09-27), by the same generic walk
+    the string-library detector makes."""
+    if isinstance(obj, dict):
+        if obj.get("op") in _SET_OPS_T or obj.get("type") == "set":
+            return True
+        return any(_uses_sets(v) for v in obj.values())
+    if isinstance(obj, list):
+        return any(_uses_sets(v) for v in obj)
+    return obj == "set"
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    if _uses_sets(task) or _uses_sets(body):
+        # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): the SPARK
+        # library ships SPARK.Containers.Functional.Sets (`Contains`,
+        # `Length`, `Add`, `Remove`, `Union`, `Intersection`, with
+        # `Union`'s Length stated through `Num_Overlaps`), so this column
+        # CAN state five of the six operations; it has no difference
+        # function, and the inclusion-exclusion and difference laws the
+        # `fz_p_set_*` probes state have not yet been measured against
+        # gnatprove here. Until the instantiation and its proofs are built
+        # and measured, the honest verdict is an abstention by name, not a
+        # partial lowering that would read unproved for a library gap.
+        raise NotImplementedError(
+            "spark lowering: finite sets (SPEC.md 'Finite sets'): the "
+            "Functional_Sets instantiation is not built yet (the library has "
+            "no difference function; union/intersection cardinality laws "
+            "unmeasured under gnatprove)")
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides (case-INsensitively, matching this file's own `reserved_lc`
     # check below) with an Ada reserved word or this lowering's static

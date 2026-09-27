@@ -418,6 +418,106 @@ and `tuple-component` name what t's pair cannot carry. **Measured**: 10 of 27
 lift, 7 pass the check stage; 8 of the other 17 refuse `function-result`
 (a tuple-returning helper). Tests: `t/test_lift_tuples.py`.
 
+### 9. Nested sequences named by their element (2026-09-27, lifter)
+
+**Refused: 113 methods `nested-seq-other`** on the 1886 staged files of the
+2026-09-26 lift (the round-2 census, merged lifter). The name hid what they
+were: 84 hold `seq<real>` or `seq<seq<real>>` (the numpy-shaped vericoding
+files), 20 `seq<T>` under a type parameter or a datatype, 5 `seq<bv32>`, one
+`seq<(int, int)>`, one `seq<seq<bool>>`, one `[i % 3 == 0]`, one
+`[('0' as int + digit) as char]`. Each now refuses under its element's own
+name (row 46: `seq-of-real`, `seq-of-datatype`, `seq-of-bitvector`,
+`seq-of-pair`, `seq-of-bool`, `seq-of-set`, `seq-of-map`), so the census
+ranks them with `real`, `datatype` and `bitvector`; a cast to char or int
+inside a display is an int element, so `[c as char]` lifts when the cast is
+safe and refuses `char-cast-unbounded` when it is not. **Measured**: 0 of
+the 113 lift, because none is a t value (reals, bitvectors and datatypes
+have no t type; a seq of pairs or of bools is "Not in v1", SPEC.md "Nested
+sequences"); 84 read seq-of-real, 20 seq-of-datatype, 5 seq-of-bitvector, 2
+seq-of-bool, 1 seq-of-pair, and one is
+the `[.. as char]` display whose cast bound the syntactic rule cannot see, and 113 of 113 read as one of the seven names or `char-cast-unbounded`.
+The lever this leaves is a range analysis for `(lit + e) as char` under a
+`requires` on `e`, which is what the int-to-string helpers need. Tests:
+`t/test_lift_seq_elements.py`.
+
+### 10. Zero-return methods named by what they are (2026-09-27, lifter)
+
+**Refused: 39 methods `zero-returns`** on the 1886 staged files. SPEC.md
+already decides what t makes of a method with no out-parameter: a task
+whose return is its mutated array (decision 22, "a method whose effect is
+its array is a task whose return is a seq"), or nothing. So the bare name
+is retired and the refusal says why the shape did not apply (row 47): a
+mutation issue `find_array_mutation` had already named stands alone (the
+method-line `zero-returns` used to hide it by line order); a `modifies`
+whose writes are all a callee's refuses `array-mutation`
+(`modifies-via-call`), one with no write `modifies-no-index-assign`; a
+method with neither return nor `modifies` is a lemma about its parameters
+(SPEC.md "Lemmas (v1)") and refuses `lemma-shaped`. **Measured**: of the
+39, 34 read `array-mutation` (23 of them the vericoding DJ family, which
+writes two arrays, `a[i] := 0` and `sum[0] := total`), 4 `lemma-shaped`, 1
+`array`; 0 lift. The lever is a task returning a pair of seqs for the
+two-array methods (t's pair holds two seqs already); not built here. Tests:
+`t/test_lift_zero_returns.py`.
+### 11. Finite sets (2026-09-27, SPEC.md "Finite sets (v1)", six lowerings touched)
+
+**Refused: 77 methods `set`** on the 1886 staged files (round-2 census): 39
+the cardinality of a bounded comprehension used as a count, 30 a display
+(`s[i] in {'G', 'T', '.', '#'}`), 8 a `set<int>` parameter or return. t now
+has the type `set` (a finite set of ints) with six total operations, the
+display `{e1, ..., en}`, `x in s`, `card(s)`, `union`, `inter`, `diff`,
+written by name, `==` extensional (SPEC.md "Finite sets (v1)", SYNTAX.md);
+`surface.py` parses and prints it (26 of 26 written examples, 1846 of 1846
+corpus tasks and 3000 fuzzed ASTs round-trip), `check_wf` types it,
+`interp` runs it on a frozenset with its own domain ladder, and
+`fuzz_lower` carries nine probes `fz_p_set_*` (duplicates collapse,
+inclusion-exclusion, difference against intersection, extensional equality,
+an adversarial union count and duplicate count, membership through an
+intersection, the empty display, a set-collecting loop) plus two committed
+tasks, `tasks/set_toggle.t` (add or remove one element, four cardinality and
+membership ensures; twin `collapse-if`) and `tasks/set_collect.t` (a loop
+collecting a seq into a set; twin `compare-flip`). The comprehension is not
+in v1 (its predicate needs a binder every kernel would close over; SPEC.md
+says how it will be stated), and the lifter's mapping of Dafny's `set<int>`
+onto the type is not built, so no corpus method lifts yet: the 38
+display-and-typed-name methods are what that mapping would reach.
+
+Per kernel, measured on this machine (the nine probes as expected with
+twins refuted, the two tasks verified with twins refuted, unless noted):
+
+| kernel | representation | probes | tasks | note |
+|---|---|---|---|---|
+| dafny | `set<int>`; `{..}`, `in`, `\|s\|`, `+ * -`; the empty display let-bound to a typed name | 9 of 9 | 2 of 2 | `\|{}\|` is underspecified and a false-ranged comprehension is rejected as not finite, measured; hence the let |
+| verus | `vstd::set::Set<int>`; `set![..]`, `contains`, `len`, `insert`/`remove` for a singleton union/difference, `union`/`intersect`/`difference`; vstd's three broadcast groups plus one prelude lemma (empty difference is inclusion) in its own module; `==` bridged to `=~=` | 9 of 9 | 2 of 2 | the ground certificate over sets is closed by the SMT arm, `compute_only` cannot evaluate a cardinality (measured) |
+| fstar | `FStar.FiniteSet.Base` with `FStar.FiniteSet.Ambient`; a task that uses sets is lowered in the Ghost effect (`cardinality` is GTot, equality the ghost decision of `equal`) | 9 of 9 | 2 of 2 | `union` with a singleton is spelled `insert`, the one law the ambient facts do not close otherwise |
+| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality | 9 of 9 real; 8 twins refuted, `fz_p_set_eq`'s twin at the wall | set_collect and set_toggle both verified and both twins refuted: a set-valued twin result is certified by `S.Equal` (MSetList values carry a sortedness proof, so two computations of one set are not Leibniz-equal), pushed under `S.cardinal` by `P.Equal_cardinal` and into `S.In` at its element, and the closed set atoms that remain are decided by `vm_compute` (`t_set_ground`) | |
+| lean | none: core Lean 4, no Mathlib, no finite set | abstain by name | abstain | a sorted duplicate-free `List Int` is the encoding to build and measure |
+| framac | none: C has no set value | abstain by name | abstain | a sorted-array encoding with WP proofs is the encoding to build |
+| spark | none yet: `SPARK.Containers.Functional.Sets` exists but has no difference function and its cardinality laws are unmeasured here | abstain by name | abstain | the instantiation is the next step |
+
+Byte identity: every set-free committed task lowers byte for byte as before
+in all seven kernels (48 fixture tasks, real and twin, `sha256` before and
+after). No twin-generator, grader or check-filter change: the ladder's
+existing moves (`wrong-var` over two set names, `off-by-one` on an int,
+`collapse-if`, `compare-flip`) found a refuting twin for every probe that
+has one.
+
+### 12. A return unassigned on a path opens with its default (2026-09-27, lifter)
+
+**Refused: 69 methods `return-not-assigned-on-all-paths`** on the 1886
+staged files. The refusal rested on a reading of Dafny that was wrong both
+ways (row 45): Dafny checks definite assignment of an out-parameter as a
+verification obligation, so a method the syntactic walk refuses (`while
+true { .. r := i; return; }`, an if-case, a `break` then a guarded
+assignment) verifies, and one that truly leaves the return unassigned does
+not. The body now opens with the return type's default and the check stage
+keeps the task only when `dafny verify --filter-symbol M` accepts the source
+method (`verify-source`), refusing `return-default-unverified` otherwise;
+`char` returns refuse `return-default-char`. **Measured**: 61 of the 69 are
+`assume` stubs (the table above foresaw them), 4 lift (all four sources
+accepted by dafny), 1 of the 4 passes the check stage, 3 fail it on
+unrelated lemmas; 4 refuse elsewhere. Tests:
+`t/test_lift_return_default.py` (6, plus 2 slow: one accepted source, one
+refused `return-default-unverified` with dafny's own message).
 ### 13. Seq-valued spec_funs (2026-09-27, language and lifter)
 
 **Refused: 135 methods `function-result`** of the 2026-09-26 lift (a helper
@@ -485,6 +585,10 @@ column of entry 13.
 ## The features ahead: designs and costs
 
 ### 9. Finite sets
+
+Landed 2026-09-27 as Done 11 above (the type and six operations in four
+kernels, three abstaining by name; the comprehension and the lifter's mapping
+remain). The plan as it stood:
 
 Candidates: Dafny `set<int>` with comprehension and `|s|`; SPARK
 `Ada.Containers.Functional_Sets`; Why3 `fset`; Lean `Finset`; Rocq

@@ -466,15 +466,42 @@ class _Parser:
             return self._parse_skipped(modifiers, base, start_line)
         raise LiftParseError(base or "<eof>", self.cur.line)
 
+    def _match_reason(self) -> str:
+        """Row 48 (2026-09-27): the gap a `match` names. The first `case`
+        pattern decides: an int, char or string literal or the wildcard `_`
+        is a match over values t already has (`match-literal`, an if-chain
+        in t's terms, not built yet); anything else (a constructor, with or
+        without arguments) is a datatype's (`datatype`). Measured on the 56
+        staged files the parser refused at `match`: 13 declared no datatype
+        at all and matched on an int, char or string."""
+        i = self.pos
+        depth = 0
+        while i < len(self.tokens) and self.tokens[i].kind != "eof":
+            tok = self.tokens[i]
+            if tok.text == "case" and depth <= 1:
+                pat = self.tokens[i + 1] if i + 1 < len(self.tokens) else None
+                if pat is not None and (pat.kind in ("int", "char", "string") or pat.text == "_"
+                                        or (pat.text == "-" and i + 2 < len(self.tokens)
+                                            and self.tokens[i + 2].kind == "int")):
+                    return "match-literal"
+                return "datatype"
+            if tok.text == "{":
+                depth += 1
+            elif tok.text == "}":
+                depth -= 1
+            i += 1
+        return "datatype"
+
     def _parse_skipped(self, modifiers: list[str], base: str, start_line: int) -> SkippedDecl:
         combined = _combine_keyword(modifiers, base)
         gap_name = KEYWORD_GAP_NAME.get(combined, "type-decl")
+        words = [base]
         self.advance()  # the base keyword itself
         while not self.at_eof() and not (
             self.cur.col == 0 and self.cur.text in TOP_LEVEL_START_WORDS
         ):
-            self.advance()
-        return SkippedDecl(start_line, keyword=combined, gap_name=gap_name)
+            words.append(self.advance().text)
+        return SkippedDecl(start_line, keyword=combined, gap_name=gap_name, text=" ".join(words))
 
     def _parse_attrs(self) -> tuple[Attr, ...]:
         attrs = []
@@ -922,7 +949,7 @@ class _Parser:
             # (measured: the subject's own first token -- "l", "xs", "t",
             # "n", a case-value identifier -- was the token every one of
             # the 154 parse-refusal "match" files reported before this).
-            raise LiftParseError("match", line, "match statement", reason="datatype")
+            raise LiftParseError("match", line, "match statement", reason=self._match_reason())
         if self.at("var"):
             return self._parse_var_stmt(line)
         if self.at("ghost") and self.tokens[self.pos + 1].text == "var":
@@ -1639,7 +1666,7 @@ class _Parser:
             # `match Expr { case ... }` used as an expression (a function
             # or predicate body, or nested in one): same construct as the
             # statement form, same reason.
-            raise LiftParseError("match", line, "match expression", reason="datatype")
+            raise LiftParseError("match", line, "match expression", reason=self._match_reason())
         if tok.text == "null":
             # The heap null literal: section 3's Atom has no such literal
             # (t has no heap, so no reference type ever needs one), and
