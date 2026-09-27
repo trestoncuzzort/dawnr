@@ -197,9 +197,31 @@ adds the table.
 ## The whole suite against round 1's 51
 
 The whole suite (`pytest t --ignore=t/test_lab_gui.py`, which needs
-tkinter) was still running on the merged tree when this report was first
-committed; its counts against round 1's 51 environment-bound failures
-follow in the same later commit.
+tkinter), run on this branch after the sets merge and alongside the Task A
+grading (load 25 to 76 on four cores, 15 min 07 s): 1428 passed, 56 failed,
+34 skipped, 1 xfailed, 113 subtests passed. Round 1 closed at 51 failed,
+1396 passed, 28 skipped. Set against round 1's 51 by test name, none of
+the 51 stopped failing and five are new:
+
+- Four in `test_dawnr_english.py` (`WidenedProtectedSetTest`, three cases,
+  and `FlaggedIdsUncappedTest`, one) come with tests the base gained on
+  2026-09-27 after round 1's run (`6f988e8`, `f875427`) and fail here with
+  `gzip.BadGzipFile: Not a gzipped file (b've')`: `nl/data/mbpp.jsonl.gz`
+  and `nl/data/humaneval.jsonl.gz` are 130-byte git-lfs pointers on this
+  checkout, the same cause as the baseline's `test_mbpp_dfy` failure.
+  Environment-bound, not this branch's.
+- One, `test_vscode.py::test_grammar_covers_keywords_and_string_methods`,
+  was this branch's: the five set keywords `surface.py` gained (`set`,
+  `card`, `union`, `inter`, `diff`) had no pattern in the TextMate
+  grammar. Fixed in the same commit as the Rocq set certificate; the four
+  `test_vscode` tests pass again.
+
+So the suite stands at 55 environment-bound failures on this checkout: round
+1's 51 plus the four new lfs-pointer cases, and no failure caused by round 2.
+The 12 tests this round added (`test_lift_return_default.py`,
+`test_lift_seq_elements.py`, `test_lift_zero_returns.py`) are in the 1428;
+the finite-set coverage lives in `conformance.py`'s nine `fz_p_set_*`
+probes and `surface.py --check`'s four written examples, not in pytest.
 
 ## How to reproduce
 
