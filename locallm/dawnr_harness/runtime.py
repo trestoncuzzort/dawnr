@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import checker, hooks as hooks_mod
-from .hooks import Hooks, aggregate_post, aggregate_pre, aggregate_stop
+from .hooks import Hooks, aggregate_post, aggregate_pre, aggregate_session, aggregate_stop
 from .tools import CallContext, CallError, Policy, Registry, Session, Tool, ToolResult, parse_call, strictest, validate
 
 DEFAULT_HOOKS = {"PostToolUse": [{"matcher": "*", "hooks": [{"type": "builtin", "name": "t_check"}]}],
@@ -55,6 +55,8 @@ class Harness:
         self.messages: list[str] = []          # for the person (systemMessage), never for the model
         self.clients: list = []                # MCP clients to close
         self.problems: list[str] = []          # what loading the configuration skipped, with why
+        self.memory = None                     # dawnr's memory settings, when configured (DAWNR-MEMORY.md)
+        self._started: set[str] = set()        # sessions whose SessionStart hooks have run
 
     @classmethod
     def with_t_tool(cls, fn=None) -> "Harness":
@@ -187,6 +189,41 @@ class Harness:
                                  f"{d.reason}")
         return StopResult(False, "", d.messages)
 
+    # ---------------------------------------------------------- sessions --
+
+    def session_start(self, session: Session, *, prompt: str = "", source: str = "startup") -> list[str]:
+        """Run the SessionStart hooks once per session, at its first message; the context each adds.
+
+        Claude Code's SessionStart (matcher on the source; additionalContext; nothing blocks), fired when the
+        person's first message arrives so a hook can rank what it recalls by it (dawnr's memory does,
+        DAWNR-MEMORY.md). The index the harness put at the head of the message is not part of it."""
+        if session.id in self._started or not self.hooks.has("SessionStart"):
+            return []
+        self._started.add(session.id)
+        index = self.index()
+        if index and prompt.startswith(index):
+            prompt = prompt[len(index):].lstrip()
+        d = aggregate_session(self.hooks.run("SessionStart", self._payload(
+            session, "", source=source, prompt=prompt, **self._memory_payload()), source))
+        self._note_errors(d.errors, d.messages)
+        self._log(session, "SessionStart", {"source": source}, "run", f"{len(d.contexts)} context(s)")
+        return d.contexts
+
+    def session_end(self, session: Session, *, transcript: list, reason: str = "other") -> list[str]:
+        """Run the SessionEnd hooks on a conversation that ended (or that a client saves as it goes, reason
+        "checkpoint"); what they said to the person (also in self.messages). Nothing here blocks."""
+        if not self.hooks.has("SessionEnd"):
+            return []
+        d = aggregate_session(self.hooks.run("SessionEnd", self._payload(
+            session, "", reason=reason, transcript=transcript, tainted=session.tainted,
+            tools=self.registry.names(), index=self.index(), **self._memory_payload()), reason))
+        self._note_errors(d.errors, d.messages)
+        self._log(session, "SessionEnd", {"reason": reason}, "run", "")
+        return d.errors + d.messages
+
+    def _memory_payload(self) -> dict:
+        return self.memory.payload() if self.memory is not None else {}
+
     # ------------------------------------------------------------- index --
 
     def visible(self) -> list[Tool]:
@@ -263,7 +300,7 @@ class Harness:
 # ------------------------------------------------------------ configuration --
 
 CONFIG_KEYS = {"offline", "permissions", "taint_escalates", "hooks", "skills", "web", "mcp_servers", "audit",
-              "retrieval", "agent"}
+              "retrieval", "agent", "memory"}
 
 
 def _expand(value: str, env: dict) -> str:
@@ -271,8 +308,11 @@ def _expand(value: str, env: dict) -> str:
 
 
 def build_harness(config: dict | str | Path | None = None, *, approver: Approver | None = None,
-                  connect_mcp: bool = True) -> Harness:
-    """The harness an operator's configuration describes. No configuration: the t tool, the checker hook, offline."""
+                  connect_mcp: bool = True, memory: dict | bool | None = None) -> Harness:
+    """The harness an operator's configuration describes. No configuration: the t tool, the checker hook, offline.
+
+    `memory` overrides the configuration's "memory" object for this run: a dict is merged over it (a chat's
+    --person), False turns memory off, None leaves the configuration's choice."""
     base = Path.cwd()
     config_path = None
     if isinstance(config, (str, Path)):
@@ -286,6 +326,13 @@ def build_harness(config: dict | str | Path | None = None, *, approver: Approver
         raise ValueError(f"unknown harness configuration keys: {', '.join(sorted(unknown))} "
                          f"(known: {', '.join(sorted(CONFIG_KEYS))})")
     env = {"DAWNR_HARNESS_DIR": str(base), "PYTHON": sys.executable}
+    if memory is False:
+        config.pop("memory", None)
+    elif isinstance(memory, dict):
+        config["memory"] = {**(config.get("memory") if isinstance(config.get("memory"), dict) else {}), **memory}
+    memory_hooks = None
+    if config.get("memory") not in (None, False):
+        from dawnr_memory import harness_hooks as memory_hooks     # registers memory_recall and memory_extract
 
     def resolve(p: str) -> Path:
         q = Path(_expand(p, env))
@@ -298,6 +345,8 @@ def build_harness(config: dict | str | Path | None = None, *, approver: Approver
     registry = Registry([checker.t_tool_entry()])
     harness = Harness(registry, policy, hooks, approver=approver,
                       audit_path=resolve(config["audit"]) if config.get("audit") else None)
+    if memory_hooks is not None:
+        memory_hooks.install(harness, config["memory"], base)
 
     if config.get("skills"):
         from .skills import discover, script_tool, skill_tool

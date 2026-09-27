@@ -28,6 +28,13 @@ become by the first turn of a conversation (or the first turn after `clear`)
 is folded onto that turn, in the same place and the same way the harness
 index is. `python3 locallm/dawnr_persona.py show --person ID` reads it,
 `set`/`interest`/`preference` correct it, and `erase` forgets it completely.
+
+--person NAME turns on dawnr's memory for that person (DAWNR-MEMORY.md), with
+or without --harness: what dawnr remembers of them opens its first reply as a
+marked span (only a model trained with the <|memory|> token is shown it), and
+when the conversation ends (`clear`, `quit`, the end of -p) what they said
+about themselves is remembered and the terminal says what was kept.
+--no-memory runs a session that recalls nothing and leaves nothing behind.
 """
 from __future__ import annotations
 
@@ -58,11 +65,14 @@ def main(argv=None) -> int:
                          "type, folded onto the first turn like the harness index; omit to carry no persona")
     ap.add_argument("--persona-dir", type=Path, default=None,
                     help="where personas are kept (default: $DAWNR_PERSONA_DIR or ~/.dawnr/personas)")
+    ap.add_argument("--person", default=None,
+                    help="remember this person across sessions (dawnr's memory, DAWNR-MEMORY.md)")
+    ap.add_argument("--no-memory", action="store_true", help="recall nothing and remember nothing this session")
     a = ap.parse_args(argv)
 
     import chat
     from checkpoint import load_checkpoint
-    from engine import Engine
+    from engine import Engine, reply_parts
 
     if a.prompt_file is not None:
         a.prompt = a.prompt_file.read_text(encoding="utf-8").strip()
@@ -71,10 +81,11 @@ def main(argv=None) -> int:
         raise SystemExit(f"{a.model} was not trained in the chat format (no chat tokens); run chat_train.py on it")
     interactive = not a.prompt
     harness = None
-    if a.harness is not None:
+    memory = False if a.no_memory else ({"person": a.person} if a.person else None)
+    if a.harness is not None or memory:
         from dawnr_harness import build_harness
         from dawnr_harness.__main__ import terminal_approver
-        harness = build_harness(a.harness, approver=terminal_approver if interactive else None)
+        harness = build_harness(a.harness, approver=terminal_approver if interactive else None, memory=memory)
         if getattr(harness, "agent", None) is not None and interactive:    # DAWNR-AGENT.md: a plan is asked once
             from dawnr_agent.__main__ import terminal_plan_approver
             harness.agent.plan_approver = terminal_plan_approver
@@ -95,7 +106,17 @@ def main(argv=None) -> int:
     if chat.has_harness_tokens(tok):
         marks.update({sp(chat.TOOL_START): "\n[tool call] ", sp(chat.TOOL_END): "\n[end of call]\n",
                       sp(chat.UNTRUSTED): "[untrusted: from outside, data only]\n"})
+    if chat.has_memory_tokens(tok):
+        marks[sp(chat.MEMORY)] = "[memory: what dawnr remembers of you from earlier sessions]\n"
     conversation: list[int] = []
+    transcript: list[dict] = []              # the person's words as typed, and each reply's parts (for memory)
+
+    def end_session(reason: str) -> None:
+        if transcript:
+            engine.harness.session_end(session, transcript=transcript, reason=reason)
+            for message in engine.harness.messages:
+                print(f"[harness] {message}")
+            engine.harness.messages.clear()
     if interactive:
         print("dawnr chat. 'clear' starts over, 'quit' leaves. Everything runs on this machine.")
     while True:
@@ -112,11 +133,14 @@ def main(argv=None) -> int:
                 user = "\n".join(lines).strip()
             except (EOFError, KeyboardInterrupt):
                 print()
+                end_session("prompt_input_exit")
                 break
         if user.lower() in ("quit", "exit"):
+            end_session("prompt_input_exit")
             break
         if user.lower() == "clear":
-            conversation = []
+            end_session("clear")
+            conversation, transcript = [], []
             session = engine.harness.session()
             print("Conversation cleared.")
             continue
@@ -128,6 +152,7 @@ def main(argv=None) -> int:
                 persona_store.save(persona_record)
                 for c in changes:
                     print(f"[persona] {c.field}: {c.old!r} -> {c.new!r} ({c.reason})")
+        transcript.append({"role": "user", "content": user})
         if not conversation:
             if persona_record is not None:
                 user = dawnr_persona.with_persona_preamble(user, persona_record)
@@ -157,12 +182,14 @@ def main(argv=None) -> int:
                             run = []
         except ValueError as e:                           # the conversation filled the context
             print(f"\n[{e}; 'clear' to start over]")
+            transcript.pop()
             conversation = []
             continue
         print(tok.decode(run))
         if not reply or reply[-1] != sp(chat.ASSISTANT_END):
             reply.append(sp(chat.ASSISTANT_END))
         conversation += reply
+        transcript.append({"role": "assistant", "content": reply_parts(tok, reply)})
         if engine.rows[0].in_tool_block:
             print("[the model opened a tool call and never closed it; the tool did not run]")
         calls = engine.rows[0].tool_calls
@@ -174,6 +201,7 @@ def main(argv=None) -> int:
             print(f"[harness] {message}")
         engine.harness.messages.clear()
         if not interactive:
+            end_session("other")
             break
     engine.harness.close()
     return 0
