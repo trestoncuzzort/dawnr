@@ -5,7 +5,11 @@ locallm builds a model from nothing on this machine; t decides what it may
 learn from. Three steps, each writing files the next one reads:
 
   corpus    the clean water only: every task that reads verified / refuted in
-            all seven kernels, from
+            all seven kernels (or, with --min-kernels N < 7, in at least N of
+            them, with the gap recorded rather than hidden -- graded-trust
+            admission, AMBITION.md "t grows as dawnr does": data is admitted
+            by recorded trust, clean in seven or six with the gap named; only
+            the held-out boundary stays absolute), from
               - the SFT sets loop_dataset.py wrote (a model's answer that also
                 passes the problem's own tests; train split only), written as
                 "Problem: <English>" and "Signature: <fn>(<kinds>) -> <ret>"
@@ -234,8 +238,102 @@ def table_rows(table: Path) -> dict[str, list[str]]:
     return rows
 
 
-def clean_rows(table: Path) -> set[str]:
-    return {name for name, cells in table_rows(table).items() if all(c == CLEAN for c in cells)}
+def table_kernels(table: Path) -> list[str]:
+    """The seven kernel names, in the table's own column order, read from its
+    `| task | dafny | ... |` header. Needed to name a row's missing kernels
+    in the graded-trust sidecar (RowTrust.gaps below) -- table_rows() above
+    keeps only the cell values, not which column each one came from."""
+    for line in table.read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) == 8 and cells[0] == "task":
+            return cells[1:]
+    raise SystemExit(f"{table}: no `| task | ... |` header row")
+
+
+# A cell reads "<real outcome> / <twin outcome>" (t/run_par.py format_table),
+# optionally with a trailing " (FLAKED)" when flake_check found disagreement
+# across repeated runs -- stripped before reading the cell, so a flaked CLEAN
+# cell still fails the equality check above but is not mistaken for a kernel
+# that actively contradicts the program below.
+_FLAKED = " (FLAKED)"
+# real-VERIFIED, twin-VERIFIED cells are never printed as "verified / verified":
+# t/harness.py's decorative_kind names the failure instead ("decorative": the
+# specification cannot tell the program from its deliberately broken twin;
+# "unsound": the twin's own measured witness says a sound kernel must refute
+# it, and this one did not), so the twin side reads one of these two words.
+_DECORATIVE_TWIN = {"decorative", "unsound"}
+
+
+def _cell_parts(cell: str) -> tuple[str, str]:
+    text = cell[:-len(_FLAKED)] if cell.endswith(_FLAKED) else cell
+    real, _, twin = text.partition(" / ")
+    return real, twin
+
+
+def contradicts_program(cell: str) -> bool:
+    """True when this cell is not just short of evidence but actively against
+    the program, and so must exclude its row at *every* --min-kernels, not
+    only reduce the clean-kernel count:
+
+    - the real side reads `refuted`: this kernel found a concrete witness
+      where the program itself violates its own specification, not its twin;
+    - the cell is a decorative twin (`verified / decorative` or `verified /
+      unsound`): the kernel accepted the real program but could not tell it
+      apart from the version deliberately built to be wrong, so its
+      "verified" is not evidence the program is right.
+
+    Every other non-clean cell -- `timeout`, `abstain` (a lowering that
+    raised NotImplementedError, t/run_par.py), `unproved`, a malformed
+    lowering, `no-twin`, a lowering that raised, one over the size cap, or a
+    real VERIFIED whose twin merely timed out/is unproved/malformed -- is
+    withheld evidence, not contrary evidence: the kernel did not get to a
+    verdict, or got to one that says nothing about whether the twin was
+    distinguished. Those only lower the clean-kernel count computed below."""
+    real, twin = _cell_parts(cell)
+    return real == "refuted" or (real == "verified" and twin in _DECORATIVE_TWIN)
+
+
+class RowTrust:
+    """One task row's graded-trust record: how many of its seven kernel cells
+    read CLEAN, whether that clears --min-kernels with no cell contradicting
+    the program (admitted), and the cells that are not CLEAN, by kernel name,
+    for the sidecar (name -> cell text; empty when clean in all seven)."""
+    __slots__ = ("admitted", "clean", "gaps")
+
+    def __init__(self, admitted: bool, clean: int, gaps: dict[str, str]):
+        self.admitted = admitted
+        self.clean = clean
+        self.gaps = gaps
+
+
+def graded_rows(table: Path, min_kernels: int = 7) -> dict[str, RowTrust]:
+    """Every task row of `table`, graded for admission at `min_kernels`.
+
+    Admitted iff at least `min_kernels` of the seven cells read CLEAN
+    (`verified / refuted`) AND no cell contradicts the program
+    (contradicts_program) -- a row 6 of 7 clean with the seventh a timeout is
+    admitted at --min-kernels 6; a row 6 of 7 clean with the seventh a
+    decorative twin or a refutation is admitted at no --min-kernels, because
+    that cell does not just fall short of evidence, it stands against the
+    program. --min-kernels 7 (the default) reproduces the original
+    all-or-nothing clean_rows exactly: with only seven cells, requiring 7
+    clean already forces every cell to be CLEAN, so no row can be vetoed."""
+    kernels = table_kernels(table)
+    graded = {}
+    for name, cells in table_rows(table).items():
+        clean = sum(1 for c in cells if c == CLEAN)
+        vetoed = any(contradicts_program(c) for c in cells)
+        gaps = {k: c for k, c in zip(kernels, cells) if c != CLEAN}
+        graded[name] = RowTrust(admitted=(not vetoed and clean >= min_kernels), clean=clean, gaps=gaps)
+    return graded
+
+
+def clean_rows(table: Path, min_kernels: int = 7) -> set[str]:
+    """The task names `graded_rows` admits at `min_kernels`. Kept under its
+    original name and default so every caller that has not been given a
+    reason to admit a gap (heads_from_sources.py, t/preflight.py) is
+    unchanged."""
+    return {name for name, g in graded_rows(table, min_kernels).items() if g.admitted}
 
 
 def committed_task_names(directory: Path | None = None) -> list[str]:
@@ -276,6 +374,14 @@ def cmd_corpus(a) -> int:
     pool = se.pool(a.pool)
     docs, n_sft, n_spec, n_lift, n_committed = [], 0, 0, 0, 0
     spec_docs = getattr(a, "spec_docs", False)
+    min_kernels = getattr(a, "min_kernels", 7)
+    # graded-trust admission (AMBITION.md "t grows as dawnr does"): every
+    # lifted or committed document that reaches the corpus gets a trust
+    # record here, by task name -- RowTrust.clean and .gaps, straight from
+    # graded_rows() below -- written beside the corpus as <out>.trust.jsonl
+    # so training can use the gap rather than the sidecar being decorative.
+    trust: dict[str, RowTrust] = {}
+    trust_counts: list[tuple[str, int, int]] = []   # (set label, admitted, gapped)
     evil = held_out(a.split)      # ids that must not appear anywhere below
     # the dev split that picks the stopping step (t/r12-dev-ids.json) is
     # refused the same way, or the step would be chosen on trained-on problems
@@ -355,12 +461,13 @@ def cmd_corpus(a) -> int:
     lifted_counts: list[tuple[str, int]] = []
     if a.lifted:
         for directory, table in lifted_sets_of(a):
-            keep = clean_rows(table)
+            graded = graded_rows(table, min_kernels)
+            keep = {name for name, g in graded.items() if g.admitted}
             lifted = sorted(directory.glob("*.json"))
             if not lifted:
                 raise SystemExit(f"--lifted asked for the lifted tasks and {directory} holds none; a corpus "
                                  f"with 0 lifted documents is not the corpus this flag names")
-            before = n_lift
+            before, gapped = n_lift, 0
             for f in lifted:
                 task = json.loads(f.read_text(encoding="utf-8"))
                 if task.get("name") in keep:
@@ -371,9 +478,13 @@ def cmd_corpus(a) -> int:
                     if gate.admit(doc, [task.get("name")]):
                         docs.append(doc)
                         n_lift += 1
+                        trust[task["name"]] = graded[task["name"]]
+                        if graded[task["name"]].clean < 7:
+                            gapped += 1
                         if row is not None:
                             headed[task["name"]] = row["source"]
             lifted_counts.append((f"{directory.name} ({table.name})", n_lift - before))
+            trust_counts.append((f"{directory.name} ({table.name})", n_lift - before, gapped))
         rows, missing = agreement_gap(AGREEMENT, COMMITTED_DIR)
         if missing:
             raise SystemExit(f"{AGREEMENT.name} has rows for {len(rows)} task(s) and {COMMITTED_DIR.name}/ holds "
@@ -381,7 +492,9 @@ def cmd_corpus(a) -> int:
                              + (" ..." if len(missing) > 5 else "")
                              + ". Regrade the committed tasks (bash t/grade_lab.sh matrix) and copy "
                              "t/out/AGREEMENT-lab.md over the table before building a corpus from it")
-        keep = clean_rows(AGREEMENT)
+        graded = graded_rows(AGREEMENT, min_kernels)
+        keep = {name for name, g in graded.items() if g.admitted}
+        gapped = 0
         for f in sorted(COMMITTED_DIR.glob("*.t")):
             task = surface.parse_file(str(f))
             if task.get("name") in keep:
@@ -392,8 +505,13 @@ def cmd_corpus(a) -> int:
                 if gate.admit(doc, [task.get("name")]):
                     docs.append(doc)
                     n_committed += 1
+                    trust[task["name"]] = graded[task["name"]]
+                    if graded[task["name"]].clean < 7:
+                        gapped += 1
                     if row is not None:
                         headed[task["name"]] = row["source"]
+        if n_committed:
+            trust_counts.append((f"{COMMITTED_DIR.name} ({AGREEMENT.name})", n_committed, gapped))
     if heads:
         # A head that reaches no document is an input the corpus does not
         # equal: the name is not a clean row, or the gates refused it (a
@@ -427,6 +545,24 @@ def cmd_corpus(a) -> int:
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(corpus_text + "\n", encoding="utf-8")
+    # The trust sidecar: never inside the training document (a model must not
+    # learn to emit a kernel name and a cell value as part of an answer), one
+    # line per admitted lifted/committed document that is actually IN the
+    # corpus (the dedupe above may have folded a repeat away). Written next to
+    # the corpus so a reader who has the corpus also has its evidence.
+    kept_names = {n for d in docs for n in loop_filter.task_names(d)} if trust else set()
+    trust_path = out.with_name(out.name + ".trust.jsonl")
+    if trust:
+        lines = []
+        for name in sorted(trust):
+            if name not in kept_names:
+                continue
+            g = trust[name]
+            lines.append(json.dumps({"document": name, "clean_kernels": g.clean, "missing": g.gaps},
+                                    sort_keys=True))
+        trust_path.write_text("".join(line + "\n" for line in lines), encoding="utf-8")
+    elif trust_path.exists():
+        trust_path.unlink()
     print(f"corpus {out}: {len(docs)} documents (base {a.base or 'none'}, {n_sft} problem answers, "
           f"{n_spec} spec documents, {n_lift} lifted, {n_committed} committed), {out.stat().st_size} bytes")
     if spec_docs or spec_in_corpus:
@@ -443,6 +579,13 @@ def cmd_corpus(a) -> int:
           + (f": {', '.join(gate.decontaminated)}" if gate.decontaminated else ""))
     if len(lifted_counts) > 1:
         print("lifted, per set: " + ", ".join(f"{n} from {label}" for label, n in lifted_counts))
+    if trust:
+        n_gapped = sum(1 for g in trust.values() if g.clean < 7)
+        print(f"graded-trust ({trust_path.name}): {len(trust)} document(s) recorded, {n_gapped} admitted "
+              f"with a gap (< 7 clean kernels, --min-kernels {min_kernels})")
+        if len(trust_counts) > 1:
+            print("graded-trust, per set: " + ", ".join(
+                f"{n} ({g} gapped) from {label}" for label, n, g in trust_counts))
     if heads:
         by_source = sorted(collections.Counter(headed.values()).items())
         print(f"heads: {len(headed)} document(s) prefixed from {', '.join(map(str, heads_paths))} ("
@@ -738,6 +881,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lifted-set", action="append", default=[], metavar="DIR=TABLE",
                    help="with --lifted, another lifted-tasks directory and the run_par table that graded it "
                         "(its clean-in-all-seven rows are kept); repeat for each lift")
+    p.add_argument("--min-kernels", dest="min_kernels", type=int, default=7,
+                   help="admit a lifted or committed row clean in at least this many of the seven kernels, "
+                        "provided none of the rest contradicts the program (loop_locallm.contradicts_program); "
+                        "the gap is recorded in <out>.trust.jsonl, never in the training document. Default 7 "
+                        "(clean in all seven, the original all-or-nothing gate; nothing admits with a gap unless "
+                        "this is lowered)")
     p = sub.add_parser("train")
     p.add_argument("--corpus", default=str(OUT / "corpus.txt"))
     p.add_argument("--model", default=str(OUT / "model"))
