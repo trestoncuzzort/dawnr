@@ -211,6 +211,34 @@ def test_an_assert_is_a_proof_step_where_it_can_be_stated() -> None:
     assert "unknown-stmt" in _keys(bad)
 
 
+def test_framac_ghost_body_keeps_its_annotations_inside_the_ghost_block() -> None:
+    # a guard with a definedness obligation (`mod`) inside a lemma body:
+    # its assert must be ghost-code `/@ .. @/`, since a `*/` would close
+    # the ghost block (vericoding_DA0484 read malformed)
+    t = copy.deepcopy(_pr("false_assert"))
+    t["lemmas"][0]["body"] = [{"if": {
+        "cond": {"op": "==", "args": [{"op": "mod", "args": [{"var": "k"}, {"int": 7}]},
+                                      {"int": 0}]},
+        "then": [{"assert": {"op": ">=", "args": [{"var": "k"}, {"int": 0}]}}],
+        "else": []}}]
+    src = _lower("lower_framac", t)
+    ghost = src[src.index("/*@ ghost\n"):]
+    ghost = ghost[:ghost.index("\n*/\n")]
+    assert "*/" not in ghost and "/@ assert" in ghost, ghost
+
+
+def test_a_parameterless_lemma_is_called_with_unit_in_fstar() -> None:
+    t = copy.deepcopy(_fx("sq_bound"))
+    t["lemmas"].insert(0, {"name": "two", "params": [], "requires": [],
+                           "ensures": [{"op": "==", "args": [
+                               {"op": "+", "args": [{"int": 1}, {"int": 1}]}, {"int": 2}]}],
+                           "body": []})
+    t["lemmas"][1]["body"] = [{"lemma": {"name": "two", "args": []}}]
+    assert check_wf.check_wf(t) == []
+    src = _lower("lower_fstar", t)
+    assert "= two ()" in src and "SMTPat" not in src.split("let two")[1].split("let ")[0]
+
+
 def test_no_kernel_axiomatizes_a_lemma() -> None:
     banned = {"lower_dafny": [r"\{:axiom\}", r"\bassume\b"],
               "lower_verus": [r"admit\(", r"assume\("],

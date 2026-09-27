@@ -3579,7 +3579,7 @@ def _lemma_body_src(cx: "Ctx", body: list, local: dict, ptys: dict) -> str:
         if "lemma" in s:
             c = s["lemma"]
             args = " ".join(_render(cx, a, t, {}, local)
-                            for a, t in zip(c["args"], ptys[c["name"]]))
+                            for a, t in zip(c["args"], ptys[c["name"]])) or "()"
             parts.append(f"{c['name']} {args}")
         elif "assert" in s:
             parts.append(f"assert ({cx.prop(s['assert'], {}, local)})")
