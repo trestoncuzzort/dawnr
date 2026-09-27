@@ -249,13 +249,14 @@ V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
 STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
              "isupper", "islower", "startswith", "endswith"}
+SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite sets" (2026-09-27)
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
-         | {"pair", "fst", "snd"} | STRLIB_OPS)
+         | {"pair", "fst", "snd"} | STRLIB_OPS | SET_OPS)
 TERNARY = {"update", "slice", "replace"}
-VARIADIC = {"seq"}      # the literal: any arity, zero included
+VARIADIC = {"seq", "set"}      # the two literals: any arity, zero included
 UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
          "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
-         "islower"}
+         "islower", "card"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
@@ -277,7 +278,9 @@ def _valid_type(t) -> bool:
     unknown string, a malformed dict, a pair whose own component is itself
     a dict) is refused here rather than left for a KeyError or a silent
     pass three checks later."""
-    if t in BASE_TYPES:
+    if t in BASE_TYPES or t == "set":
+        # "set": SPEC.md "Finite sets" (2026-09-27), a finite set of ints;
+        # deliberately NOT in BASE_TYPES, so a pair may not hold one.
         return True
     if isinstance(t, dict) and set(t) == {"pair"}:
         return (isinstance(t["pair"], list) and len(t["pair"]) == 2
@@ -434,6 +437,24 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
             return NESTED
         _e(errs, e, "fill wants (int, int) or (int, seq) for the row", "fill-types")
         return "seq"
+    if op == "set":
+        # SPEC.md "Finite sets" (2026-09-27): {e1, ..., en} of ints, {}
+        # included; unlike `seq` there is one set type, so no `expect` hint.
+        if any(t != "int" for t in ts):
+            _e(errs, e, "set display elements must be int", "set-lit-types")
+        return "set"
+    if op == "in":
+        if ts[0] != "int" or ts[1] != "set":
+            _e(errs, e, "in wants (int, set)", "set-types")
+        return "bool"
+    if op == "card":
+        if ts[0] != "set":
+            _e(errs, e, "card of a non-set", "set-types")
+        return "int"
+    if op in ("union", "inter", "diff"):
+        if ts[0] != "set" or ts[1] != "set":
+            _e(errs, e, f"{op} wants (set, set)", "set-types")
+        return "set"
     if op == "pair":
         # SPEC.md "Pairs" (2026-09-10): (e1, e2), typed from its operands;
         # T1, T2 must each be int, bool or seq. There is no way to spell a
@@ -536,7 +557,7 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
                        ts[1] == NESTED and _empty_lit(args[0], ts[0])
             if not (zero or one):
                 _e(errs, e, f"{op} wants two ints, two bools, two seqs, "
-                       f"two nested seqs, or two pairs of the same type", "eq-types")
+                       f"two nested seqs, two sets, or two pairs of the same type", "eq-types")
         return "bool"
     if any(t != "bool" for t in ts):
         _e(errs, e, f"{op} over non-bool", "bool-op")
