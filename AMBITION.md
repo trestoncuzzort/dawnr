@@ -221,7 +221,10 @@ network) teach the mid stage to pick the right tool on 97% of held-out items
 and to close its calls, but cost 2.3 of 133 prompts on the t tasks, past the
 registered guard of 2, and the injection measurement found nothing to reduce: a
 model this size follows no instruction inside a page, taught to or not, and
-only copies a program it finds there (`DAWNR-HARNESS.md` section 8).
+only copies a program it finds there. Given the same instructions by the
+person, it follows them barely more (0.02 to 0.04, again only by copying a
+program), so at this size the number measures what the model cannot do, not
+what it declines to do (`DAWNR-HARNESS.md` section 8).
 
 The rule that keeps this compatible with the north star: **the network is a
 tool, never a dependency.** dawnr works fully offline; when a network, MCP
