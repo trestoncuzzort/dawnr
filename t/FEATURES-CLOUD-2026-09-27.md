@@ -104,7 +104,14 @@ unavailable). The lifter and lowering suites (`test_lift_rules.py`,
 `test_lift_check.py`, `test_lift_lemmas.py`, `test_lower_rocq.py`,
 `test_names.py`, `test_methods.py`): 217 passed, 11 skipped, and the same
 two failures as before any change (`test_seed_acceptance`, `test_infragment`,
-both needing a corpus directory this machine does not have).
+both needing a corpus directory this machine does not have). The whole
+suite (`pytest t --ignore=t/test_lab_gui.py`, which needs tkinter), run
+before any change and again after the last one: 1396 passed, 51 failed,
+28 skipped after; the 51 are a subset of the 52 that failed before (every
+one needs a corpus directory, a lab machine, a training run or a split
+this machine does not have), no test newly fails, and the one that
+stopped failing (`test_cli`'s abstain case) did so because a kernel it
+runs was installed in between.
 
 Seeded-fault tests per kernel, for the one kernel change: the five
 `t/lemmas_probe/` programs (a false inductive lemma, a false nonlinear fact,
