@@ -417,7 +417,7 @@ class CLITests(unittest.TestCase):
     def test_show_on_a_new_person_exits_zero(self):
         self.assertEqual(self.run_cli("show", "--person", "alice"), 0)
 
-    def test_set_then_show_reflects_the_change(self, capsys=None):
+    def test_set_then_show_reflects_the_change(self):
         self.assertEqual(self.run_cli("set", "--person", "alice", "--detail", "brief"), 0)
         store = persona.JSONFilePersonaStore(self._tmp.name)
         self.assertEqual(store.get("alice").detail_level, "brief")
