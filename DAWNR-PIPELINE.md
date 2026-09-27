@@ -300,3 +300,49 @@ the tool loop first.
    repairs it (from the twins and the recorded failing answers); RL through
    the engine, so the reward sees answers that used the tool; the Tk chat
    pane with the torch-free generator.
+
+## What has been ported (2026-09-26)
+
+Items 1 to 6 of the list above, tested by `locallm/test_dawnr_chat.py` (19
+tests, CPU, under a second) and run end to end on the desktop GPU inside
+`systemd-run --user --scope -p MemoryMax=8G`:
+
+    python locallm/dawnr_pipeline.py --corpus <proved corpus> --out <dir> --core <core dir> \
+        --mid-steps 400 --mid-lr 1e-4 --dev 100
+
+On the 358-document proved corpus from the r12 weight-decay core (92.9M
+parameters, 8 chat tokens added), the whole run took under three minutes;
+a second invocation skipped every stage, and a changed module reran only the
+stages that read it. The numbers, from that run's `report.md` (tiny smoke
+numbers, not a result):
+
+- conversations: 358 (325 train, 33 validation by the hash split); 77 with a
+  Problem head, 281 from the specification; 345 with Example lines computed
+  by running the proved program; 189 with a tool call, whose 354 recorded
+  example verdicts all pass.
+- mid: loss on the assistant's tokens 2.23 -> 0.015 on training
+  conversations and 2.30 -> 0.28 on validation ones in 400 steps: it
+  memorises, as every fine-tune on this corpus has.
+- validation conversations (documents no stage trained on), greedy with the
+  tool live: 29 of 33 parse, 24 are well formed, 15 pass every example, 7
+  are the proved program exactly; the model called the tool on 7 and opened a
+  call without closing it on 7 more.
+- 100 dev problems (MBPP, English prompts, named by no training document):
+  29 well formed, 0 pass their tests (the r12 measurement was 0.6% solvable).
+  4 used the tool; one tool answer read "example 1: fail: got 55, expected 17",
+  a wrong program caught by its own examples. 31 opened a call and ended the
+  answer inside it: the model learned when to open the call better than when
+  to close it.
+
+What was deliberately not taken: Muon, the depth dial and FP8 (pretraining
+studies of their own, not pipeline); packing (the corpus is small enough to
+pad); nanochat's RL loop (`t/rl_grpo.py` is already stricter and measured);
+the web server (the Tk app is dawnr's window); ChatCORE's task set (MMLU,
+ARC, GSM8K have no t form).
+
+**The next stage to port:** repair conversations and RL through the engine.
+The tool now reports failures the model cannot act on: build conversations
+where the tool's verdict on a real failing draft (the recorded failing
+answers, the twins) is followed by the proved program, then point
+`t/rl_grpo.py`'s sampler at `engine.py` so the reward sees answers that used
+the tool.
