@@ -1613,7 +1613,7 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
     # spec_fun whose declared result disagreed with its (bool) body,
     # caught by fuzz_lower.check_wf as "body type != result" (nitwit's
     # valid_base/nitness/is_max_nit, all predicates).
-    # Row 45 (2026-09-27, SPEC.md "Seq-valued spec_funs (v1)"): a function
+    # Row 49 (2026-09-27, SPEC.md "Seq-valued spec_funs (v1)"): a function
     # returning `string`/`seq<char>`/`seq<int>`/`seq<nat>` (classify's
     # `_is_seq_fun_result`, the only seq shapes that reach here) is a
     # spec_fun with a `"seq"` result, the string spellings as code points
@@ -1663,7 +1663,7 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
     body_e = _lift_expr(d.body, scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer)
     if guard_parts:
         # Decision 6's totalising default per result type: any constant
-        # agrees on the domain; the empty seq is the seq result's (row 45).
+        # agrees on the domain; the empty seq is the seq result's (row 49).
         default = ({"bool": False} if result == "bool"
                    else {"op": "seq", "args": []} if result == "seq"
                    else {"int": 0})

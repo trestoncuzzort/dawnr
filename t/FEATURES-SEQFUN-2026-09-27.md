@@ -16,7 +16,7 @@ this record reuses rather than recomputes (both were re-checked against
 the code they measure): the baseline lift of the 1,886 staged files on
 `r12-blockers` (`base/`, 934 s wall) and the same lift on the branch's
 first lifter (`new/`, 931 s wall), whose lifter code is unchanged here
-except for decision 46 below, measured by its own run (`new2/`). Its
+except for decision 50 below, measured by its own run (`new2/`). Its
 byte-identity baseline (`hashes_base.json`, 546 entries) agrees entry for
 entry with the one recomputed here from a clean export of `r12-blockers`
 (`hashes_base2.json`).
@@ -70,7 +70,7 @@ open design; until it is built and measured, the column abstains rather
 than emit an obligation WP cannot state (SPEC.md's rule for a kernel that
 cannot state a construct).
 
-**The lifter** (LIFTER-DECISIONS rows 45 and 46). Row 45: a closure
+**The lifter** (LIFTER-DECISIONS rows 49 and 50). Row 49: a closure
 function returning `string`, `seq<char>`, `seq<int>` or `seq<nat>` lifts to
 a spec_fun with a `"seq"` result (`_is_seq_fun_result` in
 t/lift_classify.py; `_lift_function` in t/lift_rewrite.py emits the result
@@ -79,7 +79,7 @@ exactly as a string parameter is (row 28), decision 6's totalising default
 the empty seq, a `seq<nat>` result's element fact dropped and counted
 (`nat-result-fact-dropped`). The check stage's `L_fun_F` lemma relates the
 source function to the lifted spec_fun as before, a string result viewed
-as its code points (`_src_result_text`, unchanged). Row 46, forced by the
+as its code points (`_src_result_text`, unchanged). Row 50, forced by the
 measurement below: a `function F(..): bool` (a predicate spelled as a
 function, Dafny Reference Manual 6.4.2) is admitted beside int/nat/char;
 the rewrite already typed it bool, and the 2026-09-27 check that first
@@ -337,9 +337,9 @@ the reproduce section).
 | refused later by another name (of the 305) | 62 | new2/ |
 | lifted in total, before / after | 850 / 955 | base/, new2/ |
 | lifted before and not after | 0 | base/, new2/ |
-| of the 104: by row 45 (a seq-valued helper) / row 46 (a bool function only) | 72 / 32 | checked/ (the record's rewrites) |
+| of the 104: by row 49 (a seq-valued helper) / row 50 (a bool function only) | 72 / 32 | checked/ (the record's rewrites) |
 | checked (of the 104, check stage, dafny, 120 s, 409 s wall for the 101 files) | 55 (35 with a seq-valued spec_fun, 20 bool-only) | checked/ |
-| check-stage refusals by name | 47 `lift-check-failed` (35 of row 45, 12 of row 46), 2 `check-wf-failed` (row 45: a `multiset` call, an unbound local) | checked/ |
+| check-stage refusals by name | 47 `lift-check-failed` (35 of row 49, 12 of row 50), 2 `check-wf-failed` (row 49: a `multiset` call, an unbound local) | checked/ |
 | graded in seven kernels (the 55 checked tasks; `COVERAGE-seqfun.md`, 2026-09-27 19:34Z, 1,326 kernel runs) | 55 | grade/ |
 | clean in seven (verified / refuted in every column) | 0 | grade/ |
 | clean in six (framac the one column short, its named abstain) | 2 (`vericoding_da0230__solve`, a seq-valued helper; `vericoding_da0558__solve`, a bool function) | grade/ |
