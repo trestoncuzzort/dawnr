@@ -159,7 +159,7 @@ def _is_char(t: Optional[Type]) -> bool:
 
 
 def _is_seq_fun_result(t: Optional[Type]) -> bool:
-    """Row 45 (2026-09-27, SPEC.md "Seq-valued spec_funs (v1)"): the
+    """Row 49 (2026-09-27, SPEC.md "Seq-valued spec_funs (v1)"): the
     Dafny function result types that lift to a spec_fun's `"seq"` result:
     `string`, `seq<char>` (row 28's code points), `seq<int>`, `seq<nat>`.
     One level only: a nested seq result is not in v1."""
@@ -2763,7 +2763,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
             # 2026-09-27 (t/FEATURES-TRACK.md, strings): a t spec_fun's result
             # is int, bool or seq (SPEC.md gate 3, `"result": "int"|"bool"|
             # "seq"`, the seq result since "Seq-valued spec_funs (v1)",
-            # 2026-09-27, LIFTER-DECISIONS row 45). A closure function
+            # 2026-09-27, LIFTER-DECISIONS row 49). A closure function
             # returning `string`, `seq<char>`, `seq<int>` or `seq<nat>` lifts
             # to a seq-valued spec_fun (row 28's code points for the string
             # spellings, exactly as a string parameter does); a `char` result

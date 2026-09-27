@@ -1119,7 +1119,7 @@ buffer `(int *s, integer s_n)` and a spec_fun as an ACSL logic function
 over that buffer, and a logic function cannot return a buffer; the
 `\list<integer>` route (ACSL's own logic lists, with a bridge predicate
 between a buffer and a list at every `==`/`len`/`at` site) is the open
-design, not built. The lifter's mapping is LIFTER-DECISIONS.md row 45.
+design, not built. The lifter's mapping is LIFTER-DECISIONS.md row 49.
 
 ## The twins
 
