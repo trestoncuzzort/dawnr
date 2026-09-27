@@ -1,6 +1,6 @@
 # Traps before the next locallm run: audit of 2026-09-21
 
-Read-only audit of `/home/t/tup` (code as of 02f6d350; 3f57ec8b changed docs only) and of the lab at 3bd13d2b. Three things are wrong right now:
+Read-only audit of the repository (code as of 02f6d350; 3f57ec8b changed docs only) and of the lab at 3bd13d2b. Three things are wrong right now:
 
 - **Held-out leak.** `corpus-r7-headed.txt` (the headline arm) and `corpus-r8-headed.txt` (r9, all r11 seeds and the soups) contain `dafny_synthesis_task_id_269__…` and `…_626__…`. Those are held-out MBPP problems 269 and 626. Neither `loop_locallm.mbpp_id()` nor preflight's `mbpp_(\d+)` catches that name, even though `loop_dataset.py:91` maps it to MBPP N. No published clean answer came from the leak.
 - **Lab.** 27 z3 processes with PPID 1 are still running after their grader exited. `t/lab_status.py` (PID 2699319) has been stopped for 22.5 h. `~/.local/share/cpu-yield/frozen.pids` (written 09-20 19:43) lists it and the qwen235-train grader, so the "unknown" SIGSTOP came from the cpu-yield watcher, which exited without resuming them. 48 generation workers ran during that grading (load 78-112).

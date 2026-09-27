@@ -1,7 +1,7 @@
 # Which of the pulled skills are worth carrying into this project
 
-Written 2026-09-19 against `/home/t/lab-pull/claude/skills` (145 skills) and
-`/home/t/lab-pull/claude/agents` (33 agents), read alongside `README.md`, `ROADMAP.md` and
+Written 2026-09-19 against `~/lab-pull/claude/skills` (145 skills) and
+`~/lab-pull/claude/agents` (33 agents), read alongside `README.md`, `ROADMAP.md` and
 `internal/HANDOFF-2026-09-19.md`.
 
 **The number first: 10 of the 145 skills earn a place here, and 0 of the 33 agents.** The 33 agents are

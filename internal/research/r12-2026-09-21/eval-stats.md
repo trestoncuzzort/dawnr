@@ -4,7 +4,7 @@ Every recommendation cites a source fetched and read this session (receipts at t
 
 ## What sets the design
 - **The unit is the training run.** McNemar compares two fixed models; Card et al. leave "comparing one training algorithm vs. another" uncovered. Sellam's target is θ = E_seed[L(S)].
-- **r9 vs r10 was not a 1% change.** `/home/t/tup/locallm/data.py` `group_split` fills the holdout from a seeded shuffle of document *order*; its docstring's "by hash" does not match the code. So one seed on corpora of different length draws unrelated holdouts. Simulated, about 53 of ~270 training documents differ, which is closer to a seed draw than an ablation.
+- **r9 vs r10 was not a 1% change.** `locallm/data.py` `group_split` fills the holdout from a seeded shuffle of document *order*; its docstring's "by hash" does not match the code. So one seed on corpora of different length draws unrelated holdouts. Simulated, about 53 of ~270 training documents differ, which is closer to a seed draw than an ablation.
 - **Single runs cannot decide.** Two runs of one recipe differ by 3 or more with probability 0.15-0.31. Single-run McNemar mid-p detects a true +3 only 25-35% of the time. One run against 10 seeds has a smallest possible p of 1/11; a soup against its 5 ingredients has 1/6.
 
 ## 1. Seeds per arm (80% power, one-sided α=.05)
@@ -50,7 +50,7 @@ Miller's minimum detectable effect (MDE) is δ = (z_{α/2}+z_β)√((ω²+σ_A²
 5. **Reruns.** A same-seed GPU rerun is a numerical-noise row (Bouthillier), not a seed.
 
 ## Script design (repository untouched)
-- **`/home/t/tup/t/score_heldout.py --per-problem OUT.json`** emits {tag: {problem_id: {clean, novel, spec}}} from its per-`tid` loop.
+- **`t/score_heldout.py --per-problem OUT.json`** emits {tag: {problem_id: {clean, novel, spec}}} from its per-`tid` loop.
 - **`t/compare_arms.py`**, standard library only:
   - Invocation: `--arm A=tags --arm B=tags [--paired] --prereg PATH`.
   - It refuses to run if the seed counts differ from the registration.
