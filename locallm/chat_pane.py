@@ -52,6 +52,7 @@ import tkinter as tk
 from tkinter import ttk
 
 import chat
+import dawnr_persona
 import look
 from look import MONO, SANS
 
@@ -392,6 +393,12 @@ class ChatPane:
         self.on_status = on_status
         self.model = None
         self.tokenizer = None
+        # One persona, this desktop's own operator (DAWNR-HARNESS.md's index
+        # is per-session, not per-person; a future login/profile picker would
+        # set person_id from whoever is at the keyboard, not from the OS
+        # account, and nothing here would otherwise change).
+        self.persona_store = dawnr_persona.JSONFilePersonaStore()
+        self.person_id = dawnr_persona.DEFAULT_PERSON
         self.bundle: EngineBundle | None = None
         self._ready = False
         self.messages: list[dict] = []
@@ -447,6 +454,8 @@ class ChatPane:
         self.b_stop.set_enabled(False)
         _Button(row, C, "Settings…", self.open_settings).grid(
             row=0, column=3, padx=(look.SPACE.item, 0))
+        _Button(row, C, "Persona…", self.open_persona).grid(
+            row=0, column=4, padx=(look.SPACE.item, 0))
 
     # ------------------------------------------------------------ status
     def refresh(self) -> look.Say:
@@ -499,7 +508,15 @@ class ChatPane:
                 self.on_status(say_needs_modules(f"{type(e).__name__}: {e}"))
                 return
         self.entry.delete(0, "end")
-        self.messages.append({"role": "user", "content": text})
+        persona = self.persona_store.get(self.person_id)
+        if dawnr_persona.observe(persona, text):
+            self.persona_store.save(persona)
+        # The preamble is folded onto the model's copy of the first turn
+        # only (DAWNR-HARNESS.md's index does the same), never onto what is
+        # shown in the transcript: `text` is what the person typed and reads
+        # back, `model_text` is what the model sees.
+        model_text = dawnr_persona.with_persona_preamble(text, persona) if not self.messages else text
+        self.messages.append({"role": "user", "content": model_text})
         self._insert(f"You: {text}\n", ("role-user",))
         self._insert("dawnr: ", ("role-assistant",))
         try:
@@ -653,6 +670,87 @@ class ChatPane:
         _Button(btns, C, "Save", do_save, primary=True).grid(row=0, column=0)
         _Button(btns, C, "Cancel", win.destroy).grid(row=0, column=1,
                                                      padx=(look.SPACE.inner, 0))
+        win.grab_set()
+
+    # ------------------------------------------------------------- persona
+    def open_persona(self):
+        """dawnr_persona.py's CLI is the full editor (interests, preferences,
+        history, undo, export); this is its GUI hook, kept to what fits in
+        the same small dialog shape as `open_settings`: tone, detail,
+        explanation depth, and forgetting everything."""
+        _Button = _home()._Button
+        C = self.C
+        record = self.persona_store.get(self.person_id)
+        win = tk.Toplevel(self.transcript)
+        win.title("Chat: persona")
+        win.configure(bg=C["paper"])
+        win.transient(self.transcript.winfo_toplevel())
+        win.resizable(False, False)
+        body = tk.Frame(win, bg=C["paper"], padx=look.SPACE.card, pady=look.SPACE.card)
+        body.grid(row=0, column=0)
+
+        tone = tk.StringVar(value=record.tone)
+        detail = tk.StringVar(value=record.detail_level)
+        depth = tk.StringVar(value=record.explanation_depth)
+
+        tk.Label(body, text="Tone", bg=C["paper"], fg=C["ink"], font=SANS(BODY_SIZE),
+                anchor="w").grid(row=0, column=0, sticky="w")
+        tk.Entry(body, textvariable=tone, bg=C["paper"], fg=C["ink"], insertbackground=C["ink"],
+                relief="flat", highlightthickness=0, font=SANS(BODY_SIZE)).grid(
+            row=0, column=1, sticky="ew", padx=(look.SPACE.item, 0))
+
+        def radio_row(r: int, label: str, var: tk.StringVar, options: tuple[str, ...]):
+            tk.Label(body, text=label, bg=C["paper"], fg=C["ink"], font=SANS(BODY_SIZE),
+                    anchor="w").grid(row=r, column=0, sticky="nw", pady=(look.SPACE.item, 0))
+            opts = tk.Frame(body, bg=C["paper"])
+            opts.grid(row=r, column=1, sticky="w", padx=(look.SPACE.item, 0), pady=(look.SPACE.item, 0))
+            for i, opt in enumerate(options):
+                tk.Radiobutton(opts, text=opt, value=opt, variable=var, bg=C["paper"], fg=C["ink"],
+                              activebackground=C["paper"], activeforeground=C["ink"],
+                              selectcolor=C["card"], highlightthickness=0,
+                              font=SANS(BODY_SIZE)).grid(row=0, column=i, sticky="w")
+
+        radio_row(1, "Detail", detail, dawnr_persona.DETAIL_LEVELS)
+        radio_row(2, "Explanations", depth, dawnr_persona.DEPTH_LEVELS)
+
+        summary = (f"Interested in: {', '.join(record.interests)}." if record.interests
+                  else "No interests learned yet.")
+        if record.preferences:
+            summary += " " + "; ".join(f"{k}: {v}" for k, v in sorted(record.preferences.items())) + "."
+        summary += f" {len(record.history)} change(s) logged so far."
+        tk.Label(body, text=summary, bg=C["paper"], fg=C["muted"], font=SANS(CAPTION_SIZE),
+                wraplength=380, justify="left", anchor="w").grid(
+            row=3, column=0, columnspan=2, sticky="w", pady=(look.SPACE.item, 0))
+        tk.Label(body, text="Interests, preferences, history and undo: "
+                            "locallm/dawnr_persona.py on the command line.",
+                bg=C["paper"], fg=C["muted"], font=SANS(CAPTION_SIZE), wraplength=380,
+                justify="left", anchor="w").grid(row=4, column=0, columnspan=2, sticky="w")
+        err = tk.Label(body, text="", bg=C["paper"], fg=C["refuted"], font=SANS(CAPTION_SIZE),
+                      wraplength=380, justify="left", anchor="w")
+        err.grid(row=5, column=0, columnspan=2, sticky="w")
+
+        btns = tk.Frame(body, bg=C["paper"])
+        btns.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(look.SPACE.item, 0))
+
+        def do_save():
+            reason = "the person set this in the chat pane's persona dialog"
+            try:
+                dawnr_persona.correct(record, "tone", tone.get(), reason)
+                dawnr_persona.correct(record, "detail_level", detail.get(), reason)
+                dawnr_persona.correct(record, "explanation_depth", depth.get(), reason)
+            except dawnr_persona.PersonaError as e:
+                err.configure(text=str(e))    # refused, not crashed; the dialog stays open to fix it
+                return
+            self.persona_store.save(record)
+            win.destroy()
+
+        def do_forget():
+            self.persona_store.delete(self.person_id)
+            win.destroy()
+
+        _Button(btns, C, "Save", do_save, primary=True).grid(row=0, column=0)
+        _Button(btns, C, "Cancel", win.destroy).grid(row=0, column=1, padx=(look.SPACE.inner, 0))
+        _Button(btns, C, "Forget everything", do_forget).grid(row=0, column=2, padx=(look.SPACE.inner, 0))
         win.grab_set()
 
     # ------------------------------------------------------------- text
