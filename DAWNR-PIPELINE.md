@@ -340,9 +340,49 @@ pad); nanochat's RL loop (`t/rl_grpo.py` is already stricter and measured);
 the web server (the Tk app is dawnr's window); ChatCORE's task set (MMLU,
 ARC, GSM8K have no t form).
 
-**The next stage to port:** repair conversations and RL through the engine.
-The tool now reports failures the model cannot act on: build conversations
-where the tool's verdict on a real failing draft (the recorded failing
-answers, the twins) is followed by the proved program, then point
-`t/rl_grpo.py`'s sampler at `engine.py` so the reward sees answers that used
-the tool.
+## Repair conversations and the tool-call grammar (2026-09-26)
+
+Measured in `locallm/FINDINGS-repair-2026-09-26.md` (predictions and rules
+committed before each run; 3 registered seeds, a post-hoc re-analysis, then 6
+fresh registered seeds).
+
+- **`locallm/repair_data.py`** builds repair conversations from TRAINING
+  problems only: the training conversations go in 5 folds, a mid model is
+  trained on the other four (cross-fitting, so the drafts are the model's
+  mistakes on problems it has not seen, against SCoRe's distribution
+  mismatch, arXiv:2409.12917) and drafts its fold (1 greedy, 3 sampled);
+  each failing draft becomes `[call: draft (unsupervised)] [verdict] [call:
+  proved program] [verdict]` (SAFE's self-debugging triple,
+  arXiv:2410.15756; STaR, arXiv:2203.14465), and a passing draft that is the
+  proved program a pass conversation. From 1,300 drafts: 436 repairs, 84
+  passes. `dawnr_pipeline.py --extra-conversations` adds them to the mid
+  stage; off by default.
+- **Result:** the model acts on a failed check (a different program after
+  55-70% of failing verdicts, against 5-12% without repair data) but answers
+  that pass their examples rise by +2.3 of 133 at three seeds and +1.2 at six
+  fresh ones, INCONCLUSIVE both times, inside seed noise (about 24 seeds a
+  side would be needed). Not adopted.
+- **The unclosed call:** `engine.py` has a grammar on the chat tokens
+  (Outlines-style logit masking, arXiv:2307.09702): inside a call only text
+  and `<|t_end|>` are legal, so a call always closes and the tool runs (0 of
+  399 answers ended inside a call, against 41, 28 and 7 of 133). Off by
+  default: its registered rule failed because the last call was taken as the
+  answer. Arm B needed no grammar: when nearly every training conversation
+  calls the tool, the model closes calls on its own.
+- **`chat_eval.py`** now reports what an answer did with its verdicts (acted,
+  repeated, repaired), where calls ended, `--answer best-verdict` (the call
+  whose verdict ranks highest, AlphaCode's filtering by example tests,
+  arXiv:2203.07814; with it, the repair-trained model's dev well formed goes
+  from 5 to 28), `--max-calls N` (a budget of calls, after s1's budget
+  forcing, arXiv:2501.19393; without one the repair-trained model retried
+  until its tokens ran out on 82 of 100 dev answers) and `--rescore` (any
+  rule recomputed from an earlier run's rows).
+
+**The next stage to port:** the t tool checks that a draft keeps the
+specification the user gave (101 of 285 passing fold drafts had rewritten
+it); repairs as edits of the draft rather than a whole new program (the
+model rewrote the loop three times while the verdict named a missing
+parameter name in the signature); conversations that end in an honest stop
+after repeated failures; then RL through the engine (SCoRe's multi-turn
+RL), pointing `t/rl_grpo.py`'s sampler at `engine.py` so the reward sees
+answers that used the tool.
