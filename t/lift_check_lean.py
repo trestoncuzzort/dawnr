@@ -68,7 +68,15 @@ def _view(name: str, t: lift_lean.LType) -> str:
         base = f"{name}.toList" if t.text.strip().startswith("Array") else name
         if t.elem.kind == "nat":
             return f"({base}.map (fun (v : Nat) => (v : Int)))"
+        if t.elem.kind == "char":
+            return f"({base}.map (fun (c : Char) => (c.toNat : Int)))"
         return base
+    if k == "string":
+        # feature 6 (2026-09-27): a String is its list of chars, each its
+        # code point (Lean core: `String.toList s = s.data`; `Char.toNat`)
+        return f"({name}.toList.map (fun (c : Char) => (c.toNat : Int)))"
+    if k == "char":
+        return f"(({name}.toNat : Nat) : Int)"
     raise NoHarness(f"type {t.text}")
 
 
