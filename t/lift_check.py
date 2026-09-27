@@ -2787,6 +2787,12 @@ def _dafny_literal(v, ty) -> str:
         # point could not be printed before): a nested value is a display
         # of displays, the shape `interp` holds it in.
         return "[" + ", ".join(_dafny_literal(row, "seq") for row in v) + "]"
+    if isinstance(ty, dict) and "pair" in ty:
+        # Row 44 (2026-09-27): a pair point is Dafny's own tuple literal;
+        # `interp.Pair` holds the two components as `.a`/`.b`.
+        t1, t2 = ty["pair"]
+        a, b = (v.a, v.b) if hasattr(v, "a") else (v[0], v[1])
+        return f"({_dafny_literal(a, t1)}, {_dafny_literal(b, t2)})"
     raise ValueError(f"lift_check._dafny_literal: unknown t type {ty!r}")
 
 
@@ -2794,8 +2800,8 @@ def _dafny_type_text(ty) -> str:
     """The Dafny spelling of a lifted param's JSON type in the differential
     harness's point list: `lower_dafny.TYPES` for a flat type, and the
     nested `seq<seq<int>>` for t's compound `{"seq": "seq"}` (row 43)."""
-    if isinstance(ty, dict) and ty.get("seq") == "seq":
-        return "seq<seq<int>>"
+    if isinstance(ty, dict):
+        return lower_dafny.dafny_type(ty)  # `seq<seq<int>>`, `(int, int)` (row 44)
     return lower_dafny.TYPES[ty]
 
 
