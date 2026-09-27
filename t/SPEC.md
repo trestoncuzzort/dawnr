@@ -1039,6 +1039,88 @@ proof asserts a false step, around a correct program; false_nonlinear_step:
 the same with a false nonlinear step under a guard). Per-kernel verdicts are in
 t/FEATURES-TRACK.md.
 
+### Seq-valued spec_funs (v1)
+
+Stated 2026-09-27 (t/FEATURES-TRACK.md "The order from here": the binding
+refusal for string programs). Measured first: of the 2026-09-26 lift of the
+1,886 staged Dafny files, 135 methods failed on a helper function returning
+a `string` or a `seq<int>`, refused `function-result` since 2026-09-27
+(t/FEATURES-CLOUD-2026-09-27.md, "Strings, the binding gap"); 25 of the 37
+nested-string lifts and 8 of the 17 tuple refusals hit it. A spec_fun's
+result was int or bool; every string program with a helper that builds a
+string stopped there.
+
+Gate 3's SpecFun gains one result type:
+
+```
+{"name": ID, "params": [...], "result": "int"|"bool"|"seq",
+ "decreases": Expr, "body": Expr}
+```
+
+`"seq"` is the elementary seq of ints, the same type a parameter, return or
+local already has (a string is a seq of code points, "Strings as sequences
+of code points (v1)"). The body is a seq expression: a literal, a slice, a
+concatenation, an `update`/`fill`, a string-library member, an `ite` over
+seqs, a call of a seq-valued spec_fun (itself included), or a seq parameter.
+Nothing else changes: a call `f(args)` of a seq-valued spec_fun is a seq
+expression wherever an int-valued call is an int expression (`requires`,
+`ensures`, invariants, other spec_fun bodies, the task body), so it may be
+indexed, measured (`len`), sliced, concatenated and compared with `==`/`!=`
+(extensionally) as any seq; the definedness rules of those operators apply
+to the result exactly as to a seq variable (`f(s)[i]` is DEFINED IFF
+`0 <= i < len(f(s))`). Well-definedness is still the termination obligation
+of gate 3, unchanged; a seq-valued spec_fun's body carries the same
+definedness obligation an int-valued one does (its `at`/slice/`div` sites
+are defined under the body's own path conditions). Not in v1: a nested seq
+result (`{"seq": "seq"}`), a pair result, a bool-seq result; check_wf
+refuses them by name (`spec-fun-result`).
+
+The notation writes the result type as it writes a parameter's:
+`spec fun dbl(s: seq, n: int): seq decreases n = ...`.
+
+The twin ladder needs no new rung: the twin never touches a spec_fun, and a
+task body that builds a seq under an invariant stated through the spec_fun
+(`invariant r == dbl(s, i)`) already offers the ladder its moves. The
+committed task `double_all` (t/tasks/double_all.t: `dbl(s, n)` is the
+first `n` elements doubled, the loop appends `2 * s[i]` under `r ==
+dbl(s, i)`, ensures `r == dbl(s, len(s))` and `len(r) == len(s)`) draws
+`compare-flip` on the loop guard, refuted at `s = []` where the twin reads
+`s[0]`. The probes `fz_p_sf_seq_*` (t/fuzz_lower.py) cover a result that
+is measured, indexed, sliced and built in the body, and one false ensures
+through a seq-valued spec_fun (expected refuted); since the 2026-09-27
+review, two more plant the fault in the spec_fun's own body (`dbl`
+prepending where the loop appends; `tl` dropping the last element where
+the body drops the first), expected refuted.
+
+The refutation certificate (dafny and F*, the two columns that state a
+witness as a ground lemma the kernel must accept) ladders every seq-valued
+spec_fun call its formula reaches, callees first, and every ground seq
+operator around it, each asserted equal to the interpreter's literal
+before the certificate's own goal (lower_dafny.py, certificate step 3;
+lower_fstar.py `_seq_rungs`). Without the rungs both kernels read the two
+seeded faults unproved, not refuted: Dafny unfolds a recursive function
+only to its default fuel, and neither kernel relates a literal to a ground
+append with no index term to trigger on. The rungs are hints the kernel
+re-proves; a task whose certificate reaches no seq-valued call gets none,
+so every committed lowering is unchanged.
+
+Lowering status (2026-09-27; verdicts on the fixtures in
+t/FEATURES-SEQFUN-2026-09-27.md): six kernels state the construct with
+their own sequence type in the function's signature, exactly as they state
+an int result (Dafny `function f(..): seq<int>`, Dafny Reference Manual
+6.4; Verus `spec fn f(..) -> Seq<int>`, the Verus guide's spec functions;
+SPARK an expression function returning the functional `Seq`; Lean `def
+f_s .. : List Int` with `termination_by`; Rocq a fuel Fixpoint returning
+the file's own `((Z -> Z) * Z)` function-and-length pair, read back by
+`fst`/`snd` at a call (the representation `lower_rocq.py`'s 2026-09-09
+note chose over `list Z`); F* `let rec f .. : Tot (Seq.seq int)
+(decreases m)`). Frama-C abstains by name: it models every seq as a C
+buffer `(int *s, integer s_n)` and a spec_fun as an ACSL logic function
+over that buffer, and a logic function cannot return a buffer; the
+`\list<integer>` route (ACSL's own logic lists, with a bridge predicate
+between a buffer and a list at every `==`/`len`/`at` site) is the open
+design, not built. The lifter's mapping is LIFTER-DECISIONS.md row 45.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

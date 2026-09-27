@@ -1613,11 +1613,27 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
     # spec_fun whose declared result disagreed with its (bool) body,
     # caught by fuzz_lower.check_wf as "body type != result" (nitwit's
     # valid_base/nitness/is_max_nit, all predicates).
-    result = "bool" if (d.is_predicate
-                        or (d.ret_type is not None and d.ret_type.kind == "bool")) else "int"
-    if result_nat:
+    # Row 45 (2026-09-27, SPEC.md "Seq-valued spec_funs (v1)"): a function
+    # returning `string`/`seq<char>`/`seq<int>`/`seq<nat>` (classify's
+    # `_is_seq_fun_result`, the only seq shapes that reach here) is a
+    # spec_fun with a `"seq"` result, the string spellings as code points
+    # (row 28) exactly as a string parameter already is. A `seq<nat>`
+    # result's element non-negativity is a fact the lifted theorem no
+    # longer states, dropped and counted like a nat result's own.
+    result_seq = (d.ret_type is not None
+                  and (d.ret_type.kind == "string"
+                       or (d.ret_type.kind == "seq" and len(d.ret_type.args) == 1
+                           and d.ret_type.args[0].kind in ("int", "nat", "char"))))
+    result_seq_nat = (result_seq and d.ret_type.kind == "seq"
+                      and d.ret_type.args[0].kind == "nat")
+    result = ("bool" if (d.is_predicate
+                         or (d.ret_type is not None and d.ret_type.kind == "bool"))
+              else "seq" if result_seq else "int")
+    if result_nat or result_seq_nat:
         record.clauses_dropped.append(ClauseDropped(rule="nat-result-fact-dropped", count=1))
         record.rewrites.append(Rewrite(rule="nat-result-fact-dropped", line=d.line))
+    if result_seq:
+        record.rewrites.append(Rewrite(rule="function-result-seq", line=d.line))
 
     for spec in d.specs:
         if isinstance(spec, RequiresClause):
@@ -1646,7 +1662,11 @@ def _lift_function(d: FunctionDecl, renamer: _Renamer, fn_names: dict, record: L
 
     body_e = _lift_expr(d.body, scope, fn_names, d.name or "", fn_names.get(d.name, d.name or ""), record, renamer)
     if guard_parts:
-        default = {"bool": False} if result == "bool" else {"int": 0}
+        # Decision 6's totalising default per result type: any constant
+        # agrees on the domain; the empty seq is the seq result's (row 45).
+        default = ({"bool": False} if result == "bool"
+                   else {"op": "seq", "args": []} if result == "seq"
+                   else {"int": 0})
         body_e = {"ite": {"cond": _and(guard_parts), "then": body_e, "else": default}}
 
     dec = _function_decreases(d, scope, fn_names, record, renamer)

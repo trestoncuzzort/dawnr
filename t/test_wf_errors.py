@@ -86,6 +86,12 @@ UNREACHABLE = {
                    "self.ret_name (the task's own declared return name) "
                    "at parse time (stmt()'s `return` arm); there is no "
                    "notation for a `return` naming any other variable.",
+    "spec-fun-result": "spec_fun()'s result reads vtype(('int', 'bool', "
+                       "'seq')) (SPEC.md \"Seq-valued spec_funs (v1)\", "
+                       "2026-09-27), so the notation cannot spell a nested "
+                       "seq, a pair or any other result type there; the "
+                       "rule guards the JSON gate (a lifted task) and "
+                       "t/test_seq_spec_fun.py triggers it on the AST.",
 }
 
 
