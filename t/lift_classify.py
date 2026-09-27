@@ -79,7 +79,7 @@ from lift_ast import (
     Quantifier, ReadsClause, Refusal, RequiresClause, RevealStmt,
     ReturnStmt, Rewrite, SeqDisplay, SeqUpdate, SetDisplay, SkippedDecl,
     Slice, Spec, Star, Stmt, StringLit, TupleExpr, Type, TypeTest, Unary,
-    VarDeclStmt, WhileCaseStmt, WhileStmt, Comprehension,
+    VarDeclStmt, WhileCaseStmt, WhileStmt, Comprehension, RealLit,
 )
 
 
@@ -254,11 +254,27 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
                 return None  # row 43: `seq<seq<char>>`, a row of code points
             if leaf.kind in ("seq", "string"):
                 return "nested-seq-deep"  # a string is itself a seq: three levels
-            return "nested-seq-other"
+            # Row 46 (2026-09-27): the row's own element names the refusal,
+            # `seq<seq<real>>` as `seq<real>` does one level down.
+            return _seq_element_issue(leaf) or "nested-seq-other"
         if row is not None and row.kind == "bool":
             return "seq-of-bool"
         if row is not None and row.kind == "string":
             return None  # row 43: `seq<string>`, the same nested seq
+        # Row 46 (2026-09-27, t/FEATURES-TRACK.md, nested-seq-other): the
+        # 2026-09-27 census of the 143 methods this branch used to fold
+        # into `nested-seq-other` is dominated by element types t has no
+        # value for at all -- `seq<real>` (the numpy-shaped vericoding
+        # files), `seq<bv32>`, `seq<(int, int)>`, `seq<T>` under a type
+        # parameter, `seq<Datatype>` -- none of them a seq-NESTING question.
+        # Each now refuses under the element's own name (`seq-of-real`,
+        # `seq-of-bitvector`, `seq-of-pair`, `seq-of-datatype`, `seq-of-
+        # set`, `seq-of-map`), so the census can rank them with `real`,
+        # `bitvector`, `datatype` and `set` where they belong; only a
+        # shape none of those names fits stays `nested-seq-other`.
+        named = _seq_element_issue(row)
+        if named is not None:
+            return named
         if row is not None and row.kind == "array":
             # `seq<array<int>>`: row 22's array-as-seq-value machinery is
             # built around exactly one top-level array per method (a
@@ -314,6 +330,32 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
             return "array2"
         return "generics" if t.args else "datatype"
     return "type-decl"
+
+
+def _seq_element_issue(el: Optional[Type]) -> Optional[str]:
+    """Row 46 (2026-09-27): the refusal name for a seq whose ELEMENT type
+    `el` t has no value for -- the element's own kind, `seq-of-<kind>` --
+    or `None` when this function has no sharper name than the caller's
+    (`nested-seq-other`)."""
+    if el is None:
+        return None
+    if el.kind == "real":
+        return "seq-of-real"
+    if el.kind == "bv":
+        return "seq-of-bitvector"
+    if el.kind == "tuple":
+        return "seq-of-pair"    # t has no seq of pairs (SPEC.md "Pairs": "Not in v1")
+    if el.kind in ("set", "iset"):
+        return "seq-of-set"
+    if el.kind in ("map", "imap"):
+        return "seq-of-map"
+    if el.kind == "id":
+        # a datatype, a type synonym or a method's own type parameter; all
+        # read as `id` here, none is a t value
+        return "seq-of-datatype"
+    if el.kind == "object":
+        return "seq-of-object"
+    return None
 
 
 def _tuple_issue(t: Type) -> Optional[str]:
@@ -483,6 +525,14 @@ def expr_kind(e: Expr, lookup) -> Optional[str]:
                 return rk
         return "int"
     if isinstance(e, Cardinality):
+        return "int"
+    if isinstance(e, Cast) and e.type.kind in ("int", "nat", "char"):
+        # Row 46 (2026-09-27): `e as char` / `e as int` is an int-kinded
+        # expression (a char is its code point, row 28); whether the cast
+        # itself is safe is the cast pass's own question (`int-as-char-
+        # lifted` or `char-cast-unbounded`), asked at the same node. Before
+        # this the kind was unknown, so a display `[(n % 10 + 48) as char]`
+        # refused `nested-seq-other`, a name that said nothing about it.
         return "int"
     if isinstance(e, TupleExpr):
         return "pair" if len(e.elems) == 2 else None  # row 44: a pair literal
@@ -670,6 +720,12 @@ def _seq_literal_issue(n: SeqDisplay, env: dict) -> Optional[str]:
         k = expr_kind(el, env.get)
         if k in ("int", "seq"):
             continue
+        if k == "bool":
+            return "seq-of-bool"     # row 46: `[i % 3 == 0]`, a bool element
+        if isinstance(el, RealLit):
+            return "seq-of-real"     # row 46: `[1.0]`
+        if isinstance(el, TupleExpr):
+            return "seq-of-pair"     # row 46: `[(a, b)]`
         return "nested-seq-other"
     return None
 
@@ -2425,7 +2481,35 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     pair_returns: Optional[tuple[Param, Param]] = None
     if len(method.returns) == 0:
         if array_mutation is None or array_mutation.kind != "modifies-param":
-            issues.append((method.line, "zero-returns", method.name or "?"))
+            # Row 47 (2026-09-27, t/FEATURES-TRACK.md, zero-returns): a
+            # method with no out-parameter is a t task only through
+            # decision 22's modifies-param shape (SPEC.md "Sequences as
+            # values": "a method whose effect is its array is a task whose
+            # return is a seq"). The 2026-09-27 census read 39 such
+            # methods refused `zero-returns`, and the name said nothing
+            # about 35 of them: `find_array_mutation` had already named
+            # the shape it could not map (`multi-array-mutation`, two
+            # arrays written in one body, the DJ family's `a[i] := 0` plus
+            # `sum[0] := total`) on a LATER line, which this method-line
+            # issue then hid, or the method's `modifies` clause is real
+            # but every write happens inside a callee (BubbleSort's
+            # `Swap(a, j, j+1)`), which the shape detector never sees.
+            # Now: a named mutation issue stands alone; a `modifies` with
+            # no index assignment refuses `array-mutation` under the token
+            # `modifies-via-call` (the method calls other methods) or
+            # `modifies-no-index-assign`; and a method with no return and
+            # no `modifies` is, in t's vocabulary, a lemma about its
+            # parameters (SPEC.md "Lemmas (v1)": "Dafny's lemma ... with no
+            # return"), which t states only inside a task that calls it,
+            # so it refuses `lemma-shaped`.
+            if mutation_issue is not None:
+                pass
+            elif any(isinstance(sp, ModifiesClause) for sp in method.specs):
+                via_call = any(isinstance(n, CallStmt) for n in walk(method))
+                issues.append((method.line, "array-mutation",
+                               "modifies-via-call" if via_call else "modifies-no-index-assign"))
+            else:
+                issues.append((method.line, "lemma-shaped", method.name or "?"))
     elif len(method.returns) == 2:
         ret_a, ret_b = method.returns
         bad_a = _pair_component_issue(ret_a.type)
