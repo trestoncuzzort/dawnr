@@ -209,7 +209,7 @@ def identity_of(args, chosen) -> dict:
                        "heldout_train": [c.get("source") for c in chosen["heldout_train"]],
                        "heldout_val": [c.get("source") for c in chosen["heldout_val"]]}, sort_keys=True)
     return {"problems_sha256": hashlib.sha256(blob.encode()).hexdigest(), "max_tokens": args.max_tokens,
-            "dev": args.dev, "persons": args.persons, "problem_seed": args.problem_seed}
+            "dev": args.dev, "persons": args.eligible_persons, "problem_seed": args.problem_seed}
 
 
 def main(argv=None) -> int:
@@ -219,7 +219,9 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--arm", required=True, help="a name for this arm and seed, e.g. A-s1")
     ap.add_argument("--guard-text", type=Path, required=True)
-    ap.add_argument("--persons", default="ada,bo,cy,di")
+    ap.add_argument("--persons", default="ada,bo,cy,di", help="whose sessions this invocation runs")
+    ap.add_argument("--eligible-persons", default="ada,bo,cy,di",
+                    help="the registered set: every problem must be writable by all of them (fixes the problems)")
     ap.add_argument("--sessions", type=int, default=4)
     ap.add_argument("--per-session", type=int, default=10)
     ap.add_argument("--heldout-train", type=int, default=20)
@@ -257,8 +259,13 @@ def main(argv=None) -> int:
         total = torch.cuda.get_device_properties(0).total_memory / 2 ** 30
         torch.cuda.set_per_process_memory_fraction(min(1.0, a.gpu_max_gb / total))
     people = [P.PERSONS[n] for n in a.persons.split(",")]
+    # every problem must be writable by everyone in the registered set, whichever of them this invocation runs,
+    # so that every arm and every split of the persons over jobs sees the same problems and the same base pass
+    everyone = [P.PERSONS[n] for n in a.eligible_persons.split(",")]
+    if not {p.name for p in people} <= {p.name for p in everyone}:
+        raise SystemExit("--persons must be among --eligible-persons")
     convs = [json.loads(line) for line in a.conversations.read_text(encoding="utf-8").splitlines() if line.strip()]
-    chosen = choose(convs, people, a.sessions, a.per_session, a.heldout_train, a.problem_seed, a.guard_prompts)
+    chosen = choose(convs, everyone, a.sessions, a.per_session, a.heldout_train, a.problem_seed, a.guard_prompts)
     heldout = chosen["heldout_train"] + chosen["heldout_val"]
     ident = identity_of(a, chosen)
     ident["base"] = base_identity(a.model)
@@ -270,7 +277,7 @@ def main(argv=None) -> int:
     with a.guard_text.open(encoding="utf-8") as f:
         guard = GuardWindows(tok, f.read(400_000), min(512, block))
     canon_val = Rows(tok, [c for c in convs if c.get("split") == "val"], block)
-    targets = style_targets(people, heldout)
+    targets = style_targets(everyone, heldout)
     target_rows = {name: Rows(tok, rows, block) for name, rows in targets.items()}
     engine = Engine(model, tok)
 
@@ -280,7 +287,7 @@ def main(argv=None) -> int:
     if base is None or base.get("identity") != ident:
         t0 = time.monotonic()
         answers = ask_all(engine, tok, [user_of(c) for c in heldout], a.max_tokens)
-        base = {"identity": ident, "heldout": score_answers(people, heldout, answers, tok),
+        base = {"identity": ident, "heldout": score_answers(everyone, heldout, answers, tok),
                 "heldout_answers": [x["parts"] for x in answers],
                 "style_loss": {n: mean_loss(model, r, device) for n, r in target_rows.items()},
                 "canonical_val_loss": mean_loss(model, canon_val, device),
@@ -302,6 +309,7 @@ def main(argv=None) -> int:
     behavior = BehaviorGuard([user_of(c) for c in chosen["guard_prompts"]], a.max_tokens) \
         if chosen["guard_prompts"] else None
     results = {"arm": a.arm, "identity": ident, "config": asdict(cfg), "persons": {}}
+    guard_sources = [c.get("source") for c in chosen["guard_prompts"]]
     for person in people:
         pdir = arm_dir / person.name
         store = PersonStore(person.name, root=pdir)
@@ -376,7 +384,7 @@ def main(argv=None) -> int:
         n_probe = len(chosen["heldout_train"])
         curve.append(probe_point(person, chosen["heldout_train"], answers[:n_probe], tok,
                                  after_sleep=len(chosen["sessions"])))
-        final = {"heldout": score_answers(people, heldout, answers, tok), "curve": curve,
+        final = {"heldout": score_answers(everyone, heldout, answers, tok), "curve": curve,
                  "heldout_answers": [x["parts"] for x in answers],
                  "style_loss": {n: mean_loss(model, r, device) for n, r in target_rows.items()},
                  "canonical_val_loss": mean_loss(model, canon_val, device),
@@ -387,6 +395,8 @@ def main(argv=None) -> int:
         if state is not None:
             torch.save(state, pdir / "final-adapter.pt")
         (pdir / "results.json").write_text(json.dumps({"arm": a.arm, "identity": ident, "config": asdict(cfg),
+                                                       "behavior_guard_prompts": guard_sources,
+                                                       "replay_pool": len(chosen["replay_pool"]),
                                                        "person": person.name, **results["persons"][person.name]},
                                                       indent=1) + "\n", encoding="utf-8")
         print(json.dumps({"person": person.name, "style_loss": final["style_loss"],
