@@ -277,9 +277,15 @@ class TestTheFilesThemselves(unittest.TestCase):
             self.assertEqual(0, done.returncode, f"{name}: {done.stdout}")
 
     def test_the_shell_scripts_parse_as_plain_sh_too(self):
-        # They say #!/bin/sh, so the claim to check is the one they make.
+        # They say #!/bin/sh, so the claim to check is the one they make --
+        # but /bin/sh is a POSIX path, not a promise: it does not exist on
+        # Windows, where a literal ["/bin/sh", ...] raises FileNotFoundError
+        # instead of the missing-interpreter skip below.
+        sh = shutil.which("sh")
+        if sh is None:
+            self.skipTest("no sh on this machine")
         for name in SHELL_LAUNCHERS:
-            done = subprocess.run(["/bin/sh", "-n", str(HERE / name)],
+            done = subprocess.run([sh, "-n", str(HERE / name)],
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.STDOUT, text=True)
             self.assertEqual(0, done.returncode, f"{name}: {done.stdout}")
