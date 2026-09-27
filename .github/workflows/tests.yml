@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [r12-blockers, main]
 
+
+# read-only token: the tests need to read the repository, nothing more
+permissions:
+  contents: read
+
 jobs:
   # No provers (dafny/verus/spark/framac/lean/rocq/fstar), no torch, no GPU.
   # t/ and locallm/ are both designed to run without any of those -- the
