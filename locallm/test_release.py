@@ -57,6 +57,24 @@ class TestClosure(unittest.TestCase):
                          "test_release.py", "release.py"):
             self.assertNotIn(unwanted, names)
 
+    def test_the_app_never_reaches_the_research_pipeline(self):
+        """t/'s pipeline modules (loop_locallm, rl_reward, spec_experiment, run_par, score_heldout)
+        are how the numbers were earned and are not shipped. A shipped module that imports one at
+        the top level, or through a package sibling, breaks every stranger's install; the closure
+        must refuse it, not carry it, and no shipped module may need it (found 2026-09-27: the
+        learning sleep imported chat_eval for one helper, and chat_eval imports all three)."""
+        names = release.closure(HERE)
+        pipeline = {"loop_locallm", "rl_reward", "spec_experiment", "run_par", "score_heldout", "chat_eval"}
+        for name in names:
+            path = HERE / name
+            if path.is_dir():
+                paths = sorted(path.rglob("*.py"))
+            else:
+                paths = [path]
+            for py in paths:
+                found = release._imports(py) if py.is_file() else set()
+                self.assertFalse(found & pipeline, f"{py.relative_to(HERE)} imports {sorted(found & pipeline)}")
+
     def test_an_import_with_no_file_is_a_sentence(self):
         # The one that would otherwise ship broken: home.py imports look, look.py
         # is not there, and "is there a file of that name" would read the absence

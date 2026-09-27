@@ -24,8 +24,9 @@ scope (for unrelated reasons -- it also builds batches), so importing it here wo
 plain BM25-only, no-model path require torch, contradicting "the harness ... starts offline" and
 this track's own "standard library" BM25 requirement. `_documents` mirrors data.documents()'s
 splitting rule; eval_recall.py's `_is_val` separately mirrors data.hash_holdout() the same way.
-continue_from_checkpoint.py has no such import (confirmed: it imports torch only inside the
-functions that need it), so its gate is used directly rather than re-copied.
+The trainers' gate is imported from heldout_gate.py, the shipped module it moved to on 2026-09-27
+(it lived in continue_from_checkpoint.py, a research script the release keeps out of the zip; importing
+that pulled the research record into the app's closure), rather than re-copied.
 """
 from __future__ import annotations
 
@@ -113,7 +114,7 @@ def load_corpus(path, *, split_path=None, dev_ids_path=None) -> tuple[list["Pass
     Anything a document names from either set, under any alias, is left out and named in `problems`
     rather than silently indexed."""
     _paths.ensure_repo_paths()
-    import continue_from_checkpoint as cfc  # deferred: confirmed torch-free, but no need to pay for it at import time
+    import heldout_gate  # the trainers' gate, shipped (not continue_from_checkpoint.py, the research script it came from)
 
     path = Path(path)
     text = path.read_text(encoding="utf-8")
@@ -132,7 +133,7 @@ def load_corpus(path, *, split_path=None, dev_ids_path=None) -> tuple[list["Pass
     for i, doc in enumerate(_documents(text)):
         label = f"{path}#doc{i}"
         try:
-            cfc.refuse_unless_trainable(doc, label, eval_ids, split_path or path, dev_ids)
+            heldout_gate.refuse_unless_trainable(doc, label, eval_ids, split_path or path, dev_ids)
         except ValueError as e:
             problems.append(str(e))
             continue

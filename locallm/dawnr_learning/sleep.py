@@ -266,17 +266,22 @@ class BehaviorGuard:
         self.prompts, self.max_tokens = list(prompts), max_tokens
 
     def check(self, model, tokenizer) -> dict:
-        from chat_eval import ask
+        # The engine directly, not chat_eval.ask: chat_eval is the research scorer and imports t/'s
+        # pipeline (loop_locallm, rl_reward, spec_experiment), which the shipped app does not carry
+        # (release.py's closure refused it, 2026-09-27). The guard needs only the reply's parts.
+        import chat
         from dawnr_harness.checker import check
-        from engine import Engine
+        from engine import Engine, reply_parts
         from .feedback import final_program
         was = model.training
         model.eval()
         engine = Engine(model, tokenizer)
         each = []
         for user in self.prompts:
-            got = ask(engine, tokenizer, user, self.max_tokens)
-            program = final_program(got["parts"]) if got["parts"] else None
+            prompt = chat.render_for_completion(tokenizer, {"messages": [{"role": "user", "content": user}]})
+            results, _masks = engine.generate_batch(prompt, 1, max_tokens=self.max_tokens, temperature=0.0, seed=0)
+            parts = reply_parts(tokenizer, results[0])
+            program = final_program(parts) if parts else None
             each.append(bool(program) and check(program, user)[0])
         model.train(was)
         return {"passed": sum(each), "asked": len(each), "each": each}

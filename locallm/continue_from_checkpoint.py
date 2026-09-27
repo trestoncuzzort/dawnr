@@ -270,21 +270,9 @@ def source_losses(model, sources: dict, batch_size: int, block_size: int, iters:
     return out
 
 
-def refuse_unless_trainable(text: str, label: str, eval_ids, split, dev_ids=frozenset()) -> None:
-    """Refuse, by name, text that names a held-out id under any alias, a
-    same-task exclusion, or a dev-split id; nothing is dropped quietly."""
-    validation = loop_filter.validate_training_data(text, eval_ids)
-    dev = loop_filter.held_out_ids_in(text, set(dev_ids))
-    if validation.ok and not dev:
-        return
-    reasons = []
-    if validation.held_out:
-        reasons.append(f"contains held-out ids from {split}: {loop_filter.held_out_detail(validation.held_out)}")
-    if validation.same_task_names or validation.same_task_ids:
-        reasons.append(loop_filter.same_task_detail(validation))
-    if dev:
-        reasons.append(f"contains dev-split ids: {loop_filter.held_out_detail(dev)}")
-    raise ValueError(f"cannot train: {label}: " + "; ".join(reasons))
+# The gate itself moved to locallm/heldout_gate.py (shipped; this script is not), 2026-09-27;
+# re-exported here so every caller and test that spells it from this module still finds it.
+from heldout_gate import refuse_unless_trainable  # noqa: E402
 
 
 def load_pairs(path, eval_ids, dev_ids, split_path, corpus_text=None, corpus_path=None) -> list[dict]:

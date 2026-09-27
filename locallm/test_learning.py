@@ -22,6 +22,7 @@ import string
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -395,6 +396,29 @@ class Profile(unittest.TestCase):
 
 
 # --------------------------------------------------------------- gate --
+
+class GateFailsClosed(unittest.TestCase):
+    """A release built without t/ beside it cannot tell a held-out problem from any other: the gate
+    then refuses every example with the reason recorded, never passes them ungated (fail-safe)."""
+
+    def test_a_missing_checker_refuses_every_example(self):
+        import builtins
+        real_import = builtins.__import__
+
+        def no_loop_filter(name, *a, **k):
+            if name == "loop_filter":
+                raise ImportError("No module named 'loop_filter' (release without t/)")
+            return real_import(name, *a, **k)
+        examples = [{"id": "x1", "messages": [{"role": "user", "content": "plain prompt"}]},
+                    {"id": "x2", "messages": [{"role": "user", "content": "another"}]}]
+        with unittest.mock.patch.object(builtins, "__import__", no_loop_filter):
+            sys.modules.pop("loop_filter", None)
+            kept, refused = F.held_out_gate(examples)
+        self.assertEqual(kept, [])
+        self.assertEqual([r["id"] for r in refused], ["x1", "x2"])
+        self.assertIn("held-out gate unavailable", refused[0]["why"])
+        self.assertIn("nothing is learned", refused[0]["why"])
+
 
 class GateBypass(unittest.TestCase):
     """No reader of a person's examples goes around training_examples()'s gate: the guard against this

@@ -100,7 +100,13 @@ EXTERNAL = frozenset({"torch", "tokenizers", "tkinterdnd2", "charset_normalizer"
 # shipped zip on purpose: bundling them would mean bundling what they need
 # too, which is the seven-prover toolchain this release's whole point (see
 # this file's own module docstring) is to not be.
-CROSS_REPO_OPTIONAL = frozenset({"surface", "fuzz_lower", "interp"})
+# dawnr_learning/feedback.py's held_out_gate() imports `loop_filter`, t/'s
+# held-out and decontamination policy, the same way: deferred, from the
+# sibling tree, never bundled. Its degradation differs on purpose and is the
+# one exception to "an error answer": a gate whose checker is missing
+# REFUSES every example (fail closed, DAWNR-LEARNING.md section 8), because
+# passing them ungated would train on what may be a held-out problem.
+CROSS_REPO_OPTIONAL = frozenset({"surface", "fuzz_lower", "interp", "loop_filter"})
 
 STDLIB = frozenset(sys.stdlib_module_names)
 
@@ -122,6 +128,10 @@ RESEARCH = tuple(re.compile(p) for p in (
     r"score_execution\.py$", r"sample_.*\.py$", r"completion_batch\.py$",
     r"continue_from_checkpoint\.py$", r"next_latent\.py$", r"test_.*\.py$",
 ))
+
+# Research files inside a package, named exactly (the RESEARCH patterns match
+# top-level names like measure_*.py; a package's own measure.py does not).
+PACKAGE_RESEARCH = frozenset({"measure.py", "measure_profile.py", "summarize.py", "plain_code_loss.py"})
 
 # A launcher that is not executable is a launcher a stranger cannot start on
 # macOS or Linux. Everything else is data.
@@ -243,6 +253,13 @@ def _package_files(pkg_dir: Path, src: Path) -> tuple[list[str], set[str]]:
     """
     files, imported = [], set()
     for path in sorted(pkg_dir.rglob("*.py")):
+        # A package carries its research record beside its app code (dawnr_learning's measure.py,
+        # measure_profile.py, summarize.py, plain_code_loss.py: the four-person experiment), and
+        # those are RESEARCH by the same rule as the top level: not a program a stranger runs, and
+        # the only files that reach t/'s pipeline modules (loop_locallm). They stay out of the zip;
+        # nothing the app runs imports them (a test does, and tests stay out too).
+        if any(p.search(path.name) for p in RESEARCH) or path.name in PACKAGE_RESEARCH:
+            continue
         files.append(path.relative_to(src).as_posix())
         imported |= _imports(path)
     return files, imported
