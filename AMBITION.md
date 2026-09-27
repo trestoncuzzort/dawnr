@@ -203,6 +203,26 @@ is judged by the same rule: nothing is trusted without evidence.
 | to be understood from inside | interpretability, sparse autoencoders | planned |
 | to improve itself safely | the data engine: generate, verify, keep only what is proved, retrain | **built** |
 
+### dawnr's harness: reaching past itself
+
+dawnr is meant to be a full assistant built on everything machine learning and
+the sciences around it can contribute, not only a model. Around the model sits
+a harness, the way an agent runtime wraps a language model:
+
+| dawnr needs | the idea | where it stands |
+|---|---|---|
+| to act through tools | a tool-calling engine: the model emits a call, the runtime executes it, the result returns into the context | **started**: the chat engine runs the t interpreter mid-answer |
+| to reach other systems | the Model Context Protocol (MCP): dawnr as an MCP client using any MCP server's tools and resources, and as an MCP server so other agents can use its checker | not started |
+| to reach the internet | search and fetch as tools | not started |
+| to know how to do specialised tasks | skills: packaged instructions and scripts loaded only when a task needs them | not started |
+| to enforce rules no matter what the model says | hooks: deterministic scripts the runtime runs before and after tool calls; the proof check is dawnr's first hook | not started |
+
+The rule that keeps this compatible with the north star: **the network is a
+tool, never a dependency.** dawnr works fully offline; when a network, MCP
+servers or skills are present it may use them, and everything that comes back
+from outside is untrusted data, checked before it is relied on and never
+followed as an instruction.
+
 **The order**, trustworthy core first and breadth after, because a system that
 talks and sees before it reasons well is confident and wrong, the opposite of
 the north star:
