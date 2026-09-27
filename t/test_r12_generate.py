@@ -41,6 +41,12 @@ def entry(fn: str, text: str) -> dict:
 
 
 class TempDirTestCase(unittest.TestCase):
+
+    if not hasattr(unittest.TestCase, "enterContext"):    # arrived in Python 3.11; CI still runs 3.10
+        def enterContext(self, cm):
+            result = cm.__enter__()
+            self.addCleanup(cm.__exit__, None, None, None)
+            return result
     def tempdir(self) -> Path:
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
