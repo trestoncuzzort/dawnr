@@ -48,7 +48,8 @@ def tensor(shape, rng, scale=0.3):
     return {"shape": tuple(shape), "flat": flat, "offset": 0, "numel": numel}
 
 
-def tiny_model(block_size=12, n_layer=2, n_head=2, n_embd=16, seed=7):
+def tiny_model(block_size=12, n_layer=2, n_head=2, n_embd=16, seed=7,
+              quantize=False, quantize_kv=False):
     rng = random.Random(seed)
     V, D = len(VOCAB), n_embd
     state = {"transformer.wte.weight": tensor((V, D), rng, 1.0),
@@ -67,7 +68,8 @@ def tiny_model(block_size=12, n_layer=2, n_head=2, n_embd=16, seed=7):
             state[p + name] = tensor(shape, rng)
     config = {"n_layer": n_layer, "n_head": n_head, "n_embd": D,
               "block_size": block_size, "vocab_size": V}
-    return pg.PlainGPT(config, state), pg.CharTokens(VOCAB)
+    return (pg.PlainGPT(config, state, quantize=quantize, quantize_kv=quantize_kv),
+           pg.CharTokens(VOCAB))
 
 
 def old_attend(weights, values):
@@ -288,6 +290,202 @@ class TheCommandLine(unittest.TestCase):
 def _plain_generate(model, ids, n):
     with plain_arithmetic():
         return model.generate(ids, n, temperature=0)
+
+
+class Int8WeightQuantization(unittest.TestCase):
+    """--quantize: per-row symmetric int8, off by default.
+
+    Krishnamoorthi 2018 (arXiv:1806.08342) section 2.2's restricted-range
+    symmetric quantizer (scale = peak/127, clamp to [-127, 127], zero-point 0)
+    and section 2.6's per-channel granularity (one scale per output row).
+    """
+
+    def test_an_all_zero_row_gets_scale_one_not_a_division_by_zero(self):
+        q, scale = pg._quantize_row([0.0, 0.0, 0.0])
+        self.assertEqual(scale, 1.0)
+        self.assertEqual(list(q), [0, 0, 0])
+
+    def test_quantized_values_stay_in_the_restricted_signed_range(self):
+        rng = random.Random(1)
+        for _ in range(20):
+            row = [rng.uniform(-9, 9) for _ in range(17)]
+            q, scale = pg._quantize_row(row)
+            self.assertTrue(all(-127 <= v <= 127 for v in q))
+            self.assertGreater(scale, 0.0)
+
+    def test_the_peak_element_lands_on_the_edge_of_the_range(self):
+        # eq. 7-8: scale = peak / 127, so the largest-magnitude element
+        # quantizes to exactly +-127 (whichever sign the peak carries).
+        q, scale = pg._quantize_row([0.3, -1.2, 0.9])
+        self.assertEqual(min(q), -127)
+        self.assertAlmostEqual(scale, 1.2 / 127.0, places=12)
+
+    def test_dequantizing_recovers_the_row_within_half_a_step(self):
+        rng = random.Random(2)
+        row = [rng.uniform(-5, 5) for _ in range(40)]
+        q, scale = pg._quantize_row(row)
+        for original, quantized in zip(row, q):
+            self.assertLessEqual(abs(original - quantized * scale), scale / 2 + 1e-9)
+
+    def test_quantize_rows_matches_quantize_row_one_at_a_time(self):
+        rng = random.Random(3)
+        rows = [[rng.uniform(-4, 4) for _ in range(9)] for _ in range(6)]
+        q_rows, scales = pg._quantize_rows(rows)
+        self.assertEqual(len(q_rows), len(rows))
+        # scales is array('f'): float32 storage, so each readback is that
+        # float32's nearest float64, not the float64 _quantize_row computed —
+        # they agree to float32 precision, not bit for bit.
+        for got_scale, row in zip(scales, rows):
+            self.assertAlmostEqual(got_scale, pg._quantize_row(row)[1], places=6)
+        for got, row in zip(q_rows, rows):
+            self.assertEqual(list(got), list(pg._quantize_row(row)[0]))
+
+    def test_matvec_int8_is_the_dequantized_dot_product(self):
+        # The identity the whole design leans on: dot(int8_row, x) * scale IS
+        # dot(dequantized_row, x), not an approximation of it.
+        rng = random.Random(4)
+        rows = [[rng.uniform(-3, 3) for _ in range(11)] for _ in range(5)]
+        bias = [rng.uniform(-1, 1) for _ in range(5)]
+        x = [rng.uniform(-2, 2) for _ in range(11)]
+        q_rows, scales = pg._quantize_rows(rows)
+        got = pg._matvec_int8(q_rows, scales, x, bias)
+        for i, (q_row, scale, b) in enumerate(zip(q_rows, scales, bias)):
+            dequantized = [v * scale for v in q_row]
+            want = sum(a * c for a, c in zip(dequantized, x)) + b
+            self.assertAlmostEqual(got[i], want, places=5)
+
+    def test_embed_row_dequantizes_and_the_unquantized_case_is_the_same_object(self):
+        rows = [array.array("f", [1.0, 2.0, 3.0])]
+        self.assertIs(pg._embed_row(rows, None, 0), rows[0])
+        q_rows, scales = pg._quantize_rows([[1.0, -2.0, 0.5]])
+        got = pg._embed_row(q_rows, scales, 0)
+        self.assertEqual(got, [v * scales[0] for v in q_rows[0]])
+
+    def test_the_default_is_unquantized(self):
+        model, _ = tiny_model()
+        self.assertFalse(model.quantize)
+        self.assertFalse(model.quantize_kv)
+        self.assertIsNone(model.wte_scale)
+        self.assertIsNone(model.wpe_scale)
+        self.assertIsNone(model.head_scale)
+        for layer in model.layers:
+            for key in ("qkv_scale", "attn_out_scale", "fc_scale", "mlp_out_scale"):
+                self.assertIsNone(layer[key])
+
+    def test_a_quantized_model_runs_and_stays_finite(self):
+        model, _ = tiny_model(quantize=True)
+        model.reset()
+        out = model.generate([1, 2, 3], 40, temperature=0)
+        self.assertEqual(len(out), 40)
+        self.assertTrue(all(0 <= t < model.vocab_size for t in out))
+
+    def test_two_quantized_builds_of_the_same_weights_agree_exactly(self):
+        model_a, _ = tiny_model(quantize=True, seed=9)
+        model_b, _ = tiny_model(quantize=True, seed=9)
+        self.assertEqual(model_a.generate([1, 2], 25, temperature=0),
+                         model_b.generate([1, 2], 25, temperature=0))
+
+    def test_quantized_weights_are_about_a_quarter_the_bytes(self):
+        plain, _ = tiny_model(quantize=False, seed=5)
+        quantized, _ = tiny_model(quantize=True, seed=5)
+        ratio = quantized.weight_bytes() / plain.weight_bytes()
+        self.assertLess(ratio, 0.40, "int8 rows plus a float32 scale per row "
+                                     "should still land well under half of float32")
+        self.assertGreater(ratio, 0.20, "a quarter is the floor; scale overhead adds a bit")
+
+    def test_weight_bytes_of_an_unquantized_model_is_plain_float32_storage(self):
+        model, _ = tiny_model()
+        expected = sum(len(row) * row.itemsize
+                       for rows, _ in model._weight_slots() for row in rows)
+        self.assertEqual(model.weight_bytes(), expected)
+
+
+class Int8KVCache(unittest.TestCase):
+    """--quantize-kv: the same per-row scheme, one scale per cached vector
+    (see plain_generate.py's _attend_int8_plain/_sumprod docstring comment)."""
+
+    def test_attend_int8_plain_matches_a_naive_reference(self):
+        rng = random.Random(11)
+        T, hd = 6, 5
+        weights = [math.exp(rng.uniform(-4, 0)) for _ in range(T)]
+        vectors = [[rng.uniform(-2, 2) for _ in range(hd)] for _ in range(T)]
+        q_vectors, value_scales = zip(*(pg._quantize_row(v) for v in vectors))
+        columns = [array.array("b", [q[j] for q in q_vectors]) for j in range(hd)]
+        got = pg._attend_int8_plain(weights, columns, list(value_scales))
+        norm = 1.0 / sum(weights)
+        want = [sum(w * norm * (qv[j] * s) for w, qv, s in zip(weights, q_vectors, value_scales))
+               for j in range(hd)]
+        for a, b in zip(got, want):
+            self.assertAlmostEqual(a, b, places=9)
+
+    @unittest.skipUnless(hasattr(math, "sumprod"), "math.sumprod is Python 3.12+")
+    def test_attend_int8_sumprod_agrees_with_attend_int8_plain(self):
+        rng = random.Random(12)
+        T, hd = 7, 6
+        weights = [math.exp(rng.uniform(-4, 0)) for _ in range(T)]
+        vectors = [[rng.uniform(-2, 2) for _ in range(hd)] for _ in range(T)]
+        q_vectors, value_scales = zip(*(pg._quantize_row(v) for v in vectors))
+        columns = [array.array("b", [q[j] for q in q_vectors]) for j in range(hd)]
+        slow = pg._attend_int8_plain(weights, columns, list(value_scales))
+        fast = pg._attend_int8_sumprod(weights, columns, list(value_scales))
+        for a, b in zip(slow, fast):
+            self.assertAlmostEqual(a, b, places=9)
+
+    def test_a_quantized_cache_runs_across_a_window_refill(self):
+        model, _ = tiny_model(block_size=8, quantize_kv=True)
+        model.reset()
+        got = model.generate([1, 5, 2], 30, temperature=0)
+        self.assertEqual(len(got), 30)
+        self.assertGreater(model.rebuilt, 0, "30 tokens at block_size 8 must refill")
+        self.assertTrue(all(0 <= t < model.vocab_size for t in got))
+
+    def test_two_runs_of_a_quantized_cache_agree_exactly(self):
+        model_a, _ = tiny_model(quantize_kv=True, seed=13)
+        model_b, _ = tiny_model(quantize_kv=True, seed=13)
+        self.assertEqual(model_a.generate([2, 3], 20, temperature=0.8, seed=1),
+                         model_b.generate([2, 3], 20, temperature=0.8, seed=1))
+
+    def test_both_quantize_flags_together(self):
+        model, _ = tiny_model(quantize=True, quantize_kv=True)
+        got = model.generate([1, 1, 2], 15, temperature=0)
+        self.assertEqual(len(got), 15)
+
+
+class IncludedModelInt8(unittest.TestCase):
+    """The shipped round-4 checkpoint, quantized both ways.
+
+    The full 200-token speed/memory/agreement measurement this track was asked
+    for is FINDINGS-int8-quant-2026-09-27.md and bench_int8.py; this class is
+    the fast regression that both paths still load and generate correctly.
+    """
+
+    def setUp(self):
+        if not (INCLUDED / "ckpt.pt").is_file() or (INCLUDED / "ckpt.pt").stat().st_size < 1000:
+            self.skipTest("the included model's weights are not in this checkout")
+
+    def test_quantize_flags_load_and_generate_on_the_real_checkpoint(self):
+        model, tok, _ = pg.load_checkpoint(INCLUDED, quantize=True, quantize_kv=True)
+        self.assertTrue(model.quantize and model.quantize_kv)
+        text = pg.sample(model, tok, "task ", 20, temperature=0)
+        self.assertIsInstance(text, str)
+        self.assertGreater(len(text), len("task "))
+
+    def test_quantized_weights_measure_close_to_a_quarter(self):
+        plain, _, _ = pg.load_checkpoint(INCLUDED)
+        quantized, _, _ = pg.load_checkpoint(INCLUDED, quantize=True)
+        ratio = quantized.weight_bytes() / plain.weight_bytes()
+        self.assertLess(ratio, 0.30)
+        self.assertGreater(ratio, 0.24)
+
+    def test_cli_quantize_flags_run(self):
+        import subprocess
+        got = subprocess.run([sys.executable, str(HERE / "plain_generate.py"), "--out",
+                              str(INCLUDED), "--prompt", "task ", "--tokens", "6",
+                              "--temperature", "0", "--quantize", "--quantize-kv"],
+                             capture_output=True, text=True, check=True)
+        self.assertIn("weights held as", got.stderr)
+        self.assertIn("int8 weights", got.stderr)
+        self.assertIn("int8 KV cache", got.stderr)
 
 
 if __name__ == "__main__":

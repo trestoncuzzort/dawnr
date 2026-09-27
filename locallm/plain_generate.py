@@ -57,6 +57,16 @@ WHAT THIS DELIBERATELY DOES NOT DO.
     (`temperature=0`) is the comparable one, and even that can differ in the
     last place because float32 sums accumulate in a different order.
 
+WEIGHTS CAN BE HELD AS INT8 INSTEAD OF FLOAT32, off by default. `--quantize`
+stores every weight row as one array('b') plus one float32 scale rather than an
+array('f') (about a quarter the bytes); `--quantize-kv` does the same to the
+key/value cache this file already keeps in Python lists. Both are the symmetric,
+per-row scheme in Krishnamoorthi 2018 (arXiv:1806.08342) sections 2.2 and 2.6 —
+see `_quantize_row` below for the exact arithmetic. Neither is free: greedy
+output is measured, not assumed, to sometimes disagree with float32's past the
+first few dozen tokens (FINDINGS-int8-quant-2026-09-27.md has the numbers on the
+included model), so both stay opt-in.
+
 The API mirrors `checkpoint.py` on purpose — `checkpoint_exists`,
 `load_checkpoint`, `sample` with the same arguments — so a caller switches
 between the torch path and this one by changing which module it imports, and
@@ -340,9 +350,130 @@ else:
     _dot, _attend = _dot_plain, _attend_plain
 
 
+# --- int8 KV-cache: the same symmetric per-row quantizer (_quantize_row above),
+# applied to one cached key or value VECTOR at a time instead of one weight row.
+# Krishnamoorthi 2018 states the quantizer (its section 2) generically over "a
+# floating point variable" and generalizes granularity to per-channel (2.6)
+# without restricting either to weight tensors, so no separate source is cited
+# for this: it is the same construction at a different granularity, argued in
+# the same commit that adds it.
+#
+# Keys: scale is one float per cached vector, so scores = dot(q, k_int8) *
+# key_scale * attn_scale — the same "multiply once, after the sum" factoring as
+# _matvec_int8, just with an extra per-key scalar.
+#
+# Values: harder, because _attend sums OVER TIME for one output dimension at a
+# time (columns[j] is dimension j's value across every cached position), and
+# here EVERY position has its OWN scale (unlike a weight row, where one scale
+# covered the whole row). But scale is still a plain number, so
+#     sum_t weight[t] * value[t][j]
+#   = sum_t weight[t] * (value_scale[t] * int8_value[t][j])
+#   = sum_t (weight[t] * value_scale[t]) * int8_value[t][j]
+# which is _attend's own dot product over column j, with the softmax weights
+# pre-multiplied by each position's value_scale ONCE (O(T), not O(T * head_dim))
+# before the per-dimension loop, so the per-dimension inner loop below still
+# runs over a raw int8 column with no per-element dequantizing.
+def _attend_int8_plain(weights, columns, value_scales):
+    # Folds norm into the same pre-multiply as value_scale, matching
+    # _attend_plain's own choice to scale the weights once before summing
+    # rather than scale the sum once after.
+    norm = 1.0 / sum(weights)
+    adjusted = [w * s * norm for w, s in zip(weights, value_scales)]
+    return [sum(map(mul, adjusted, column)) for column in columns]
+
+
+def _attend_int8_sumprod(weights, columns, value_scales):
+    sumprod = math.sumprod
+    norm = 1.0 / sum(weights)
+    adjusted = [w * s for w, s in zip(weights, value_scales)]
+    return [sumprod(adjusted, column) * norm for column in columns]
+
+
+if hasattr(math, "sumprod"):
+    _attend_int8 = _attend_int8_sumprod
+else:
+    _attend_int8 = _attend_int8_plain
+
+
 def _matvec(rows, x, bias):
     dot = _dot
     return [dot(row, x) + b for row, b in zip(rows, bias)]
+
+
+# --- int8 weight quantization: per-row (per-channel), symmetric, OFF BY DEFAULT ---
+#
+# Krishnamoorthi 2018 (arXiv:1806.08342), section 2.2's uniform SYMMETRIC
+# quantizer restricted to the SIMD-friendly range (eq. 7-10: zero-point fixed at
+# 0, clamp to [-(N/2-1), N/2-1] = [-127, 127] for signed 8-bit) and section 2.6's
+# PER-CHANNEL granularity (one scale per output row, rather than one for the
+# whole tensor). Section 3.1.1, "weight only quantization", is this file's case
+# exactly: only the weights shrink to int8, activations (the hidden state `x`
+# below) stay float32, and "one does not mind the cost of performing inference
+# in floating point" — table 2 there also shows this is not free: symmetric
+# per-channel weight-only quantization lands close to floating-point accuracy
+# but not always at it (0.591-0.78 against 0.708-0.78 float, across their CNNs),
+# which is why this file's own tests measure greedy-output agreement rather
+# than assume it. `torch.quantize_per_channel`
+# (docs.pytorch.org/docs/2.14/generated/torch.quantize_per_channel.html) takes
+# one scale per index along an axis — the same per-row convention used here.
+#
+# WHY THE SCALE FACTORS OUT OF THE DOT PRODUCT. scale is one float for the
+# WHOLE row, so dequantizing element i is `quantized[i] * scale`, and because
+# scalar multiplication distributes over a sum,
+#     dot(dequantized_row, x) == dot(quantized_row, x) * scale
+# exactly (up to one extra floating-point rounding, not one per element). That
+# is why _matvec_int8 below multiplies by `scale` once per output row instead
+# of dequantizing a 384-wide row back to float before every dot product: doing
+# that would rebuild, at every step, the very float32 row this format exists to
+# not keep in memory.
+def _quantize_row(row):
+    """One float row -> (int8 array, scale). Dequantizing element i is
+    `quantized[i] * scale`. An all-zero row gets scale=1.0 (0 * 1.0 == 0), so a
+    fresh key/value vector before any signal ever divides by zero."""
+    peak = max((abs(v) for v in row), default=0.0)
+    scale = peak / 127.0 if peak else 1.0
+    inv = 1.0 / scale
+    return (array.array("b", (min(127, max(-127, round(v * inv))) for v in row)),
+            scale)
+
+
+def _quantize_rows(rows):
+    """[float row, ...] -> ([int8 row, ...], array('f') of one scale per row)."""
+    quantized, scales = [], array.array("f")
+    for row in rows:
+        q, scale = _quantize_row(row)
+        quantized.append(q)
+        scales.append(scale)
+    return quantized, scales
+
+
+def _load_weight(tensor, quantize: bool):
+    """A weight's rows as _rows() always returned them, quantized to int8 first
+    if `quantize`. `scales` is None for float32 rows, so every caller below —
+    _matvec_int8's dispatch, _embed_row, weight_bytes — has exactly one thing to
+    check to know which kind of row it is holding.
+    """
+    rows = _rows(tensor)
+    return _quantize_rows(rows) if quantize else (rows, None)
+
+
+def _embed_row(rows, scales, index):
+    """One row of an embedding table, dequantized if it is int8.
+
+    Returns the row itself (an array('f'), not a copy) when unquantized, so
+    `zip(_embed_row(self.wte, None, token), ...)` costs exactly what
+    `zip(self.wte[token], ...)` always did.
+    """
+    if scales is None:
+        return rows[index]
+    return [v * scales[index] for v in rows[index]]
+
+
+def _matvec_int8(rows, scales, x, bias):
+    """_matvec over int8 rows: dot(int8_row, x) * scale + bias — see above for
+    why multiplying by `scale` once per row, after the dot product, is exact."""
+    dot = _dot
+    return [dot(row, x) * s + b for row, s, b in zip(rows, scales, bias)]
 
 
 def _layernorm(x, weight, bias, eps=1e-5):
@@ -371,7 +502,7 @@ class PlainGPT:
     model.py's opt-in `use_cache` it is not optional here.
     """
 
-    def __init__(self, config, state):
+    def __init__(self, config, state, quantize: bool = False, quantize_kv: bool = False):
         if config.get("architecture", "gpt") != "gpt":
             raise _Refused(
                 f"this checkpoint is architecture={config['architecture']!r}, which "
@@ -384,33 +515,70 @@ class PlainGPT:
         self.head_dim = self.n_embd // self.n_head
         self.block_size = config["block_size"]
         self.vocab_size = config["vocab_size"]
+        # quantize: every 2-D weight (embeddings, qkv/projection/mlp matrices,
+        # lm_head) is stored as int8 rows plus one float32 scale per row instead
+        # of float32 rows (see _quantize_row and _load_weight above).
+        # quantize_kv: the key/value cache this model keeps across step() calls
+        # (see reset, step) is stored the same way, one scale per cached vector.
+        # Both default False: identical weights, identical arithmetic, identical
+        # output to before either flag existed (TheDefaultIsUnquantized in
+        # test_plain_generate.py pins this down).
+        self.quantize, self.quantize_kv = quantize, quantize_kv
         if "transformer.wpe.weight" not in state:
             raise _Refused("no learned position table; this is not a gpt-core checkpoint")
-        self.wte = _rows(state["transformer.wte.weight"])
-        self.wpe = _rows(state["transformer.wpe.weight"])
+        self.wte, self.wte_scale = _load_weight(state["transformer.wte.weight"], quantize)
+        self.wpe, self.wpe_scale = _load_weight(state["transformer.wpe.weight"], quantize)
         self.layers = []
         for i in range(self.n_layer):
             p = f"transformer.h.{i}."
+            qkv_w, qkv_scale = _load_weight(state[p + "attn.c_attn.weight"], quantize)
+            attn_out_w, attn_out_scale = _load_weight(state[p + "attn.c_proj.weight"], quantize)
+            fc_w, fc_scale = _load_weight(state[p + "mlp.c_fc.weight"], quantize)
+            mlp_out_w, mlp_out_scale = _load_weight(state[p + "mlp.c_proj.weight"], quantize)
             self.layers.append({
                 "ln1_w": _vector(state[p + "ln_1.weight"]),
                 "ln1_b": _vector(state[p + "ln_1.bias"]),
                 "ln2_w": _vector(state[p + "ln_2.weight"]),
                 "ln2_b": _vector(state[p + "ln_2.bias"]),
-                "qkv_w": _rows(state[p + "attn.c_attn.weight"]),
+                "qkv_w": qkv_w, "qkv_scale": qkv_scale,
                 "qkv_b": _vector(state[p + "attn.c_attn.bias"]),
-                "attn_out_w": _rows(state[p + "attn.c_proj.weight"]),
+                "attn_out_w": attn_out_w, "attn_out_scale": attn_out_scale,
                 "attn_out_b": _vector(state[p + "attn.c_proj.bias"]),
-                "fc_w": _rows(state[p + "mlp.c_fc.weight"]),
+                "fc_w": fc_w, "fc_scale": fc_scale,
                 "fc_b": _vector(state[p + "mlp.c_fc.bias"]),
-                "mlp_out_w": _rows(state[p + "mlp.c_proj.weight"]),
+                "mlp_out_w": mlp_out_w, "mlp_out_scale": mlp_out_scale,
                 "mlp_out_b": _vector(state[p + "mlp.c_proj.bias"]),
             })
         self.ln_f_w = _vector(state["transformer.ln_f.weight"])
         self.ln_f_b = _vector(state["transformer.ln_f.bias"])
         # Tied to wte in model.py, but a checkpoint records both names, so read
         # the head rather than assume the tie still holds.
-        self.head = _rows(state["lm_head.weight"])
+        self.head, self.head_scale = _load_weight(state["lm_head.weight"], quantize)
         self.reset()
+
+    def weight_bytes(self) -> int:
+        """Bytes actually held by this model's weight arrays and their scales —
+        never the biases or LayerNorm vectors, which are not quantized. What
+        --quantize buys or costs, measured rather than assumed: array('b') is 1
+        byte/element against array('f')'s 4, and a scale array adds 4 bytes per
+        output row on top of the int8 rows it belongs to."""
+        total = 0
+        for rows, scales in self._weight_slots():
+            total += sum(len(row) * row.itemsize for row in rows)
+            if scales is not None:
+                total += len(scales) * scales.itemsize
+        return total
+
+    def _weight_slots(self):
+        """Every (rows, scales) pair weight_bytes and quantize_model_report walk."""
+        yield self.wte, self.wte_scale
+        yield self.wpe, self.wpe_scale
+        for layer in self.layers:
+            yield layer["qkv_w"], layer["qkv_scale"]
+            yield layer["attn_out_w"], layer["attn_out_scale"]
+            yield layer["fc_w"], layer["fc_scale"]
+            yield layer["mlp_out_w"], layer["mlp_out_scale"]
+        yield self.head, self.head_scale
 
     def total_params(self) -> int:
         """model.py's total_params(): the tied embedding counted once.
@@ -437,6 +605,11 @@ class PlainGPT:
         self.keys = [[[] for _ in range(self.n_head)] for _ in range(self.n_layer)]
         self.values = [[[[] for _ in range(self.head_dim)] for _ in range(self.n_head)]
                        for _ in range(self.n_layer)]
+        if self.quantize_kv:
+            # One scale per cached key vector, and one per cached value vector
+            # (shared by that vector's head_dim columns above) — see step().
+            self.key_scales = [[[] for _ in range(self.n_head)] for _ in range(self.n_layer)]
+            self.value_scales = [[[] for _ in range(self.n_head)] for _ in range(self.n_layer)]
         self.history = []
         if not keep_counters:
             self.rebuilt = 0          # window re-prefills, for the caller to report
@@ -488,34 +661,64 @@ class PlainGPT:
                 self.step(earlier)
         position = len(self.history)
         self.history.append(token)
-        x = [a + b for a, b in zip(self.wte[token], self.wpe[position])]
+        x = [a + b for a, b in zip(_embed_row(self.wte, self.wte_scale, token),
+                                    _embed_row(self.wpe, self.wpe_scale, position))]
         scale = 1.0 / math.sqrt(self.head_dim)
         # Looked up once per step, and at call time rather than bound at import,
         # so a test can put either arithmetic under the same model.
         dot, attend = _dot, _attend
+        quantize, quantize_kv = self.quantize, self.quantize_kv
         width = self.n_embd
         for index, layer in enumerate(self.layers):
+            def project(prefix, value):
+                # Dispatches once per call on the model's own --quantize flag,
+                # never per element; the unquantized branch calls the same
+                # _matvec every non-quantized model has always called.
+                if quantize:
+                    return _matvec_int8(layer[prefix + "_w"], layer[prefix + "_scale"],
+                                        value, layer[prefix + "_b"])
+                return _matvec(layer[prefix + "_w"], value, layer[prefix + "_b"])
+
             h = _layernorm(x, layer["ln1_w"], layer["ln1_b"])
-            qkv = _matvec(layer["qkv_w"], h, layer["qkv_b"])
+            qkv = project("qkv", h)
             attended = [0.0] * width
             for head in range(self.n_head):
                 lo, hi = head * self.head_dim, (head + 1) * self.head_dim
                 q = qkv[lo:hi]
                 past_k, columns = self.keys[index][head], self.values[index][head]
-                past_k.append(qkv[width + lo: width + hi])
-                for column, value in zip(columns, qkv[2 * width + lo: 2 * width + hi]):
-                    column.append(value)
-                scores = [dot(q, k) * scale for k in past_k]
-                top = max(scores)
-                attended[lo:hi] = attend([math.exp(s - top) for s in scores], columns)
-            projected = _matvec(layer["attn_out_w"], attended, layer["attn_out_b"])
+                new_k = qkv[width + lo: width + hi]
+                new_v = qkv[2 * width + lo: 2 * width + hi]
+                if quantize_kv:
+                    kq, kscale = _quantize_row(new_k)
+                    past_k.append(kq)
+                    key_scales = self.key_scales[index][head]
+                    key_scales.append(kscale)
+                    vq, vscale = _quantize_row(new_v)
+                    for column, v in zip(columns, vq):
+                        column.append(v)
+                    value_scales = self.value_scales[index][head]
+                    value_scales.append(vscale)
+                    scores = [dot(q, k) * ks * scale for k, ks in zip(past_k, key_scales)]
+                    top = max(scores)
+                    weights = [math.exp(s - top) for s in scores]
+                    attended[lo:hi] = _attend_int8(weights, columns, value_scales)
+                else:
+                    past_k.append(new_k)
+                    for column, value in zip(columns, new_v):
+                        column.append(value)
+                    scores = [dot(q, k) * scale for k in past_k]
+                    top = max(scores)
+                    attended[lo:hi] = attend([math.exp(s - top) for s in scores], columns)
+            projected = project("attn_out", attended)
             x = [a + b for a, b in zip(x, projected)]
             h = _layernorm(x, layer["ln2_w"], layer["ln2_b"])
-            inner = _gelu(_matvec(layer["fc_w"], h, layer["fc_b"]))
-            out = _matvec(layer["mlp_out_w"], inner, layer["mlp_out_b"])
+            inner = _gelu(project("fc", h))
+            out = project("mlp_out", inner)
             x = [a + b for a, b in zip(x, out)]
         h = _layernorm(x, self.ln_f_w, self.ln_f_b)
-        return [dot(row, h) for row in self.head]   # lm_head has no bias
+        if self.head_scale is None:
+            return [dot(row, h) for row in self.head]   # lm_head has no bias
+        return [dot(row, h) * s for row, s in zip(self.head, self.head_scale)]
 
     def generate(self, ids, max_new_tokens: int, temperature: float = 0.8,
                  top_k: int | None = 40, seed: int | None = None,
@@ -607,8 +810,12 @@ def checkpoint_exists(out_dir) -> bool:
     return (out / "ckpt.pt").is_file() and (out / "tokenizer.json").is_file()
 
 
-def load_checkpoint(out_dir):
-    """Return (model, tokenizer, config) ready to generate from, without torch."""
+def load_checkpoint(out_dir, quantize: bool = False, quantize_kv: bool = False):
+    """Return (model, tokenizer, config) ready to generate from, without torch.
+
+    quantize and quantize_kv default False and pass straight through to
+    PlainGPT — see its docstring and _quantize_row above for what each does.
+    """
     out = Path(out_dir)
     weights, vocab = out / "ckpt.pt", out / "tokenizer.json"
     missing = [str(p) for p in (weights, vocab) if not p.exists()]
@@ -626,7 +833,7 @@ def load_checkpoint(out_dir):
             f"{out}/ is inconsistent: tokenizer has {tok.vocab_size} tokens but the "
             f"model's vocab_size is {config['vocab_size']}. The tokenizer and the "
             f"weights came from different training runs.")
-    return PlainGPT(config, state), tok, config
+    return PlainGPT(config, state, quantize=quantize, quantize_kv=quantize_kv), tok, config
 
 
 def sample(model, tok, prompt: str, tokens: int = 400, temperature: float = 0.8,
@@ -731,11 +938,19 @@ def main() -> int:
                          "keeps (default half the window)")
     ap.add_argument("--stop-at-window", action="store_true",
                     help="stop when the prompt and the text fill one window")
+    ap.add_argument("--quantize", action="store_true",
+                    help="hold weights as int8 (one scale per row) instead of "
+                         "float32 -- about a quarter the memory, off by default "
+                         "because greedy output can then disagree with float32's")
+    ap.add_argument("--quantize-kv", action="store_true",
+                    help="hold the key/value cache as int8 the same way, off by "
+                         "default for the same reason")
     # The default since 2026-09-26; kept so command lines written before still run.
     ap.add_argument("--past-context", action="store_true", help=argparse.SUPPRESS)
     args = ap.parse_args()
     try:
-        model, tok, config = load_checkpoint(args.out)
+        model, tok, config = load_checkpoint(args.out, quantize=args.quantize,
+                                             quantize_kv=args.quantize_kv)
     except zipfile.BadZipFile as exc:
         # zipfile's own message is "File is not a zip file" with no path in it,
         # which in a stick's console is indistinguishable from any other failure.
@@ -747,6 +962,10 @@ def main() -> int:
         return 1
     print(f"{model.total_params():,} numbers, {tok.vocab_size} vocabulary entries, "
           f"context {config['block_size']} — no torch, no numpy", file=sys.stderr)
+    if args.quantize or args.quantize_kv:
+        print(f"plain_generate: weights held as {model.weight_bytes():,} bytes "
+              f"({'int8' if args.quantize else 'float32'} weights, "
+              f"{'int8' if args.quantize_kv else 'float32'} KV cache)", file=sys.stderr)
     note = unknown_note(tok, args.prompt)
     if note:
         # Said before generating, not after: the answer takes seconds to come.
