@@ -122,6 +122,8 @@ def _t_type_of(t: Optional[Type]) -> str:
         return "int"
     if t.kind == "bool":
         return "bool"
+    if t.kind == "tuple":
+        return "pair"  # row 44 (2026-09-27): a tuple-typed name is a pair
     if t.kind in ("seq", "array", "string"):
         # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code
         # points (v1)"): `string` is the same t `seq` a Dafny
@@ -151,6 +153,10 @@ def _t_json_type(t: Optional[Type]) -> object:
         # Row 43 (2026-09-27): a `seq<string>`/`seq<seq<char>>` is the
         # same compound type, its rows code points (row 28 per row).
         return {"seq": "seq"}
+    if t is not None and t.kind == "tuple" and len(t.args) == 2:
+        # Row 44 (2026-09-27): a two-component Dafny tuple is t's pair type,
+        # each component mapped as row 29 maps an out-parameter's type.
+        return {"pair": [_pair_component_ty_of(t.args[0]), _pair_component_ty_of(t.args[1])]}
     return _t_type_of(t)
 
 
@@ -585,6 +591,17 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
         return _lift_quantifier(e, scope, fn_names, self_name, task_name, record, renamer)
     if e.__class__.__name__ == "Cardinality":
         return {"op": "len", "args": [_lift_expr(e.arg, scope, fn_names, self_name, task_name, record, renamer)]}
+    if e.__class__.__name__ == "TupleExpr":
+        # Row 44 (2026-09-27): `(a, b)` is t's pair literal; `classify`
+        # has already confirmed the arity is two.
+        record.rewrites.append(Rewrite(rule="tuple-literal-lifted", line=e.line))
+        return {"op": "pair", "args": [
+            _lift_expr(x, scope, fn_names, self_name, task_name, record, renamer) for x in e.elems]}
+    if e.__class__.__name__ == "Member" and e.name in ("0", "1"):
+        # Row 44: `p.0`/`p.1` on a tuple-typed name are t's projections.
+        record.rewrites.append(Rewrite(rule="tuple-projection-lifted", line=e.line))
+        return {"op": "fst" if e.name == "0" else "snd",
+                "args": [_lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)]}
     if e.__class__.__name__ == "Member":  # `.Length`, only reachable form (classify refused others)
         return {"op": "len", "args": [_lift_expr(e.base, scope, fn_names, self_name, task_name, record, renamer)]}
     if e.__class__.__name__ == "Index":
@@ -1890,6 +1907,13 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             # same reason.
             ret_ty = "seq"
             ret_json_ty = _t_json_type(ret.type)  # row 30: nested when ret.type is
+        elif ret.type is not None and ret.type.kind == "tuple":
+            # Row 44 (2026-09-27): a tuple-typed return IS the pair return
+            # row 29 builds for two out-parameters, here under the source's
+            # own single name (`result`), so `result.0`/`result.1` and
+            # `result := (a, b)` lift through `_lift_expr` unchanged.
+            ret_ty = "pair"
+            ret_json_ty = _t_json_type(ret.type)
         else:
             ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"
             ret_json_ty = ret_ty
@@ -1959,6 +1983,16 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             requires_out.append(_ge0(tn))
             record.clauses_added.append(ClauseAdded(rule="nat-param-guard", text=f"{tn} >= 0"))
             record.rewrites.append(Rewrite(rule="nat-param-guard", line=p.line))
+    for p in method.params:
+        if p.type is not None and p.type.kind == "tuple" and len(p.type.args) == 2:
+            # Row 44 (2026-09-27): a tuple parameter's `nat` component owes
+            # the same guard a `nat` parameter does, on its projection.
+            for ct, proj, idx in zip(p.type.args, ("fst", "snd"), ("0", "1")):
+                if ct is not None and ct.kind == "nat":
+                    tn = scope.renames[p.name]
+                    requires_out.append(_ge0_of({"op": proj, "args": [{"var": tn}]}))
+                    record.clauses_added.append(ClauseAdded(rule="nat-param-guard", text=f"{tn}.{idx} >= 0"))
+                    record.rewrites.append(Rewrite(rule="nat-param-guard", line=p.line))
     for p in method.params:
         if p.type is not None and p.type.kind == "char":
             tn = scope.renames[p.name]
@@ -2093,6 +2127,17 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             ensures_out.append(clause)
             record.clauses_added.append(ClauseAdded(rule="nat-return-ensures", text=f"{t_ret}.1 >= 0"))
             record.rewrites.append(Rewrite(rule="nat-return-ensures", line=method.line))
+    # Row 44 (2026-09-27): the same per-component non-negativity for a
+    # tuple-typed return with a `nat` component (`(nat, nat)`, DD0145).
+    tuple_ret = (method.returns[0].type if pair_returns is None and len(method.returns) == 1
+                 and method.returns[0].type is not None and method.returns[0].type.kind == "tuple"
+                 else None)
+    if tuple_ret is not None and len(tuple_ret.args) == 2:
+        for ct, proj, idx in zip(tuple_ret.args, ("fst", "snd"), ("0", "1")):
+            if ct is not None and ct.kind == "nat":
+                ensures_out.append(_ge0_of({"op": proj, "args": [{"var": t_ret}]}))
+                record.clauses_added.append(ClauseAdded(rule="nat-return-ensures", text=f"{t_ret}.{idx} >= 0"))
+                record.rewrites.append(Rewrite(rule="nat-return-ensures", line=method.line))
     for spec in method.specs:
         if isinstance(spec, EnsuresClause):
             src_e = _strip_fresh_conjuncts(spec.expr, fresh_ret_name, record, spec.line)
