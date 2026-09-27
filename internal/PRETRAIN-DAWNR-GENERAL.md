@@ -286,3 +286,13 @@ exact token counts, step counts and the number that would prove the prediction w
 written before the run starts -- the same rule this note itself followed for the
 tokenizer and decontamination measurements above, and the rule every other round in this
 repository is held to.
+
+## Required before the English corpus is assembled (added at merge, 2026-09-26)
+
+The 13-gram filter's protected set is the 332 MBPP held-out and dev ids. Before any shard enters a
+training corpus it must be widened to every problem the project measures on or will measure on:
+the HumanEval ids the decontamination policy already excludes (vericoding's `humaneval_NNN`
+aliases were caught by the RL spec-pool gate), the fresh CodeContests confirmation panel held for the
+Phi comparison, and any later evaluation set. The 53 flagged documents must then be excluded by
+document id at assembly time, with a check that proves it. Until both are done, no English shard is
+training data.
