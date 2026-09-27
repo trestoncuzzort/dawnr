@@ -997,8 +997,17 @@ Semantics:
   a Lean `grind_pattern`) over the spec_fun calls in its ensures, so its
   conclusion is available wherever those terms occur and its hypotheses
   can be shown. That adds only proved facts; the one difference is that a
-  call whose requires is false is not rejected there. Rocq states no
-  lemma in v1: its lowering proves the program with the calls removed.
+  call whose requires is false is not rejected there. Rocq (2026-09-27)
+  proves each lemma as a theorem of the file (a recursive one by induction
+  on a nat fuel bounding its `decreases`, the encoding its spec_funs and
+  self-recursive tasks already have) and poses the call's instance, the
+  theorem applied to the arguments as rendered in the symbolic state at
+  the call, in the proof whose goal covers that statement; a premise
+  (a `requires`) is discharged where its automation proves it and left in
+  place as an implication otherwise, so a call whose requires is false
+  gives nothing. Where its lowering has no site for the instance (a
+  self-recursive body, nested or multiple loops) it states none of the
+  lemmas and proves the program with the calls removed, as it did in v1.
 - **Execution.** The interpreter skips a lemma call. The twin never
   mutates a lemma and never mutates a lemma call's arguments (the ladder
   breaks only assignments, locals, returns and guards). A twin's
@@ -1014,7 +1023,11 @@ value-neutral obligation wrapper (left out in a body with an early return,
 whose escape threading has no path guard for the Pre); Frama-C a ghost C
 function with an ACSL contract and a ghost call; F* a `Lemma` with an
 `SMTPat`; Lean a theorem closed by grind with a `grind_pattern`; Rocq
-states no lemma and proves the program with the calls removed.
+(2026-09-27, `t/lower_rocq.py`'s LEMMAS section) a theorem per lemma
+proved from the skeleton by the file's own automation, fuel induction for
+a recursive one, each call's instance posed in the enclosing proof; a body
+shape with no site for it states none and proves the program with the
+calls removed.
 
 Fixtures `t/lemmas/*.t` (pow2_pos: an inductive lemma over a recursive
 spec_fun; sum_loop: an induction step used inside a loop; sq_bound: a

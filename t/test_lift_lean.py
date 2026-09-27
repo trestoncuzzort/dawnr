@@ -145,7 +145,14 @@ class Refusals(unittest.TestCase):
         self.assertEqual(self.refusal(post="result = (List.range 3).foldl (fun a b => a + b) 0"), "higher-order")
 
     def test_string(self):
-        self.assertEqual(self.refusal(sig="(s : String)", body="0", post="result = 0"), "string")
+        # feature 6 (2026-09-27): a String parameter renders as Dafny's
+        # `string` (row 28 lifts it as code points); `String.Pos` and the
+        # library members with no Dafny expression still refuse by name
+        self.assertIsNone(self.refusal(sig="(s : String)", body="0", post="result = 0"))
+        self.assertEqual(self.refusal(sig="(s : String)", body="(s.get 0).toNat", post="result ≥ 0"),
+                         "string-pos")
+        self.assertEqual(self.refusal(sig="(s : String)", body="(s.splitOn \" \").length",
+                                      post="result ≥ 0"), "string-lib")
 
     def test_float(self):
         self.assertEqual(self.refusal(sig="(x : Float)", body="0", post="result = 0"), "float")

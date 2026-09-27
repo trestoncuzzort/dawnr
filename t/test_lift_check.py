@@ -782,11 +782,22 @@ def test_resolver_binder_printed_in_source_form() -> None:
     text = lift_check._print_expr(_q("forall", ["i", "_t#0"], rng, body), {})
     assert "_t#" not in text and "#" not in text, text
     assert text == "(forall i: int :: ((0 <= i < (|s| - 1)) ==> (s[i] <= s[(i + 1)])))", text
-    # A binder the author wrote, pinned by an equation, is left alone.
+    # A binder the author wrote, pinned by an equation, is substituted the
+    # same way since 2026-09-27 (t/FEATURES-TRACK.md feature 5): the one-point
+    # rule is a logical identity, and the lifted side applies it too
+    # (`lift_classify._eliminate_defined_binders`), so both sides of
+    # L_req/L_ens read `P(E)`. Until then it was left alone.
     j = Ident(1, "j")
     kept = _q("forall", ["i", "j"], Chain(1, ("==",), (j, Binary(1, "+", i, IntLit(1, 1)))),
               Chain(1, ("<=",), (Index(1, s, i), Index(1, s, j))))
-    assert "forall i: int, j: int | (j == (i + 1))" in lift_check._print_expr(kept, {})
+    assert lift_check._print_expr(kept, {}) == "(forall i: int :: (s[i] <= s[(i + 1)]))", \
+        lift_check._print_expr(kept, {})
+    # A quantifier all of whose binders are pinned is its body.
+    from lift_ast import NaryBool
+    alone = _q("exists", ["j"], None,
+               NaryBool(1, "&&", (Chain(1, ("==",), (j, Binary(1, "+", i, IntLit(1, 1)))),
+                                  Chain(1, ("<=",), (Index(1, s, i), Index(1, s, j))))))
+    assert lift_check._print_expr(alone, {}) == "(s[i] <= s[(i + 1)])", lift_check._print_expr(alone, {})
     print("test_resolver_binder_printed_in_source_form: ok")
 
 
