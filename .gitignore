@@ -109,7 +109,15 @@ t/out/**
 !t/out/loop/apps-upper.txt
 !t/out/loop/sft-r*.jsonl
 !t/out/loop/pairs-r*.jsonl
+# the corpus r12 actually trains on (t/RUN-NEXT-locallm-r12.md section C's --data):
+# same reason as the split above, reproducibility, and preflight already warns when
+# a file the run opens is not in the repository.
+!t/out/loop/corpus-r12-headed.txt
+!t/out/loop/corpus-r12-headed.txt.trust.jsonl
+!t/out/loop/sft-r12-dropped-not-in-pool-v5.txt
 !t/out/spec-experiment/**/WHY-NO-TABLE.md
+# the r12 launcher itself is a deliverable, not a run's output
+!t/out/r12-run/run.sh
 # tup/book/ stays TRACKED: it is generated, but it is the exact bytes that
 # executed, which is evidence a receipt can point at.
 

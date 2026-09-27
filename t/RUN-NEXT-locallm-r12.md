@@ -268,3 +268,115 @@ eligible, 100 chosen). `t/r12_data_queue.sh all` runs on the lab's CPUs: the
 teacher answers graded in chunks with `--no-cache`, then spec checks, the r12
 pool files (with the relabeled rows), and the twelve r11 baseline arms.
 
+## Corpus and build status, 2026-09-27: ready to launch, nothing trained
+
+The queue's `spec` step (section F step 2 depends on it only through the trust
+each tag's table carries, not through this check itself) stopped on the lab at
+`spec-qwen235-train-p4`: "specification results incomplete". Checking the lab
+directly (`t/out/spec-experiment/<tag>/kernels.md`) found the graded-table gap is
+wider than that one tag: `qwen235-train-p4` (483 tested, extracted 2026-09-25) and
+`prover-train2` (37 tested) have never been merged into a table at all, and
+`student-r4-train` and `locallm-r4-train` (the r4-era contributors to r8's
+positives) likewise have `raw/` and `tasks/` but no `kernels.md` on this lab
+checkout. A further eleven `-fix2`/`-fix3` retry-shard tags under the `qwen2.5-
+coder-14b-*`/`qwen3-coder-30b-*` glob (`t/steps.json`'s tag list has drifted from
+the lab's current directories) are also ungraded. None of this is a defect in the
+data that exists; it is work not yet done, so it is omitted and named rather than
+silently skipped or forced.
+
+**1. `build-r12` run without them.** `t/r12_data_queue.sh build`'s documented
+override, `R12_BUILD_TAGS`, was given the section 892 default list with every tag
+above dropped (verified first, `[ -f <tag>/kernels.md ]` on the lab, for each
+glob-matched candidate) instead of the stale glob. A second, real blocker
+surfaced once the tag list was fixed: `loop_dataset.py --relabel-rows` refused
+the whole build because `t/out/loop/relabel-2026-09-25.jsonl:78` (task_id 204207)
+now names a problem the 2026-09-25 behavioural decontamination list added after
+the relabel file was built -- the held-out boundary working as designed, not a
+bug to route around by weakening it. `t/r12_data_queue.sh` gained a matching
+override, `R12_SKIP_RELABEL=1` (same style as `R12_BUILD_TAGS`, default
+unchanged), so the relabeled-row enrichment is left out this round rather than
+the whole build refused. Result on the lab: **`sft-r12.jsonl`: 128 rows**
+(`t/out/loop/pairs-r12.jsonl`: 1,162). Owed: `prover-train2` (up to 29) and
+`qwen235-train-p4`'s spec check, both small, independent follow-ups; grading
+`student-r4-train`/`locallm-r4-train` recovers whatever of the original r8
+positives table B counted through them.
+
+**2. The r12 corpus, assembled and measured.** Of `sft-r12.jsonl`'s 128 rows, 54
+name a task_id in neither pool v3 nor v5 (checked directly; an unindexed-APPS
+gap from an older, wider teacher-generation catalog than the current pool files
+cover, not a decontamination hit) and were dropped, named in
+`t/out/loop/sft-r12-dropped-not-in-pool-v5.txt`, leaving 74
+(`sft-r12-v5resolved.jsonl`). The corpus command `t/LIFT-2026-09-26.md` records
+for one lifted set was run for all nine 2026-09-27 regrades plus the original
+785-DafnyBench lift, each `--lifted-set` paired with its own regrade table, and
+`--heads` filtered first to the names each regrade table actually admits (a raw
+`heads.jsonl` names every lifted file a source described, most of which the
+strict clean-in-seven gate refuses; `loop_locallm.py corpus` refuses an
+unmatched head by design, so the filter runs `graded_rows()` itself before
+`--heads` sees the file -- 423 raw heads narrow to 118 admitted, which is exactly
+the 118-headed count already published):
+
+    python3 t/loop_locallm.py corpus --sft t/out/loop/sft-r12-v5resolved.jsonl --lifted \
+      --lifted-set t/out/lifted-tasks-2026-09-26=t/COVERAGE-lifted-2026-09-26-regrade-2026-09-27.md \
+      --lifted-set t/out/lifted-tasks-2026-09-26-rechecked=t/COVERAGE-lifted-2026-09-26-rechecked-regrade-2026-09-27.md \
+      --lifted-set t/out/lifted-tasks-2026-09-26-let=t/COVERAGE-lifted-2026-09-26-let-regrade-2026-09-27.md \
+      --lifted-set t/out/lifted-tasks-2026-09-26-let-rechecked=t/COVERAGE-lifted-2026-09-26-let-rechecked-regrade-2026-09-27.md \
+      --lifted-set t/out/lifted-tasks-2026-09-26-recovered=t/COVERAGE-lifted-2026-09-26-recovered-regrade-2026-09-27.md \
+      --lifted-set t/out/lifted-tasks-acsl-by-example=t/COVERAGE-lifted-acsl-by-example-regrade-2026-09-27.md \
+      --lifted-set t/out/lifted-tasks-vericoding-lean=t/COVERAGE-lifted-vericoding-lean-regrade-2026-09-27.md \
+      --lifted-set t/out/lifted-tasks-vericoding-verus=t/COVERAGE-lifted-vericoding-verus-regrade-2026-09-27.md \
+      --lifted-set t/out/lifted-tasks-verus-examples=t/COVERAGE-lifted-verus-examples-regrade-2026-09-27.md \
+      --heads <lifted-tasks-2026-09-26,-let,-recovered,vericoding-lean,vericoding-verus>.meta/heads-clean.jsonl \
+      --split t/out/loop/split-v5.json --pool v5 --min-kernels 7 --out t/out/loop/corpus-r12-headed.txt
+
+(`lifted-tasks-verus-examples` has no head source and is omitted from `--heads`,
+not from `--lifted-set`.) **Result: `t/out/loop/corpus-r12-headed.txt`, 499
+documents, 272,163 bytes** -- 431 lifted/committed (167 original DafnyBench lift +
+237 across the nine 2026-09-27 regrades + 27 committed via `AGREEMENT.md`,
+matching the 431 already reported in `AMBITION.md` and `t/LIFT-2026-09-26.md`
+exactly) plus 68 new teacher-answer positives, 118 with an
+English head, 0 admitted with a gap. sha256
+`a8a382ebd3c731d5144267d0001d22595cd9701c1a8d65cdc7a61e5492a1881e`.
+`t/r12_data_queue.sh verify-dev` finds none of the 100 dev ids under any alias.
+
+**3. Predictions registered:** `t/PREDICT-r12.md` (`seeds: 10`, `metric: clean`,
+`problems: decontam`), before any r12 seed has trained.
+
+**4. The run script, written and dry-run tested, not started:**
+`t/out/r12-run/run.sh` (`--dry-run` exercises every branch with no side effect;
+default mode was run for real and correctly refused because the core is not
+ready -- see below). It waits for
+`t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337-desktop-best/{best.pt,
+run.json}` to report `status: complete` (at this writing: `running`, step
+1,700 of 11,200), then per seed 1-10 trains (section C's command), picks the
+dev-chosen stopping step, generates the 232 held-out answers, and grades on the
+lab, each GPU-touching step as `flock /home/t/scratch/gpu.lock systemd-run
+--user --scope -p MemoryMax=6G <cmd>`; grading cells are capped at `T_LAB_JOBS=2`
+(about 8 cores) as a courtesy on the shared lab. It ends by running
+`score_heldout.py` and `compare_arms.py --prereg t/PREDICT-r12.md` over the ten
+r12 seeds against the ten already-graded r11 seeds (`rerun`, `s1`-`s9`).
+Preflight's one standing warning (`t/steps.json`'s teacher-generation prompt v3
+contradicting the parser about division) is accepted explicitly in the script's
+own comment, per preflight's own suggested escape: r12's generation decodes the
+fine-tuned model directly from the corpus head, never through that prompt.
+
+**5. Preflight, passing.** Run from a controller with `T_LAB` set to the lab
+(not from the lab itself, which has no host key for its own address and fails
+two unrelated checks that way -- `t/DATA-r12.md`'s own note about
+`t/r12_data_queue.sh`):
+
+    T_LAB=<lab> python3 t/preflight.py --split t/out/loop/split-v5.json \
+      --corpus t/out/loop/corpus-r12-headed.txt --strict
+
+Zero `[FAIL]`; one `[warn]`, the division-prompt one above, accepted for the
+reason given in run.sh's comment rather than silenced.
+
+**Launch, when the pretraining run finishes** (poll it, or pass `--wait` to have
+run.sh do the polling):
+
+    bash t/out/r12-run/run.sh --wait
+
+Not run today: the desktop's GPU is inside the pretraining sweep's memory and
+time window (section on "WHERE COMPUTE RUNS"), and section E's one-look rule
+means the 232 are graded once, after training, not before.
+
