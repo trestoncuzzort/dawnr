@@ -215,8 +215,16 @@ a harness, the way an agent runtime wraps a language model:
 | to know how to do specialised tasks | skills: packaged instructions and scripts loaded only when a task needs them | **built**: the Agent Skills folder format, an index line per skill, loading on demand; the first skill is `t-repair` |
 | to enforce rules no matter what the model says | hooks: deterministic scripts the runtime runs before and after tool calls; the proof check is dawnr's first hook | **built**: Claude Code's hook contract; the checker checks every t program from outside and blocks a failing final answer once |
 
-None of the harness is learned yet: today's checkpoints can use only the t
-tool. `DAWNR-HARNESS.md` section 8 lists the conversations each piece needs.
+The harness's tools are now trained, opt-in: 1,007 conversations built through
+the real harness (every tool output its own, a recorded fixture web for the
+network) teach the mid stage to pick the right tool on 97% of held-out items
+and to close its calls, but cost 2.3 of 133 prompts on the t tasks, past the
+registered guard of 2, and the injection measurement found nothing to reduce: a
+model this size follows no instruction inside a page, taught to or not, and
+only copies a program it finds there. Given the same instructions by the
+person, it follows them barely more (0.02 to 0.04, again only by copying a
+program), so at this size the number measures what the model cannot do, not
+what it declines to do (`DAWNR-HARNESS.md` section 8).
 
 The rule that keeps this compatible with the north star: **the network is a
 tool, never a dependency.** dawnr works fully offline; when a network, MCP
