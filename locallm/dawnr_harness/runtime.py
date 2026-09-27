@@ -257,7 +257,8 @@ class Harness:
 
 # ------------------------------------------------------------ configuration --
 
-CONFIG_KEYS = {"offline", "permissions", "taint_escalates", "hooks", "skills", "web", "mcp_servers", "audit"}
+CONFIG_KEYS = {"offline", "permissions", "taint_escalates", "hooks", "skills", "web", "mcp_servers", "audit",
+              "retrieval"}
 
 
 def _expand(value: str, env: dict) -> str:
@@ -309,6 +310,15 @@ def build_harness(config: dict | str | Path | None = None, *, approver: Approver
         if set(web) - known:
             raise ValueError(f"unknown web keys: {', '.join(sorted(set(web) - known))}")
         for tool in web_tools(WebConfig(**web), search):
+            registry.add(tool)
+
+    if config.get("retrieval") is not None:
+        # dawnr_retrieval is a sibling package of dawnr_harness under locallm/, not a submodule of
+        # it (DAWNR-RETRIEVAL.md), so it is reached the same way t_tool and checkpoint are (an
+        # absolute import relying on locallm/ already being on sys.path, which every caller that
+        # could import dawnr_harness at all has already arranged).
+        from dawnr_retrieval import retrieval_tools
+        for tool in retrieval_tools(config["retrieval"]):
             registry.add(tool)
 
     for server, spec in (config.get("mcp_servers") or {}).items():
