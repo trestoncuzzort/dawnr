@@ -58,6 +58,80 @@ class ProtectedIdsTest(unittest.TestCase):
         self.assertEqual(eval_ids & dev_ids, set())
 
 
+class WidenedProtectedSetTest(unittest.TestCase):
+    """internal/PRETRAIN-DAWNR-GENERAL.md, 'Required before the English corpus
+    is assembled': the protected set must widen past the 332 held-out/dev ids
+    to the HumanEval ids the decontamination policy excludes and every
+    CodeContests problem text. Runs with only the repository's committed data
+    (no lab-only nl/data/codecontests_*.jsonl.gz), so the CodeContests half is
+    checked for shape, not count."""
+
+    def test_humaneval_excluded_ids_match_the_policy(self):
+        # t/decontamination-behavioural-2026-09-25.json's exclude_train_ids
+        # merged with t/decontamination-2026-09-21.json's, restricted to the
+        # HumanEval id range: today that is exactly these three. A policy
+        # change that adds or removes a HumanEval exclusion should change this
+        # assertion, not silently pass it.
+        ids = decontam.humaneval_excluded_ids()
+        self.assertEqual(ids, {"humaneval:13": "humaneval-excluded",
+                               "humaneval:23": "humaneval-excluded",
+                               "humaneval:57": "humaneval-excluded"})
+
+    def test_humaneval_records_found_for_every_excluded_id(self):
+        ids = decontam.humaneval_excluded_ids()
+        records = decontam.humaneval_records(HERE.parent / "nl" / "data", ids)
+        self.assertEqual(set(records), set(ids))
+        for rec in records.values():
+            self.assertTrue(rec["text"].strip())
+
+    def test_codecontests_records_keyed_and_empty_without_lab_data(self):
+        # nl/data/codecontests_*.jsonl.gz is gitignored (local-only, per
+        # .gitignore); a checkout without it must contribute zero records,
+        # never raise.
+        records = decontam.codecontests_records(HERE.parent / "nl" / "data")
+        if (HERE.parent / "nl" / "data" / "codecontests_train.jsonl.gz").exists():
+            self.assertGreater(len(records), 0)
+        else:
+            self.assertEqual(records, {})
+        for key in records:
+            self.assertTrue(key.startswith("codecontests:"))
+
+    def test_widened_set_is_a_strict_superset_of_the_held_out_boundary(self):
+        records, ids = decontam.widened_protected_set(
+            HERE.parent / "nl" / "data", HERE / "out" / "loop" / "split-v5.json", HERE / "r12-dev-ids.json")
+        held_out = decontam.protected_ids(HERE / "out" / "loop" / "split-v5.json", HERE / "r12-dev-ids.json")
+        self.assertLessEqual(held_out.keys(), ids.keys())
+        for pid, reason in held_out.items():
+            self.assertEqual(ids[pid], reason)  # widening never relabels the absolute boundary
+        self.assertEqual(sum(v == "humaneval-excluded" for v in ids.values()), 3)
+        index, owners, missing = decontam.build_index(records, ids)
+        self.assertEqual(missing, [])
+
+    def test_a_humaneval_excluded_needle_is_caught(self):
+        records, ids = decontam.widened_protected_set(
+            HERE.parent / "nl" / "data", HERE / "out" / "loop" / "split-v5.json", HERE / "r12-dev-ids.json")
+        index, owners, missing = decontam.build_index(records, ids)
+        needle = decontam.problem_text(records["humaneval:13"])
+        fake_doc = "An unrelated introduction.\n\n" + needle + "\n\nAn unrelated conclusion."
+        words = decontam.WORD.findall(fake_doc.lower())
+        pos, gram = decontam.find_match(words, index)
+        self.assertIsNotNone(gram)
+        self.assertIn("humaneval:13", owners[gram])
+
+    def test_matched_problem_ids_sort_even_when_families_mix(self):
+        # owners[gram] can hold both an int (MBPP) and a str (humaneval:/
+        # codecontests:) key if two different protected problems happen to
+        # share one generic 13-gram: plain sorted() on such a set raises
+        # TypeError (str and int are not orderable), which is exactly why the
+        # report-writing code sorts with key=str instead.
+        mixed = {29, "humaneval:13", "codecontests:train:0"}
+        with self.assertRaises(TypeError):
+            sorted(mixed)
+        result = sorted(mixed, key=str)  # must not raise
+        self.assertEqual(set(result), mixed)
+        self.assertEqual(len(result), 3)
+
+
 class NgramFilterTest(unittest.TestCase):
     def setUp(self):
         self.ids = decontam.protected_ids(HERE / "out" / "loop" / "split-v5.json", HERE / "r12-dev-ids.json")
