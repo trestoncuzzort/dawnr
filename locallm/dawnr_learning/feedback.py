@@ -205,9 +205,12 @@ class PersonStore:
 
     # ---- files
     def _ensure_dir(self) -> None:
+        """Create the person's folder, private to this user (platformdirs' private=True); a folder that
+        already existed keeps its permissions, so pointing DAWNR_PEOPLE_DIR somewhere never changes them."""
+        fresh = [d for d in (self.root, self.dir) if not d.exists()]
         self.dir.mkdir(parents=True, exist_ok=True)
         if os.name == "posix":
-            for d in (self.root, self.dir):
+            for d in fresh:
                 try:
                     os.chmod(d, 0o700)
                 except OSError:

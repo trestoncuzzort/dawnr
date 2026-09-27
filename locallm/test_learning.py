@@ -166,6 +166,17 @@ class Store(unittest.TestCase):
             self.assertGreater(s.erase_all(), 0)
             self.assertEqual(s.records(), [])
 
+    @unittest.skipIf(sys.platform == "win32", "POSIX permissions")
+    def test_the_persons_folder_is_private_and_an_existing_folder_keeps_its_mode(self):
+        import os
+        import stat
+        with tempfile.TemporaryDirectory() as tmp:
+            os.chmod(tmp, 0o755)
+            s = F.PersonStore("ada", root=tmp)
+            s.add_answer([{"role": "user", "content": USER}], PROGRAM)
+            self.assertEqual(stat.S_IMODE(os.stat(tmp).st_mode), 0o755)
+            self.assertEqual(stat.S_IMODE(os.stat(s.dir).st_mode), 0o700)
+
     def test_wrong_turn_detector_prefers_precision(self):
         for said in ("That's wrong", "no, that is wrong", "Wrong.", "this is incorrect, try again",
                      "It doesn't work", "that's not what I asked", "nope, not right", "your program is wrong"):
