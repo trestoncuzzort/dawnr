@@ -116,9 +116,13 @@ its line changes here.
   old ~300-document corpus reached 0.11 nats per token on its training text
   against 0.68 on held-out text: it memorised. Released corpora of verified
   Dafny programs are lifted into t, proved equivalent to their sources and
-  graded in all seven kernels. *State:* the first lift added 108 documents;
-  the proved corpus went from 194 to 302 (`t/LIFT-2026-09-26.md`). More lifts
-  are being graded.
+  graded in all seven kernels, and now Verus, Lean and C/ACSL corpora too.
+  *State:* the proved corpus went from 194 documents (66,569 characters) to
+  **358 (171,182)** on 2026-09-26: Dafny lifts 136, Verus 21, Lean 5, ACSL 2
+  (`t/LIFT-2026-09-26.md`, `t/LIFT-VERICODING-VERUS-LEAN.md`,
+  `t/LIFT-ACSL-BY-EXAMPLE.md`). About 70 more are clean in six of seven kernels
+  and wait on graded-trust admission; Frama-C, Lean and Rocq lose the most
+  lifted tasks, so their lowerings are the next lever.
 - **Denoising training.** Corrupt spans of each training document and train
   the model to restore them (fill in the middle, arXiv:2207.14255). *State:*
   measured twice, and the two disagree. From scratch on the 302 proved
