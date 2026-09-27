@@ -2636,3 +2636,15 @@ is written above.
 Mechanizing the normative core in Rocq or Lean, tup's prove layer with the
 kernels inside the receipted distro (10.5), floats, an OS in t. Considered
 for this road and left where they were.
+
+## dawnr is the track, 2026-09-26
+
+The operator set the project's track: dawnr, the assistant described in `AMBITION.md` (a model
+you could trust on a spaceship; a system of machine-learning parts, each judged by the proof
+engine). locallm is dawnr's core model; r12 and the Phi comparison are milestones on the way.
+State that day: proved corpus 358 documents (from 194); RL with the provers as reward built and
+waiting on a higher base rate (0.6% of problems outside the corpus); teacher-seeded expert
+iteration and graded-trust admission started; the pretraining sweep done with its best state lost
+(the trainer now keeps `best.pt`). Next: re-run pretraining to its best point, finish the data
+tracks, train r12 on the full corpus and score it on the clean 200; then dawnr's next rows
+(retrieval, memory) in the table's order.
