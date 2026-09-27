@@ -418,6 +418,40 @@ and `tuple-component` name what t's pair cannot carry. **Measured**: 10 of 27
 lift, 7 pass the check stage; 8 of the other 17 refuse `function-result`
 (a tuple-returning helper). Tests: `t/test_lift_tuples.py`.
 
+### 9. Seq-valued spec_funs (2026-09-27, language and lifter)
+
+**Refused: 135 methods `function-result`** of the 2026-09-26 lift (a helper
+function returning `string` or `seq<int>`); **305 methods** in the
+2026-09-27 baseline re-lift of the 1,886 staged files without the check
+stage, this feature's own run (`t/FEATURES-SEQFUN-2026-09-27.md`: 86
+`string`, 66 `bool`, 58 `real`, 31 `seq<string>`, 25 `seq<int>`, 5
+`seq<char>`, 2 `seq<nat>`, the rest sets, tuples, bitvectors, type
+synonyms). A spec_fun's result may now be a seq of ints (SPEC.md
+"Seq-valued spec_funs (v1)"; `"result": "seq"` in SYNTAX.md, `spec fun
+f(..): seq` in the notation): a call is a seq expression wherever an int
+call is an int expression, indexed, measured, sliced, concatenated and
+compared as any seq. The lifter lifts a function returning `string`,
+`seq<char>`, `seq<int>` or `seq<nat>` to one (LIFTER-DECISIONS row 45),
+with the empty seq as the totalising default, and a `function F(..): bool`
+as the bool spec_fun a `predicate` already was (row 46: the 66 `bool`
+tokens were an omission of the 2026-09-27 check, not a language gap). Six
+kernels lower the seq result in their own sequence type; Frama-C abstains
+by name (a logic function over the buffer model cannot return a buffer;
+the `\list` route is the open design). Fixtures: the committed task
+`t/tasks/double_all.t`, four probes `fz_p_sf_seq_*` in `t/fuzz_lower.py`.
+**Measured** (same run, same files): `function-result` 305 to 139
+methods, lifted 850 to 955, 104 methods in 101 files newly lift at the
+rewrite stage (72 by the seq result, 32 by the bool one); the check stage
+on the desktop: 55 checked (35 with a seq-valued spec_fun), 47
+`lift-check-failed` (the helper's own `L_fun` lemma, mostly), 2
+`check-wf-failed`; the seven-kernel grading of the 55: none clean in
+seven, 2 clean in six with Frama-C's abstain the missing column (dafny
+29, spark 27, verus 26, lean 18, fstar 18, rocq 5 verified/refuted; 12
+with no twin). The fixtures read verified/refuted in six kernels and
+abstain in Frama-C. Runs, per-kernel tables and what still refuses are
+in `t/FEATURES-SEQFUN-2026-09-27.md`. Tests: `t/test_seq_spec_fun.py`,
+`t/test_lift_seq_fun.py`.
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
@@ -436,10 +470,12 @@ effort is the lowering work across seven kernels plus the lifter.
 
 Rows 3 to 6 landed 2026-09-27 (Done, above), with nested string sequences,
 Lean strings and tuples beside them; the measured yield of each is in its
-entry. Finite sets, datatypes and higher-order functions remain, and two
-gaps the measurements named rank with them: a spec_fun that returns a
-sequence (the binding refusal for string programs, `function-result`), and
-the in-place sorts' `multiset` permutation specs.
+entry. The seq-valued spec_fun (the binding refusal for string programs,
+`function-result`) landed 2026-09-27 as entry 9. Finite sets, datatypes and
+higher-order functions remain, and one gap the measurements named ranks
+with them: the in-place sorts' `multiset` permutation specs. A Frama-C
+lowering of the seq-valued spec_fun (ACSL `\list`) is the one open kernel
+column of entry 9.
 
 ## The features ahead: designs and costs
 
