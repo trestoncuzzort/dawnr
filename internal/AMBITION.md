@@ -196,7 +196,7 @@ is judged by the same rule: nothing is trusted without evidence.
 | to get better at reasoning | reinforcement learning with the verifier as the reward | **built, waiting on data**: tiered proof reward inspected by hand, GRPO trainer (Dr. GRPO advantages hold; plain GRPO unlearned). The model solves 0.6% of problems outside its corpus, too few to reinforce, so new verified data comes first (`t/RL-DESIGN-2026-09-26.md`) |
 | to know what it was not trained on | retrieval, embeddings, a vector index | not started |
 | to remember the person and past work | long-term memory, continual learning without forgetting | not started (replay against forgetting exists in the fine-tune) |
-| to do things, not only talk | tool use, agents, planning | not started; write a program, prove it, then run it |
+| to do things, not only talk | tool use, agents, planning | **started**: a chat pipeline adapted from nanochat (`DAWNR-PIPELINE.md`) runs end to end; the model can call the t interpreter on its own draft mid-answer. It does not yet repair after a failed check (0 of 100 dev problems pass); repair conversations are next |
 | to hear and speak | speech recognition, text to speech | not started |
 | to see | vision encoders, multimodal models | later |
 | to fit small hardware | quantisation, distillation, mixture of experts | partly: runs with no PyTorch, on a CPU |
