@@ -2055,6 +2055,21 @@ class Ctx:
             # tree that bottoms out at one.
             items = "; ".join(str(int(v)) for v in e["_seq"])
             return f"(Seq.createL #int [{items}])"
+        if "ite" in e:
+            # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a seq
+            # spec_fun's body is an `ite` whose branches are seqs (the
+            # recursion's base case `[]` against its step), rendered as
+            # F*'s own `if`, exactly as `zx`/`bx` render an int/bool one.
+            c = e["ite"]
+            return (f"(if {self.bx(c['cond'], env, local)} then "
+                    f"{self.sx(c['then'], env, local)} else "
+                    f"{self.sx(c['else'], env, local)})")
+        if "call" in e:
+            # A call of a seq-valued spec_fun (SPEC.md "Seq-valued
+            # spec_funs (v1)"): `call` renders every argument by its
+            # formal's own type, so nothing here differs from an int
+            # call; only the position it lands in does.
+            return self.call(e, env, local)
         op = e.get("op")
         if op == "at":
             # SPEC.md "Nested sequences" (2026-09-10): a seq position
@@ -3535,14 +3550,28 @@ def emit_spec_fun(cx: Ctx, sf: dict) -> str:
     for n in local:
         _ck(n)
     binders = " ".join(f"({p['name']}:{TY[p['type']]})" for p in sf["params"])
+    # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a spec_fun whose
+    # result is a seq is the same `let rec ... : Tot (Seq.seq int)
+    # (decreases m)` an int one is, its body rendered by `sx` (F* tutorial,
+    # "Lemmas and proofs by induction": a total recursive function over
+    # any type; `FStar.Seq` is the same sequence the params already use).
     body = (cx.bx(sf["body"], {}, local) if sf["result"] == "bool"
+            else cx.sx(sf["body"], {}, local) if sf["result"] == "seq"
             else cx.zx(sf["body"], {}, local))
+    # `Tot Seq.seq int (decreases n)` parses as `Tot` applied to three
+    # arguments ("Effect Prims.Tot does not take a requires or ensures
+    # clause", measured 2026-09-27 on double_all, F* 2026.08.30); the
+    # two-token seq type is parenthesized, the one-token int/bool types
+    # are spelled exactly as before.
+    rty = TY[sf["result"]]
+    if " " in rty:
+        rty = f"({rty})"
     if has_self_call(sf["body"], sf["name"]):
         dec = cx.zx(sf["decreases"], {}, local)
         return (f"let rec {sf['name']} {binders}\n"
-                f"  : Tot {TY[sf['result']]} (decreases {dec})\n"
+                f"  : Tot {rty} (decreases {dec})\n"
                 f"= {body}\n")
-    return f"let {sf['name']} {binders} : Tot {TY[sf['result']]} = {body}\n"
+    return f"let {sf['name']} {binders} : Tot {rty} = {body}\n"
 
 
 def _call_terms(e, out: list) -> list:
