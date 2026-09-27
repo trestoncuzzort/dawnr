@@ -1,0 +1,112 @@
+"""pane.py: the few calls the chat window makes into per-person learning, and nothing else.
+
+chat_pane.py keeps its hooks to one line each (DAWNR-LEARNING.md lists them);
+everything they need is here: whether learning is on for this machine's user
+and under which name, recording each reply, the Good / Not this / Correct...
+buttons, a "that's wrong" turn, and putting the person's adapter on the model
+when it is loaded.
+
+Learning is off until the person turns it on (settings.json in the people
+folder, which the window's settings dialog writes): nothing is remembered about
+anyone who did not ask for it, and every step says in a sentence what was kept.
+Standard library only, except attach_adapter(), which needs torch and is only
+called once a real model is loaded.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from .feedback import Recorder, final_program, parts_of, person_id
+
+SETTINGS = "settings.json"
+DEFAULT_PERSON = "me"
+
+
+class PaneLearning:
+    def __init__(self, root: Path | str):
+        self.root = Path(root)
+        self.recorder: Recorder | None = None
+        self.model_identity: dict | None = None
+
+    # ----------------------------------------------------------- settings --
+    def settings(self) -> dict:
+        path = self.root / SETTINGS
+        try:
+            data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+        except (OSError, ValueError):
+            data = {}
+        return {"enabled": bool(data.get("enabled", False)), "person": str(data.get("person") or DEFAULT_PERSON)}
+
+    def save_settings(self, enabled: bool, person: str) -> str:
+        pid = person_id(person or DEFAULT_PERSON)
+        self.root.mkdir(parents=True, exist_ok=True)
+        tmp = self.root / (SETTINGS + ".tmp")
+        tmp.write_text(json.dumps({"enabled": bool(enabled), "person": pid}, indent=2) + "\n", encoding="utf-8")
+        tmp.replace(self.root / SETTINGS)
+        self.recorder = None
+        return (f"Learning from {pid}'s feedback is on; it is kept in {self.root / pid} and nowhere else."
+                if enabled else "Learning is off: nothing new is remembered.")
+
+    def enabled(self) -> bool:
+        return self.settings()["enabled"]
+
+    def _recorder(self) -> Recorder | None:
+        if not self.enabled():
+            return None
+        if self.recorder is None:
+            self.recorder = Recorder(self.settings()["person"], self.root, model=self.model_identity or {})
+        return self.recorder
+
+    # -------------------------------------------------------------- hooks --
+    def attach_adapter(self, model, checkpoint_dir: Path) -> str | None:
+        """After the model loads: put this person's fresh adapter on it, if learning is on and one exists.
+
+        Replies are recorded only after this has identified the base (an answer
+        is kept with the weights that wrote it), so a window whose model could
+        not be identified records nothing rather than something unattributed."""
+        if not self.enabled():
+            return None
+        try:
+            from . import adapters
+            identity = adapters.base_identity(checkpoint_dir)
+            rec = self._recorder()
+            rec.model = dict(identity)
+            status = adapters.attach(model, rec.store, identity)
+        except Exception as e:                                   # noqa: BLE001  (said, never silent)
+            return f"Learning is on, but this model could not be identified, so nothing is recorded: {e}"
+        self.model_identity = identity
+        return adapters.describe(status)
+
+    def user_turn(self, text: str) -> str | None:
+        rec = self._recorder() if self.model_identity is not None else None
+        return rec.user_turn(text) if rec is not None else None
+
+    def replied(self, messages: list[dict]) -> None:
+        rec = self._recorder() if self.model_identity is not None else None
+        if rec is not None:
+            rec.answered(messages)
+
+    def thumbs(self, up: bool) -> str:
+        rec = self._recorder() if self.model_identity is not None else None
+        return rec.thumbs(up) if rec is not None else self.off_sentence()
+
+    def correct(self, text: str) -> str:
+        rec = self._recorder() if self.model_identity is not None else None
+        return rec.edit_program(text) if rec is not None else self.off_sentence()
+
+    def last_answer_text(self) -> str:
+        """What the Correct... dialog starts from: the last answer's program, else its text."""
+        rec = self._recorder() if self.model_identity is not None else None
+        if rec is None or rec.last_id is None:
+            return ""
+        answer = rec.store.get(rec.last_id)["answer"]
+        program = final_program(answer)
+        if program:
+            return program
+        return "".join(p.get("text", "") for p in parts_of(answer) if p.get("type") == "text")
+
+    def off_sentence(self) -> str:
+        if self.enabled():
+            return "There is no answer from this model to rate yet."
+        return "Learning is off. Turn it on in Settings to have dawnr learn from your feedback."
