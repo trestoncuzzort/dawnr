@@ -16,10 +16,18 @@ GET /search?q=...&format=json), `command` (an operator program given the
 query as its last argument, printing a JSON list), or one added with
 register_backend().
 
-Known gap: the address check resolves the host before urllib does, so a DNS
-server that answers differently the second time could slip a private address
-past it; an operator worried about that runs the harness offline or behind a
-proxy that enforces the same rule.
+DNS pinning. check_url resolves the host once and validates that address;
+fetch() then connects to that exact address (_PinnedHTTPConnection,
+_PinnedHTTPSConnection), never letting the HTTP client resolve the host a
+second time. Without this, a short-TTL DNS server can answer a public
+address for check_url's lookup and a private one for urllib's own lookup a
+moment later at connect time -- DNS rebinding (en.wikipedia.org/wiki/
+DNS_rebinding, "Web Based" protections: "the IP address is locked to the
+value received in the first DNS response"). Each redirect hop is resolved,
+validated and pinned again by the same rule (_Redirects.redirect_request),
+since a redirect can name a different host. The Host header and, for https,
+TLS's SNI and certificate hostname verification still use the original
+hostname (self.host) throughout; only the socket's destination is pinned.
 """
 from __future__ import annotations
 
@@ -56,7 +64,15 @@ class WebConfig:
     allow_private_hosts: bool = False
 
 
-def check_url(url: str, allow_private: bool) -> str:
+def check_url(url: str, allow_private: bool) -> tuple[str, str]:
+    """(url, the address to connect to), after validating `url` and resolving its host exactly once.
+
+    Unless `allow_private`, every address the host resolves to must be public: not private, loopback,
+    link-local, multicast, reserved or unspecified (a model must not be able to probe the machine's own
+    network). The first resolved address is returned so the caller can pin its connection to it (DNS
+    rebinding: see this module's docstring) instead of resolving the host again later, when a low-TTL DNS
+    answer could differ from the one just validated.
+    """
     parts = urllib.parse.urlsplit(url)
     if parts.scheme not in ("http", "https"):
         raise FetchRefused(f"only http and https URLs are fetched, not {parts.scheme or 'a relative URL'!r}")
@@ -64,19 +80,20 @@ def check_url(url: str, allow_private: bool) -> str:
         raise FetchRefused("the URL has no host")
     if parts.username or parts.password:
         raise FetchRefused("URLs carrying credentials are not fetched")
-    if allow_private:
-        return url
+    port = parts.port or (443 if parts.scheme == "https" else 80)
     try:
-        infos = socket.getaddrinfo(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80),
-                                   type=socket.SOCK_STREAM)
+        infos = socket.getaddrinfo(parts.hostname, port, type=socket.SOCK_STREAM)
     except (socket.gaierror, UnicodeError) as e:
         raise FetchRefused(f"cannot resolve {parts.hostname}: {e}") from None
-    for info in infos:
-        addr = ipaddress.ip_address(info[4][0].split("%", 1)[0])
-        if (addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_multicast or addr.is_reserved
-                or addr.is_unspecified):
-            raise FetchRefused(f"{parts.hostname} is a private or local address ({addr}); not fetched")
-    return url
+    if not infos:
+        raise FetchRefused(f"cannot resolve {parts.hostname}: no address")
+    if not allow_private:
+        for info in infos:
+            addr = ipaddress.ip_address(info[4][0].split("%", 1)[0])
+            if (addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_multicast
+                    or addr.is_reserved or addr.is_unspecified):
+                raise FetchRefused(f"{parts.hostname} is a private or local address ({addr}); not fetched")
+    return url, infos[0][4][0]
 
 
 class _Redirects(urllib.request.HTTPRedirectHandler):
@@ -88,8 +105,64 @@ class _Redirects(urllib.request.HTTPRedirectHandler):
         self.count += 1
         if self.count > self.cfg.max_redirects:
             raise FetchRefused(f"more than {self.cfg.max_redirects} redirects")
-        check_url(newurl, self.allow_private)
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
+        newurl, address = check_url(newurl, self.allow_private)          # a redirect may name a different host
+        new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_req is not None:
+            new_req.pinned_address = address                             # pin this hop too, not just the first
+        return new_req
+
+
+class _PinnedHTTPConnection(http.client.HTTPConnection):
+    """http.client.HTTPConnection, but connect() dials `pinned_address` (check_url's own resolution)
+    instead of resolving `self.host` again -- the second, independent lookup a DNS-rebinding attack needs
+    (this module's docstring). The Host header, built by http.client itself from `self.host`, is
+    untouched; only the socket's destination changes."""
+
+    def __init__(self, host, *args, pinned_address: str | None = None, **kwargs):
+        super().__init__(host, *args, **kwargs)
+        self._pinned_address = pinned_address
+
+    def connect(self):
+        if self._pinned_address is None:            # no resolution was done to pin (allow_private, no lookup)
+            super().connect()
+            return
+        self.sock = socket.create_connection((self._pinned_address, self.port), self.timeout, self.source_address)
+        if self._tunnel_host:
+            self._tunnel()
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """As _PinnedHTTPConnection, then wraps the pinned socket in TLS using `self.host` (never the pinned
+    address) for SNI and certificate hostname verification -- exactly what http.client.HTTPSConnection.connect
+    does for whatever address it resolves itself, so pinning changes nothing about what the certificate is
+    checked against."""
+
+    def __init__(self, host, *args, pinned_address: str | None = None, **kwargs):
+        super().__init__(host, *args, **kwargs)
+        self._pinned_address = pinned_address
+
+    def connect(self):
+        if self._pinned_address is None:
+            super().connect()
+            return
+        sock = socket.create_connection((self._pinned_address, self.port), self.timeout, self.source_address)
+        server_hostname = self._tunnel_host or self.host
+        if self._tunnel_host:
+            self.sock = sock
+            self._tunnel()
+            sock = self.sock
+        self.sock = self._context.wrap_socket(sock, server_hostname=server_hostname)
+
+
+class _PinnedHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req):
+        return self.do_open(_PinnedHTTPConnection, req, pinned_address=getattr(req, "pinned_address", None))
+
+
+class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req):
+        return self.do_open(_PinnedHTTPSConnection, req, context=self._context,
+                            pinned_address=getattr(req, "pinned_address", None))
 
 
 class _Text(HTMLParser):
@@ -129,10 +202,11 @@ def html_to_text(html: str) -> str:
 def fetch(url: str, cfg: WebConfig, *, allow_private: bool | None = None, accept: str | None = None) -> dict:
     """{"url", "status", "content_type", "bytes", "truncated", "text"}; raises FetchRefused."""
     allow_private = cfg.allow_private_hosts if allow_private is None else allow_private
-    check_url(url, allow_private)
-    opener = urllib.request.build_opener(_Redirects(cfg, allow_private))
+    url, address = check_url(url, allow_private)
+    opener = urllib.request.build_opener(_Redirects(cfg, allow_private), _PinnedHTTPHandler(), _PinnedHTTPSHandler())
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept or
                                                "text/html, text/plain;q=0.9, application/json;q=0.8, */*;q=0.1"})
+    req.pinned_address = address                # connect to the address just validated, never re-resolve self.host
     deadline = time.monotonic() + cfg.timeout
     try:
         resp = opener.open(req, timeout=cfg.timeout)

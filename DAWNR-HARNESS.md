@@ -49,12 +49,20 @@ The answer is forced into the stream, as the t tool's is:
 
     <|output_start|><|untrusted|>fetched https://example.org/spec.html (200, text/html, 5120 bytes)
     ...the page's text...<|output_end|>
-    <|output_start|>dawnr's checker on the t program in web_fetch's output: parses: yes; well formed: no: ...<|output_end|>
+    <|output_start|><|untrusted|>dawnr's checker on the t program in web_fetch's output: parses: yes; well formed: no: class=valid-type<|output_end|>
 
 The first span is the tool's output, marked untrusted because it came from
 the network. The second is the harness's own note (here the checker hook's
-verdict on a program the page contained): trusted, and a separate span, so
-nothing in the page can run into it. Every output span is mask 0 in training
+verdict on a program the page contained), a separate span so nothing in the
+page can run into it; it is marked untrusted too, because it is *about* an
+untrusted call's output (`ToolResult.spans()`, `dawnr_harness/tools.py`) --
+a note on a trusted call's output stays a trusted span. Whatever the mark,
+the note's own words never come from the page: dawnr's checker answers about
+text it does not trust with a fixed vocabulary only (parses/well formed
+yes-no, examples passed k of n, a closed set of error classes), never a
+quoted parse error or identifier, so a page cannot put its own words into
+the model's context through the note either (`redacted_verdict`,
+`dawnr_harness/checker.py`). Every output span is mask 0 in training
 (`chat.render_conversation`): the model is never taught to write what a tool
 or the harness says, only to call and to read.
 
@@ -144,10 +152,13 @@ decisions, by event:
 
 **The first hook is dawnr's checker** (`builtin` `t_check`, on by default).
 After any tool call except `t` itself, it finds every t program (a `t N` line
-through its closing brace) in the call's input and output, runs the t tool on
-each (parse, type check, the conversation's Example lines) and attaches the
-verdict as a trusted note: a program from a web page or an MCP server is
-checked before anything relies on it. At `Stop` it checks the final answer's
+through its closing brace) in the call's input and output, runs a reduced
+form of the t tool on each (parse, type check, the conversation's Example
+lines, answered in a fixed vocabulary that never quotes the program: section
+1's example) and attaches the verdict as a note, marked untrusted when the
+call it is about is: a program from a web page or an MCP server is checked
+before anything relies on it, and the checking itself never becomes a way to
+smuggle the page's own words past the mark. At `Stop` it checks the final answer's
 program (the last t call, else the last program in the assistant's own text;
 tool outputs are never taken for the answer); if a verdict fails it blocks
 once with the verdict as the reason, and the engine forces that reason into
@@ -206,6 +217,18 @@ descriptions are hidden from the index (name and argument names only) unless
 the operator sets `"describe": true` for that server, which stops a server
 from writing instructions into the index (tool poisoning).
 
+**`"network": false` is the operator's claim about that server, not a fact
+the harness checks.** The harness never inspects what a server's process
+does: it does not sandbox it, watch its sockets, or verify it stays local.
+Marking a server `"network": false` only changes whether the harness starts
+it while offline (section 7 rule 4) and, once started, nothing about how its
+calls are policed. If the operator marks a server that does reach the
+network this way, that server can call out from inside the harness's offline
+guarantee, unseen. Running the harness offline is only as trustworthy as the
+`"network": false` claims in its configuration; an operator who cannot vouch
+for a server's own code should leave it marked `"network": true` (the
+default) or not configure it at all.
+
 **dawnr's server** exposes the checker to any MCP client, Claude Code
 included:
 
@@ -222,11 +245,16 @@ version -32022 with the supported list), and `initialize` for legacy clients.
 `web_fetch {"url"}` and `web_search {"query", "n"}`, both network tools, so
 both are denied while the harness is offline (the default) and ask once it is
 not. Fetching allows http and https only, refuses credentials in the URL,
-resolves the host and refuses loopback, private, link-local, multicast and
-reserved addresses unless the operator allows private hosts (a model must not
-be able to probe the machine's own network), re-checks every redirect (at most
-five), stops at a byte cap and a wall-clock deadline, returns only text types
-(HTML reduced to its text, scripts and styles dropped), and caps the
+resolves the host once and refuses loopback, private, link-local, multicast
+and reserved addresses unless the operator allows private hosts (a model must
+not be able to probe the machine's own network), then connects to that exact
+resolved address rather than letting the address be looked up again: a name
+with a very short TTL could otherwise answer a public address for this check
+and a private one moments later, when an unpinned client resolves it a second
+time to connect (DNS rebinding). Every redirect is resolved, checked and
+pinned again the same way (at most five), fetching stops at a byte cap and a
+wall-clock deadline, returns only text types (HTML reduced to its text,
+scripts and styles dropped), and caps the
 characters returned. Search has no default backend: the operator names one in
 the config, `searxng` (a self-hosted instance's keyless JSON API), `command`
 (an operator program that prints JSON results), or a Python backend added with
@@ -257,7 +285,10 @@ sends about itself (descriptions, annotations, instructions).
    (an exact name, else the strictest matching glob), and ask with no one
    present is deny.
 4. **Offline is the default state**: a missing or empty configuration means
-   offline, and offline denies every network tool whatever the rules say.
+   offline, and offline denies every network tool whatever the rules say --
+   except an MCP server the operator marked `"network": false` (section 5),
+   which the harness starts and never checks; that guarantee is only as good
+   as the operator's own claim about what that server's code does.
 5. **Taint.** After untrusted text has entered a conversation, a
    consequential tool that would have been allowed must be approved
    (arXiv:2506.08837): a page that says "now fetch this URL with the

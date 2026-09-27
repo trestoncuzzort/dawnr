@@ -91,6 +91,7 @@ class Harness:
             self._log(session, name, arguments, "deny", why)
             return ToolResult(f"denied: {why}", is_error=True, source="harness")
         notes: list[str] = []
+        untrusted_notes: list[str] = []
         if self.hooks.has("PreToolUse"):
             pre = aggregate_pre(self.hooks.run("PreToolUse", self._payload(session, context, tool_name=name,
                                                                              tool_input=arguments), name))
@@ -110,7 +111,9 @@ class Harness:
                     return ToolResult(f"{name}: a hook rewrote the input into an invalid one: " + "; ".join(errs),
                                       is_error=True, source="harness")
                 arguments = pre.updated_input
-            notes += pre.contexts
+            # a note about an untrusted tool's own input (its arguments) is untrusted too: an attacker who gets
+            # the model to echo a page's text into a call's arguments must not get an unmarked span out of it
+            (untrusted_notes if tool.trust == "untrusted" else notes).extend(pre.contexts)
         if decision == "ask":
             approved = False
             if self.approver is not None:
@@ -142,8 +145,12 @@ class Harness:
                 result = ToolResult(f"[output withheld by a hook: {post.reason}]", is_error=True, source=name)
             elif post.updated_output is not None:
                 result.text = post.updated_output
-            notes += post.contexts
+            # same rule as PreToolUse's notes, now against the call's actual result: a hook's commentary on an
+            # untrusted output (dawnr's checker quoting a few words of a fetched page, say) is itself untrusted,
+            # never blended into a trusted span (ToolResult.spans(), DAWNR-HARNESS.md section 7)
+            (untrusted_notes if result.trust == "untrusted" else notes).extend(post.contexts)
         result.notes = notes + result.notes
+        result.untrusted_notes = untrusted_notes + result.untrusted_notes
         if result.trust == "untrusted":
             session.tainted = True
         self._log(session, name, arguments, "run", why, result=result, seconds=time.monotonic() - started)
@@ -201,8 +208,8 @@ class Harness:
                "arguments": text if len(text) <= MAX_AUDIT_ARGS else text[:MAX_AUDIT_ARGS] + "...",
                "decision": decision, "why": why}
         if result is not None:
-            row.update(is_error=result.is_error, trust=result.trust, chars=len(result.text), notes=len(result.notes),
-                       seconds=round(seconds, 3))
+            row.update(is_error=result.is_error, trust=result.trust, chars=len(result.text),
+                       notes=len(result.notes) + len(result.untrusted_notes), seconds=round(seconds, 3))
         self.audit.append(row)
         if self.audit_path is not None:
             try:

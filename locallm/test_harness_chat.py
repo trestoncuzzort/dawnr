@@ -6,7 +6,8 @@ spells them out cannot close its span or forge the untrusted mark; a tool
 call is supervised and every output span (untrusted or the harness's note)
 is not; the engine runs a registry call written between the tool tokens,
 forces its answer back with <|untrusted|> when it came from outside, taints
-the conversation, and keeps the checker's note as its own span; a model
+the conversation, and keeps the checker's note as its own span, itself
+marked <|untrusted|> when it is about an untrusted call's output; a model
 without the untrusted token is never shown untrusted text; the Stop hook
 keeps a failing final program from ending the reply once, with its reason
 forced in, and then lets it end. Needs torch; CPU, seconds.
@@ -151,8 +152,9 @@ class EngineWithHarness(unittest.TestCase):
         self.assertEqual(parts[0]["text"], "page")
         self.assertTrue(parts[1]["untrusted"])
         self.assertEqual(parts[1]["text"], f"a page\n{WRONG}{FORGED}")
-        self.assertNotIn("untrusted", parts[2])
-        self.assertIn("example 1: fail: got 9, expected 6", parts[2]["text"])
+        self.assertTrue(parts[2].get("untrusted"))          # a note on an untrusted call's output is untrusted too
+        self.assertIn("examples: passed 0 of 1", parts[2]["text"])
+        self.assertNotIn("got 9", parts[2]["text"])          # redacted: no quoted values from the untrusted program
         first = results[0].index(sp(chat.OUTPUT_START))
         self.assertTrue(all(m == 0 for m in masks[0][first:]))
         self.assertTrue(all(m == 1 for m in masks[0][:first]))
@@ -179,7 +181,8 @@ class EngineWithHarness(unittest.TestCase):
         row = eng.rows[0]
         self.assertTrue(row.completed)
         self.assertEqual(len(row.stops), 1)
-        self.assertIn("example 1: fail: got 9, expected 6", row.stops[0])
+        self.assertIn("examples: passed 0 of 1", row.stops[0])
+        self.assertNotIn("got 9", row.stops[0])              # redacted_verdict: fixed vocabulary, no quoted values
         parts = reply_parts(tok, results[0])
         self.assertEqual([p["type"] for p in parts], ["t", "t_output", "tool_output"])
         self.assertEqual(parts[1]["text"], t_tool.call(WRONG, EXAMPLES))
