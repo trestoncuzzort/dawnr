@@ -1885,10 +1885,13 @@ def array_readonly_issue(param_name: str, method: MethodDecl,
     results, and the in-place sorts (`aliased`), none of them this
     condition's."""
     closure_fn_names = {d.name for d in closure if isinstance(d, FunctionDecl) and d.name}
-    lemma_names: set = set()
+    # the closure carries the lemmas the method calls (row 38), so a caller
+    # without the module (the check stage re-deriving decision 22's shape)
+    # still sees a lemma call as a lemma call
+    lemma_names: set = {d.name for d in closure if isinstance(d, LemmaDecl) and d.name}
     methods_by_name: dict = {}
     if module is not None:
-        lemma_names = {d.name for d in module.decls if isinstance(d, LemmaDecl) and d.name}
+        lemma_names |= {d.name for d in module.decls if isinstance(d, LemmaDecl) and d.name}
         methods_by_name = {d.name: d for d in module.decls
                            if isinstance(d, MethodDecl) and d.name}
 
@@ -1947,13 +1950,25 @@ def _array_passed_to_call(name: str, method: MethodDecl, closure: tuple[Decl, ..
     `module` given (feature 4, 2026-09-27), a LEMMA call is not an alias:
     a lemma reads the array and cannot write it (the sorts' own
     permutation lemmas, `SortedLemma(a, ...)`, are what tripped this)."""
-    lemma_names: set = set()
+    lemma_names: set = {d.name for d in closure if isinstance(d, LemmaDecl) and d.name}
     if module is not None:
-        lemma_names = {d.name for d in module.decls if isinstance(d, LemmaDecl) and d.name}
+        lemma_names |= {d.name for d in module.decls if isinstance(d, LemmaDecl) and d.name}
+    # 2026-09-27 (t/FEATURES-TRACK.md, in-place writes, the Dafny half's
+    # first shape): a closure FUNCTION (a predicate in an invariant,
+    # `IsSorted(a, 0, i)`, insertionSort's `sorted(a, 0, i)`) is not an
+    # alias either: a Dafny function has no assignment and no heap
+    # mutation, it reads the array's value at the point of evaluation, and
+    # that value is exactly the seq decision 22 threads there (the same
+    # exemption `array_readonly_issue` grants a read-only parameter).
+    # Measured: 2 of the 11 `aliased` sorts have no `multiset` spec and
+    # lift once this is exempt; the other 9 refuse `multiset` next.
+    closure_fn_names = {d.name for d in closure if isinstance(d, FunctionDecl) and d.name}
     for root in [method] + list(closure):
         if _closure_root_shadows(root, method, name):
             continue
         for n in walk(root):
+            if isinstance(n, Call) and isinstance(n.fn, Ident) and n.fn.name in closure_fn_names:
+                continue
             if isinstance(n, (Call, CallStmt)):
                 callee_name = (n.name if isinstance(n, CallStmt)
                                else (n.fn.name if isinstance(n.fn, Ident) else None))

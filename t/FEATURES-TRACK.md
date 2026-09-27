@@ -309,7 +309,16 @@ lifts with a seq parameter. **Measured**: 21 of 88 pass, 14 lift, 12 of those
 pass the check stage. The 67 still refused are arrays of char/real/bool/bv32/
 a type parameter/arrays, array results, and the in-place sorts (`aliased`: a
 mutated array passed to a predicate; 9 of the 11 also need `multiset`).
-Tests: `t/test_lift_array_functions.py`.
+Later the same day (the in-place writes feature's first shape): a mutated
+array passed to a closure PREDICATE is no alias either (a function reads
+the value at the point of evaluation, the threaded seq), so `insertionSort`
+and `sorting`, the two sorts without `multiset`, lift; both then fail the
+check stage on the predicate's equivalence over the mutated array
+(`L_inv_0`, `L_fun_insertionSorted` unproved). A fixture for that shape
+caught a check-stage bug: it re-derived decision 22's shape without the
+module, so a lemma call still counted as an alias there and the
+synthesised return was typed `int`; the alias checks read lemma names from
+the closure too now. Tests: `t/test_lift_array_functions.py`.
 
 ### 5. Quantifier bounds (2026-09-27, lifter)
 
