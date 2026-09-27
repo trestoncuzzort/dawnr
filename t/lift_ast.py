@@ -724,9 +724,14 @@ class SkippedDecl(Decl):
     predicate`, `greatest predicate`, `twostate function`, `twostate
     predicate`. `gap_name` is the census gap name this keyword maps to
     (section 5's vocabulary); the declaration is never lifted, and no
-    method inside it (a `class`'s methods, say) is visited."""
+    method inside it (a `class`'s methods, say) is visited. `text` is the
+    declaration's tokens joined by single spaces (row 48, 2026-09-27): the
+    classifier reads a `datatype`'s constructor list from it to name the
+    shape a member access on it needs (enum, record, sum, recursive,
+    generic, real-bearing); nothing is lifted from it."""
     keyword: str = ""
     gap_name: str = ""
+    text: str = ""
 
 
 # ---------------------------------------------------------------------------
