@@ -26,6 +26,7 @@ import ast
 import difflib
 import errno
 import fnmatch
+import functools
 import os
 import time
 import uuid
@@ -49,6 +50,10 @@ class Limits:
     max_search_results: int = 50
     max_search_files: int = 20_000
     search_seconds: float = 10.0
+    link_scan_entries: int = paths.LINK_SCAN_ENTRIES      # a file's other names, searched for in the roots
+    link_scan_seconds: float = paths.LINK_SCAN_SECONDS
+    home_scan_entries: int = paths.HOME_SCAN_ENTRIES      # the home directory's secret scan, once per agent
+    home_scan_seconds: float = paths.HOME_SCAN_SECONDS
 
 
 @dataclass
@@ -79,6 +84,13 @@ def _refuse_child(space: Space, parent, target: Target, e: OSError) -> PathRefus
     if e.errno in (errno.ELOOP, getattr(errno, "EMLINK", -1)):
         return PathRefused(f"{target.display} is a symbolic link; links are not followed")
     return PathRefused(f"{target.display}: {e.strerror or e}")
+
+
+def _refuse_unread(row: dict, change: str) -> None:
+    if row.get("unread"):
+        raise PathRefused(f"change {change} replaced {row.get('path')}, whose old file also has a name outside the "
+                          "roots (or a secret one): its bytes were never read or kept, so it cannot be undone (they "
+                          "are still under that other name)")
 
 
 def _read_fd(fd: int, limit: int) -> bytes:
@@ -113,7 +125,9 @@ class FileOps:
     # -------------------------------------------------------------- reading --
 
     def open_regular(self, target: Target, *, write: bool = False):
-        """(parent handle, fd, stat) of an existing regular file inside a root; the caller closes both."""
+        """(parent handle, fd, stat) of an existing regular file inside a root; the caller closes both. Opened to
+        read, it has also passed Space.check_read: its real path is inside a root and every name it has may be read
+        (a hard link from outside the roots, or from a secret name, is refused)."""
         if not target.parts:
             raise PathRefused(f"{target.display} is a root directory, not a file")
         parent = self.space.walk(target, len(target.parts) - 1, write=write)
@@ -128,6 +142,8 @@ class FileOps:
                 if not paths.is_regular(st):
                     raise PathRefused(f"{target.display} is a {paths.kind(st)}, not a regular file")
                 self.space.check_file_ident(st, target, write=write)
+                if not write:
+                    self.space.check_read(fd, st, target)
             except BaseException:
                 os.close(fd)
                 raise
@@ -243,7 +259,7 @@ class FileOps:
         parent, created = self._walk_create(target, make_dirs)
         try:
             self.space.check_new_entry(paths.fstat_dir(parent), target)
-            old, st = None, None
+            old, st, unread = None, None, None
             try:
                 fd = paths.open_child(parent, target.name,
                                       os.O_RDONLY | paths.O_NONBLOCK | paths.O_NOCTTY | paths.O_BINARY)
@@ -261,21 +277,30 @@ class FileOps:
                         # replacing by rename needs only the directory's permission, so a file its owner made
                         # read-only would be replaced anyway; its mode is the owner's "do not modify", kept here
                         raise PathRefused(f"{target.display} is read-only (its permissions); not written")
-                    old = _read_fd(fd, self.limits.max_write_bytes)
+                    # A file that also has a name outside the roots (or a secret one) is replaced by name like any
+                    # other, and its other name keeps its bytes, but it is never read: kept as this change's old
+                    # bytes, they would come back into the root on undo as a new file with one name, which no
+                    # check could then tell from the person's own.
+                    unread = self.space.link_problem(st, target)
+                    if unread is None:
+                        old = _read_fd(fd, self.limits.max_write_bytes)
                 finally:
                     os.close(fd)
-                if len(old) > self.limits.max_write_bytes:
+                if old is not None and len(old) > self.limits.max_write_bytes:
                     raise PathRefused(f"{target.display} is over {self.limits.max_write_bytes} bytes; not replaced")
                 if create_only:
                     raise PathRefused(f"{target.display} already exists; pass \"overwrite\": true to replace it")
             before = sha256(old) if old is not None else None
             if expect is not None:
-                if before is None:
+                if st is None:
                     raise PathRefused(f"{target.display} does not exist, but the step expected sha256 {expect}")
+                if unread:
+                    raise PathRefused(f"{target.display} has a name outside the roots, so it is never read and no "
+                                      "expected sha256 can match it; not written")
                 if not before.startswith(expect.lower()):
                     raise PathRefused(f"{target.display} changed since it was read or planned (expected sha256 "
                                       f"{expect}, now {before[:HASH_SHOWN]}); not written")
-            if old is None:
+            if st is None:
                 try:
                     fd = paths.open_child(parent, target.name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | paths.O_BINARY,
                                           0o666)
@@ -292,7 +317,7 @@ class FileOps:
                 os.close(fd)
                 backup = None
             else:
-                backup = self.journal.keep(old)
+                backup = self.journal.keep(old) if old is not None else None
                 tmp = f".{target.name[:100]}.dawnr-{uuid.uuid4().hex[:8]}.tmp"
                 fd = paths.open_child(parent, tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | paths.O_BINARY, 0o600)
                 try:
@@ -317,6 +342,8 @@ class FileOps:
             entry = {"root": target.root.name, "path": target.display, "action": action, "before": before,
                      "after": after, "bytes_before": None if old is None else len(old), "bytes_after": len(data),
                      "backup": backup, "dirs_created": created, "session": session, **(extra or {})}
+            if unread:
+                entry["unread"] = "the old file has a name outside the roots or a secret one; its bytes were not read"
             entry["id"] = self.journal.record(**entry)
             return entry
         finally:
@@ -525,12 +552,16 @@ class FileTools:
         limit = min(int(args.get("max_results", self.limits.max_search_results)), 200)
         tops = [self.space.resolve(args["path"])] if args.get("path") else [paths.Target(r, ()) for r in
                                                                               self.space.roots]
-        hits, more, files, skipped = [], 0, 0, {"secret": 0, "binary": 0, "too large": 0, "link": 0, "unreadable": 0}
+        hits, more, files = [], 0, 0
+        skipped = {"secret": 0, "binary": 0, "too large": 0, "link": 0, "hard link": 0, "not inside the roots": 0,
+                   "unreadable": 0}
         matched_files = set()
         deadline = time.monotonic() + self.limits.search_seconds
         stopped = ""
+        # the roots' names of every file with more than one, searched for once per search and only if one turns up
+        names = functools.lru_cache(maxsize=None)(self.space.names_in_roots)
         for top in tops:
-            for target, data in self._walk_files(top, pattern, skipped):
+            for target, data in self._walk_files(top, pattern, skipped, names):
                 files += 1
                 if files > self.limits.max_search_files:
                     stopped = f"stopped after {self.limits.max_search_files} files"
@@ -568,9 +599,11 @@ class FileTools:
             out.append(f"[{stopped}]")
         return ToolResult(_clip("\n".join(out), self.limits.max_output_chars), trust="untrusted")
 
-    def _walk_files(self, top: Target, pattern: str | None, skipped: dict):
+    def _walk_files(self, top: Target, pattern: str | None, skipped: dict, names=None):
         """(target, bytes) of every regular file below top that the rules let a search read, without following
-        links: os.fwalk with follow_symlinks=False ("safe against symlink races"), a checked walk elsewhere."""
+        links: os.fwalk with follow_symlinks=False ("safe against symlink races"), a checked walk elsewhere. A file
+        is read only after Space.check_read's two checks, with `names` the roots' names of every file with more
+        than one (names_in_roots, asked once per search)."""
         try:
             handle = self.space.walk(top)
         except PathRefused:
@@ -635,6 +668,10 @@ class FileTools:
                         fst = os.fstat(fd)
                         if not paths.is_regular(fst) or paths.ident(fst) != paths.ident(st):
                             continue
+                        refused = self.space.read_problem(fd, fst, child, names)
+                        if refused:
+                            skipped[refused[0]] += 1
+                            continue
                         data = _read_fd(fd, self.limits.max_read_bytes)
                     finally:
                         os.close(fd)
@@ -660,9 +697,14 @@ class FileTools:
         entry = self.ops.write(target, data, create_only=not args.get("overwrite", False),
                                expect=args.get("expect_sha256"), make_dirs=bool(args.get("make_dirs", False)),
                                action="write", session=_session_id(ctx))
-        what = "created" if entry["before"] is None else f"replaced ({entry['bytes_before']} bytes before, kept)"
-        text = (f"wrote {target.display}: {len(data)} bytes, {what}; change {entry['id']} (fs_undo reverts it), "
-                f"sha256 {entry['after'][:HASH_SHOWN]}")
+        if entry.get("unread"):
+            what = (f"replaced; change {entry['id']} cannot be undone: the old file also has a name outside the roots "
+                    "(or a secret one), so its bytes were neither read nor kept (they are still under that name)")
+        elif entry["before"] is None:
+            what = f"created; change {entry['id']} (fs_undo reverts it)"
+        else:
+            what = f"replaced ({entry['bytes_before']} bytes before, kept); change {entry['id']} (fs_undo reverts it)"
+        text = f"wrote {target.display}: {len(data)} bytes, {what}, sha256 {entry['after'][:HASH_SHOWN]}"
         return ToolResult(text + (f"\n{note}" if note else ""))
 
     def _edited(self, target: Target, old_bytes: bytes, args: dict) -> bytes:
@@ -705,6 +747,7 @@ class FileTools:
         row = self.ops.journal.find(change)
         if row is None:
             raise PathRefused(f"no change {change!r} in the journal")
+        _refuse_unread(row, change)
         target = self.space.resolve(row["path"])
         self.space.check_names(target, write=True)
         now = self.ops.current(target)
@@ -769,6 +812,7 @@ class FileTools:
                 row = self.ops.journal.find(args["change"])
                 if row is None:
                     return Preview(error=f"no change {args['change']!r} in the journal")
+                _refuse_unread(row, args["change"])
                 target = self.space.resolve(row["path"])
                 self.write_check(target)
                 now = self.ops.current(target, overlay)

@@ -23,15 +23,29 @@ matched by whole components, never by a string prefix.
 Beyond containment, two lists the operator controls:
 
 * **secrets**: names and globs (`.ssh`, `*.pem`, `.env`, ...) that are
-  never read, listed as secret, and skipped by search; their files under the
-  home directory are also known by identity (device and inode), so a hard
-  link to one inside a root is refused too.
+  never read, listed as secret, and skipped by search; their files anywhere
+  under the home directory are also known by identity (device and inode),
+  found by a bounded breadth-first scan when the agent is built
+  (home_secret_identities), so a hard link to one inside a root is refused
+  too.
 * **protected**: what the model may read but never write: `.git` by default
   (a written `.git/config` or hook runs code the next time git does), and,
   added by the agent at load, the harness's configuration, audit log and
   state, the skills and hooks it runs, and the code that enforces all of it.
   Protected files and directories are matched by identity as well as by
   name, so case, Unicode spelling or a hard link does not get around them.
+
+And one rule that consults no list: a file's contents are returned only when
+every name the file has is one the model could read itself (check_read). A
+regular file with more than one link has names elsewhere, and link(2) says it
+is impossible to tell which name was the original, so the roots are searched
+for them (names_in_roots) and the file is refused unless all of them are
+found there, none secret, the way GNU tar's --check-links compares the links
+it archived against st_nlink; a search that stops at its cap refuses. The
+CERT C rule POS01-C and Postfix's safe_open() refuse every file with more
+than one link; this refuses only those with a name outside the roots, so two
+names inside them still work. The real path of the opened file must be
+inside a root too.
 
 Where the platform has no directory-descriptor calls (Windows), the same
 rules run on path strings with a symbolic-link and reparse-point check per
@@ -44,6 +58,9 @@ import fnmatch
 import os
 import re
 import stat
+import sys
+import time
+from collections import deque
 from dataclasses import dataclass, field
 
 ROOT_NAME = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$")
@@ -69,6 +86,16 @@ DEFAULT_SECRETS = (".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker", ".pas
                    "*.kdbx", "id_rsa*", "id_dsa*", "id_ecdsa*", "id_ed25519*", "credentials", "credentials.json")
 # read but never written
 DEFAULT_PROTECT = (".git",)
+# The home directory's secret scan, once per agent: breadth-first, so a cap cuts the deepest levels rather than
+# whole folders. The whole home tree of the desktop this was written on is 10,065,366 entries and took 78 s to walk
+# (DAWNR-AGENT.md section 7), too long to pay at every start; 200,000 entries covers its first five levels whole.
+HOME_SCAN_ENTRIES = 200_000
+HOME_SCAN_SECONDS = 2.0
+# The roots searched for a file's other names at read time (only for a file with more than one): past either cap
+# the search stops and the file is refused, never read on a count that may be short.
+LINK_SCAN_ENTRIES = 200_000
+LINK_SCAN_SECONDS = 5.0
+_PROC_FD = sys.platform.startswith("linux") and os.path.isdir("/proc/self/fd")
 
 
 class PathRefused(ValueError):
@@ -126,6 +153,8 @@ class Space:
     protected_entries: set = field(default_factory=set)    # (parent identity, casefolded name) not yet existing
     secret_ids: set = field(default_factory=set)           # files and directories never read, by identity
     hidden_ids: set = field(default_factory=set)           # never listed or searched (the agent's own state)
+    link_scan_entries: int = LINK_SCAN_ENTRIES             # the caps of names_in_roots
+    link_scan_seconds: float = LINK_SCAN_SECONDS
 
     def __post_init__(self):
         names = [r.name for r in self.roots]
@@ -356,6 +385,116 @@ class Space:
         if (ident(parent_st), target.name.casefold()) in self.protected_entries:
             raise PathRefused(f"{target.display} is protected; it can be read but never written")
 
+    # --------------------------------------------------------- hard links --
+
+    def check_read(self, fd: int, st, target: Target, names=None) -> None:
+        """What an opened file passes before a tool returns anything of its contents (read_problem)."""
+        problem = self.read_problem(fd, st, target, names)
+        if problem:
+            raise PathRefused(problem[1])
+
+    def read_problem(self, fd: int, st, target: Target, names=None) -> tuple[str, str] | None:
+        """None, or (kind, why) when the opened file `fd` (whose fstat is `st`) must not be read: its real path is
+        not inside a root ("not inside the roots"), or it has a name the model could not read itself ("hard link",
+        link_problem). `names`, when given, is a function returning names_in_roots() for every file (a search asks
+        once, not once per file). For a file with more than one name the descriptor is examined again after the
+        search, as Postfix's safe_open() compares its two stats: a name added or removed meanwhile changes the link
+        count or the status-change time, and the file is refused rather than read on a count already stale."""
+        if not self.real_path_inside(fd, target):
+            return "not inside the roots", (f"{target.display}: the file that was opened is not inside any root by "
+                                            "its real path (a link was swapped in while it was opened); not read")
+        problem = self.link_problem(st, target, names)
+        if problem:
+            return "hard link", problem
+        if stat.S_ISREG(st.st_mode) and st.st_nlink > 1:
+            now = os.fstat(fd)
+            if (now.st_nlink, now.st_ctime_ns) != (st.st_nlink, st.st_ctime_ns):
+                return "hard link", (f"{target.display}: its names changed while they were being counted; not read "
+                                     "(read it again)")
+        return None
+
+    def real_path_inside(self, fd: int, target: Target) -> bool:
+        real = real_path(fd, target.abspath)
+        return real is not None and self.display_of(real) is not None
+
+    def link_problem(self, st, target: Target, names=None) -> str | None:
+        """None if every name of the file `st` describes is inside the roots and may be read there, else why not.
+
+        A regular file with one link has only the name the model used, which the walk has already checked. With
+        more, link(2): "it is impossible to tell which name was the 'original'", so a name outside the roots may be
+        the file's real home (a key, a password file), and the roots are searched for the others."""
+        if not stat.S_ISREG(st.st_mode) or st.st_nlink <= 1:
+            return None
+        found, stopped = names() if names is not None else self.names_in_roots(ident(st), st.st_nlink)
+        have = len(found.get(ident(st), ()))
+        if have >= st.st_nlink:
+            return None
+        if stopped:
+            return (f"{target.display} has {st.st_nlink} names (hard links), and the search of the roots for them "
+                    f"stopped {stopped} with {have} found; a file with more than one name is read only when every "
+                    "name is found inside the roots, so it is not read")
+        return (f"{target.display} has {st.st_nlink} names (hard links) and only {have} of them are inside the roots "
+                "under a name that may be read: the file is also reached from outside the roots or through a secret "
+                "name, so it is not read")
+
+    def names_in_roots(self, want: tuple | None = None, need: int = 0) -> tuple[dict, str | None]:
+        """({(st_dev, st_ino): {(directory identity, name), ...}}, None or where the search stopped).
+
+        The names inside the roots, that the model could read itself (not secret by name, not below a secret or
+        hidden directory, no link followed on the way), of the regular file `want`, or with want None of every
+        regular file there with more than one link. A directory is walked once (by identity) and a name is its
+        directory's identity and its spelling, so a directory two roots share (one inside the other) counts its
+        names once. With want, the search ends as soon
+        as `need` names are found. Past link_scan_entries entries or link_scan_seconds it stops and says so, and
+        what it found is then incomplete: a caller refuses rather than trust the count."""
+        found: dict = {}
+        seen: set = set()
+        count = 0
+        deadline = time.monotonic() + self.link_scan_seconds
+
+        def over() -> str | None:
+            if count > self.link_scan_entries:
+                return f"after {self.link_scan_entries} entries"
+            if time.monotonic() > deadline:
+                return f"after {self.link_scan_seconds:g} s"
+            return None
+
+        for root in self.roots:
+            walker = _root_dirs(root)
+            try:
+                for did, rel, files, lstat_file, dirnames in walker:
+                    count += 1
+                    if over():
+                        return found, over()
+                    if did in seen or did in self.secret_ids or did in self.hidden_ids:
+                        dirnames[:] = []                 # walked already, or nothing below is the model's to read
+                        continue
+                    seen.add(did)
+                    for name in files:
+                        count += 1
+                        if over():
+                            return found, over()
+                        try:
+                            st = lstat_file(name)
+                        except OSError:
+                            continue
+                        if not stat.S_ISREG(st.st_mode):
+                            continue
+                        i = ident(st)
+                        if (i != want) if want is not None else st.st_nlink < 2:
+                            continue
+                        if self.secret_reason(Target(root, rel + (name,))):
+                            continue
+                        names = found.setdefault(i, set())
+                        names.add((did, name))
+                        if want is not None and len(names) >= need:
+                            return found, None
+            except OSError as e:
+                return found, f"at root {root.name} ({e.strerror or e})"
+            finally:
+                walker.close()
+        return found, None
+
 
 # ---------------------------------------------------------- handle helpers --
 # A handle is a directory descriptor (int) on POSIX, a checked directory path (str) elsewhere.
@@ -409,6 +548,52 @@ def unlink_child(handle, name: str) -> None:
 
 def scandir(handle):
     return os.scandir(handle)
+
+
+def real_path(fd: int, fallback: str) -> str | None:
+    """The real path of an open file: where the kernel says the descriptor is (/proc/self/fd/N, "a symbolic link to
+    the actual file", proc_pid_fd(5)), else os.path.realpath of the path it was opened by."""
+    if _PROC_FD:
+        try:
+            return os.readlink(f"/proc/self/fd/{fd}")
+        except OSError:
+            pass
+    try:
+        return os.path.realpath(fallback)
+    except (OSError, ValueError):
+        return None
+
+
+def _root_dirs(root: Root):
+    """(identity, parts below the root, file names, an lstat of one of them by name, subdirectory names) for each
+    directory of a root, top-down, no link followed: os.fwalk with follow_symlinks=False where the platform has
+    descriptor calls, os.walk otherwise. Emptying the subdirectory list prunes. A root replaced since it was
+    configured raises OSError, as does a directory that cannot be examined."""
+    if FD_WALK:
+        rfd = os.open(root.path, os.O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        try:
+            if root.ident and ident(os.fstat(rfd)) != tuple(root.ident):
+                raise OSError(errno.ESTALE, "replaced since it was configured")
+            walker = os.fwalk(".", dir_fd=rfd, follow_symlinks=False)
+            try:
+                for dirpath, dirnames, filenames, dfd in walker:
+                    rel = () if dirpath == "." else tuple(dirpath[2:].split("/"))
+                    yield (ident(os.fstat(dfd)), rel, filenames,
+                           lambda n, d=dfd: os.stat(n, dir_fd=d, follow_symlinks=False), dirnames)
+            finally:
+                walker.close()
+        finally:
+            os.close(rfd)
+        return
+    if root.ident and ident(os.lstat(root.path)) != tuple(root.ident):
+        raise OSError(errno.ESTALE, "replaced since it was configured")
+    for dirpath, dirnames, filenames in os.walk(root.path, followlinks=False):
+        rel = tuple(p for p in os.path.relpath(dirpath, root.path).split(os.sep) if p not in ("", "."))
+        st = os.lstat(dirpath)
+        if _is_link(st):
+            dirnames[:] = []
+            continue
+        yield ident(st), rel, filenames, lambda n, d=dirpath: os.lstat(os.path.join(d, n)), dirnames
 
 
 def is_regular(st) -> bool:
@@ -480,28 +665,88 @@ def identities(paths, *, max_files: int = 2000, recurse: bool = False) -> set:
     return out
 
 
-def home_secret_identities(home, names, *, max_files: int = 2000) -> set:
-    """(st_dev, st_ino) of every entry directly under the home directory that one of `names` names, by exact
-    spelling or by glob (case-insensitively, like secret_reason), plus the files beneath a matching directory
-    (bounded, as identities() does): the identity twin of the by-name check, so a hard link into a root under
-    an innocent name is refused even when that name itself is not on the list (CWE-59, cwe.mitre.org: a link
-    resolves a checked name to an unintended file; stat(2), man7.org: st_dev+st_ino identify a file regardless
-    of the name used to reach it, so they are unchanged by the second name a hard link adds).
+def home_secret_identities(home, names, *, skip=(), devices=(), max_entries: int = HOME_SCAN_ENTRIES,
+                           seconds: float = HOME_SCAN_SECONDS) -> tuple[set, dict]:
+    """(identities, what the scan covered): (st_dev, st_ino) of every entry anywhere under the home directory that
+    one of `names` names, by exact spelling or by glob (case-insensitively, like secret_reason; a name with a `/`
+    is matched against the path from the home directory, like `.config/gh`), and of everything below a matching
+    directory: the identity twin of the by-name check, so a hard link into a root under an innocent name is
+    refused even when that name is not on the list (CWE-59 and CWE-62, cwe.mitre.org; stat(2): st_dev and st_ino
+    identify a file whatever name reaches it).
 
-    A literal name (no `*`, `?` or `[`) is looked up directly, existing or not, exactly as the four hardcoded
-    directories were before this covered the rest of DEFAULT_SECRETS. A glob is matched against one scandir()
-    of the home directory's own top level rather than a walk of the whole home directory, which is where a
-    person's dotfiles and credential files conventionally sit and where the fixed cost stays bounded."""
-    literal = [n for n in names if not re.search(r"[*?\[]", n)]
-    globs = [n.casefold() for n in names if re.search(r"[*?\[]", n)]
-    targets = [os.path.join(home, n) for n in literal]
-    if globs:
+    Breadth-first, like bfs (github.com/tavianator/bfs: "lists files from shallowest to deepest"), so the caps cut
+    the deepest levels and never a whole folder near the top, where a person's keys and credential files sit. It
+    follows no link, does not descend into a directory in `skip` (the operator's roots: what is inside them is
+    checked by name and at read time) or on a file system other than the home directory's and `devices`' (the
+    roots'): POSIX find's -xdev, and a hard link cannot cross file systems (link(2), EXDEV), so nothing on another
+    one can have a name inside a root. It stops after max_entries entries or `seconds`, and says so.
+
+    The dict: entries and directories read, seconds, depth (the deepest level with an entry read; 1 is the home
+    directory's own entries), whole_levels (every entry down to that level was read), stopped (None, or why)."""
+    literal, globs, slashed = set(), [], []
+    for n in names:
+        n = n.casefold().strip("/")
+        if "/" in n:
+            slashed.append(n)
+        elif re.search(r"[*?\[]", n):
+            globs.append(n)
+        elif n:
+            literal.add(n)
+    glob_re = re.compile("|".join(f"(?:{fnmatch.translate(g)})" for g in globs)) if globs else None
+    slash_re = re.compile("|".join(f"(?:{fnmatch.translate(g)})" for g in slashed)) if slashed else None
+    out: set = set()
+    info = {"entries": 0, "directories": 0, "seconds": 0.0, "depth": 0, "whole_levels": 0, "stopped": None}
+    started = time.monotonic()
+    try:
+        hst = os.stat(home)
+    except (OSError, ValueError) as e:
+        info["stopped"] = f"at the start: the home directory cannot be read ({getattr(e, 'strerror', None) or e})"
+        return out, info
+    allowed = {hst.st_dev} | set(devices)
+    skip = set(skip)
+    seen = {ident(hst)}
+    queue = deque([(os.fspath(home), "", 0, False)])       # (path, from home casefolded, depth, below a secret)
+    while queue and info["stopped"] is None:
+        path, rel, depth, below = queue.popleft()
+        info["whole_levels"] = depth                         # breadth-first: every level down to depth is read
         try:
-            entries = list(os.scandir(home))
+            it = os.scandir(path)
         except OSError:
-            entries = []
-        for e in entries:
-            cf = e.name.casefold()
-            if any(fnmatch.fnmatchcase(cf, g) for g in globs):
-                targets.append(e.path)
-    return identities(targets, recurse=True, max_files=max_files)
+            continue
+        info["directories"] += 1
+        with it:
+            for e in it:
+                if info["entries"] >= max_entries:
+                    info["stopped"] = f"after {max_entries} entries"
+                    break
+                if time.monotonic() - started > seconds:
+                    info["stopped"] = f"after {seconds:g} s"
+                    break
+                info["entries"] += 1
+                info["depth"] = max(info["depth"], depth + 1)
+                name = e.name.casefold()
+                r = f"{rel}/{name}" if rel else name
+                secret = (below or name in literal or (glob_re is not None and glob_re.match(name) is not None)
+                          or (slash_re is not None and slash_re.match(r) is not None))
+                try:
+                    is_dir = e.is_dir(follow_symlinks=False)
+                    st = e.stat(follow_symlinks=False) if secret or is_dir else None
+                    if secret and e.is_symlink():
+                        # a secret name that is a link (dotfiles kept elsewhere, as GNU Stow does): what it points
+                        # to is the secret, and a directory there is scanned like one found here
+                        st = os.stat(e.path)
+                        is_dir = stat.S_ISDIR(st.st_mode)
+                except OSError:
+                    continue
+                if secret:
+                    out.add(ident(st))
+                if is_dir:
+                    i = ident(st)
+                    if i in skip or i in seen or st.st_dev not in allowed:
+                        continue
+                    seen.add(i)
+                    queue.append((e.path, r, depth + 1, secret))
+    if info["stopped"] is None:
+        info["whole_levels"] = info["depth"]
+    info["seconds"] = round(time.monotonic() - started, 3)
+    return out, info

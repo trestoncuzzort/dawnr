@@ -68,7 +68,8 @@ rights; kernel bugs; a person who approves a plan whose dry run showed the harm.
 | writing through a hard link to a file outside | a replace writes a temporary file and renames it over the name; the other name keeps its bytes | `test_a_write_replaces_a_hard_link_instead_of_writing_through_it` |
 | a FIFO or device that blocks or never ends | opened non-blocking, refused unless a regular file | `test_a_fifo_is_refused_without_blocking` |
 | a root replaced by a link after loading | the root's identity (device, inode) recorded at load and checked at every walk | `test_a_root_replaced_after_loading_is_refused` |
-| reading a secret | names (`.ssh`, `*.pem`, `.env`, ...) matched case-insensitively; the home directory's secret folders also by identity, so a hard link under an innocent name is refused | `test_secrets_are_never_read_by_name_or_by_identity` |
+| reading a secret | names (`.ssh`, `*.pem`, `.env`, ...) matched case-insensitively; every file under the home directory with a secret name, at any depth, also by identity (a bounded breadth-first scan when the agent is built), so a hard link under an innocent name is refused | `test_secrets_are_never_read_by_name_or_by_identity`, `test_a_nested_home_secret_hard_linked_into_a_root_is_refused`, `test_a_nested_literal_secret_name_hard_linked_into_a_root_is_refused`, `test_every_secret_pattern_is_known_by_identity_anywhere_under_home`, `HomeScan` |
+| a hard link into a root to any file outside the roots, or to a secret name inside them (an archive unpacked into a root can make one: CWE-62 lists CVE-2021-21272, hard links in a tarball reaching outside the folder it was unpacked into) | no list: a file's contents leave only when every name it has (its link count) is found inside the roots under a name the model could read itself, the roots being searched for them; a search that stops at its cap refuses, and the descriptor is examined again after the search; the file actually opened must be inside a root by its real path. Search skips such a file, a command is not given it as a `{path}`, and a write replaces it without reading or keeping its bytes, so no undo can bring them into the root | `test_a_hard_link_to_a_file_outside_the_roots_is_refused_whatever_its_name`, `test_a_hard_link_whose_other_name_in_a_root_is_secret_is_refused`, `test_search_does_not_show_a_file_hard_linked_from_outside`, `test_replacing_a_hard_link_from_outside_keeps_no_copy_to_undo_into_the_root`, `test_overlapping_roots_do_not_count_one_name_twice`, `test_a_name_added_inside_the_roots_while_the_names_are_counted_is_caught`, `test_the_search_for_a_files_other_names_fails_closed_at_its_cap`, `test_a_path_hard_linked_from_outside_the_roots_is_not_given_to_a_command`, `test_a_file_swapped_for_a_link_between_check_and_open_is_refused_by_its_real_path`; and `test_a_hard_link_between_two_names_inside_the_roots_is_read` for what must still work |
 | rewriting `.git/config`, a hook, the configuration, the audit log, the agent's journal, the enforcement code | protected by name (`.git`, and the operator's list) and by identity (everything the configuration names, and `dawnr_harness`, `dawnr_agent`, `engine.py`, `chat.py`, `chat_cli.py`, `chat_pane.py`, `t_tool.py`); protected paths are read but never written, and never handed to a command | `test_protected_paths_are_read_but_never_written`, `Plans.test_the_model_cannot_reach_permissions_or_configuration` |
 | a file its owner made read-only | a rename needs only the directory's permission, so the file's own mode is checked and kept | `test_a_file_its_owner_made_read_only_is_not_replaced` |
 | shell metacharacters | no shell, ever: an argv list | `Commands.test_no_shell_and_a_scrubbed_environment` |
@@ -108,7 +109,11 @@ looser; a hook's rewritten input meets it again).
 Every change is journaled in the agent's state directory with the bytes it
 replaced (content-addressed), so `fs_undo`, or the person's own
 `python locallm/dawnr_agent --config ... undo <change>`, restores them; an undo
-refuses when the file changed since, rather than clobber the later change.
+refuses when the file changed since, rather than clobber the later change. The
+one exception: a write that replaces a file with a name outside the roots (a
+hard link) does not read or keep its bytes, which are still under that other
+name, so that change cannot be undone; keeping them would let an undo write
+them into the root as a new file with one name.
 
 ## 3. Paths
 
@@ -129,6 +134,33 @@ root, and the model can use that path. The operator's own links, in a root's
 path, are resolved once when the configuration loads. Search uses `os.fwalk`
 with `follow_symlinks=False`, which CPython's own docstring calls safe against
 symlink races.
+
+A hard link is not a link to follow: it is a second name for the same file, and
+link(2) says "it is impossible to tell which name was the 'original'". So before
+any of a file's contents leave (a read, a search hit, an edit, a dry run's
+diff), two more checks run on the opened descriptor. Its real path, as the
+kernel reports it (`/proc/self/fd`, else `os.path.realpath`), must be inside a
+root. And if its link count is above one, the roots are searched for its names
+(`os.fwalk` again, no link followed), and it is read only if all of them are
+found there, none secret by name and none below a secret or the agent's hidden
+directory: the comparison GNU tar's `--check-links` makes between the links it
+archived and `st_nlink`. The CERT C rule POS01-C and Postfix's `safe_open()`
+refuse every file with more than one link; this refuses only those with a name
+the model could not use itself, so a file with two names inside the roots is
+still read. The search stops at 200,000 entries or 5 s (`limits`
+`link_scan_entries`, `link_scan_seconds`) and then refuses, and the descriptor is
+examined again after it (link count and change time, as `safe_open()` compares
+its two stats), so a name added during the search refuses the read too.
+
+The home directory is also scanned once, when the agent is built, for every
+secret name at any depth: breadth-first (like `bfs`, so a cap cuts the deepest
+levels, never a whole folder near the top), no link followed except a secret
+name that is itself a link (dotfiles kept elsewhere), not into a root, not onto
+a file system that holds neither the home directory nor a root (a hard link
+cannot cross one), at most 200,000 entries or 2 s (`home_scan_entries`,
+`home_scan_seconds`). What it finds is refused by identity, which also covers a
+secret moved into a root after the scan. When it stops early, loading says so
+(`harness.problems`, and `roots` prints how far it got).
 
 ## 4. Commands
 
@@ -251,6 +283,27 @@ command). Under bubblewrap the child that escaped the process-group kill does
 not outlive the call (it stopped writing when the call returned); without the
 sandbox it does (it kept writing), which section 8 says.
 
+Measured on the second review of hard links, the same day (test numbers from
+`python -m unittest locallm/test_dawnr_agent.py`: 102 tests, 2 skipped, on
+Python 3.14 and 3.10; the registered numbers above came out identical). The
+first fix had scanned only the home directory's top level; a key in a subfolder
+hard-linked into a root was read whole. Every new test failed before this fix
+but the one that checks two names inside the roots are still read, which guards
+against refusing too much and passed before and after; and twelve pieces of the
+fix, each removed on its own, fail at least one test (a thirteenth, one of the
+two ways a folder two roots share is counted once, is backed up by the other:
+removing both fails). The home tree of the desktop this was written on is
+10,065,366 entries in 358,916 directories, and walking all of it took 78 s, so
+the scan is bounded: 200,000 entries, breadth-first, took 0.40 s warm and 1.0 s
+on the first run, read every level to depth 5 whole, and found 111 secret files
+and directories. The read-time search, on a root of 225,610 entries holding a
+file with one name outside it: stopped at the 200,000-entry cap after 1.04 s and
+refused; with a 400,000 cap it saw the whole root in 0.61 s and refused with the
+exact reason. A file with one name costs no search (0.3 ms per read). One more
+leak was found on the way and closed: `fs_write` over such a file kept its old
+bytes for undo, and `fs_undo` then wrote them into the root as a file with one
+name, which a link-count check alone would have read.
+
 Weaker than it looks, said plainly: the sweep's generated paths mostly end in
 refusals (31 of 5,000 reads opened a real file), so the property is tested far
 more on what is refused than on what is allowed; the fooled planner is scripted,
@@ -277,9 +330,37 @@ skips.
   operator's claims**, and a command that puts itself in a new session escapes
   the process-group kill; under bubblewrap it cannot, because the command's
   process namespace ends with it.
-- **Hard links.** A file hard-linked into a root from elsewhere is in the root
-  by the file system's own definition and is readable; writes never go through
-  it; secrets are known by identity only in the home directory's secret folders.
+- **Hard links: what still gets through.** A file with a name outside the roots
+  is not read (section 3), but the roots are the boundary, so:
+  - *A file moved into a root* (linked in, then its outside name removed) has
+    one name, inside the root, and is read like any file there. If it had a
+    secret name under the home directory when the agent was built, and the scan
+    reached it, its identity still refuses it; a secret made after the scan, or
+    deeper than the scan reached, and then moved in, is read.
+  - *A hard link made after the scan* is caught at read time, because its other
+    name is still outside; only removing that name first (the move above) gets
+    it through.
+  - *The count and the read are not one step.* A name added or removed during
+    the search changes the link count or change time and refuses the read; a
+    change after that last look, while the bytes are read, is not seen (the file
+    read was inside the roots at the look).
+  - *Both scans are bounded.* Past the search's cap a file with more than one
+    name is refused even when every name is inside a large root. Files that
+    share a store outside the roots are refused by design: pnpm's
+    `node_modules` (its files are "hard-linked from" the store, pnpm.io's
+    Motivation page), uv with `--link-mode hardlink` (its default on Windows,
+    by `uv help pip install`), and a local `git clone`'s objects (two links
+    each, measured here).
+  - *Not the file tools:* `fs_list` still shows such a file's name and size; a
+    command given a directory reads whatever it opens below it, hard links
+    included (the check covers a `{path}` that names a file); a bind or FUSE
+    mount inside a root is inside it by the file system's own definition.
+  - *Without `/proc/self/fd`* (macOS, Windows) the real path is
+    `os.path.realpath` of the path used: one more check-then-use window. With
+    it, the path is the kernel's spelling, compared with the root's as
+    configured; a root spelled differently from the kernel (possible on a
+    case-insensitive file system) would be refused file by file. Not measured
+    here: no such file system was at hand.
 - **Symbolic links are refused rather than followed**, so a root built from
   links is less useful than its owner may expect.
 - **Windows has no descriptor walk.** The same rules run on path strings with a
@@ -336,8 +417,12 @@ Other keys: `secrets` (replaces the default list), `command_path` (the PATH
 commands resolve against), `env` (extra environment for every command),
 `processes` (false removes `ps_list`), `check_writes` (`block`, `note`, `off`),
 `limits` (read and write sizes, lines, results, seconds, `command_timeout`,
-`command_output`), `dry_run` (the `plan` tool previews and runs nothing). An
-unknown or malformed key fails when the configuration loads.
+`command_output`, and the caps of the two scans in section 3:
+`link_scan_entries`, `link_scan_seconds`, `home_scan_entries`,
+`home_scan_seconds`), `dry_run` (the `plan` tool previews and runs nothing). An
+unknown or malformed key fails when the configuration loads. The operator's
+`secrets` replace the default names for the by-name check; the home scan looks
+for both.
 
     python locallm/dawnr_agent --config harness.json roots             # what is configured, what was skipped
     python locallm/dawnr_agent --config harness.json dry-run plan.json # exactly what would run; runs nothing
