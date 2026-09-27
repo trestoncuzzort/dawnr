@@ -454,6 +454,9 @@ def build(source_text: str, task: dict, rename_map: dict, target: Optional[str] 
     pviews = ", ".join(views.view(p.name, p.type) for p in fn.params)
     src_ret = fn.ret_name or "result"
     rview = views.view(src_ret, fn.ret)
+    lemma_task = "lemma" in fn.attrs
+    if lemma_task:
+        rview = "true"          # the lemma's conclusion is the lifted ensures at ok = true
     used = views.uses + used
     use = f"    broadcast use {', '.join(used)};\n" if used else ""
     # a source spec fn marked opaque is revealed for the equivalence (Verus guide,
@@ -465,7 +468,7 @@ def build(source_text: str, task: dict, rename_map: dict, target: Optional[str] 
     eq = [f"proof fn t_eq_requires({sps})\n"
           f"    ensures {req_src} <==> t_lift_pre({pviews}),\n"
           "{\n" + use_pre + "}\n",
-          f"proof fn t_eq_ensures({', '.join(x for x in (sps, f'{src_ret}: {fn.ret_src}') if x)})\n"
+          f"proof fn t_eq_ensures({', '.join(x for x in (sps, '' if lemma_task else f'{src_ret}: {fn.ret_src}') if x)})\n"
           f"    requires {req_src},\n"
           f"    ensures {_conj([_drop_inner_attrs(x) for x in fn.ensures_src])} <==> t_lift_post({', '.join(x for x in (pviews, rview) if x)}),\n"
           "{\n" + use_post + "}\n"]

@@ -1726,6 +1726,12 @@ def _render_file(vf: VerusFile, target: str) -> Rendering:
     if fn.ret.unsigned_elems:
         enss.append(f"forall i: int :: 0 <= i < |{dn(ret_name)}| ==> {dn(ret_name)}[i] >= 0")
         rd.rewrites.append("unsigned-elements-bound")
+    if "lemma" in fn.attrs:
+        # a lemma as a task: the token result is the truth value of the conclusion, so
+        # the program `true` verifies exactly when the lemma holds, and a twin returning
+        # false is refuted wherever the conclusion is satisfiable (t's grading needs one)
+        enss = [f"({dn(ret_name)} <==> (" + " && ".join(f"({e})" for e in enss) + "))"]
+        rd.rewrites.append("lemma-as-truth-value")
     body_lines: list[str] = []
     rd.stmts(fn.body, "  ", ret_name, body_lines, True)
     if rd.called_execs:
