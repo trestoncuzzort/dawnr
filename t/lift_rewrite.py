@@ -1797,6 +1797,15 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
     record.let_substitution = lets.census()
     for line in lets.lines:
         record.rewrites.append(Rewrite(rule="let-substituted", line=line))
+    # Row 51 (2026-09-27): `classify`'s own note, never a rewrite this
+    # function performs -- an `{:axiom}`/`{:verify false}` declaration (or
+    # axiom-only function) elsewhere in the source, outside this method's
+    # closure, that this method never touches. Copied here so the sidecar
+    # (and the census that reads it) can count it without re-reading the
+    # source; a method that instead REFERENCES one of these never reaches
+    # `rewrite` at all (`classify` refused it `source-axiom`).
+    for line in getattr(plan, "axiom_in_file", ()):
+        record.rewrites.append(Rewrite(rule="axiom-in-file", line=line))
 
     t_method = renamer.fresh(method.name, record, "method")
     task_name = f"{_sanitize_stem(source_path)}__{t_method}"
