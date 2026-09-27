@@ -18,7 +18,9 @@ call the model would have ended inside (and the tool then runs), counts the
 override, and leaves a completed row inert; repair conversations come only
 from failing drafts of training conversations, keep a passing draft only when
 it is the proved program, and end with the proved program under a passing
-verdict; the eval's judge tells acting on a failed check from repeating it.
+verdict; the eval's judge tells acting on a failed check from repeating it;
+a call budget refuses <|t_start|> after N calls; the best-verdict answer is
+the call the tool ranked highest, and a rescored row gives the same answer.
 Needs torch; CPU only, seconds.
 """
 import json
@@ -405,6 +407,26 @@ class Grammar(unittest.TestCase):
         self.assertEqual(len(seen), len(slow))
 
 
+    def test_call_budget_refuses_a_third_call(self):
+        sp = self.sp
+        # a model that calls again after every verdict and would never end
+        table = {**self.table, self.y: [(sp(chat.T_END), 0.0)],
+                 sp(chat.OUTPUT_END): [(sp(chat.T_START), 0.0), (sp(chat.ASSISTANT_END), -1.0)]}
+        from engine import Engine
+        eng = Engine(TableModel(self.tok, table), self.tok, max_calls=2, tool=lambda p, c: "parses: no")
+        list(eng.generate(self.prompt, max_tokens=200, temperature=0.0))
+        row = eng.rows[0]
+        self.assertEqual(len(row.tool_calls), 2)
+        self.assertTrue(row.completed)
+        self.assertEqual(row.budget_refusals, 1)
+        unbounded = Engine(TableModel(self.tok, table), self.tok, tool=lambda p, c: "parses: no")
+        list(unbounded.generate(self.prompt, max_tokens=200, temperature=0.0))
+        self.assertGreater(len(unbounded.rows[0].tool_calls), 2)
+        self.assertFalse(unbounded.rows[0].completed)
+        with self.assertRaises(ValueError):
+            Engine(TableModel(self.tok, table), self.tok, grammar=False, max_calls=2)
+
+
 class Repairs(unittest.TestCase):
     def setUp(self):
         self.convs = [dict(chat_data.conversation(PROGRAM, tool=False), split="train"),
@@ -495,6 +517,28 @@ class Judge(unittest.TestCase):
         self.assertTrue(chat_eval.verdict_ok(ok))
         right_first = chat_eval.judge(got([PROGRAM]), user)
         self.assertFalse(right_first["got_failing_verdict"] or right_first["repaired"])
+
+    def test_best_verdict_answer_and_rescore(self):
+        import chat_eval
+        user = "Example: double(3) == 6"
+        wrong = PROGRAM.replace("y := 2 * x;", "y := x + 1;")
+        broken = PROGRAM.replace("y := 2 * x;", "y := z;")
+        calls = [wrong, PROGRAM, broken]
+        got = {"program": broken.strip(), "calls": calls, "tool_verdicts": [t_tool.call(c, user) for c in calls],
+               "tool_calls": 3, "ended": True, "unclosed_call": False, "ended_in_call": False,
+               "budget_in_call": False, "grammar_overrides": 0, "new_tokens": 9}
+        self.assertEqual(chat_eval.answer_program(got, "last"), broken.strip())
+        self.assertEqual(chat_eval.answer_program(got, "best-verdict"), PROGRAM.strip())
+        tie = dict(got, calls=[wrong, wrong.replace("x + 1", "x + 2")],
+                   tool_verdicts=[t_tool.call(wrong, user)] * 2)
+        self.assertEqual(chat_eval.answer_program(tie, "best-verdict"), tie["calls"][1].strip())   # latest of equals
+        none = dict(got, calls=[], tool_verdicts=[], program="text")
+        self.assertEqual(chat_eval.answer_program(none, "best-verdict"), "text")
+        best = chat_eval.answered(got, "best-verdict")
+        self.assertTrue(chat_eval.judge(best, user)["examples_all_pass"])
+        row = {k: best[k] for k in chat_eval.ROW_KEYS if k in best}
+        again = chat_eval.answered(chat_eval.from_row(row), "last")
+        self.assertEqual(again["program"], broken.strip())           # the row keeps the last call as last_program
 
 
 class Trainer(unittest.TestCase):
