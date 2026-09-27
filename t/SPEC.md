@@ -1087,7 +1087,22 @@ dbl(s, i)`, ensures `r == dbl(s, len(s))` and `len(r) == len(s)`) draws
 `compare-flip` on the loop guard, refuted at `s = []` where the twin reads
 `s[0]`. The probes `fz_p_sf_seq_*` (t/fuzz_lower.py) cover a result that
 is measured, indexed, sliced and built in the body, and one false ensures
-through a seq-valued spec_fun (expected refuted).
+through a seq-valued spec_fun (expected refuted); since the 2026-09-27
+review, two more plant the fault in the spec_fun's own body (`dbl`
+prepending where the loop appends; `tl` dropping the last element where
+the body drops the first), expected refuted.
+
+The refutation certificate (dafny and F*, the two columns that state a
+witness as a ground lemma the kernel must accept) ladders every seq-valued
+spec_fun call its formula reaches, callees first, and every ground seq
+operator around it, each asserted equal to the interpreter's literal
+before the certificate's own goal (lower_dafny.py, certificate step 3;
+lower_fstar.py `_seq_rungs`). Without the rungs both kernels read the two
+seeded faults unproved, not refuted: Dafny unfolds a recursive function
+only to its default fuel, and neither kernel relates a literal to a ground
+append with no index term to trigger on. The rungs are hints the kernel
+re-proves; a task whose certificate reaches no seq-valued call gets none,
+so every committed lowering is unchanged.
 
 Lowering status (2026-09-27; verdicts on the fixtures in
 t/FEATURES-SEQFUN-2026-09-27.md): six kernels state the construct with

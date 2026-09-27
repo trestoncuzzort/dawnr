@@ -3844,6 +3844,61 @@ def probes() -> list[dict]:
         "[1] (dbl([1], 1) == [2]); a kernel that verifies this read the "
         "recursive seq spec_fun as something other than its definition",
         adversarial=True)
+    # 2026-09-27, the review's seeded faults: a bug in the seq-valued
+    # spec_fun's OWN body, which none of the four probes above plants (each
+    # of theirs is on the task side, one unfolding from the base case).
+    # Both read unproved in dafny and F* before the certificate's seq rungs
+    # (lower_dafny.py, certificate step 3) and refuted after; the other
+    # four kernels refuted them throughout.
+    _SF_DBL_SWAPPED = {"name": "dbl", "params": [{"name": "s", "type": "seq"},
+                                                 {"name": "n", "type": "int"}],
+                       "result": "seq", "decreases": V("n"),
+                       "body": ITE(OP("or", OP("<=", V("n"), I(0)),
+                                            OP(">", V("n"), LEN("s"))),
+                                   SEQ(),
+                                   CAT(SEQ(OP("*", I(2), AT("s", OP("-", V("n"), I(1))))),
+                                       CALL("dbl", V("s"), OP("-", V("n"), I(1)))))}
+    add({"t": 1, "name": "fz_p_sf_seq_swap", "gate": "loops",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), CALL("dbl", V("s"), LEN("s"))),
+                     OP("==", LEN("r"), LEN("s"))],
+         "spec_funs": [_SF_DBL_SWAPPED],
+         "body": [ASG("r", SEQ()), LOC("i", "int", I(0)),
+                  WH(OP("<", V("i"), LEN("s")),
+                     [OP("==", V("r"), CALL("dbl", V("s"), V("i"))),
+                      OP("==", LEN("r"), V("i")),
+                      OP("and", OP(">=", V("i"), I(0)),
+                                OP("<=", V("i"), LEN("s")))],
+                     OP("-", LEN("s"), V("i")),
+                     [ASG("r", CAT(V("r"), SEQ(OP("*", I(2), AT("s", V("i")))))),
+                      ASG("i", OP("+", V("i"), I(1)))])]},
+        "refuted",
+        "double_all's loop under a dbl that PREPENDS the doubled element: "
+        "r == dbl(s, len(s)) is false at s = [0, 1] (the loop builds [0, 2], "
+        "dbl builds [2, 0]), a refutation that needs the recursive spec_fun "
+        "unfolded twice at the witness",
+        adversarial=True)
+    _SF_TL_LAST = {"name": "tl", "params": [{"name": "s", "type": "seq"}],
+                   "result": "seq", "decreases": I(0),
+                   "body": ITE(OP(">=", LEN("s"), I(1)),
+                               SLICE("s", I(0), OP("-", LEN("s"), I(1))), SEQ())}
+    add({"t": 1, "name": "fz_p_sf_seq_slice_off", "gate": "recursion",
+         "params": [{"name": "s", "type": "seq"}],
+         "returns": [{"name": "r", "type": "seq"}],
+         "requires": [OP(">=", LEN("s"), I(1))],
+         "ensures": [OP("==", V("r"), CAT(CALL("tl", V("s")),
+                                          SEQ(AT("s", I(0))))),
+                     OP("==", LEN("r"), LEN("s"))],
+         "spec_funs": [_SF_TL_LAST],
+         "body": [ASG("r", CAT(SLICE("s", I(1), LEN("s")), SEQ(AT("s", I(0)))))]},
+        "refuted",
+        "fz_p_sf_seq_build under a tl that drops the LAST element where the "
+        "body drops the first: r == tl(s) + [s[0]] is false at s = [0, 1] "
+        "([1, 0] against [0, 0]), a literal against a ground append, which "
+        "no kernel relates to a display without the append's value stated",
+        adversarial=True)
     return P
 
 
