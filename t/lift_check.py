@@ -1883,7 +1883,7 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     for md in mdecls:
         lines.extend(_print_method_decl(md, rename))
 
-    lines.append(lower_dafny.lower(task, task["body"]))
+    lines.append(_no_auto_induction(lower_dafny.lower(task, task["body"]), task))
 
     lemma_names = []
     ret = task["returns"][0]
@@ -3009,6 +3009,24 @@ def _extract_warnings(out: str) -> list:
     "Warnings are recorded in the sidecar and ignored" -- recorded here,
     ignored by every pass/fail decision in this module)."""
     return [line.strip() for line in out.splitlines() if "Warning" in line]
+
+
+def _no_auto_induction(text: str, task: dict) -> str:
+    """Row 38: the task's own lifted lemmas, in the checker file only, with
+    Dafny's automatic induction off (`{:induction false}`, reference manual
+    11.2 "Induction"). A lemma is kept only when dafny proves it from the
+    proof steps the lift kept; Dafny alone of the seven kernels inducts on
+    its own, so a lemma whose source proof leaned on that (an `assert` of
+    the recursive case with no self-call) would pass dafny's check and fail
+    in every other kernel (measured: vericoding_DA0642, verus, lean and
+    fstar lost a verified cell to such a lemma)."""
+    names = {l["name"] for l in task.get("lemmas", [])}
+    if not names:
+        return text
+    return re.sub(r"^lemma (\w+)\(",
+                  lambda m: (f"lemma {{:induction false}} {m.group(1)}("
+                             if m.group(1) in names else m.group(0)),
+                  text, flags=re.M)
 
 
 def _unproved_task_lemmas(task: dict, verdicts: dict, all_ok: bool,
