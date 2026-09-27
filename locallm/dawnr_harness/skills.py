@@ -176,7 +176,14 @@ def discover(dirs) -> tuple[dict[str, Skill], list[str]]:
 def _inside(skill: Skill, rel: str) -> Path:
     if not isinstance(rel, str) or not rel or Path(rel).is_absolute() or rel.startswith(("/", "\\")):
         raise SkillError(f"file {rel!r}: give a path relative to the skill's folder")
-    target = (skill.path / rel).resolve()
+    try:
+        target = (skill.path / rel).resolve()
+    except (OSError, ValueError) as e:
+        # confirmed directly: os.path.realpath (Path.resolve's implementation) raises ValueError on an
+        # embedded null byte and OSError (ENAMETOOLONG) on a too-long component -- neither is the
+        # "outside the folder" case relative_to() below exists to catch, but both are still just a bad
+        # `file` argument, not a reason for this call to crash instead of answering with a refusal
+        raise SkillError(f"file {rel!r}: {e}") from None
     try:
         target.relative_to(skill.path)
     except ValueError:
@@ -200,9 +207,12 @@ def skill_tool(skills: dict[str, Skill]) -> Tool:
             target = _inside(skill, args["file"])
         except SkillError as e:
             return ToolResult(str(e), is_error=True)
-        if not target.is_file():
-            return ToolResult(f"{skill.name} has no file {args['file']}", is_error=True)
-        raw = target.read_bytes()[:MAX_FILE_BYTES + 1]
+        try:
+            if not target.is_file():
+                return ToolResult(f"{skill.name} has no file {args['file']}", is_error=True)
+            raw = target.read_bytes()[:MAX_FILE_BYTES + 1]
+        except OSError as e:
+            return ToolResult(f"{skill.name}: could not read {args['file']}: {e}", is_error=True)
         if b"\x00" in raw:
             return ToolResult(f"{args['file']} is not text; not returned", is_error=True)
         text = raw[:MAX_FILE_BYTES].decode("utf-8", errors="replace")
@@ -231,7 +241,11 @@ def script_tool(skills: dict[str, Skill], timeout: float = 60.0, max_chars: int 
             target = _inside(skill, script if "/" in script or "\\" in script else f"scripts/{script}")
         except SkillError as e:
             return ToolResult(str(e), is_error=True)
-        if target.suffix != ".py" or not target.is_file():
+        try:
+            no_script = target.suffix != ".py" or not target.is_file()
+        except OSError as e:
+            return ToolResult(f"{skill.name}: could not check script {script}: {e}", is_error=True)
+        if no_script:
             return ToolResult(f"{skill.name} has no Python script {script} (only .py scripts run, the same on "
                               "every system)", is_error=True)
         try:
