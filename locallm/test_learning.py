@@ -298,6 +298,15 @@ class Profile(unittest.TestCase):
         self.assertEqual(PR.apply({"inferred": {}, "pinned": {}}, PROGRAM, USER), PROGRAM)
         self.assertEqual(PR.apply(prof, "no program here", USER), "no program here")
 
+    def test_an_ill_formed_answer_is_shown_as_written(self):
+        """A local that shadows a parameter is ill formed; renaming it would decide which name each use meant."""
+        from dawnr_learning import profile as PR
+        shadow = PROGRAM.replace("var i_v: int := 0;", "var n: int := 0;").replace("i_v", "n")
+        verdict = F.check_target([{"role": "user", "content": USER}], shadow)
+        self.assertIn("well formed: no", verdict["verdict"])
+        prof = {"inferred": PR.infer(self.examples(P.PERSONS["bo"])), "pinned": {}}
+        self.assertEqual(PR.apply(prof, shadow, USER), shadow)
+
     def test_refresh_reads_the_store_and_keeps_pins(self):
         from dawnr_learning import profile as PR
         with tempfile.TemporaryDirectory() as tmp:

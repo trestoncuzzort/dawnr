@@ -137,8 +137,14 @@ def apply(profile: dict, content, user: str):
     program = final_program(content)
     if not program:
         return content
+    passed, verdict = check(program, user)
+    if "well formed: yes" not in verdict.split("\n"):
+        # a rename is capture-free only in a well-formed program: in one whose local shadows a parameter
+        # (found by the first run of arm P, DAWNR-LEARNING.md) renaming would choose which name each use
+        # meant, and so change the program. An ill-formed answer is shown as dawnr wrote it.
+        return content
     styled = restyle(program, prefs) or program
-    if styled != program and check(program, user)[0] and not check(styled, user)[0]:
+    if styled != program and passed and not check(styled, user)[0]:
         styled = program
     calls = [i for i, p in enumerate(parts) if p.get("type") == "t"]
     show_tool = prefs.get("tool", bool(calls))
