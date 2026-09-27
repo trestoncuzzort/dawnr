@@ -7203,6 +7203,17 @@ def emit_spec_funs(cx: Ctx) -> str:
         for binders, hyps, concl in obls:
             cx._sf_obls.append((f, btxt, sf_lens, binders, hyps, concl))
 
+        # 2026-09-27 (t/FEATURES-SEQFUN-2026-09-27.md, the seven-kernel
+        # grading of the lifted tasks): a `decreases` that is an `ite`
+        # (the lifter's totalised measure `if n <= 0 then 0 else n`)
+        # spliced under `( .. < fuel)%nat` has its literals read in nat
+        # scope, "The term n has type Z while it is expected to have type
+        # nat" (vericoding DT0631 Multiply's repeatString, DH0026's
+        # concatenate: MALFORMED). An `ite` measure is restated in Z scope
+        # there; a measure with no `ite` (every committed task) is
+        # spliced exactly as before.
+        measure_nat = (f"({measure})%Z" if "'ite'" in repr(sf["decreases"])
+                       else measure)
         chunks.append(f"""Fixpoint sf_{f}_fuel (fuel : nat) {btxt} : {res} :=
   match fuel with
   | O => {default}
@@ -7214,7 +7225,7 @@ Definition sf_{f} {btxt} : {res} :=
 
 Lemma sf_{f}_fuel_irrel :
   forall (fuel fuel' : nat) {btxt},
-  (Z.to_nat {measure} < fuel)%nat -> (Z.to_nat {measure} < fuel')%nat ->
+  (Z.to_nat {measure_nat} < fuel)%nat -> (Z.to_nat {measure_nat} < fuel')%nat ->
   sf_{f}_fuel fuel {atxt} = sf_{f}_fuel fuel' {atxt}.
 Proof.
   induction fuel as [|fu IH]; intros fuel' {atxt} Hf Hf'; [ lia | ].
