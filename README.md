@@ -44,6 +44,7 @@ trusted because what it writes is checked.
 | reinforcement learning with the provers as the reward | built and tested; waits until the model succeeds often enough on new problems to have something to reinforce |
 | the model's own verified answers as new data (expert iteration) | running with a local teacher model |
 | a chat pipeline (format, mid-training, tools, report card), adapted from nanochat | runs end to end ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md)); its first tool is the t interpreter, which the model calls on its own draft; it does not yet act on a failed check |
+| acting on the machine: files, commands, processes, plans | built, not yet learned by any model: every action through the harness's permissions, plans shown in a dry run and approved as a whole; 0 escapes on 5,000 generated paths, 0 of 80 injected actions run ([DAWNR-AGENT.md](DAWNR-AGENT.md)) |
 | retrieval, memory, tool use, speech, vision | not started; in the order [AMBITION.md](AMBITION.md) gives |
 
 The honest headline: the machinery that makes dawnr trustworthy works; the
@@ -94,6 +95,7 @@ A plain clone holds Git LFS pointers until `git lfs pull` runs.
 | understand `t` and the seven-prover pipeline | [t/README.md](t/README.md) |
 | see how verified corpora are brought in | [t/LIFT-2026-09-26.md](t/LIFT-2026-09-26.md), [t/LIFT-VERICODING-VERUS-LEAN.md](t/LIFT-VERICODING-VERUS-LEAN.md) |
 | see reinforcement learning with the provers | [t/RL-DESIGN-2026-09-26.md](t/RL-DESIGN-2026-09-26.md) |
+| let dawnr act on your machine, and see its threat model | [DAWNR-AGENT.md](DAWNR-AGENT.md) |
 | see every measurement and limitation | [SCOREBOARD.md](SCOREBOARD.md), [LIMITS.md](LIMITS.md), [CORRECTIONS.md](CORRECTIONS.md) |
 | read the engineering record | [internal/ROADMAP-LOG.md](internal/ROADMAP-LOG.md) |
 

@@ -169,7 +169,10 @@ def preview_plan(agent, harness, plan: Plan, session: Session | None = None, con
             if errs:
                 view = StepView(i, step, "deny", "invalid arguments", Preview(error="; ".join(errs[:5])))
             else:
-                prev = agent.preview(step.tool, args, overlay, context)
+                try:
+                    prev = agent.preview(step.tool, args, overlay, context)
+                except Exception as e:                             # noqa: BLE001  (a preview's bug refuses the step)
+                    prev = Preview(error=f"the dry run of this step failed: {type(e).__name__}")
                 if prev.pin:
                     args.update(prev.pin)
                 decision, why = harness.policy.decide(tool, sim, args)
