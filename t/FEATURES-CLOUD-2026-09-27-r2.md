@@ -104,7 +104,7 @@ on the real, twin refuted where a twin exists) and the two committed tasks
 | dafny | `set<int>`; the empty display let-bound to a typed name (`\|{}\|` is underspecified, a false-ranged comprehension is rejected as not finite, measured) | 9 of 9, twins refuted | 2 verified, twins refuted |
 | verus | `vstd::set::Set<int>`; `insert`/`remove` for a singleton union/difference; vstd's three broadcast groups plus one prelude lemma (empty difference is inclusion) in its own module; `==` bridged to `=~=`; the ground certificate over sets closed by the SMT arm (`compute_only` cannot evaluate a cardinality, measured) | 9 of 9, twins refuted | 2 verified, twins refuted |
 | fstar | `FStar.FiniteSet.Base` with `FStar.FiniteSet.Ambient`; a task using sets is lowered in the Ghost effect (`cardinality` is GTot, equality the ghost decision of `equal`); union with a singleton spelled `insert` | 9 of 9, twins refuted | 2 verified, twins refuted |
-| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality, each fact posed once behind the prelude's persistent marker | 9 of 9 real; 8 twins refuted, `fz_p_set_eq`'s twin at the 180 s wall | both verified; set_collect's twin refuted, set_toggle's twin unproved (no certificate for a set-valued return yet) |
+| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality, each fact posed once behind the prelude's persistent marker | 9 of 9 real; 8 twins refuted, `fz_p_set_eq`'s twin at the 180 s wall | both verified, both twins refuted (the set-valued twin result is certified by `S.Equal`, proved by computing `S.equal`, since MSetList values are not Leibniz-equal across computations) |
 | lean | none: core Lean 4 without Mathlib has no finite set | abstain by name | abstain |
 | framac | none: C has no set value | abstain by name | abstain |
 | spark | none yet: `SPARK.Containers.Functional.Sets` exists but has no difference function and its cardinality laws are unmeasured here | abstain by name | abstain |
@@ -171,9 +171,12 @@ adds the table.
   encoding proved equivalent (core has no `Finset`); Frama-C needs a
   sorted-array encoding with WP proofs; SPARK needs the
   `Functional_Sets` instantiation and a difference function the library
-  lacks. Two Rocq cells are open: `fz_p_set_eq`'s twin runs to the wall
-  (the real verifies), and `set_toggle`'s twin has no certificate because
-  the value certificate's closing step does not reach a set-valued return.
+  lacks. One Rocq cell is open: `fz_p_set_eq`'s twin runs to the wall
+  (the real verifies). `set_toggle`'s twin was unproved until the value
+  certificate learned to state a set-valued result as `S.Equal` rather
+  than Leibniz equality (an MSetList value carries a sortedness proof, so
+  `cbv; reflexivity` cannot identify two computations of one set); it now
+  refutes in 34 s.
 - **Two arrays written in one method.** 23 vericoding DJ methods
   (`a[i] := 0` and `sum[0] := total` under `modifies a, sum`) are one
   construct short: a task returning a pair of seqs, which t's pair already
