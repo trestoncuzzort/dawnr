@@ -464,8 +464,9 @@ two-array methods (t's pair holds two seqs already); not built here. Tests:
 the cardinality of a bounded comprehension used as a count, 30 a display
 (`s[i] in {'G', 'T', '.', '#'}`), 8 a `set<int>` parameter or return. t now
 has the type `set` (a finite set of ints) with six total operations, the
-display `{e1, ..., en}`, `x in s`, `card(s)`, `union`, `inter`, `diff`,
-written by name, `==` extensional (SPEC.md "Finite sets (v1)", SYNTAX.md);
+display `{e1, ..., en}`, `x in s`, `card(s)`, `union`, `inter`, `setminus`
+(spelled `diff` at first, respelled the same day -- see below), written by
+name, `==` extensional (SPEC.md "Finite sets (v1)", SYNTAX.md);
 `surface.py` parses and prints it (26 of 26 written examples, 1846 of 1846
 corpus tasks and 3000 fuzzed ASTs round-trip), `check_wf` types it,
 `interp` runs it on a frozenset with its own domain ladder, and
@@ -500,6 +501,33 @@ after). No twin-generator, grader or check-filter change: the ladder's
 existing moves (`wrong-var` over two set names, `off-by-one` on an int,
 `collapse-if`, `compare-flip`) found a refuting twin for every probe that
 has one.
+
+**Regression, found and fixed the same day: `diff` collided with a common
+identifier.** `set`, `card`, `union`, `inter` and `diff` all became
+keywords when this landed. `diff` is a common variable and return name:
+4 documents of the proved corpus (dafny_synthesis_task_id_145__maxDifference,
+vericoding_dd0675__maxDifference, vericoding_dd0740__differenceSumCubesAnd
+SumNumbers, vericoding_da0528__solve) and lifted task files across
+`t/out/lifted-tasks/`, `-2026-09-26/`, `-2026-09-26-rechecked/` and
+`-2026-09-26-recovered/` named a return or local `diff`, and every one
+stopped parsing (`expected 'id', found 'diff'`) or stopped printing (`'diff'
+is a keyword ... and has no notation as a name`). Nothing caught it: the
+corpus builder (`t/loop_locallm.py cmd_corpus`) kept writing the 4 documents
+unchecked, `locallm/chat_data.py`'s broad exception handler silently
+dropped them from training, and `t_tool` would have rejected any model
+answer that named a variable `diff`. `set`, `card`, `union` and `inter`
+collide with nothing in the corpus and keep the named-operation style (as
+`len` and `tostr` do); only `diff` is respelled, to `setminus` (the AST op
+tag stays `"diff"`, so no lowering, `check_wf` or `interp` changed -- see
+SPEC.md's "Set difference is spelled `setminus`" paragraph for the full
+account). `t/loop_locallm.py` gained the guard that was missing: it now
+refuses, by name and with the parse error, any document about to be
+written that does not parse with the current surface, and two tests
+(`t/test_set_keyword_surface.py`, `t/test_corpus_parse_gate.py`) hold both
+the fix and the guard in place. Byte identity: unaffected -- the two
+committed set tasks' surface changed (`tasks/set_toggle.t`'s `diff(a, {x})`
+is now `setminus(a, {x})`), their AST and lowering did not (`sha256`
+checked across all seven kernels, real and twin, against `r12-blockers`).
 
 ### 12. A return unassigned on a path opens with its default (2026-09-27, lifter)
 
