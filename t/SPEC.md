@@ -1121,7 +1121,7 @@ abstains by name; none totalises or approximates it.
 
 **Set difference is spelled `setminus`, not `diff` (2026-09-27, same day).**
 A review found `diff` was a common variable and return name: 4 documents of
-the proved corpus and 5 lifted task files under `t/out/lifted-tasks-*/`
+the proved corpus and 7 lifted task files under `t/out/lifted-tasks-*/`
 named a return or local `diff`, and every one stopped parsing the moment
 `diff` became a keyword (`t/FEATURES-TRACK.md` "11. Finite sets" carries the
 measurement). `set`, `card`, `union` and `inter` collide with nothing in
