@@ -996,14 +996,18 @@ def _char_cast_safe(base: Expr, char_names: set, char_seq_names: set) -> bool:
 # strictly more mechanical (and checkable) source of the same fact.
 # ---------------------------------------------------------------------------
 
-def _called_names(node) -> set[str]:
-    names: set[str] = set()
+def _called_names(node) -> tuple[str, ...]:
+    """The names a node calls, in source order of first call and without
+    repeats. A set here fed the closure walks in hash order, which Python
+    randomises per process, so a refusal chosen among issues on one line
+    named a different witness on different runs (row 51's DT0258)."""
+    names: dict[str, None] = {}
     for n in walk(node):
         if isinstance(n, Call) and isinstance(n.fn, Ident):
-            names.add(n.fn.name)
+            names.setdefault(n.fn.name)
         elif isinstance(n, CallStmt):
-            names.add(n.name)
-    return names
+            names.setdefault(n.name)
+    return tuple(names)
 
 
 def _closure(module: Module, method: MethodDecl) -> tuple[Decl, ...]:
@@ -1191,7 +1195,7 @@ def _axiom_only_functions(module: Module, axiomatised: dict[str, int]) -> dict[s
 
 def _mutual_recursion_issue(closure: tuple[Decl, ...]) -> Optional[tuple[int, str, str]]:
     funs = [d for d in closure if isinstance(d, FunctionDecl)]
-    calls = {f.name: (_called_names(f) - {f.name}) for f in funs}
+    calls = {f.name: (set(_called_names(f)) - {f.name}) for f in funs}
     names = set(calls)
 
     def reachable(start: str) -> set[str]:
@@ -2624,11 +2628,10 @@ class Liftable:
 
 
 def _first(issues: list[tuple[int, str, str]]) -> tuple[int, str, str]:
-    # Ties on one line break by reason, then token: the issue list is built
-    # in a set's iteration order, which Python randomises per process
-    # (PYTHONHASHSEED), so a line-only key named a different witness on
-    # different runs (row 51's DT0258, 2026-09-27 review).
-    return min(issues, key=lambda t: (t[0], t[1], t[2]))
+    # min is stable: among issues on one line the first appended wins, and
+    # the walks append in source order (`_called_names` is ordered), so
+    # the witness is the same on every run (row 51's DT0258, 2026-09-27).
+    return min(issues, key=lambda t: t[0])
 
 
 def classify(module: Module, method: MethodDecl, _stack: tuple = (),

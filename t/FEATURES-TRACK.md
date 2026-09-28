@@ -609,7 +609,7 @@ function/lemma-only for its other three callers, which assume a side-effect-free
 provable-body closure). `UsesDoubleIt` now refuses `source-axiom`; a sibling method that
 never calls the axiom method still lifts, noted `axiom-in-file`. Also fixed in this
 round: the token `classify` named for DT0258 varied between runs (two issues on one line, the
-tie broken by a set's iteration order); ties now break by (line, reason, token) and an
+tie broken by a set's iteration order); the closure walk now follows the source order of calls and an
 axiom-only function is recorded at its own declaration, so the witness is `BitwiseOr` on every run. See LIFT-2026-09-26.md's review-round section for the
 reproduction and the one item raised that was not a row-51 gap (`{:verify false}` on a
 method's own declaration never reaches `classify`; `lift_resolve.py` refuses it first, a
