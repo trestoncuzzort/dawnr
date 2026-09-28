@@ -1142,6 +1142,11 @@ def run_seed_acceptance() -> list[tuple[str, str]]:
 
 
 def test_seed_acceptance() -> None:
+    # the lifter-design bank of t-corpora (a sibling checkout) may be absent or partial
+    # here, as on a fresh desktop; CI has no t-corpora at all and deselects these
+    if not (corpora.CORPUS_RPRINT.exists() and corpora.INFRAGMENT_TXT.exists()):
+        import pytest
+        pytest.skip("t-corpora/lifter-design-2026-09-05 is not checked out here")
     results = run_seed_acceptance()
     for name, verdict in results:
         print(f"  {name:30s} {verdict}")
@@ -1201,6 +1206,11 @@ def run_infragment() -> dict:
 
 
 def test_infragment() -> None:
+    # the lifter-design bank of t-corpora (a sibling checkout) may be absent or partial
+    # here, as on a fresh desktop; CI has no t-corpora at all and deselects these
+    if not (corpora.CORPUS_RPRINT.exists() and corpora.INFRAGMENT_TXT.exists()):
+        import pytest
+        pytest.skip("t-corpora/lifter-design-2026-09-05 is not checked out here")
     summary = run_infragment()
     print(f"  {summary['lifted']} lifted / {summary['total_files']} files")
     for reason, items in sorted(summary["refused"].items(), key=lambda kv: -len(kv[1])):
