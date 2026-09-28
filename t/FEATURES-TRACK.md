@@ -490,7 +490,7 @@ twins refuted, the two tasks verified with twins refuted, unless noted):
 | dafny | `set<int>`; `{..}`, `in`, `\|s\|`, `+ * -`; the empty display let-bound to a typed name | 9 of 9 | 2 of 2 | `\|{}\|` is underspecified and a false-ranged comprehension is rejected as not finite, measured; hence the let |
 | verus | `vstd::set::Set<int>`; `set![..]`, `contains`, `len`, `insert`/`remove` for a singleton union/difference, `union`/`intersect`/`difference`; vstd's three broadcast groups plus one prelude lemma (empty difference is inclusion) in its own module; `==` bridged to `=~=` | 9 of 9 | 2 of 2 | the ground certificate over sets is closed by the SMT arm, `compute_only` cannot evaluate a cardinality (measured) |
 | fstar | `FStar.FiniteSet.Base` with `FStar.FiniteSet.Ambient`; a task that uses sets is lowered in the Ghost effect (`cardinality` is GTot, equality the ghost decision of `equal`) | 9 of 9 | 2 of 2 | `union` with a singleton is spelled `insert`, the one law the ambient facts do not close otherwise |
-| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality | 9 of 9 real; 8 twins refuted, `fz_p_set_eq`'s twin at the wall | set_collect and set_toggle both verified and both twins refuted: a set-valued twin result is certified by `S.Equal` (MSetList values carry a sortedness proof, so two computations of one set are not Leibniz-equal), pushed under `S.cardinal` by `P.Equal_cardinal` and into `S.In` at its element, and the closed set atoms that remain are decided by `vm_compute` (`t_set_ground`) | |
+| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality | 9 of 9 real; 9 of 9 twins refuted (`fz_p_set_eq`'s twin ran to the wall until the certificate computed its closed set atoms, `t_set_ground`) | set_collect and set_toggle both verified and both twins refuted: a set-valued twin result is certified by `S.Equal` (MSetList values carry a sortedness proof, so two computations of one set are not Leibniz-equal), pushed under `S.cardinal` by `P.Equal_cardinal` and into `S.In` at its element, and the closed set atoms that remain are decided by `vm_compute` (`t_set_ground`) | |
 | lean | none: core Lean 4, no Mathlib, no finite set | abstain by name | abstain | a sorted duplicate-free `List Int` is the encoding to build and measure |
 | framac | none: C has no set value | abstain by name | abstain | a sorted-array encoding with WP proofs is the encoding to build |
 | spark | none yet: `SPARK.Containers.Functional.Sets` exists but has no difference function and its cardinality laws are unmeasured here | abstain by name | abstain | the instantiation is the next step |
@@ -724,6 +724,46 @@ dropped the `accepted_ids` exemption `_dropped_function_decreases_set_ids` needs
 for dafny's own inferred `decreases {a}, a, x` on a `reads`-bearing, non-self-
 calling closure function; restored, with the exemption checked first in the new
 dedicated pass too).
+### 17. Datatype refusals named by what they touch (2026-09-27, lifter)
+
+**Refused: 78 methods `datatype` and 56 files `parse:datatype`** on the 1886
+staged files. Read at the source, 42 of the 78 touched no datatype: `.0`/`.1`
+on an element of a `seq<(int, int)>`, `Length0`/`Length1` on an `array2`,
+`.Floor` on a real, `type` synonyms, members of imported modules. Row 48
+names each by what it is and names a real datatype use by the shape of the
+file's declarations, read from the skipped declaration's tokens:
+`datatype-enum`, `-record`, `-sum`, `-real`, `-generic`, `-recursive`; the
+parser splits `match` by its first case pattern into `match-literal` and
+`datatype`. **Measured** (re-lift of the 78): 18 `seq-of-pair`, 17
+`datatype-real`, 9 `function-result`, 8 `type-decl`, 8 `datatype-record`, 5
+`tuple-projection`, 4 `datatype-generic`, 3 `array2`, 2 `datatype-sum`, 1
+each `datatype-enum`, `set`, `opaque-type`, `real`; 0 lift. Of the 56 files,
+41 match on constructors and 15 on literals (12 int, 2 char, 1 string). The
+reach of a non-recursive datatype without reals or type parameters is
+therefore 11 methods and at most 8 files, against a declaration form in
+seven kernels and twin moves over constructors ("The features ahead: 10.
+Datatypes"); it was not built this round, and the numbers say what to build
+first instead: `match-literal` as an if-chain (Done 18: built, 1 file
+lifts, the rest match on chars or lack a default) and a record of ints as
+an n-ary pair (8 methods). Tests: `t/test_lift_datatypes.py`.
+
+### 18. A `match` on int literals with a default lifts as an if-chain (2026-09-27, lifter)
+
+**Refused: 15 files `match-literal`** after Done 17's split of the parser's
+`match` refusal. Dafny tries a match's cases in order, takes the first that
+matches, and `_` matches everything, so over int literals with a `_` default
+the construct is exactly an if-chain over `==`. The parser builds that chain
+(row 54) as the IfStmt/IfExpr nodes every later stage already handles,
+statement and expression form, and the classifier logs
+`match-literal-if-chain`; a char or string literal keeps `match-literal`
+(t compares neither yet), a missing `_` refuses `match-no-default` (an
+if-chain needs an else and exhaustiveness would rest on the precondition).
+**Measured**: 1 of the 15 files lifts (vericoding DD0831, FibonacciIterative
+through its spec_fun Fibonacci) and passes the check stage with every
+checker lemma verified; 9 still refuse `match-literal` (a match on a char or
+string in the same file), 5 `match-no-default`. Tests:
+`t/test_lift_datatypes.py` (8, plus 2 slow: dafny proves both if-chains
+against the source clauses).
 
 ## The order from here
 
@@ -773,6 +813,10 @@ Candidates: Dafny `datatype`, Rust `enum`, OCaml/Haskell variants, Lean
 non-recursive, then recursive, algebraic datatypes with `match`, Dafny's
 syntax. Cost: a declaration form in all seven kernels (Frama-C and SPARK
 through records with discriminants), twin moves over constructors.
+Measured reach (Done 17, 2026-09-27): a non-recursive datatype without
+reals or type parameters unlocks 11 methods and at most 8 files of the
+staged corpora; 17 of the datatype methods carry a real field and 4 a type
+parameter, so those two gaps come first.
 
 ### 11. Higher-order functions
 

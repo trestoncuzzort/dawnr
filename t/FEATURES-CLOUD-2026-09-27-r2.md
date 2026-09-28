@@ -74,13 +74,21 @@ differing cells each time; the merged tree adds the two set tasks and
 changes nothing else). Every commit cites the design it copies or says
 `INVENTED:` and what was searched.
 
+The round's first pull request (#51) was merged by hand mid-round as
+`ee35da6`, beside the seq-valued spec_fun and source-axiom work (rows
+49-51, entries 13-14); the commits after it were replayed on that base, so
+the datatype and match work below are rows 48 and 52 and entries 15 and
+16, and the byte-identity check was taken again against the merged base:
+51 committed tasks, 0 differing cells in seven kernels.
+
 | feature | track entry, decision row | what changed | kernels |
 |---|---|---|---|
 | B1 nested-seq-other | Done 9, row 46 | lifter: a `seq<X>` whose element t has no value for refuses under X's own name (`seq-of-real`, `seq-of-datatype`, `seq-of-bitvector`, `seq-of-pair`, `seq-of-bool`, `seq-of-set`, `seq-of-map`); a cast inside a display is an int element, so `[c as char]` lifts when the cast is safe | none |
 | B2 return-not-assigned-on-all-paths | Done 12, row 45 | lifter: the body opens with the return type's default and the check stage runs `dafny verify --filter-symbol M` on the source method (`verify-source`), refusing `return-default-unverified` unless dafny's own definite-assignment check accepts it; `char` returns refuse `return-default-char` | none |
 | B3 zero-returns | Done 10, row 47 | lifter: the bare name is retired for why decision 22's shape did not apply: a named mutation issue stands alone, a `modifies` without an index assignment refuses `array-mutation` (`modifies-via-call` or `modifies-no-index-assign`), a method with neither return nor `modifies` refuses `lemma-shaped` | none |
 | B4 finite sets | Done 11, SPEC.md "Finite sets (v1)" | the type `set` and six total operations (display, `in`, `card`, `union`, `inter`, `diff`), the notation, check_wf, interp, nine probes, two committed tasks; lowered in dafny, verus, fstar, rocq; lean, framac, spark abstain by name | 4 lower, 3 abstain |
-| B5 datatypes | not started | | |
+| B5 datatypes | Done 17, row 48 | lifter: the blanket `datatype` refusal is split by what the method touches (`seq-of-pair`, `tuple-projection`, `array2`, `real`, `type-decl`, `opaque-type`, `member-access`) and a real datatype use is named by the shape of the file's declarations (`datatype-enum`, `-record`, `-sum`, `-real`, `-generic`, `-recursive`), read from the skipped declaration's tokens; the parser names a `match` on a literal `match-literal`; no t datatype built (measured reach: 11 methods, at most 8 files) | none |
+| B5b match on int literals | Done 18, row 54 | lifter: a `match` whose cases are int literals with a `_` default is parsed as the if-chain it is (statement and expression form), logged `match-literal-if-chain`; a char or string literal keeps `match-literal`, no `_` refuses `match-no-default` | none |
 
 The measurement of B2 changed a belief written in `t/LIFTER-DESIGN.md`
 section 4.7: Dafny does not "accept such a method with an unspecified
@@ -104,7 +112,7 @@ on the real, twin refuted where a twin exists) and the two committed tasks
 | dafny | `set<int>`; the empty display let-bound to a typed name (`\|{}\|` is underspecified, a false-ranged comprehension is rejected as not finite, measured) | 9 of 9, twins refuted | 2 verified, twins refuted |
 | verus | `vstd::set::Set<int>`; `insert`/`remove` for a singleton union/difference; vstd's three broadcast groups plus one prelude lemma (empty difference is inclusion) in its own module; `==` bridged to `=~=`; the ground certificate over sets closed by the SMT arm (`compute_only` cannot evaluate a cardinality, measured) | 9 of 9, twins refuted | 2 verified, twins refuted |
 | fstar | `FStar.FiniteSet.Base` with `FStar.FiniteSet.Ambient`; a task using sets is lowered in the Ghost effect (`cardinality` is GTot, equality the ghost decision of `equal`); union with a singleton spelled `insert` | 9 of 9, twins refuted | 2 verified, twins refuted |
-| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality, each fact posed once behind the prelude's persistent marker | 9 of 9 real; 8 twins refuted, `fz_p_set_eq`'s twin at the 180 s wall | both verified, both twins refuted (the set-valued twin result is certified by `S.Equal`, proved by computing `S.equal`, since MSetList values are not Leibniz-equal across computations) |
+| rocq | Stdlib 9.2 `MSetList.Make Z_as_OT` with `MSetProperties`; prelude lemmas and `t_inv1` arms for membership, negative membership, the four cardinality laws and set equality, each fact posed once behind the prelude's persistent marker | 9 of 9 real; 9 of 9 twins refuted (`fz_p_set_eq`'s twin ran to the 180 s wall until the certificate computed its closed set atoms) | both verified, both twins refuted (the set-valued twin result is certified by `S.Equal`, proved by computing `S.equal`, since MSetList values are not Leibniz-equal across computations) |
 | lean | none: core Lean 4 without Mathlib has no finite set | abstain by name | abstain |
 | framac | none: C has no set value | abstain by name | abstain |
 | spark | none yet: `SPARK.Containers.Functional.Sets` exists but has no difference function and its cardinality laws are unmeasured here | abstain by name | abstain |
@@ -137,14 +145,23 @@ with the check stage on for the methods that lifted.
 | B2 return-not-assigned-on-all-paths | 69 | 8 | 4 | 1 | 61 `assume` (specification stubs, foreseen by the track's table); 4 refuse elsewhere (`array`, `unbounded-quantifier`, `seq-typing`, `array-mutation`); of the 4 that lift, dafny accepts all four sources (`verify-source` exit 0), 1 checks (ChooseOdd), 3 fail lemmas unrelated to the default (`L_inv_1` twice, a closure function's well-formedness once) |
 | B3 zero-returns | 39 | 39 (every method now carries a name) | 0 | 0 | 34 `array-mutation` (23 of them the DJ family writing two arrays; 6 `modifies-via-call`; 5 `modifies-no-index-assign`), 4 `lemma-shaped`, 1 `array` |
 | B4 set | 77 | 0 (no lifter mapping yet) | 0 | 0 | 39 comprehensions, 30 displays, 8 typed names |
+| B5 datatype | 78 methods, 56 files | 78 (every method now carries a name); 56 (every file) | 0 | 0 | methods: 18 `seq-of-pair`, 17 `datatype-real`, 9 `function-result`, 8 `type-decl`, 8 `datatype-record`, 5 `tuple-projection`, 4 `datatype-generic`, 3 `array2`, 2 `datatype-sum`, 1 each `datatype-enum`, `set`, `opaque-type`, `real`; files: 41 `datatype` (constructor patterns), 15 `match-literal` (12 int, 7 with a `_` default; 2 char; 1 string) |
+| B5b match-literal | 15 files | 15 (every file carries a name) | 1 | 1 | 9 `match-literal` (a char or string match in the file), 5 `match-no-default`; the 1 that lifts (DD0831 FibonacciIterative, through its spec_fun) passes the check stage with every lemma verified |
 
-Two of the four buckets were, on measurement, buckets of names rather than
-of liftable programs: nothing in `nested-seq-other` is a t value, and
+Three of the five buckets were, on measurement, buckets of names rather
+than of liftable programs: nothing in `nested-seq-other` is a t value,
 nothing in `zero-returns` is a task under SPEC.md's own rule for a method
-with no return (its mutated array is the return, or it is a lemma). What
-the work bought there is a census that ranks the real gaps: reals (84 more
-than the `real` bucket showed), datatypes (20 more), a pair-of-seqs return
-for the 23 two-array methods, a range analysis for `(lit + e) as char`.
+with no return (its mutated array is the return, or it is a lemma), and 42
+of the 78 `datatype` methods touch no datatype (26 of them project a pair
+out of a sequence element). What the work bought there is a census that
+ranks the real gaps: reals (84 more than the `real` bucket showed, plus 17
+real-valued datatypes), a seq of pairs (18 + 1 methods), a pair-of-seqs
+return for the 23 two-array methods, `match` on an int as an if-chain (7
+files with a `_` default), a record of ints as an n-ary pair (8 methods), a
+range analysis for `(lit + e) as char`. A t datatype proper, non-recursive
+and without reals or type parameters, would reach 11 methods and at most 8
+files; that is why it was named and not built. The if-chain lift was
+built and reaches 1 file here, checked.
 
 ## Task A: the 2026-09-27 features re-lift, graded
 
@@ -153,13 +170,48 @@ The data branch `data/features-lift-2026-09-27` appeared during the round
 `t/out/lifted-tasks-2026-09-27-features/`). Graded from this branch's
 lowerings with `T_SPARK_JOBS=1 python3 t/run_par.py --jobs 4 --tasks <the
 data worktree's task directory> --out lift-runs/features-grade --table
-t/COVERAGE-lifted-2026-09-27-features.md`; the table is committed on this
-branch, the tasks stay on the data branch.
+t/COVERAGE-lifted-2026-09-27-features.md` (three flake runs per side, 4794
+kernel runs, 2 h 53 min); the table is committed on this branch, the tasks
+stay on the data branch.
 
-The run (140 tasks, seven kernels, three flake runs per side) was still in
-progress when this report was first committed; its clean-in-seven and
-clean-in-six counts, with the gap kernel named, follow in the commit that
-adds the table.
+| | tasks |
+|---|---:|
+| graded | 140 |
+| no twin (the ladder found no refuting move) | 8 |
+| clean in seven (`verified / refuted` in every kernel) | 19 |
+| clean in six | 16 |
+| of which the gap kernel is lean | 8 |
+| framac | 4 |
+| spark | 3 |
+| fstar | 1 |
+
+The six-clean gaps by cause: lean `unproved / refuted` 6 (the real side
+unproved, the twin refuted) and `abstain / abstain` 2 (the two `modExp`
+tasks, a construct the Lean lowering abstains on by name); framac
+`malformed / malformed` 3 and `timeout / refuted` 1; spark `timeout /
+timeout` 2 and `verified / timeout` 1; fstar `unproved / refuted` 1.
+
+Per kernel, `verified / refuted` cells out of 132 twinned tasks: dafny 92,
+fstar 73, verus 60, spark 49, rocq 43, framac 42, lean 35. The first pass
+of the run shared the four cores with this round's own re-lifts, probe
+runs and test suites (load 25 to 76 for most of it, 2 h 53 min, 4794
+kernel runs). `run_par` caches only a settled verdict, so a second pass of
+the same line on the quieter machine (load 12 to 27, 615 of 799 cells and
+1333 of 1598 sides straight from the cache, 795 kernel runs for the rest)
+recomputed exactly the timed-out and malformed cells; the committed table
+is that second pass. It moved 10 spark cells from a timeout to `verified /
+refuted` (39 to 49) and one each in framac and rocq, and changed neither
+count above: 19 clean in seven, 16 in six, the same sixteen tasks with the
+same gap kernels. What it did not move is the honest part: spark still
+reads `timeout / timeout` on 49 tasks, `timeout / refuted` on 22 and
+`verified / timeout` on 7; framac `timeout / refuted` on 31; dafny
+`timeout / refuted` on 9 and `timeout / timeout` on 4; fstar `timeout /
+timeout` on 10. Those are the kernels' own walls on these lowerings, not
+the load's, and 244 sides were still too noisy to cache after the second
+pass. Frama-C's 47 abstentions and Lean's 27 are the lowerings' refusals
+by name (sets, strings, nested sequences); Verus's 4 `malformed /
+malformed` and Frama-C's 7 are cells the harness could not parse a verdict
+from, listed in the table.
 
 ## What is left, and why
 
@@ -171,12 +223,14 @@ adds the table.
   encoding proved equivalent (core has no `Finset`); Frama-C needs a
   sorted-array encoding with WP proofs; SPARK needs the
   `Functional_Sets` instantiation and a difference function the library
-  lacks. One Rocq cell is open: `fz_p_set_eq`'s twin runs to the wall
-  (the real verifies). `set_toggle`'s twin was unproved until the value
-  certificate learned to state a set-valued result as `S.Equal` rather
-  than Leibniz equality (an MSetList value carries a sortedness proof, so
-  `cbv; reflexivity` cannot identify two computations of one set); it now
-  refutes in 34 s.
+  lacks. No Rocq set cell is open any more: `set_toggle`'s twin was
+  unproved until the value certificate learned to state a set-valued result
+  as `S.Equal` rather than Leibniz equality (an MSetList value carries a
+  sortedness proof, so `cbv; reflexivity` cannot identify two computations
+  of one set), and `fz_p_set_eq`'s twin ran to the wall until the same
+  certificate computed the closed set atoms every witness leaves
+  (`t_set_ground`: membership by `S.mem`, cardinality by `vm_compute`);
+  both refute now.
 - **Two arrays written in one method.** 23 vericoding DJ methods
   (`a[i] := 0` and `sum[0] := total` under `modifies a, sum`) are one
   construct short: a task returning a pair of seqs, which t's pair already
@@ -187,8 +241,17 @@ adds the table.
 - **`function-result`, 305 methods**, is the binding refusal of the census
   and is being built elsewhere (`feat/seq-spec-fun`); this branch did not
   touch it, as instructed.
-- **Datatypes (B5)** were not started: 73 methods and 56 parser-refused
-  files remain, the largest untouched bucket after `function-result`.
+- **A t datatype (B5)** was measured and not built: after row 48's names,
+  a non-recursive datatype without reals or type parameters reaches 11
+  methods (8 `datatype-record`, 2 `-sum`, 1 `-enum`) and at most 8 of the
+  56 `match` files, against a declaration form in seven kernels and twin
+  moves over constructors. 17 datatype methods carry a real field and 4 a
+  type parameter; 41 of the 56 files match on constructors. The two cheaper
+  levers the census exposed were `match-literal` on an int with a `_`
+  default as an if-chain, since built (B5b: 1 of the 15 files lifts and
+  checks; the other int matches share their file with a char match or have
+  no default), and a record of ints as an n-ary pair (t's pair covers two
+  fields already), not built.
 - **The differential arm** still needs dotnet; `dafny run --target:py`
   works on this machine (measured while checking Dafny's auto-init
   defaults: 0, false, [], "", 'D' for char) and would give the check stage
@@ -197,31 +260,37 @@ adds the table.
 ## The whole suite against round 1's 51
 
 The whole suite (`pytest t --ignore=t/test_lab_gui.py`, which needs
-tkinter), run on this branch after the sets merge and alongside the Task A
-grading (load 25 to 76 on four cores, 15 min 07 s): 1428 passed, 56 failed,
-34 skipped, 1 xfailed, 113 subtests passed. Round 1 closed at 51 failed,
-1396 passed, 28 skipped. Set against round 1's 51 by test name, none of
-the 51 stopped failing and five are new:
+tkinter), run on this branch's final tree once the grading had released the
+cores (8 min 53 s): 1438 passed, 55 failed, 34 skipped, 1 xfailed, 115
+subtests passed. Round 1 closed at 51 failed, 1396 passed, 28 skipped. Set
+against round 1's 51 by test name, none of the 51 stopped failing and four
+are new, all in `test_dawnr_english.py` (`WidenedProtectedSetTest`, three
+cases, and `FlaggedIdsUncappedTest`, one): they come with tests the base
+gained on 2026-09-27 after round 1's run (`6f988e8`, `f875427`) and fail
+here with `gzip.BadGzipFile: Not a gzipped file (b've')`, because
+`nl/data/mbpp.jsonl.gz` and `nl/data/humaneval.jsonl.gz` are 130-byte
+git-lfs pointers on this checkout, the same cause as the baseline's
+`test_mbpp_dfy` failure. Environment-bound, not this branch's. So the
+suite stands at 55 environment-bound failures on this checkout, round 1's
+51 plus these four, and no failure caused by round 2.
 
-- Four in `test_dawnr_english.py` (`WidenedProtectedSetTest`, three cases,
-  and `FlaggedIdsUncappedTest`, one) come with tests the base gained on
-  2026-09-27 after round 1's run (`6f988e8`, `f875427`) and fail here with
-  `gzip.BadGzipFile: Not a gzipped file (b've')`: `nl/data/mbpp.jsonl.gz`
-  and `nl/data/humaneval.jsonl.gz` are 130-byte git-lfs pointers on this
-  checkout, the same cause as the baseline's `test_mbpp_dfy` failure.
-  Environment-bound, not this branch's.
-- One, `test_vscode.py::test_grammar_covers_keywords_and_string_methods`,
-  was this branch's: the five set keywords `surface.py` gained (`set`,
-  `card`, `union`, `inter`, `diff`) had no pattern in the TextMate
-  grammar. Fixed in the same commit as the Rocq set certificate; the four
-  `test_vscode` tests pass again.
+Two things the run taught along the way. A first pass, taken alongside the
+grading (load 25 to 76), showed a fifth new failure that was this
+branch's: `test_vscode.py::test_grammar_covers_keywords_and_string_methods`,
+because the five set keywords `surface.py` gained had no pattern in the
+TextMate grammar; fixed in the same commit as the Rocq set certificate.
+And under that load the suite twice died silently at its 14th test:
+`test_behavioural_decontam.py`'s
+`test_a_reference_that_swallows_every_timeout_exits_the_worker_and_is_named`
+exercises a reference that swallows its CPU-time timeout, and the fallback
+`os._exit(70)` fired inside the pytest process when the timer was starved
+(exit status 70, no summary line). It passes alone and passed in both full
+runs on a quieter machine; a base test, not this round's, but one to know
+about when the suite is run beside a grading.
 
-So the suite stands at 55 environment-bound failures on this checkout: round
-1's 51 plus the four new lfs-pointer cases, and no failure caused by round 2.
-The 12 tests this round added (`test_lift_return_default.py`,
-`test_lift_seq_elements.py`, `test_lift_zero_returns.py`) are in the 1428;
-the finite-set coverage lives in `conformance.py`'s nine `fz_p_set_*`
-probes and `surface.py --check`'s four written examples, not in pytest.
+The 21 tests this round added (`test_lift_return_default.py` 7, `test_lift_seq_elements.py` 3, `test_lift_zero_returns.py` 2, `test_lift_datatypes.py` 9, as pytest collects them) are in the 1438; the finite-set
+coverage lives in `conformance.py`'s nine `fz_p_set_*` probes and
+`surface.py --check`'s four written examples, not in pytest.
 
 ## How to reproduce
 
