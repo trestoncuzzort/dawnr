@@ -163,13 +163,40 @@ The data branch `data/features-lift-2026-09-27` appeared during the round
 `t/out/lifted-tasks-2026-09-27-features/`). Graded from this branch's
 lowerings with `T_SPARK_JOBS=1 python3 t/run_par.py --jobs 4 --tasks <the
 data worktree's task directory> --out lift-runs/features-grade --table
-t/COVERAGE-lifted-2026-09-27-features.md`; the table is committed on this
-branch, the tasks stay on the data branch.
+t/COVERAGE-lifted-2026-09-27-features.md` (three flake runs per side, 4794
+kernel runs, 2 h 53 min); the table is committed on this branch, the tasks
+stay on the data branch.
 
-The run (140 tasks, seven kernels, three flake runs per side) was still in
-progress when this report was first committed; its clean-in-seven and
-clean-in-six counts, with the gap kernel named, follow in the commit that
-adds the table.
+| | tasks |
+|---|---:|
+| graded | 140 |
+| no twin (the ladder found no refuting move) | 8 |
+| clean in seven (`verified / refuted` in every kernel) | 19 |
+| clean in six | 16 |
+| of which the gap kernel is lean | 8 |
+| framac | 4 |
+| spark | 3 |
+| fstar | 1 |
+
+The six-clean gaps by cause: lean `unproved / refuted` 6 (the real side
+unproved, the twin refuted) and `abstain / abstain` 2 (the two `modExp`
+tasks, a construct the Lean lowering abstains on by name); framac
+`malformed / malformed` 3 and `timeout / refuted` 1; spark `timeout /
+timeout` 2 and `verified / timeout` 1; fstar `unproved / refuted` 1.
+
+Per kernel, `verified / refuted` cells out of 132 twinned tasks: dafny 92,
+fstar 73, verus 60, rocq 42, framac 41, spark 39, lean 35. The run shared
+the four cores with this round's own re-lifts, probe runs and test suites
+(load 25 to 76 for most of it), and the timeouts say so: spark 54 cells
+timed out on both sides and 14 more on the twin side, framac 32 on the real
+side, dafny 9 on the real side and 4 on both, fstar 10 on both. Those are
+the wall's verdicts, not the kernels'; `run_par` does not cache a timeout,
+so a rerun of the same line on a quiet machine recomputes exactly those
+cells and keeps the rest (the cache lives under `t/out/cache`). Frama-C's
+47 abstentions and Lean's 27 are the lowerings' own refusals by name (sets,
+strings, nested sequences), and Verus's 4 `malformed / malformed` and
+Frama-C's 7 are cells the harness could not parse a verdict from, listed in
+the table.
 
 ## What is left, and why
 
