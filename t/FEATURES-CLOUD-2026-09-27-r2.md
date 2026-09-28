@@ -192,18 +192,26 @@ tasks, a construct the Lean lowering abstains on by name); framac
 timeout` 2 and `verified / timeout` 1; fstar `unproved / refuted` 1.
 
 Per kernel, `verified / refuted` cells out of 132 twinned tasks: dafny 92,
-fstar 73, verus 60, rocq 42, framac 41, spark 39, lean 35. The run shared
-the four cores with this round's own re-lifts, probe runs and test suites
-(load 25 to 76 for most of it), and the timeouts say so: spark 54 cells
-timed out on both sides and 14 more on the twin side, framac 32 on the real
-side, dafny 9 on the real side and 4 on both, fstar 10 on both. Those are
-the wall's verdicts, not the kernels'; `run_par` does not cache a timeout,
-so a rerun of the same line on a quiet machine recomputes exactly those
-cells and keeps the rest (the cache lives under `t/out/cache`). Frama-C's
-47 abstentions and Lean's 27 are the lowerings' own refusals by name (sets,
-strings, nested sequences), and Verus's 4 `malformed / malformed` and
-Frama-C's 7 are cells the harness could not parse a verdict from, listed in
-the table.
+fstar 73, verus 60, spark 49, rocq 43, framac 42, lean 35. The first pass
+of the run shared the four cores with this round's own re-lifts, probe
+runs and test suites (load 25 to 76 for most of it, 2 h 53 min, 4794
+kernel runs). `run_par` caches only a settled verdict, so a second pass of
+the same line on the quieter machine (load 12 to 27, 615 of 799 cells and
+1333 of 1598 sides straight from the cache, 795 kernel runs for the rest)
+recomputed exactly the timed-out and malformed cells; the committed table
+is that second pass. It moved 10 spark cells from a timeout to `verified /
+refuted` (39 to 49) and one each in framac and rocq, and changed neither
+count above: 19 clean in seven, 16 in six, the same sixteen tasks with the
+same gap kernels. What it did not move is the honest part: spark still
+reads `timeout / timeout` on 49 tasks, `timeout / refuted` on 22 and
+`verified / timeout` on 7; framac `timeout / refuted` on 31; dafny
+`timeout / refuted` on 9 and `timeout / timeout` on 4; fstar `timeout /
+timeout` on 10. Those are the kernels' own walls on these lowerings, not
+the load's, and 244 sides were still too noisy to cache after the second
+pass. Frama-C's 47 abstentions and Lean's 27 are the lowerings' refusals
+by name (sets, strings, nested sequences); Verus's 4 `malformed /
+malformed` and Frama-C's 7 are cells the harness could not parse a verdict
+from, listed in the table.
 
 ## What is left, and why
 
