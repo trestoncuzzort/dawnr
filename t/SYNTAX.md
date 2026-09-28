@@ -80,8 +80,11 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
                                                    "+" on two seqs is concatenation *)
            | "pair" | "fst" | "snd"             (* v1, since 2026-09-10; written (e1, e2), p.0, p.1 *)
            | "set" | "in" | "card"              (* v1, since 2026-09-27; written {e1, ..., en} (any arity, {} empty),
-           | "union" | "inter" | "diff"         x in s, card(s), union(s, t), inter(s, t), diff(s, t);
-                                                   SPEC.md "Finite sets" *)
+           | "union" | "inter" | "diff"         x in s, card(s), union(s, t), inter(s, t), setminus(s, t);
+                                                   SPEC.md "Finite sets" -- the AST tag is "diff", the surface
+                                                   word is "setminus" since 2026-09-27 (same day): "diff" is a
+                                                   common variable/return name and colliding with it broke
+                                                   4 corpus documents and 5 lifted tasks *)
            | "split"                            (* v1, since 2026-09-11; seq -> seq<seq>, arity 1 or 2;
                                                    written s.split() and s.split(c) *)
            | "join" | "tostr" | "count" | "find"
@@ -261,16 +264,18 @@ WRONG-VAR rung gained one move for this construct: it also swaps a
 {"var": {"name": "d", "type": "set",
          "init": {"op": "diff", "args": [{"var": "s"}, {"var": "u"}]}}}
 ```
-written: `{1, x}` · `x in s` · `card(union(s, u))` · `var d: set := diff(s, u);`
+written: `{1, x}` · `x in s` · `card(union(s, u))` · `var d: set := setminus(s, u);`
 
 Since 2026-09-27 (SPEC.md "Finite sets (v1)"), a finite set of ints is a
 value: the type `set`, usable as a param, return or local type. `{e1, ...,
 en}` builds one (duplicates collapse, `{}` is the empty set), `x in s` is
 membership, `card(s)` the number of elements, `union(s, u)`, `inter(s, u)`
-and `diff(s, u)` the three operations, all six total. The operations are
+and `setminus(s, u)` the three operations, all six total (`setminus` since
+2026-09-27, same day: `diff` collided with a common variable/return name;
+the AST op tag is still `"diff"`, unchanged). The operations are
 written by name, never as `+`, `*` or `-`, so the notation needs no type
 to read them back. `==` and `!=` on two sets are extensional; `< <= > >=`
-stay int-only (no subset operator; `card(diff(s, u)) == 0` says it). `in`
+stay int-only (no subset operator; `card(setminus(s, u)) == 0` says it). `in`
 sits at the comparison level and does not chain. Not in v1: a set of
 bools, seqs or pairs, a set inside a pair or a seq, a set-typed spec_fun
 parameter or result, a set as a quantifier's range, and the comprehension.

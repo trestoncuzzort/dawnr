@@ -535,6 +535,28 @@ def cmd_corpus(a) -> int:
             seen.add(d)
             unique.append(d)
     docs = unique
+    # Every document the corpus is about to write must parse with the current
+    # surface, or chat_data.build() silently drops it later and t_tool rejects
+    # any model answer shaped like it (found 2026-09-27: `diff` reserved as a
+    # keyword by the finite-sets feature broke 4 corpus documents and 5 lifted
+    # tasks that used it as a variable or return name, and this builder wrote
+    # them anyway -- SPEC.md "Finite sets (v1)"). Refused by name, with the
+    # parse error, never a silent skip: a corpus this builder cannot itself
+    # read back is not the corpus it claims to write.
+    unparseable = []
+    for d in docs:
+        if loop_filter.is_spec_document(d):
+            continue           # by design: a declaration with no body, surface.parse refuses it
+        try:
+            surface.parse(loop_filter.strip_head(d))
+        except surface.SurfaceError as e:
+            name = next((ln.split()[1].split("(")[0] for ln in d.split("\n")
+                        if ln.startswith("task ")), "?")
+            unparseable.append(f"{name}: {e}")
+    if unparseable:
+        raise SystemExit(f"{len(unparseable)} document(s) do not parse with the current surface; a corpus "
+                         f"the builder cannot read back is not the corpus it claims to write: "
+                         + "; ".join(unparseable))
     spec_in_corpus = sum(loop_filter.is_spec_document(d) for d in docs)
     corpus_text = "\n\n".join(docs)
     final = loop_filter.validate_training_data(corpus_text, evil)
