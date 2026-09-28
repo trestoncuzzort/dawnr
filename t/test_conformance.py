@@ -221,6 +221,48 @@ def test_format_table_contains_expected_column_and_pass_fail():
     assert "t1" in table and "verified" in table
 
 
+@test
+def test_metamorphic_manifest_has_no_tripwire_bugs_on_abs():
+    """2026-09-28: the lab conformance run recorded 13 of the 20 transforms
+    as tripwire bugs (TypeError out of check_wf._ty, whose positional order
+    had grown a `dtypes` parameter in the datatypes v1 merge while
+    metamorphic._ty kept the old six-positional call) instead of rows.
+    The committed t/CONFORMANCE.md manifest is 13 applicable transforms,
+    7 not applicable to abs.t (named, not omitted), 0 bugs; pinned here so
+    a signature drift fails the unit tests, not a two-hour kernel run."""
+    items, not_applicable, bugs = cf.metamorphic_manifest()
+    assert bugs == [], bugs
+    assert sorted(not_applicable) == [
+        "comm-add", "de-morgan", "let-copy", "reassoc-add", "reorder",
+        "req-or-false", "self-assign"], sorted(not_applicable)
+    assert len(items) == 13, sorted(i["name"] for i in items)
+
+
+@test
+def test_grade_named_abstain_is_na_where_a_verdict_was_expected():
+    """2026-09-28 (conformance.py's "Named abstains"): a lowering's named
+    abstain (NotImplementedError before any kernel call) grades N/A against
+    a kernel-verdict expectation, never FAIL and never PASS: the per-
+    construct opt-out. Against `lower-error` it stays FAIL, since that
+    probe asks every lowering to reject the token itself."""
+    cols = [("dafny", "1.0"), ("spark", "1.0")]
+    items = [{"name": n, "kind": "probe", "expected": e, "adversarial": a}
+             for n, e, a in (("t1", "verified", False),
+                             ("t2", "refuted", True),
+                             ("t3", "rejected", False),
+                             ("t4", "lower-error", False))]
+    ab = ("abstain", "abstain", True)
+    rows = {"t1": {"dafny": ("verified", "refuted", True), "spark": ab},
+            "t2": {"dafny": ("refuted", "refuted", True), "spark": ab},
+            "t3": {"dafny": ("unproved", "refuted", True), "spark": ab},
+            "t4": {"dafny": ("lower-error", "x", True), "spark": ab}}
+    v = cf.grade(items, rows, cols)
+    assert v["t1"] == {"dafny": "PASS", "spark": "N/A"}, v["t1"]
+    assert v["t2"] == {"dafny": "PASS", "spark": "N/A"}, v["t2"]
+    assert v["t3"] == {"dafny": "PASS", "spark": "N/A"}, v["t3"]
+    assert v["t4"] == {"dafny": "PASS", "spark": "FAIL"}, v["t4"]
+
+
 def run() -> None:
     failures = 0
     for fn in UNIT_TESTS:
