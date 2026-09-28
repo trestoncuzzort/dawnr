@@ -244,6 +244,16 @@ def _sub(e: dict, path: tuple):
     elif "call" in e:
         for i, a in enumerate(e["call"]["args"]):
             yield from _sub(a, path + ("call", "args", i))
+    elif "ctor" in e:
+        # SPEC.md "Datatypes (v1)" (2026-09-27): {"ctor": {"dtype", "name",
+        # "args"}} -- v1's enum constructors are nullary so this is always
+        # an empty loop today, kept general for the record case ahead.
+        for i, a in enumerate(e["ctor"].get("args", [])):
+            yield from _sub(a, path + ("ctor", "args", i))
+    elif "match" in e:
+        yield from _sub(e["match"]["scrutinee"], path + ("match", "scrutinee"))
+        for i, arm in enumerate(e["match"]["arms"]):
+            yield from _sub(arm["body"], path + ("match", "arms", i, "body"))
 
 
 def _c_collapse_if(body, scope):
@@ -433,12 +443,46 @@ def _c_wrong_operator(body, scope):
                 yield _replace(body, sp, {"op": alt, "args": node["args"]})
 
 
+def _c_swap_ctor(body, scope):
+    """SWAP-CTOR (SPEC.md "Datatypes (v1)", 2026-09-27): the twin ladder's
+    move for a `match` expression, the enum analogue of `wrong-var`'s
+    pair-component swap. Two of a `match`'s arms trade BODIES (their
+    `ctor`/`binders` stay put), so the twin returns the result declared
+    for constructor B whenever it is really given constructor A and vice
+    versa -- "swaps two constructors" read as "swaps what two
+    constructors mean", the same reading `wrong-var`'s pair swap gives
+    "swaps the two components": both rewrite which value comes out, never
+    which case is taken. Every unordered pair of arms is tried (not just
+    adjacent ones), since a match may have more than two constructors
+    (v1's non-recursive sums, when they land) and any two swapped is a
+    distinct candidate body. A single-arm match (a one-constructor
+    datatype, legal JSON though v1's committed tasks never declare one)
+    yields no candidate at all: the inner loop's `range(i + 1, 1)` is
+    empty, so this move is silently absent from the ladder for that one
+    task rather than raising, exactly the "a rung with nothing to move
+    contributes no candidate" posture WRONG-CONSTANT's own docstring
+    states for a body with no int-rooted site."""
+    for path, e, _sc, _kind in _exprs(body, scope):
+        for sp, node in _sub(e, path):
+            if "match" not in node:
+                continue
+            arms = node["match"]["arms"]
+            for i in range(len(arms)):
+                for j in range(i + 1, len(arms)):
+                    swapped = list(arms)
+                    swapped[i] = dict(arms[i], body=arms[j]["body"])
+                    swapped[j] = dict(arms[j], body=arms[i]["body"])
+                    yield _replace(body, sp, {"match": dict(node["match"],
+                                                            arms=swapped)})
+
+
 EXTENSIONAL = (("collapse-if", _c_collapse_if),
                ("negate-cond", _c_negate_cond),
                ("compare-flip", _c_compare_flip),
                ("boundary-swap", _c_boundary_swap),
                ("off-by-one", _c_off_by_one),
                ("wrong-var", _c_wrong_var),
+               ("swap-ctor", _c_swap_ctor),
                ("drop-guard", _c_drop_guard),
                ("wrong-constant", _c_wrong_constant),
                ("wrong-operator", _c_wrong_operator))

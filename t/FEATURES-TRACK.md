@@ -784,11 +784,70 @@ effort is the lowering work across seven kernels plus the lifter.
 Rows 3 to 6 landed 2026-09-27 (Done, above), with nested string sequences,
 Lean strings and tuples beside them; the measured yield of each is in its
 entry. The seq-valued spec_fun (the binding refusal for string programs,
-`function-result`) landed 2026-09-27 as entry 13. Finite sets, datatypes and
-higher-order functions remain, and one gap the measurements named ranks
-with them: the in-place sorts' `multiset` permutation specs. A Frama-C
-lowering of the seq-valued spec_fun (ACSL `\list`) is the one open kernel
-column of entry 13.
+`function-result`) landed 2026-09-27 as entry 13. Finite sets landed as
+entry 11/15; datatypes landed its first wave (enumerations) as entry 16,
+below, records and non-recursive sums still ahead of it; higher-order
+functions remain, and one gap the measurements named ranks with them: the
+in-place sorts' `multiset` permutation specs. A Frama-C lowering of the
+seq-valued spec_fun (ACSL `\list`) is the one open kernel column of entry
+13.
+
+### 16. Datatypes: enumerations (2026-09-27, SPEC.md "Datatypes (v1)", three lowerings touched)
+
+**Refused: 73 methods `datatype` at classify, plus 56 files the parser
+refuses on `match`** (the 2026-09-27 round-2 census, t/FEATURES-CLOUD-
+2026-09-27-r2.md, which also named the shapes: `datatype-enum`, `-record`,
+`-sum`, `-real`, `-generic`, `-recursive`, and the parser's own
+`match-literal`). This wave states the first and simplest of those shapes
+end to end: **enumerations**, a datatype whose constructors carry no
+fields (SPEC.md "Datatypes (v1)"). t now has a per-task `datatype D = C1 |
+C2 | ...` declaration, the type `{"datatype": D}`, a constructor value
+`D.C`, structural `==`/`!=`, and a total `match` (surface keyword `case`,
+not Dafny's own `match`: `tasks/probe_names_fstar.t`/`probe_names_lean.t`
+deliberately use `match` as an ordinary t parameter name, proving F*'s and
+Lean's own reserved words do not leak into t, so reserving it would have
+broken that exact probe -- the same reasoning `setminus` was chosen over
+`diff` for). `check_wf` types `ctor`/`match` (four new rule names,
+`match-coverage` proving the arm-to-constructor bijection); `interp`
+evaluates them on a new `Ctor` dataclass value and gives every declared
+datatype its own domain ladder (the whole, small, finite list of its
+constructors); `surface.py` parses and prints the notation (2 of 2 new
+written examples, 1919 of 1919 corpus tasks still round-trip); the twin
+ladder gains `SWAP-CTOR` (`harness.py` `_c_swap_ctor`: two of a match's
+arms trade bodies), and the ladder's generic expression walk was extended
+to descend into `ctor`/`match` nodes, so every EXISTING move also now
+reaches a match arm's body for free. Four probes state the construct's
+laws (`fz_p_dt_match_total`/`_bad`, `fz_p_dt_eq`, `fz_p_dt_match_eq`) and
+one committed task, `tasks/color_code.t` (a three-constructor enum read
+back as its own int code; twin found by the pre-existing `off-by-one` move
+alone, one arm's literal bumped). Records (one constructor, int/bool/seq
+fields) and non-recursive sums are FEATURES-TRACK's own next two waves;
+recursive datatypes stay out of v1, permanently for now (no termination
+measure built for a recursive constructor). The lifter's own admission of
+Dafny's `datatype`/`match` source syntax is NOT built this wave
+(LIFTER-DECISIONS.md row 53): `lift_classify`/`lift_parse` still refuse
+every one of the 73 + 56 files the census counted, unchanged, so no corpus
+method lifts through this construct yet.
+
+Per kernel, measured on this machine (`fz_p_dt_match_total`/`color_code`,
+real verified, twin as noted):
+
+| kernel | representation | note |
+|---|---|---|
+| dafny | native `datatype`/`match`, the source construct itself | real verified (`dafny verify`, 1/0); the twin's own postcondition genuinely fails (0 verified, 1 error) and its ground certificate proves ALONE under `--filter-symbol` (1/0), but `verifiers/dafny.py`'s certificate shape check (`_HONEST_KINDS`, untouched) refuses a file that also declares a `datatype`, so the grader's own cell reads `verified / unproved`, not `refuted` -- a structural gap in the certificate's vocabulary, not a soundness gap |
+| verus | Rust `enum` + `#[derive(PartialEq, Eq)]`, `use Dtype::*;` so `match` arms print bare | real verified, twin's certificate accepted -- `verified / refuted` |
+| lean | `inductive ... deriving DecidableEq`, `match ... with \| .C => ...` (Lean 4's own anonymous-constructor dot notation) | real's `grind`-closed spec theorem prints a clean axiom list; the twin's own spec theorem depends on `sorryAx` while its hand-built certificate depends on no axioms -- `verified / refuted` |
+| spark | none yet: an Ada enumeration type is the design, unmeasured against gnatprove's own `case` exhaustiveness and equality obligations here | abstain by name |
+| rocq | none yet: `Inductive` is the design, at the same measured-cost posture entry 11's finite-set wave logged for its own prelude machinery | abstain by name |
+| fstar | none yet: `type D = \| C1 \| C2 \| ...` is the design, unmeasured against fstar.exe here | abstain by name |
+| framac | none: C's `enum` is an unchecked int with no WP support of its own for a `match`-shaped case split; a tagged struct with an ACSL exhaustiveness predicate is the design | abstain by name |
+
+Byte identity: every task/lemma/nested file committed before this landing
+carries no `"datatypes"` field and lowers byte for byte as before in all
+seven kernels (588 = 42 files x 7 kernels x 2 sides, `sha256` before and
+after, against `r12-blockers`). No twin-generator move, grader or
+check-filter change beyond the new `SWAP-CTOR` rung and the generic
+expression-walk extension every existing rung now shares.
 
 ## The features ahead: designs and costs
 

@@ -1105,6 +1105,11 @@ def dafny_type(t) -> str:
         if "pair" in t:
             t1, t2 = t["pair"]
             return f"({TYPES[t1]}, {TYPES[t2]})"
+        if "datatype" in t:
+            # SPEC.md "Datatypes (v1)" (2026-09-27): t's datatype IS
+            # Dafny's own `datatype` (reference manual 5.14) -- the
+            # declared name prints as itself, no wrapping.
+            return t["datatype"]
         return f"seq<{TYPES[t['seq']]}>"
     return TYPES[t]
 
@@ -1247,6 +1252,28 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return (f"(if {expr(c['cond'], self_name)} "
                 f"then {expr(c['then'], self_name)} "
                 f"else {expr(c['else'], self_name)})")
+    if "ctor" in e:
+        # SPEC.md "Datatypes (v1)" (2026-09-27): `D.C` or `D.C(a1, ...)`,
+        # Dafny's own qualified constructor syntax (reference manual 5.14).
+        c = e["ctor"]
+        if c.get("args"):
+            cargs = ", ".join(expr(a, self_name) for a in c["args"])
+            return f"{c['dtype']}.{c['name']}({cargs})"
+        return f"{c['dtype']}.{c['name']}"
+    if "match" in e:
+        # `match e case C1 => e1 case C2 => e2` -- Dafny's own match
+        # expression (reference manual 8.5.2's statement form has a
+        # matching expression form), exhaustive over constructors, which
+        # check_wf already proved this match is (SPEC.md "Datatypes (v1)").
+        m = e["match"]
+        scrut = expr(m["scrutinee"], self_name)
+        arms = " ".join(
+            "case %s%s => %s" % (
+                a["ctor"],
+                "(%s)" % ", ".join(a["binders"]) if a.get("binders") else "",
+                expr(a["body"], self_name))
+            for a in m["arms"])
+        return f"(match {scrut} {arms})"
     if "call" in e:
         c = e["call"]
         if c["fun"] == self_name:
@@ -1649,10 +1676,29 @@ def _tlit(v, ty=None):
     from shape alone, unchanged, because int/bool/flat-seq values never
     lie about their shape the way a pair or a nested seq's row count
     does."""
+    if isinstance(v, interp.Ctor):
+        # SPEC.md "Datatypes (v1)" (2026-09-27): a raw interp.Ctor (from
+        # this file's own `_ev` mirror, not from a witness dict) is
+        # unmistakable by its Python type, exactly as interp.Pair is for
+        # the pair case just below -- needs no `ty` at all.
+        return {"ctor": {"dtype": v.dtype, "name": v.ctor,
+                         "args": [_tlit(a) for a in v.args]}}
     if isinstance(ty, dict):
         if "pair" in ty:
             t1, t2 = ty["pair"]
             return {"op": "pair", "args": [_tlit(v[0], t1), _tlit(v[1], t2)]}
+        if "datatype" in ty:
+            # SPEC.md "Datatypes (v1)" (2026-09-27): interp._j renders a
+            # Ctor value as "Dtype.Ctor" (v1's nullary constructors carry
+            # no fields to show), so, like a pair, the value is rebuilt
+            # from `ty` rather than guessed: a bare string has no other
+            # shape it could be confused with here (int/bool/seq/set/pair
+            # witnesses never arrive as a "Name.Name" string).
+            dtype = ty["datatype"]
+            if isinstance(v, str) and v.startswith(dtype + "."):
+                return {"ctor": {"dtype": dtype, "name": v[len(dtype) + 1:],
+                                "args": []}}
+            raise ValueError(f"witness value {v!r} is not a {dtype} constructor")
         return {"_seq2": tuple(tuple(row) for row in v)}
     if ty == "set" or isinstance(v, frozenset):
         # SPEC.md "Finite sets" (2026-09-27): interp._j shows a set as its
@@ -1697,6 +1743,19 @@ def subst(e: dict, m: dict) -> dict:
         return {kind: {"var": q["var"], "lo": subst(q["lo"], m),
                        "hi": subst(q["hi"], m),
                        "body": subst(q["body"], inner)}}
+    if "ctor" in e:
+        c = e["ctor"]
+        return {"ctor": {"dtype": c["dtype"], "name": c["name"],
+                         "args": [subst(a, m) for a in c.get("args", [])]}}
+    if "match" in e:
+        mm = e["match"]
+        return {"match": {
+            "scrutinee": subst(mm["scrutinee"], m),
+            "arms": [{"ctor": a["ctor"], "binders": a.get("binders", []),
+                      "body": subst(a["body"],
+                                   {k: v for k, v in m.items()
+                                    if k not in a.get("binders", [])})}
+                     for a in mm["arms"]]}}
     return {"op": e["op"], "args": [subst(a, m) for a in e.get("args", [])]}
 
 
@@ -1800,6 +1859,35 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
             hoist.append(ce if cv else _not(ce))
         return _ev(c["then"] if cv else c["else"], env, funs, st, facts,
                    hoist)
+    if "ctor" in e:
+        # SPEC.md "Datatypes (v1)" (2026-09-27): eager, like `pair` --
+        # defined iff every field argument is (always vacuously true this
+        # landing, `args` is always empty).
+        c = e["ctor"]
+        pairs = [_ev(a, env, funs, st, facts, hoist) for a in c.get("args", [])]
+        pruned = {"ctor": {"dtype": c["dtype"], "name": c["name"],
+                           "args": [x for x, _ in pairs]}}
+        return pruned, interp.Ctor(c["dtype"], c["name"],
+                                   tuple(v for _, v in pairs))
+    if "match" in e:
+        # Non-strict, like `ite`: only the chosen arm's body is evaluated,
+        # and (with `hoist` a list) the fact "the scrutinee took THIS
+        # constructor" is hoisted so the emitted lemma re-derives the same
+        # branch a kernel would otherwise have to re-decide from nothing --
+        # exactly what `ite`'s own guard hoist does one line up.
+        m = e["match"]
+        se, sv = _ev(m["scrutinee"], env, funs, st, facts, hoist)
+        for a in m["arms"]:
+            if a["ctor"] == sv.ctor:
+                if hoist is not None:
+                    hoist.append({"op": "==", "args": [
+                        se, {"ctor": {"dtype": sv.dtype, "name": sv.ctor,
+                                     "args": []}}]})
+                sub = dict(env)
+                for bname, fv in zip(a.get("binders", []), sv.args):
+                    sub[bname] = fv
+                return _ev(a["body"], sub, funs, st, facts, hoist)
+        raise interp.Undef(f"match: no arm for constructor {sv.ctor!r}")
     if "forall" in e or "exists" in e:
         if hoist is not None:
             raise ValueError("quantifier survived unrolling")
@@ -2016,6 +2104,18 @@ def _unroll(e: dict, funs: dict, st, budget: list, bounds: list) -> dict:
         return {"ite": {"cond": _unroll(c["cond"], funs, st, budget, bounds),
                         "then": _unroll(c["then"], funs, st, budget, bounds),
                         "else": _unroll(c["else"], funs, st, budget, bounds)}}
+    if "ctor" in e:
+        c = e["ctor"]
+        return {"ctor": {"dtype": c["dtype"], "name": c["name"],
+                         "args": [_unroll(a, funs, st, budget, bounds)
+                                  for a in c.get("args", [])]}}
+    if "match" in e:
+        m = e["match"]
+        return {"match": {
+            "scrutinee": _unroll(m["scrutinee"], funs, st, budget, bounds),
+            "arms": [{"ctor": a["ctor"], "binders": a.get("binders", []),
+                      "body": _unroll(a["body"], funs, st, budget, bounds)}
+                     for a in m["arms"]]}}
     if "call" in e:
         c = e["call"]
         return {"call": {"fun": c["fun"],
@@ -2061,6 +2161,18 @@ def _name_seqs(e: dict, names: dict, used: dict,
         return {"ite": {"cond": _name_seqs(c["cond"], names, used, nnames, nused, snames, sused),
                         "then": _name_seqs(c["then"], names, used, nnames, nused, snames, sused),
                         "else": _name_seqs(c["else"], names, used, nnames, nused, snames, sused)}}
+    if "ctor" in e:
+        c = e["ctor"]
+        return {"ctor": {"dtype": c["dtype"], "name": c["name"],
+                         "args": [_name_seqs(a, names, used, nnames, nused, snames, sused)
+                                  for a in c.get("args", [])]}}
+    if "match" in e:
+        m = e["match"]
+        return {"match": {
+            "scrutinee": _name_seqs(m["scrutinee"], names, used, nnames, nused, snames, sused),
+            "arms": [{"ctor": a["ctor"], "binders": a.get("binders", []),
+                      "body": _name_seqs(a["body"], names, used, nnames, nused, snames, sused)}
+                     for a in m["arms"]]}}
     if "call" in e:
         c = e["call"]
         return {"call": {"fun": c["fun"],
@@ -2729,6 +2841,15 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # own int-counting spec_fun is named "count" too; see _uses_strlib).
     if _uses_strlib(task) or _uses_strlib(body):
         lines = [STRLIB_PRELUDE.strip("\n"), ""]
+
+    for d in task.get("datatypes", []):
+        # SPEC.md "Datatypes (v1)" (2026-09-27): t's datatype IS Dafny's
+        # own `datatype` declaration (reference manual 5.14), one
+        # constructor per ctor, v1 states nullary constructors only.
+        ctors = " | ".join(c["name"] for c in d["ctors"])
+        lines.append(f"datatype {d['name']} = {ctors}")
+    if task.get("datatypes"):
+        lines.append("")
 
     for f in task.get("spec_funs", []):
         # 2026-09-27 (t/FEATURES-TRACK.md, nested string sequences): a

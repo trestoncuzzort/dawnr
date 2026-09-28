@@ -3219,6 +3219,10 @@ class Lower:
             return "bool"
         if "ite" in e:
             return self.sort(e["ite"]["then"], types)
+        if "ctor" in e:
+            return {"datatype": e["ctor"]["dtype"]}
+        if "match" in e:
+            return self.sort(e["match"]["arms"][0]["body"], types)
         if "call" in e:
             f = e["call"]["fun"]
             if f == self.name:
@@ -3437,6 +3441,35 @@ class Lower:
             if dep:
                 return f"(if {self.fresh_hyp()} : {cp} then {t} else {f})"
             return f"(if {cp} then {t} else {f})"
+        if "ctor" in e:
+            # SPEC.md "Datatypes (v1)" (2026-09-27): `Dtype.Ctor`, fully
+            # qualified (always valid regardless of what is open in
+            # scope, unlike Lean's `.Ctor` anonymous-constructor dot
+            # notation, which needs the expected type visible at THIS
+            # syntactic position -- not guaranteed here, term() is called
+            # from ensures/requires operand positions too). v1's
+            # constructors are nullary so `args` is always empty.
+            c = e["ctor"]
+            if c.get("args"):
+                cargs = " ".join(self.term(a, env, types, dep) for a in c["args"])
+                return f"({c['dtype']}.{c['name']} {cargs})"
+            return f"{c['dtype']}.{c['name']}"
+        if "match" in e:
+            # `match e with | .C1 => e1 | .C2 => e2` -- Lean's own match,
+            # exhaustive over the datatype's constructors (check_wf's
+            # match-coverage rule already proved it, SPEC.md "Datatypes
+            # (v1)"); `.C` (Lean 4's anonymous-constructor dot notation)
+            # is safe HERE because the scrutinee's own type is always
+            # known at a match (unlike a bare `ctor` term above).
+            m = e["match"]
+            scrut = self.term(m["scrutinee"], env, types, dep)
+            arms = " ".join(
+                "| .%s%s => %s" % (
+                    a["ctor"],
+                    " " + " ".join(a["binders"]) if a.get("binders") else "",
+                    self.term(a["body"], env, types, dep, expect))
+                for a in m["arms"])
+            return f"(match {scrut} with {arms})"
         if "call" in e:
             c = e["call"]
             args = " ".join(self.term(a, env, types, dep) for a in c["args"])
@@ -3662,6 +3695,13 @@ class Lower:
             return f"(({cp} → {t}) ∧ (¬{cp} → {f}))"
         if "call" in e:
             return f"({self.term(e, env, types)} = true)"
+        if "match" in e:
+            # SPEC.md "Datatypes (v1)": a bool-sorted match reaching this
+            # function directly (a whole clause, or an operand of ==/
+            # implies/and/or above) has no logical connective of its own
+            # to recurse into -- the same generic `(term = true)` bridge
+            # `call` just above already uses for a computed bool value.
+            return f"({self.term(e, env, types)} = true)"
         op = e["op"]
         if op in ("==", "!="):
             a, b = e["args"]
@@ -3751,6 +3791,33 @@ class Lower:
                 parts.append(f"(∀ ({b} : Int), {lo} ≤ {b} → {b} < {hi} "
                              f"→ {db})")
             return self._conj(parts)
+        if "ctor" in e:
+            # SPEC.md "Datatypes (v1)" (2026-09-27): defined iff every
+            # field argument is (v1's constructors are nullary, so this
+            # is None/True for every ctor this landing).
+            return self._conj([self.dcond(a, env, types)
+                               for a in e["ctor"].get("args", [])])
+        if "match" in e:
+            # A match's result is defined iff the scrutinee is AND the
+            # body of the arm ACTUALLY TAKEN is -- reusing Lean's own
+            # `match` as the branching construct is exact (check_wf's
+            # match-coverage rule already proved it exhaustive), the same
+            # move `ite`'s own case above makes with `guard`.
+            m = e["match"]
+            ds = self.dcond(m["scrutinee"], env, types)
+            arm_ds = [self.dcond(a["body"], env, types) for a in m["arms"]]
+            if all(d is None for d in arm_ds):
+                branch = None
+            else:
+                scrut = self.term(m["scrutinee"], env, types)
+                arms = " ".join(
+                    "| .%s%s => %s" % (
+                        a["ctor"],
+                        " " + " ".join(a.get("binders", [])) if a.get("binders") else "",
+                        d if d is not None else "True")
+                    for a, d in zip(m["arms"], arm_ds))
+                branch = f"(match {scrut} with {arms})"
+            return self._conj([ds, branch])
         if "call" in e:
             parts = [self.dcond(a, env, types) for a in e["call"]["args"]]
             m = self.methods.get(e["call"]["fun"])
@@ -4103,6 +4170,13 @@ class Lower:
 
     def lean_type(self, t) -> str:
         if isinstance(t, dict):
+            if "datatype" in t:
+                # SPEC.md "Datatypes (v1)" (2026-09-27): the declared
+                # name, an ordinary Lean `inductive` type (Theorem
+                # Proving in Lean 4, ch.7 "Inductive Types", 7.1
+                # "Enumerated Types": `inductive Weekday where | sunday |
+                # ...` is exactly v1's field-less shape).
+                return t["datatype"]
             if "pair" in t:
                 # SPEC.md "Pairs" (2026-09-10): `{"pair": [T1, T2]}` over
                 # Int/Bool/List Int, as the Lean product `T1 × T2`
@@ -6747,6 +6821,17 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
     def lower(self) -> str:
         header = (f"-- t task {self.name!r} -> lean4, generated by "
                   f"lower_lean.py; every verdict is the kernel's.\n")
+        dt_src = ""
+        for d in self.task.get("datatypes", []):
+            # SPEC.md "Datatypes (v1)" (2026-09-27): t's datatype IS
+            # Lean's own `inductive` type ("Theorem Proving in Lean 4"
+            # ch.7, 7.1 "Enumerated Types": `inductive Weekday where |
+            # sunday | ...`), `deriving DecidableEq` for the structural
+            # `=`/`≠` SPEC.md gives it (`==`/`!=` on two datatype values
+            # lower through term()'s `Dtype.Ctor`, decided the same way
+            # any other Lean equality is, `omega`/`grind`/`decide`).
+            ctor_lines = "\n".join(f"  | {c['name']}" for c in d["ctors"])
+            dt_src += f"inductive {d['name']} where\n{ctor_lines}\n  deriving DecidableEq\n\n"
         seq_src = self.emit_seq_helpers()
         seq_thms = []
         if self.seq_mut:
@@ -6846,6 +6931,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             db_thms + seq_thms + strlib_thms + sf_thms + l_thms + m_thms
             + wf_thms + thms + smoke_thms)
         parts = [header]
+        if dt_src.strip():
+            parts.append(dt_src)
         if db_src.strip():
             parts.append(db_src)
         if seq_src.strip():
@@ -9281,6 +9368,15 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         return g
 
     def _gterm(self, v, ty) -> str:
+        if isinstance(ty, dict) and "datatype" in ty:
+            # SPEC.md "Datatypes (v1)" (2026-09-27): interp._j renders a
+            # Ctor witness value as "Dtype.Ctor" already valid Lean
+            # syntax verbatim (fully qualified, so no `open`/context is
+            # needed the way `.Ctor` dot notation would).
+            dtype = ty["datatype"]
+            if isinstance(v, str) and v.startswith(dtype + "."):
+                return v
+            raise ValueError(f"witness value {v!r} is not a {dtype} constructor")
         if isinstance(ty, dict) and "pair" in ty:
             # SPEC.md "Pairs" (2026-09-10): a ground pair value, from a
             # witness (interp.py's `_j` renders it `[a, b]`, exactly `v`
@@ -9335,6 +9431,15 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             t1, t2 = ty["pair"]
             return interp.Pair(self._unshow(v[0], t1),
                                self._unshow(v[1], t2))
+        if isinstance(ty, dict) and "datatype" in ty:
+            # SPEC.md "Datatypes (v1)": the inverse of interp._j's
+            # "Dtype.Ctor" rendering, a real interp.Ctor so `fst`/`snd`-
+            # style field access (the record case ahead) would read a
+            # dataclass, not a string, exactly as a pair's `_unshow` does.
+            dtype = ty["datatype"]
+            if isinstance(v, str) and v.startswith(dtype + "."):
+                return interp.Ctor(dtype, v[len(dtype) + 1:], ())
+            raise ValueError(f"witness value {v!r} is not a {dtype} constructor")
         return v
 
     def _ens_conj(self) -> dict:
@@ -9754,6 +9859,11 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         the shape a witness renders it in (`_j`)."""
         if isinstance(v, interp.Pair):
             return [Lower._reground(v.a), Lower._reground(v.b)]
+        if isinstance(v, interp.Ctor):
+            # SPEC.md "Datatypes (v1)": the same "Dtype.Ctor" shown form
+            # interp._j already renders it as, so it re-enters `_gterm`/
+            # `_unshow` exactly as a witness dict's own value would.
+            return f"{v.dtype}.{v.ctor}"
         if isinstance(v, (tuple, list)):
             return [Lower._reground(x) for x in v]
         return v

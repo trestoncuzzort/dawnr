@@ -180,6 +180,32 @@ class MeasureViolation(Exception):
 
 
 @dataclass(frozen=True)
+class Ctor:
+    """SPEC.md "Datatypes (v1)" (2026-09-27): the runtime value of
+    `{"ctor": {"dtype": D, "name": C, "args": [...]}}` -- a datatype value,
+    tagged by its datatype's name and the constructor that built it, with
+    its field values in declaration order (empty for an enum constructor,
+    v1's only shape). `dtype` is part of the value (not just a type-checker
+    fact) because `_tv` below tags every value by `type(v).__name__`, and
+    two DIFFERENT datatypes could otherwise declare same-named
+    constructors that would then collide under that tag; carrying `dtype`
+    on the value itself, the same way `Pair` carries no type tag because a
+    pair has only one Python type, keeps every datatype's own values
+    distinct from every other's even when a constructor name is reused
+    (SPEC.md requires constructor names be unique only WITHIN a datatype,
+    Dafny's own rule, reference manual 5.14). `@dataclass(frozen=True)`
+    gives structural equality and a hash for free, the same reasoning as
+    `Pair`'s: `==`/`!=` on two datatype values (SPEC.md: "equality" is
+    "structural, by constructor and fields") and hashability for the
+    domain ladders below. No order: a datatype has no `< <= > >=`, so none
+    is defined, and check_wf refuses the syntax before a Ctor value would
+    ever reach one."""
+    dtype: str
+    ctor: str
+    args: tuple
+
+
+@dataclass(frozen=True)
 class Pair:
     """SPEC.md "Pairs" (2026-09-10): the runtime value of `{"op": "pair",
     "args": [a, b]}`. Kept OUT of Python's tuple on purpose: seqs are Python
@@ -432,6 +458,31 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         c = e["ite"]
         return ev(c["then" if ev(c["cond"], env, funs, st) else "else"],
                   env, funs, st)
+    if "ctor" in e:
+        # SPEC.md "Datatypes (v1)" (2026-09-27): {"ctor": {"dtype", "name",
+        # "args"}}, a value defined iff every field argument is (every v1
+        # constructor is nullary, so `args` is always empty this landing,
+        # but the field loop already works for the record case ahead).
+        c = e["ctor"]
+        args = tuple(ev(a, env, funs, st) for a in c.get("args", []))
+        return Ctor(c["dtype"], c["name"], args)
+    if "match" in e:
+        # {"match": {"scrutinee", "arms": [{"ctor", "binders", "body"}]}}:
+        # non-strict like `ite` -- only the chosen arm's body is evaluated
+        # (SPEC.md gate 1's definedness rule: a match is defined iff the
+        # scrutinee is and the CHOSEN arm's body is; check_wf already
+        # proved every constructor has exactly one arm, so the loop below
+        # always finds one).
+        m = e["match"]
+        v = ev(m["scrutinee"], env, funs, st)
+        for arm in m["arms"]:
+            if arm["ctor"] == v.ctor:
+                sub = dict(env)
+                for name, fv in zip(arm.get("binders", []), v.args):
+                    sub[name] = fv
+                return ev(arm["body"], sub, funs, st)
+        raise ValueError(f"match: no arm for constructor {v.ctor!r} "
+                         f"(check_wf should have refused this)")
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
@@ -976,12 +1027,28 @@ def ladders(task: dict) -> dict:
     alpha = tuple(_dedup([0, 1, -1] + _around(lits)
                          + [2, -2, 3, -3] + list(STR_ALPHA))[:ALPHA])
     seqs = _seq_ladder(alpha)
-    return {"int": ints, "seq": seqs, "bool": BOOLS,
-            "nested_seq": _nested_seq_ladder(seqs),
-            # SPEC.md "Finite sets" (2026-09-27): the seq ladder's tuples
-            # read as sets, duplicates collapsed, so the near corner (the
-            # empty set, then the singletons) comes first as it does for seqs.
-            "set": tuple(_dedup([frozenset(t) for t in seqs]))}
+    lad = {"int": ints, "seq": seqs, "bool": BOOLS,
+          "nested_seq": _nested_seq_ladder(seqs),
+          # SPEC.md "Finite sets" (2026-09-27): the seq ladder's tuples
+          # read as sets, duplicates collapsed, so the near corner (the
+          # empty set, then the singletons) comes first as it does for seqs.
+          "set": tuple(_dedup([frozenset(t) for t in seqs]))}
+    # SPEC.md "Datatypes (v1)" (2026-09-27): a datatype's domain is finite
+    # and small by construction (it is exactly its declared constructors,
+    # v1's enum shape carrying no fields), so, unlike int/seq/set, the
+    # WHOLE domain is the ladder -- declaration order, not a near-to-far
+    # search, since there is no such thing as one enum value being
+    # "closer" to another. Keyed by name (not by a single "datatype" slot,
+    # the way "int"/"seq" are): a task may declare more than one datatype,
+    # each with its own domain.
+    for d in task.get("datatypes", []):
+        ctors = d.get("ctors", [])
+        if isinstance(d.get("name"), str) and isinstance(ctors, list):
+            lad[f"datatype:{d['name']}"] = tuple(
+                Ctor(d["name"], c["name"], ())
+                for c in ctors if isinstance(c, dict)
+                and isinstance(c.get("name"), str) and not c.get("fields"))
+    return lad
 
 
 PAIR_SHELL = 24          # 2-argument shell cap, the same magnitude
@@ -1008,6 +1075,10 @@ def _ladder(lad: dict, ty) -> tuple:
             t1, t2 = ty["pair"]
             return tuple(_dedup([Pair(a, b) for a, b in
                                  _shell([lad[t1], lad[t2]], PAIR_SHELL)]))
+        if "datatype" in ty:
+            # SPEC.md "Datatypes (v1)": the whole (small, finite) domain,
+            # precomputed once per task in `ladders()` above.
+            return lad[f"datatype:{ty['datatype']}"]
         return lad["nested_seq"]
     return lad[ty]
 
@@ -1047,6 +1118,14 @@ def _names(task: dict) -> list[tuple[str, str]]:
 
 
 def _j(v):
+    if isinstance(v, Ctor):
+        # SPEC.md "Datatypes (v1)": shown as "Dtype.Ctor(field, ...)", the
+        # surface notation for the value (empty parens omitted, v1's enum
+        # shape); recursing on fields the same way Pair recurses on its
+        # two components, for the record case ahead.
+        if v.args:
+            return f"{v.dtype}.{v.ctor}(%s)" % ", ".join(str(_j(a)) for a in v.args)
+        return f"{v.dtype}.{v.ctor}"
     if isinstance(v, Pair):
         # SPEC.md "Pairs": shown as a 2-list, recursing so a seq component
         # (itself a tuple) prints as a list too rather than as a raw tuple.

@@ -259,6 +259,20 @@ KEYWORDS = {
     "int", "bool", "seq",
     "tostr",       # SPEC.md "The string library" (2026-09-11): tostr(n) is
                    # a function like len(n), reserved the same way.
+    "datatype", "case",
+                   # SPEC.md "Datatypes (v1)" (2026-09-27): a datatype
+                   # declaration and its total match expression. Dafny's
+                   # own keyword for the expression is "match" (reference
+                   # manual 5.14), but `tasks/probe_names_fstar.t` and
+                   # `tasks/probe_names_lean.t` deliberately use `match` as
+                   # an ordinary t PARAMETER/local name (proving F*'s and
+                   # Lean's own reserved words do not leak into t), so
+                   # reserving it here would break that exact probe -- the
+                   # same reasoning `setminus` was chosen over `diff` for
+                   # (SPEC.md "Decisions since t:0"). `case` collides with
+                   # no name in `tasks/` or a probe; the AST key stays
+                   # "match" (t/lower_*.py, interp.py, check_wf.py, harness.py
+                   # are unaffected), only this surface spelling differs.
     "set", "card", "union", "inter", "setminus",
                    # SPEC.md "Finite sets" (2026-09-27): the type keyword and
                    # the four named operations, functions like len(n); `in`
@@ -288,9 +302,10 @@ STR_METHODS = {"split", "join", "count", "find", "strip", "lstrip", "rstrip",
               "replace", "lower", "upper", "isdigit", "isalpha", "isupper",
               "islower", "startswith", "endswith"}
 
-# Longest match first: "==>" before "==" before "=", ":=" before ":".
-SYMBOLS = ["==>", "==", "!=", "<=", ">=", ":=", "=", "<", ">", "+", "-", "*",
-           "/", "%", "(", ")", "[", "]", "{", "}", ",", "..", ".", ":", ";"]
+# Longest match first: "==>" before "==" before "=", "=>" before "=", ":=" before ":".
+SYMBOLS = ["==>", "==", "=>", "!=", "<=", ">=", ":=", "=", "<", ">", "+", "-",
+           "*", "/", "%", "(", ")", "[", "]", "{", "}", ",", "..", ".", ":", ";",
+           "|"]
 
 _ID = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 _NAT = re.compile(r"[0-9]+")
@@ -476,6 +491,11 @@ class Parser:
         self.toks = lex(src, file)
         self.i = 0
         self.production = "Task"  # the SYNTAX.md production being parsed
+        # SPEC.md "Datatypes (v1)" (2026-09-27): name -> [ctor names],
+        # filled by `datatype_decl()` before `program()` reads the "t N"
+        # line, so `ptype()` and `p_atom()` can tell a datatype name from
+        # an ordinary spec_fun/var identifier without a second pass.
+        self.datatypes: dict[str, list[str]] = {}
 
     # -- token plumbing ----------------------------------------------------
 
@@ -544,6 +564,14 @@ class Parser:
             t2 = self.vtype(PAIR_TYPES)
             self.eat("sym", ")", "Type")
             return self.mark(start, {"pair": [t1, t2]})
+        if self.tok.kind == "id" and self.tok.text in self.datatypes:
+            # SPEC.md "Datatypes (v1)" (2026-09-27): a declared datatype
+            # name is a TYPE, `{"datatype": D}`; `vtype()` below only ever
+            # accepts a KEYWORD, so a datatype name (an ordinary
+            # identifier) has to be read here instead, before falling
+            # through to it.
+            name = self.eat("id", production="Type").text
+            return self.mark(start, {"datatype": name})
         t = self.vtype()
         if t == "seq" and self.opt("sym", "<"):
             self.eat("kw", "seq", "Type")
@@ -553,14 +581,48 @@ class Parser:
 
     # -- program -----------------------------------------------------------
 
+    def datatype_decl(self) -> dict:
+        """`datatype Name = Ctor1 | Ctor2 | ...` (SPEC.md "Datatypes (v1)",
+        2026-09-27; Dafny reference manual 5.14): declared before the "t N"
+        line, like a header field rather than a body statement, so no
+        `;` terminates it -- the same convention `requires`/`ensures`
+        already use. v1 states enumerations only: a constructor is a bare
+        name, no field list; SPEC.md names records and non-recursive sums
+        as later v1 waves that would extend this same production with a
+        parenthesised field list, not replace it."""
+        start = self.tok
+        self.production = "Datatype"
+        self.eat("kw", "datatype")
+        name = self.name("Datatype")
+        if name in self.datatypes:
+            self.err(start, "datatype %s declared twice" % name, "Datatype")
+        self.eat("sym", "=", "Datatype")
+        ctors = []
+        cnames = []
+        while True:
+            ctok = self.tok
+            cname = self.name("Datatype")
+            ctors.append(self.mark(ctok, {"name": cname}))
+            cnames.append(cname)
+            if not self.opt("sym", "|"):
+                break
+        self.datatypes[name] = cnames
+        return self.mark(start, {"name": name, "ctors": ctors})
+
     def program(self) -> dict:
         start = self.tok
+        self.production = "Task"
+        datatypes = []
+        while self.at("kw", "datatype"):
+            datatypes.append(self.datatype_decl())
         self.production = "Task"
         self.eat("kw", "t")
         ver = int(self.eat("nat").text)
         if ver not in (0, 1):
             self.err(start, "format version must be 0 or 1, found %d" % ver)
         task = {"t": ver}
+        if datatypes:
+            task["datatypes"] = datatypes
         if self.opt("kw", "gate"):
             task["gate"] = self.name()
         self.eat("kw", "task")
@@ -902,6 +964,37 @@ class Parser:
             self.production = "Expr"
             return self.mark(start, {"ite": {"cond": cond, "then": then,
                                              "else": els}})
+        if self.opt("kw", "case"):
+            # SPEC.md "Datatypes (v1)" (2026-09-27): `match e { C1 => e1,
+            # C2 => e2, ... }`, total over the scrutinee's datatype
+            # (check_wf proves the coverage; the parser only shapes the
+            # tree). No "dtype" field is written here: the scrutinee's own
+            # type says which datatype's constructors the arms name,
+            # exactly as check_wf's `_ty` resolves it.
+            scrut = self.expr()
+            self.production = "Expr"
+            self.eat("sym", "{", "Expr")
+            arms = []
+            while True:
+                actok = self.tok
+                cname = self.name("Expr")
+                binders = []
+                if self.opt("sym", "("):
+                    if not self.at("sym", ")"):
+                        while True:
+                            binders.append(self.name("Expr"))
+                            if not self.opt("sym", ","):
+                                break
+                    self.eat("sym", ")", "Expr")
+                self.eat("sym", "=>", "Expr")
+                abody = self.expr()
+                self.production = "Expr"
+                arms.append(self.mark(actok, {"ctor": cname, "binders": binders,
+                                              "body": abody}))
+                if not self.opt("sym", ","):
+                    break
+            self.eat("sym", "}", "Expr")
+            return self.mark(start, {"match": {"scrutinee": scrut, "arms": arms}})
         return self.p_implies()
 
     def p_implies(self) -> dict:
@@ -1216,6 +1309,27 @@ class Parser:
             return self.mark(t, {"op": "seq", "args": args})
         if t.kind == "id":
             ident = self.name()
+            if ident in self.datatypes and self.opt("sym", "."):
+                # SPEC.md "Datatypes (v1)" (2026-09-27): `D.C`, a
+                # constructor value, qualified the way Dafny's own
+                # datatype values are (reference manual 5.14) since a
+                # constructor name alone would be ambiguous against a
+                # spec_fun or a var of the same name in scope.
+                ctok = self.tok
+                cname = self.name("Expr")
+                if cname not in self.datatypes[ident]:
+                    self.err(ctok, "%s has no constructor %s" % (ident, cname), "Expr")
+                cargs = []
+                if self.opt("sym", "("):
+                    if not self.at("sym", ")"):
+                        while True:
+                            cargs.append(self.expr())
+                            self.production = "Expr"
+                            if not self.opt("sym", ","):
+                                break
+                    self.eat("sym", ")", "Expr")
+                return self.mark(t, {"ctor": {"dtype": ident, "name": cname,
+                                              "args": cargs}})
             if self.opt("sym", "("):
                 args = []
                 if not self.at("sym", ")"):
@@ -1279,9 +1393,17 @@ def check_file(path: str) -> list:
     return check_wf.check_wf(task, positions=positions, file=path)
 
 
-def parse_expr(src: str) -> dict:
-    """One expression, for the SYNTAX.md `written:` lines that are not tasks."""
+def parse_expr(src: str, datatypes: dict | None = None) -> dict:
+    """One expression, for the SYNTAX.md `written:` lines that are not
+    tasks. `datatypes` (name -> [ctor names]), since 2026-09-27 (SPEC.md
+    "Datatypes (v1)"): a bare expression like `Color.Red` needs a
+    datatype declared in scope to parse at all (`p_atom`'s ctor-reference
+    branch only fires for a NAME already in `self.datatypes`), which an
+    isolated expression has no `datatype ...` line to declare; every
+    caller but the WRITTEN table below omits it, unaffected."""
     p = Parser(src)
+    if datatypes:
+        p.datatypes = dict(datatypes)
     e = p.expr()
     p.eat("eof")
     return e
@@ -1371,6 +1493,28 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         return _wrap("%s %s in [%s, %s) . %s"
                      % (kind, _ident(q["var"]), pexpr(q["lo"]),
                         pexpr(q["hi"]), pexpr(q["body"])), P_QUANT, floor)
+    if kind == "ctor":
+        # SPEC.md "Datatypes (v1)" (2026-09-27): `D.C` or `D.C(a1, ...)`,
+        # the notation `p_atom`'s ctor-reference branch parses back.
+        c = e["ctor"]
+        cargs = c.get("args", [])
+        base = "%s.%s" % (_ident(c["dtype"]), _ident(c["name"]))
+        if cargs:
+            base += "(%s)" % ", ".join(pexpr(a) for a in cargs)
+        return _wrap(base, P_POSTFIX, floor)
+    if kind == "match":
+        # `match e { C1 => e1, C2 => e2, ... }`, the notation `expr()`'s
+        # `match` branch parses back.
+        m = e["match"]
+        arms = []
+        for a in m["arms"]:
+            binders = a.get("binders", [])
+            head = _ident(a["ctor"])
+            if binders:
+                head += "(%s)" % ", ".join(_ident(b) for b in binders)
+            arms.append("%s => %s" % (head, pexpr(a["body"])))
+        return _wrap("case %s { %s }" % (pexpr(m["scrutinee"]), ", ".join(arms)),
+                     P_QUANT, floor)
     if kind != "op":
         raise SurfaceError("unknown expression node %r" % kind)
 
@@ -1506,6 +1650,12 @@ def _print_type(t) -> str:
             return "(%s, %s)" % (p[0], p[1])
         if t == {"seq": "seq"}:
             return "seq<seq>"
+        if set(t) == {"datatype"} and isinstance(t["datatype"], str):
+            # SPEC.md "Datatypes (v1)" (2026-09-27): a declared datatype
+            # name prints as itself, the notation `ptype()` reads back
+            # (via `self.datatypes`, populated from the leading `datatype`
+            # declarations before this same name is ever used as a type).
+            return t["datatype"]
         raise SurfaceError("not a t type: %r" % (t,))
     if t not in VAL_TYPES:
         raise SurfaceError("not a t type: %r" % (t,))
@@ -1567,7 +1717,7 @@ def print_task(task: dict) -> str:
             raise SurfaceError("task is missing required field %r" % k)
     unknown = set(t) - {"t", "name", "params", "returns", "requires",
                         "ensures", "gate", "spec_funs", "methods",
-                        "lemmas", "decreases", "body"}
+                        "lemmas", "decreases", "body", "datatypes"}
     if unknown:
         raise SurfaceError("task carries fields t does not define: %s"
                            % " ".join(sorted(unknown)))
@@ -1577,7 +1727,13 @@ def print_task(task: dict) -> str:
         raise SurfaceError("a task returns exactly one value, found %d"
                            % len(t["returns"]))
 
-    lines = ["t %d" % t["t"]]
+    lines = []
+    for d in t.get("datatypes", []):
+        # SPEC.md "Datatypes (v1)" (2026-09-27): `datatype_decl()`'s own
+        # notation, printed back before the "t N" line the way it was read.
+        lines.append("datatype %s = %s" % (_ident(d["name"]),
+                     " | ".join(_ident(c["name"]) for c in d["ctors"])))
+    lines.append("t %d" % t["t"])
     if "gate" in t:
         lines.append("gate %s" % _ident(t["gate"]))
     ps = ", ".join("%s: %s" % (_ident(p["name"]), _print_type(p["type"]))
@@ -1712,6 +1868,18 @@ WRITTEN = [
      {"op": "count", "args": [{"var": "s"}, {"var": "u"}]}),
     ("expr", "s.strip().lower()",
      {"op": "lower", "args": [{"op": "strip", "args": [{"var": "s"}]}]}),
+    # SPEC.md "Datatypes (v1)", added 2026-09-27: both need a datatype in
+    # scope to parse at all (parse_expr's own note), which an isolated
+    # WRITTEN expression has no `datatype ...` line to declare -- the 4th
+    # tuple element seeds `self.datatypes` the same way the full parser's
+    # own leading declarations would.
+    ("expr", "Color.Red", {"ctor": {"dtype": "Color", "name": "Red", "args": []}},
+     {"Color": ["Red", "Green"]}),
+    ("expr", "case c { Red => true, Green => false }",
+     {"match": {"scrutinee": {"var": "c"}, "arms": [
+         {"ctor": "Red", "binders": [], "body": {"bool": True}},
+         {"ctor": "Green", "binders": [], "body": {"bool": False}}]}},
+     {"Color": ["Red", "Green"]}),
 ]
 
 # Three more char/string probes (SPEC.md "Strings as sequences of code
@@ -2009,8 +2177,11 @@ def check(seeds, n, verbose: bool) -> int:
 
     print("written: lines from SYNTAX.md")
     w_ok = 0
-    for kind, text, want in WRITTEN:
-        got = (parse_expr if kind == "expr" else parse_stmt)(text)
+    for entry in WRITTEN:
+        kind, text, want = entry[0], entry[1], entry[2]
+        dtypes = entry[3] if len(entry) > 3 else None
+        got = (parse_expr(text, dtypes) if kind == "expr"
+              else parse_stmt(text))
         if json.dumps(got, sort_keys=True) == json.dumps(want, sort_keys=True):
             w_ok += 1
         else:
