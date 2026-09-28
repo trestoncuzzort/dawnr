@@ -1071,7 +1071,7 @@ New Expr forms:
 {"op": "card",  "args": [SetExpr]}            // card(s); the number of elements
 {"op": "union", "args": [SetExpr, SetExpr]}   // union(s, t)
 {"op": "inter", "args": [SetExpr, SetExpr]}   // inter(s, t)
-{"op": "diff",  "args": [SetExpr, SetExpr]}   // diff(s, t); the elements of s not in t
+{"op": "diff",  "args": [SetExpr, SetExpr]}   // setminus(s, t); the elements of s not in t
 ```
 
 `set` denotes the set of its arguments' values, so duplicates collapse:
@@ -1082,7 +1082,7 @@ iff every element is, and the other five iff their operands are; the
 library adds no undefined case, as the string library adds none. `==`
 and `!=` on two sets are extensional (the same members), the polymorphic
 `==` again; `< <= > >=` stay int-only, so a set has no order and v1 has
-no subset operator (`card(diff(s, t)) == 0` says it). An `in` whose left
+no subset operator (`card(setminus(s, t)) == 0` says it). An `in` whose left
 operand is not an int or whose right is not a set, a `card` of a non-set,
 a `union`/`inter`/`diff` on anything but two sets, and a display with a
 non-int element are ill-typed; so is `+`, `-` or `*` on a set (t writes the
@@ -1118,6 +1118,28 @@ so `diff` is a named refusal there until one is built and proved); lean
 value) a named refusal, measured first, or a sorted duplicate-free list
 proved equivalent. A kernel that cannot state an operation soundly
 abstains by name; none totalises or approximates it.
+
+**Set difference is spelled `setminus`, not `diff` (2026-09-27, same day).**
+A review found `diff` was a common variable and return name: 4 documents of
+the proved corpus and 5 lifted task files under `t/out/lifted-tasks-*/`
+named a return or local `diff`, and every one stopped parsing the moment
+`diff` became a keyword (`t/FEATURES-TRACK.md` "11. Finite sets" carries the
+measurement). `set`, `card`, `union` and `inter` collide with nothing in
+the corpus and stay reserved by name, the same named-operation style as
+`len`, `tostr` and `fill`; `set` also opens the type-name production a
+`var x: set` declaration needs before it would try a user name, and
+`card`/`union`/`inter` are resolved by keyword before the parser would try
+a generic call, so freeing them would trade one collision for another kind
+of ambiguity, not remove one. `diff` had no such need -- it was simply
+spelled the same as an English word already in use -- so only its surface
+spelling changed, to `setminus`; the AST op tag stays `"diff"` (every
+lowering, `check_wf` and `interp` read the tag, never the surface word, so
+none of them changed). `t/loop_locallm.py`'s corpus builder gained the
+guard that was missing: it now refuses, by name and with the parse error,
+any document about to be written that does not parse with the current
+surface, rather than writing it and letting a downstream reader (`t_tool`,
+`locallm/chat_data.py`) drop it silently.
+
 ### Seq-valued spec_funs (v1)
 
 Stated 2026-09-27 (t/FEATURES-TRACK.md "The order from here": the binding
