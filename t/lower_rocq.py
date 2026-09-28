@@ -11468,6 +11468,14 @@ def _value_cert(cx, task, body, witness, def_text, w=None):
             lines.append("  cbn [fst snd].\n")
     lines += _call_asserts(cx, task, body, task["ensures"], env_py, env_lit)
     lines += sets
+    if ret_t != "set" and _uses_sets(task):
+        # SPEC.md "Finite sets (v1)", 2026-09-27: with every parameter a
+        # literal, the set atoms left in the goal are closed whatever the
+        # return type is (`Z.of_nat (S.cardinal (S.diff {..} {..})) = 0`
+        # on the set-equality probe's twin, which ran to the wall under
+        # the general arms); `t_set_ground` computes them (see _SET_DEFS).
+        # The set-return branch above already ran it after its rewrite.
+        lines.append("  t_set_ground.\n")
     # LOOP-BODY VALUE CERTIFICATE, is_prime's own gap (2026-09-14, ROADMAP
     # 16.2, rocq-cert; full story in the dated note above
     # `_first_undef_body`): a return-bearing loop's own ensures can need a
