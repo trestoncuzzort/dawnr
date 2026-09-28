@@ -9279,13 +9279,36 @@ def _value_certificate(task: dict, twin_body: list, w: dict,
     # the int ladder's own `f(args) == v` line already relies on.
     # Untouched (an empty, no-op loop) for any task with no seq-valued
     # spec_fun call in `ensures` (byte identity).
+    #
+    # Per-entry try/except, 2026-09-27 (review finding, feat/framac-seq-fun):
+    # this loop sat outside the `except (_CertSkip, NotImplementedError,
+    # ValueError, KeyError, TypeError, RecursionError)` umbrella above it,
+    # unlike every other fallible step in this function (the seq-args
+    # resolution loop just above, the per-call `_cev` loop, `_flush_trace`)
+    # -- an unanticipated exception here (a `funs[fname]` KeyError, a
+    # `zip(..., strict=True)` length mismatch, a non-int `v` reaching
+    # `_int_lit`) would propagate through `_value_certificate`,
+    # `_certificate` and `certificate` (whose own `try/finally` has no
+    # `except`) to `lower()`'s bare `cert = certificate(...)` call site,
+    # crashing the WHOLE lowering rather than degrading. No such crash was
+    # reproduced on any committed fixture (double_all, the four
+    # `fz_p_sf_seq_*` probes, the three seeded faults -- t/
+    # test_framac_seq_fun.py's own set), but the design this function's
+    # own docstring states for `_seq_call_lhs`
+    # returning None -- "the refutation certificate degrades to no rung
+    # for this call, never to an incorrect one" -- applies equally to an
+    # exception raised while building on: caught per entry, so one
+    # malformed rung is dropped, not the whole certificate.
     for fname, vals, v in _CEV_TRACE_SEQ:
-        lhs = _seq_call_lhs(fname, vals, funs)
-        if lhs is None:
-            continue                   # unresolved seq argument; no rung
-        rhs = "\\Nil"
-        for x in reversed(v):
-            rhs = f"\\Cons({_int_lit(x)}, {rhs})"
+        try:
+            lhs = _seq_call_lhs(fname, vals, funs)
+            if lhs is None:
+                continue               # unresolved seq argument; no rung
+            rhs = "\\Nil"
+            for x in reversed(v):
+                rhs = f"\\Cons({_int_lit(x)}, {rhs})"
+        except (KeyError, ValueError, TypeError):
+            continue                   # malformed rung; no rung, not a wrong one
         body_out.append(f"  /*@ assert {lhs} == {rhs}; */")
     _CEV_TRACE_SEQ.clear()
     _CEV_SEQ_ARGS.clear()

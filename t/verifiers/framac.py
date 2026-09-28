@@ -235,6 +235,37 @@ THE TWO SEMANTIC VACUITY INSTRUMENTS, and the measured division of labour:
    conditionally-evaluated `at`, swap's timeout) are each a different
    defect, left for whichever pass takes them next.
 
+5. LIST-RESULT PROBE, FIXED 2026-09-27 (feat/framac-seq-fun review). Instrument
+   2's own eligibility check (`_recursive_defs`'s "typed" flag, now
+   `_restype`) looked only at a recursive symbol's PARAMETER types, never
+   its RESULT type, so a `\\list<integer>`-returning `logic` definition
+   (`spec_fun_acsl`'s new route, SPEC.md "Seq-valued spec_funs (v1)") was
+   probed with the int shape, `(call) >= 0` / `(call) < 0` -- an ACSL type
+   error against a `\\list` result. MEASURED (the bug): building that probe
+   for double_all.t's own `dbl` and running it gives `annot-error`,
+   "comparison of incompatible types: \\list<ℕ> and ℕ", so
+   `_consistency_probe` read "probe file produced no WP goals" and ran the
+   file's own goals with the recursive theory never checked -- confirmed
+   live on a hand-written non-well-founded `logic \\list<integer> bad{L}(n)
+   = \\Cons(n, bad{L}(n));`: `ensures \\length(bad(0)) >= 0 ==> \\result ==
+   999` on a function returning 0 read VALID, the same failure class
+   e1_wrong.c documents for int, now reproduced for list. FIXED:
+   `_restype` reads the definition's own return type (the `ret` capture
+   group `_LOGIC_DEF` already had, unused until now) and a `\\list<..>`
+   result gets a `\\length(call) == 0` / `!= 0` split instead -- ACSL's own
+   built-in, always-total length (kernel_internals/typing/logic_builtin.ml,
+   WP's Vlist.ml), no bridge predicate, the same complementary-and-
+   exhaustive shape over "empty"/"not" that the int shape has over
+   "negative"/"not". MEASURED (the fix): the same `bad` file's two probes
+   both read `(Doomed)` (frama-c 33.0 / alt-ergo 2.4.3-free), while `dbl`
+   (honest) reads `Smoke Tests: 2 / 2`, matching the int/bool measurement
+   above exactly. A `logic boolean` result (never emitted today; no
+   committed or lifted task declares a recursive one) is fixed the same
+   pass, `P`/`!P` like a `predicate`, since `_restype` reads it from the
+   same capture group; anything else (`real`, `set<..>`, ...) stays
+   unprobed (`typed: False`), same as an untyped parameter always was --
+   never mis-probed, only left for the structural backstop (3, above).
+
 CONFORMANCE 2026-09-11 (ROADMAP 13.4, the framac column's 15-probe
 assignment named in ../lower_framac.py's own dated note): read in full
 against the vacuity-smoke pattern (this file's -wp-smoke-tests /
@@ -537,6 +568,10 @@ _LOGIC_DEF = re.compile(
 _PARAM = re.compile(r"^(?P<ty>.+?)\s*(?P<stars>\**)\s*(?P<nm>[A-Za-z_]\w*)$")
 # -print renders ACSL `integer` as ℤ; `int` appears for C-typed parameters.
 _INT_TYPES = {"ℤ", "integer", "int"}
+# -print renders `\list<integer>` as `\list<ℤ>`; either spelling of the
+# element type is the same built-in ACSL list (kernel_internals/typing/
+# logic_builtin.ml), so only the `\list<` head is checked.
+_LIST_RET = re.compile(r"^\\list\s*<")
 
 
 def _wf_obligation(flat: str, name: str) -> bool:
@@ -545,6 +580,51 @@ def _wf_obligation(flat: str, name: str) -> bool:
     the lemma form lower_framac.py emits is the only one that exists."""
     return re.search(r"\blemma\s+" + re.escape(name) + r"_(?:terminates|decreases)",
                      flat) is not None
+
+
+def _restype(kind: str, ret: str | None) -> str | None:
+    """The probe shape a recursive definition's RESULT admits: "int" (a
+    ground `>= 0`/`< 0` split), "bool" (`P`/`!P`, a `predicate` or a `logic
+    boolean`), "list" (a `\\list<..>` result's `>= 0`/`< 0` split becomes
+    `\\length(call) == 0`/`!= 0`, ACSL's own built-in, always-total length
+    -- Vlist.ml's native decision procedure, no bridge predicate needed,
+    mirroring `_seq_len_render`'s own `call` case), or None when the
+    return type is none of these (the probe cannot be built well-typed,
+    e.g. `real`, `set<..>`; the def stays UNPROBED, never mis-probed).
+
+    2026-09-27 fix (reviewer finding, feat/framac-seq-fun): before this,
+    every recursive def with well-typed PARAMETERS was probed with the int
+    shape regardless of what it RETURNS, because the caller never looked at
+    `ret` at all. A `\\list<integer>`-returning def (the new spec_fun-to-
+    ACSL-list route, `spec_fun_acsl`) was therefore probed with
+    `(call) >= 0` -- an ACSL type error against a `\\list` result -- which
+    Frama-C rejects at parse time (`annot-error`, "comparison of
+    incompatible types"), so `_consistency_probe` read "probe file produced
+    no WP goals" and Instrument 2, this file's own load-bearing check
+    (module docstring, "THE TWO SEMANTIC VACUITY INSTRUMENTS"), silently
+    ran the file's OWN goals with the recursive theory unchecked -- for
+    every \\list-returning definition this branch's own fixtures and
+    probes state, confirmed here: `python3 -c` building the probe for
+    `double_all`'s own `dbl` and running it through frama-c 33.0 gives
+    exactly that `annot-error`/"no WP goals" pair, and a hand-written
+    `logic \\list<integer> bad{L}(n) = \\Cons(n, bad{L}(n));` (non-well-
+    founded, so its theory is \\false) proves a deliberately false
+    `ensures` VALID with the probe never having run. MEASURED fix: the
+    same `bad` file's two `\\length(bad(n)) == 0` / `!= 0` probe functions
+    both read `(Doomed)` (frama-c 33.0/alt-ergo 2.4.3-free,
+    `probe_bad.c`), while the honest `dbl` reads `Smoke Tests: 2 / 2`
+    (`probe_dbl.c`), the same "both doomed iff inconsistent" property
+    Instrument 2 already has for int/bool, now real for list too."""
+    if kind == "predicate":
+        return "bool"
+    ret = (ret or "").strip()
+    if ret in _INT_TYPES:
+        return "int"
+    if ret == "boolean":
+        return "bool"
+    if _LIST_RET.match(ret):
+        return "list"
+    return None
 
 
 def _recursive_defs(norm: str) -> tuple[list, str]:
@@ -568,25 +648,44 @@ def _recursive_defs(norm: str) -> tuple[list, str]:
             name = m.group("name")
             if not re.search(r"\b" + re.escape(name) + r"\b", "".join(rhs)):
                 continue                    # non-recursive: a definitional
-            params, typed = [], True        # extension, always consistent
+            params, params_ok = [], True    # extension, always consistent
             for raw in (m.group("params") or "").split(","):
                 raw = raw.strip()
                 if raw in ("", "void"):
                     continue
                 pm = _PARAM.match(raw)
                 if not pm or pm.group("ty").strip() not in _INT_TYPES:
-                    typed = False           # cannot build a well-typed probe
+                    params_ok = False       # cannot build a well-typed probe
                     break
                 params.append("int " + pm.group("stars"))
+            restype = _restype(m.group("kind"), m.group("ret"))
             defs.append({"kind": m.group("kind"), "name": name,
                          "labels": m.group("labels"), "params": params,
-                         "typed": typed})
+                         "restype": restype,
+                         "typed": params_ok and restype is not None})
     return defs, " ".join(flat_all)
 
 
 def _probe_source(raw: str, defs: list) -> tuple[str, list]:
     """Original source + two complementary-precondition probe functions per
-    recursive symbol. Both preconditions doomed == theory inconsistent."""
+    recursive symbol. Both preconditions doomed == theory inconsistent.
+
+    The precondition SHAPE is picked from `d["restype"]` (`_restype`, above),
+    not from `d["kind"]` alone: a `logic` definition can return `\\list<..>`
+    (this branch's own `spec_fun_acsl` route) as well as `integer`, and a
+    `\\list` has no `>= 0`/`< 0` -- that comparison is an ACSL type error
+    (measured: frama-c 33.0 rejects it, `annot-error`, "comparison of
+    incompatible types"), which is what silently disabled this probe for
+    every `\\list`-returning definition before this fix (`_restype`'s own
+    docstring has the full account). The list shape splits on `\\length`
+    instead (`== 0` / `!= 0`), ACSL's own built-in, always-total length
+    (Vlist.ml's native decision procedure) -- the same complementary-and-
+    exhaustive shape as the int split, over "empty" vs. "not" rather than
+    "negative" vs. "not", and equally unable to force AT MOST one side
+    Doomed on an honest definition without deriving \\false: MEASURED on
+    `dbl` (double_all.t's own spec_fun, honest) reads `Smoke Tests: 2 / 2`
+    (neither side doomed) and on a hand-written non-well-founded `bad{L}(n)
+    = \\Cons(n, bad{L}(n))` both sides read `(Doomed)`."""
     lines, pairs = [raw, ""], []
     for i, d in enumerate(defs):
         if not d["typed"]:
@@ -596,8 +695,12 @@ def _probe_source(raw: str, defs: list) -> tuple[str, list]:
         lab = ("{" + ",".join("Pre" for _ in d["labels"].strip("{}").split(","))
                + "}") if d["labels"] else ""
         call = f"{d['name']}{lab}({', '.join(args)})"
-        pos, neg = ((call, f"!({call})") if d["kind"] == "predicate"
-                    else (f"({call}) >= 0", f"({call}) < 0"))
+        if d["restype"] == "bool":
+            pos, neg = (call, f"!({call})")
+        elif d["restype"] == "list":
+            pos, neg = (f"(\\length({call})) == 0", f"(\\length({call})) != 0")
+        else:
+            pos, neg = (f"({call}) >= 0", f"({call}) < 0")
         fp, fn = f"{_PROBE_TAG}_pos_{i}", f"{_PROBE_TAG}_neg_{i}"
         for f, req in ((fp, pos), (fn, neg)):
             lines += [f"/*@ requires {req};", "    assigns \\nothing; */",

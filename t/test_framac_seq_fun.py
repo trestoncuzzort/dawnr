@@ -21,6 +21,25 @@ concatenation -- t/FEATURES-SEQFUN-2026-09-27.md's own three categories),
 checking every twin refutes and every seeded fault reads refuted or
 unproved, NEVER verified.
 
+2026-09-27 review fix, two more checks (verifiers/framac.py's own module
+docstring, "5. LIST-RESULT PROBE"): `test_consistency_probe_is_typed_by_
+result_not_just_params` (text-level) confirms `\\list<integer>`-returning
+`dbl` is read as probe-eligible with a `\\length(..) == 0`/`!= 0` split,
+never the int shape's `>= 0`/`< 0` (an ACSL type error against a `\\list`,
+which is exactly what silently disabled Instrument 2, this file's own
+consistency probe, for every `\\list`-returning definition before the
+fix); `--slow` adds `test_consistency_probe_catches_a_list_inconsistency`,
+which runs the real prover against a hand-written non-well-founded
+`logic \\list<integer> bad{L}(n) = \\Cons(n, bad{L}(n));` and checks the
+probe now reports it inconsistent (both smoke goals Doomed), the same
+property already measured for int/bool. `test_seq_certificate_rung_
+failure_degrades_not_crashes` (text-level) is the second finding: the
+`\\list` route's own certificate rung loop (lower_framac.py's
+`_value_certificate`, the `_CEV_TRACE_SEQ` loop) sat outside its
+neighboring `except` umbrella; this forces that loop's one call
+(`_seq_call_lhs`) to raise and checks the lowering degrades (drops the
+one rung) rather than crashing.
+
 Run: python3 t/test_framac_seq_fun.py [--slow]   (or pytest)
 """
 from __future__ import annotations
@@ -103,6 +122,130 @@ def test_probes_lower_in_framac() -> None:
             twin = tlib.lower(p, "framac", twin_body=True)
             assert isinstance(twin, str) and "t_refutation_certificate" in twin
     print("test_probes_lower_in_framac: ok")
+
+
+def test_consistency_probe_is_typed_by_result_not_just_params() -> None:
+    """2026-09-27 review finding (verifiers/framac.py's own module
+    docstring, "5. LIST-RESULT PROBE"): `_recursive_defs` used to decide
+    a recursive symbol's probe-eligibility from its PARAMETER types
+    alone, never its RESULT type, so `dbl` (a `\\list<integer>`-returning
+    `logic` definition) was marked `typed: True` and then probed with the
+    int shape, `(call) >= 0` / `(call) < 0` -- an ACSL type error against
+    a `\\list` result that Frama-C rejects at parse time, silently
+    disabling Instrument 2 (the consistency probe, this file's own
+    load-bearing check against a non-well-founded recursive definition)
+    for every seq-valued spec_fun. Checked here without a prover: `dbl`'s
+    own restype reads "list", not "int", and the probe text it builds
+    uses `\\length(..)`, never a bare `(call) >= 0` comparison."""
+    from verifiers import framac as framac_backend
+    real = tlib.lower(_committed(), "framac", twin_body=False)
+    # A hand-rolled stand-in for `frama-c -print`'s own normalization
+    # (ℤ for `integer`), since this check must not require frama-c on
+    # PATH: `_recursive_defs` only ever reads the RETURN-TYPE spelling
+    # `_LOGIC_DEF` captures, unaffected by the rest of the rendering.
+    norm = real.replace("logic \\list<integer> dbl", "logic \\list<ℤ> dbl")
+    defs, _ = framac_backend._recursive_defs(norm)
+    dbl = next(d for d in defs if d["name"] == "dbl")
+    assert dbl["restype"] == "list", dbl
+    assert dbl["typed"] is True, dbl
+    src, pairs = framac_backend._probe_source(real, defs)
+    assert pairs and pairs[0][0] == "dbl", pairs
+    probe_tail = src[len(real):]          # the two appended probe functions
+    assert "\\length(dbl{Pre}(" in probe_tail, probe_tail
+    assert "== 0" in probe_tail and "!= 0" in probe_tail, probe_tail
+    assert "dbl{Pre}(t_p0, t_p1, t_p2)) >= 0" not in probe_tail, (
+        "the int probe shape leaked into a \\list-returning definition",
+        probe_tail)
+    assert "dbl{Pre}(t_p0, t_p1, t_p2)) < 0" not in probe_tail, probe_tail
+    print("test_consistency_probe_is_typed_by_result_not_just_params: ok")
+
+
+def test_consistency_probe_catches_a_list_inconsistency(slow: bool) -> None:
+    """The real prover half of the fix above: a hand-written non-well-
+    founded `\\list<integer>`-returning definition (the reviewer's own
+    shape) is read INCONSISTENT by the fixed probe, the same "both
+    complementary smoke goals Doomed" evidence already measured for
+    int/bool (module docstring, e1_wrong.c/e3_pred_wrong.c) -- and the
+    honest `dbl` it sits beside in the fixture is not."""
+    if not slow:
+        print("test_consistency_probe_catches_a_list_inconsistency: "
+              "skipped (pass --slow)")
+        return
+    from verifiers import framac as framac_backend
+    if not framac_backend.FRAMAC:
+        print("test_consistency_probe_catches_a_list_inconsistency: "
+              "skipped (frama-c absent)")
+        return
+    bad_src = (
+        "/*@ logic \\list<integer> bad{L}(integer n) = "
+        "\\Cons(n, bad{L}(n));\n*/\n"
+        "/*@\n  requires \\true;\n  assigns \\nothing;\n"
+        "  ensures \\length(bad{Here}(0)) >= 0 ==> \\result == 999;\n*/\n"
+        "int f(void) {\n  return 0;\n}\n")
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "seed_list_inconsistent.c"
+        path.write_text(bad_src, encoding="utf-8", newline="\n")
+        r = framac_backend.verify(path)
+        assert r.outcome == "vacuous", (r.outcome, r.extras)
+        assert r.extras.get("inconsistent_symbols") == ["bad"], r.extras
+        assert (r.extras.get("vacuity_instrument")
+                == "consistency probe (-wp-fct smoke)"), r.extras
+        real_path = Path(d) / "double_all_real.c"
+        real_path.write_text(tlib.lower(_committed(), "framac", False),
+                             encoding="utf-8", newline="\n")
+        r2 = framac_backend.verify(real_path)
+        assert "bad" not in (r2.extras.get("inconsistent_symbols") or []), r2.extras
+        assert r2.extras.get("probe_note", "") == "", r2.extras
+    print("test_consistency_probe_catches_a_list_inconsistency: ok")
+
+
+def test_seq_certificate_rung_failure_degrades_not_crashes() -> None:
+    """2026-09-27 review finding: lower_framac.py's `_CEV_TRACE_SEQ` rung
+    loop (`_value_certificate`) sat outside the neighboring
+    `except (_CertSkip, NotImplementedError, ValueError, KeyError,
+    TypeError, RecursionError)` umbrella, so an unanticipated exception
+    from its one call, `_seq_call_lhs`, would propagate all the way
+    through `certificate()` (whose own `try/finally` has no `except`) to
+    `lower()`'s bare call site and crash the whole lowering rather than
+    degrading (dropping the one rung, the design `_seq_call_lhs`'s own
+    docstring already states for its `None` return).
+
+    `double_all` and the four `fz_p_sf_seq_*` probes never reach this
+    loop at all (their witnesses are the "undefined"-kind short-circuit
+    double_all.t's own report names, whose certificate formula has no
+    seq-valued call to ladder); `seed_swapped_concat` (this file's own
+    seeded fault, `harness.real_witness`) DOES -- two `dbl{Here}(..) ==
+    ..` rungs -- so it is used here to force `_seq_call_lhs` to raise and
+    confirm the lowering still succeeds, dropping the rungs rather than
+    crashing (no fault in the real code was found that reaches this on
+    its own -- double_all, the four fixtures, the three seeded faults and
+    a corpus sample all lower clean)."""
+    task = _seed_swapped_concat()
+    w = harness.real_witness(task)
+    assert w is not None
+    good_src = lower_framac.lower(task, task["body"], witness=w)
+    assert good_src.count("dbl{Here}(") >= 2, good_src   # the un-forced rungs
+    orig = lower_framac._seq_call_lhs
+    def _raise(*a, **k):
+        raise KeyError("forced for test_seq_certificate_rung_failure_"
+                       "degrades_not_crashes")
+    lower_framac._seq_call_lhs = _raise
+    try:
+        forced_src = lower_framac.lower(task, task["body"], witness=w)
+    finally:
+        lower_framac._seq_call_lhs = orig
+    assert isinstance(forced_src, str)
+    assert "t_refutation_certificate" in forced_src, forced_src
+    # The forced exception dropped every seq rung (each call to the mock
+    # raises), so the certificate's OWN ground `dbl{Here}(..) == ..`
+    # assertions are gone, while everything else about the file (the
+    # logic definition, the function body, the certificate's closing
+    # assert) is unaffected.
+    assert "assert dbl{Here}(" not in forced_src, forced_src
+    assert "logic \\list<integer> dbl{L}(" in forced_src, forced_src
+    print("test_seq_certificate_rung_failure_degrades_not_crashes: ok")
 
 
 def test_check_wf_and_committed_tasks_unaffected() -> None:
@@ -279,6 +422,9 @@ def run(slow: bool = False) -> None:
     test_double_all_states_the_list_route()
     test_slice_bodied_spec_fun_gets_the_range_helper()
     test_probes_lower_in_framac()
+    test_consistency_probe_is_typed_by_result_not_just_params()
+    test_consistency_probe_catches_a_list_inconsistency(slow)
+    test_seq_certificate_rung_failure_degrades_not_crashes()
     test_check_wf_and_committed_tasks_unaffected()
     test_seeded_faults_lower_and_check_wf()
     test_kernels_verify_the_fixtures(slow)
