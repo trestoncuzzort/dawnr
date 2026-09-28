@@ -129,8 +129,16 @@ its line changes here.
   a third re-lift (casts under a bound, row 55) with the Dafny and Frama-C
   refutation certificates walking through spec_fun calls, to **463 documents
   (281,188 characters) clean in all seven kernels**, 147 with an English
-  head. With graded trust (six kernels clean, none contradicting, the gap
-  recorded) it is **566 (375,609)**, 103 of them with a gap. Tables:
+  head; that build (531 documents with the 68 teacher answers) is the r12
+  corpus, registered by hash in `t/PREDICT-r12.md`. Six sources whose
+  differential check had only timed out at the 120 s budget passed at 900 s
+  the same night, and one of their tasks (`replace`) is clean in seven,
+  two more in six (`t/COVERAGE-lifted-2026-09-28-recheck.md`), so the data
+  engine stands at **464 clean in all seven kernels** (a 532-document build
+  with the answers, 312,476 bytes by the builder's own count), joining the
+  corpus at its next registration, not r12's. With graded trust (six kernels
+  clean, none contradicting, the gap recorded) it is **569** (a 637-document
+  build, 408,419 bytes), 105 of them with a gap. Tables:
   `t/out/COVERAGE-lifted-*-regrade3.md`, `-lab.md` and `-features3-c.md`. The
   lab's regrade of the 140 new tasks agreed with the desktop's cell for cell
   (2 of 980 cells differ), so the timeouts there are the provers' own limits.
