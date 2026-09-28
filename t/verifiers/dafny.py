@@ -286,6 +286,8 @@ _RESULT_OUTCOME = re.compile(r"^\s+Overall outcome:\s*(\S+)")
 # its modifiers, keyword and name; its clauses follow one per line indented
 # by exactly two spaces; its body opens with a `{` line at column 0.
 _HONEST_KINDS = ("function", "method", "lemma")
+# A datatype declaration is admitted beside them only through `_inert_datatype`
+# below (2026-09-28): bare constructors, plain fields, no attribute, no body.
 _RP_HEAD = re.compile(
     r"^((?:(?:ghost|static|twostate|least|greatest|opaque|abstract)\s+)*)"
     r"(function|method|lemma|predicate|constructor|class|trait|datatype|"
@@ -415,6 +417,37 @@ def _symbol_outcomes(out: str) -> list[tuple[str, str, str]]:
     return blocks
 
 
+_DT_HEAD = re.compile(r"^datatype ([A-Za-z_]\w*) = (.+?)\s*$")
+_DT_CTOR = re.compile(r"^([A-Za-z_]\w*)(?:\(([^()]*)\))?$")
+_DT_FIELD = re.compile(r"^[A-Za-z_]\w*\s*:\s*(?:int|bool|nat|seq<int>|seq<seq<int>>|string)$")
+
+
+def _inert_datatype(d: dict) -> bool:
+    """True for a datatype declaration that can hide nothing: no modifier,
+    no clause, no member body, and a head that is exactly `datatype Name =
+    Ctor | Ctor(field: T, ...)` with T among int, bool, nat, seq<int>,
+    seq<seq<int>> and string. Such a declaration states no proof obligation
+    and suppresses none (Dafny Reference Manual, inductive datatypes: goals
+    come from members, attributes and the code that uses the type), so the
+    certificate lemma's verdict beside it means what it meant. An attribute
+    (`{:..}` or `@..`) never matches these patterns; a member body reads as
+    `body` and refuses; anything else stays outside the honest vocabulary."""
+    if d["mods"] or d["kind"] != "datatype" or not d["name"] or d["clauses"] or d["body"]:
+        return False
+    m = _DT_HEAD.match(d["head"])
+    if not m or m.group(1) != d["name"]:
+        return False
+    for ctor in re.split(r"\s*\|\s*", m.group(2)):
+        c = _DT_CTOR.match(ctor)
+        if not c:
+            return False
+        if c.group(2) is not None:
+            fields = [f.strip() for f in c.group(2).split(",")]
+            if not fields or not all(_DT_FIELD.match(f) for f in fields):
+                return False
+    return True
+
+
 def _certificate_shape(rprint: str | None) -> tuple[list[str], str]:
     """The plain-method names of the kernel's resolved program, and '' when
     the program has the honest shape around exactly one certificate lemma
@@ -430,6 +463,11 @@ def _certificate_shape(rprint: str | None) -> tuple[list[str], str]:
     names: set[str] = set()
     cert: list[dict] = []
     for d in decls:
+        if _inert_datatype(d):
+            if d["name"] in names:
+                return [], f"name declared twice: {d['name']}"
+            names.add(d["name"])
+            continue
         if d["mods"] or d["kind"] not in _HONEST_KINDS or not d["name"]:
             return [], ("declaration outside the honest vocabulary: "
                         + d["head"][:80])
