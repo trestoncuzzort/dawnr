@@ -1836,7 +1836,13 @@ class _Parser:
             # regardless); reusing SetDisplay here is a deliberate
             # approximation so the surrounding method still parses instead
             # of derailing the whole file's decl loop the way an
-            # unconsumed "{" previously did.
+            # unconsumed "{" previously did. Row 52 (2026-09-27, SPEC.md
+            # "Finite sets (v1)"): now that a genuine `{...}` set display
+            # can lift, `multiset=True` is the one bit that keeps this
+            # approximation from being mistaken for one (Dafny Reference
+            # Manual 5.5.2: a multiset display is keyword-prefixed and
+            # distinct from a set display, never reachable by the same
+            # syntax a real set literal uses).
             self.advance()  # multiset
             self.advance()  # "{"
             elems = []
@@ -1846,7 +1852,7 @@ class _Parser:
                     self.advance()
                     elems.append(self.parse_expr())
             self.expect("}")
-            return SetDisplay(line, tuple(elems))
+            return SetDisplay(line, tuple(elems), multiset=True)
         if tok.text == "|":
             self.advance()
             inner = self.parse_expr()
