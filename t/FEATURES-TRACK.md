@@ -534,10 +534,13 @@ compared as any seq. The lifter lifts a function returning `string`,
 `seq<char>`, `seq<int>` or `seq<nat>` to one (LIFTER-DECISIONS row 49),
 with the empty seq as the totalising default, and a `function F(..): bool`
 as the bool spec_fun a `predicate` already was (row 50: the 66 `bool`
-tokens were an omission of the 2026-09-27 check, not a language gap). Six
-kernels lower the seq result in their own sequence type; Frama-C abstains
-by name (a logic function over the buffer model cannot return a buffer;
-the `\list` route is the open design). Fixtures: the committed task
+tokens were an omission of the 2026-09-27 check, not a language gap). All seven
+kernels lower the seq result in their own sequence type since 2026-09-27
+(`feat/framac-seq-fun`): Frama-C states it as a recursive `\list<integer>`
+logic function, bridged to a buffer-typed seq value at `==`/`len`/`at`
+through ACSL's own built-in `\length`/`\nth` (t/FEATURES-SEQFUN-2026-09-27.md
+"Frama-C, the `\list` route" has the numbers; what the route does not
+reach still abstains by name). Fixtures: the committed task
 `t/tasks/double_all.t`, four probes `fz_p_sf_seq_*` in `t/fuzz_lower.py`.
 **Measured** (same run, same files): `function-result` 305 to 139
 methods, lifted 850 to 955, 104 methods in 101 files newly lift at the
