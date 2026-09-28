@@ -1,6 +1,7 @@
 """Training must preserve notation, requested context and intermediate artifacts."""
 from __future__ import annotations
 
+import importlib.util
 import json
 import tempfile
 import unittest
@@ -33,6 +34,9 @@ class CharacterTokenizer:
 
     def save_pretrained(self, path):
         Path(path, "tokenizer.json").write_text("saved")
+
+
+HAS_DATASETS = importlib.util.find_spec("datasets") is not None   # CI installs it; a bare desktop may not
 
 
 class TrainingReadinessTests(unittest.TestCase):
@@ -95,6 +99,7 @@ class TrainingReadinessTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             train.sft_length_kwargs(object, 4096)
 
+    @unittest.skipUnless(HAS_DATASETS, "needs the datasets package")
     def test_prompt_only_rows_are_excluded_and_reported(self):
         path = self.data("rows.jsonl", [self.row("short"), self.row("x" * 32)])
         for builder in (train.build_pair_dataset, train.build_sft_dataset):
@@ -105,6 +110,7 @@ class TrainingReadinessTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "retain answer tokens"):
                 builder(CharacterTokenizer(), path, 3)
 
+    @unittest.skipUnless(HAS_DATASETS, "needs the datasets package")
     def test_sft_does_not_duplicate_eos_and_empty_answers_fail(self):
         path = self.data("sft.jsonl", [self.row("prompt", "answer!")])
         ds = train.build_sft_dataset(CharacterTokenizer(), path, 20)
@@ -115,6 +121,7 @@ class TrainingReadinessTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "empty chosen"):
             train.build_pair_dataset(CharacterTokenizer(), empty, 20)
 
+    @unittest.skipUnless(HAS_DATASETS, "needs the datasets package")
     def test_partial_completion_counts_are_visible(self):
         path = self.data("partial.jsonl", [self.row("prompt", "x" * 30)])
         for builder in (train.build_pair_dataset, train.build_sft_dataset):
