@@ -3968,9 +3968,11 @@ def probes() -> list[dict]:
     # doubled, the recursive shape count_matches' own `count` has, seq-
     # valued. Four probes: the result measured, indexed, built by the body
     # (a non-recursive spec_fun), and one false ensures through the
-    # recursive one. Frama-C abstains on all four by name (SPEC.md's own
-    # lowering status), which conformance grades as an honest N/A-shaped
-    # abstain, never a verdict.
+    # recursive one. Frama-C lowers all four by the \list route (SPEC.md
+    # "Seq-valued spec_funs (v1)"); measured 2026-09-28 on two machines,
+    # sf_seq_at verifies and sf_seq_len/sf_seq_build hit WP's goal budget
+    # (timeout: an honest FAIL cell in CONFORMANCE.md beside biglen's and
+    # seqlen's, a kernel gap shown, not hidden).
     _SF_TL = {"name": "tl", "params": [{"name": "s", "type": "seq"}],
               "result": "seq", "decreases": I(0),
               "body": ITE(OP(">=", LEN("s"), I(1)),

@@ -169,32 +169,46 @@ def _rng(name: str, salt: str) -> random.Random:
 # supplies the env each subexpression actually has.
 # ---------------------------------------------------------------------------
 
-def _ty(e, env, funs, ver):
+def _ty(e, env, funs, ver, dtypes=None):
     errs: list[str] = []
-    t = fz._ty(e, env, funs, ver, errs, set())
+    # By keyword, PEP 3102's lesson: check_wf._ty's positional order
+    # grew a `dtypes` parameter with SPEC.md "Datatypes (v1)"
+    # (2026-09-27) and this call, still six positionals, shifted
+    # silently into a TypeError; the 2026-09-28 conformance run
+    # recorded 13 of the 20 transforms as tripwire bugs instead of
+    # rows. A keyword call cannot be shifted by a later insertion.
+    t = fz._ty(e=e, env=env, funs=funs, dtypes=dtypes or {}, ver=ver,
+               errs=errs, bound=set())
     return None if errs else t
 
 
-def _sites(e, env, funs, ver, path=()):
-    """(path, node, type, env) for e and every subexpression, pre-order."""
-    yield path, e, _ty(e, env, funs, ver), env
+def _sites(e, env, funs, ver, path=(), dtypes=None):
+    """(path, node, type, env) for e and every subexpression, pre-order.
+    `dtypes` is the task's datatype table (`_dtypes`), what check_wf's
+    typing of a `ctor`/`match` position needs; empty without datatypes."""
+    yield path, e, _ty(e, env, funs, ver, dtypes=dtypes), env
     if "op" in e:
         for i, a in enumerate(e.get("args", [])):
-            yield from _sites(a, env, funs, ver, path + ("args", i))
+            yield from _sites(a, env, funs, ver, path + ("args", i),
+                              dtypes=dtypes)
     elif "ite" in e:
         for k in ("cond", "then", "else"):
-            yield from _sites(e["ite"][k], env, funs, ver, path + ("ite", k))
+            yield from _sites(e["ite"][k], env, funs, ver, path + ("ite", k),
+                              dtypes=dtypes)
     elif "forall" in e or "exists" in e:
         q = "forall" if "forall" in e else "exists"
         d = e[q]
         for k in ("lo", "hi"):
-            yield from _sites(d[k], env, funs, ver, path + (q, k))
+            yield from _sites(d[k], env, funs, ver, path + (q, k),
+                              dtypes=dtypes)
         sub = dict(env)
         sub[d["var"]] = "int"
-        yield from _sites(d["body"], sub, funs, ver, path + (q, "body"))
+        yield from _sites(d["body"], sub, funs, ver, path + (q, "body"),
+                          dtypes=dtypes)
     elif "call" in e:
         for i, a in enumerate(e["call"]["args"]):
-            yield from _sites(a, env, funs, ver, path + ("call", "args", i))
+            yield from _sites(a, env, funs, ver, path + ("call", "args", i),
+                              dtypes=dtypes)
 
 
 def _stmt_exprs(body, env, funs, ver, path=()):
@@ -236,6 +250,13 @@ def _body_env(task):
     return env
 
 
+def _dtypes(task):
+    """The task's datatype table as check_wf builds it (name -> declaration,
+    SPEC.md "Datatypes (v1)"), empty for a task without datatypes."""
+    return {d["name"]: d for d in task.get("datatypes", [])
+            if isinstance(d, dict) and isinstance(d.get("name"), str)}
+
+
 def _funs(task):
     f = {g["name"]: g for g in task.get("spec_funs", [])}
     if fz._self_calls(task["body"], task["name"]):
@@ -250,7 +271,8 @@ def _all_body_sites(task):
     out = []
     for p, e, env, kind in _stmt_exprs(task["body"], _body_env(task),
                                        funs, ver):
-        for sp, node, ty, _sc in _sites(e, env, funs, ver, p):
+        for sp, node, ty, _sc in _sites(e, env, funs, ver, p,
+                                        dtypes=_dtypes(task)):
             out.append((sp, node, ty, kind))
     return out
 
@@ -806,7 +828,8 @@ def t_spec_add_zero(task):
     env = _body_env(task)
     cands = []
     for i, e in enumerate(task["ensures"]):
-        for sp, _n, ty, _sc in _sites(e, env, funs, ver, (i,)):
+        for sp, _n, ty, _sc in _sites(e, env, funs, ver, (i,),
+                                      dtypes=_dtypes(task)):
             if ty == "int":
                 cands.append(sp)
     p = _pick(task, "specadd0", cands)
@@ -832,7 +855,8 @@ def _spec_rewrite(task, field, salt, want, wrap):
            else _body_env(task))
     cands = []
     for i, e in enumerate(task.get(field, [])):
-        for sp, _n, ty, _sc in _sites(e, env, funs, ver, (i,)):
+        for sp, _n, ty, _sc in _sites(e, env, funs, ver, (i,),
+                                      dtypes=_dtypes(task)):
             if ty == want:
                 cands.append(sp)
     p = _pick(task, salt, cands)
