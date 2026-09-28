@@ -557,6 +557,64 @@ ladders every seq-valued call and the ground seq operators around it in
 those two certificates, and moved 6 corpus twin cells from unproved to
 refuted (dafny 29 to 30, F* 18 to 22 of the 55 checked tasks).
 
+### 14. Source-axiom, source-assume: refusing sources dafny accepted unchecked (2026-09-27, lifter)
+
+**Refused: 74 methods across 80 staged files carrying `{:axiom}`/`{:verify false}`/`assume`**
+(69 with `{:axiom}`, 68 with a raw `assume` token, of the 1,886 staged files) -- 61
+`source-assume` directly, 10 `callee-refused:source-assume` (a lemma the method calls
+hides the assume in its own proof), 3 `source-axiom`. Dafny's `{:axiom}` (Reference
+Manual 11.2.4) means a lemma's/function's/method's ensures "may be assumed to be true
+without proof," and `{:verify false}` (11.2.22) skips even well-formedness; neither
+checks the declaration's body against what it claims. vericoding's DT0258
+`NumpyBitwiseOr` (t/LIFT-2026-09-26.md's last section) names the failure mode: its
+`BitwiseOr` is a placeholder returning 0, and its only stated properties are
+`lemma {:axiom}` facts false for that body (`BitwiseOr(x, 0) == x` only when x == 0);
+dafny accepts the source anyway, so it "verifies" without dafny ever checking the one
+thing the lift would grade. `lift_classify.py` now reads, per source file, every
+`{:axiom}` attribute (on lemmas -- kept only in `LemmaDecl.text`, since `attrs` is not a
+stored field for a lemma the way it is for a function or method -- functions and
+methods), every `{:verify false}`, and every `assume` statement (attributed or not),
+then refuses `source-axiom` when the method's spec, body, invariants or the closure of
+functions and lemmas it uses references a declaration that is axiomatised or a function
+whose only stated properties come from axiom lemmas (`_axiom_only_functions`), and
+`source-assume` when an assume lies in the method's own body or in a lemma/callee it
+uses. An axiom the method's closure never touches still lifts, noted `axiom-in-file` in
+the sidecar (LIFTER-DECISIONS row 51). **Measured** (`t/lifter.py --list` over the union
+of the two staged sets, `--skip-check --jobs 4`, `~/scratch/axiom/out`): DT0258 reads
+`source-axiom` (token `BitwiseOr`, the placeholder function at its declaration); of the 69 `{:axiom}` files, 3 have a
+method refused `source-axiom` directly (`DT0258`, `DT0333`, `DT0360`; most of the rest
+also carry an `assume` in the graded method's own body and are caught there first); of
+the 68 `assume`-token files, 35 have a method refused `source-assume`. Of the 74 newly
+refused methods, only 1 (DT0258's `NumpyBitwiseOr`) had ever lifted before across any
+`t/out/lifted-tasks-*` run, and it is in neither the 552-document nor the
+454-document corpus (`~/scratch/corpus-2026-09-27-6.txt`, `-7.txt`): the twin/kernel
+gate had already excluded it, so this rule's corpus effect today is 0 documents -- its
+value is catching the defect at classify, before seven kernels are spent proving a spec
+that is false of the very body they would grade. One limitation found and left as is, by
+the letter of the decision: `assume{:axiom} false;` inside an unrelated, no-ensures
+sibling method (`vericoding_DD0311`, `DD0520`, `DD0521`, `DD0598`: a common boilerplate
+"Testing'" stub) sits in neither the graded method's body nor a callee it uses, so it is
+not refused and gets no note -- the decision names an axiom DECLARATION outside the
+closure for the note, not a stray assume in a method the graded one never calls. Tests:
+`t/test_lift_source_axiom.py`.
+
+**Review round (2026-09-27)** found the closure walk this check used (`_closure`,
+function/lemma callees only) dropped an axiom-attributed callee METHOD entirely instead
+of checking it: `method {:axiom} DoubleIt(...) ensures r==2*x { r := 0; }` called by
+`UsesDoubleIt` (same `ensures`) lifted clean through the real pipeline, carrying
+`DoubleIt`'s false ensures into the task as ground truth -- DT0258's own hazard through a
+method instead of a function+lemma pair. Fixed with `_closure_incl_methods`, a
+`MethodDecl`-inclusive walk used only by this check (`_closure` itself stays
+function/lemma-only for its other three callers, which assume a side-effect-free,
+provable-body closure). `UsesDoubleIt` now refuses `source-axiom`; a sibling method that
+never calls the axiom method still lifts, noted `axiom-in-file`. Also fixed in this
+round: the token `classify` named for DT0258 varied between runs (two issues on one line, the
+tie broken by a set's iteration order); ties now break by (line, reason, token) and an
+axiom-only function is recorded at its own declaration, so the witness is `BitwiseOr` on every run. See LIFT-2026-09-26.md's review-round section for the
+reproduction and the one item raised that was not a row-51 gap (`{:verify false}` on a
+method's own declaration never reaches `classify`; `lift_resolve.py` refuses it first, a
+pre-existing narrowing outside this diff).
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is

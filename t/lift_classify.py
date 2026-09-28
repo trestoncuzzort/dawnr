@@ -1029,6 +1029,166 @@ def _closure(module: Module, method: MethodDecl) -> tuple[Decl, ...]:
     return tuple(order)
 
 
+def _closure_incl_methods(module: Module, method: MethodDecl) -> tuple[Decl, ...]:
+    """Row 51's own reachability walk: identical to `_closure` except a
+    `MethodDecl` callee is also followed and included, not dropped. `_closure`
+    itself must stay function/lemma-only -- its other three callers (the
+    mutual-recursion check, the read-only-array condition, `find_array_
+    mutation`) all assume a closure of side-effect-free, provable-body
+    declarations, and a method has neither property, so widening the shared
+    helper would change what those three see. The source-axiom/source-assume
+    check has no such assumption: Dafny gives a called METHOD's `ensures`
+    exactly the same caller-trusted status as a called function's or lemma's
+    (Reference Manual 6.3.1, 6.3.3), so an axiom-attributed method reached as
+    a callee is exactly as much a row-51 hazard as an axiom-attributed
+    function or lemma is, and must be walked into and included the same way."""
+    by_name = {d.name: d for d in module.decls if d.name}
+    order: list[Decl] = []
+    seen: set[str] = set()
+
+    def visit(name: str) -> None:
+        if name in seen:
+            return
+        d = by_name.get(name)
+        if d is None or not isinstance(d, (FunctionDecl, LemmaDecl, MethodDecl)):
+            return
+        seen.add(name)
+        for dep in _called_names(d):
+            if dep != name:
+                visit(dep)
+        order.append(d)
+
+    for dep in _called_names(method):
+        if dep != method.name:
+            visit(dep)
+    return tuple(order)
+
+
+# ---------------------------------------------------------------------------
+# `source-axiom` / `source-assume` (row 51, 2026-09-27, t/LIFT-2026-09-26.md's
+# DT0258 finding): a source-level reading, over the WHOLE module, of the
+# three markers Dafny Reference Manual section 11.2.4 (`{:axiom}`), 11.2.22
+# (`{:verify false}`) and 8.18 (the `assume` statement) document as unchecked
+# trust -- `{:axiom}` "means that the post-condition may be assumed to be
+# true without proof" and the body may be omitted; `{:verify false}` "skip[s]
+# verification... altogether, not even trying to verify the well-formedness
+# of postconditions and preconditions"; an `assume` statement "lets the user
+# specify a logical proposition that Dafny may assume to be true without
+# proof. If in fact the proposition is not true this may lead to invalid
+# conclusions." None of the three is checked against the declaration's own
+# body, so a placeholder function decorated with axiom lemmas about it (the
+# vericoding DT0258 `BitwiseOr` case: a body that always returns 0, and
+# `lemma {:axiom} BitwiseOrIdentity(x) ensures BitwiseOr(x, 0) == x`, false
+# for that body whenever x != 0) verifies in dafny while being false of the
+# very function the lift would inline. This is a SOURCE-level reading, not a
+# semantic one: `LemmaDecl` keeps no parsed `attrs` field (its raw `text`
+# does, since `_parse_lemma` reads and discards the attribute tokens but
+# `text` is a straight slice of the source between the same two token
+# positions) and `walk()` never descends into a `LemmaDecl.parts` (not a
+# dataclass field, by the same docstring's design: a lemma's own body is
+# never a reason to refuse the method that calls it -- decision 8 still
+# drops the CALL as a hint; this rule looks at what the lemma itself CLAIMS
+# and whether that claim is trustworthy, not at whether the call survives).
+# ---------------------------------------------------------------------------
+
+_AXIOM_ATTR_RE = re.compile(r"\{\s*:\s*axiom\b")
+_VERIFY_FALSE_ATTR_RE = re.compile(r"\{\s*:\s*verify\s+false\b")
+_ASSUME_WORD_RE = re.compile(r"(?<![A-Za-z0-9_])assume(?![A-Za-z0-9_])")
+
+
+def _has_axiom_attr(attrs: tuple) -> bool:
+    return any(a.name == "axiom" for a in attrs)
+
+
+def _has_verify_false_attr(attrs: tuple) -> bool:
+    for a in attrs:
+        if a.name != "verify" or not a.args:
+            continue
+        arg = a.args[0]
+        if isinstance(arg, BoolLit) and arg.value is False:
+            return True
+        if isinstance(arg, Ident) and arg.name == "false":
+            return True
+    return False
+
+
+def _lemma_signature_text(d: "LemmaDecl") -> str:
+    """The lemma's own `lemma [modifiers] {:attr} Name(...)` prefix, up to
+    the first `(` of its parameter list -- restricting the attribute search
+    to where `{:axiom}`/`{:verify false}` can actually sit (section 11's
+    grammar puts an entity's own attributes right after its keyword), so an
+    unrelated `{:axiom}`/`{:verify false}`-shaped fragment inside the body
+    (a nested `assert ... by`, a quoted string) is never mistaken for the
+    lemma's own attribute."""
+    idx = d.text.find("(")
+    return d.text if idx < 0 else d.text[:idx]
+
+
+def _lemma_is_axiomatised(d: "LemmaDecl") -> bool:
+    head = _lemma_signature_text(d)
+    return bool(_AXIOM_ATTR_RE.search(head) or _VERIFY_FALSE_ATTR_RE.search(head))
+
+
+def _lemma_has_assume(d: "LemmaDecl") -> bool:
+    """An `assume` statement (attributed or not) anywhere in the lemma's own
+    proof -- the source-level reading, over `d.text` (the lemma's full raw
+    slice, signature through closing brace), rather than an AST walk: a
+    lemma's parsed `parts.body` is `None` whenever its proof used a shape
+    this parser's statement grammar does not know (a `calc`, a nested
+    `forall`), and the hazard `assume` names (`Reference Manual` 8.18: "the
+    user takes responsibility for being absolutely sure that the
+    proposition is indeed true") is exactly as real whether or not the rest
+    of the proof happened to parse."""
+    return bool(_ASSUME_WORD_RE.search(d.text))
+
+
+def _axiomatised_names(module: Module) -> dict[str, int]:
+    """Every top-level `FunctionDecl`/`MethodDecl`/`LemmaDecl` in the module
+    carrying `{:axiom}` or `{:verify false}` -- name -> its own line."""
+    out: dict[str, int] = {}
+    for d in module.decls:
+        if not d.name:
+            continue
+        if isinstance(d, (FunctionDecl, MethodDecl)):
+            if _has_axiom_attr(d.attrs) or _has_verify_false_attr(d.attrs):
+                out[d.name] = d.line
+        elif isinstance(d, LemmaDecl):
+            if _lemma_is_axiomatised(d):
+                out[d.name] = d.line
+    return out
+
+
+def _references_ident(node, name: str) -> bool:
+    return any(isinstance(n, Ident) and n.name == name for n in walk(node))
+
+
+def _axiom_only_functions(module: Module, axiomatised: dict[str, int]) -> dict[str, int]:
+    """A `FunctionDecl` F, not itself axiomatised, whose only lemmas of
+    record in the file are axiom lemmas about it (DT0258: `BitwiseOr` carries
+    no attribute of its own, but `BitwiseOrCommutative`/`BitwiseOrIdentity`/
+    `BitwiseOrIdempotent` -- every lemma in the file whose ensures names it
+    -- are all `{:axiom}`). A function with NO lemma of record, or with at
+    least one lemma that is not itself axiomatised, is not flagged here: it
+    either stands on its own body (ordinary `classify` handles it) or has a
+    real proof backing at least one of its stated properties."""
+    lemmas = [d for d in module.decls if isinstance(d, LemmaDecl)]
+    out: dict[str, int] = {}
+    for f in module.decls:
+        if not (isinstance(f, FunctionDecl) and f.name) or f.name in axiomatised:
+            continue
+        related = []
+        for lm in lemmas:
+            specs = tuple(getattr(getattr(lm, "parts", None), "specs", ()) or ())
+            if any(isinstance(s, (RequiresClause, EnsuresClause))
+                   and _references_ident(s.expr, f.name) for s in specs):
+                related.append(lm)
+        if related and all(lm.name in axiomatised for lm in related):
+            # the witness is the function itself, at its own declaration; the
+            # first lemma's line tied with that lemma's own issue (DT0258)
+            out[f.name] = getattr(f, "line", None) or related[0].line
+    return out
+
+
 def _mutual_recursion_issue(closure: tuple[Decl, ...]) -> Optional[tuple[int, str, str]]:
     funs = [d for d in closure if isinstance(d, FunctionDecl)]
     calls = {f.name: (_called_names(f) - {f.name}) for f in funs}
@@ -2452,10 +2612,23 @@ class Liftable:
     # `return-default-unverified` when dafny does not accept it, so the
     # default is only ever kept where dafny proved it is never observed.
     ret_default: Optional[str] = None
+    # Row 51 (2026-09-27, t/LIFT-2026-09-26.md's DT0258 finding): the lines
+    # of every `{:axiom}`/`{:verify false}` declaration (or axiom-only
+    # function, `_axiom_only_functions`) that the source file carries OUTSIDE
+    # this method's own closure -- a note, never a refusal (LIFTER-DESIGN.md
+    # section 8's own distinction: "a file whose axioms lie outside the
+    # method's closure lifts as before"). `lift_rewrite.rewrite` copies each
+    # line into the sidecar as an `axiom-in-file` rewrite entry so the
+    # census can count it without re-reading the source.
+    axiom_in_file: tuple[int, ...] = ()
 
 
 def _first(issues: list[tuple[int, str, str]]) -> tuple[int, str, str]:
-    return min(issues, key=lambda t: t[0])
+    # Ties on one line break by reason, then token: the issue list is built
+    # in a set's iteration order, which Python randomises per process
+    # (PYTHONHASHSEED), so a line-only key named a different witness on
+    # different runs (row 51's DT0258, 2026-09-27 review).
+    return min(issues, key=lambda t: (t[0], t[1], t[2]))
 
 
 def classify(module: Module, method: MethodDecl, _stack: tuple = (),
@@ -2521,6 +2694,42 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     for d in closure:
         if isinstance(d, FunctionDecl) and d.body is None:
             issues.append((d.line, "bodyless-function", d.name or "?"))
+
+    # -- source-axiom / source-assume (row 51) ----------------------------
+    # `{:axiom}`, `{:verify false}` and `assume` are read over the WHOLE
+    # module (a declaration outside this method's closure is a note, not a
+    # refusal -- `axiom_in_file` below), then checked against exactly what
+    # LIFTER-DECISIONS row 51 names: the method's own closure (its spec,
+    # body and invariants are all inside `_called_names(method)`'s reach)
+    # and, for `assume`, the method's own body directly. This closure is
+    # `_closure_incl_methods`, not the shared `closure`/`source_closure`:
+    # `closure` stops at any callee that is not a FunctionDecl/LemmaDecl, so
+    # an axiom-attributed METHOD reached as a callee (row 51 review finding
+    # 2: `method {:axiom} DoubleIt(...)` called by a plain method) would
+    # otherwise be neither checked against `axiomatised` here nor excluded
+    # from `axiom_in_file` correctly -- it would be dropped from the check
+    # entirely and then wrongly reported as an axiom lying outside the
+    # closure, though it is a direct callee.
+    axiom_closure = _closure_incl_methods(module, source_method)
+    axiomatised = _axiomatised_names(module)
+    axiom_only = _axiom_only_functions(module, axiomatised)
+    closure_names = {d.name for d in axiom_closure if d.name}
+    for d in axiom_closure:
+        if not d.name:
+            continue
+        if d.name in axiomatised:
+            issues.append((axiomatised[d.name], "source-axiom", d.name))
+        elif isinstance(d, FunctionDecl) and d.name in axiom_only:
+            issues.append((axiom_only[d.name], "source-axiom", d.name))
+        if isinstance(d, LemmaDecl) and _lemma_has_assume(d):
+            issues.append((d.line, "source-assume", "assume"))
+    # A direct `assume` in the method's OWN body is caught below by the
+    # generic per-node pass (`_scan_node_for_issues`'s `AssumeStmt` branch,
+    # same reason `source-assume`) once `scope_roots` exists; not duplicated
+    # here.
+    axiom_in_file = tuple(sorted(
+        {line for name, line in axiomatised.items() if name not in closure_names}
+        | {line for name, line in axiom_only.items() if name not in closure_names}))
 
     # -- array mutation / allocation (decision 22), ahead of the
     # returns check: a `modifies-param` shape needs `method.returns`
@@ -3001,7 +3210,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
         rewrites.append(Rewrite(rule="method-lifted", line=_cplan.method.line))
     return Liftable(method=source_method, closure=source_closure, rewrites=rewrites,
                     pair_returns=pair_returns, callees=tuple(callee_plans),
-                    ret_default=ret_default)
+                    ret_default=ret_default, axiom_in_file=axiom_in_file)
 
 
 def _scan_node_for_issues(n: Node, issues: list, method_name: str,
@@ -3058,7 +3267,17 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
         if id(n) not in accepted_ids:
             issues.append((n.line, "heap", "null"))
     elif isinstance(n, AssumeStmt):
-        issues.append((n.line, "assume", "assume"))
+        # Row 51 (2026-09-27): renamed from the bare `assume` this branch
+        # used before -- `source-assume` is now the one reason for BOTH an
+        # assume directly in the method's own body (this branch: `walk()`
+        # only ever reaches an `AssumeStmt` here through `method.body`
+        # itself, since a `FunctionDecl` body is an expression and a
+        # `LemmaDecl`'s own body is never a `scope_roots` member -- `parts`
+        # is not a dataclass field, by design) and one inside a callee
+        # lemma's proof (`_lemma_has_assume`, checked separately in
+        # `classify` over `closure` before this generic pass runs, since
+        # that scan needs the lemma's raw `text`, not this walk).
+        issues.append((n.line, "source-assume", "assume"))
     elif isinstance(n, AssignSuchThat):
         issues.append((n.line, "such-that-exec", ":|"))
     elif isinstance(n, PrintStmt):
