@@ -316,8 +316,23 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
         # `string-lib`, `char-literal-nonbmp`), which needs the method's
         # own scope to decide, not a bare `Type` node.
         return None
-    if t.kind == "set" or t.kind == "iset":
-        return "set"
+    if t.kind == "set":
+        # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): a `set<int>`
+        # is t's own finite-set type, `None` (accepted) exactly when its
+        # element is `int` -- `_set_element_issue` names the residual
+        # (`nat-set-elements` for `set<nat>`, mirroring `nat-seq-
+        # elements`'s own reading that the source's per-element bound is
+        # part of its precondition, a fact this lifter has no per-element
+        # guard to carry; `set-of-bool`/`set-of-real`/... for anything
+        # else, SPEC.md's own "Not in v1" list). A bare `set` (no `<T>` at
+        # all -- Dafny infers it, measured: "predicate IsSubset(A: set, B:
+        # set)", decision 2's own comment) has no element this row can
+        # read at all, so it refuses `set-generic` rather than guess int.
+        return _set_element_issue(t.args[0]) if t.args else "set-generic"
+    if t.kind == "iset":
+        return "iset"  # SPEC.md: "Not in v1" -- a potentially infinite set has no t value
+    if t.kind == "multiset":
+        return "multiset"  # SPEC.md: "Not in v1" -- t has no multiset type
     if t.kind in ("map", "imap"):
         return "map"
     if t.kind == "tuple":
@@ -339,6 +354,50 @@ def _type_issue(t: Optional[Type]) -> Optional[str]:
             return "array2"
         return "generics" if t.args else "datatype"
     return "type-decl"
+
+
+def _set_element_issue(el: Optional[Type]) -> Optional[str]:
+    """Row 52 (2026-09-27, SPEC.md "Finite sets (v1)": "a finite set of
+    ints"): the refusal name for a Dafny `set<T>` whose element `el` is
+    not `int` -- `None` (accepted) for `int` alone. Mirrors
+    `_seq_element_issue`'s per-kind vocabulary where the same element
+    shape recurs (`set-of-bool`, `set-of-real`, `set-of-pair`, ...), but
+    keeps `nat` its own name (`nat-set-elements`) rather than folding it
+    into `int` the way `_declared_kind` folds a `seq<nat>`'s element:
+    SPEC.md states int alone, and a `set<nat>`'s per-element `>= 0` bound
+    is part of the source's own precondition (decision 14's `nat-seq-
+    elements` reads a `seq<nat>` the same way), a fact this lifter has no
+    per-element guard to carry, so it refuses rather than silently drops
+    it. `char` is likewise left out here (`set<char>` is not measured in
+    the 77 and SPEC.md's own "Not in v1" list never widens row 28's
+    char-is-an-int folding to sets), refused `set-of-char`."""
+    if el is None:
+        return None
+    if el.kind == "int":
+        return None
+    if el.kind == "nat":
+        return "nat-set-elements"
+    if el.kind == "bool":
+        return "set-of-bool"
+    if el.kind == "char":
+        return "set-of-char"
+    if el.kind == "real":
+        return "set-of-real"
+    if el.kind == "bv":
+        return "set-of-bitvector"
+    if el.kind == "tuple":
+        return "set-of-pair"
+    if el.kind in ("seq", "string"):
+        return "set-of-seq"
+    if el.kind in ("set", "iset", "multiset"):
+        return "set-of-set"
+    if el.kind in ("map", "imap"):
+        return "set-of-map"
+    if el.kind == "id":
+        return "set-of-datatype"
+    if el.kind == "object":
+        return "set-of-object"
+    return "set-of-other"
 
 
 def _seq_element_issue(el: Optional[Type]) -> Optional[str]:
@@ -549,6 +608,8 @@ def _declared_kind(t: Optional[Type]) -> Optional[str]:
         return "seq"
     if t.kind == "tuple" and _tuple_issue(t) is None:
         return "pair"  # row 44: a tuple-typed name; its components are `#0`/`#1`
+    if t.kind == "set" and t.args and t.args[0].kind == "int":
+        return "set"  # row 52: a `set<int>` name -- `_set_element_issue` gates anything else
     return None
 
 
@@ -570,20 +631,34 @@ def expr_kind(e: Expr, lookup) -> Optional[str]:
         return expr_kind(e.arg, lookup)
     if isinstance(e, SeqDisplay):
         return "seq"
+    if isinstance(e, SetDisplay):
+        # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): a genuine `{
+        # ... }` display is set-kinded; `multiset{...}` (the same AST
+        # node, `lift_ast.SetDisplay`'s own docstring) is neither -- t
+        # has no multiset value, so this reads as unknown, same as any
+        # other unresolvable expression, rather than silently "set".
+        return None if e.multiset else "set"
     if isinstance(e, Slice):
         return "seq"
     if isinstance(e, Unary):
         return "bool" if e.op == "!" else "int"
     if isinstance(e, Binary):
+        lk = expr_kind(e.left, lookup)
+        rk = expr_kind(e.right, lookup)
+        if e.op in ("+", "-", "*") and lk == "set" and rk == "set":
+            # Dafny Reference Manual 5.5.1: set union/difference/
+            # intersection are spelled `+`/`-`/`*`, the same three
+            # symbols int arithmetic and (for `+`) seq concatenation
+            # already overload; t writes them by name instead
+            # (`union`/`diff`/`inter`, SPEC.md "Finite sets (v1)").
+            return "set"
         if e.op == "+":
-            lk = expr_kind(e.left, lookup)
-            rk = expr_kind(e.right, lookup)
             if lk == "seq" and rk == "seq":
                 return "seq"
             if lk == "int" and rk == "int":
                 return "int"
             return None
-        return "int"  # `- * / %`: t has none of these on seq
+        return "int"  # `- * / %` otherwise: t has none of these on seq
     if isinstance(e, (NaryBool, Implies, Iff, Chain, Quantifier)):
         return "bool"
     if isinstance(e, Index):
@@ -757,6 +832,35 @@ def _build_kind_env(method: MethodDecl, closure: tuple[Decl, ...],
                                   for el in n.init[idx].elems)):
                         env[nm.name + "#row"] = "seq"
     return env
+
+
+def _set_literal_issue(n: SetDisplay, env: dict) -> Optional[str]:
+    """Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): `None` when a
+    genuine `{ ... }` display's every element is int-typed (`{}` -- no
+    elements -- included), the display's own analogue of
+    `_seq_literal_issue`. `n.multiset` is never seen here (`classify`'s
+    own dedicated pass checks it first, before calling this), so this
+    function only ever answers the genuine-set question."""
+    for el in n.elems:
+        k = expr_kind(el, env.get)
+        if k == "int":
+            continue
+        if k == "bool":
+            return "set-of-bool"
+        if isinstance(el, RealLit):
+            return "set-of-real"
+        if isinstance(el, TupleExpr):
+            return "set-of-pair"
+        if k == "seq" or isinstance(el, StringLit):
+            # Measured (2026-09-27, the 1,886-file re-lift): 11 displays
+            # of string literals (`grade in {"A+", "A", ...}`, a
+            # `set<string>`) fell into the catch-all below with no name
+            # of their own; `_set_element_issue`'s TYPE-level check
+            # already names this shape `set-of-seq` (a string is a t seq,
+            # row 28), so the LITERAL-level check names it the same way.
+            return "set-of-seq"
+        return "set-of-other"
+    return None
 
 
 def _seq_literal_issue(n: SeqDisplay, env: dict) -> Optional[str]:
@@ -1373,12 +1477,22 @@ def _subst_many(e, mapping: dict):
     return e
 
 
-def _bind_binders(names: list, conjuncts: list, predicates: Optional[dict], nat_names: set):
+def _bind_binders(names: list, conjuncts: list, predicates: Optional[dict], nat_names: set,
+                   set_lookup=None):
     """Bound every binder in `names` from the conjunct list of a quantifier's
     guard, antecedent or body. Four rules, in this order, each over the
     binders the earlier ones left unbound:
 
     1. membership, `k in s` (decision 2): `s`, the binder reading `s[j]`;
+       SPEC.md "Finite sets (v1)": "Not in v1: ... a set as a
+       quantifier's range" -- rule 1 never fires when `s` is a genuine
+       set (a `SetDisplay` that is not a `multiset{...}` one, or a name
+       `set_lookup` (row 52; `None` disables this check, its old
+       behaviour) reports set-typed), since t has no way to quantify
+       over a set's own elements, only over `[lo, hi)`; the binder then
+       stays unbound unless another rule reaches it, `unbounded-
+       quantifier` otherwise -- an honest refusal, not a `len`/index
+       call on a value that has neither.
     2. a `<`/`<=` chain of two or more relations holding the binder
        (`_chain_bounds`, either spelling via `_normalize_chain`);
     3. two single comparisons, a lower one (`lo <= k`, `lo < k`, or `k >= lo`,
@@ -1407,7 +1521,10 @@ def _bind_binders(names: list, conjuncts: list, predicates: Optional[dict], nat_
     for i, c in enumerate(norm):
         if isinstance(c, Chain) and len(c.ops) == 1 and c.ops[0] == "in":
             a, b = c.operands
-            if isinstance(a, Ident) and a.name in unbound and not _mentions_ident(b, a.name):
+            is_set = (isinstance(b, SetDisplay) and not b.multiset) or (
+                set_lookup is not None and isinstance(b, Ident) and set_lookup(b.name))
+            if (isinstance(a, Ident) and a.name in unbound and not _mentions_ident(b, a.name)
+                    and not is_set):
                 bound[a.name] = (None, None, b)
                 unbound.discard(a.name)
                 used.add(i)
@@ -1469,7 +1586,8 @@ def _bind_binders(names: list, conjuncts: list, predicates: Optional[dict], nat_
                         continue
                     pn = pd.params[j]
                     pnat = {pn.name} if pn.type is not None and pn.type.kind == "nat" else set()
-                    inner = _bind_binders([pn.name], _top_conjuncts(pd.body), None, pnat)
+                    inner = _bind_binders([pn.name], _top_conjuncts(pd.body), None, pnat,
+                                          set_lookup)
                     if inner is None:
                         continue
                     lo, hi, mem = inner[0][pn.name]
@@ -1564,7 +1682,7 @@ def closure_predicates(closure: tuple) -> dict:
             and (d.is_predicate or (d.ret_type is not None and d.ret_type.kind == "bool"))}
 
 
-def bound_quantifier(q: Quantifier, predicates: Optional[dict] = None):
+def bound_quantifier(q: Quantifier, predicates: Optional[dict] = None, set_lookup=None):
     """Section 4.4's quantifier-bounding rules, unified into one contract:
     on success, returns {"binders": [(name, lo, hi, membership_seq), ...],
     "body": Expr, "rules": set} where `body` is the FULLY RESOLVED predicate
@@ -1582,6 +1700,9 @@ def bound_quantifier(q: Quantifier, predicates: Optional[dict] = None):
     `predicates` (t/FEATURES-TRACK.md feature 5, 2026-09-27) maps the
     closure's predicate names to their `FunctionDecl`s, for the range
     through a predicate rule of `_bind_binders`; None disables that rule.
+    `set_lookup` (row 52, 2026-09-27) resolves a name to whether it is
+    set-typed, `_bind_binders`' own membership rule's guard; None (the
+    default) keeps that rule's old, set-unaware behaviour.
 
     The shapes read, each the source's own conjunction of constraints plus a
     residual body: a guard (`| C :: B`); an unguarded forall with an
@@ -1609,7 +1730,7 @@ def bound_quantifier(q: Quantifier, predicates: Optional[dict] = None):
             rng, new_body = extracted
             shapes.append((_top_conjuncts(rng), new_body))
     for conjuncts, residual in shapes:
-        got = _bind_binders(names, conjuncts, predicates, nat_names)
+        got = _bind_binders(names, conjuncts, predicates, nat_names, set_lookup)
         if got is None:
             continue
         bound, used, chain_extras, rules = got
@@ -2954,6 +3075,34 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                     issues.append((n.line, bad, "[...]"))
                 else:
                     rewrites.append(Rewrite(rule="seq-literal-lifted", line=n.line))
+            elif isinstance(n, SetDisplay):
+                # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"):
+                # `SetDisplay` moved out of `_scan_node_for_issues`'
+                # unconditional refusal the same way `SeqDisplay` did
+                # (rows 25-27's own move, that function's docstring) --
+                # `n.multiset` (a `multiset{...}` display, the SAME AST
+                # node reused, `lift_ast.SetDisplay`'s own docstring)
+                # always refuses by that name, never `set`; a genuine
+                # `{...}` display refuses only when an element is not
+                # int (`_set_literal_issue`). `accepted_ids` still
+                # exempts `_dropped_function_decreases_set_ids`'ONE own
+                # shape (measured regression, `test_lift_rules.py::
+                # test_function_reads_own_array_param_dropped`: dafny's
+                # own inferred `decreases {a}, a, x` on a `reads`-bearing,
+                # non-self-calling closure function materialises a
+                # `SetDisplay` this row must never elaborate, exactly as
+                # the old unconditional scan never did) -- silently, no
+                # issue and no rewrite either, since it is never lifted.
+                if id(n) in accepted_ids:
+                    pass
+                elif n.multiset:
+                    issues.append((n.line, "multiset", "multiset{...}"))
+                else:
+                    bad = _set_literal_issue(n, kind_env)
+                    if bad is not None:
+                        issues.append((n.line, bad, "{...}"))
+                    else:
+                        rewrites.append(Rewrite(rule="set-literal-lifted", line=n.line))
             elif isinstance(n, Slice):
                 if id(n) in accepted_ids:
                     continue  # decision 22's own unbounded exemption, unchanged
@@ -2983,6 +3132,22 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                 # (row 28 folds char into int there on purpose) and
                 # would otherwise silently pass as ordinary arithmetic.
                 issues.append((n.line, "char-arith", n.op))
+            elif isinstance(n, Binary) and n.op in ("+", "-", "*") and (
+                    expr_kind(n.left, kind_env.get) == "set"
+                    and expr_kind(n.right, kind_env.get) == "set"):
+                # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"; Dafny
+                # Reference Manual 5.5.1): Dafny spells set union,
+                # difference and intersection `+`, `-`, `*` -- the same
+                # symbols int arithmetic (all three) and seq
+                # concatenation (`+`) already overload -- so this fires
+                # BEFORE the plain `+` reading below and records which of
+                # the three rewrites `lift_rewrite` applies; t itself
+                # never overloads the symbols (SPEC.md: "t writes the
+                # operations by name"), so this row only logs provenance,
+                # same role the seq-concat row below already has.
+                rule = {"+": "set-union-lifted", "-": "set-diff-lifted",
+                        "*": "set-inter-lifted"}[n.op]
+                rewrites.append(Rewrite(rule=rule, line=n.line))
             elif isinstance(n, Binary) and n.op == "+":
                 lk = expr_kind(n.left, kind_env.get)
                 rk = expr_kind(n.right, kind_env.get)
@@ -3003,6 +3168,14 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                     rewrites.append(Rewrite(rule="seq-update-lifted", line=n.line))
                 else:
                     issues.append((n.line, "seq-update", ":="))
+            elif isinstance(n, Chain) and n.ops[0] == "!!":
+                # Dafny Reference Manual 5.5.1/5.5.2: set/multiset
+                # disjointness, chaining ("A !! B !! C" is mutual
+                # disjointness); SPEC.md "Finite sets (v1)" states six
+                # operations (set/in/card/union/inter/diff), not this
+                # one -- out of v1's scope at any chain length, same as
+                # every other relational op a set has no t analogue for.
+                issues.append((n.line, "set-disjoint", "!!"))
             elif isinstance(n, Chain) and len(n.ops) == 1 and n.ops[0] in ("<", "<=", ">", ">="):
                 # Row 28: an ORDER comparison on a seq-typed operand --
                 # measured on dafny 4.11.0 to be "proper prefix"/"prefix"
@@ -3014,9 +3187,25 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                 # alike; `_lift_chain` would otherwise print it straight
                 # through as an int comparison with no complaint, since a
                 # single relational op is never type-checked there.
-                if (expr_kind(n.operands[0], kind_env.get) == "seq"
-                        or expr_kind(n.operands[1], kind_env.get) == "seq"):
+                ok0 = expr_kind(n.operands[0], kind_env.get)
+                ok1 = expr_kind(n.operands[1], kind_env.get)
+                if ok0 == "seq" or ok1 == "seq":
                     issues.append((n.line, "string-lib", n.ops[0]))
+                elif ok0 == "set" or ok1 == "set":
+                    # Row 52: Dafny Reference Manual 5.5.1's subset
+                    # operators (proper subset/subset/superset/proper
+                    # superset); SPEC.md "Finite sets (v1)": "<<=>>= stay
+                    # int-only, so a set has no order and v1 has no
+                    # subset operator" -- refused by name rather than
+                    # printed as t's int-only relation.
+                    issues.append((n.line, "set-subset", n.ops[0]))
+            elif (isinstance(n, Chain) and len(n.ops) >= 2 and n.ops[0] in ("<", "<=", ">", ">=")
+                    and any(expr_kind(o, kind_env.get) == "set" for o in n.operands)):
+                # The same subset-chain shape as above ("A <= B <= C"),
+                # multi-operator; `_lift_chain`'s own multi-op path
+                # (`chain-desugared`) has no type check of its own, so
+                # this is caught here rather than silently mis-desugared.
+                issues.append((n.line, "set-subset", n.ops[0]))
             elif isinstance(n, (CharLit, StringLit)):
                 bad = (decode_char_literal(n.text) if isinstance(n, CharLit)
                        else decode_string_literal(n.text))
@@ -3114,10 +3303,14 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     # through a predicate rule; the same dict `lift_rewrite` reads off
     # `Scope.predicates`, so the two stages bound every quantifier alike.
     predicates = closure_predicates(closure)
+    # Row 52 (2026-09-27): `kind_env` (already built above for rows 25-27)
+    # doubles as the membership rule's set lookup -- SPEC.md "Finite sets
+    # (v1)": "Not in v1: ... a set as a quantifier's range".
+    set_lookup = lambda name: kind_env.get(name) == "set"
     for root in scope_roots:
         for n in walk(root):
             if isinstance(n, Quantifier):
-                got = bound_quantifier(n, predicates)
+                got = bound_quantifier(n, predicates, set_lookup)
                 if got is None:
                     issues.append((n.line, "unbounded-quantifier", n.kind))
                 else:
@@ -3181,6 +3374,17 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                              or _is_seq_fun_result(d.ret_type))):
                 issues.append((d.line, "function-result",
                                f"{d.name or '?'}:{_type_text(d.ret_type)}"))
+            # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): "Not in v1:
+            # ... a set-typed spec_fun parameter" -- a closure function's
+            # own parameter type has no gate of its own elsewhere (unlike
+            # its result, just above); a `set<int>` one is otherwise
+            # invisible to every check above and would reach
+            # `lift_rewrite._lift_function`'s generic `_t_json_type`,
+            # which carries any type through with no v1 boundary of its
+            # own to enforce.
+            for p in d.params:
+                if p.type is not None and p.type.kind in ("set", "iset", "multiset"):
+                    issues.append((p.line, "set-spec-fun-param", f"{d.name or '?'}:{p.name}"))
             own_array_names = {p.name for p in d.params
                                 if p.type is not None and p.type.kind == "array"
                                 and not p.type.nullable and _is_array_of_int(p.type)}
@@ -3251,7 +3455,11 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
     ...), so ALL `Cast` handling, accepted and refused alike, moved to
     that same dedicated pass. Row 30 (2026-09-10): `SeqUpdate` moved out
     the same way, its refusal now conditional on whether its base types
-    `seq` (`expr_kind`, the dedicated pass below), not unconditional."""
+    `seq` (`expr_kind`, the dedicated pass below), not unconditional. Row
+    52 (2026-09-27): `SetDisplay` moved out the same way -- a `multiset{
+    ...}` display (the same AST node, `lift_ast.SetDisplay`'s own
+    docstring) always refuses, a genuine `{...}` display only when an
+    element is not int (`_set_literal_issue`)."""
     if isinstance(n, (Old, Fresh)):
         if id(n) not in accepted_ids:
             issues.append((n.line, "old", "old"))
@@ -3301,11 +3509,23 @@ def _scan_node_for_issues(n: Node, issues: list, method_name: str,
             issues.append((n.line, "array", "local array"))
     elif isinstance(n, MapDisplay):
         issues.append((n.line, "map", "{...}"))
-    elif isinstance(n, SetDisplay):
-        if id(n) not in accepted_ids:
-            issues.append((n.line, "set", "{...}"))
+    # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): `SetDisplay` moved
+    # OUT of this generic pass, the same move rows 25-27 made for
+    # `SeqDisplay` (see this function's own docstring) -- classify's
+    # dedicated, type-aware pass now decides it (`_set_literal_issue`),
+    # since a genuine `{...}` display can lift and a `multiset{...}` one
+    # (the same AST node) cannot, a distinction this per-node scan has no
+    # way to make on its own.
     elif isinstance(n, Comprehension) and n.kind == "set":
-        issues.append((n.line, "set", "set-comprehension"))
+        # Named `set-comprehension`, not the bare `set` gap a plain
+        # display or a `set<int>` param/return/local now uses (row 52):
+        # SPEC.md's own "the comprehension is the wave after" note --
+        # `t/FEATURES-CLOUD-2026-09-27-r2.md`'s 39 comprehension-refused
+        # methods are a DIFFERENT, still-out-of-scope shape from the 38 a
+        # sharper name should not blur into the same bucket as an
+        # admitted set, mirroring how `seq-comprehension` already keeps
+        # its own name distinct from the (long-admitted) plain `seq`.
+        issues.append((n.line, "set-comprehension", "set-comprehension"))
     elif isinstance(n, Comprehension) and n.kind == "map":
         issues.append((n.line, "map", "map-comprehension"))
     elif isinstance(n, Comprehension) and n.kind == "seq":

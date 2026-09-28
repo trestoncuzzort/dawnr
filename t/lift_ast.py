@@ -242,7 +242,14 @@ class LetExpr(Expr):
 
 @dataclass
 class SetDisplay(Expr):
+    """`{ e, ... }`, `{}`. Also stands in for `multiset{ e, ... }` (Dafny
+    Reference Manual 5.5.2: a distinct keyword-prefixed display, t has no
+    multiset type, `lift_parse.py`'s own parser docstring at that call
+    site) -- `multiset` is `True` exactly there, so `classify`/`rewrite`
+    can tell a genuine set literal (row 52, SPEC.md "Finite sets (v1)")
+    from one that must still refuse by name."""
     elems: tuple[Expr, ...]
+    multiset: bool = False
 
 
 @dataclass
