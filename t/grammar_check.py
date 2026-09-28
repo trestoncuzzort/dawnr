@@ -68,7 +68,7 @@ def main() -> int:
         return 1
 
     print("1. every program the parser accepts, the grammar accepts")
-    bad_canon, bad_raw, n_canon, n_raw = [], [], 0, 0
+    bad_canon, bad_raw, n_canon, n_raw, stale_raw = [], [], 0, 0, 0
     tasks = sorted(HERE.glob("tasks/*.t")) + sorted(SE.glob("*/tasks/*.json"))
     for p in tasks:
         try:
@@ -97,10 +97,22 @@ def main() -> int:
                 block = se.find_block(json.loads(raw.read_text())["reply"]) or ""
             except (OSError, ValueError, KeyError):
                 continue
+            # 2026-09-28: the recorded stage is an older parser's verdict, so
+            # a reply today's parser refuses is a stale record, not a
+            # disagreement (`card` became a keyword with finite sets: two
+            # August replies naming a parameter `card` read as grammar
+            # refusals until this re-parse), the same rule direction 2
+            # below already applies to the refused sample.
+            try:
+                surface.parse(block)
+            except Exception:                                   # noqa: BLE001
+                stale_raw += 1
+                continue
             n_raw += 1
             if not accepts(g, block):
                 bad_raw.append(f"{d.name}/{tid}")
-    print(f"   as the model wrote it: {n_raw - len(bad_raw)} of {n_raw} accepted")
+    print(f"   as the model wrote it: {n_raw - len(bad_raw)} of {n_raw} accepted"
+          + (f" ({stale_raw} stale records today's parser refuses)" if stale_raw else ""))
     for p in (bad_canon if a.verbose else bad_canon[:5]):
         print(f"     REFUSED BY THE GRAMMAR: {p}")
     for p in (bad_raw if a.verbose else bad_raw[:5]):
