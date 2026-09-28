@@ -5765,6 +5765,21 @@ def _method_src(task: dict, m: dict, used: set) -> tuple[Ctx, str]:
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    if task.get("datatypes"):
+        # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): F*'s own
+        # `type D = | C1 | C2 | ...` is the exact source for a field-less
+        # v1 enum, and its `match` is F*'s own pattern match -- but
+        # neither this file's `Ctx`/`gen_*`/`exec_*` machinery nor a
+        # ground refutation certificate for it (the `_tlit`-equivalent
+        # this file's own pair/set cases build) has been written or
+        # measured against fstar.exe here. Until that is built and
+        # measured, the honest verdict is an abstention by name (SPEC.md's
+        # own rule), not a partial lowering guessed from the pair/set
+        # wave's shape.
+        raise NotImplementedError(
+            "fstar lowering: datatypes (SPEC.md 'Datatypes (v1)'): the "
+            "`type ... = | ...` encoding and its match/equality/certificate "
+            "support are not built or measured yet")
     # KEYWORD RENAME (2026-09-10, through the shared names.py pass since
     # 2026-09-11 -- see the note above `_needs_rename`): fix up every
     # `_ck`-refused identifier ONCE, before Ctx or any gen_*/exec_*

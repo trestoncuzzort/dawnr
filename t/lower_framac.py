@@ -10184,6 +10184,22 @@ def _uses_sets(obj) -> bool:
 
 def lower(task: dict, body: list, witness: dict | None = None,
           _unit: dict | None = None) -> str:
+    if task.get("datatypes"):
+        # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
+        # names "Frama-C ... through records with discriminants" as the
+        # eventual encoding -- a C struct with an int tag field plus an
+        # ACSL predicate enumerating its legal values, since C's `enum` is
+        # an unchecked int with no ACSL exhaustiveness or WP support for a
+        # `match`-shaped case split the way a tagged struct's own
+        # discriminant would get one. That encoding, its equality
+        # predicate and a ground refutation certificate for it are not
+        # built or measured against frama-c/WP here. Until they are, the
+        # honest verdict is an abstention by name (SPEC.md's own rule),
+        # the same posture this column already takes for finite sets below.
+        raise NotImplementedError(
+            "framac lowering: datatypes (SPEC.md 'Datatypes (v1)'): the "
+            "tagged-struct encoding and its ACSL predicates/certificate are "
+            "not built or measured yet")
     if _uses_sets(task) or _uses_sets(body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): C has no
         # set value. ACSL's logic sets (`\union`, `\inter`, `\subset`)

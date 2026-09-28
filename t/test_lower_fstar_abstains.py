@@ -361,6 +361,15 @@ class CommittedTasksUnaffectedTest(unittest.TestCase):
         here = os.path.dirname(os.path.abspath(__file__))
         for path in sorted(glob.glob(os.path.join(here, "tasks", "*.t"))):
             task = tasks_io.load_task(path)
+            if task.get("datatypes"):
+                # SPEC.md "Datatypes (v1)" (2026-09-27): fstar abstains by
+                # name on a datatype-carrying task (lf.lower's own guard,
+                # tested directly in test_lower_fstar_refusals.py), so
+                # `tasks/color_code.t` has nothing for this quantifier/loop
+                # -shape check below to inspect.
+                with self.assertRaises(NotImplementedError):
+                    lf.lower(task, task["body"])
+                continue
             out = lf.lower(task, task["body"])
             self.assertNotIn("t_exists_at", out)
             self.assertNotIn("t_forall_at", out)
