@@ -1051,9 +1051,25 @@ shapes -- 39 the cardinality of a bounded comprehension, `|set i: int | 0
 `s[i] in {'G', 'T', '.', '#'}`; 8 a `set<int>` parameter or return
 (`common(l1, l2) returns (c: set<int>)`, built up by a loop). So t takes a
 finite set of ints as a value, with the six operations every kernel's own
-library states directly; the comprehension is the wave after (below), and
-the lifter's mapping of Dafny's `set<int>` onto this type is not yet built
-(the 38 display and typed-name methods are what it would reach).
+library states directly; the comprehension is the wave after (below).
+
+The lifter's own mapping of Dafny's `set<int>` onto this type landed
+2026-09-27 (LIFTER-DECISIONS row 52, t/FEATURES-TRACK.md Done 15): a
+`set<int>` parameter, return or local; a display `{e1, ..., en}`/`{}`
+whose every element is int-typed; `in`/`!in`; `|s|` to `card`; and
+Dafny's `+`/`*`/`-` between two sets to `union`/`inter`/`diff`. Measured
+on the same 1,886 staged files (a later census snapshot found 83 methods
+refusing `set`, not 77 -- see row 52 for the discrepancy): 7 now lift, all
+seven a display, none a typed-name method -- a typed-name method's own
+realistic spec (`forall x :: x in c ==> P(x)`) needs a set as a
+quantifier's own range, which stays out of v1 (below), so the yield is
+well under the 38-method upper bound this section first estimated. Of the
+7, 3 pass the check stage; graded in all seven kernels, one (`month in
+{1, 3, 5, 7, 8, 10, 12}`) is clean in dafny/verus/f\*, an honest abstain in
+SPARK/Frama-C/Lean, and unproved in rocq (a real gap, not an abstention),
+the other two vacuous (an unsatisfiable `requires` in the bounded probe
+domain, unrelated to sets); 4 fail the check stage on an unrelated
+character/string lemma. See row 52 for the full count.
 
 New type: `"set"`, a finite set of ints, written `set`. A parameter,
 return or local type. Not in v1: a set of bools, seqs or pairs, a set as a

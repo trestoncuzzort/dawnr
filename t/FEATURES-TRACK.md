@@ -646,6 +646,85 @@ reproduction and the one item raised that was not a row-51 gap (`{:verify false}
 method's own declaration never reaches `classify`; `lift_resolve.py` refuses it first, a
 pre-existing narrowing outside this diff).
 
+### 15. Finite sets, the lifter's own mapping (2026-09-27, lifter only)
+
+Done 11 (above) built the type and its six operations in four kernels, abstaining by
+name in SPARK, Frama-C and Lean, but left the lifter's own mapping of Dafny's
+`set<int>` onto the type unbuilt: "the 38 display and typed-name methods are what it
+would reach" (t/FEATURES-CLOUD-2026-09-27-r2.md's own count, 30 display + 8 typed
+name, of the 77 methods the round-2 census refused `set`; the other 39 are set
+comprehensions, out of scope by SPEC.md's own note and still refused, now under the
+sharper name `set-comprehension`). `lift_classify.py` now admits a `set<int>`
+parameter, return or local (declared or inferred from an untyped local's own
+initialiser); a display `{e1, ..., en}`/`{}` whose every element is int-typed; `in`/
+`!in` to t's own `in` operator (kept as decision 2's bounded-exists desugaring for a
+seq); `|s|` to `card` rather than `len`; and Dafny's `+`/`*`/`-` between two sets
+(Dafny Reference Manual 5.5.1: the same three symbols overload set union,
+difference and intersection) to t's own `union`/`diff`/`inter`, checked ahead of the
+existing seq/int reading of the same symbols. Refused by name, precisely at the
+boundary SPEC.md draws: a set comprehension (`set-comprehension`); `set<T>` for T
+not int (`set-of-bool`/`set-of-real`/.../`nat-set-elements` kept distinct, the same
+reading a `seq<nat>` already gets); a bare `set` with no `<T>` (`set-generic`);
+`iset` and `multiset` (a `multiset{...}` display reuses the `SetDisplay` AST node,
+so `lift_ast.SetDisplay` grew a `multiset` field to keep the two apart now that a
+genuine set literal can lift); a subset/superset comparison (`set-subset`) and
+disjointness (`set-disjoint`, Dafny's `!!`); a set used as a quantifier's own range
+(`unbounded-quantifier` -- SPEC.md: "Not in v1: ... a set as a quantifier's range";
+decision 2's own membership-binding rule was never type-aware before this row, and
+would otherwise have tried to desugar `forall x :: x in c ==> P(x)` for a set `c`
+into a nonexistent index range); and a set-typed spec_fun parameter
+(`set-spec-fun-param`, a gate that did not exist anywhere before this row). The
+check stage's equivalence lemmas print the six ops back to Dafny (`_t_expr`), the
+differential harness compares set-typed points order-free (Dafny's own printed set
+element order is unspecified, measured on dafny 4.11.0), and the membership-bridge/
+pointwise proof helpers skip a set-typed collection rather than hand it the
+seq-shaped `|R|`/`R[j]` bridge those build for a genuine seq.
+
+**Measured** (`t/lifter.py --list --skip-check --jobs 4` over the 1,886 staged
+files of the 2026-09-26 lift, diffed method by method against `t/out/lifted-tasks-
+2026-09-27-features2.meta/lift`): of the 83 methods this baseline refused `set`,
+**7 now lift** -- every one a display shape (`x in {..}`, `{..} + {x}`), none a
+typed-name method: the realistic typed-name spec, `forall x :: x in c ==> P(x)`,
+turns out to need exactly the one thing SPEC.md excludes from v1 (a set as a
+quantifier's own range), which is why the yield is 7, well under the 30-display-
+plus-8-typed-name upper bound `t/FEATURES-CLOUD-2026-09-27-r2.md` estimated before
+this row was built. The other 76 refuse by a sharper name than before: 46
+`set-comprehension` (unchanged in substance, SPEC's own "wave after"), 11
+`set-of-seq` (a `set<string>` display), 6 `unbounded-quantifier` (the set-as-range
+shape above), 3 `set-spec-fun-param`, 2 `function-contract`, 2 `function-result`,
+1 each of `such-that-exec`/`set-of-char`/`seq-update`/`nat-set-elements`/
+`tuple-projection`/`as-cast`. 972 of 1,886 files' methods lift in total, up from
+966 (net +6: +7 gained, -1 -- `vericoding_DT0258`'s `NumpyBitwiseOr`, now
+`source-axiom`, row 51, already on `r12-blockers` before this branch and dated
+ahead of the baseline snapshot; checked against every one of the 1,886 files'
+methods for an unexpected transition into a refusal this row touches, and found
+none, so this is the one pre-existing, unrelated difference between the baseline's
+timestamp and this branch's, not a regression). Of the 7, the full check stage
+(`t/lifter.py --list --jobs 4`) checked 3 (`vericoding_DA0038`/`DA0633`'s `solve`,
+`vericoding_DD0729`'s `MonthHas31Days`) and left 4 `lift-check-failed` on an
+unproved `L_fun_*`/`L_inv_0` lemma unrelated to the set machinery (each method's
+own character/string logic; not investigated further). Graded in all seven kernels
+(`t/run_par.py --jobs 2`, `systemd-run --user --scope -p MemoryMax=9G`,
+`T_SPARK_JOBS=1`): `DA0038`/`DA0633` are vacuous (no input in the bounded probe
+domain satisfies their own `requires`; nothing measured, an existing harness
+category, not a set-specific gap). `DD0729` (`month in {1, 3, 5, 7, 8, 10, 12}`)
+is verified/refuted (clean) in dafny, verus and f\*, an honest abstain in
+SPARK/Frama-C/Lean exactly as Done 11's own table states, and **unproved/unproved
+in rocq** -- a real proof gap, not a documented abstention, so **0 of the 7 newly-
+lifted methods reach graded-trust admissible today**; the yield of this row is the
+sound type-and-operator mapping and an honest corpus count, not a clean-in-four
+document -- reported plainly rather than rounded up. Tests: `t/test_lift_sets.py`;
+a full CI
+run (`t/ unit tests that need neither provers nor torch`) found and this change
+fixed two tests asserting the old refusal (`test_lift_rules.py::
+test_set_refused_before_rewrite`, `test_function_reads_own_array_param_dropped` --
+the second a real regression, not a stale assertion: moving `SetDisplay`'s refusal
+out of the generic per-node scan the way rows 25-27 already moved `SeqDisplay`
+dropped the `accepted_ids` exemption `_dropped_function_decreases_set_ids` needs
+for dafny's own inferred `decreases {a}, a, x` on a `reads`-bearing, non-self-
+calling closure function; restored, with the exemption checked first in the new
+dedicated pass too).
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
