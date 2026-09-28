@@ -127,12 +127,14 @@ method Ones() returns (r: int)
 
 UNBOUNDED_CAST = """
 method Digit(n: int) returns (s: string)
-  requires 0 <= n < 10
   ensures |s| == 1
 {
   s := [('0' as int + n) as char];
 }
 """
+# Row 55 (2026-09-28): with `requires 0 <= n < 10` this method now lifts
+# (the cast's operand ranges over '0'..'9', t/test_lift_char_cast.py), so
+# the fixture that shows the cast's own refusal name carries no bound.
 
 
 def test_displays_refuse_by_element() -> None:
