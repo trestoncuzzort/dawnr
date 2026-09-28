@@ -9364,6 +9364,18 @@ def defs_t(e: dict):
     SPEC positions) this only needs the executable-expression subset."""
     if "int" in e or "bool" in e or "var" in e:
         return None
+    if "call" in e:
+        # 2026-09-28: a spec_fun call CAN sit in executable position since
+        # SPEC.md "Methods (v1)" and the lifter's calls-other-method row, so
+        # the docstring's "cannot occur" no longer holds; without this case
+        # the walk raised KeyError('op') here and `_undef_certificate`
+        # swallowed it, so a twin whose violation sits inside a call's
+        # argument (`f(s[i])`, i out of range) never got its certificate and
+        # read `timeout` instead of `refuted`. Mirrors `defs()`'s ACSL case:
+        # the arguments' obligations, left to right, as Frama-C's own
+        # well-formedness order has them; the callee's body is total by
+        # check_wf and states no obligation of its own.
+        return _t_and([defs_t(a) for a in e["call"]["args"]])
     if "ite" in e:
         i = e["ite"]
         dt, de = defs_t(i["then"]), defs_t(i["else"])
