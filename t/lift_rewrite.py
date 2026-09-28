@@ -56,7 +56,7 @@ from lift_ast import (
     Iff, Implies, Index, IntLit, InvariantClause, LabelStmt, LemmaDecl,
     LiftRecord, Lhs, MethodDecl, Module, NaryBool, NewRhs, Old, Param,
     Quantifier, ReadsClause, Refusal, Rename, RequiresClause, ReturnStmt, Rewrite,
-    SeqDisplay, SeqUpdate, Slice, Stmt, StringLit, Type, Unary, VarDeclStmt, WhileStmt,
+    SeqDisplay, SeqUpdate, SetDisplay, Slice, Stmt, StringLit, Type, Unary, VarDeclStmt, WhileStmt,
 )
 from lift_classify import (
     ArrayMutation, Liftable, T_KEYWORDS, RESERVED_EXTRA, bound_quantifier, closure_predicates,
@@ -124,6 +124,14 @@ def _t_type_of(t: Optional[Type]) -> str:
         return "bool"
     if t.kind == "tuple":
         return "pair"  # row 44 (2026-09-27): a tuple-typed name is a pair
+    if t.kind == "set":
+        # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): `classify` has
+        # already confirmed this is `set<int>` (`_set_element_issue`), so
+        # the flat JSON type is t's own "set" (`check_wf.py`'s
+        # `BASE_TYPES`/`SET_OPS`, `lower_dafny.TYPES["set"] == "set<int>"`)
+        # unconditionally -- no compound shape the way a nested seq or a
+        # pair needs, one level or any other.
+        return "set"
     if t.kind in ("seq", "array", "string"):
         # Row 28 (2026-09-09, SPEC.md "Strings as sequences of code
         # points (v1)"): `string` is the same t `seq` a Dafny
@@ -173,6 +181,12 @@ def _type_default(ty: object) -> dict:
         return {"op": "seq", "args": []}
     if isinstance(ty, dict) and "pair" in ty:
         return {"op": "pair", "args": [_type_default(ty["pair"][0]), _type_default(ty["pair"][1])]}
+    if ty == "set":
+        # Row 52 (2026-09-27): measured on dafny 4.11.0 (`dafny run
+        # --relax-definite-assignment`, `~/scratch/setslift/tset.dfy`):
+        # an uninitialised `set<int>` prints `{}`, the empty set, same
+        # convention as seq's own `[]`.
+        return {"op": "set", "args": []}
     return {"int": 0}
 
 
@@ -575,7 +589,23 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
         # 4.11.0, matching t's div/mod one to one, so no domain narrowing
         # or totalising wrapper is needed here, only the name change.
         op = {"/": "div", "%": "mod"}.get(e.op, e.op)
-        if e.op == "+" and _rw_seq_kind(e, scope) == "seq":
+        whole_kind = _rw_seq_kind(e, scope) if e.op in ("+", "-", "*") else None
+        if e.op in ("+", "-", "*") and whole_kind == "set":
+            # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"; Dafny
+            # Reference Manual 5.5.1, measured on dafny 4.11.0,
+            # `~/scratch/setslift/tset.dfy`): Dafny spells set union `+`,
+            # difference `-`, intersection `*`; `classify` has already
+            # confirmed both operands are set-typed (`expr_kind`, the
+            # same helper `_rw_seq_kind` delegates to), so this rewrites
+            # to t's own named ops, never printed back through the
+            # symbolic op the way seq concatenation is (SPEC.md "Finite
+            # sets (v1)": "t writes the operations by name, never by
+            # overloading the arithmetic symbols").
+            op_name = {"+": "union", "-": "diff", "*": "inter"}[e.op]
+            rule = {"+": "set-union-lifted", "-": "set-diff-lifted", "*": "set-inter-lifted"}[e.op]
+            record.rewrites.append(Rewrite(rule=rule, line=e.line))
+            return {"op": op_name, "args": [left, right]}
+        if e.op == "+" and whole_kind == "seq":
             # Row 26 (2026-09-09): t's own `+` is polymorphic by operand
             # type exactly as `==` already is (SPEC.md "Sequences:
             # literals, concatenation, slices (v1)"), so the JSON shape
@@ -606,7 +636,17 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
     if isinstance(e, Quantifier):
         return _lift_quantifier(e, scope, fn_names, self_name, task_name, record, renamer)
     if e.__class__.__name__ == "Cardinality":
-        return {"op": "len", "args": [_lift_expr(e.arg, scope, fn_names, self_name, task_name, record, renamer)]}
+        arg_e = _lift_expr(e.arg, scope, fn_names, self_name, task_name, record, renamer)
+        if _rw_seq_kind(e.arg, scope) == "set":
+            # Row 52 (2026-09-27): `|s|` on a set-typed `s` is t's `card`,
+            # not `len` (SPEC.md "Finite sets (v1)"; Dafny Reference
+            # Manual 5.5.1, "set cardinality"). `classify` never refuses
+            # a `Cardinality` node on its base's kind alone (its base was
+            # always seq/array before sets existed), so this is the one
+            # place the two diverge.
+            record.rewrites.append(Rewrite(rule="set-card-lifted", line=e.line))
+            return {"op": "card", "args": [arg_e]}
+        return {"op": "len", "args": [arg_e]}
     if e.__class__.__name__ == "TupleExpr":
         # Row 44 (2026-09-27): `(a, b)` is t's pair literal; `classify`
         # has already confirmed the arity is two.
@@ -685,6 +725,15 @@ def _lift_expr(e, scope: Scope, fn_names: dict, self_name: str,
                  for el in e.elems]
         record.rewrites.append(Rewrite(rule="seq-literal-lifted", line=e.line))
         return {"op": "seq", "args": elems}
+    if isinstance(e, SetDisplay):
+        # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): `{e1, ..., en}`
+        # (or `{}`) is t's set literal one to one; `classify` has already
+        # confirmed every element is int-typed and this is not a
+        # `multiset{...}` display (`_set_literal_issue`, `e.multiset`).
+        elems = [_lift_expr(el, scope, fn_names, self_name, task_name, record, renamer)
+                 for el in e.elems]
+        record.rewrites.append(Rewrite(rule="set-literal-lifted", line=e.line))
+        return {"op": "set", "args": elems}
     if isinstance(e, SeqUpdate):
         # Row 30 (2026-09-10): `s[i := r]` -- `classify` has already
         # confirmed the base types `seq` -- is t's own `update` operator,
@@ -732,11 +781,22 @@ def _lift_chain(e: Chain, scope: Scope, fn_names: dict, self_name: str,
         right = _lift_expr(e.operands[1], scope, fn_names, self_name, task_name, record, renamer)
         return {"op": e.ops[0], "args": [left, right]}
     if e.ops[0] in ("in", "!in"):
-        record.rewrites.append(Rewrite(rule="in-desugared", line=e.line))
         x, s = e.operands
-        k = renamer.fresh("k", record, "quantbind")
         s_e = _lift_expr(s, scope, fn_names, self_name, task_name, record, renamer)
         x_e = _lift_expr(x, scope, fn_names, self_name, task_name, record, renamer)
+        if _rw_seq_kind(s, scope) == "set":
+            # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): `x in s`/
+            # `x !in s` on a set-typed `s` is t's own `in` operator
+            # directly (SPEC.md's six ops include it), never decision 2's
+            # bounded-exists desugaring -- `classify`'s own quantifier-
+            # boundedness pass (`_bind_binders`'s `set_lookup` guard)
+            # never binds a QUANTIFIER's range this way either, so this
+            # branch only ever sees a plain membership test.
+            record.rewrites.append(Rewrite(rule="set-membership-lifted", line=e.line))
+            in_e = {"op": "in", "args": [x_e, s_e]}
+            return in_e if e.ops[0] == "in" else {"op": "not", "args": [in_e]}
+        record.rewrites.append(Rewrite(rule="in-desugared", line=e.line))
+        k = renamer.fresh("k", record, "quantbind")
         body = {"op": "==", "args": [{"op": "at", "args": [s_e, {"var": k}]}, x_e]}
         exists = {"exists": {"var": k, "lo": {"int": 0}, "hi": {"op": "len", "args": [s_e]}, "body": body}}
         return exists if e.ops[0] == "in" else {"op": "not", "args": [exists]}
@@ -752,7 +812,8 @@ def _lift_chain(e: Chain, scope: Scope, fn_names: dict, self_name: str,
 
 def _lift_quantifier(q: Quantifier, scope: Scope, fn_names: dict, self_name: str,
                       task_name: str, record: LiftRecord, renamer: "_Renamer") -> dict:
-    got = bound_quantifier(q, scope.predicates)
+    got = bound_quantifier(q, scope.predicates,
+                          set_lookup=lambda nm: scope.types.get(scope.renames.get(nm, nm)) == "set")
     if got is None:
         raise ValueError("lift_rewrite: unbounded quantifier reached rewrite "
                           "(a lift_classify bug: should have been refused)")
@@ -1320,6 +1381,13 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                 # local too, the declared type disambiguating).
                 if ty == "seq":
                     default = {"op": "seq", "args": []}
+                elif ty == "set":
+                    # Row 52 (2026-09-27): `var d: set<int>;`, no
+                    # initialiser -- t's empty set, the same convention
+                    # `_type_default` states (measured on dafny 4.11.0,
+                    # `~/scratch/setslift/tset.dfy`: an uninitialised
+                    # `set<int>` prints `{}`).
+                    default = {"op": "set", "args": []}
                 else:
                     default = {"bool": False} if ty == "bool" else {"int": 0}
                 out.append({"var": {"name": tname, "type": _t_json_type(nm.type), "init": default}})
@@ -1377,7 +1445,18 @@ def _lift_stmt(s: Stmt, scope: Scope, fn_names: dict, self_name: str,
                         # seq-shaped initialiser was always refused
                         # before ever reaching here.
                         inferred = _rw_seq_kind(rhs, scope)
-                        ty = inferred if inferred in ("int", "bool", "seq") else "int"
+                        # Row 52 (2026-09-27): "set" joins the whitelist
+                        # the same way -- an untyped `var acc := {};`/
+                        # `var acc := a + b;` (set union) local, exactly
+                        # as common a style as a typed one (the two
+                        # committed set tasks' own `acc` is typed, but
+                        # nothing in the source requires it). Measured
+                        # missing without this line (`~/scratch/setslift`
+                        # smoke test): `ty` fell to "int", and a later
+                        # `u * a` printed the bare `*` instead of `inter`,
+                        # since `scope.types` disagreed with `classify`'s
+                        # own `kind_env` about what `u` was.
+                        ty = inferred if inferred in ("int", "bool", "seq", "set") else "int"
                         # Row 30: an untyped local's nested-seq-ness (a
                         # rare style -- SPEC's own measured shapes all
                         # give the accumulator an explicit declared type)
@@ -1959,6 +2038,16 @@ def rewrite(module: Module, plan: Liftable, source_path: str,
             # `result := (a, b)` lift through `_lift_expr` unchanged.
             ret_ty = "pair"
             ret_json_ty = _t_json_type(ret.type)
+        elif ret.type is not None and ret.type.kind == "set":
+            # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): `classify`
+            # has already confirmed `set<int>` (`_set_element_issue`);
+            # measured missing without this branch (`~/scratch/setslift`
+            # smoke test): the return fell through to the `else` default
+            # below and came back typed `int`, so `s[i] in r` printed as
+            # decision 2's seq-membership desugaring against a set that
+            # has no index at all, rather than t's own `in`.
+            ret_ty = "set"
+            ret_json_ty = "set"
         else:
             ret_ty = "bool" if (ret.type is not None and ret.type.kind == "bool") else "int"
             ret_json_ty = ret_ty

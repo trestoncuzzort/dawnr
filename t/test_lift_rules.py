@@ -1718,8 +1718,15 @@ method UseSumDec(x: int, y: int) returns (r: int)
 def test_set_refused_before_rewrite() -> None:
     """The 785 run found `SetDisplay` and a set `Comprehension` reaching
     lift_rewrite uncaught (dafny-synthesis task_id_455 / task_id_142);
-    classify must refuse `set` for both, and for a set-typed local, before
-    a rewrite is ever attempted."""
+    classify used to refuse `set` for both, and for a set-typed local,
+    before a rewrite was ever attempted. Row 52 (2026-09-27, SPEC.md
+    "Finite sets (v1)") built the lifter's own mapping of `set<int>` onto
+    t's finite-set type, so the display case now LIFTS (t/test_lift_sets.py
+    is this feature's own test file); the comprehension case still
+    refuses -- SPEC.md's own "the comprehension is the wave after" -- but
+    under the sharper name `set-comprehension` a plain display or a
+    `set<int>` name no longer shares (that bucket now means an admitted
+    set, row 52's own `_set_literal_issue`)."""
     display_src = """
 method UseDisplay(x: int) returns (r: bool)
   ensures r == true
@@ -1729,7 +1736,7 @@ method UseDisplay(x: int) returns (r: bool)
 }
 """
     v = _classify_one(display_src, "UseDisplay")
-    assert isinstance(v, C.Refusal) and v.reason == "set", f"expected set refusal, got {v}"
+    assert isinstance(v, C.Liftable), f"expected liftable (row 52), got {v}"
 
     compr_src = """
 method UseCompr(n: int) returns (r: bool)
@@ -1740,9 +1747,9 @@ method UseCompr(n: int) returns (r: bool)
 }
 """
     v2 = _classify_one(compr_src, "UseCompr")
-    assert isinstance(v2, C.Refusal) and v2.reason == "set", f"expected set refusal, got {v2}"
-    print("test_set_refused_before_rewrite: a set display and a set comprehension both "
-          "refuse `set` at classify, never reaching rewrite")
+    assert isinstance(v2, C.Refusal) and v2.reason == "set-comprehension", f"expected set-comprehension refusal, got {v2}"
+    print("test_set_refused_before_rewrite: a set display now lifts (row 52); a set "
+          "comprehension still refuses, `set-comprehension`, never reaching rewrite")
 
 
 _HELPER_SRC = """
