@@ -52,3 +52,9 @@ wf-v0-frozen.t	1	1	v0-frozen
 wf-v0-int-only.t	1	1	v0-int-only
 wf-v1-expr-v0.t	3	8	v1-expr-v0
 wf-while-v0.t	3	3	while-v0
+wf-ctor-dup.t	1	1	ctor-dup
+wf-ctor-arity.t	4	8	ctor-arity
+wf-match-scrutinee.t	3	8	match-scrutinee
+wf-match-coverage.t	4	8	match-coverage
+wf-match-arity.t	4	8	match-arity
+wf-match-branches.t	4	8	match-branches
