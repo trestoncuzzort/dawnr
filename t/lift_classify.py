@@ -1074,19 +1074,141 @@ def _is_char_expr(e: Expr, char_names: set, char_seq_names: set = frozenset(),
     return False
 
 
-def _char_cast_safe(base: Expr, char_names: set, char_seq_names: set) -> bool:
+_CHAR_SAFE_MAX = 0xD7FF   # below the surrogate gap: every value in 0..0xD7FF is a Dafny char
+
+
+def _cast_bounds_env(root, char_names: set) -> dict:
+    """Row 55 (2026-09-28): what a `requires`, a loop `invariant` or a
+    single `var x := e` in `root` says about an int or char name, for
+    `_char_cast_safe`'s interval reading of an `as char` operand. Chains
+    `lo <= x <= hi` / `lo <= x < hi` with literal ends bound `x` (a char
+    literal end bounds a char name by its code point); a `var x := e` with
+    one initialiser records `e` for a lazy interval; anything else says
+    nothing, and a name that is assigned again anywhere in the root loses
+    its initialiser (the interval must hold at every use)."""
+    env: dict = {}
+    assigned: dict = {}
+    def lit(e):
+        if isinstance(e, IntLit):
+            return e.value
+        if isinstance(e, CharLit):
+            return decode_char_literal(e.text)
+        return None
+    def bound(e):
+        if not isinstance(e, Chain):
+            return
+        for i, op in enumerate(e.ops):
+            a, b = e.operands[i], e.operands[i + 1]
+            if op in ("<", "<="):
+                if isinstance(b, Ident) and lit(a) is not None:
+                    lo = lit(a) + (1 if op == "<" else 0)
+                    cur = env.setdefault(b.name, [None, None]); cur[0] = lo if cur[0] is None else max(cur[0], lo)
+                if isinstance(a, Ident) and lit(b) is not None:
+                    hi = lit(b) - (1 if op == "<" else 0)
+                    cur = env.setdefault(a.name, [None, None]); cur[1] = hi if cur[1] is None else min(cur[1], hi)
+            elif op in (">", ">="):
+                if isinstance(a, Ident) and lit(b) is not None:
+                    lo = lit(b) + (1 if op == ">" else 0)
+                    cur = env.setdefault(a.name, [None, None]); cur[0] = lo if cur[0] is None else max(cur[0], lo)
+    for sp in getattr(root, "specs", ()) or ():
+        if isinstance(sp, RequiresClause):
+            for n in walk(sp.expr):
+                bound(n)
+    for n in walk(root):
+        if isinstance(n, WhileStmt):
+            for sp in n.specs:
+                if isinstance(sp, InvariantClause):
+                    for m in walk(sp.expr):
+                        bound(m)
+        elif isinstance(n, VarDeclStmt) and n.init and len(n.names) == 1 and len(n.init) == 1 and isinstance(n.init[0], Expr):
+            assigned.setdefault(n.names[0].name, []).append(n.init[0])
+        elif isinstance(n, Assign):
+            for t in n.targets:
+                if t.kind == "name" and t.name:
+                    assigned.setdefault(t.name, []).append(None)
+    for name, inits in assigned.items():
+        if len(inits) == 1 and inits[0] is not None and name not in env:
+            env[name] = inits[0]
+    return env
+
+
+def _cast_interval(e: Expr, env: dict, char_names: set, depth: int = 0):
+    """The interval an `as char` operand ranges over, or None when the
+    lifter cannot see one: literals, a char literal's code point, `c as int`
+    for a char name (its requires range, else every code point), an int
+    name's requires/invariant range or its single initialiser, + - * by
+    intervals, % by a positive literal (Dafny's Euclidean remainder is in
+    0..d-1 whatever the sign of the dividend), unary minus, and an if-
+    expression's union of arms. Conservative: unknown means None."""
+    if depth > 12:
+        return None
+    if isinstance(e, IntLit):
+        return (e.value, e.value)
+    if isinstance(e, CharLit):
+        cp = decode_char_literal(e.text)
+        return None if cp is None else (cp, cp)
+    if isinstance(e, Cast) and e.type.kind == "int":
+        if isinstance(e.base, Ident) and e.base.name in char_names:
+            b = env.get(e.base.name)
+            if isinstance(b, list) and b[0] is not None and b[1] is not None:
+                return (b[0], b[1])
+            return (0, _CHAR_MAX)
+        # `'0' as int` is its code point; an int expression cast to int is itself
+        return _cast_interval(e.base, env, char_names, depth + 1)
+    if isinstance(e, Ident):
+        b = env.get(e.name)
+        if isinstance(b, list):
+            return (b[0], b[1]) if b[0] is not None and b[1] is not None else None
+        if isinstance(b, Expr):
+            return _cast_interval(b, env, char_names, depth + 1)
+        return None
+    if isinstance(e, Unary) and e.op == "-":
+        iv = _cast_interval(e.arg, env, char_names, depth + 1)
+        return None if iv is None else (-iv[1], -iv[0])
+    if isinstance(e, IfExpr):
+        a = _cast_interval(e.then, env, char_names, depth + 1); b = _cast_interval(e.else_, env, char_names, depth + 1)
+        return None if a is None or b is None else (min(a[0], b[0]), max(a[1], b[1]))
+    if isinstance(e, Binary):
+        if e.op == "%":
+            if isinstance(e.right, IntLit) and e.right.value > 0:
+                return (0, e.right.value - 1)
+            return None
+        a = _cast_interval(e.left, env, char_names, depth + 1); b = _cast_interval(e.right, env, char_names, depth + 1)
+        if a is None or b is None:
+            return None
+        if e.op == "+":
+            return (a[0] + b[0], a[1] + b[1])
+        if e.op == "-":
+            return (a[0] - b[1], a[1] - b[0])
+        if e.op == "*":
+            ps = (a[0] * b[0], a[0] * b[1], a[1] * b[0], a[1] * b[1])
+            return (min(ps), max(ps))
+        return None
+    return None
+
+
+def _char_cast_safe(base: Expr, char_names: set, char_seq_names: set, env: Optional[dict] = None) -> bool:
     """Row 28's own condition for accepting `n as char`: the task's own
     words, "ONLY when the lifter can see the operand is a code point
     already (a char cast back, or a literal in range)". A literal is
     checked against `_CHAR_MAX` (the value bound, not the more
     conservative literal-decoding bound: dafny itself accepts any
     literal up to 1114111 here with no extra obligation, measured, and
-    this is a CAST's safety, not a literal's own decoding)."""
+    this is a CAST's safety, not a literal's own decoding). Row 55
+    (2026-09-28) adds the third way the operand can be seen to be a code
+    point: its interval under `env` (`_cast_bounds_env`) lies in
+    0.._CHAR_SAFE_MAX, below the surrogate gap, so every value it can
+    take is a char in dafny's own sense (Reference Manual, conversions:
+    the obligation on `as char` is exactly that the value is a char)."""
     if isinstance(base, IntLit) and 0 <= base.value <= _CHAR_MAX:
         return True
     if (isinstance(base, Cast) and base.type.kind == "int"
             and _is_char_expr(base.base, char_names, char_seq_names)):
         return True
+    if env is not None:
+        iv = _cast_interval(base, env, char_names)
+        if iv is not None and 0 <= iv[0] and iv[1] <= _CHAR_SAFE_MAX:
+            return True
     return False
 
 
@@ -3077,6 +3199,7 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
     char_names, char_seq_names, nested_str_names = _build_char_names(method, closure)
     mutated_array_name = array_mutation.name if array_mutation is not None else None
     for root in scope_roots:
+        cast_env = _cast_bounds_env(root, char_names)   # row 55
         for n in walk(root):
             if isinstance(n, SeqDisplay):
                 bad = _seq_literal_issue(n, kind_env)
@@ -3233,6 +3356,10 @@ def classify(module: Module, method: MethodDecl, _stack: tuple = (),
                 if n.type.kind == "char":
                     if _char_cast_safe(n.base, char_names, char_seq_names):
                         rewrites.append(Rewrite(rule="int-as-char-lifted", line=n.line))
+                    elif _char_cast_safe(n.base, char_names, char_seq_names, cast_env):
+                        # row 55: the operand's interval under the requires,
+                        # invariants and single initialisers is inside the char range
+                        rewrites.append(Rewrite(rule="int-as-char-bounded", line=n.line))
                     else:
                         issues.append((n.line, "char-cast-unbounded", "as char"))
                 elif n.type.kind == "int" and _is_char_expr(n.base, char_names, char_seq_names,
