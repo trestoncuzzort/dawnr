@@ -54,12 +54,18 @@ Task     ::= { "t": 0|1, "name": Id,
                "methods"?: [ Method* ],         (* v1, since 2026-09-26; SPEC.md "Methods (v1)" *)
                "lemmas"?: [ Lemma* ],           (* v1, since 2026-09-27; SPEC.md "Lemmas (v1)" *)
                "decreases"?: Expr,              (* v1; required iff body self-calls *)
+               "datatypes"?: [ Datatype* ],     (* v1, since 2026-09-27; SPEC.md "Datatypes (v1)" *)
                "body": [ Stmt+ ] }              (* every path ends in assign *)
+
+Datatype ::= {"name": Id, "ctors": [ {"name": Id}+ ]}  (* v1, since 2026-09-27; enumerations only,
+                                                          a constructor carries no fields this landing *)
 
 Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local type since 2026-09-09 *)
            | {"pair": [Type, Type]}             (* v1, since 2026-09-10; written (T1, T2); T1, T2 int/bool/seq, no pair of pairs *)
            | {"seq": "seq"}                     (* v1, since 2026-09-10; written seq<seq>; one level only, rows are seqs of int *)
            | "set"                              (* v1, since 2026-09-27; a finite set of ints; SPEC.md "Finite sets" *)
+           | {"datatype": Id}                   (* v1, since 2026-09-27; Id names one of the task's own
+                                                   "datatypes" declarations; SPEC.md "Datatypes (v1)" *)
 
 Expr     ::= {"int": integer}                   (* mathematical integer *)
            | {"bool": true|false}                                        (* v1 *)
@@ -69,6 +75,10 @@ Expr     ::= {"int": integer}                   (* mathematical integer *)
            | {"forall": {"var": Id, "lo": Expr, "hi": Expr, "body": Expr}}  (* v1 *)
            | {"exists": {"var": Id, "lo": Expr, "hi": Expr, "body": Expr}}  (* v1 *)
            | {"call":   {"fun": Id, "args": [Expr*]}}                    (* v1 *)
+           | {"ctor":   {"dtype": Id, "name": Id, "args": [Expr*]}}      (* v1, since 2026-09-27; written D.C;
+                                                                           "args" always [] this landing *)
+           | {"match":  {"scrutinee": Expr,                              (* v1, since 2026-09-27; written
+                         "arms": [ {"ctor": Id, "binders": [Id*], "body": Expr}+ ]}}  (*   case e {C1=>e1, ...} *)
 
 Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "div" | "mod"                     (* v1; written / and %; Euclidean *)
@@ -279,6 +289,41 @@ stay int-only (no subset operator; `card(setminus(s, u)) == 0` says it). `in`
 sits at the comparison level and does not chain. Not in v1: a set of
 bools, seqs or pairs, a set inside a pair or a seq, a set-typed spec_fun
 parameter or result, a set as a quantifier's range, and the comprehension.
+
+### Datatypes (v1)
+
+```json
+{"datatypes": [{"name": "Color", "ctors": [{"name": "Red"}, {"name": "Green"}]}]}
+{"ctor": {"dtype": "Color", "name": "Red", "args": []}}
+{"match": {"scrutinee": {"var": "c"}, "arms": [
+    {"ctor": "Red", "binders": [], "body": {"bool": true}},
+    {"ctor": "Green", "binders": [], "body": {"bool": false}}]}}
+```
+written: `datatype Color = Red | Green` · `Color.Red` ·
+`case c { Red => true, Green => false }`
+
+Since 2026-09-27 (SPEC.md "Datatypes (v1)"), a datatype is a value type
+declared once per task, before the `t N` line: `datatype D = C1 | C2 |
+...`, a name and a non-empty ordered list of constructor names (this
+landing: enumerations only, a constructor carries no fields). The type
+`{"datatype": D}` names one of the task's own declarations, usable as a
+param, return or local type. `D.C` builds the value of constructor `C`
+(the AST's `ctor` form always carries `"args": []` this landing); `==`/
+`!=` are structural, the same polymorphic operator every other value type
+already has. `case e { C1 => e1, C2 => e2, ... }` is the AST's `match`
+form, total: check_wf refuses one that does not cover every constructor
+of `e`'s own datatype exactly once. The keyword is `case`, not Dafny's own
+`match` (SPEC.md's own words): `tasks/probe_names_fstar.t` and
+`tasks/probe_names_lean.t` deliberately use `match` as an ordinary t
+PARAMETER name (proving F*'s and Lean's own reserved words do not leak
+into t), so reserving it in t's own grammar would break that exact
+probe -- the same reasoning that gave finite-set difference the surface
+spelling `setminus` over the AST's own `diff`. The twin ladder's `SWAP-CTOR`
+move (SPEC.md "The twins" note in "Datatypes (v1)") swaps two of a
+match's arms. Not in v1: a datatype as a pair/seq/set component or a
+spec_fun's own type, field-carrying constructors (records), more than one
+constructor with fields (non-recursive sums), and a recursive constructor
+(permanently out of scope for now).
 
 ### Nested sequences (v1)
 

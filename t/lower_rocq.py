@@ -12333,6 +12333,23 @@ def _v0_cert(task: dict, body: list, witness: dict):
 # sites pass it; when a certificate can ground it, the twin file carries
 # t_refutation_certificate instead of an unprovable spec theorem.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    if task.get("datatypes"):
+        # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): Rocq's own
+        # `Inductive` is the exact source for a field-less v1 enum
+        # (Rocq reference: `Inductive`, one constant constructor per
+        # `|`), and this column's finite-set wave (bf9d70b4) already
+        # measured how much of its own prelude machinery (custom lemmas
+        # for membership/equality decided through a term-by-term case
+        # split) a new value type costs here -- an equal or larger cost
+        # for `match`'s own decidable-equality and exhaustiveness proof
+        # obligations, unmeasured for this construct. Until that is
+        # built and measured, the honest verdict is an abstention by
+        # name (SPEC.md's own rule), not a partial lowering guessed from
+        # the set wave's shape.
+        raise NotImplementedError(
+            "rocq lowering: datatypes (SPEC.md 'Datatypes (v1)'): the "
+            "Inductive encoding and its match/equality lemmas are not "
+            "built or measured yet")
     # SPEC.md "Lemmas (v1)" (2026-09-27, the LEMMAS section before
     # `lower_v1`): a lemma call is a no-op at run time. The refutation
     # certificate (the one door to REFUTED) is still built from the body

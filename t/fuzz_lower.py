@@ -3812,6 +3812,73 @@ def probes() -> list[dict]:
         "collecting len(s) elements into a set gives at most len(s) members; "
         "|acc + {e}| <= |acc| + 1 is the step")
 
+    # --- SPEC.md "Datatypes (v1)" (2026-09-27): an enum's value, total
+    # match, structural equality, and the twin ladder's swap-ctor move
+    # (SWAP-CTOR, harness.py `_c_swap_ctor`), each a probe a lowering that
+    # mistranslates the enum shape fails.
+    _COLOR_DT = {"name": "Color", "ctors": [{"name": "Red"}, {"name": "Green"},
+                                            {"name": "Blue"}]}
+    def _CTOR(name):
+        return {"ctor": {"dtype": "Color", "name": name, "args": []}}
+    def _MATCH(scrut, arms):
+        return {"match": {"scrutinee": scrut,
+                          "arms": [{"ctor": c, "binders": [], "body": b}
+                                   for c, b in arms]}}
+    # A total match over all three constructors, each read back as its own
+    # int code: the enum analogue of fz_p_set_dup, one cell per constructor.
+    add({"t": 1, "name": "fz_p_dt_match_total", "datatypes": [_COLOR_DT],
+         "params": [{"name": "c", "type": {"datatype": "Color"}}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("implies", OP("==", V("c"), _CTOR("Red")), OP("==", V("r"), I(0))),
+                     OP("implies", OP("==", V("c"), _CTOR("Green")), OP("==", V("r"), I(1))),
+                     OP("implies", OP("==", V("c"), _CTOR("Blue")), OP("==", V("r"), I(2)))],
+         "body": [ASG("r", _MATCH(V("c"), [("Red", I(0)), ("Green", I(1)), ("Blue", I(2))]))]},
+        "verified",
+        "SPEC.md 'Datatypes (v1)': match is total over a datatype's "
+        "constructors and each arm's own body is the value for that "
+        "constructor alone, one cell of the ensures per constructor")
+    # SWAP-CTOR's own twin, written by hand rather than found by the
+    # ladder: Red and Green's arms traded, which the ensures above catches
+    # at c = Color.Red (real gives 0, this gives 1).
+    add({"t": 1, "name": "fz_p_dt_match_total_bad", "datatypes": [_COLOR_DT],
+         "params": [{"name": "c", "type": {"datatype": "Color"}}],
+         "returns": [{"name": "r", "type": "int"}],
+         "requires": [],
+         "ensures": [OP("implies", OP("==", V("c"), _CTOR("Red")), OP("==", V("r"), I(0))),
+                     OP("implies", OP("==", V("c"), _CTOR("Green")), OP("==", V("r"), I(1))),
+                     OP("implies", OP("==", V("c"), _CTOR("Blue")), OP("==", V("r"), I(2)))],
+         "body": [ASG("r", _MATCH(V("c"), [("Red", I(1)), ("Green", I(0)), ("Blue", I(2))]))]},
+        "refuted",
+        "Red and Green's arms swapped (harness.py's SWAP-CTOR move): at "
+        "c = Color.Red the body now returns 1, not 0", adversarial=True)
+    # Structural equality: two constructions of the SAME constructor are
+    # equal, two DIFFERENT constructors of the same datatype are not --
+    # SPEC.md's "equality is structural, by constructor" stated both ways
+    # at once, general over a parameter rather than two literal ctors.
+    add({"t": 1, "name": "fz_p_dt_eq", "datatypes": [_COLOR_DT],
+         "params": [{"name": "c", "type": {"datatype": "Color"}}],
+         "returns": [{"name": "r", "type": "bool"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("!=", V("c"), _CTOR("Blue")))],
+         "body": [ASG("r", OP("or", OP("==", V("c"), _CTOR("Red")),
+                              OP("==", V("c"), _CTOR("Green"))))]},
+        "verified",
+        "c is Red or Green iff c is not Blue: structural equality over "
+        "the three constructors, restated through disequality")
+    # A match whose own arms are literally `c == Color.X` returns the same
+    # value ordinary equality does, tying match to the equality probe above.
+    add({"t": 1, "name": "fz_p_dt_match_eq", "datatypes": [_COLOR_DT],
+         "params": [{"name": "c", "type": {"datatype": "Color"}}],
+         "returns": [{"name": "r", "type": "bool"}],
+         "requires": [],
+         "ensures": [OP("==", V("r"), OP("==", V("c"), _CTOR("Red")))],
+         "body": [ASG("r", _MATCH(V("c"), [("Red", {"bool": True}),
+                                           ("Green", {"bool": False}),
+                                           ("Blue", {"bool": False})]))]},
+        "verified",
+        "a match returning true only for Red computes exactly c == Color.Red")
+
     # --- SPEC.md "The string library (v1)": `split(s)`'s own stated edge
     # case, "split("") == []" verbatim, true by construction, no
     # parameter and no loop.
