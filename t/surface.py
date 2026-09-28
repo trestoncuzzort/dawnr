@@ -259,10 +259,23 @@ KEYWORDS = {
     "int", "bool", "seq",
     "tostr",       # SPEC.md "The string library" (2026-09-11): tostr(n) is
                    # a function like len(n), reserved the same way.
-    "set", "card", "union", "inter", "diff",
+    "set", "card", "union", "inter", "setminus",
                    # SPEC.md "Finite sets" (2026-09-27): the type keyword and
                    # the four named operations, functions like len(n); `in`
                    # (membership) is already reserved for the quantifier range.
+                   # Set difference is spelled `setminus`, not `diff`, since
+                   # 2026-09-27 (SPEC.md "Decisions since t:0"): `diff` is a
+                   # common return/variable name (4 corpus documents and 5
+                   # lifted tasks used it) and reserving it broke every one of
+                   # them; the AST op tag stays "diff" (t/lower_*.py and
+                   # interp.py are unaffected), only the surface spelling and
+                   # the printer changed. `set`, `card`, `union` and `inter`
+                   # collide with nothing in the corpus and stay reserved:
+                   # the parser resolves them by keyword before it would try
+                   # a generic call or a type name, so an unreserved `card`
+                   # or `union` would either parse as an ordinary spec_fun
+                   # call (a different AST) or, for `set`, fail to open the
+                   # type-name production a `var x: set` declaration needs.
 }
 
 # SPEC.md "The string library" (2026-09-11): the 16 members reached as a
@@ -1139,10 +1152,14 @@ class Parser:
             self.production = "Expr"
             self.eat("sym", ")")
             return self.mark(t, {"op": "card", "args": [e]})
-        if self.at("kw", "union") or self.at("kw", "inter") or self.at("kw", "diff"):
-            # union(s, t), inter(s, t), diff(s, t): SPEC.md "Finite sets"
-            # (2026-09-27); written by name, never as +, * or -.
-            op = self.eat("kw").text
+        if self.at("kw", "union") or self.at("kw", "inter") or self.at("kw", "setminus"):
+            # union(s, t), inter(s, t), setminus(s, t): SPEC.md "Finite sets"
+            # (2026-09-27); written by name, never as +, * or -. `setminus`
+            # is the surface spelling (since 2026-09-27, this file's KEYWORDS
+            # comment); the AST op tag stays "diff" so every lowering keeps
+            # its existing dispatch.
+            kw = self.eat("kw").text
+            op = "diff" if kw == "setminus" else kw
             self.eat("sym", "(")
             a = self.expr()
             self.production = "Expr"
@@ -1393,7 +1410,11 @@ def pexpr(e, floor: int = P_QUANT) -> str:
     if op == "card":
         return "card(%s)" % pexpr(args[0])
     if op in ("union", "inter", "diff"):
-        return "%s(%s, %s)" % (op, pexpr(args[0]), pexpr(args[1]))
+        # The AST tag is "diff"; the surface spelling is "setminus" (SPEC.md
+        # "Finite sets", 2026-09-27 amendment: `diff` collided with a common
+        # variable/return name in the corpus).
+        return "%s(%s, %s)" % ("setminus" if op == "diff" else op,
+                               pexpr(args[0]), pexpr(args[1]))
     if op == "pair":
         # (e1, e2) (SPEC.md "Pairs", 2026-09-10): its own delimiters, like
         # `seq`'s `[...]` or `call`'s `f(...)`, so no `_wrap` floor applies.
@@ -1642,7 +1663,7 @@ WRITTEN = [
     ("expr", "x in s", {"op": "in", "args": [{"var": "x"}, {"var": "s"}]}),
     ("expr", "card(union(s, u))",
      {"op": "card", "args": [{"op": "union", "args": [{"var": "s"}, {"var": "u"}]}]}),
-    ("stmt", "var d: set := diff(s, u);",
+    ("stmt", "var d: set := setminus(s, u);",
      {"var": {"name": "d", "type": "set",
               "init": {"op": "diff", "args": [{"var": "s"}, {"var": "u"}]}}}),
     ("expr", "s[i]", {"op": "at", "args": [{"var": "s"}, {"var": "i"}]}),

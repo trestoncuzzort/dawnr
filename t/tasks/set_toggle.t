@@ -6,7 +6,7 @@ task set_toggle(a: set, x: int) returns (r: set)
   ensures not (x in a) ==> x in r
 {
   if x in a {
-    r := diff(a, {x});
+    r := setminus(a, {x});
   } else {
     r := union(a, {x});
   }

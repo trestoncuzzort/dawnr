@@ -95,7 +95,7 @@
         },
         {
           "name": "keyword.other.builtin.t",
-          "match": "\\b(len|tostr|card|union|inter|diff)\\b"
+          "match": "\\b(len|tostr|card|union|inter|setminus)\\b"
         },
         {
           "name": "constant.language.boolean.t",
