@@ -236,6 +236,21 @@ method D(x: bool) returns (r: bool)
     _refuses(src, "D", "set-of-bool")
 
 
+def test_set_display_of_strings_refuses_set_of_seq() -> None:
+    # Measured on the 1,886-file re-lift: `grade in {"A+", "A", ...}`
+    # (vericoding_DH0083, 10 siblings) is a `set<string>` display; a
+    # string is a t seq (row 28), the same name `_set_element_issue`
+    # already gives the TYPE-level shape.
+    src = """
+method Grade(g: string) returns (r: bool)
+  ensures r
+{
+  r := g in {"A", "B", "C"};
+}
+"""
+    _refuses(src, "Grade", "set-of-seq")
+
+
 def test_set_comprehension_refuses_sharper_than_plain_set() -> None:
     src = """
 method G(n: int) returns (c: int)
@@ -319,6 +334,7 @@ def run(slow: bool = False) -> None:
     test_set_of_nat_refuses_by_name()
     test_bare_set_refuses_generic()
     test_set_display_of_non_int_refuses_by_element()
+    test_set_display_of_strings_refuses_set_of_seq()
     test_set_comprehension_refuses_sharper_than_plain_set()
     test_subset_and_superset_refuse_by_name()
     test_disjointness_refuses_by_name()

@@ -851,6 +851,14 @@ def _set_literal_issue(n: SetDisplay, env: dict) -> Optional[str]:
             return "set-of-real"
         if isinstance(el, TupleExpr):
             return "set-of-pair"
+        if k == "seq" or isinstance(el, StringLit):
+            # Measured (2026-09-27, the 1,886-file re-lift): 11 displays
+            # of string literals (`grade in {"A+", "A", ...}`, a
+            # `set<string>`) fell into the catch-all below with no name
+            # of their own; `_set_element_issue`'s TYPE-level check
+            # already names this shape `set-of-seq` (a string is a t seq,
+            # row 28), so the LITERAL-level check names it the same way.
+            return "set-of-seq"
         return "set-of-other"
     return None
 
