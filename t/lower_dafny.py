@@ -2334,8 +2334,29 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
         c = e["ite"]
         cv = _ev_undef(c["cond"], env, funs, st)
         return _ev_undef(c["then"] if cv else c["else"], env, funs, st)
-    if "forall" in e or "exists" in e or "call" in e:
-        raise ValueError("undefined-kind certificate: quantifier/call in body")
+    if "forall" in e or "exists" in e:
+        raise ValueError("undefined-kind certificate: quantifier in body")
+    if "call" in e:
+        # 2026-09-28: a spec_fun call no longer aborts the replay. Its
+        # arguments go through this mirror first, left to right, so an
+        # argument's own obligation (`f(s[i])` with i out of range) raises
+        # the ground guard exactly as it would outside the call -- the order
+        # Dafny's well-formedness checking uses (Reference Manual, well-
+        # formedness: arguments before the call they feed). The call's value
+        # then comes from interp.ev on the ground arguments; a spec_fun body
+        # is total by check_wf, so an interp.Undef here is a refusal of the
+        # certificate (ValueError, caught by _certificate), never a guard.
+        c = e["call"]
+        f = funs.get(c["fun"])
+        if f is None or len(c["args"]) != len(f["params"]):
+            raise ValueError(f"undefined-kind certificate: call {c['fun']!r} unknown or mis-arity")
+        vals = [_ev_undef(a, env, funs, st) for a in c["args"]]
+        ground = {"call": {"fun": c["fun"],
+                           "args": [_tlit(v, prm.get("type")) for v, prm in zip(vals, f["params"])]}}
+        try:
+            return interp.ev(ground, {}, funs, st)
+        except interp.Undef as u:
+            raise ValueError(f"undefined-kind certificate: call {c['fun']!r} undefined on replay: {u}")
     op = e["op"]
     if op == "and":
         for a in e["args"]:
