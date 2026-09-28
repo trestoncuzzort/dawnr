@@ -765,6 +765,30 @@ string in the same file), 5 `match-no-default`. Tests:
 `t/test_lift_datatypes.py` (8, plus 2 slow: dafny proves both if-chains
 against the source clauses).
 
+### 19. An `as char` cast under a bound lifts by interval (2026-09-28, lifter)
+
+**Refused: 31 methods `char-cast-unbounded`** on the 1,886 staged files after round 2 (the
+int-to-string helpers, the case-toggling and Caesar-shift methods). Row 28 admitted an `int as
+char` only for a literal or a cast back; row 55 reads the operand's interval from the `requires`
+chains, the loop invariants and a single initialiser (`('0' as int + d) as char` under
+`0 <= d < 10`; `((c as int - 'a' as int + 5) % 26 + 'a' as int) as char` under `'a' <= c <= 'z'`)
+and lifts when it lies in 0..0xD7FF, the range below the surrogate gap.
+
+| measured on the 29 files (`~/scratch/charcast`, t/lifter.py --list, then the check stage) | |
+|---|---:|
+| methods refused `char-cast-unbounded` before | 31 |
+| lift by row 55 | 17 |
+| still refused (a bound the reading does not see: an `if` guard, a callee's result, a wider range) | 14 |
+| pass the check stage (dafny equivalence lemmas + the differential arm) | 13 |
+| clean in seven / in six, graded on the lab | 0 / 2 (Rocq the gap) |
+
+What stops the 13 short of the corpus is not the cast: 6 read `dafny verified / unproved` — the
+real program verifies and Dafny's own refutation certificate does not close the `%`-arithmetic
+twin (Frama-C times out on the same twins) — and 3 read unproved in Lean, Rocq or F* on the real
+side. A certificate rung for `%` on ints is the named next lever; the lifter's part is done.
+Tests: t/test_lift_char_cast.py (9); t/test_lift_seq_elements.py's cast fixture now carries no
+bound, since with one it lifts.
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
