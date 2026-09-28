@@ -1,4 +1,4 @@
-# t cross-kernel agreement, 2026-09-28 00:13Z
+# t cross-kernel agreement, 2026-09-28 02:07Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
 
@@ -6,13 +6,13 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 |---|---|---|---|---|---|---|---|
 | humaneval_dafny_005_intersperse__intersperse | verified / refuted | verified / refuted | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
 | humaneval_dafny_006_parse_nested_parens__parse_paren_group | verified / refuted | unproved / refuted | timeout / timeout | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
-| humaneval_dafny_035_max_element__max_element | verified / refuted | verified / refuted | timeout / timeout | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| humaneval_dafny_035_max_element__max_element | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | humaneval_dafny_038_encode_cyclic__decode_cyclic | verified / refuted | verified / refuted | timeout / timeout | abstain / abstain | timeout / timeout | timeout / unproved | timeout / timeout |
 | humaneval_dafny_052_below_threshold__below_threshold | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | humaneval_dafny_077_iscube__iscube | timeout / timeout | unproved / unproved | timeout / timeout | timeout / timeout | unproved / refuted | unproved / unproved | unproved / unproved |
 | humaneval_dafny_163_generate_integers__generate_integers | verified / refuted | unproved / unproved | timeout / timeout | abstain / abstain | timeout / timeout | malformed / malformed | unproved / unproved |
 | vericoding_da0017__solve | verified / refuted | verified / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
-| vericoding_da0018__solve | verified / refuted | verified / refuted | verified / timeout | abstain / abstain | unproved / refuted | unproved / refuted | verified / refuted |
+| vericoding_da0018__solve | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | unproved / refuted | unproved / refuted | verified / refuted |
 | vericoding_da0026__solve | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted |
 | vericoding_da0029__solve | verified / refuted | unproved / refuted | timeout / refuted | malformed / malformed | unproved / refuted | timeout / refuted | verified / refuted |
 | vericoding_da0031__solve | verified / refuted | verified / unproved | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain | unproved / refuted |
@@ -20,15 +20,15 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | vericoding_da0043__solve | timeout / timeout | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | vericoding_da0044__solve | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | vericoding_da0046__minimumMoves | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| vericoding_da0062__solve | verified / unproved | unproved / refuted | timeout / timeout | timeout / timeout | verified / unproved | unproved / malformed | verified / refuted |
+| vericoding_da0062__solve | verified / unproved | unproved / refuted | timeout / timeout | verified / timeout | verified / unproved | unproved / malformed | verified / refuted |
 | vericoding_da0063__shellGame | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | unproved / unproved | verified / refuted |
 | vericoding_da0071__solve | verified / refuted | unproved / refuted | timeout / timeout | malformed / malformed | unproved / refuted | unproved / refuted | verified / refuted |
 | vericoding_da0078__solve | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | unproved / refuted | verified / refuted | verified / refuted |
-| vericoding_da0080__solve | verified / refuted | unproved / refuted | timeout / timeout | timeout / refuted | unproved / refuted | verified / refuted | verified / refuted |
+| vericoding_da0080__solve | verified / refuted | unproved / refuted | verified / refuted | timeout / refuted | unproved / refuted | verified / refuted | verified / refuted |
 | vericoding_da0085__findMinimumTotalDistance | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | vericoding_da0086__solve | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | vericoding_da0101__solve | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| vericoding_da0105__solve | verified / refuted | unproved / refuted | timeout / timeout | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted |
+| vericoding_da0105__solve | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | vericoding_da0108__solve | verified / refuted | verified / refuted | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain | unproved / refuted |
 | vericoding_da0110__solve | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | vericoding_da0113__solve | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
@@ -40,7 +40,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | vericoding_da0148__solve | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | vericoding_da0151__solve | verified / refuted | verified / refuted | timeout / timeout | verified / refuted | unproved / refuted | timeout / refuted | verified / refuted |
 | vericoding_da0153__solve | verified / refuted | verified / unproved | timeout / timeout | abstain / abstain | unproved / unproved | abstain / abstain | malformed / malformed |
-| vericoding_da0157__solve | timeout / timeout | verified / refuted | verified / timeout | timeout / refuted | unproved / refuted | verified / unproved | verified / refuted |
+| vericoding_da0157__solve | timeout / timeout | verified / refuted | verified / refuted | timeout / refuted | unproved / refuted | verified / unproved | verified / refuted |
 | vericoding_da0159__solve | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | vericoding_da0168__solve | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | verified / refuted | verified / refuted | verified / refuted |
 | vericoding_da0172__solve | unproved / refuted | unproved / unproved | timeout / timeout | abstain / abstain | unproved / unproved | abstain / abstain | timeout / timeout |
@@ -53,7 +53,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | vericoding_da0205__solve | timeout / timeout | unproved / refuted | timeout / timeout | timeout / refuted | timeout / timeout | unproved / unproved | timeout / timeout |
 | vericoding_da0217__solve | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
 | vericoding_da0239__solve | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
-| vericoding_da0246__solve | unproved / refuted | unproved / refuted | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain | unproved / refuted |
+| vericoding_da0246__solve | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain | unproved / refuted |
 | vericoding_da0282__solve | timeout / refuted | verified / refuted | timeout / refuted | timeout / refuted | unproved / refuted | timeout / refuted | verified / refuted |
 | vericoding_da0285__solve | verified / refuted | unproved / unproved | timeout / timeout | abstain / abstain | unproved / unproved | abstain / abstain | verified / refuted |
 | vericoding_da0287__solve | timeout / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
@@ -75,12 +75,12 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | vericoding_da0396__solve | unproved / refuted | unproved / refuted | timeout / timeout | abstain / abstain | unproved / refuted | unproved / unproved | unproved / refuted |
 | vericoding_da0399__solve | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | vericoding_da0409__solveRivalDistance | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| vericoding_da0423__solve | verified / refuted | verified / unproved | timeout / timeout (FLAKED) | abstain / abstain | unproved / unproved | abstain / abstain | verified / refuted |
+| vericoding_da0423__solve | verified / refuted | verified / unproved | verified / timeout | abstain / abstain | unproved / unproved | abstain / abstain | verified / refuted |
 | vericoding_da0429__solve | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | unproved / refuted | timeout / refuted | verified / refuted |
 | vericoding_da0469__solve | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin | no-twin / no-twin |
 | vericoding_da0470__solve | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | unproved / refuted | timeout / refuted | unproved / refuted |
 | vericoding_da0472__solve | verified / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | timeout / refuted | verified / refuted |
-| vericoding_da0476__solve | verified / refuted | unproved / refuted | verified / timeout | verified / refuted | unproved / unproved | timeout / refuted | unproved / refuted |
+| vericoding_da0476__solve | verified / refuted | unproved / refuted | verified / refuted | verified / refuted | unproved / unproved | verified / refuted | unproved / refuted |
 | vericoding_da0478__solve | verified / refuted | verified / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | verified / refuted |
 | vericoding_da0482__solve | verified / refuted | verified / unproved | verified / timeout | abstain / abstain | unproved / unproved | abstain / abstain | verified / refuted |
 | vericoding_da0484__solve | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -99,21 +99,21 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | vericoding_da0585__solve | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
 | vericoding_da0586__solve | verified / refuted | verified / refuted | verified / refuted | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
 | vericoding_da0609__getRow | verified / refuted | unproved / refuted | malformed / refuted | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
-| vericoding_da0642__solve | verified / refuted | verified / refuted | timeout / refuted | timeout / refuted | verified / refuted | timeout / refuted | verified / refuted |
+| vericoding_da0642__solve | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | verified / refuted | timeout / refuted | verified / refuted |
 | vericoding_da0657__solve | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | unproved / refuted | unproved / refuted | unproved / refuted |
 | vericoding_da0659__solve | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | vericoding_db0020__modExpPow2_int | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
 | vericoding_db0034__modPowExec | verified / refuted | verified / refuted | verified / timeout | verified / refuted | unproved / refuted | verified / refuted | verified / refuted |
 | vericoding_db0052__modExp_int | verified / refuted | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | verified / refuted |
 | vericoding_db0053__modExp_int | verified / refuted | verified / refuted | verified / refuted | malformed / malformed | unproved / refuted | verified / refuted | verified / refuted |
-| vericoding_dd0040__query | verified / refuted | verified / refuted | timeout / timeout (FLAKED) | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
-| vericoding_dd0041__queryFast | verified / refuted | verified / unproved | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
+| vericoding_dd0040__query | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| vericoding_dd0041__queryFast | verified / refuted | verified / unproved | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
 | vericoding_dd0130__mCountMin | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | unproved / refuted | unproved / unproved | unproved / refuted |
-| vericoding_dd0131__mPeekSum | verified / refuted | unproved / unproved | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted |
+| vericoding_dd0131__mPeekSum | verified / refuted | unproved / unproved | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted |
 | vericoding_dd0133__binarySearchRec | verified / refuted | unproved / unproved | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
 | vericoding_dd0144__barrier | unproved / refuted | unproved / refuted | timeout / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain |
 | vericoding_dd0356__mod | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | unproved / refuted | timeout / refuted | unproved / refuted |
-| vericoding_dd0493__queryFast | verified / refuted | verified / malformed | verified / timeout | abstain / abstain | unproved / unproved | abstain / abstain | verified / refuted |
+| vericoding_dd0493__queryFast | verified / refuted | verified / malformed | verified / refuted | abstain / abstain | unproved / unproved | abstain / abstain | verified / refuted |
 | vericoding_dd0508__mergeSimple | verified / refuted | verified / refuted | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
 | vericoding_dd0517__prodAndCount | unproved / unproved | unproved / refuted | timeout / timeout | abstain / abstain | unproved / refuted | unproved / unproved | unproved / refuted |
 | vericoding_dd0518__findAddends | unproved / unproved | unproved / refuted | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
@@ -124,11 +124,11 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | vericoding_dh0008__sum_product | unproved / refuted | unproved / refuted | timeout / timeout | abstain / abstain | unproved / refuted | unproved / unproved | timeout / timeout |
 | vericoding_dh0021__largest_divisor | verified / refuted | verified / refuted | verified / timeout | verified / refuted | verified / refuted | timeout / refuted | verified / refuted |
 | vericoding_dh0024__remove_duplicates | verified / refuted | unproved / refuted | timeout / timeout | abstain / abstain | unproved / refuted | unproved / unproved | verified / timeout |
-| vericoding_dh0051__modp | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | unproved / unproved | timeout / refuted | timeout / refuted |
-| vericoding_dh0073__will_it_fly | verified / refuted | verified / refuted | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
-| vericoding_dh0074__smallest_change | unproved / refuted | unproved / refuted | timeout / timeout | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| vericoding_dh0051__modp | unproved / refuted | unproved / refuted | timeout / timeout | timeout / refuted | unproved / unproved | timeout / refuted | unproved / refuted |
+| vericoding_dh0073__will_it_fly | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
+| vericoding_dh0074__smallest_change | unproved / refuted | unproved / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
 | vericoding_dh0079__is_cube | timeout / refuted | unproved / refuted | verified / refuted | timeout / refuted | unproved / refuted | unproved / unproved | verified / timeout |
-| vericoding_dh0112__exchange | verified / refuted | verified / refuted | verified / timeout | abstain / abstain | verified / refuted | unproved / unproved | unproved / refuted |
+| vericoding_dh0112__exchange | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | verified / refuted | unproved / unproved | unproved / refuted |
 | vericoding_dh0141__special_factorial | verified / refuted | unproved / refuted | timeout / timeout | verified / refuted | unproved / unproved | unproved / unproved | verified / refuted |
 | vericoding_dj0077__splitArray | verified / unproved | verified / refuted | verified / timeout | abstain / abstain | verified / refuted | verified / unproved | verified / refuted |
 | vericoding_dj0142__binarySearchRecursive | verified / refuted | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | unproved / refuted | verified / refuted |
@@ -137,7 +137,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | vericoding_dt0258__numpyBitwiseOr | refuted / unproved | refuted / refuted | timeout / timeout | refuted / timeout | refuted / refuted | refuted / refuted | refuted / refuted |
 | vericoding_dt0662__ntypes | verified / refuted | malformed / malformed | timeout / timeout | verified / refuted | verified / refuted | verified / refuted | verified / unproved |
 | vericoding_dv0079__twoSum | verified / refuted | verified / refuted | timeout / timeout | timeout / refuted | verified / refuted | timeout / refuted | timeout / timeout |
-| vericoding_dv0131__binarySearchLoop | verified / refuted | verified / refuted | verified / timeout | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
+| vericoding_dv0131__binarySearchLoop | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | malformed / malformed |
 | vericoding_dv0139__doubleQuadruple | verified / refuted | verified / refuted | verified / refuted | timeout / refuted | verified / refuted | verified / refuted | verified / refuted |
 | vericoding_dv0158__multipleReturns | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | vericoding_dv0171__swap | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
@@ -163,11 +163,11 @@ Verdict basis: every source file hashed; e.g. `humaneval_dafny_005_intersperse__
 | kernel | sole blocker of | co-blocker of | tasks it alone keeps out of all seven |
 |---|---|---|---|
 | lean | 8 | 61 | vericoding_da0113__solve, vericoding_da0239__solve, vericoding_da0368__solve, vericoding_da0523__solve, vericoding_da0585__solve, vericoding_da0586__solve, vericoding_db0020__modExpPow2_int, vericoding_db0052__modExp_int |
-| framac | 4 | 59 | vericoding_da0026__solve, vericoding_da0168__solve, vericoding_da0530__solve, vericoding_dv0139__doubleQuadruple |
-| spark | 3 | 62 | humaneval_dafny_035_max_element__max_element, vericoding_da0101__solve, vericoding_dd0040__query |
+| framac | 4 | 58 | vericoding_da0026__solve, vericoding_da0168__solve, vericoding_da0530__solve, vericoding_dv0139__doubleQuadruple |
+| spark | 3 | 52 | humaneval_dafny_035_max_element__max_element, vericoding_da0101__solve, vericoding_dd0040__query |
 | fstar | 1 | 30 | vericoding_da0556__solveCakeProblem |
 | dafny | 0 | 12 | (none) |
 | verus | 0 | 44 | (none) |
-| rocq | 0 | 62 | (none) |
+| rocq | 0 | 61 | (none) |
 
 Of the 16 tasks in six, 8 are lean alone, 4 are framac alone, 3 are spark alone, 1 is fstar alone.
