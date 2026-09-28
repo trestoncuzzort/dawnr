@@ -235,10 +235,21 @@ if __name__ == "__main__":
     run()
 
 
-def test_first_breaks_a_line_tie_the_same_way_in_any_order() -> None:
-    """Two issues on one line: the witness must not depend on the order the
-    closure walk appended them (a set's order, randomised per process)."""
-    a = (150, "source-axiom", "BitwiseOrCommutative")
-    b = (150, "source-axiom", "BitwiseOr")
-    assert C._first([a, b]) == C._first([b, a]) == b
-    assert C._first([(151, "source-assume", "assume"), a]) == a
+def test_the_witness_is_the_same_under_every_hash_seed() -> None:
+    """DT0258's shape has two issues in one file: the classifier must name the
+    same witness whatever order Python's per-process string hashing gives a
+    set (the closure walk follows source order, never a set's)."""
+    import subprocess, sys, os, json
+    code = (
+        "import sys, json; sys.path.insert(0, %r); import test_lift_source_axiom as T\n"
+        "v = T._classify_one(T.NUMPY_BITWISE_OR, 'NumpyBitwiseOr')\n"
+        "print(json.dumps([v.reason, v.token, v.line]))" % str(HERE))
+    seen = set()
+    for seed in ("0", "1", "42"):
+        out = subprocess.run([sys.executable, "-c", code], env={**os.environ, "PYTHONHASHSEED": seed},
+                             capture_output=True, text=True, check=True).stdout.strip()
+        seen.add(out)
+    assert len(seen) == 1, seen
+    reason, token, line = json.loads(seen.pop())
+    decl_line = next(i for i, l in enumerate(NUMPY_BITWISE_OR.split("\n"), 1) if "function BitwiseOr" in l)
+    assert (reason, token, line) == ("source-axiom", "BitwiseOr", decl_line), (reason, token, line, decl_line)
