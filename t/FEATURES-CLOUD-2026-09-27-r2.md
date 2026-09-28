@@ -74,6 +74,13 @@ differing cells each time; the merged tree adds the two set tasks and
 changes nothing else). Every commit cites the design it copies or says
 `INVENTED:` and what was searched.
 
+The round's first pull request (#51) was merged by hand mid-round as
+`ee35da6`, beside the seq-valued spec_fun and source-axiom work (rows
+49-51, entries 13-14); the commits after it were replayed on that base, so
+the datatype and match work below are rows 48 and 52 and entries 15 and
+16, and the byte-identity check was taken again against the merged base:
+51 committed tasks, 0 differing cells in seven kernels.
+
 | feature | track entry, decision row | what changed | kernels |
 |---|---|---|---|
 | B1 nested-seq-other | Done 9, row 46 | lifter: a `seq<X>` whose element t has no value for refuses under X's own name (`seq-of-real`, `seq-of-datatype`, `seq-of-bitvector`, `seq-of-pair`, `seq-of-bool`, `seq-of-set`, `seq-of-map`); a cast inside a display is an int element, so `[c as char]` lifts when the cast is safe | none |
