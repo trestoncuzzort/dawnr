@@ -1870,7 +1870,10 @@ method B(n: nat) returns (r: int)
   if n == 0 { r := 0; } else { r := A(n - 1); }
 }
 """, "A"),
-        "callee-refused:assume": ("""
+        # renamed from `assume` (LIFTER-DECISIONS row 51, 2026-09-27):
+        # `source-assume` is now the one reason for an assume statement
+        # wherever it lies, in the method's own body or a callee's.
+        "callee-refused:source-assume": ("""
 method Bad(x: int) returns (h: int)
   ensures h == x
 {
