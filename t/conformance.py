@@ -74,6 +74,21 @@ Exit code: 1 if any probe or metamorphic cell reads FAIL, 0 otherwise.
 Writes t/CONFORMANCE.md (or --out) in AGREEMENT.md's row format, one
 "expected" column and a PASS/FAIL/N-A suffix per kernel cell.
 
+Named abstains, 2026-09-28: a lowering that raises NotImplementedError
+before any kernel call (SPEC.md's own per-construct lowering status:
+sets in SPARK, Frama-C and Lean; datatypes in SPARK, Frama-C, Rocq and
+F*) is recorded as the real outcome `abstain`, and `grade` reads that
+cell N/A where a kernel verdict (verified, refuted, vacuous, rejected,
+decorative) was expected: neither conformance nor a defect, the per-
+construct opt-out, not counted toward the exit code, still shown in
+the cell. SV-COMP's rules score UNKNOWN 0 and let a tool opt out of a
+category (sv-comp.sosy-lab.org/2025/rules.php); a kernel's timeout
+stays FAIL here, unlike SV-COMP's UNKNOWN, because this suite exists
+to show a kernel gap, not to rank tools. Against `lower-error` an
+abstain stays FAIL: that probe asks every lowering to reject the token
+itself. Before this rule the 2026-09-28 run read 43 named abstains as
+FAIL cells.
+
 fz_p_divreq0, ROADMAP 13.4 (framac-fast), 2026-09-11: `run_items` used to
 lower and grade the REAL program normally whenever `harness.twin_cached`
 came back with no twin, on the theory that the probe's expectation is
@@ -417,7 +432,9 @@ def grade(items: list[dict], rows: dict, cols: list) -> dict:
     (ROADMAP 13.4): "rejected" (REJECTED_OK membership on the real outcome
     alone, still never the twin) and "decorative" (harness.decorative_kind
     on the (real, twin) PAIR, the one case that is about both columns of
-    the cell, because that is what the twin rule itself is about)."""
+    the cell, because that is what the twin rule itself is about). A
+    real outcome of `abstain` (2026-09-28, the module docstring's "Named
+    abstains") reads N/A against every expectation but lower-error."""
     present_names = {b for b, v in cols if not v.startswith("ABSENT")}
     verdicts = {}
     for it in items:
@@ -441,6 +458,9 @@ def grade(items: list[dict], rows: dict, cols: list) -> dict:
             c = cells.get(b)
             if c is None:
                 per_col[b] = "FAIL"
+                continue
+            if c[0] == "abstain" and exp != "lower-error":
+                per_col[b] = "N/A"        # named abstain: the opt-out
                 continue
             if exp == "rejected":
                 per_col[b] = "PASS" if c[0] in REJECTED_OK else "FAIL"
@@ -472,8 +492,14 @@ def format_table(cols, items, rows, verdicts, not_applicable, bugs,
              "`decorative` (PASS iff harness.decorative_kind on the real/"
              "twin PAIR reads 'decorative', the twin-rule finding this "
              "cell's own probe is about). N/A means the kernel's own "
-             "binary is absent from this run (not counted toward exit "
-             "code). Built from fuzz_lower.py's hand-built probes plus "
+             "binary is absent from this run, or (2026-09-28) the "
+             "lowering abstained by name where a kernel verdict was "
+             "expected (NotImplementedError before any kernel call, "
+             "SPEC.md's own per-construct lowering status: the "
+             "per-construct opt-out, as SV-COMP scores UNKNOWN 0 and "
+             "lets a tool opt out of a category); neither is counted "
+             "toward the exit code. A kernel's timeout stays FAIL. "
+             "Built from fuzz_lower.py's hand-built probes plus "
              "metamorphic.py's named TRANSFORMS applied to t/tasks/abs.t; "
              "see t/conformance.py's module docstring for the manifest.",
              ""]
