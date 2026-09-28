@@ -92,6 +92,54 @@ UNREACHABLE = {
                        "seq, a pair or any other result type there; the "
                        "rule guards the JSON gate (a lifted task) and "
                        "t/test_seq_spec_fun.py triggers it on the AST.",
+    # SPEC.md "Datatypes (v1)" (2026-09-27): datatype-name/-dup/-empty and
+    # ctor-name/-unknown are all guards the PARSER itself already enforces
+    # before check_wf ever sees the task, exactly the same posture as
+    # "name"/"return-name"/"strlib-arity" above; ctor-fields-not-v1 and
+    # ctor-argtype guard a shape (a fielded constructor) the notation
+    # cannot write in this v1 landing at all.
+    "datatype-name": "datatype_decl() reads a datatype's name with "
+                     "self.name() (an 'id' token, already NAME_RE by "
+                     "construction, exactly as a task/spec_fun name is), "
+                     "so no notation token can fail this check.",
+    "datatype-dup": "datatype_decl() itself refuses a second `datatype` "
+                    "declaration whose name is already in self.datatypes "
+                    "(program()'s own loop, a SurfaceError, before `t N` "
+                    "is even read), so check_wf's own dup check can never "
+                    "see two entries of the same name from a parse.",
+    "datatype-empty": "datatype_decl()'s ctor loop reads self.name() "
+                      "unconditionally before checking for '|', so the "
+                      "notation cannot write a `datatype D = ` with zero "
+                      "constructors; every parsed datatype has at least one.",
+    "datatype-unknown": "ptype()'s datatype branch and p_atom()'s "
+                        "ctor-reference branch both gate on `name in "
+                        "self.datatypes` before building a `{\"datatype\": "
+                        "..}` type or a `ctor` node at all; an undeclared "
+                        "name simply never takes either branch (it falls "
+                        "through to an ordinary type-keyword or var/call "
+                        "read instead), so no notation reaches check_wf "
+                        "carrying a datatype name it does not know.",
+    "ctor-name": "a constructor name is read with self.name() in both "
+                 "datatype_decl() (the declaration) and p_atom()'s "
+                 "ctor-reference branch (a use), each an 'id' token, "
+                 "already NAME_RE by construction.",
+    "ctor-fields-not-v1": "this v1 landing's datatype_decl() has no "
+                          "notation for a field list at all (a constructor "
+                          "is a bare name, full stop), so the parser "
+                          "cannot build a ctor dict whose 'fields' is "
+                          "non-empty; the rule guards the JSON gate for "
+                          "the record wave ahead.",
+    "ctor-unknown": "p_atom()'s ctor-reference branch (`D.C`) checks `C` "
+                    "against self.datatypes[D] (the declared constructor "
+                    "list) and raises a SurfaceError itself when it is "
+                    "not there, before any ctor AST node is built.",
+    "ctor-argtype": "reached only when a ctor's field COUNT already "
+                    "matches (ctor-arity's own guard) and at least one "
+                    "field exists to mistype; ctor-fields-not-v1 refuses "
+                    "every declared datatype with a non-empty field list "
+                    "in this v1 landing, so no ctor this file's `dtypes` "
+                    "ever builds has a field for an argument to mismatch "
+                    "against, from ANY input, malformed or not.",
 }
 
 

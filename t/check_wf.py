@@ -103,6 +103,28 @@ RULES: dict[str, str] = {
                    "a decreases; its contract calls no lemma or method (Lemmas)",
     "local-shadow": "a local must not shadow a name already in scope (Gate 1 scope rule)",
     "local-v0": "locals are a v1 construct (Gate 2)",
+    "datatype-name": "a datatype name matches [A-Za-z][A-Za-z0-9_]* (Datatypes)",
+    "datatype-dup": "a datatype name is declared at most once per task (Datatypes)",
+    "datatype-empty": "a datatype declares at least one constructor (Datatypes)",
+    "datatype-unknown": "a datatype type or ctor names a datatype this task "
+                        "declares (Datatypes)",
+    "ctor-name": "a constructor name matches [A-Za-z][A-Za-z0-9_]* (Datatypes)",
+    "ctor-dup": "a constructor name is declared at most once per datatype (Datatypes)",
+    "ctor-fields-not-v1": "this v1 landing states enumerations only: a "
+                          "constructor carries no fields (Datatypes)",
+    "ctor-unknown": "a ctor names one of its datatype's own declared "
+                    "constructors (Datatypes)",
+    "ctor-arity": "a ctor's argument count matches its constructor's declared "
+                  "field count (Datatypes)",
+    "ctor-argtype": "a ctor's arguments match their constructor's declared "
+                    "field types (Datatypes)",
+    "match-scrutinee": "match scrutinizes a value of one of this task's own "
+                       "declared datatypes (Datatypes)",
+    "match-coverage": "match covers every constructor of the scrutinee's "
+                      "datatype exactly once (Datatypes; Dafny reference 5.14)",
+    "match-arity": "a match arm binds exactly its constructor's declared "
+                   "fields (Datatypes)",
+    "match-branches": "every match arm has the same type (Datatypes)",
     "method-call-position": "a method call is the whole right-hand side of an "
                             "assign or a var init, with call-free arguments; "
                             "never in a spec, a guard, an invariant, a "
@@ -266,18 +288,24 @@ BASE_TYPES = ("int", "bool", "seq")     # every T1, T2 a pair may hold
 SPEC_FUN_RESULTS = ("int", "bool", "seq")
 
 
-def _valid_type(t) -> bool:
+def _valid_type(t, dtypes=frozenset()) -> bool:
     """A well-formed t TYPE: "int", "bool", "seq", a pair
     `{"pair": [T1, T2]}` with T1, T2 each one of int/bool/seq (SPEC.md
     "Pairs", 2026-09-10): no pair of pairs, no seq of pairs, no pair of
-    three; or `{"seq": "seq"}` (SPEC.md "Nested sequences", 2026-09-10),
+    three; `{"seq": "seq"}` (SPEC.md "Nested sequences", 2026-09-10),
     one level only -- the value under "seq" must be the literal string
     "seq" and nothing else, so `{"seq": {"seq": "seq"}}` (three levels) and
     `{"seq": {"pair": [...]}}` (a seq of pairs) are both refused here, by
-    name, exactly as the SPEC says v1 does not have them. Anything else (an
-    unknown string, a malformed dict, a pair whose own component is itself
-    a dict) is refused here rather than left for a KeyError or a silent
-    pass three checks later."""
+    name, exactly as the SPEC says v1 does not have them; or
+    `{"datatype": D}` (SPEC.md "Datatypes (v1)", 2026-09-27) where `D` is
+    one of THIS task's own declared datatype names -- `dtypes` is the
+    dict `check_wf` built from `task["datatypes"]` (name -> decl), so a
+    type naming a datatype no `datatype` declaration in this task defines
+    is refused here, the same way an unbound var is refused in `_ty`,
+    rather than surfacing three call frames later as a KeyError. Anything
+    else (an unknown string, a malformed dict, a pair whose own component
+    is itself a dict) is refused here rather than left for a KeyError or a
+    silent pass three checks later."""
     if t in BASE_TYPES or t == "set":
         # "set": SPEC.md "Finite sets" (2026-09-27), a finite set of ints;
         # deliberately NOT in BASE_TYPES, so a pair may not hold one.
@@ -285,10 +313,13 @@ def _valid_type(t) -> bool:
     if isinstance(t, dict) and set(t) == {"pair"}:
         return (isinstance(t["pair"], list) and len(t["pair"]) == 2
                 and all(c in BASE_TYPES for c in t["pair"]))
-    return isinstance(t, dict) and t == {"seq": "seq"}
+    if isinstance(t, dict) and t == {"seq": "seq"}:
+        return True
+    return (isinstance(t, dict) and set(t) == {"datatype"}
+            and isinstance(t["datatype"], str) and t["datatype"] in dtypes)
 
 
-def _ty(e, env, funs, ver, errs, bound, expect=None):
+def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
     """Type of e in env, or None; appends to errs. env maps name -> type.
 
     `expect`, added for SPEC.md "Nested sequences" (2026-09-10): the
@@ -314,15 +345,98 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         if t is None:
             _e(errs, e, f"unbound var {e['var']}", "unbound")
         return t
-    if "ite" in e or "forall" in e or "exists" in e or "call" in e:
+    if ("ite" in e or "forall" in e or "exists" in e or "call" in e
+            or "ctor" in e or "match" in e):
         if ver == 0:
             _e(errs, e, "v1 expression form in a v0 task", "v1-expr-v0")
+    if "ctor" in e:
+        # SPEC.md "Datatypes (v1)" (2026-09-27): {"ctor": {"dtype": D,
+        # "name": C, "args": [...]}}, a value of datatype D built with
+        # constructor C. Copied from Dafny's own datatype values (reference
+        # manual 5.14): a constructor is qualified by its datatype's name,
+        # exactly as t's surface notation writes `D.C`.
+        c = e["ctor"]
+        d = dtypes.get(c.get("dtype"))
+        if d is None:
+            _e(errs, e, f"ctor of unknown datatype {c.get('dtype')!r}",
+               "datatype-unknown")
+            return None
+        cdecl = next((ct for ct in d.get("ctors", [])
+                      if isinstance(ct, dict) and ct.get("name") == c.get("name")),
+                     None)
+        if cdecl is None:
+            _e(errs, e, f"{c.get('dtype')} has no constructor {c.get('name')!r}",
+               "ctor-unknown")
+            return {"datatype": c.get("dtype")}
+        fields = cdecl.get("fields") or []
+        cargs = c.get("args", [])
+        if len(cargs) != len(fields):
+            _e(errs, e, f"{c['dtype']}.{c['name']} takes {len(fields)} "
+                        f"argument(s), given {len(cargs)}", "ctor-arity")
+        for fdecl, a in zip(fields, cargs):
+            if _ty(a, env, funs, dtypes, ver, errs, bound, fdecl.get("type")) != fdecl.get("type"):
+                _e(errs, e, f"{c['dtype']}.{c['name']}: field type mismatch",
+                   "ctor-argtype")
+        return {"datatype": c["dtype"]}
+    if "match" in e:
+        # SPEC.md "Datatypes (v1)": {"match": {"scrutinee": Expr, "arms":
+        # [{"ctor": C, "binders": [...], "body": Expr}, ...]}}, total --
+        # every arm's body must type, and every constructor of the
+        # scrutinee's datatype must be covered EXACTLY once (Dafny
+        # reference manual 5.14: a `match` is exhaustive over
+        # constructors); the scrutinee's own type names which datatype,
+        # so no separate "dtype" field is needed here the way `ctor`
+        # needs one to disambiguate construction.
+        m = e["match"]
+        st = _ty(m["scrutinee"], env, funs, dtypes, ver, errs, bound)
+        if not (isinstance(st, dict) and set(st) == {"datatype"}
+                and st["datatype"] in dtypes):
+            _e(errs, e, f"match scrutinee is not a datatype value: {st!r}",
+               "match-scrutinee")
+            return None
+        d = dtypes[st["datatype"]]
+        declared = [ct["name"] for ct in d.get("ctors", []) if isinstance(ct, dict)
+                    and isinstance(ct.get("name"), str)]
+        arms = m.get("arms", [])
+        seen = [a.get("ctor") for a in arms]
+        if sorted(seen) != sorted(declared) or len(seen) != len(set(seen)):
+            _e(errs, e, f"match over {st['datatype']} must cover each "
+                        f"constructor exactly once, found {seen!r}",
+               "match-coverage")
+        result = None
+        mismatch = False
+        for a in arms:
+            cdecl = next((ct for ct in d.get("ctors", [])
+                          if isinstance(ct, dict) and ct.get("name") == a.get("ctor")),
+                         None)
+            fields = (cdecl.get("fields") or []) if cdecl is not None else []
+            binders = a.get("binders", [])
+            if len(binders) != len(fields):
+                _e(errs, e, f"match arm {a.get('ctor')}: {len(fields)} "
+                            f"binder(s) expected, found {len(binders)}",
+                   "match-arity")
+            sub = dict(env)
+            subbound = set(bound)
+            for bname, fdecl in zip(binders, fields):
+                if bname in env or bname in subbound:
+                    _e(errs, e, f"match binder {bname} shadows a name in scope",
+                       "quant-shadow")
+                sub[bname] = fdecl.get("type")
+                subbound.add(bname)
+            at = _ty(a.get("body"), sub, funs, dtypes, ver, errs, subbound)
+            if result is None:
+                result = at
+            elif at != result:
+                mismatch = True
+        if mismatch:
+            _e(errs, e, "match arms have different types", "match-branches")
+        return result
     if "ite" in e:
         c = e["ite"]
-        if _ty(c["cond"], env, funs, ver, errs, bound) != "bool":
+        if _ty(c["cond"], env, funs, dtypes, ver, errs, bound) != "bool":
             _e(errs, e, "ite condition is not bool", "bool-cond")
-        a = _ty(c["then"], env, funs, ver, errs, bound, expect)
-        b = _ty(c["else"], env, funs, ver, errs, bound, expect)
+        a = _ty(c["then"], env, funs, dtypes, ver, errs, bound, expect)
+        b = _ty(c["else"], env, funs, dtypes, ver, errs, bound, expect)
         if a != b:
             _e(errs, e, f"ite branches differ: {a} vs {b}", "ite-branches")
         return a
@@ -332,11 +446,11 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         if v in env or v in bound:
             _e(errs, e, f"bound var {v} shadows a name in scope", "quant-shadow")
         for side in ("lo", "hi"):
-            if _ty(q[side], env, funs, ver, errs, bound) != "int":
+            if _ty(q[side], env, funs, dtypes, ver, errs, bound) != "int":
                 _e(errs, e, f"quantifier {side} is not int", "quant-bounds")
         sub = dict(env)
         sub[v] = "int"
-        if _ty(q["body"], sub, funs, ver, errs, bound | {v}) != "bool":
+        if _ty(q["body"], sub, funs, dtypes, ver, errs, bound | {v}) != "bool":
             _e(errs, e, "quantifier body is not bool", "quant-body")
         return "bool"
     if "call" in e:
@@ -348,7 +462,7 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         if len(f["params"]) != len(c["args"]):
             _e(errs, e, f"arity mismatch calling {c['fun']}", "call-arity")
         for p, a in zip(f["params"], c["args"]):
-            if _ty(a, env, funs, ver, errs, bound, p["type"]) != p["type"]:
+            if _ty(a, env, funs, dtypes, ver, errs, bound, p["type"]) != p["type"]:
                 _e(errs, e, f"argument type mismatch calling {c['fun']}", "call-argtype")
         return f["result"]
     op = e["op"]
@@ -371,7 +485,7 @@ def _ty(e, env, funs, ver, errs, bound, expect=None):
         _e(errs, e, f"{op} takes two arguments", "op-arity")
     if op in NARY and len(args) < 2:
         _e(errs, e, f"{op} needs at least two arguments", "op-arity")
-    ts = [_ty(a, env, funs, ver, errs, bound) for a in args]
+    ts = [_ty(a, env, funs, dtypes, ver, errs, bound) for a in args]
     NESTED = {"seq": "seq"}
     if op == "seq":
         # SPEC.md "Sequences: literals, concatenation, slices": [e1, ..., en]
@@ -576,14 +690,20 @@ def _self_calls(e, name) -> bool:
 
 def expression_type(expr: dict, variables: dict, functions: dict | None = None,
                     expected=None, positions: dict | None = None,
-                    file: str = "<string>") -> tuple:
+                    file: str = "<string>", datatypes: dict | None = None) -> tuple:
     """Type an expression using the same rules as task checking.
 
     Surface inline helpers use this before expansion, so unused definitions and
-    arguments cannot escape the ordinary scope and type rules.
+    arguments cannot escape the ordinary scope and type rules. `datatypes`
+    (name -> decl) is new for SPEC.md "Datatypes (v1)" (2026-09-27) and
+    defaults to empty: no existing caller passes a datatype-typed
+    expression through an inline helper today, so `{}` reproduces exactly
+    what this function did before datatypes existed, and a helper that DOES
+    reach a `ctor`/`match` node is refused here (an "unbound"-style datatype
+    name) rather than silently typed against some other task's declarations.
     """
     errors = _Errs(positions, file)
-    result = _ty(expr, variables, functions or {}, 1, errors, set(), expected)
+    result = _ty(expr, variables, functions or {}, datatypes or {}, 1, errors, set(), expected)
     return result, errors
 
 
@@ -613,6 +733,54 @@ def check_wf(task: dict, positions: dict | None = None,
         _e(errs, task, "exactly one return value (SPEC.md v0 and v1)", "one-return")
     if not task["ensures"]:
         _e(errs, task, "ensures must be non-empty", "ensures-nonempty")
+    # SPEC.md "Datatypes (v1)" (2026-09-27): `task["datatypes"]`, a list of
+    # {"name": D, "ctors": [{"name": C}, ...]} -- v1 is enumerations only, a
+    # constructor carries no fields, so a `ctor` dict with anything under
+    # "fields" is refused here by name rather than silently accepted and
+    # dropped at interp time. `dtypes` (name -> decl) is threaded through
+    # every `_ty` call the same way `funs` already is, so a type or a
+    # `ctor`/`match` node can be checked against ITS OWN task's declarations
+    # only -- there is no such thing as a datatype declared by one task and
+    # used by another.
+    if ver == 0 and "datatypes" in task:
+        _e(errs, task, "v1 field in a v0 task", "v0-frozen")
+    dtypes: dict = {}
+    for d in task.get("datatypes", []):
+        dname = d.get("name")
+        if not isinstance(dname, str) or not NAME_RE.match(dname):
+            _e(errs, task, f"bad datatype name {dname!r}", "datatype-name")
+            continue
+        if dname in dtypes:
+            _e(errs, task, f"datatype {dname} declared twice", "datatype-dup")
+            continue
+        ctors = d.get("ctors")
+        if not isinstance(ctors, list) or not ctors:
+            _e(errs, d, f"datatype {dname} has no constructors", "datatype-empty")
+            dtypes[dname] = d
+            continue
+        cnames = set()
+        for c in ctors:
+            cname = c.get("name") if isinstance(c, dict) else None
+            if not isinstance(cname, str) or not NAME_RE.match(cname):
+                _e(errs, d, f"datatype {dname}: bad constructor name {cname!r}",
+                   "ctor-name")
+                continue
+            if cname in cnames:
+                _e(errs, d, f"datatype {dname}: constructor {cname} declared twice",
+                   "ctor-dup")
+            cnames.add(cname)
+            if c.get("fields"):
+                # SPEC.md "Datatypes (v1)": "enumerations: a datatype whose
+                # constructors carry no fields ... records ... [and] non-
+                # recursive sums ... stay out of v1" for this landing --
+                # only the enum shape is implemented end to end (interp,
+                # the seven lowerings, the ladder move), so a constructor
+                # that DOES carry fields is refused here by name instead of
+                # being accepted and then mishandled downstream.
+                _e(errs, d, f"datatype {dname}: constructor {cname} carries "
+                            f"fields, not in this v1 landing (enumerations "
+                            f"only)", "ctor-fields-not-v1")
+        dtypes[dname] = d
     funs = dict(expression_funs or {})
     funs.update({f["name"]: f for f in task.get("spec_funs", [])})
     if ver == 0 and (funs or "decreases" in task or "gate" in task
@@ -622,10 +790,10 @@ def check_wf(task: dict, positions: dict | None = None,
     if ver == 0 and any(t != "int" for t in penv.values()):
         _e(errs, task, "v0 has int only", "v0-int-only")
     for p in task["params"]:
-        if not _valid_type(p["type"]):
+        if not _valid_type(p["type"], dtypes):
             _e(errs, p, f"param {p['name']} has an invalid type: {p['type']!r}", "valid-type")
     for r in task["returns"]:
-        if not _valid_type(r["type"]):
+        if not _valid_type(r["type"], dtypes):
             _e(errs, r, f"return {r['name']} has an invalid type: {r['type']!r}", "valid-type")
     for i, f in enumerate(task.get("spec_funs", [])):
         fenv = {p["name"]: p["type"] for p in f["params"]}
@@ -640,18 +808,18 @@ def check_wf(task: dict, positions: dict | None = None,
             # check below under a misleading message.
             _e(errs, f, f"spec_fun {f['name']} result must be int, bool or "
                         f"seq, not {f['result']!r}", "spec-fun-result")
-        if _ty(f["decreases"], fenv, earlier, ver, errs, set()) != "int":
+        if _ty(f["decreases"], fenv, earlier, dtypes, ver, errs, set()) != "int":
             _e(errs, f, f"spec_fun {f['name']} decreases is not int", "spec-fun-decreases-int")
-        if _ty(f["body"], fenv, earlier, ver, errs, set(), f["result"]) != f["result"]:
+        if _ty(f["body"], fenv, earlier, dtypes, ver, errs, set(), f["result"]) != f["result"]:
             _e(errs, f, f"spec_fun {f['name']} body type != result", "spec-fun-body-type")
     for e in task.get("requires", []):
-        if _ty(e, penv, funs, ver, errs, set()) != "bool":
+        if _ty(e, penv, funs, dtypes, ver, errs, set()) != "bool":
             _e(errs, e, "requires clause is not bool", "requires-bool")
     ret = task["returns"][0]
     eenv = dict(penv)
     eenv[ret["name"]] = ret["type"]
     for e in task["ensures"]:
-        if _ty(e, eenv, funs, ver, errs, set()) != "bool":
+        if _ty(e, eenv, funs, dtypes, ver, errs, set()) != "bool":
             _e(errs, e, "ensures clause is not bool", "ensures-bool")
     if _self_calls(task["ensures"], task["name"]):
         _e(errs, task, "ensures references the task name (SPEC.md gate 3)", "no-self-in-ensures")
@@ -668,13 +836,13 @@ def check_wf(task: dict, positions: dict | None = None,
     lnames = [l.get("name") for l in lemmas]
     lsigs: dict = {}
     for i, l in enumerate(lemmas):
-        _check_lemma(l, i, task, funs, lsigs, lnames, mnames, ver, errs)
+        _check_lemma(l, i, task, funs, lsigs, lnames, mnames, dtypes, ver, errs)
         if isinstance(l.get("name"), str) and isinstance(l.get("params"), list):
             lsigs[l["name"]] = l
     all_lemmas = {n for n in lnames if isinstance(n, str)}
     msigs = {}
     for i, m in enumerate(methods):
-        _check_method(m, i, task, funs, msigs, mnames, ver, errs, lemmas=lsigs)
+        _check_method(m, i, task, funs, msigs, mnames, dtypes, ver, errs, lemmas=lsigs)
         if isinstance(m.get("name"), str) and len(m.get("returns", [])) == 1:
             msigs[m["name"]] = {"params": m["params"],
                                 "result": m["returns"][0]["type"],
@@ -698,13 +866,13 @@ def check_wf(task: dict, positions: dict | None = None,
                                "result": ret["type"], "body": None,
                                "decreases": None}
     _check_call_positions(task["body"], all_methods, errs)
-    _check_stmts(task["body"], dict(eenv), bfuns, ver, errs, {ret["name"]},
+    _check_stmts(task["body"], dict(eenv), bfuns, dtypes, ver, errs, {ret["name"]},
                  lemmas=lsigs)
     _check_returns(task["body"], ret["name"], errs)
     return errs
 
 
-def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs,
+def _check_method(m, i, task, funs, earlier_sigs, mnames, dtypes, ver, errs,
                   lemmas=None):
     """One entry of `methods` (SPEC.md "Methods (v1)"): a named body with
     its own contract, checked like a task, whose body may call the
@@ -729,11 +897,11 @@ def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs,
         _e(errs, m, f"method {name}: ensures must be non-empty", "ensures-nonempty")
     penv = {p["name"]: p["type"] for p in m["params"]}
     for p in m["params"] + m["returns"]:
-        if not _valid_type(p["type"]):
+        if not _valid_type(p["type"], dtypes):
             _e(errs, p, f"method {name}: {p['name']} has an invalid type: "
                         f"{p['type']!r}", "valid-type")
     for e in m["requires"]:
-        if _ty(e, penv, funs, ver, errs, set()) != "bool":
+        if _ty(e, penv, funs, dtypes, ver, errs, set()) != "bool":
             _e(errs, e, f"method {name}: requires clause is not bool", "requires-bool")
     r = m["returns"][0]
     eenv = dict(penv)
@@ -742,7 +910,7 @@ def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs,
         _e(errs, m, f"method {name}: a parameter and the return share a name",
            "local-shadow")
     for e in m["ensures"]:
-        if _ty(e, eenv, funs, ver, errs, set()) != "bool":
+        if _ty(e, eenv, funs, dtypes, ver, errs, set()) != "bool":
             _e(errs, e, f"method {name}: ensures clause is not bool", "ensures-bool")
     here = {n for n in mnames if isinstance(n, str)} | {task["name"]}
     for e in list(m["requires"]) + list(m["ensures"]):
@@ -755,7 +923,7 @@ def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs,
         _e(errs, m, f"method {name}: decreases without a self-call", "method-decreases")
     if "decreases" in m:
         _no_method_calls(m["decreases"], here, errs)
-        if _ty(m["decreases"], penv, funs, ver, errs, set()) != "int":
+        if _ty(m["decreases"], penv, funs, dtypes, ver, errs, set()) != "int":
             _e(errs, m, f"method {name}: decreases is not int", "method-decreases")
     later = {n for n in mnames[i + 1:] if isinstance(n, str)} | {task["name"]}
     if _calls_any(m["body"], later):
@@ -766,12 +934,12 @@ def _check_method(m, i, task, funs, earlier_sigs, mnames, ver, errs,
         bfuns[name] = {"params": m["params"], "result": r["type"],
                        "body": None, "decreases": None, "_method": True}
     _check_call_positions(m["body"], here, errs)
-    _check_stmts(m["body"], dict(eenv), bfuns, ver, errs, {r["name"]},
+    _check_stmts(m["body"], dict(eenv), bfuns, dtypes, ver, errs, {r["name"]},
                  lemmas=lemmas)
     _check_returns(m["body"], r["name"], errs)
 
 
-def _check_lemma_call(s, env, funs, ver, errs, lemmas) -> None:
+def _check_lemma_call(s, env, funs, dtypes, ver, errs, lemmas) -> None:
     """`{"lemma": {"name": L, "args": [...]}}`: Dafny's lemma call
     statement (reference manual 6.3.3), a no-op at run time whose effect is
     the lemma's ensures at the arguments, owed its requires there."""
@@ -786,7 +954,7 @@ def _check_lemma_call(s, env, funs, ver, errs, lemmas) -> None:
     if len(l["params"]) != len(c["args"]):
         _e(errs, s, f"arity mismatch calling lemma {c['name']}", "lemma-call")
     for p, a in zip(l["params"], c["args"]):
-        if _ty(a, env, funs, ver, errs, set(), p["type"]) != p["type"]:
+        if _ty(a, env, funs, dtypes, ver, errs, set(), p["type"]) != p["type"]:
             _e(errs, s, f"argument type mismatch calling lemma {c['name']}",
                "lemma-call")
 
@@ -815,7 +983,7 @@ def _check_lemma_body(body, name, errs) -> None:
             _check_lemma_body(s["if"]["else"], name, errs)
 
 
-def _check_lemma(l, i, task, funs, earlier, lnames, mnames, ver, errs):
+def _check_lemma(l, i, task, funs, earlier, lnames, mnames, dtypes, ver, errs):
     """One entry of `lemmas` (SPEC.md "Lemmas (v1)"), copied from Dafny's
     lemma (reference manual 6.3.3): a ghost method with no return, whose
     requires/ensures are the statement and whose body is its proof. The
@@ -841,14 +1009,14 @@ def _check_lemma(l, i, task, funs, earlier, lnames, mnames, ver, errs):
     if len(penv) != len(l["params"]):
         _e(errs, l, f"lemma {name}: two parameters share a name", "local-shadow")
     for p in l["params"]:
-        if not _valid_type(p["type"]):
+        if not _valid_type(p["type"], dtypes):
             _e(errs, p, f"lemma {name}: {p['name']} has an invalid type: "
                         f"{p['type']!r}", "valid-type")
     for e in l["requires"]:
-        if _ty(e, penv, funs, ver, errs, set()) != "bool":
+        if _ty(e, penv, funs, dtypes, ver, errs, set()) != "bool":
             _e(errs, e, f"lemma {name}: requires clause is not bool", "requires-bool")
     for e in l["ensures"]:
-        if _ty(e, penv, funs, ver, errs, set()) != "bool":
+        if _ty(e, penv, funs, dtypes, ver, errs, set()) != "bool":
             _e(errs, e, f"lemma {name}: ensures clause is not bool", "ensures-bool")
     _check_lemma_body(l["body"], name, errs)
     called = _lemma_calls(l["body"])
@@ -858,7 +1026,7 @@ def _check_lemma(l, i, task, funs, earlier, lnames, mnames, ver, errs):
            "lemma-decreases")
     if not selfrec and "decreases" in l:
         _e(errs, l, f"lemma {name}: decreases without a self-call", "lemma-decreases")
-    if "decreases" in l and _ty(l["decreases"], penv, funs, ver, errs, set()) != "int":
+    if "decreases" in l and _ty(l["decreases"], penv, funs, dtypes, ver, errs, set()) != "int":
         _e(errs, l, f"lemma {name}: decreases is not int", "lemma-decreases")
     allowed = set(earlier) | {name}
     if any(c not in allowed for c in called if isinstance(c, str)
@@ -866,7 +1034,7 @@ def _check_lemma(l, i, task, funs, earlier, lnames, mnames, ver, errs):
         _e(errs, l, f"lemma {name} calls a later lemma", "lemma-order")
     sigs = dict(earlier)
     sigs[name] = l
-    _check_stmts(l["body"], dict(penv), funs, ver, errs, set(), lemmas=sigs,
+    _check_stmts(l["body"], dict(penv), funs, dtypes, ver, errs, set(), lemmas=sigs,
                  in_lemma=True)
 
 
@@ -932,7 +1100,7 @@ def _check_returns(body, rname, errs):
             _check_returns(s["while"]["body"], rname, errs)
 
 
-def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None,
+def _check_stmts(body, env, funs, dtypes, ver, errs, assignable, lemmas=None,
                  in_lemma=False):
     lemmas = {} if lemmas is None else lemmas
     for s in body:
@@ -940,7 +1108,7 @@ def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None,
             n, e = s["assign"]
             if n not in assignable:
                 _e(errs, s, f"assign to {n}, not a return or local", "assign-target")
-            t = _ty(e, env, funs, ver, errs, set(), env.get(n))
+            t = _ty(e, env, funs, dtypes, ver, errs, set(), env.get(n))
             if t != env.get(n):
                 _e(errs, s, f"assign {n}: {t} into {env.get(n)}", "assign-type")
         elif "var" in s:
@@ -949,35 +1117,35 @@ def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None,
             d = s["var"]
             if d["name"] in env:
                 _e(errs, s, f"local {d['name']} shadows a name in scope", "local-shadow")
-            if not _valid_type(d["type"]):
+            if not _valid_type(d["type"], dtypes):
                 _e(errs, s, f"local {d['name']} has an invalid type: "
                        f"{d['type']!r}", "valid-type")
-            if _ty(d["init"], env, funs, ver, errs, set(), d["type"]) != d["type"]:
+            if _ty(d["init"], env, funs, dtypes, ver, errs, set(), d["type"]) != d["type"]:
                 _e(errs, s, f"local {d['name']} init type mismatch", "assign-type")
             env[d["name"]] = d["type"]
             assignable.add(d["name"])
         elif "if" in s:
             c = s["if"]
-            if _ty(c["cond"], env, funs, ver, errs, set()) != "bool":
+            if _ty(c["cond"], env, funs, dtypes, ver, errs, set()) != "bool":
                 _e(errs, s, "if condition is not bool", "bool-cond")
-            _check_stmts(c["then"], dict(env), funs, ver, errs, set(assignable),
+            _check_stmts(c["then"], dict(env), funs, dtypes, ver, errs, set(assignable),
                          lemmas, in_lemma)
-            _check_stmts(c["else"], dict(env), funs, ver, errs, set(assignable),
+            _check_stmts(c["else"], dict(env), funs, dtypes, ver, errs, set(assignable),
                          lemmas, in_lemma)
         elif "while" in s:
             if ver == 0:
                 _e(errs, s, "while in a v0 task", "while-v0")
             w = s["while"]
-            if _ty(w["cond"], env, funs, ver, errs, set()) != "bool":
+            if _ty(w["cond"], env, funs, dtypes, ver, errs, set()) != "bool":
                 _e(errs, s, "loop condition is not bool", "bool-cond")
             if "decreases" not in w:
                 _e(errs, s, "loop without decreases (SPEC.md gate 2)", "loop-decreases")
-            elif _ty(w["decreases"], env, funs, ver, errs, set()) != "int":
+            elif _ty(w["decreases"], env, funs, dtypes, ver, errs, set()) != "int":
                 _e(errs, s, "loop decreases is not int", "loop-decreases")
             for inv in w.get("invariants", []):
-                if _ty(inv, env, funs, ver, errs, set()) != "bool":
+                if _ty(inv, env, funs, dtypes, ver, errs, set()) != "bool":
                     _e(errs, s, "loop invariant is not bool", "loop-invariant-bool")
-            _check_stmts(w["body"], dict(env), funs, ver, errs, set(assignable),
+            _check_stmts(w["body"], dict(env), funs, dtypes, ver, errs, set(assignable),
                          lemmas)
         elif "return" in s:
             if ver == 0:
@@ -985,7 +1153,7 @@ def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None,
             n, e = s["return"]
             if n not in assignable:
                 _e(errs, s, f"return names {n}, not the task's return", "return-name")
-            t = _ty(e, env, funs, ver, errs, set(), env.get(n))
+            t = _ty(e, env, funs, dtypes, ver, errs, set(), env.get(n))
             if t != env.get(n):
                 _e(errs, s, f"return {n}: {t} into {env.get(n)}", "assign-type")
             if s is not body[-1]:
@@ -994,10 +1162,10 @@ def _check_stmts(body, env, funs, ver, errs, assignable, lemmas=None,
         elif "lemma" in s:
             if ver == 0:
                 _e(errs, s, "lemma call in a v0 task", "v0-frozen")
-            _check_lemma_call(s, env, funs, ver, errs, lemmas)
+            _check_lemma_call(s, env, funs, dtypes, ver, errs, lemmas)
         elif "assert" in s and in_lemma:
             # SPEC.md "Lemmas (v1)": a proof step inside a lemma body only
-            if _ty(s["assert"], env, funs, ver, errs, set()) != "bool":
+            if _ty(s["assert"], env, funs, dtypes, ver, errs, set()) != "bool":
                 _e(errs, s, "assert is not bool", "bool-cond")
         else:
             _e(errs, s, f"t has no statement {sorted(s)!r}", "unknown-stmt")
