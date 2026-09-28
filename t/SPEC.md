@@ -1268,6 +1268,179 @@ combining the recursive unfolding with a loop-carried or slice-derived
 `\list` fact under the task's other hypotheses, not a soundness gap).
 The lifter's mapping is LIFTER-DECISIONS.md row 49.
 
+### Datatypes (v1)
+
+Stated 2026-09-27 (FEATURES-TRACK.md "10. Datatypes", the census's biggest
+remaining sole-blocker group: 73 methods refused `datatype` at classify,
+plus 56 files the parser refuses on `match`; round 2 named the shapes
+`datatype-enum`, `-record`, `-sum`, `-real`, `-generic`, `-recursive`, and
+`match-literal`). This landing states the first of them, in the order
+FEATURES-TRACK.md set: **enumerations**, a datatype whose constructors
+carry no fields (Dafny `datatype Color = Red | Green`, Dafny Reference
+Manual 5.14 "Algebraic Datatypes"/5.14.1 "Inductive datatypes"; Rust
+Reference "Enumerations", a field-less/"unit-only" enum; Lean's "Theorem
+Proving in Lean 4" ch.7.1 "Enumerated Types", `inductive Weekday where |
+sunday | ...`). Records (one constructor, int/bool/seq fields) and
+non-recursive sums are the next two v1 waves FEATURES-TRACK.md orders
+after this one; recursive datatypes stay out of v1 and refuse by name,
+permanently for now (a recursive constructor needs a well-founded
+interpreter value and a termination measure on top of everything below,
+neither built).
+
+**The value.** A datatype is declared once per task, a name and an
+ordered, non-empty list of constructor names, each carrying zero fields in
+this landing:
+
+```
+"datatypes": [{"name": "Color", "ctors": [{"name": "Red"}, {"name": "Green"}]}]
+```
+
+Its value (`interp.Ctor`, a frozen dataclass of `dtype`, `ctor`, `args`,
+`args` always `()` this landing) is a closed, ordered list of nullary
+constructors, exactly what all three cited designs treat a field-less sum
+as: Dafny's own words, a set of constructors; Rust's own words, "a
+field-less enum"; Lean's own words, "a type with a finite, enumerated list
+of elements". `dtype` is part of the runtime value, not only of the static
+type, the same reasoning `Pair` needed no type tag for (interp.py's own
+note): two different datatypes may reuse a constructor name (Dafny allows
+this too, disambiguated by qualification), so a bare tag by constructor
+name alone could not tell `Color.Red` from some other datatype's own
+`Red`. `==`/`!=` are the same polymorphic operator every other value type
+already has, now structural over a datatype value's `(dtype, ctor)` pair
+(interp.py's dataclass equality, `Ctor(...) == Ctor(...)`); a datatype has
+no order, so `< <= > >=` on one is ill-typed, checked before a `Ctor` value
+could ever reach one, exactly the pair/set precedent.
+
+New type: `{"datatype": D}` where `D` names one of the task's own
+`datatypes` declarations. A parameter, return or local type. Not in v1: a
+datatype as a pair component, a seq element, a set element, or a spec_fun
+parameter/result (SPEC_FUN_RESULTS stays int/bool/seq); a datatype
+declared by one task and used by another (there is no such thing --
+`dtypes`, check_wf's per-task lookup table, is built fresh from
+`task["datatypes"]` every call).
+
+New Expr forms:
+
+```
+{"ctor": {"dtype": D, "name": C, "args": [...]}}       // D.C; a value; "args" always [] this landing
+{"match": {"scrutinee": Expr, "arms": [{"ctor": C, "binders": [...], "body": Expr}, ...]}}
+```
+
+`ctor` denotes the value built by constructor `C` of datatype `D`; defined
+iff every field argument is (vacuously true this landing, `args` is always
+empty, kept general for the record wave). `match` is Dafny's own construct
+(reference manual 5.14, "match expression"/8.5.2): **total**, one arm per
+constructor of the scrutinee's own datatype, each exactly once (check_wf's
+`match-coverage` rule proves the bijection between the arms' `ctor` names
+and the datatype's declared ones; a match with a missing or repeated
+constructor is refused before it ever reaches the interpreter or a
+lowering). `match`'s own type is its arms' common type (check_wf's
+`match-branches` rule: every arm must agree); definedness is the
+scrutinee's own AND the definedness of whichever arm's body the
+scrutinee's actual constructor selects (interp.py's `ev`, and
+`lower_verus.py`'s `defined()`/`lower_lean.py`'s `dcond()`, both state this
+by reusing `match` ITSELF as the branching construct in the obligation
+formula, exact because the coverage proof already makes it exhaustive --
+the same move `ite`'s two-branch definedness case already makes). A record
+match (SPEC.md's next wave) is field access, stated when records land; a
+match over a datatype's constructors is what v1 has, not an if-chain a
+printer writes back (FEATURES-TRACK.md's original phrasing named an
+if-chain as an alternative notation for an all-boolean-result match; this
+landing states `match` as its own AST form instead, since every one of the
+three cited designs gives datatypes a real case-split construct and a
+printed if-chain would need the same total-coverage proof `match` already
+states, with none of Dafny's/Rust's/Lean's own name for it).
+
+**What is not in v1.** A datatype as a pair/seq/set component or a
+spec_fun signature type; field-carrying constructors (records, the next
+wave); more than one constructor with fields (non-recursive sums, the wave
+after); a recursive constructor (permanently out of scope for now, no
+termination measure built for one); a match whose scrutinee is anything
+but a plain datatype value (no nested match-of-match pattern beyond what
+composing two `match` Exprs already gives); a datatype-typed loop-havoc
+value undergoes no special treatment -- the frame rule havocs it by name
+like any other variable, unchanged.
+
+**The frame rule.** Unaffected: a `while` loop havocs a datatype-typed
+variable by name exactly as it does a pair or a set (SPEC.md "The frame
+rule"); nothing about the construct interacts with the loop gate.
+
+**The twins.** The ladder gains one move, `swap-ctor` (harness.py
+`_c_swap_ctor`): two of a `match`'s arms trade BODIES (their `ctor`/
+`binders` stay put), so a twin computes arm B's value when given
+constructor A and vice versa -- "swaps two constructors" read as "swaps
+what two constructors mean", the enum analogue of `wrong-var`'s pair-
+component swap (which itself reads as "swaps the two components", not
+"swaps which projection runs"). Every unordered pair of arms is tried,
+since a match may have more than two constructors. `harness.py`'s generic
+expression walk (`_sub`, `_exprs`) was extended to descend into a `ctor`'s
+field arguments and a `match`'s scrutinee and arm bodies, so every
+EXISTING rung (`off-by-one`, `wrong-var`, ...) also now reaches into a
+match arm's body for free -- measured: `off-by-one` alone already refutes
+`fz_p_dt_match_total`'s canonical twin (bumping one arm's literal), and
+`swap-ctor` independently refutes all three of its own candidates for the
+same task (3 of 3, `interp.Reference.refuting_witness`). Four probes state
+the construct's laws in `fuzz_lower.py`'s families (`fz_p_dt_match_total`/
+`_bad`, `fz_p_dt_eq`, `fz_p_dt_match_eq`): a total match reading back each
+constructor's own code, its hand-written swap-ctor twin refuted, structural
+equality stated both as membership and disequality, and a match tied to
+plain equality.
+
+**Lowering status (2026-09-27).** Three of seven kernels state the
+construct end to end, matched to what "Finite sets (v1)" measured first as
+well (three of seven, then a fourth later): dafny (a native `datatype`
+declaration and `match` expression, the source construct itself -- measured,
+`dafny verify`, 1 verified / 0 errors on `fz_p_dt_match_total`, 0 verified
+/ 2 errors refuting its swap-ctor twin by hand-checking the postcondition
+directly). Through the actual grader (`run_par.py`/`verifiers/dafny.py`,
+both untouched by this landing), dafny's own committed cell reads
+`verified / unproved`, not `verified / refuted`: `verifiers/dafny.py`'s
+refutation-certificate shape check (`_HONEST_KINDS = ("function", "method",
+"lemma")`) refuses a certificate in a file that also declares a
+`datatype`, so the one door to a minted REFUTED never opens for this
+construct, an honest structural gap in the certificate's allowed
+vocabulary rather than a soundness gap -- the twin's own measured witness
+(SPEC.md "The twins") is genuine and the postcondition genuinely fails
+under `dafny verify` (measured directly, `0 verified, 1 error` on the
+whole file, `1 verified, 0 errors` on the certificate lemma ALONE under
+`--filter-symbol=t_refutation_certificate`), but the grader's own gate
+holds it to `unproved`, recorded here rather than routed around (AGREEMENT.md's
+own note on the `color_code` row). verus (a Rust `enum` with
+`#[derive(PartialEq, Eq)]`, `use Dtype::*;` so a `match`'s arms print as
+bare variant names -- measured, `verus`, 1 verified / 0 errors on the real
+body, 0 verified / 1 postcondition error alongside the accepted refutation
+certificate on the twin, both in `proof fn` position with no additional
+attribute; `run_par.py`'s own grade of `color_code` reads `verified /
+refuted`); lean (an `inductive ... deriving
+DecidableEq`, `match ... with | .C => ...` using Lean 4's own anonymous-
+constructor dot notation in match position -- measured, `lean`, the real
+body's `grind`-closed spec theorem prints a clean axiom list, the twin's
+own spec theorem depends on `sorryAx` (grind correctly cannot close a false
+goal) while its hand-built refutation certificate (SPEC.md "The twins")
+depends on no axioms at all -- REFUTED, and `run_par.py`'s own grade of
+`color_code` agrees). SPARK, Rocq, F* and Frama-C
+abstain by name (`NotImplementedError` at the top of each `lower()`, before
+any other work runs): each has a design FEATURES-TRACK.md or this file
+names (Ada enumeration types for SPARK; Rocq's own `Inductive` with the
+same measured-cost posture its finite-set wave already logged; F*'s own
+`type D = | C1 | C2 | ...`; Frama-C through a tagged struct with an ACSL
+exhaustiveness predicate, since C's `enum` is an unchecked int with no WP
+support of its own for a case split), unbuilt and unmeasured against their
+own kernels this landing, named honestly rather than guessed at. The
+lifter's own mapping (source-side admission of Dafny `datatype`/`match`
+into this shape) is LIFTER-DECISIONS.md row 53, which this landing leaves
+open: `lift_classify`/`lift_parse` still refuse every method and file the
+2026-09-27 census counted for `datatype`/`match`, unchanged.
+
+**Byte identity.** Every task/lemma/nested file committed before this
+landing carries no `"datatypes"` field, and every new code path above is
+gated on `task.get("datatypes")` (the four abstaining lowerings) or on a
+`"ctor"`/`"match"` key no pre-existing AST ever carries (check_wf, interp,
+the lowerings that DO state the construct, the twin ladder's `_sub`
+extension): sha256 of every committed task's, lemma's and nested file's
+lowered source, real and twin, in all seven kernels, is unchanged from
+before this landing (588 = 42 files x 7 kernels x 2 sides, byte for byte).
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice
