@@ -125,15 +125,15 @@ its line changes here.
   regraded over every lifted set, to 431 documents on 2026-09-27, with no
   document lost; and after the features track (seven lifter features, lemmas
   in Rocq, seq-valued spec_funs) was merged and the staged corpora re-lifted
-  and graded the same day, then regraded on the lab on 2026-09-28, to
-  **457 documents (275,362 characters) clean in all seven kernels**, 142 with
-  an English head. With graded trust (six kernels clean, none contradicting,
-  the gap recorded) it is **566 (375,609)**, 109 of them with a gap, after a
-  third re-lift (casts under a bound, row 55) and a Dafny certificate that
-  walks through spec_fun calls. Tables: `t/out/COVERAGE-lifted-*-regrade3.md`,
-  `-lab.md` and `-features3-b.md`. The lab's regrade of the 140 new tasks
-  agreed with the desktop's cell for cell (2 of 980 cells differ), so the
-  timeouts there are the provers' own limits, not a budget.
+  and graded the same day, then regraded on the lab on 2026-09-28, and after
+  a third re-lift (casts under a bound, row 55) with the Dafny and Frama-C
+  refutation certificates walking through spec_fun calls, to **463 documents
+  (281,188 characters) clean in all seven kernels**, 147 with an English
+  head. With graded trust (six kernels clean, none contradicting, the gap
+  recorded) it is **566 (375,609)**, 103 of them with a gap. Tables:
+  `t/out/COVERAGE-lifted-*-regrade3.md`, `-lab.md` and `-features3-c.md`. The
+  lab's regrade of the 140 new tasks agreed with the desktop's cell for cell
+  (2 of 980 cells differ), so the timeouts there are the provers' own limits.
 - **Denoising training.** Corrupt spans of each training document and train
   the model to restore them (fill in the middle, arXiv:2207.14255). *State:*
   measured twice, and the two disagree. From scratch on the 302 proved
