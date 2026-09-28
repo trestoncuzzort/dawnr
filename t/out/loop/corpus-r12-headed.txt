@@ -6652,319 +6652,6 @@ task vericoding_dv0181__triple(x: int) returns (result: int)
 }
 
 
-t 1
-gate recursion
-task vericoding_da0140__minBacteria(x: int) returns (result: int)
-  requires validInput(x)
-  ensures validOutput(x, result)
-spec fun validInput(x_v: int): bool
-  decreases 0
-= x_v >= 1
-spec fun countOnesInBinary(n: int): int
-  decreases n
-= if n >= 1 then if n == 1 then 1 else if n % 2 == 1 then 1 + countOnesInBinary(n / 2) else countOnesInBinary(n / 2) else 0
-spec fun validOutput(x_v2: int, result_v: int): bool
-  decreases 0
-= validInput(x_v2) and result_v == countOnesInBinary(x_v2)
-{
-  var count: int := 0;
-  var n_v: int := x;
-  while n_v > 1
-    invariant n_v >= 1
-    invariant count + countOnesInBinary(n_v) == countOnesInBinary(x)
-    decreases n_v - 1
-  {
-    if n_v % 2 == 1 {
-      count := count + 1;
-    } else {
-    }
-    n_v := n_v / 2;
-  }
-  count := count + 1;
-  result := count;
-}
-
-
-t 1
-gate recursion
-task vericoding_da0488__solve(d: int, t_v: int, s: int) returns (result: seq)
-  requires validInput(d, t_v, s)
-  ensures canTravel(d, t_v, s) ==> result == [89, 101, 115]
-  ensures not canTravel(d, t_v, s) ==> result == [78, 111]
-spec fun validInput(d_v: int, t_v2: int, s_v: int): bool
-  decreases 0
-= (1 <= d_v and d_v <= 10000) and (1 <= t_v2 and t_v2 <= 10000) and (1 <= s_v and s_v <= 10000)
-spec fun canTravel(d_v2: int, t_v3: int, s_v2: int): bool
-  decreases 0
-= d_v2 <= t_v3 * s_v2
-{
-  if d <= t_v * s {
-    result := [89, 101, 115];
-  } else {
-    result := [78, 111];
-  }
-}
-
-
-t 1
-gate recursion
-task vericoding_da0629__solve(n: int, m: int) returns (result: int)
-  requires validInput(n, m)
-  ensures result == expectedTime(n, m)
-spec fun validInput(n_v: int, m_v: int): bool
-  decreases 0
-= (1 <= n_v and n_v <= 100) and (1 <= m_v and m_v <= n_v) and m_v <= 5
-spec fun power(base: int, exp: int): int
-  decreases exp
-= if exp >= 0 then if exp == 0 then 1 else base * power(base, exp - 1) else 0
-spec fun expectedTime(n_v2: int, m_v2: int): int
-  decreases 0
-= if validInput(n_v2, m_v2) then (1900 * m_v2 + 100 * (n_v2 - m_v2)) * power(2, m_v2) else 0
-{
-  var p: int := 1;
-  var i: int := 0;
-  while i < m
-    invariant 0 <= i and i <= m
-    invariant p == power(2, i)
-    invariant validInput(n, m)
-    decreases m - i
-  {
-    p := p * 2;
-    i := i + 1;
-  }
-  var coefficient: int := 1900 * m + 100 * (n - m);
-  result := coefficient * p;
-}
-
-
-t 1
-gate loops
-task vericoding_dd0068__linearSearch(a: seq, e: int) returns (n: int)
-  requires exists i in [0, len(a)) . a[i] == e
-  ensures 0 <= n and n < len(a)
-  ensures a[n] == e
-  ensures forall k in [0, n) . a[k] != e
-{
-  n := 0;
-  while n < len(a)
-    invariant 0 <= n and n <= len(a)
-    invariant forall k_v in [0, n) . a[k_v] != e
-    invariant exists i_v in [n, len(a)) . a[i_v] == e
-    decreases len(a) - n
-  {
-    if a[n] == e {
-      return n;
-    } else {
-    }
-    n := n + 1;
-  }
-}
-
-
-t 1
-gate loops
-task vericoding_dd0070__match(s: seq, p: seq) returns (b: bool)
-  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
-  requires forall k_v in [0, len(p)) . p[k_v] >= 0 and p[k_v] <= 1114111
-  requires len(s) == len(p)
-  ensures b == (forall n in [0, len(s)) . s[n] == p[n] or p[n] == 63)
-{
-  b := true;
-  var i: int := 0;
-  while i < len(s)
-    invariant 0 <= i and i <= len(s)
-    invariant b == (forall n_v in [0, i) . s[n_v] == p[n_v] or p[n_v] == 63)
-    decreases len(s) - i
-  {
-    if s[i] != p[i] and p[i] != 63 {
-      b := false;
-    } else {
-    }
-    i := i + 1;
-  }
-}
-
-
-t 1
-gate loops
-task vericoding_dd0680__replaceBlanksWithChar(s: seq, ch: int) returns (v: seq)
-  requires ch >= 0 and ch <= 1114111
-  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
-  ensures len(v) == len(s)
-  ensures forall i in [0, len(s)) . (s[i] == 32 ==> v[i] == ch) and (s[i] != 32 ==> v[i] == s[i])
-{
-  v := [];
-  var i_v: int := 0;
-  while i_v < len(s)
-    invariant 0 <= i_v and i_v <= len(s)
-    invariant len(v) == i_v
-    invariant forall j in [0, i_v) . (s[j] == 32 ==> v[j] == ch) and (s[j] != 32 ==> v[j] == s[j])
-    decreases len(s) - i_v
-  {
-    if s[i_v] == 32 {
-      v := v + [ch];
-    } else {
-      v := v + [s[i_v]];
-    }
-    i_v := i_v + 1;
-  }
-}
-
-
-t 1
-gate loops
-task vericoding_dd0736__replaceChars(s: seq, oldChar: int, newChar: int) returns (v: seq)
-  requires oldChar >= 0 and oldChar <= 1114111
-  requires newChar >= 0 and newChar <= 1114111
-  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
-  ensures len(v) == len(s)
-  ensures forall i in [0, len(s)) . (s[i] == oldChar ==> v[i] == newChar) and (s[i] != oldChar ==> v[i] == s[i])
-{
-  v := [];
-  var i_v: int := 0;
-  while i_v < len(s)
-    invariant 0 <= i_v and i_v <= len(s)
-    invariant len(v) == i_v
-    invariant forall j in [0, i_v) . (s[j] == oldChar ==> v[j] == newChar) and (s[j] != oldChar ==> v[j] == s[j])
-    decreases len(s) - i_v
-  {
-    if s[i_v] == oldChar {
-      v := v + [newChar];
-    } else {
-      v := v + [s[i_v]];
-    }
-    i_v := i_v + 1;
-  }
-}
-
-
-t 1
-gate loops
-task vericoding_dd0789__isDecimalWithTwoPrecision(s: seq) returns (result: bool)
-  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
-  ensures result ==> (exists i in [0, len(s)) . s[i] == 46 and len(s) - i - 1 == 2)
-  ensures not result ==> not (exists i_v in [0, len(s)) . s[i_v] == 46 and len(s) - i_v - 1 == 2)
-{
-  var i_v2: int := 0;
-  while i_v2 < len(s)
-    invariant 0 <= i_v2 and i_v2 <= len(s)
-    invariant forall j in [0, i_v2) . not (s[j] == 46 and len(s) - j - 1 == 2)
-    decreases len(s) - i_v2
-  {
-    if s[i_v2] == 46 and len(s) - i_v2 - 1 == 2 {
-      return true;
-    } else {
-    }
-    i_v2 := i_v2 + 1;
-  }
-  result := false;
-}
-
-
-t 1
-gate loops
-task vericoding_dj0058__squareNums(nums: seq) returns (squared: seq)
-  requires forall k in [0, len(nums)) . 0 <= nums[k] * nums[k] and nums[k] * nums[k] < 2147483647
-  ensures len(squared) == len(nums)
-  ensures len(nums) == len(squared)
-  ensures forall k_v in [0, len(nums)) . squared[k_v] == nums[k_v] * nums[k_v]
-{
-  squared := seq(len(nums), 0);
-  var i: int := 0;
-  while i < len(nums)
-    invariant len(squared) == len(nums)
-    invariant 0 <= i and i <= len(nums)
-    invariant forall k_v2 in [0, i) . squared[k_v2] == nums[k_v2] * nums[k_v2]
-    decreases len(nums) - i
-  {
-    squared := squared[i := nums[i] * nums[i]];
-    i := i + 1;
-  }
-}
-
-
-t 1
-gate recursion
-task vericoding_dv0008__countSumDivisibleBy(n: int, d: int) returns (result: int)
-  requires n >= 0
-  requires d >= 0
-  requires d > 0
-  ensures result >= 0
-  ensures result <= n
-spec fun sumOfDigits(x: int): int
-  decreases x
-= if x >= 0 then if x == 0 then 0 else x % 10 + sumOfDigits(x / 10) else 0
-spec fun isSumDivisibleBy(x_v: int, d_v: int): bool
-  decreases 0
-= if x_v >= 0 and d_v >= 0 and d_v > 0 then sumOfDigits(x_v) % d_v == 0 else false
-{
-  result := 0;
-  var i: int := 0;
-  while i < n
-    invariant 0 <= i and i <= n
-    invariant result <= i
-    invariant result >= 0
-    decreases n - i
-  {
-    i := i + 1;
-    if isSumDivisibleBy(i, d) {
-      result := result + 1;
-    } else {
-    }
-  }
-}
-
-
-t 1
-gate recursion
-task vericoding_dv0073__solution(nums: seq) returns (result: int)
-  requires 1 <= len(nums)
-  requires len(nums) <= 100
-  requires forall i_v in [0, len(nums)) . nums[i_v] >= 1 and nums[i_v] <= 100
-  ensures result >= 0
-spec fun sumArray(nums_v: seq, i: int): int
-  decreases len(nums_v) - i
-= if 0 <= i and i <= len(nums_v) then if i == len(nums_v) then 0 else nums_v[i] + sumArray(nums_v, i + 1) else 0
-{
-  var sum: int := 0;
-  var i_v2: int := 0;
-  while i_v2 < len(nums)
-    invariant 0 <= i_v2 and i_v2 <= len(nums)
-    invariant sum == sumArray(nums, 0) - sumArray(nums, i_v2)
-    invariant sum >= 0
-    decreases len(nums) - i_v2
-  {
-    sum := sum + nums[i_v2];
-    i_v2 := i_v2 + 1;
-  }
-  result := sum;
-}
-
-
-t 1
-gate loops
-task vericoding_dv0153__matchStrings(s: seq, p: seq) returns (result: bool)
-  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
-  requires forall k_v in [0, len(p)) . p[k_v] >= 0 and p[k_v] <= 1114111
-  requires len(s) == len(p)
-  ensures result == (forall n in [0, len(s)) . s[n] == p[n] or p[n] == 63)
-{
-  result := true;
-  var i: int := 0;
-  while i < len(s)
-    invariant 0 <= i and i <= len(s)
-    invariant result == (forall n_v in [0, i) . s[n_v] == p[n_v] or p[n_v] == 63)
-    decreases len(s) - i
-  {
-    if s[i] != p[i] and p[i] != 63 {
-      result := false;
-    } else {
-    }
-    i := i + 1;
-  }
-}
-
-
 Problem: Given a string of n digits where n is odd and n >= 13, two players (Vasya first, then Petya) take turns removing one character at a time until exactly 11 characters remain. Vasya wins if the final 11-character string starts with digit 8, otherwise Petya wins. Determine if Vasya has a winning strategy.
 Signature: vericoding_da0044__count_eights_iterative(seq, int) -> int
 t 1
@@ -7404,98 +7091,6 @@ spec fun maxArrayPrecond(a_v: seq): bool
     } else {
     }
     i := i + 1;
-  }
-}
-
-
-t 1
-gate loops
-task vericoding_da0320__createString(c: int, n: int) returns (result: seq)
-  requires n >= 0
-  requires c >= 0 and c <= 1114111
-  ensures len(result) == n
-  ensures forall i in [0, len(result)) . result[i] == c
-{
-  result := [];
-  var h: int := n;
-  var i_v: int := 0;
-  while i_v < h
-    invariant 0 <= i_v
-    invariant i_v <= h
-    invariant 0 <= i_v and i_v <= n
-    invariant len(result) == i_v
-    invariant forall j in [0, i_v) . result[j] == c
-    decreases h - i_v
-  {
-    result := result + [c];
-    i_v := i_v + 1;
-  }
-}
-
-
-t 1
-gate recursion
-task vericoding_da0508__solve(s: seq) returns (result: int)
-  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
-  requires validInput(s)
-  ensures result >= 0
-  ensures result <= len(s)
-  ensures result == countExcessivePositions(s)
-spec fun countExcessivePositionsHelper(s_v: seq, pos: int, consecutiveX: int): int
-  decreases len(s_v) - pos
-= if (0 <= pos and pos <= len(s_v)) and consecutiveX >= 0 then if pos >= len(s_v) then 0 else (if (if s_v[pos] == 120 then consecutiveX + 1 else 0) > 2 then 1 else 0) + countExcessivePositionsHelper(s_v, pos + 1, if s_v[pos] == 120 then consecutiveX + 1 else 0) else 0
-spec fun validInput(s_v2: seq): bool
-  decreases 0
-= len(s_v2) >= 3
-spec fun countExcessivePositions(s_v3: seq): int
-  decreases 0
-= countExcessivePositionsHelper(s_v3, 0, 0)
-{
-  var i: int := 0;
-  var consecutiveX_v: int := 0;
-  result := 0;
-  while i < len(s)
-    invariant 0 <= i and i <= len(s)
-    invariant consecutiveX_v >= 0
-    invariant result >= 0
-    invariant result + countExcessivePositionsHelper(s, i, consecutiveX_v) == countExcessivePositions(s)
-    invariant result <= i
-    decreases len(s) - i
-  {
-    var oldResult: int := result;
-    var oldConsecutiveX: int := consecutiveX_v;
-    if s[i] == 120 {
-      consecutiveX_v := consecutiveX_v + 1;
-      if consecutiveX_v > 2 {
-        result := result + 1;
-      } else {
-      }
-    } else {
-      consecutiveX_v := 0;
-    }
-    i := i + 1;
-  }
-}
-
-
-t 1
-gate loops
-task vericoding_dj0091__cubeElement(nums: seq) returns (cubed: seq)
-  requires forall k in [0, len(nums)) . (-(2147483648) <= nums[k] * nums[k] and nums[k] * nums[k] <= 2147483647) and (-(2147483648) <= nums[k] * nums[k] * nums[k] and nums[k] * nums[k] * nums[k] <= 2147483647)
-  ensures len(cubed) == len(nums)
-  ensures len(cubed) == len(nums)
-  ensures forall i in [0, len(nums)) . cubed[i] == nums[i] * nums[i] * nums[i]
-{
-  cubed := seq(len(nums), 0);
-  var i_v: int := 0;
-  while i_v < len(nums)
-    invariant 0 <= i_v and i_v <= len(nums)
-    invariant len(cubed) == len(nums)
-    invariant forall j in [0, i_v) . cubed[j] == nums[j] * nums[j] * nums[j]
-    decreases len(nums) - i_v
-  {
-    cubed := cubed[i_v := nums[i_v] * nums[i_v] * nums[i_v]];
-    i_v := i_v + 1;
   }
 }
 
@@ -8124,6 +7719,411 @@ task vericoding_dv0148__linearSearch(a: seq, e: int) returns (result: int)
 
 
 t 1
+gate recursion
+task vericoding_da0140__minBacteria(x: int) returns (result: int)
+  requires validInput(x)
+  ensures validOutput(x, result)
+spec fun validInput(x_v: int): bool
+  decreases 0
+= x_v >= 1
+spec fun countOnesInBinary(n: int): int
+  decreases n
+= if n >= 1 then if n == 1 then 1 else if n % 2 == 1 then 1 + countOnesInBinary(n / 2) else countOnesInBinary(n / 2) else 0
+spec fun validOutput(x_v2: int, result_v: int): bool
+  decreases 0
+= validInput(x_v2) and result_v == countOnesInBinary(x_v2)
+{
+  var count: int := 0;
+  var n_v: int := x;
+  while n_v > 1
+    invariant n_v >= 1
+    invariant count + countOnesInBinary(n_v) == countOnesInBinary(x)
+    decreases n_v - 1
+  {
+    if n_v % 2 == 1 {
+      count := count + 1;
+    } else {
+    }
+    n_v := n_v / 2;
+  }
+  count := count + 1;
+  result := count;
+}
+
+
+t 1
+gate recursion
+task vericoding_da0488__solve(d: int, t_v: int, s: int) returns (result: seq)
+  requires validInput(d, t_v, s)
+  ensures canTravel(d, t_v, s) ==> result == [89, 101, 115]
+  ensures not canTravel(d, t_v, s) ==> result == [78, 111]
+spec fun validInput(d_v: int, t_v2: int, s_v: int): bool
+  decreases 0
+= (1 <= d_v and d_v <= 10000) and (1 <= t_v2 and t_v2 <= 10000) and (1 <= s_v and s_v <= 10000)
+spec fun canTravel(d_v2: int, t_v3: int, s_v2: int): bool
+  decreases 0
+= d_v2 <= t_v3 * s_v2
+{
+  if d <= t_v * s {
+    result := [89, 101, 115];
+  } else {
+    result := [78, 111];
+  }
+}
+
+
+t 1
+gate recursion
+task vericoding_da0629__solve(n: int, m: int) returns (result: int)
+  requires validInput(n, m)
+  ensures result == expectedTime(n, m)
+spec fun validInput(n_v: int, m_v: int): bool
+  decreases 0
+= (1 <= n_v and n_v <= 100) and (1 <= m_v and m_v <= n_v) and m_v <= 5
+spec fun power(base: int, exp: int): int
+  decreases exp
+= if exp >= 0 then if exp == 0 then 1 else base * power(base, exp - 1) else 0
+spec fun expectedTime(n_v2: int, m_v2: int): int
+  decreases 0
+= if validInput(n_v2, m_v2) then (1900 * m_v2 + 100 * (n_v2 - m_v2)) * power(2, m_v2) else 0
+{
+  var p: int := 1;
+  var i: int := 0;
+  while i < m
+    invariant 0 <= i and i <= m
+    invariant p == power(2, i)
+    invariant validInput(n, m)
+    decreases m - i
+  {
+    p := p * 2;
+    i := i + 1;
+  }
+  var coefficient: int := 1900 * m + 100 * (n - m);
+  result := coefficient * p;
+}
+
+
+t 1
+gate loops
+task vericoding_dd0068__linearSearch(a: seq, e: int) returns (n: int)
+  requires exists i in [0, len(a)) . a[i] == e
+  ensures 0 <= n and n < len(a)
+  ensures a[n] == e
+  ensures forall k in [0, n) . a[k] != e
+{
+  n := 0;
+  while n < len(a)
+    invariant 0 <= n and n <= len(a)
+    invariant forall k_v in [0, n) . a[k_v] != e
+    invariant exists i_v in [n, len(a)) . a[i_v] == e
+    decreases len(a) - n
+  {
+    if a[n] == e {
+      return n;
+    } else {
+    }
+    n := n + 1;
+  }
+}
+
+
+t 1
+gate loops
+task vericoding_dd0070__match(s: seq, p: seq) returns (b: bool)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires forall k_v in [0, len(p)) . p[k_v] >= 0 and p[k_v] <= 1114111
+  requires len(s) == len(p)
+  ensures b == (forall n in [0, len(s)) . s[n] == p[n] or p[n] == 63)
+{
+  b := true;
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i and i <= len(s)
+    invariant b == (forall n_v in [0, i) . s[n_v] == p[n_v] or p[n_v] == 63)
+    decreases len(s) - i
+  {
+    if s[i] != p[i] and p[i] != 63 {
+      b := false;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task vericoding_dd0680__replaceBlanksWithChar(s: seq, ch: int) returns (v: seq)
+  requires ch >= 0 and ch <= 1114111
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  ensures len(v) == len(s)
+  ensures forall i in [0, len(s)) . (s[i] == 32 ==> v[i] == ch) and (s[i] != 32 ==> v[i] == s[i])
+{
+  v := [];
+  var i_v: int := 0;
+  while i_v < len(s)
+    invariant 0 <= i_v and i_v <= len(s)
+    invariant len(v) == i_v
+    invariant forall j in [0, i_v) . (s[j] == 32 ==> v[j] == ch) and (s[j] != 32 ==> v[j] == s[j])
+    decreases len(s) - i_v
+  {
+    if s[i_v] == 32 {
+      v := v + [ch];
+    } else {
+      v := v + [s[i_v]];
+    }
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+gate loops
+task vericoding_dd0736__replaceChars(s: seq, oldChar: int, newChar: int) returns (v: seq)
+  requires oldChar >= 0 and oldChar <= 1114111
+  requires newChar >= 0 and newChar <= 1114111
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  ensures len(v) == len(s)
+  ensures forall i in [0, len(s)) . (s[i] == oldChar ==> v[i] == newChar) and (s[i] != oldChar ==> v[i] == s[i])
+{
+  v := [];
+  var i_v: int := 0;
+  while i_v < len(s)
+    invariant 0 <= i_v and i_v <= len(s)
+    invariant len(v) == i_v
+    invariant forall j in [0, i_v) . (s[j] == oldChar ==> v[j] == newChar) and (s[j] != oldChar ==> v[j] == s[j])
+    decreases len(s) - i_v
+  {
+    if s[i_v] == oldChar {
+      v := v + [newChar];
+    } else {
+      v := v + [s[i_v]];
+    }
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+gate loops
+task vericoding_dd0789__isDecimalWithTwoPrecision(s: seq) returns (result: bool)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  ensures result ==> (exists i in [0, len(s)) . s[i] == 46 and len(s) - i - 1 == 2)
+  ensures not result ==> not (exists i_v in [0, len(s)) . s[i_v] == 46 and len(s) - i_v - 1 == 2)
+{
+  var i_v2: int := 0;
+  while i_v2 < len(s)
+    invariant 0 <= i_v2 and i_v2 <= len(s)
+    invariant forall j in [0, i_v2) . not (s[j] == 46 and len(s) - j - 1 == 2)
+    decreases len(s) - i_v2
+  {
+    if s[i_v2] == 46 and len(s) - i_v2 - 1 == 2 {
+      return true;
+    } else {
+    }
+    i_v2 := i_v2 + 1;
+  }
+  result := false;
+}
+
+
+t 1
+gate loops
+task vericoding_dj0058__squareNums(nums: seq) returns (squared: seq)
+  requires forall k in [0, len(nums)) . 0 <= nums[k] * nums[k] and nums[k] * nums[k] < 2147483647
+  ensures len(squared) == len(nums)
+  ensures len(nums) == len(squared)
+  ensures forall k_v in [0, len(nums)) . squared[k_v] == nums[k_v] * nums[k_v]
+{
+  squared := seq(len(nums), 0);
+  var i: int := 0;
+  while i < len(nums)
+    invariant len(squared) == len(nums)
+    invariant 0 <= i and i <= len(nums)
+    invariant forall k_v2 in [0, i) . squared[k_v2] == nums[k_v2] * nums[k_v2]
+    decreases len(nums) - i
+  {
+    squared := squared[i := nums[i] * nums[i]];
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate recursion
+task vericoding_dv0008__countSumDivisibleBy(n: int, d: int) returns (result: int)
+  requires n >= 0
+  requires d >= 0
+  requires d > 0
+  ensures result >= 0
+  ensures result <= n
+spec fun sumOfDigits(x: int): int
+  decreases x
+= if x >= 0 then if x == 0 then 0 else x % 10 + sumOfDigits(x / 10) else 0
+spec fun isSumDivisibleBy(x_v: int, d_v: int): bool
+  decreases 0
+= if x_v >= 0 and d_v >= 0 and d_v > 0 then sumOfDigits(x_v) % d_v == 0 else false
+{
+  result := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant result <= i
+    invariant result >= 0
+    decreases n - i
+  {
+    i := i + 1;
+    if isSumDivisibleBy(i, d) {
+      result := result + 1;
+    } else {
+    }
+  }
+}
+
+
+t 1
+gate recursion
+task vericoding_dv0073__solution(nums: seq) returns (result: int)
+  requires 1 <= len(nums)
+  requires len(nums) <= 100
+  requires forall i_v in [0, len(nums)) . nums[i_v] >= 1 and nums[i_v] <= 100
+  ensures result >= 0
+spec fun sumArray(nums_v: seq, i: int): int
+  decreases len(nums_v) - i
+= if 0 <= i and i <= len(nums_v) then if i == len(nums_v) then 0 else nums_v[i] + sumArray(nums_v, i + 1) else 0
+{
+  var sum: int := 0;
+  var i_v2: int := 0;
+  while i_v2 < len(nums)
+    invariant 0 <= i_v2 and i_v2 <= len(nums)
+    invariant sum == sumArray(nums, 0) - sumArray(nums, i_v2)
+    invariant sum >= 0
+    decreases len(nums) - i_v2
+  {
+    sum := sum + nums[i_v2];
+    i_v2 := i_v2 + 1;
+  }
+  result := sum;
+}
+
+
+t 1
+gate loops
+task vericoding_dv0153__matchStrings(s: seq, p: seq) returns (result: bool)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires forall k_v in [0, len(p)) . p[k_v] >= 0 and p[k_v] <= 1114111
+  requires len(s) == len(p)
+  ensures result == (forall n in [0, len(s)) . s[n] == p[n] or p[n] == 63)
+{
+  result := true;
+  var i: int := 0;
+  while i < len(s)
+    invariant 0 <= i and i <= len(s)
+    invariant result == (forall n_v in [0, i) . s[n_v] == p[n_v] or p[n_v] == 63)
+    decreases len(s) - i
+  {
+    if s[i] != p[i] and p[i] != 63 {
+      result := false;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task vericoding_da0320__createString(c: int, n: int) returns (result: seq)
+  requires n >= 0
+  requires c >= 0 and c <= 1114111
+  ensures len(result) == n
+  ensures forall i in [0, len(result)) . result[i] == c
+{
+  result := [];
+  var h: int := n;
+  var i_v: int := 0;
+  while i_v < h
+    invariant 0 <= i_v
+    invariant i_v <= h
+    invariant 0 <= i_v and i_v <= n
+    invariant len(result) == i_v
+    invariant forall j in [0, i_v) . result[j] == c
+    decreases h - i_v
+  {
+    result := result + [c];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
+gate recursion
+task vericoding_da0508__solve(s: seq) returns (result: int)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires validInput(s)
+  ensures result >= 0
+  ensures result <= len(s)
+  ensures result == countExcessivePositions(s)
+spec fun countExcessivePositionsHelper(s_v: seq, pos: int, consecutiveX: int): int
+  decreases len(s_v) - pos
+= if (0 <= pos and pos <= len(s_v)) and consecutiveX >= 0 then if pos >= len(s_v) then 0 else (if (if s_v[pos] == 120 then consecutiveX + 1 else 0) > 2 then 1 else 0) + countExcessivePositionsHelper(s_v, pos + 1, if s_v[pos] == 120 then consecutiveX + 1 else 0) else 0
+spec fun validInput(s_v2: seq): bool
+  decreases 0
+= len(s_v2) >= 3
+spec fun countExcessivePositions(s_v3: seq): int
+  decreases 0
+= countExcessivePositionsHelper(s_v3, 0, 0)
+{
+  var i: int := 0;
+  var consecutiveX_v: int := 0;
+  result := 0;
+  while i < len(s)
+    invariant 0 <= i and i <= len(s)
+    invariant consecutiveX_v >= 0
+    invariant result >= 0
+    invariant result + countExcessivePositionsHelper(s, i, consecutiveX_v) == countExcessivePositions(s)
+    invariant result <= i
+    decreases len(s) - i
+  {
+    var oldResult: int := result;
+    var oldConsecutiveX: int := consecutiveX_v;
+    if s[i] == 120 {
+      consecutiveX_v := consecutiveX_v + 1;
+      if consecutiveX_v > 2 {
+        result := result + 1;
+      } else {
+      }
+    } else {
+      consecutiveX_v := 0;
+    }
+    i := i + 1;
+  }
+}
+
+
+t 1
+gate loops
+task vericoding_dj0091__cubeElement(nums: seq) returns (cubed: seq)
+  requires forall k in [0, len(nums)) . (-(2147483648) <= nums[k] * nums[k] and nums[k] * nums[k] <= 2147483647) and (-(2147483648) <= nums[k] * nums[k] * nums[k] and nums[k] * nums[k] * nums[k] <= 2147483647)
+  ensures len(cubed) == len(nums)
+  ensures len(cubed) == len(nums)
+  ensures forall i in [0, len(nums)) . cubed[i] == nums[i] * nums[i] * nums[i]
+{
+  cubed := seq(len(nums), 0);
+  var i_v: int := 0;
+  while i_v < len(nums)
+    invariant 0 <= i_v and i_v <= len(nums)
+    invariant len(cubed) == len(nums)
+    invariant forall j in [0, i_v) . cubed[j] == nums[j] * nums[j] * nums[j]
+    decreases len(nums) - i_v
+  {
+    cubed := cubed[i_v := nums[i_v] * nums[i_v] * nums[i_v]];
+    i_v := i_v + 1;
+  }
+}
+
+
+t 1
 task acsl_clamp__clamp(v: int, lower: int, upper: int) returns (result: int)
   requires lower < upper
   ensures lower <= result
@@ -8249,155 +8249,6 @@ task acsl_mismatch__mismatch(a: seq, b: seq) returns (result: int)
     i_v5 := i_v5 + 1;
   }
   result := len(a);
-}
-
-
-t 1
-gate recursion
-task vericoding_la0026__solve(l1: int, r1: int, l2: int, r2: int, k: int) returns (result: int)
-  requires validInput(l1, r1, l2, r2, k)
-  ensures result == expectedResult(l1, r1, l2, r2, k)
-  ensures result >= 0
-spec fun intersectionLeft(l1_v: int, l2_v: int): int
-  decreases 0
-= if l1_v > l2_v then l1_v else l2_v
-spec fun intersectionRight(r1_v: int, r2_v: int): int
-  decreases 0
-= if r1_v < r2_v then r1_v else r2_v
-spec fun intersectionSize(l1_v2: int, r1_v2: int, l2_v2: int, r2_v2: int): int
-  decreases 0
-= if intersectionRight(r1_v2, r2_v2) - intersectionLeft(l1_v2, l2_v2) + 1 > 0 then intersectionRight(r1_v2, r2_v2) - intersectionLeft(l1_v2, l2_v2) + 1 else 0
-spec fun kInIntersection(l1_v3: int, r1_v3: int, l2_v3: int, r2_v3: int, k_v: int): bool
-  decreases 0
-= intersectionLeft(l1_v3, l2_v3) <= k_v and k_v <= intersectionRight(r1_v3, r2_v3)
-spec fun expectedResult(l1_v4: int, r1_v4: int, l2_v4: int, r2_v4: int, k_v2: int): int
-  decreases 0
-= if kInIntersection(l1_v4, r1_v4, l2_v4, r2_v4, k_v2) then if intersectionSize(l1_v4, r1_v4, l2_v4, r2_v4) - 1 > 0 then intersectionSize(l1_v4, r1_v4, l2_v4, r2_v4) - 1 else 0 else intersectionSize(l1_v4, r1_v4, l2_v4, r2_v4)
-spec fun validInput(l1_v5: int, r1_v5: int, l2_v5: int, r2_v5: int, k_v3: int): bool
-  decreases 0
-= l1_v5 <= r1_v5 and l2_v5 <= r2_v5
-{
-  result := expectedResult(l1, r1, l2, r2, k);
-}
-
-
-t 1
-gate recursion
-task vericoding_la0046__solve(n: int, k: int) returns (result: int)
-  requires validInput(n, k)
-  ensures result == optimalMoves(n, k)
-  ensures result > 0
-spec fun optimalMoves(n_v: int, k_v: int): int
-  decreases 0
-= if k_v == 1 or k_v == n_v then 3 * n_v else 3 * n_v + (if k_v - 1 <= n_v - k_v then k_v - 1 else n_v - k_v)
-spec fun validInput(n_v2: int, k_v2: int): bool
-  decreases 0
-= 2 <= n_v2 and n_v2 <= 5000 and 1 <= k_v2 and k_v2 <= n_v2
-{
-  result := optimalMoves(n, k);
-}
-
-
-t 1
-gate recursion
-task vericoding_la0099__solve(a: int, b: int, c: int, d: int) returns (result: int)
-  requires 1 <= a
-  requires a <= 1000000000 and (1 <= b and (b <= 1000000000 and (1 <= c and (c <= 1000000000 and (1 <= d and d <= 1000000000)))))
-  ensures result >= 0
-  ensures result == (if d > pos2(a, b, c) - pos1(a, b, c) then d - (pos2(a, b, c) - pos1(a, b, c)) else 0) + (if d > pos3(a, b, c) - pos2(a, b, c) then d - (pos3(a, b, c) - pos2(a, b, c)) else 0)
-spec fun pos1(a_v: int, b_v: int, c_v: int): int
-  decreases 0
-= if a_v <= b_v and a_v <= c_v then a_v else if b_v <= a_v and b_v <= c_v then b_v else c_v
-spec fun pos2(a_v2: int, b_v2: int, c_v2: int): int
-  decreases 0
-= if a_v2 <= b_v2 and a_v2 <= c_v2 then if b_v2 <= c_v2 then b_v2 else c_v2 else if b_v2 <= a_v2 and b_v2 <= c_v2 then if a_v2 <= c_v2 then a_v2 else c_v2 else if a_v2 <= b_v2 then a_v2 else b_v2
-spec fun pos3(a_v3: int, b_v3: int, c_v3: int): int
-  decreases 0
-= if a_v3 <= b_v3 and a_v3 <= c_v3 then if b_v3 <= c_v3 then c_v3 else b_v3 else if b_v3 <= a_v3 and b_v3 <= c_v3 then if a_v3 <= c_v3 then c_v3 else a_v3 else if a_v3 <= b_v3 then b_v3 else a_v3
-{
-  result := (if d > pos2(a, b, c) - pos1(a, b, c) then d - (pos2(a, b, c) - pos1(a, b, c)) else 0) + (if d > pos3(a, b, c) - pos2(a, b, c) then d - (pos3(a, b, c) - pos2(a, b, c)) else 0);
-}
-
-
-t 1
-gate recursion
-task vericoding_la0110__solve(r: int, g: int, b: int) returns (result: int)
-  requires validInput(r, g, b)
-  ensures result == maxTables(r, g, b)
-  ensures result >= 0
-spec fun mymin(a: int, b_v: int): int
-  decreases 0
-= if a <= b_v then a else b_v
-spec fun maxTables(r_v: int, g_v: int, b_v2: int): int
-  decreases 0
-= mymin(mymin(mymin((r_v + g_v + b_v2) / 3, r_v + g_v), r_v + b_v2), g_v + b_v2)
-spec fun validInput(r_v2: int, g_v2: int, b_v3: int): bool
-  decreases 0
-= r_v2 >= 0 and g_v2 >= 0 and b_v3 >= 0
-{
-  result := maxTables(r, g, b);
-}
-
-
-Problem: /- { "name": "Dafny_Learning_Experience_tmp_tmpuxvcet_u_week1_7_week5_ComputePower_ComputePower", "category": "Dafny Translation", "description": "Automatically translated from Dafny specification: Dafny_Learning_Experience_tmp_tmpuxvcet_u_week1_7_week5_ComputePower_ComputePower", "source": "Dafny", "translation_date": "2024", "functions": , "methods": } -/ /- Recursive function that computes 2^n for natural numbers. Translated from Dafny's Power function. -/ /- Method to calculate 2*n. Translated from Dafny's CalcPower method. -/ /- Specification for CalcPower ensuring result equals 2*n -/ /- Method to compute 2^n using Power function. Translated from Dafny's ComputePower method. -/ /- Specification for ComputePower ensuring result equals Power(n) -/
-Signature: vericoding_ld0178__calcPower(int) -> int
-t 1
-task vericoding_ld0178__calcPower(n: int) returns (result: int)
-  requires n >= 0
-  ensures result >= 0
-  ensures result == 2 * n
-{
-  result := 2 * n;
-}
-
-
-Problem: /- Translation of Verus function choose_odd to Lean 4 -/
-Signature: vericoding_lj0000__chooseOdd() -> int
-t 1
-task vericoding_lj0000__chooseOdd() returns (result: int)
-  requires true
-  ensures result % 2 == 1
-{
-  result := 1;
-}
-
-
-Problem: /- -----Description----- This task requires writing a Lean 4 method that extracts the last digit of a given non-negative integer. The method should return the last digit, which is obtained by computing the remainder when the number is divided by 10. The result must always be between 0 and 9. -----Input----- The input consists of a single value: n: A non-negative integer. -----Output----- The output is an integer: Returns the last digit of the input number, ensuring that the digit lies within the range 0 to 9. -----Note----- It is assumed that the input number n is non-negative. -/
-Signature: vericoding_lv0091__lastDigit(int) -> int
-t 1
-task vericoding_lv0091__lastDigit(n: int) returns (result: int)
-  requires n >= 0
-  requires true
-  ensures result >= 0
-  ensures 0 <= result and result < 10
-  ensures (if n % 10 >= result then n % 10 - result else 0) == 0 and (if result >= n % 10 then result - n % 10 else 0) == 0
-{
-  result := n % 10;
-}
-
-
-Problem: /- -----Description----- This task requires writing a Lean 4 method that calculates the surface area of a cube based on the length of one of its edges. The method should compute the surface area using the standard formula for a cube. -----Input----- The input consists of: size: An natural number representing the length of an edge of the cube. -----Output----- The output is an natural number: Returns the surface area of the cube. -/
-Signature: vericoding_lv0092__cubeSurfaceArea(int) -> int
-t 1
-task vericoding_lv0092__cubeSurfaceArea(size: int) returns (result: int)
-  requires size >= 0
-  requires true
-  ensures result >= 0
-  ensures (if result >= 6 * size * size then result - 6 * size * size else 0) == 0
-  ensures (if 6 * size * size >= result then 6 * size * size - result else 0) == 0
-{
-  result := 6 * size * size;
-}
-
-
-Problem: /- -----Description----- This task involves computing the average of two integers. The objective is to determine a value that closely approximates the true arithmetic mean when using integer division, ensuring that the result reflects the necessary rounding behavior. -----Input----- The input consists of: • a: An integer. • b: An integer. -----Output----- The output is an integer representing the computed average of a and b using integer division. -----Note----- The specification requires that the computed average satisfies the condition that 2 * avg is between (a + b - 1) and (a + b + 1), ensuring that the result meets the expected rounding boundaries. -/
-Signature: vericoding_lv0187__computeAvg(int, int) -> int
-t 1
-task vericoding_lv0187__computeAvg(a: int, b: int) returns (result: int)
-  requires true
-  ensures 2 * result == a + b - (a + b) % 2
-{
-  result := (a + b) / 2;
 }
 
 
@@ -8955,6 +8806,155 @@ task vericoding_vv0176__swap_simultaneous(x: int, y: int) returns (r: (int, int)
 
 
 t 1
+gate recursion
+task vericoding_la0026__solve(l1: int, r1: int, l2: int, r2: int, k: int) returns (result: int)
+  requires validInput(l1, r1, l2, r2, k)
+  ensures result == expectedResult(l1, r1, l2, r2, k)
+  ensures result >= 0
+spec fun intersectionLeft(l1_v: int, l2_v: int): int
+  decreases 0
+= if l1_v > l2_v then l1_v else l2_v
+spec fun intersectionRight(r1_v: int, r2_v: int): int
+  decreases 0
+= if r1_v < r2_v then r1_v else r2_v
+spec fun intersectionSize(l1_v2: int, r1_v2: int, l2_v2: int, r2_v2: int): int
+  decreases 0
+= if intersectionRight(r1_v2, r2_v2) - intersectionLeft(l1_v2, l2_v2) + 1 > 0 then intersectionRight(r1_v2, r2_v2) - intersectionLeft(l1_v2, l2_v2) + 1 else 0
+spec fun kInIntersection(l1_v3: int, r1_v3: int, l2_v3: int, r2_v3: int, k_v: int): bool
+  decreases 0
+= intersectionLeft(l1_v3, l2_v3) <= k_v and k_v <= intersectionRight(r1_v3, r2_v3)
+spec fun expectedResult(l1_v4: int, r1_v4: int, l2_v4: int, r2_v4: int, k_v2: int): int
+  decreases 0
+= if kInIntersection(l1_v4, r1_v4, l2_v4, r2_v4, k_v2) then if intersectionSize(l1_v4, r1_v4, l2_v4, r2_v4) - 1 > 0 then intersectionSize(l1_v4, r1_v4, l2_v4, r2_v4) - 1 else 0 else intersectionSize(l1_v4, r1_v4, l2_v4, r2_v4)
+spec fun validInput(l1_v5: int, r1_v5: int, l2_v5: int, r2_v5: int, k_v3: int): bool
+  decreases 0
+= l1_v5 <= r1_v5 and l2_v5 <= r2_v5
+{
+  result := expectedResult(l1, r1, l2, r2, k);
+}
+
+
+t 1
+gate recursion
+task vericoding_la0046__solve(n: int, k: int) returns (result: int)
+  requires validInput(n, k)
+  ensures result == optimalMoves(n, k)
+  ensures result > 0
+spec fun optimalMoves(n_v: int, k_v: int): int
+  decreases 0
+= if k_v == 1 or k_v == n_v then 3 * n_v else 3 * n_v + (if k_v - 1 <= n_v - k_v then k_v - 1 else n_v - k_v)
+spec fun validInput(n_v2: int, k_v2: int): bool
+  decreases 0
+= 2 <= n_v2 and n_v2 <= 5000 and 1 <= k_v2 and k_v2 <= n_v2
+{
+  result := optimalMoves(n, k);
+}
+
+
+t 1
+gate recursion
+task vericoding_la0099__solve(a: int, b: int, c: int, d: int) returns (result: int)
+  requires 1 <= a
+  requires a <= 1000000000 and (1 <= b and (b <= 1000000000 and (1 <= c and (c <= 1000000000 and (1 <= d and d <= 1000000000)))))
+  ensures result >= 0
+  ensures result == (if d > pos2(a, b, c) - pos1(a, b, c) then d - (pos2(a, b, c) - pos1(a, b, c)) else 0) + (if d > pos3(a, b, c) - pos2(a, b, c) then d - (pos3(a, b, c) - pos2(a, b, c)) else 0)
+spec fun pos1(a_v: int, b_v: int, c_v: int): int
+  decreases 0
+= if a_v <= b_v and a_v <= c_v then a_v else if b_v <= a_v and b_v <= c_v then b_v else c_v
+spec fun pos2(a_v2: int, b_v2: int, c_v2: int): int
+  decreases 0
+= if a_v2 <= b_v2 and a_v2 <= c_v2 then if b_v2 <= c_v2 then b_v2 else c_v2 else if b_v2 <= a_v2 and b_v2 <= c_v2 then if a_v2 <= c_v2 then a_v2 else c_v2 else if a_v2 <= b_v2 then a_v2 else b_v2
+spec fun pos3(a_v3: int, b_v3: int, c_v3: int): int
+  decreases 0
+= if a_v3 <= b_v3 and a_v3 <= c_v3 then if b_v3 <= c_v3 then c_v3 else b_v3 else if b_v3 <= a_v3 and b_v3 <= c_v3 then if a_v3 <= c_v3 then c_v3 else a_v3 else if a_v3 <= b_v3 then b_v3 else a_v3
+{
+  result := (if d > pos2(a, b, c) - pos1(a, b, c) then d - (pos2(a, b, c) - pos1(a, b, c)) else 0) + (if d > pos3(a, b, c) - pos2(a, b, c) then d - (pos3(a, b, c) - pos2(a, b, c)) else 0);
+}
+
+
+t 1
+gate recursion
+task vericoding_la0110__solve(r: int, g: int, b: int) returns (result: int)
+  requires validInput(r, g, b)
+  ensures result == maxTables(r, g, b)
+  ensures result >= 0
+spec fun mymin(a: int, b_v: int): int
+  decreases 0
+= if a <= b_v then a else b_v
+spec fun maxTables(r_v: int, g_v: int, b_v2: int): int
+  decreases 0
+= mymin(mymin(mymin((r_v + g_v + b_v2) / 3, r_v + g_v), r_v + b_v2), g_v + b_v2)
+spec fun validInput(r_v2: int, g_v2: int, b_v3: int): bool
+  decreases 0
+= r_v2 >= 0 and g_v2 >= 0 and b_v3 >= 0
+{
+  result := maxTables(r, g, b);
+}
+
+
+Problem: /- { "name": "Dafny_Learning_Experience_tmp_tmpuxvcet_u_week1_7_week5_ComputePower_ComputePower", "category": "Dafny Translation", "description": "Automatically translated from Dafny specification: Dafny_Learning_Experience_tmp_tmpuxvcet_u_week1_7_week5_ComputePower_ComputePower", "source": "Dafny", "translation_date": "2024", "functions": , "methods": } -/ /- Recursive function that computes 2^n for natural numbers. Translated from Dafny's Power function. -/ /- Method to calculate 2*n. Translated from Dafny's CalcPower method. -/ /- Specification for CalcPower ensuring result equals 2*n -/ /- Method to compute 2^n using Power function. Translated from Dafny's ComputePower method. -/ /- Specification for ComputePower ensuring result equals Power(n) -/
+Signature: vericoding_ld0178__calcPower(int) -> int
+t 1
+task vericoding_ld0178__calcPower(n: int) returns (result: int)
+  requires n >= 0
+  ensures result >= 0
+  ensures result == 2 * n
+{
+  result := 2 * n;
+}
+
+
+Problem: /- Translation of Verus function choose_odd to Lean 4 -/
+Signature: vericoding_lj0000__chooseOdd() -> int
+t 1
+task vericoding_lj0000__chooseOdd() returns (result: int)
+  requires true
+  ensures result % 2 == 1
+{
+  result := 1;
+}
+
+
+Problem: /- -----Description----- This task requires writing a Lean 4 method that extracts the last digit of a given non-negative integer. The method should return the last digit, which is obtained by computing the remainder when the number is divided by 10. The result must always be between 0 and 9. -----Input----- The input consists of a single value: n: A non-negative integer. -----Output----- The output is an integer: Returns the last digit of the input number, ensuring that the digit lies within the range 0 to 9. -----Note----- It is assumed that the input number n is non-negative. -/
+Signature: vericoding_lv0091__lastDigit(int) -> int
+t 1
+task vericoding_lv0091__lastDigit(n: int) returns (result: int)
+  requires n >= 0
+  requires true
+  ensures result >= 0
+  ensures 0 <= result and result < 10
+  ensures (if n % 10 >= result then n % 10 - result else 0) == 0 and (if result >= n % 10 then result - n % 10 else 0) == 0
+{
+  result := n % 10;
+}
+
+
+Problem: /- -----Description----- This task requires writing a Lean 4 method that calculates the surface area of a cube based on the length of one of its edges. The method should compute the surface area using the standard formula for a cube. -----Input----- The input consists of: size: An natural number representing the length of an edge of the cube. -----Output----- The output is an natural number: Returns the surface area of the cube. -/
+Signature: vericoding_lv0092__cubeSurfaceArea(int) -> int
+t 1
+task vericoding_lv0092__cubeSurfaceArea(size: int) returns (result: int)
+  requires size >= 0
+  requires true
+  ensures result >= 0
+  ensures (if result >= 6 * size * size then result - 6 * size * size else 0) == 0
+  ensures (if 6 * size * size >= result then 6 * size * size - result else 0) == 0
+{
+  result := 6 * size * size;
+}
+
+
+Problem: /- -----Description----- This task involves computing the average of two integers. The objective is to determine a value that closely approximates the true arithmetic mean when using integer division, ensuring that the result reflects the necessary rounding behavior. -----Input----- The input consists of: • a: An integer. • b: An integer. -----Output----- The output is an integer representing the computed average of a and b using integer division. -----Note----- The specification requires that the computed average satisfies the condition that 2 * avg is between (a + b - 1) and (a + b + 1), ensuring that the result meets the expected rounding boundaries. -/
+Signature: vericoding_lv0187__computeAvg(int, int) -> int
+t 1
+task vericoding_lv0187__computeAvg(a: int, b: int) returns (result: int)
+  requires true
+  ensures 2 * result == a + b - (a + b) % 2
+{
+  result := (a + b) / 2;
+}
+
+
+t 1
 task verus_examples_guide_const_add_one__add_one(x: int) returns (ret: int)
   requires x >= 0
   requires x < 255
@@ -9057,6 +9057,967 @@ spec fun arith_sum_int(i: int): int
     i_v := i_v + 1;
   }
   sum := sum_1;
+}
+
+
+Problem: Return maximum element in the list.
+Signature: humaneval_dafny_035_max_element__max_element(seq) -> int
+t 1
+gate loops
+task humaneval_dafny_035_max_element__max_element(l: seq) returns (result: int)
+  requires len(l) > 0
+  ensures forall i in [0, len(l)) . l[i] <= result
+  ensures exists i_v in [0, len(l)) . l[i_v] == result
+{
+  result := l[0];
+  var i_v2: int := 1;
+  while i_v2 < len(l)
+    invariant i_v2 >= 1 and i_v2 <= len(l)
+    invariant forall i1 in [0, i_v2) . l[i1] <= result
+    invariant exists i1_v in [0, i_v2) . l[i1_v] == result
+    decreases len(l) - i_v2
+  {
+    if l[i_v2] > result {
+      result := l[i_v2];
+    } else {
+    }
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+Problem: Return True if all numbers in the list l are below threshold t.
+Signature: humaneval_dafny_052_below_threshold__below_threshold(seq, int) -> bool
+t 1
+gate loops
+task humaneval_dafny_052_below_threshold__below_threshold(l: seq, t_v: int) returns (b: bool)
+  ensures b == (forall i in [0, len(l)) . l[i] < t_v)
+{
+  b := true;
+  var i_v: int := 0;
+  while i_v < len(l)
+    invariant 0 <= i_v and i_v <= len(l)
+    invariant b == (forall i1 in [0, i_v) . l[i1] < t_v)
+    decreases len(l) - i_v
+  {
+    if l[i_v] >= t_v {
+      b := false;
+    } else {
+    }
+    i_v := i_v + 1;
+  }
+}
+
+
+Problem: Given n manholes in a line (positions 1 to n), each initially covered by one stone with one coin underneath. Nastya starts at position k and can: throw stones, move to adjacent positions, or collect coins from uncovered manholes. Find the minimum number of moves needed to collect all n coins.
+Signature: vericoding_da0046__minimumMoves(int, int) -> int
+t 1
+gate recursion
+task vericoding_da0046__minimumMoves(n: int, k: int) returns (result: int)
+  requires validInput(n, k)
+  ensures result == optimalMoves(n, k)
+  ensures result > 0
+spec fun validInput(n_v: int, k_v: int): bool
+  decreases 0
+= (2 <= n_v and n_v <= 5000) and (1 <= k_v and k_v <= n_v)
+spec fun min(a: int, b: int): int
+  decreases 0
+= if a <= b then a else b
+spec fun optimalMoves(n_v2: int, k_v2: int): int
+  decreases 0
+= if validInput(n_v2, k_v2) then if k_v2 == 1 or k_v2 == n_v2 then 3 * n_v2 else 3 * n_v2 + min(k_v2 - 1, n_v2 - k_v2) else 0
+lemma optimalMovesPositive(n_v3: int, k_v3: int)
+  requires validInput(n_v3, k_v3)
+  ensures optimalMoves(n_v3, k_v3) > 0
+{
+}
+{
+  if k == 1 or k == n {
+    result := 3 * n;
+  } else {
+    var minDist: int := if k - 1 <= n - k then k - 1 else n - k;
+    result := 3 * n + minDist;
+  }
+  optimalMovesPositive(n, k);
+}
+
+
+Problem: Given three distinct integers representing positions of three friends on a number line, find the minimum total distance they need to travel to meet at a single point.
+Signature: vericoding_da0085__findMinimumTotalDistance(int, int, int) -> int
+t 1
+gate recursion
+task vericoding_da0085__findMinimumTotalDistance(x1: int, x2: int, x3: int) returns (result: int)
+  requires validInput(x1, x2, x3)
+  ensures result == minTotalDistance(x1, x2, x3)
+  ensures result >= 1
+  ensures result <= 99
+spec fun validInput(x1_v: int, x2_v: int, x3_v: int): bool
+  decreases 0
+= (1 <= x1_v and x1_v <= 100) and (1 <= x2_v and x2_v <= 100) and (1 <= x3_v and x3_v <= 100) and x1_v != x2_v and x1_v != x3_v and x2_v != x3_v
+spec fun minTotalDistance(x1_v2: int, x2_v2: int, x3_v2: int): int
+  decreases 0
+= if validInput(x1_v2, x2_v2, x3_v2) then (if x1_v2 >= x2_v2 and x1_v2 >= x3_v2 then x1_v2 else if x2_v2 >= x1_v2 and x2_v2 >= x3_v2 then x2_v2 else x3_v2) - (if x1_v2 <= x2_v2 and x1_v2 <= x3_v2 then x1_v2 else if x2_v2 <= x1_v2 and x2_v2 <= x3_v2 then x2_v2 else x3_v2) else 0
+lemma minTotalDistanceBounds(x1_v3: int, x2_v3: int, x3_v3: int)
+  requires validInput(x1_v3, x2_v3, x3_v3)
+  ensures 1 <= minTotalDistance(x1_v3, x2_v3, x3_v3)
+  ensures minTotalDistance(x1_v3, x2_v3, x3_v3) <= 99
+{
+  assert (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) == x1_v3 or (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) == x2_v3 or (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) == x3_v3;
+  assert 1 <= (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) and (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) <= 100;
+  assert (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3) == x1_v3 or (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3) == x2_v3 or (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3) == x3_v3;
+  assert 1 <= (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3) and (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3) <= 100;
+  assert (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) != (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3);
+  assert (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) > (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3);
+  assert (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) - (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3) >= 1;
+  assert (if x1_v3 >= x2_v3 and x1_v3 >= x3_v3 then x1_v3 else if x2_v3 >= x1_v3 and x2_v3 >= x3_v3 then x2_v3 else x3_v3) - (if x1_v3 <= x2_v3 and x1_v3 <= x3_v3 then x1_v3 else if x2_v3 <= x1_v3 and x2_v3 <= x3_v3 then x2_v3 else x3_v3) <= 99;
+}
+{
+  var max_pos: int := if x1 >= x2 and x1 >= x3 then x1 else if x2 >= x1 and x2 >= x3 then x2 else x3;
+  var min_pos: int := if x1 <= x2 and x1 <= x3 then x1 else if x2 <= x1 and x2 <= x3 then x2 else x3;
+  result := max_pos - min_pos;
+  minTotalDistanceBounds(x1, x2, x3);
+}
+
+
+Problem: Given a list of university entrance years for groups that student Igor joined, determine Igor's university entrance year. Igor joins his own group and all groups where the entrance year differs by at most x years from his entrance year. The solution computes Igor's entrance year as the average of all group years.
+Signature: vericoding_da0101__solve(int, seq) -> int
+t 1
+gate recursion
+task vericoding_da0101__solve(n: int, years: seq) returns (result: int)
+  requires validInput(n, years)
+  ensures result == sumRange(years, 0, len(years)) / n
+spec fun validInput(n_v: int, years_v: seq): bool
+  decreases 0
+= n_v > 0 and len(years_v) == n_v
+spec fun sumRange(s: seq, start: int, end: int): int
+  decreases end - start
+= if 0 <= start and start <= end and end <= len(s) then if start == end then 0 else s[start] + sumRange(s, start + 1, end) else 0
+lemma sumRangeAppend(s_v: seq, start_v: int, end_v: int)
+  requires 0 <= start_v
+  requires start_v <= end_v
+  requires end_v < len(s_v)
+  ensures sumRange(s_v, start_v, end_v + 1) == sumRange(s_v, start_v, end_v) + s_v[end_v]
+  decreases end_v - start_v
+{
+  if start_v == end_v {
+    assert sumRange(s_v, start_v, end_v) == 0;
+    assert sumRange(s_v, start_v, end_v + 1) == s_v[start_v];
+    assert s_v[start_v] == s_v[end_v];
+  } else {
+    assert sumRange(s_v, start_v, end_v + 1) == s_v[start_v] + sumRange(s_v, start_v + 1, end_v + 1);
+    sumRangeAppend(s_v, start_v + 1, end_v);
+    assert sumRange(s_v, start_v + 1, end_v + 1) == sumRange(s_v, start_v + 1, end_v) + s_v[end_v];
+    assert sumRange(s_v, start_v, end_v) == s_v[start_v] + sumRange(s_v, start_v + 1, end_v);
+    assert sumRange(s_v, start_v, end_v + 1) == sumRange(s_v, start_v, end_v) + s_v[end_v];
+  }
+}
+{
+  var sum: int := 0;
+  var i: int := 0;
+  while i < n
+    invariant 0 <= i and i <= n
+    invariant n == len(years)
+    invariant sum == sumRange(years, 0, i)
+    decreases n - i
+  {
+    sumRangeAppend(years, 0, i);
+    sum := sum + years[i];
+    i := i + 1;
+  }
+  result := sum / n;
+}
+
+
+Problem: Given r red balloons, g green balloons, and b blue balloons, determine the maximum number of tables that can be decorated. Each table requires exactly 3 balloons, and no table can have all 3 balloons of the same color.
+Signature: vericoding_da0110__solve(int, int, int) -> int
+t 1
+gate recursion
+task vericoding_da0110__solve(r: int, g: int, b: int) returns (result: int)
+  requires validInput(r, g, b)
+  ensures result == maxTables(r, g, b)
+  ensures result >= 0
+spec fun min(a: int, b_v: int): int
+  decreases 0
+= if a <= b_v then a else b_v
+spec fun validInput(r_v: int, g_v: int, b_v2: int): bool
+  decreases 0
+= r_v >= 0 and g_v >= 0 and b_v2 >= 0
+spec fun maxTables(r_v2: int, g_v2: int, b_v3: int): int
+  decreases 0
+= if validInput(r_v2, g_v2, b_v3) then min(min(min((r_v2 + g_v2 + b_v3) / 3, r_v2 + g_v2), r_v2 + b_v3), g_v2 + b_v3) else 0
+lemma maxTablesNonNegative(r_v3: int, g_v3: int, b_v4: int)
+  requires validInput(r_v3, g_v3, b_v4)
+  ensures maxTables(r_v3, g_v3, b_v4) >= 0
+{
+}
+{
+  var sum_all: int := (r + g + b) / 3;
+  var sum_rg: int := r + g;
+  var sum_rb: int := r + b;
+  var sum_gb: int := g + b;
+  var min1: int := min(sum_all, sum_rg);
+  var min2: int := min(min1, sum_rb);
+  result := min(min2, sum_gb);
+  maxTablesNonNegative(r, g, b);
+}
+
+
+Problem: Given a positive integer n, calculate the value of the alternating sum: f(n) = -1 + 2 - 3 + 4 - 5 + ... + (-1)^n × n
+Signature: vericoding_da0123__solve(int) -> int
+t 1
+gate recursion
+task vericoding_da0123__solve(n: int) returns (result: int)
+  requires validInput(n)
+  ensures result == alternatingSum(n)
+  ensures n % 2 == 0 ==> result == n / 2
+  ensures n % 2 != 0 ==> result == n / 2 - n
+spec fun validInput(n_v: int): bool
+  decreases 0
+= n_v > 0
+spec fun alternatingSum(n_v2: int): int
+  decreases n_v2
+= if n_v2 > 0 then if n_v2 == 1 then -(1) else alternatingSum(n_v2 - 1) + (if n_v2 % 2 == 0 then n_v2 else -n_v2) else 0
+lemma alternatingSum_formula(n_v3: int)
+  requires n_v3 > 0
+  ensures alternatingSum(n_v3) == (if n_v3 % 2 == 0 then n_v3 / 2 else n_v3 / 2 - n_v3)
+  decreases n_v3
+{
+  if n_v3 == 1 {
+    assert alternatingSum(1) == -(1);
+    assert 1 / 2 - 1 == -(1);
+    assert alternatingSum(1) == 1 / 2 - 1;
+  } else {
+    alternatingSum_formula(n_v3 - 1);
+    if n_v3 % 2 == 0 {
+      assert alternatingSum(n_v3) == alternatingSum(n_v3 - 1) + n_v3;
+      assert alternatingSum(n_v3 - 1) == (n_v3 - 1) / 2 - (n_v3 - 1);
+      assert alternatingSum(n_v3) == (n_v3 - 1) / 2 - (n_v3 - 1) + n_v3;
+      assert (n_v3 - 1) / 2 - (n_v3 - 1) + n_v3 == (n_v3 - 1) / 2 + 1;
+      assert n_v3 == 2 * (n_v3 / 2);
+      assert (n_v3 - 1) / 2 == n_v3 / 2 - 1;
+      assert (n_v3 - 1) / 2 + 1 == n_v3 / 2;
+      assert alternatingSum(n_v3) == n_v3 / 2;
+      assert alternatingSum(n_v3) == n_v3 / 2;
+    } else {
+      assert alternatingSum(n_v3) == alternatingSum(n_v3 - 1) - n_v3;
+      assert alternatingSum(n_v3 - 1) == (n_v3 - 1) / 2;
+      assert alternatingSum(n_v3) == (n_v3 - 1) / 2 - n_v3;
+      assert n_v3 == 2 * (n_v3 / 2) + 1;
+      assert (n_v3 - 1) / 2 == n_v3 / 2;
+      assert (n_v3 - 1) / 2 == n_v3 / 2;
+      assert alternatingSum(n_v3) == n_v3 / 2 - n_v3;
+    }
+  }
+}
+{
+  var i: int := 1;
+  result := -(1);
+  while i < n
+    invariant 1 <= i and i <= n
+    invariant result == alternatingSum(i)
+    decreases n - i
+  {
+    i := i + 1;
+    if i % 2 == 0 {
+      result := result + i;
+    } else {
+      result := result - i;
+    }
+  }
+  alternatingSum_formula(n);
+}
+
+
+Problem: Given a red socks and b blue socks, determine the maximum number of days to wear different colored socks (one red, one blue per day), then the number of days to wear same colored socks afterwards (two socks of same color per day). Each day, worn socks are discarded.
+Signature: vericoding_da0176__solve(int, int) -> (int, int)
+t 1
+gate recursion
+task vericoding_da0176__solve(a: int, b: int) returns (r: (int, int))
+  requires validInput(a, b)
+  ensures r.0 == maxDifferentDays(a, b)
+  ensures r.1 == sameDays(a, b)
+  ensures r.0 >= 0
+  ensures r.1 >= 0
+  ensures r.0 <= a
+  ensures r.0 <= b
+spec fun validInput(a_v: int, b_v: int): bool
+  decreases 0
+= a_v >= 1 and b_v >= 1
+spec fun maxDifferentDays(a_v2: int, b_v2: int): int
+  decreases 0
+= if a_v2 < b_v2 then a_v2 else b_v2
+spec fun remainingAfterDifferent(a_v3: int, b_v3: int): int
+  decreases 0
+= if a_v3 > b_v3 then a_v3 - maxDifferentDays(a_v3, b_v3) else b_v3 - maxDifferentDays(a_v3, b_v3)
+spec fun sameDays(a_v4: int, b_v4: int): int
+  decreases 0
+= remainingAfterDifferent(a_v4, b_v4) / 2
+lemma sameDaysProperties(a_v5: int, b_v5: int)
+  requires validInput(a_v5, b_v5)
+  ensures sameDays(a_v5, b_v5) >= 0
+{
+}
+lemma maxDifferentDaysProperties(a_v6: int, b_v6: int)
+  requires validInput(a_v6, b_v6)
+  ensures maxDifferentDays(a_v6, b_v6) >= 0
+  ensures maxDifferentDays(a_v6, b_v6) <= a_v6
+  ensures maxDifferentDays(a_v6, b_v6) <= b_v6
+  ensures maxDifferentDays(a_v6, b_v6) == (if a_v6 < b_v6 then a_v6 else b_v6)
+{
+}
+{
+  var days_different: int := 0;
+  var days_same: int := 0;
+  days_different := if a < b then a else b;
+  var remaining: int := if a > b then a - days_different else b - days_different;
+  days_same := remaining / 2;
+  maxDifferentDaysProperties(a, b);
+  sameDaysProperties(a, b);
+  r := (days_different, days_same);
+}
+
+
+Problem: Given three stick lengths, find the minimum number of operations to form a triangle with positive area, where each operation increases any stick's length by 1 centimeter. A triangle has positive area if it satisfies the triangle inequality: the sum of any two sides must be greater than the third side.
+Signature: vericoding_da0188__solve(int, int, int) -> int
+t 1
+gate recursion
+task vericoding_da0188__solve(a: int, b: int, c: int) returns (result: int)
+  requires validInput(a, b, c)
+  ensures result >= 0
+  ensures result == minOperationsNeeded(a, b, c)
+  ensures (result == 0) == isTriangle(a, b, c)
+spec fun validInput(a_v: int, b_v: int, c_v: int): bool
+  decreases 0
+= (1 <= a_v and a_v <= 100) and (1 <= b_v and b_v <= 100) and (1 <= c_v and c_v <= 100)
+spec fun max(a_v2: int, b_v2: int): int
+  decreases 0
+= if a_v2 >= b_v2 then a_v2 else b_v2
+spec fun minOperationsNeeded(a_v3: int, b_v3: int, c_v2: int): int
+  decreases 0
+= if validInput(a_v3, b_v3, c_v2) then max(0, max(max(a_v3, b_v3), c_v2) - (a_v3 + b_v3 + c_v2 - max(max(a_v3, b_v3), c_v2)) + 1) else 0
+spec fun isTriangle(a_v4: int, b_v4: int, c_v3: int): bool
+  decreases 0
+= a_v4 + b_v4 > c_v3 and a_v4 + c_v3 > b_v4 and b_v4 + c_v3 > a_v4
+lemma maxProperties(a_v5: int, b_v5: int, c_v4: int)
+  ensures max(max(a_v5, b_v5), c_v4) >= a_v5
+  ensures max(max(a_v5, b_v5), c_v4) >= b_v5
+  ensures max(max(a_v5, b_v5), c_v4) >= c_v4
+  ensures max(max(a_v5, b_v5), c_v4) == a_v5 or max(max(a_v5, b_v5), c_v4) == b_v5 or max(max(a_v5, b_v5), c_v4) == c_v4
+{
+}
+{
+  var max_val: int := if a >= b then if a >= c then a else c else if b >= c then b else c;
+  var sum_of_other_two: int := a + b + c - max_val;
+  if max_val < sum_of_other_two {
+    result := 0;
+  } else {
+    result := max_val - sum_of_other_two + 1;
+  }
+}
+
+
+Problem: Given an integer N, find a permutation P₁, P₂, ..., Pₙ of numbers 1 to N that maximizes the sum M₁ + M₂ + ... + Mₙ, where Mᵢ is the remainder when i is divided by Pᵢ.
+Signature: vericoding_da0308__solve(int) -> int
+t 1
+gate recursion
+task vericoding_da0308__solve(n: int) returns (result: int)
+  requires validInput(n)
+  ensures result == maxSum(n)
+spec fun validInput(n_v: int): bool
+  decreases 0
+= n_v >= 1
+spec fun maxSum(n_v2: int): int
+  decreases 0
+= if n_v2 >= 1 then n_v2 * (n_v2 - 1) / 2 else 0
+{
+  result := n * (n - 1) / 2;
+}
+
+
+Problem: Given three brothers numbered 1, 2, and 3, exactly two brothers arrived on time for a meeting and one brother was late. Given the numbers of the two brothers who arrived on time, determine the number of the brother who was late.
+Signature: vericoding_da0399__solve(int, int) -> int
+t 1
+gate recursion
+task vericoding_da0399__solve(a: int, b: int) returns (result: int)
+  requires validBrotherNumbers(a, b)
+  ensures isValidResult(a, b, result)
+  ensures result == lateBrother(a, b)
+spec fun validBrotherNumbers(a_v: int, b_v: int): bool
+  decreases 0
+= (1 <= a_v and a_v <= 3) and (1 <= b_v and b_v <= 3) and a_v != b_v
+spec fun lateBrother(a_v2: int, b_v2: int): int
+  decreases 0
+= if validBrotherNumbers(a_v2, b_v2) then 6 - a_v2 - b_v2 else 0
+spec fun isValidResult(a_v3: int, b_v3: int, result_v: int): bool
+  decreases 0
+= validBrotherNumbers(a_v3, b_v3) ==> (1 <= result_v and result_v <= 3) and result_v != a_v3 and result_v != b_v3
+lemma lateBrotherCorrect(a_v4: int, b_v4: int)
+  requires validBrotherNumbers(a_v4, b_v4)
+  ensures 1 <= lateBrother(a_v4, b_v4)
+  ensures lateBrother(a_v4, b_v4) <= 3
+  ensures lateBrother(a_v4, b_v4) != a_v4
+  ensures lateBrother(a_v4, b_v4) != b_v4
+{
+  assert lateBrother(a_v4, b_v4) == 6 - a_v4 - b_v4;
+  assert a_v4 + b_v4 == 3 or a_v4 + b_v4 == 4 or a_v4 + b_v4 == 5;
+  if a_v4 + b_v4 == 3 {
+    assert a_v4 == 1 and b_v4 == 2 or a_v4 == 2 and b_v4 == 1;
+    assert lateBrother(a_v4, b_v4) == 3;
+  } else {
+    if a_v4 + b_v4 == 4 {
+      assert a_v4 == 1 and b_v4 == 3 or a_v4 == 3 and b_v4 == 1;
+      assert lateBrother(a_v4, b_v4) == 2;
+    } else {
+      assert a_v4 + b_v4 == 5;
+      assert a_v4 == 2 and b_v4 == 3 or a_v4 == 3 and b_v4 == 2;
+      assert lateBrother(a_v4, b_v4) == 1;
+    }
+  }
+}
+{
+  result := 6 - a - b;
+  lateBrotherCorrect(a, b);
+}
+
+
+Problem: Given n students in positions 1 to n, with two rival students initially at positions a and b, find the maximum distance between the rivals after performing at most x adjacent swaps. Distance between positions p and s is |p - s|.
+Signature: vericoding_da0409__solveRivalDistance(int, int, int, int) -> int
+t 1
+gate recursion
+task vericoding_da0409__solveRivalDistance(n: int, x: int, a: int, b: int) returns (result: int)
+  requires validInput(n, x, a, b)
+  ensures validResult(n, x, a, b, result)
+  ensures result >= 0
+spec fun validInput(n_v: int, x_v: int, a_v: int, b_v: int): bool
+  decreases 0
+= (2 <= n_v and n_v <= 100) and (0 <= x_v and x_v <= 100) and (1 <= a_v and a_v <= n_v) and (1 <= b_v and b_v <= n_v) and a_v != b_v
+spec fun maxDistance(n_v2: int, x_v2: int, a_v2: int, b_v2: int): int
+  decreases 0
+= if validInput(n_v2, x_v2, a_v2, b_v2) then if (if a_v2 >= b_v2 then a_v2 - b_v2 else b_v2 - a_v2) + x_v2 <= n_v2 - 1 then (if a_v2 >= b_v2 then a_v2 - b_v2 else b_v2 - a_v2) + x_v2 else n_v2 - 1 else 0
+spec fun validResult(n_v3: int, x_v3: int, a_v3: int, b_v3: int, result_v: int): bool
+  decreases 0
+= if validInput(n_v3, x_v3, a_v3, b_v3) then result_v == maxDistance(n_v3, x_v3, a_v3, b_v3) and (0 <= result_v and result_v <= n_v3 - 1) else false
+lemma maxDistanceProperties(n_v4: int, x_v4: int, a_v4: int, b_v4: int)
+  requires validInput(n_v4, x_v4, a_v4, b_v4)
+  ensures 0 <= maxDistance(n_v4, x_v4, a_v4, b_v4)
+  ensures maxDistance(n_v4, x_v4, a_v4, b_v4) <= n_v4 - 1
+{
+  assert (if a_v4 >= b_v4 then a_v4 - b_v4 else b_v4 - a_v4) >= 0;
+  assert (if a_v4 >= b_v4 then a_v4 - b_v4 else b_v4 - a_v4) + x_v4 >= (if a_v4 >= b_v4 then a_v4 - b_v4 else b_v4 - a_v4);
+  assert n_v4 - 1 == n_v4 - 1 and n_v4 - 1 >= 0;
+  if (if a_v4 >= b_v4 then a_v4 - b_v4 else b_v4 - a_v4) + x_v4 <= n_v4 - 1 {
+    assert maxDistance(n_v4, x_v4, a_v4, b_v4) == (if a_v4 >= b_v4 then a_v4 - b_v4 else b_v4 - a_v4) + x_v4;
+    assert maxDistance(n_v4, x_v4, a_v4, b_v4) >= 0;
+    assert maxDistance(n_v4, x_v4, a_v4, b_v4) <= n_v4 - 1;
+  } else {
+    assert maxDistance(n_v4, x_v4, a_v4, b_v4) == n_v4 - 1;
+    assert maxDistance(n_v4, x_v4, a_v4, b_v4) == n_v4 - 1;
+    assert 0 <= maxDistance(n_v4, x_v4, a_v4, b_v4) and maxDistance(n_v4, x_v4, a_v4, b_v4) <= n_v4 - 1;
+  }
+}
+{
+  var initialDistance: int := 0;
+  if a >= b {
+    initialDistance := a - b;
+  } else {
+    initialDistance := b - a;
+  }
+  var maxPossibleDistance: int := initialDistance + x;
+  var maxLineDistance: int := n - 1;
+  if maxPossibleDistance <= maxLineDistance {
+    result := maxPossibleDistance;
+  } else {
+    result := maxLineDistance;
+  }
+  maxDistanceProperties(n, x, a, b);
+}
+
+
+Problem: Given a cost N yen, calculate the change received when paying with the minimum number of 1000-yen bills.
+Signature: vericoding_da0484__solve(int) -> int
+t 1
+gate recursion
+task vericoding_da0484__solve(n: int) returns (change: int)
+  requires validInput(n)
+  ensures validChange(change)
+  ensures change == correctChange(n)
+spec fun validChange(change_v: int): bool
+  decreases 0
+= 0 <= change_v and change_v <= 999
+spec fun validInput(n_v: int): bool
+  decreases 0
+= 1 <= n_v and n_v <= 10000
+spec fun correctChange(n_v2: int): int
+  decreases 0
+= if validInput(n_v2) then (1000 - n_v2 % 1000) % 1000 else 0
+lemma changeProperties(n_v3: int)
+  requires validInput(n_v3)
+  ensures 0 <= correctChange(n_v3)
+  ensures correctChange(n_v3) <= 999
+{
+  assert 0 <= n_v3 % 1000 and n_v3 % 1000 < 1000;
+  if n_v3 % 1000 == 0 {
+    assert correctChange(n_v3) == (1000 - 0) % 1000 and (1000 - 0) % 1000 == 0;
+  } else {
+    assert 1 <= n_v3 % 1000 and n_v3 % 1000 <= 999;
+    assert 1000 - n_v3 % 1000 >= 1;
+    assert 1000 - n_v3 % 1000 <= 999;
+    assert correctChange(n_v3) == (1000 - n_v3 % 1000) % 1000 and (1000 - n_v3 % 1000) % 1000 == 1000 - n_v3 % 1000;
+  }
+}
+{
+  var remainder: int := n % 1000;
+  if remainder == 0 {
+    change := 0;
+  } else {
+    change := 1000 - remainder;
+  }
+  changeProperties(n);
+}
+
+
+Problem: Count how many odd positive integers between 1 and N (inclusive) have exactly 8 positive divisors, where N is between 1 and 200.
+Signature: vericoding_da0531__solve(int) -> int
+t 1
+gate recursion
+task vericoding_da0531__solve(n: int) returns (count: int)
+  requires validInput(n)
+  ensures n < 105 ==> count == 0
+  ensures 105 <= n and n < 135 ==> count == 1
+  ensures 135 <= n and n < 165 ==> count == 2
+  ensures 165 <= n and n < 189 ==> count == 3
+  ensures 189 <= n and n < 195 ==> count == 4
+  ensures n >= 195 ==> count == 5
+  ensures 0 <= count
+  ensures count <= 5
+spec fun validInput(n_v: int): bool
+  decreases 0
+= 1 <= n_v and n_v <= 200
+{
+  if n < 105 {
+    count := 0;
+  } else {
+    if n < 135 {
+      count := 1;
+    } else {
+      if n < 165 {
+        count := 2;
+      } else {
+        if n < 189 {
+          count := 3;
+        } else {
+          if n < 195 {
+            count := 4;
+          } else {
+            count := 5;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+Problem: Given N students, divide them into groups such that the number of groups containing 3 or more students is maximized. Groups with 2 or fewer students are not counted toward the result.
+Signature: vericoding_da0538__computeMaxGroups(int) -> int
+t 1
+gate recursion
+task vericoding_da0538__computeMaxGroups(n: int) returns (result: int)
+  requires validInput(n)
+  ensures validSolution(n, result)
+spec fun validInput(n_v: int): bool
+  decreases 0
+= 1 <= n_v and n_v <= 1000
+spec fun maxGroupsWithAtLeastThree(n_v2: int): int
+  decreases 0
+= if validInput(n_v2) then n_v2 / 3 else 0
+spec fun validSolution(n_v3: int, result_v: int): bool
+  decreases 0
+= if validInput(n_v3) then result_v == maxGroupsWithAtLeastThree(n_v3) and result_v >= 0 and result_v <= n_v3 else false
+lemma maxGroupsCorrect(n_v4: int)
+  requires validInput(n_v4)
+  ensures validSolution(n_v4, n_v4 / 3)
+{
+}
+{
+  result := n / 3;
+  maxGroupsCorrect(n);
+}
+
+
+Problem: Calculate how many hours remain from M o'clock (24-hour format) on December 30th until New Year (0 o'clock on January 1st). M is an integer between 1 and 23 inclusive.
+Signature: vericoding_da0659__solve(int) -> int
+t 1
+gate recursion
+task vericoding_da0659__solve(m: int) returns (result: int)
+  requires validInput(m)
+  ensures validOutput(m, result)
+spec fun validInput(m_v: int): bool
+  decreases 0
+= 1 <= m_v and m_v <= 23
+spec fun hoursUntilNewYear(m_v2: int): int
+  decreases 0
+= if validInput(m_v2) then 48 - m_v2 else 0
+spec fun validOutput(m_v3: int, result_v: int): bool
+  decreases 0
+= if validInput(m_v3) then result_v == hoursUntilNewYear(m_v3) and (25 <= result_v and result_v <= 47) else false
+lemma hoursUntilNewYearBounds(m_v4: int)
+  requires validInput(m_v4)
+  ensures 25 <= hoursUntilNewYear(m_v4)
+  ensures hoursUntilNewYear(m_v4) <= 47
+{
+}
+{
+  result := 48 - m;
+  hoursUntilNewYearBounds(m);
+}
+
+
+Problem: /* Cumulative Sums over Arrays */ /* Daniel Cavalheiro 57869 Pedro Nunes 57854 */ //(a) //(b) //(c)
+Signature: vericoding_dd0040__query(seq, int, int) -> int
+t 1
+gate recursion
+task vericoding_dd0040__query(a: seq, i: int, j: int) returns (res: int)
+  requires 0 <= i
+  requires i <= j
+  requires j <= len(a)
+  ensures res == sum(a, i, j)
+spec fun sum(a_v: seq, i_v: int, j_v: int): int
+  decreases j_v - i_v
+= if 0 <= i_v and i_v <= j_v and j_v <= len(a_v) then if i_v == j_v then 0 else a_v[i_v] + sum(a_v, i_v + 1, j_v) else 0
+lemma sum_extend(a_v2: seq, i_v2: int, j_v2: int)
+  requires 0 <= i_v2
+  requires i_v2 <= j_v2
+  requires j_v2 < len(a_v2)
+  ensures sum(a_v2, i_v2, j_v2) + a_v2[j_v2] == sum(a_v2, i_v2, j_v2 + 1)
+  decreases j_v2 - i_v2
+{
+  if i_v2 == j_v2 {
+    assert sum(a_v2, i_v2, j_v2) == 0;
+    assert sum(a_v2, i_v2, j_v2 + 1) == a_v2[i_v2] + sum(a_v2, i_v2 + 1, j_v2 + 1) and a_v2[i_v2] + sum(a_v2, i_v2 + 1, j_v2 + 1) == a_v2[i_v2] + 0 and a_v2[i_v2] + 0 == a_v2[i_v2];
+  } else {
+    assert sum(a_v2, i_v2, j_v2 + 1) == a_v2[i_v2] + sum(a_v2, i_v2 + 1, j_v2 + 1);
+    sum_extend(a_v2, i_v2 + 1, j_v2);
+    assert sum(a_v2, i_v2 + 1, j_v2) + a_v2[j_v2] == sum(a_v2, i_v2 + 1, j_v2 + 1);
+    assert sum(a_v2, i_v2, j_v2) == a_v2[i_v2] + sum(a_v2, i_v2 + 1, j_v2);
+  }
+}
+{
+  var s: int := 0;
+  var idx: int := i;
+  while idx < j
+    invariant i <= idx and idx <= j
+    invariant s == sum(a, i, idx)
+    decreases j - idx
+  {
+    s := s + a[idx];
+    sum_extend(a, i, idx);
+    idx := idx + 1;
+  }
+  res := s;
+}
+
+
+Problem: /* Given two integers, the task is to compute two output values: one being the sum of the integers and the other being their difference. -----Input----- The input consists of two integers: • x: An integer. • y: An integer. -----Output----- The output is a tuple of two integers: • The first element is x + y. • The second element is x - y. -----Note----- It is assumed that x and y are valid integers. There are no additional constraints on the inputs. */
+Signature: vericoding_dv0158__multipleReturns(int, int) -> (int, int)
+t 1
+task vericoding_dv0158__multipleReturns(x: int, y: int) returns (result: (int, int))
+  ensures result.0 == x + y
+  ensures result.1 + y == x
+{
+  result := (x + y, x - y);
+}
+
+
+Problem: /* This task involves creating a function that swaps two integer values. Given two integers, the function should return a pair where the first element is the second input value and the second element is the first input value. -----Input----- The input consists of two integers: • X: An integer representing the first value. • Y: An integer representing the second value. -----Output----- The output is a pair (int, int) that: • Contains the original Y as the first element. • Contains the original X as the second element. -----Note----- There are no additional preconditions. The function simply swaps the two input values. */
+Signature: vericoding_dv0171__swap(int, int) -> (int, int)
+t 1
+task vericoding_dv0171__swap(x: int, y: int) returns (result: (int, int))
+  ensures result.0 == y
+  ensures result.1 == x
+  ensures x != y ==> result.0 != x and result.1 != y
+{
+  result := (y, x);
+}
+
+
+Problem: /* This problem involves swapping the values of two integers. Given two integers as inputs, the objective is to return the two numbers in reversed order. -----Input----- The input consists of two integers: • X: The first integer. • Y: The second integer. -----Output----- The output is a tuple of two integers (Int × Int) where: • The first element is equal to Y. • The second element is equal to X. -----Note----- There are no restrictions on the input values. The function must correctly swap the inputs regardless of whether they are positive, negative, or zero. */
+Signature: vericoding_dv0172__swapArithmetic(int, int) -> (int, int)
+t 1
+task vericoding_dv0172__swapArithmetic(x: int, y: int) returns (result: (int, int))
+  ensures result.0 == y
+  ensures result.1 == x
+  ensures x != y ==> result.0 != x and result.1 != y
+{
+  var a: int := x;
+  var b: int := y;
+  a := a + b;
+  b := a - b;
+  a := a - b;
+  result := (a, b);
+}
+
+
+Problem: /* This task requires swapping two 8-bit unsigned integers. Given two unsigned integer inputs, the goal is to produce an output pair where the first element is the original second input and the second element is the original first input. The problem focuses solely on exchanging the values without specifying any particular method to achieve the swap. Input: The input consists of: • X: A u8 value. • Y: A u8 value. Output: The output is a pair of u8 values (newX, newY) where: • newX is equal to the original Y. • newY is equal to the original X. Note: There are no additional preconditions; the function is meant to work correctly for any pair of u8 values by leveraging bitwise xor operations. */
+Signature: vericoding_dv0173__swapBitvectors(int, int) -> (int, int)
+t 1
+task vericoding_dv0173__swapBitvectors(x: int, y: int) returns (result: (int, int))
+  requires 0 <= x and x < 256
+  requires 0 <= y and y < 256
+  ensures result.0 == y
+  ensures result.1 == x
+  ensures x != y ==> result.0 != x and result.1 != y
+{
+  result := (y, x);
+}
+
+
+Problem: /* This task requires swapping two integer values. Given two integers as input, the objective is to produce an output where their order is reversed: the first element of the output corresponds to the second input and the second element corresponds to the first input. Input: The input consists of two integers: • X: An integer value. • Y: Another integer value. Output: The output is a tuple (int, int) where: • The first element is equal to Y. • The second element is equal to X. Note: There are no additional preconditions for this task. The function simply returns a swapped tuple of its two input integers. */
+Signature: vericoding_dv0176__swapSimultaneous(int, int) -> (int, int)
+t 1
+task vericoding_dv0176__swapSimultaneous(x: int, y: int) returns (result: (int, int))
+  ensures result.0 == y
+  ensures result.1 == x
+  ensures x != y ==> result.0 != x and result.1 != y
+{
+  result := (y, x);
+}
+
+
+Problem: Given an integer N (1 ≤ N ≤ 1998), determine the first three characters of the N-th AtCoder Beginner Contest label. Contest labeling system: Rounds 1-999 use "ABC", rounds 1000-1998 use "ABD".
+Signature: vericoding_da0561__solve(int) -> seq
+t 1
+gate recursion
+task vericoding_da0561__solve(n: int) returns (result: seq)
+  requires validInput(n)
+  ensures result == expectedResult(n)
+spec fun validInput(n_v: int): bool
+  decreases 0
+= 1 <= n_v and n_v <= 1998
+spec fun expectedResult(n_v2: int): seq
+  decreases 0
+= if validInput(n_v2) then if n_v2 < 1000 then [65, 66, 67] else [65, 66, 68] else []
+{
+  if n < 1000 {
+    result := [65, 66, 67];
+  } else {
+    result := [65, 66, 68];
+  }
+}
+
+
+Problem: Given a contestant's rating R, determine which contest they are eligible for: ABC for ratings less than 1200, ARC for ratings from 1200 to less than 2800, and AGC for ratings 2800 and above.
+Signature: vericoding_da0564__solve(int) -> seq
+t 1
+gate recursion
+task vericoding_da0564__solve(r: int) returns (result: seq)
+  requires validRating(r)
+  ensures result == contestForRating(r)
+  ensures r < 1200 ==> result == [65, 66, 67, 10]
+  ensures 1200 <= r and r < 2800 ==> result == [65, 82, 67, 10]
+  ensures r >= 2800 ==> result == [65, 71, 67, 10]
+spec fun contestForRating(r_v: int): seq
+  decreases 0
+= if r_v < 1200 then [65, 66, 67, 10] else if r_v < 2800 then [65, 82, 67, 10] else [65, 71, 67, 10]
+spec fun validRating(r_v2: int): bool
+  decreases 0
+= 0 <= r_v2 and r_v2 <= 4208
+{
+  if r < 1200 {
+    result := [65, 66, 67, 10];
+  } else {
+    if r < 2800 {
+      result := [65, 82, 67, 10];
+    } else {
+      result := [65, 71, 67, 10];
+    }
+  }
+}
+
+
+t 1
+gate loops
+task vericoding_dj0010__chooseOdd(v: seq) returns (odd_index: int)
+  requires exists q in [0, len(v)) . v[q] % 2 == 1
+  ensures 0 <= odd_index
+  ensures odd_index < len(v)
+{
+  odd_index := 0;
+  var i: int := 0;
+  while i < len(v)
+    invariant 0 <= i and i <= len(v)
+    invariant exists q_v in [i, len(v)) . v[q_v] % 2 == 1
+    decreases len(v) - i
+  {
+    if v[i] % 2 == 1 {
+      odd_index := i;
+      return odd_index;
+    } else {
+    }
+    i := i + 1;
+  }
+}
+
+
+Problem: returns encoded string by shifting every character by 5 in the alphabet. function `decode_shift`: takes as input string encoded with encode_shift function. Returns decoded string.
+Signature: humaneval_dafny_050_encode_shift__decode_shift(seq) -> seq
+t 1
+gate recursion
+task humaneval_dafny_050_encode_shift__decode_shift(s: seq) returns (t_v: seq)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires forall i in [0, len(s)) . 97 <= s[i] and s[i] <= 122
+  ensures len(s) == len(t_v)
+  ensures forall i_v in [0, len(s)) . t_v[i_v] == decode_char(s[i_v])
+spec fun encode_char(c: int): int
+  decreases 0
+= if 97 <= c and c <= 122 then (c - 97 + 5) % 26 + 97 else 0
+spec fun decode_char(c_v: int): int
+  decreases 0
+= if 97 <= c_v and c_v <= 122 then (c_v - 97 - 5) % 26 + 97 else 0
+{
+  t_v := [];
+  var i_v2: int := 0;
+  while i_v2 < len(s)
+    invariant 0 <= i_v2 and i_v2 <= len(s)
+    invariant len(t_v) == i_v2
+    invariant forall j in [0, i_v2) . t_v[j] == decode_char(s[j])
+    decreases len(s) - i_v2
+  {
+    t_v := t_v + [decode_char(s[i_v2])];
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+Problem: returns encoded string by shifting every character by 5 in the alphabet. function `decode_shift`: takes as input string encoded with encode_shift function. Returns decoded string.
+Signature: humaneval_dafny_050_encode_shift__encode_shift(seq) -> seq
+t 1
+gate recursion
+task humaneval_dafny_050_encode_shift__encode_shift(s: seq) returns (t_v: seq)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires forall i in [0, len(s)) . 97 <= s[i] and s[i] <= 122
+  ensures len(s) == len(t_v)
+  ensures forall i_v in [0, len(s)) . t_v[i_v] == encode_char(s[i_v])
+spec fun encode_char(c: int): int
+  decreases 0
+= if 97 <= c and c <= 122 then (c - 97 + 5) % 26 + 97 else 0
+{
+  t_v := [];
+  var i_v2: int := 0;
+  while i_v2 < len(s)
+    invariant 0 <= i_v2 and i_v2 <= len(s)
+    invariant len(t_v) == i_v2
+    invariant forall j in [0, i_v2) . t_v[j] == encode_char(s[j])
+    decreases len(s) - i_v2
+  {
+    t_v := t_v + [encode_char(s[i_v2])];
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+t 1
+gate recursion
+task humaneval_dafny_089_encrypt__encrypt(s: seq) returns (r: seq)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires forall i in [0, len(s)) . 97 <= s[i] and s[i] <= 122
+  ensures len(r) == len(s)
+  ensures forall i_v in [0, len(s)) . r[i_v] == rot_sym(s[i_v])
+spec fun rot_sym(c: int): int
+  decreases 0
+= if 97 <= c and c <= 122 then (c - 97 + 2 * 2) % 26 + 97 else 0
+{
+  r := [];
+  var i_v2: int := 0;
+  while i_v2 < len(s)
+    invariant 0 <= i_v2 and i_v2 <= len(s)
+    invariant len(r) == i_v2
+    invariant forall j in [0, i_v2) . r[j] == rot_sym(s[j])
+    decreases len(s) - i_v2
+  {
+    r := r + [rot_sym(s[i_v2])];
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+Problem: Given a lowercase English letter (not 'z'), output the next letter in alphabetical order.
+Signature: vericoding_da0580__solve(seq) -> seq
+t 1
+gate recursion
+task vericoding_da0580__solve(input: seq) returns (output: seq)
+  requires forall k in [0, len(input)) . input[k] >= 0 and input[k] <= 1114111
+  requires validInput(input)
+  ensures validOutput(input, output)
+spec fun validInput(input_v: seq): bool
+  decreases 0
+= len(input_v) > 0 and (97 <= input_v[0] and input_v[0] <= 121)
+spec fun nextChar(c: int): int
+  decreases 0
+= if 97 <= c and c <= 121 then c + 1 else 0
+spec fun validOutput(input_v2: seq, output_v: seq): bool
+  decreases 0
+= if validInput(input_v2) then len(output_v) == 2 and output_v[0] == nextChar(input_v2[0]) and output_v[1] == 10 and (98 <= output_v[0] and output_v[0] <= 122) else false
+{
+  var nextChar_v: int := nextChar(input[0]);
+  output := [nextChar_v, 10];
+}
+
+
+Problem: function_signature: method decode_shift(s: string) returns (t: string) Decode data. Requires: the condition holds for all values. Ensures: returns the correct size/count; the condition holds for all values.
+Signature: vericoding_dh0052__decode_shift(seq) -> seq
+t 1
+gate recursion
+task vericoding_dh0052__decode_shift(s: seq) returns (t_v: seq)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires forall i in [0, len(s)) . 97 <= s[i] and s[i] <= 122
+  ensures len(s) == len(t_v)
+  ensures forall i_v in [0, len(s)) . t_v[i_v] == decode_char(s[i_v])
+spec fun encode_char(c: int): int
+  decreases 0
+= if 97 <= c and c <= 122 then (c - 97 + 5) % 26 + 97 else 0
+spec fun decode_char(c_v: int): int
+  decreases 0
+= if 97 <= c_v and c_v <= 122 then (c_v - 97 - 5) % 26 + 97 else 0
+{
+  t_v := [];
+  var i_v2: int := 0;
+  while i_v2 < len(s)
+    invariant 0 <= i_v2 and i_v2 <= len(s)
+    invariant len(t_v) == i_v2
+    invariant forall j in [0, i_v2) . t_v[j] == decode_char(s[j])
+    decreases len(s) - i_v2
+  {
+    t_v := t_v + [decode_char(s[i_v2])];
+    i_v2 := i_v2 + 1;
+  }
+}
+
+
+Problem: function_signature: method encode_shift(s: string) returns (t: string) Encode data. Requires: the condition holds for all values. Ensures: returns the correct size/count; the condition holds for all values.
+Signature: vericoding_dh0053__encode_shift(seq) -> seq
+t 1
+gate recursion
+task vericoding_dh0053__encode_shift(s: seq) returns (t_v: seq)
+  requires forall k in [0, len(s)) . s[k] >= 0 and s[k] <= 1114111
+  requires forall i in [0, len(s)) . 97 <= s[i] and s[i] <= 122
+  ensures len(s) == len(t_v)
+  ensures forall i_v in [0, len(s)) . t_v[i_v] == encode_char(s[i_v])
+spec fun encode_char(c: int): int
+  decreases 0
+= if 97 <= c and c <= 122 then (c - 97 + 5) % 26 + 97 else 0
+{
+  t_v := [];
+  var i_v2: int := 0;
+  while i_v2 < len(s)
+    invariant 0 <= i_v2 and i_v2 <= len(s)
+    invariant len(t_v) == i_v2
+    invariant forall j in [0, i_v2) . t_v[j] == encode_char(s[j])
+    decreases len(s) - i_v2
+  {
+    t_v := t_v + [encode_char(s[i_v2])];
+    i_v2 := i_v2 + 1;
+  }
 }
 
 
@@ -9306,6 +10267,41 @@ task max(x: int, y: int) returns (r: int)
   } else {
     r := y;
   }
+}
+
+
+t 1
+gate loops
+task min_max(s: seq) returns (r: (int, int))
+  requires len(s) > 0
+  ensures forall k in [0, len(s)) . r.0 <= s[k]
+  ensures forall k in [0, len(s)) . s[k] <= r.1
+  ensures exists k in [0, len(s)) . r.0 == s[k]
+  ensures exists k in [0, len(s)) . r.1 == s[k]
+{
+  var lo: int := s[0];
+  var hi: int := s[0];
+  var i: int := 1;
+  while i < len(s)
+    invariant 1 <= i
+    invariant i <= len(s)
+    invariant forall k in [0, i) . lo <= s[k]
+    invariant forall k in [0, i) . s[k] <= hi
+    invariant exists k in [0, i) . lo == s[k]
+    invariant exists k in [0, i) . hi == s[k]
+    decreases len(s) - i
+  {
+    if s[i] < lo {
+      lo := s[i];
+    } else {
+    }
+    if s[i] > hi {
+      hi := s[i];
+    } else {
+    }
+    i := i + 1;
+  }
+  r := (lo, hi);
 }
 
 
