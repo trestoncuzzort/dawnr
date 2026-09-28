@@ -118,6 +118,11 @@ t/out/**
 !t/out/spec-experiment/**/WHY-NO-TABLE.md
 # the r12 launcher itself is a deliverable, not a run's output
 !t/out/r12-run/run.sh
+# the lifter's staged third-party corpora (t/lift_corpora.py --vericoding, --humaneval-dafny):
+# HumanEval-Dafny (Apache-2.0) and vericoding (MIT), each its own git checkout under t/out/L1,
+# regenerable by a clone and never committed here; the directory rule above re-includes
+# directories, so without this line an embedded checkout shows as untracked.
+t/out/L1/
 # tup/book/ stays TRACKED: it is generated, but it is the exact bytes that
 # executed, which is evidence a receipt can point at.
 

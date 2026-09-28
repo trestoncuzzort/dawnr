@@ -16,16 +16,26 @@ later run cannot silently switch to a kinder count.)
 
 ## What the corpus is, frozen by its hash
 
-`t/out/loop/corpus-r12-headed.txt`, sha256 `a8a382ebd3c731d5144267d0001d22595cd97
-01c1a8d65cdc7a61e5492a1881e`: 499 documents, 272,163 bytes -- 431 lifted/committed
-(clean in all seven kernels, 0 admitted with a gap; the regraded totals from
-`t/LIFT-2026-09-26.md`'s 2026-09-27 update) plus 68 teacher-answer positives from
+`t/out/loop/corpus-r12-headed.txt`, sha256 `12491a7f067ea0b96a6ee6217b9869c9d81e7439
+04603f202109d8f878daf943`: 531 documents, 311,723 bytes -- 463 lifted/committed (435
+lifted, 28 committed; clean in all seven kernels, 0 admitted with a gap; the 2026-09-28
+totals from `t/LIFT-2026-09-26.md`) plus 68 teacher-answer positives from
 `t/out/loop/sft-r12-v5resolved.jsonl` (sha256 `fede669ce7b2036d2ff17ab4db0c203679
 f14b63df4ca05a920ef14d7a5cc5ca`), which is `t/out/loop/sft-r12.jsonl` (sha256
 `b891cc4046371a2b034ae91cbe54b2d938a54a367905299d36e2721a5419078e`, built by
 `build-r12`) with 54 rows dropped that name a task_id in neither pool v3 nor v5
 (an unindexed-APPS gap, not a decontamination hit; see section B's update in
-`t/RUN-NEXT-locallm-r12.md`). 118 documents carry an English head.
+`t/RUN-NEXT-locallm-r12.md`). 147 documents carry an English head.
+
+**Re-registered 2026-09-28, still before any seed trains.** No r12 checkpoint exists;
+the core `best.pt` above is unchanged (2026-09-27 05:04, `run.json` status `stopped`
+at its best, which the launcher accepts). The 2026-09-27 registration froze the
+499-document build (sha256 `a8a382ebd3c731d5144267d0001d22595cd9701c1a8d65cdc7a61e5492a1881e`:
+431 lifted/committed, 118 heads); the lifter rows and certificate fixes of 2026-09-27
+and 2026-09-28 (seq-valued spec_funs, finite sets, datatypes, as-char casts under a
+bound, the spec_fun-call certificates in Dafny and Frama-C) grew it to the build above,
+same builder, same gates, same `--min-kernels 7`. The predictions below are unchanged;
+prediction 1's document count reads the new total.
 
 ## Arms
 
@@ -51,7 +61,7 @@ problems (tests pass, and verified with the twin refuted in all seven kernels);
    seeds average above roughly 0.2 (2 of 200 in one seed, 0 in the other nine), and
    9 of the 10 arms measured anywhere in `t/RUN-NEXT-locallm-r12.md`'s "Where
    locallm actually stands" table are exactly 0. Falsified if all 10 r12 seeds
-   score 0 clean on the 200: the corpus growth (194 to 499 documents, with the
+   score 0 clean on the 200: the corpus growth (194 to 531 documents, with the
    dev-chosen stopping step replacing "last step") would have bought nothing
    measurable.
 2. **At least one r12 seed's clean-200 count is written, not merely clean** (its
