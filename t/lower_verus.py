@@ -2135,6 +2135,13 @@ def _vty(ty) -> str:
     if isinstance(ty, dict):
         if "seq" in ty:
             return f"Seq<{_vty(ty['seq'])}>"
+        if "datatype" in ty:
+            # SPEC.md "Datatypes (v1)": the declared enum name, an
+            # ordinary Rust type in spec/proof code exactly as a pair's
+            # tuple type is (measured, color.rs above: a proof fn taking
+            # and returning it, `==` and `match` in its own ensures/body,
+            # 0 errors with `#[derive(PartialEq, Eq)]` alone).
+            return ty["datatype"]
         t1, t2 = ty["pair"]
         return f"({_vty(t1)}, {_vty(t2)})"
     return TYPES[ty]
@@ -2486,6 +2493,37 @@ def expr(e: dict, vty: str | None = None) -> str:
         c = e["ite"]
         return (f"(if {expr(c['cond'])} {{ {expr(c['then'], vty)} }}"
                 f" else {{ {expr(c['else'], vty)} }})")
+    if "ctor" in e:
+        # SPEC.md "Datatypes (v1)" (2026-09-27): `Dtype::Ctor`, Rust's own
+        # qualified enum-variant path (Rust reference "Enumerations":
+        # "Variant constructors are ... referenced by a path from the
+        # enumeration name"); v1's constructors are nullary, so no `(...)`
+        # ever follows.
+        c = e["ctor"]
+        if c.get("args"):
+            cargs = ", ".join(expr(a) for a in c["args"])
+            return f"{c['dtype']}::{c['name']}({cargs})"
+        return f"{c['dtype']}::{c['name']}"
+    if "match" in e:
+        # `match e { C1 => e1, C2 => e2, }` -- Rust's own match expression,
+        # exhaustive over the enum's variants (check_wf already proved
+        # this match is, SPEC.md "Datatypes (v1)"), arms in BARE variant
+        # form: `lower()` below emits `use Dtype::*;` for every declared
+        # datatype (Rust reference "Enumerations": "use Examples::*; //
+        # Creates aliases to all variants"), so a bare `C1`/`C2` here
+        # resolves without this printer having to know, at an arbitrary
+        # expression node with no type environment threaded through it,
+        # which of the task's possibly-several datatypes the scrutinee
+        # belongs to.
+        m = e["match"]
+        scrut = expr(m["scrutinee"])
+        arms = ", ".join(
+            "%s%s => %s" % (
+                a["ctor"],
+                "(%s)" % ", ".join(a["binders"]) if a.get("binders") else "",
+                expr(a["body"], vty))
+            for a in m["arms"])
+        return f"(match {scrut} {{ {arms} }})"
     if "call" in e:
         c = e["call"]
         return f"{c['fun']}(" + ", ".join(expr(a) for a in c["args"]) + ")"
@@ -2825,6 +2863,23 @@ def defined(e: dict) -> dict:
         return _conj([defined(c["cond"]), branch])
     if "call" in e:
         return _conj([defined(a) for a in e["call"]["args"]])
+    if "ctor" in e:
+        # SPEC.md "Datatypes (v1)" (2026-09-27): defined iff every field
+        # argument is (v1's constructors are nullary, so this is TRUE for
+        # every ctor this landing; kept general for the record case ahead).
+        return _conj([defined(a) for a in e["ctor"].get("args", [])])
+    if "match" in e:
+        # A match's result is defined iff the scrutinee is AND the body of
+        # the arm ACTUALLY TAKEN is -- reusing "match" itself as the
+        # branching construct is exact (check_wf's match-coverage rule
+        # already proved it exhaustive, SPEC.md "Datatypes (v1)"), the same
+        # move "ite"'s own two-branch case above makes with its `branch`.
+        m = e["match"]
+        arm_obs = [{"ctor": a["ctor"], "binders": a.get("binders", []),
+                   "body": defined(a["body"])} for a in m["arms"]]
+        branch = (TRUE if all(a["body"] == TRUE for a in arm_obs)
+                  else {"match": {"scrutinee": m["scrutinee"], "arms": arm_obs}})
+        return _conj([defined(m["scrutinee"]), branch])
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
         db = defined(q["body"])
@@ -3097,6 +3152,19 @@ def subst(e: dict, m: dict) -> dict:
         return {kind: {"var": q["var"], "lo": subst(q["lo"], m),
                        "hi": subst(q["hi"], m),
                        "body": subst(q["body"], inner)}}
+    if "ctor" in e:
+        c = e["ctor"]
+        return {"ctor": {"dtype": c["dtype"], "name": c["name"],
+                         "args": [subst(a, m) for a in c.get("args", [])]}}
+    if "match" in e:
+        mm = e["match"]
+        return {"match": {
+            "scrutinee": subst(mm["scrutinee"], m),
+            "arms": [{"ctor": a["ctor"], "binders": a.get("binders", []),
+                      "body": subst(a["body"],
+                                   {k: v for k, v in m.items()
+                                    if k not in a.get("binders", [])})}
+                     for a in mm["arms"]]}}
     return {"op": e["op"], "args": [subst(a, m) for a in e.get("args", [])]}
 
 
@@ -3112,6 +3180,12 @@ def _calls(e: dict, name: str) -> bool:
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
         return any(_calls(q[k], name) for k in ("lo", "hi", "body"))
+    if "ctor" in e:
+        return any(_calls(a, name) for a in e["ctor"].get("args", []))
+    if "match" in e:
+        m = e["match"]
+        return (_calls(m["scrutinee"], name)
+                or any(_calls(a["body"], name) for a in m["arms"]))
     return any(_calls(a, name) for a in e.get("args", []))
 
 
@@ -4682,7 +4756,25 @@ class _V1:
                          if _rotate_witnesses(task)
                          or any(_rotate_witnesses(p) for p in pseudos)
                          else [])
-        blocks = (strlib_blocks + rotate_blocks + spec_blocks + lemma_blocks
+        # SPEC.md "Datatypes (v1)" (2026-09-27): each declared datatype is
+        # its own Rust enum (Rust reference "Enumerations"; v1 states
+        # nullary/field-less constructors, "a field-less enum"), with
+        # `#[derive(PartialEq, Eq)]` for the structural `==`/`!=` SPEC.md
+        # gives it (measured, color.rs: a `proof fn` taking the enum,
+        # `==` and an exhaustive `match` in its own ensures/body, 0
+        # errors) and `use Dtype::*;` so a `match`'s arms print as bare
+        # variant names (Rust reference: "Creates aliases to all
+        # variants") without this file's expression printer having to
+        # carry a type environment down to every `match` node just to
+        # qualify them.
+        datatype_blocks = []
+        for d in task.get("datatypes", []):
+            ctors = ", ".join(c["name"] for c in d["ctors"])
+            datatype_blocks.append(
+                f"#[derive(PartialEq, Eq)]\nenum {d['name']} {{ {ctors} }}\n"
+                f"use {d['name']}::*;\n")
+        blocks = (datatype_blocks + strlib_blocks + rotate_blocks
+                  + spec_blocks + lemma_blocks
                   + method_blocks + self.wf + self.helpers + [main])
         uses_sets = _uses_sets(task)
         src = ("use vstd::prelude::*;\n\n"
@@ -5063,6 +5155,14 @@ def _tlit(v, ty=None):
     off its own shape, and the inner empty row is the flat-seq empty case,
     already handled below with no `ty` needed since a row's own type
     ("seq", never a dict) never reaches this ambiguity."""
+    if isinstance(v, interp.Ctor):
+        # SPEC.md "Datatypes (v1)" (2026-09-27): a raw interp.Ctor is
+        # unmistakable by its Python type, exactly as interp.Pair is
+        # above; v1's constructors are nullary so `v.args` is always
+        # empty, kept general (recursing through `_tlit`) for the record
+        # case ahead.
+        return {"ctor": {"dtype": v.dtype, "name": v.ctor,
+                         "args": [_tlit(a) for a in v.args]}}
     if isinstance(v, interp.Pair):
         t1, t2 = (ty["pair"] if isinstance(ty, dict) and "pair" in ty
                   else (None, None))
@@ -5093,6 +5193,16 @@ def _tlit(v, ty=None):
         t1, t2 = ty["pair"]
         a, b = v
         return {"op": "pair", "args": [_tlit(a, t1), _tlit(b, t2)]}
+    if isinstance(ty, dict) and "datatype" in ty and isinstance(v, str):
+        # SPEC.md "Datatypes (v1)": the OTHER shape this function's own
+        # docstring names -- a witness dict's value, already turned into
+        # "Dtype.Ctor" by interp._j, needs `ty` to be read back, exactly
+        # as a witness dict's pair (a plain 2-list) does above.
+        dtype = ty["datatype"]
+        if v.startswith(dtype + "."):
+            return {"ctor": {"dtype": dtype, "name": v[len(dtype) + 1:],
+                            "args": []}}
+        raise ValueError(f"witness value {v!r} is not a {dtype} constructor")
     if isinstance(v, bool):
         return {"bool": v}
     if isinstance(v, int):

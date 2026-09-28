@@ -6,6 +6,7 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 |---|---|---|---|---|---|---|---|
 | abs | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | all_nonneg | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
+| color_code | verified / unproved | verified / refuted | abstain / abstain | abstain / abstain | verified / refuted | abstain / abstain | abstain / abstain |
 | contains | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | count_matches | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted | verified / refuted |
 | count_vowels | verified / refuted | unproved / refuted | timeout / refuted | abstain / abstain | unproved / unproved | verified / refuted | timeout / refuted |
@@ -69,3 +70,22 @@ Verdict basis: every source file hashed; e.g. `abs.dfy` 9fe1e7e805cfacce…, `ab
 | fstar | 0 | 2 | (none) |
 
 Of the 2 tasks in six, 2 are framac alone.
+
+`color_code` (SPEC.md "Datatypes (v1)", 2026-09-27) is not folded into the
+counts above: its own row was measured by a separate `run_par.py
+--allow-subset-table` run over that one task (`~/scratch/datatypes/
+AGREEMENT-color_code.md`, all seven kernels, `--jobs 2`) and spliced in
+by hand rather than by a full re-grade of every committed task, so this
+table's aggregate counts are exactly what they were before `color_code`
+landed. It is co-blocked by four kernels at once (spark, framac, rocq,
+fstar all abstain, SPEC.md's own list), so it would not have counted as
+a "sole blocker" case regardless. dafny's own cell reads `verified /
+unproved`, not `verified / refuted`: `verifiers/dafny.py`'s refutation-
+certificate shape check (`_HONEST_KINDS = ("function", "method",
+"lemma")`, untouched by this landing) refuses a certificate in a file
+that also declares a `datatype`, so the twin's own measured witness
+(SPEC.md "The twins") is real and the twin genuinely disagrees with it,
+but the one door to a minted REFUTED here does not open for this
+construct yet -- an honest structural gap in the certificate's own
+allowed vocabulary, not a soundness gap (nothing is asserted or assumed;
+the kernel simply never gets the chance to prove the negation).

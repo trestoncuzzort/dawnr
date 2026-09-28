@@ -71,7 +71,7 @@
       "patterns": [
         {
           "name": "keyword.control.conditional.t",
-          "match": "\\b(if|then|else)\\b"
+          "match": "\\b(if|then|else|case)\\b"
         },
         {
           "name": "keyword.control.loop.t",
@@ -83,7 +83,7 @@
         },
         {
           "name": "keyword.other.declaration.t",
-          "match": "\\b(t|gate|task|returns|requires|ensures|spec|fun|var)\\b"
+          "match": "\\b(t|gate|task|returns|requires|ensures|spec|fun|var|datatype)\\b"
         },
         {
           "name": "keyword.operator.logical.t",
