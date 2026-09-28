@@ -6074,6 +6074,23 @@ def _uses_sets(obj) -> bool:
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    if task.get("datatypes"):
+        # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
+        # names "Frama-C and SPARK through records with discriminants" as
+        # the eventual encoding -- an Ada discriminated record whose sole
+        # discriminant carries the enum tag, since Ada's own enumeration
+        # types have no analogue of Dafny's/Rust's/Lean's value-carrying
+        # constructor for the record wave ahead, and a plain Ada
+        # enumeration type (which WOULD fit v1's field-less case exactly)
+        # has not been measured against gnatprove's own `case` exhaustiveness
+        # checking or its equality proof obligations here. Until that is
+        # built and measured, the honest verdict is an abstention by name
+        # (SPEC.md's own rule), the same posture this column already takes
+        # for finite sets below.
+        raise NotImplementedError(
+            "spark lowering: datatypes (SPEC.md 'Datatypes (v1)'): the Ada "
+            "enumeration-type encoding is not built yet (case exhaustiveness "
+            "and equality under gnatprove unmeasured)")
     if _uses_sets(task) or _uses_sets(body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): the SPARK
         # library ships SPARK.Containers.Functional.Sets (`Contains`,
