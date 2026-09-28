@@ -992,7 +992,7 @@ def _has_partial(e, index_ok: bool = True) -> bool:
     return False
 
 
-def _membership_bridge_lines(exprs: list, rename: dict) -> list:
+def _membership_bridge_lines(exprs: list, rename: dict, set_names: frozenset = frozenset()) -> list:
     """Proved bridges for section 4.4's membership row. A source
     `forall x :: x in R ==> B(x)` is lifted to `forall j in [0, len(R)) .
     B(R[j])` (and `x in R` itself to `exists k ...`), a true equivalence
@@ -1010,7 +1010,13 @@ def _membership_bridge_lines(exprs: list, rename: dict) -> list:
 
     is emitted. It is proved where it stands, so it changes neither side
     of the lemma; it only gives dafny the index form of the source
-    quantifier, which is the lifted one's shape."""
+    quantifier, which is the lifted one's shape.
+
+    `set_names` (row 52, 2026-09-27, SPEC.md "Finite sets (v1)") names
+    the source's own set-typed params/return/locals: this bridge is
+    seq-shaped throughout (`|R|`, `R[j]` indexing), so `R` set-typed
+    (a `SetDisplay` too) is skipped -- a set has no index, and `x in R`
+    on one is already t's own `in`, needing no bridge at all."""
     out = []
     seen = set()
 
@@ -1029,6 +1035,9 @@ def _membership_bridge_lines(exprs: list, rename: dict) -> list:
                         and isinstance(e.body.left.operands[0], Ident) \
                         and e.body.left.operands[0].name == x:
                     mem, body = e.body.left.operands[1], e.body.right
+                if mem is not None and (isinstance(mem, SetDisplay)
+                        or (isinstance(mem, Ident) and mem.name in set_names)):
+                    mem = None
                 # Only for operands that are total wherever the quantifier
                 # can be read: a slice or a call in them could be
                 # ill-formed at the lemma's top level (`x in arr[..i]` for
@@ -1067,7 +1076,8 @@ def _membership_bridge_lines(exprs: list, rename: dict) -> list:
     return out
 
 
-def _membership_point_lines(exprs: list, rename: dict, array_names=frozenset()) -> list:
+def _membership_point_lines(exprs: list, rename: dict, array_names=frozenset(),
+                            set_names: frozenset = frozenset()) -> list:
     """The pointwise half of the membership row: a source `E in R` under
     enclosing quantifiers is lifted to `exists k in [0, len(R)) . R[k] ==
     E`, and dafny does not relate the two under a quantifier it has to
@@ -1119,8 +1129,14 @@ def _membership_point_lines(exprs: list, rename: dict, array_names=frozenset()) 
             # quantified fact, and measured as noise that cost vericoding
             # DJ0099 FindOddNumbers its L_ens.
             is_bound_elem = isinstance(elem, Ident) and elem.name in {b.name for b in binders}
+            # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): `coll` set-
+            # typed (a `SetDisplay`, already excluded below, or a name
+            # `set_names` reports) has no `[k]`/`|coll|` this bounds
+            # statement could well-formedly print -- `x in coll` on one
+            # is already t's own `in`, no pointwise bridge needed.
+            is_set_coll = isinstance(coll, Ident) and coll.name in set_names
             if any(b.name in free for b in binders) and not is_bound_elem \
-                    and not isinstance(coll, (SetDisplay, MapDisplay)) \
+                    and not isinstance(coll, (SetDisplay, MapDisplay)) and not is_set_coll \
                     and not _has_partial(elem) and not _has_partial(coll):
                 used = set()
                 for q in stack:
@@ -1283,6 +1299,30 @@ def _t_expr(e: dict, views: dict = {}) -> str:
         # and seq concatenation (t's own `+` is polymorphic the same
         # way, per SPEC.md).
         return "[" + ", ".join(_t_expr(a, views) for a in args) + "]"
+    if op == "set":
+        # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): `{"op": "set",
+        # "args": [...]}` is a Dafny set display, `{}` for no arguments
+        # (Dafny Reference Manual 5.5.1: "a possibly empty, unordered,
+        # duplicate-insensitive list of expressions enclosed in curly
+        # braces").
+        return "{" + ", ".join(_t_expr(a, views) for a in args) + "}"
+    if op == "in":
+        return f"({_t_expr(args[0], views)} in {_t_expr(args[1], views)})"
+    if op == "card":
+        # `|s|`, the same notation `len` already prints (Dafny overloads
+        # `|...|` for both a seq's length and a set's cardinality).
+        return f"|{_t_expr(args[0], views)}|"
+    if op in ("union", "inter", "diff"):
+        # SPEC.md "Finite sets (v1)": t writes union/intersection/
+        # difference by name; Dafny spells them `+`/`*`/`-` (measured on
+        # dafny 4.11.0, `~/scratch/setslift/tset.dfy`), the same symbols
+        # int arithmetic and (for `+`) seq concatenation already print
+        # through the generic `+`/`-`/`*` branch above -- printed here by
+        # name instead, since that branch is reached first only for
+        # operators the JSON itself already spells `+`/`-`/`*`, never
+        # `union`/`inter`/`diff`.
+        dfy_op = {"union": "+", "inter": "*", "diff": "-"}[op]
+        return f"({_t_expr(args[0], views)} {dfy_op} {_t_expr(args[1], views)})"
     if op == "slice":
         return f"{_t_expr(args[0], views)}[{_t_expr(args[1], views)}..{_t_expr(args[2], views)}]"
     if op == "update":
@@ -2276,16 +2316,27 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     src_req_premise = _and([type_clause, src_req_conj])
     array_src_names = frozenset(crename.get(sp.name, sp.name) for sp in src_params
                                 if sp.type is not None and sp.type.kind == "array")
+    # Row 52 (2026-09-27, SPEC.md "Finite sets (v1)"): every set-typed
+    # name the SOURCE method's own scope carries (a param, the return, a
+    # closure function's own param, a local) -- `lift_classify`'s own
+    # best-effort typing, shared rather than re-derived, renamed the same
+    # way `array_src_names` is -- so the membership bridge/pointwise
+    # helpers can skip a genuine set the way they already skip an array's
+    # own shape mismatch.
+    set_src_names = frozenset(
+        crename.get(name, name)
+        for name, k in lift_classify._build_kind_env(source, closure).items()
+        if k == "set" and "#" not in name)
     lines.append(f"lemma L_req({lem_ps})")
     lines.append(f"  ensures ({lifted_req}) <==> ({_and([type_clause, src_req_conj])})")
     lines.extend(_body(_view_hint_lines(views, {tp["name"] for tp in task_params})
                        + hint_lines
                        + _membership_bridge_lines(
                            [sp.expr for sp in source.specs if isinstance(sp, RequiresClause)],
-                           crename)
+                           crename, set_src_names)
                        + _membership_point_lines(
                            [sp.expr for sp in source.specs if isinstance(sp, RequiresClause)],
-                           crename, array_src_names)))
+                           crename, array_src_names, set_src_names)))
     lines.append("")
 
     # (5) L_ens.
@@ -2323,8 +2374,8 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
     lines.append(f"  ensures ({_and([ret_type_clause, ens_length_fact, src_ens_conj])}) <==> ({lifted_ens})")
     lines.extend(_body(_view_hint_lines(
         views, {tp["name"] for tp in task_params} | {ret["name"]}) + hint_lines
-        + _membership_bridge_lines(ens_exprs, crename)
-        + _membership_point_lines(ens_exprs, crename, array_src_names)))
+        + _membership_bridge_lines(ens_exprs, crename, set_src_names)
+        + _membership_point_lines(ens_exprs, crename, array_src_names, set_src_names)))
     lines.append("")
 
     # (6) L_inv_k / decreases-equality per loop, pre-order.
@@ -2707,8 +2758,9 @@ def _build_checker_parts(task: dict, source: MethodDecl, closure: tuple,
         lines.append(f"  requires {_and([lifted_req, src_req_premise, nat_clause, encl_fact, call_guards, this_length_fact, extra_fact, array_view_fact])}")
         lines.append(f"  ensures ({_and([nat_clause, call_guards, this_length_fact, extra_fact, for_range_fact, src_inv])}) <==> ({lifted_inv})")
         lines.extend(_body(_view_hint_lines(loop_views, set(full_names)) + inv_hints + hint_lines
-                           + _membership_bridge_lines(inv_exprs, loop_crename)
-                           + _membership_point_lines(inv_exprs, loop_crename, array_src_names)))
+                           + _membership_bridge_lines(inv_exprs, loop_crename, set_src_names)
+                           + _membership_point_lines(inv_exprs, loop_crename, array_src_names,
+                                                     set_src_names)))
         lines.append("")
 
         dec_specs = [sp for sp in loop.specs if isinstance(sp, DecreasesClause)]
@@ -2782,6 +2834,15 @@ def _dafny_literal(v, ty) -> str:
         return str(v)
     if ty == "seq":
         return "[" + ", ".join(str(x) for x in v) + "]"
+    if ty == "set":
+        # Row 52 (2026-09-27): `v` is `interp.py`'s own set value, a
+        # Python frozenset (SPEC.md "Finite sets (v1)": "the interpreter's
+        # value is a finite set of ints ... Python's frozenset"); printed
+        # sorted purely for a readable, deterministic literal -- Dafny's
+        # own set display is unordered (measured on dafny 4.11.0,
+        # `~/scratch/setslift/tset.dfy`: a set-typed point compares equal
+        # regardless of the order this literal lists its elements).
+        return "{" + ", ".join(str(x) for x in sorted(v)) + "}"
     if isinstance(ty, dict) and ty.get("seq") == "seq":
         # Row 43 (2026-09-27; also row 30's own residual, a nested-seq
         # point could not be printed before): a nested value is a display
@@ -3441,9 +3502,31 @@ def _parse_dafny_seq(printed: str) -> Optional[tuple]:
     return tuple(int(x.strip()) for x in inner.split(","))
 
 
+def _parse_dafny_set(printed: str) -> Optional[frozenset]:
+    """`"{1, 2, 3}"` -> `frozenset({1, 2, 3})`; `"{}"` -> `frozenset()`;
+    `None` if `printed` is not brace-delimited (row 52, 2026-09-27,
+    SPEC.md "Finite sets (v1)")."""
+    s = printed.strip()
+    if not (s.startswith("{") and s.endswith("}")):
+        return None
+    inner = s[1:-1].strip()
+    if not inner:
+        return frozenset()
+    return frozenset(int(x.strip()) for x in inner.split(","))
+
+
 def _dafny_value_matches(printed: str, py_value) -> bool:
     if isinstance(py_value, bool):
         return printed == ("true" if py_value else "false")
+    if isinstance(py_value, frozenset):
+        # Row 52 (2026-09-27): a set-typed result (interp.py's own set
+        # representation, a Python frozenset). Dafny's own printed
+        # element order is unspecified (measured on dafny 4.11.0,
+        # `~/scratch/setslift/tset.dfy`: a hash-driven order, not
+        # insertion or sorted order), so the comparison is by set
+        # equality, order-free, never a string or tuple compare.
+        parsed = _parse_dafny_set(printed)
+        return parsed is not None and parsed == py_value
     if isinstance(py_value, tuple):
         # decision 22: a seq-typed result (interp.py's own seq representation).
         parsed = _parse_dafny_seq(printed)
