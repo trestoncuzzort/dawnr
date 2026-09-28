@@ -1183,7 +1183,9 @@ def _axiom_only_functions(module: Module, axiomatised: dict[str, int]) -> dict[s
                    and _references_ident(s.expr, f.name) for s in specs):
                 related.append(lm)
         if related and all(lm.name in axiomatised for lm in related):
-            out[f.name] = related[0].line
+            # the witness is the function itself, at its own declaration; the
+            # first lemma's line tied with that lemma's own issue (DT0258)
+            out[f.name] = getattr(f, "line", None) or related[0].line
     return out
 
 
@@ -2622,7 +2624,11 @@ class Liftable:
 
 
 def _first(issues: list[tuple[int, str, str]]) -> tuple[int, str, str]:
-    return min(issues, key=lambda t: t[0])
+    # Ties on one line break by reason, then token: the issue list is built
+    # in a set's iteration order, which Python randomises per process
+    # (PYTHONHASHSEED), so a line-only key named a different witness on
+    # different runs (row 51's DT0258, 2026-09-27 review).
+    return min(issues, key=lambda t: (t[0], t[1], t[2]))
 
 
 def classify(module: Module, method: MethodDecl, _stack: tuple = (),

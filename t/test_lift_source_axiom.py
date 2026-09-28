@@ -196,7 +196,7 @@ method Unrelated(x: int) returns (r: int)
 
 
 def test_axiom_lemma_and_axiom_only_function_refuse_source_axiom() -> None:
-    _refuses(NUMPY_BITWISE_OR, "NumpyBitwiseOr", "source-axiom")
+    _refuses(NUMPY_BITWISE_OR, "NumpyBitwiseOr", "source-axiom", token="BitwiseOr")
     _refuses(AXIOM_ONLY_FUNCTION, "UseBitwiseOr", "source-axiom", "BitwiseOr")
     _refuses(VERIFY_FALSE_LEMMA, "UseStub", "source-axiom")
     print("test_axiom_lemma_and_axiom_only_function_refuse_source_axiom: ok")
@@ -233,3 +233,12 @@ def run() -> None:
 
 if __name__ == "__main__":
     run()
+
+
+def test_first_breaks_a_line_tie_the_same_way_in_any_order() -> None:
+    """Two issues on one line: the witness must not depend on the order the
+    closure walk appended them (a set's order, randomised per process)."""
+    a = (150, "source-axiom", "BitwiseOrCommutative")
+    b = (150, "source-axiom", "BitwiseOr")
+    assert C._first([a, b]) == C._first([b, a]) == b
+    assert C._first([(151, "source-assume", "assume"), a]) == a
