@@ -642,6 +642,124 @@ counts it as abstain, not re-run in full afterward since the fix cannot
 change any OTHER cell -- it only replaces a crash with a refusal on a
 task no other row of the table names).
 
+## The second review (2026-09-27): the consistency-probe blind spot
+
+An adversarial review of this branch after the fix above found three
+things, in `verifiers/framac.py` and `lower_framac.py`, this file's own
+"How to reproduce" section extended to cover them.
+
+**High: Instrument 2 (the consistency probe) was inert for every
+`\list`-returning definition.** verifiers/framac.py's own consistency
+probe (module docstring, "THE TWO SEMANTIC VACUITY INSTRUMENTS", item 2)
+is the load-bearing check against a non-well-founded recursive `logic`/
+`predicate` definition -- the standing rule "no axiom that is not a
+definition" is enforced by this instrument, not by hope. It builds two
+complementary-precondition probe functions per recursive symbol and asks
+WP whether BOTH read `(Doomed)`; `_recursive_defs`'s own "typed"
+eligibility check, though, read only a symbol's PARAMETER types, never
+its RESULT type, so `dbl` (a `\list<integer>`-returning `logic`
+definition, this pass's own new construct) was marked eligible and then
+probed with the INT shape, `(call) >= 0` / `(call) < 0` -- an ACSL type
+error against a `\list` result. MEASURED (the bug, before the fix):
+building that probe for `double_all.t`'s own `dbl` and running it
+through frama-c 33.0 gives `[kernel:annot-error] ... comparison of
+incompatible types: \list<ℕ> and ℕ`, so `_consistency_probe` read "probe
+file produced no WP goals" and the file's own goals ran with the
+recursive theory never checked by this instrument; a hand-written
+non-well-founded `logic \list<integer> bad{L}(n) = \Cons(n,
+bad{L}(n));` with `ensures \length(bad(0)) >= 0 ==> \result == 999` on a
+function returning 0 read `typed_nat_f_ensures ... [Valid]` -- the exact
+failure class the docstring already documents for int (e1_wrong.c), now
+live for `\list`.
+
+Fixed: `_restype` (verifiers/framac.py) reads the definition's own
+return type from `_LOGIC_DEF`'s `ret` capture group, which existed
+already and was simply never read, and a `\list<..>` result gets a
+`\length(call) == 0` / `!= 0` split in place of `>= 0` / `< 0` --
+ACSL's own built-in, always-total length (kernel_internals/typing/
+logic_builtin.ml, WP's Vlist.ml, cited in this file's own "Frama-C, the
+\list route" section above), no bridge predicate, the same
+complementary-and-exhaustive shape over "empty"/"not" that the int
+shape has over "negative"/"not". MEASURED (the fix): the same `bad`
+file now reads `verifiers.framac.verify()` outcome `vacuous`,
+`extras={'inconsistent_symbols': ['bad'], 'vacuity_instrument':
+'consistency probe (-wp-fct smoke)', ...}` -- both smoke goals Doomed,
+caught before any other goal is even read. The honest `dbl` is
+unaffected: `double_all`'s real side still reads `timeout` (31/32
+proved, the same `loop_invariant_preserved` Stepout as before,
+`probe_note: ''` meaning the probe now RAN and found nothing, rather
+than silently not running at all) and its twin still reads `refuted`,
+byte-for-byte the same outcomes this file's own tables above record. A
+`logic boolean` result (never emitted by this or any other lifted task
+today) is fixed the same pass, `P`/`!P` like a `predicate`, since
+`_restype` reads it from the same capture group; any other return type
+(`real`, `set<..>`, ...) is left unprobed exactly as an untyped
+parameter always was -- never mis-probed, only left to the structural
+backstop (Instrument 3). t/test_framac_seq_fun.py gained two checks,
+`test_consistency_probe_is_typed_by_result_not_just_params` (text-level:
+`dbl`'s own restype reads "list" and its probe text uses `\length`,
+never a bare `(call) >= 0`) and `test_consistency_probe_catches_a_list_
+inconsistency` (`--slow`: the `bad` file above, live).
+
+**Low: the `\list` route's own certificate rung loop was unguarded.**
+`_value_certificate`'s (lower_framac.py) SEQ-VALUED-call rung loop (the
+`_CEV_TRACE_SEQ` loop that states `dbl(s, i) == \Cons(v0, ...)` ground
+facts ahead of the certificate's closing assert) sat outside the
+`except (_CertSkip, NotImplementedError, ValueError, KeyError, TypeError,
+RecursionError)` umbrella the rest of this function's fallible steps
+share, and `certificate()`'s own `try/finally` (no `except`) does not
+catch anything either, so an exception from its one call, `_seq_call_lhs`,
+would have propagated to `lower()`'s bare call site and crashed the whole
+lowering rather than degrading. No fault in the real code was found that
+reaches this -- `double_all`, the four `fz_p_sf_seq_*` probes and the
+three seeded faults (this file's own committed fixture set) lower clean
+without it, and the review's own run over 22 sampled corpus tasks plus
+its own four seeded faults found no crash either -- so this was a
+plausible robustness gap, not a demonstrated one. Fixed with a
+per-entry `try/except (KeyError, ValueError, TypeError): continue`
+around the loop body, matching the design `_seq_call_lhs`'s own
+docstring already states for its `None` return ("the refutation
+certificate degrades to no rung for this call, never to an incorrect
+one"). `test_seq_certificate_rung_failure_degrades_not_crashes` forces
+the exception (on `seed_swapped_concat`, whose certificate is the one
+committed fixture that reaches two `dbl` rungs; `double_all`'s own
+witness never reaches one, hence the byte identity below) and checks the
+lowering still succeeds with the rungs dropped rather than raising.
+
+**Low: the CI numbers this file records were stale against the tree as
+reviewed.** The review's own re-run of the CI step (`.github/workflows/
+tests.yml`'s ignore/deselect list) against the reviewed commit read `3
+failed, 1477 passed, 33 skipped, 25 deselected, 1 xfailed, 115 subtests
+passed in 385.68s`, matching neither of this file's two previously
+recorded numbers (1,430 then 1,432 passed) nor its own final one (1,457,
+recorded after the crash fix above but evidently from a different
+machine state). Re-run here, on the tree with both fixes above
+(`t/test_framac_seq_fun.py`'s two new tests included): `3 failed, 1480
+passed, 33 skipped, 25 deselected, 1 xfailed, 72 warnings, 115 subtests
+passed in 217.15s`. The three failures are the same `test_loop_train.py`
+`ModuleNotFoundError: No module named 'datasets'` ones named throughout
+this file; passed + skipped (1480 + 33 = 1513) is exactly 3 more than
+the review's own total (1477 + 33 = 1510), the three new tests just
+named, and deselected/xfailed/subtests match exactly -- so this reads as
+the same environment-dependent wall-time variance the review's own
+finding already concluded (this machine, unshared this run), not a
+correctness regression, with the count now reconciled rather than merely
+asserted.
+
+**Byte identity, re-confirmed after both fixes.** Neither fix touches a
+lowered byte: the consistency-probe fix lives entirely in
+verifiers/framac.py (the verifier, never the lowering), and the
+certificate-rung fix only changes behavior on an exception path that no
+committed task's lowering takes. Measured directly: sha256 of
+`tlib.lower(task, "framac", twin_body)` over every t/tasks, t/lemmas,
+t/nested file, real and twin, on the reviewed commit (`fb3c5f27`)
+against this fix -- **84 of 84 identical, 0 different** -- and, repeating
+this file's own sweep, against a clean `git archive` of `r12-blockers`
+at the fork point (f9da6dca) -- **82 of 84 identical, exactly 2
+different** (`tasks/double_all.t`'s own real and twin, the only
+committed task with a seq-valued spec_fun), the same count this file
+already recorded above.
+
 ## Tests run
 
 - The CI step "t/ unit tests that need neither provers nor torch"
@@ -676,6 +794,16 @@ fourth being the `spec-fun-result` coverage row added since). The three
 - The CI step, again after `seq_assign_lines`'s crash fix (this file's
   own "One crash" note): 1,457 passed, 3 failed (the same `datasets`
   ones), 53 skipped, 25 deselected, 1 xfailed, 102 subtests passed, 133 s.
+- `python3 t/test_framac_seq_fun.py`, after the second review's two fixes
+  above (this file's own "The second review" section): 9 tests (three
+  new: the consistency-probe restype check, the certificate-rung crash
+  check, and the `--slow`-gated live inconsistency read); all pass, fast
+  and `--slow` alike.
+- The CI step, after the second review's two fixes: 3 failed (the same
+  `datasets` ones), 1,480 passed, 33 skipped, 25 deselected, 1 xfailed,
+  115 subtests passed, 217 s -- see "The second review" section above for
+  why this reconciles with, rather than merely restates, the review's own
+  independently-measured number.
 
 ## How to reproduce
 
