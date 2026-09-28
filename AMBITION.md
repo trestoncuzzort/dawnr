@@ -125,14 +125,13 @@ its line changes here.
   regraded over every lifted set, to 431 documents on 2026-09-27, with no
   document lost; and after the features track (seven lifter features, lemmas
   in Rocq, seq-valued spec_funs) was merged and the staged corpora re-lifted
-  and graded the same day, to **455 documents (273,687 characters) clean in
-  all seven kernels**, 140 with an English head, after a second re-lift with
-  seq-valued spec_funs in. With graded trust (six kernels clean, none
-  contradicting, the gap recorded) it is **555 (364,020)**, 100 of them with
-  a gap. Tables: `t/COVERAGE-lifted-*-regrade-2026-09-27.md` and
-  `t/out/COVERAGE-lifted-2026-09-27-features{,2}.md` (graded on the desktop at
-  two memory-capped cells, so their timeouts understate: 50 SPARK cells of
-  140 timed out there; a regrade on a larger machine is owed).
+  and graded the same day, then regraded on the lab on 2026-09-28, to
+  **457 documents (275,362 characters) clean in all seven kernels**, 142 with
+  an English head. With graded trust (six kernels clean, none contradicting,
+  the gap recorded) it is **557 (365,593)**, 100 of them with a gap. Tables:
+  `t/out/COVERAGE-lifted-*-regrade3.md` and `-lab.md`. The lab's regrade of
+  the 140 new tasks agreed with the desktop's cell for cell (2 of 980 cells
+  differ), so the timeouts there are the provers' own limits, not a budget.
 - **Denoising training.** Corrupt spans of each training document and train
   the model to restore them (fill in the middle, arXiv:2207.14255). *State:*
   measured twice, and the two disagree. From scratch on the 302 proved
