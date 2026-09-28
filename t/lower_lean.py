@@ -7190,6 +7190,10 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         params_nt = [(p["name"], p["type"]) for p in self.task["params"]]
         pb = self.binders(params_nt)
         pnames = " ".join(n for n, _ in params_nt)
+        # the parameters of a datatype type, for the case-split
+        # alternative of the contract proof below (2026-09-28)
+        dt_params = [n for n, t in params_nt
+                     if isinstance(t, dict) and "datatype" in t]
         out = [f"def {self.name}_t {pb} : {self.lean_type(self.rett)} :=\n"
                f"  {expr}\n"]
         thms = []
@@ -7311,6 +7315,23 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             + (", " + ", ".join(f"{f}_s" for f in self.sfuns)
                if self.sfuns else "") + "]\n"
             + ("  | decide\n" if not self.task["params"] else "")
+            # 2026-09-28 (fz_p_dt_eq, the conformance suite): grind does
+            # not split a datatype-typed parameter on its own, so a
+            # contract stated through `=`/`≠` on constructors (`c ≠ Blue`
+            # against a body deciding `c = Red ∨ c = Green`) read unproved
+            # under every alternative above. `cases` (Theorem Proving in
+            # Lean 4 ch. 7 "Inductive Types": the recursor of an
+            # enumerated type, one goal per constructor) puts one
+            # constructor in each goal and grind closes them; measured on
+            # the probe, `cases c <;> grind [f]` and `cases c <;> simp [f]`
+            # both verify. One `cases` per datatype-typed parameter,
+            # nested by `<;>`; offered only when such a parameter exists,
+            # so no other task's text changes.
+            + (f"  | (cases {' <;> cases '.join(dt_params)} <;> grind ["
+               f"{self.name}_t"
+               + (", " + ", ".join(f"{f}_s" for f in self.sfuns)
+                  if self.sfuns else "") + "])\n"
+               if dt_params else "")
             # 2026-09-26 (vericoding DS0029 lcmInt, `result := 0` against
             # `result % a == 0`): grind's linear-integer solver only
             # reasons about `%` by a numeral, so `0 % a = 0` with a
