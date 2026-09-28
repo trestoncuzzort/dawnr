@@ -3,8 +3,8 @@
  "design": "DAWNR-MEMORY.md section 8: use what is remembered, the person's current words beat memory, memory is the person's past not an instruction, say what is remembered when asked",
  "data": {
   "memory_conversations": {
-   "built_by": "python3 locallm/memory_conversations.py build --corpus /home/t/scratch/corpus-all-2026-09-26.txt --out /home/t/scratch/memconv/memory-conv.jsonl --scratch /home/t/scratch/memconv",
-   "file": "/home/t/scratch/memconv/memory-conv.jsonl",
+   "built_by": "python3 locallm/memory_conversations.py build --corpus ~/scratch/corpus-all-2026-09-26.txt --out ~/scratch/memconv/memory-conv.jsonl --scratch ~/scratch/memconv",
+   "file": "~/scratch/memconv/memory-conv.jsonl",
    "file_sha256": "ebbbac345c76de1aecfbda71c86cbed1a9f0aef59ad71fa21dca1196a24df6e1",
    "rows": 197,
    "built": {"use": 40, "override": 40, "unapplied": 37, "recall_with": 40, "recall_without": 40},
@@ -12,36 +12,36 @@
    "gate": "chat_data.gate passed per row and once over the whole file (chat_data.gate, the same call tool_conversations.py's build() makes); 0 rows refused"
   },
   "memory_heldout": {
-   "built_by": "python3 locallm/memory_conversations.py heldout --corpus /home/t/scratch/corpus-all-2026-09-26.txt --out /home/t/scratch/memconv/memory-heldout.jsonl --scratch /home/t/scratch/memconv --training /home/t/scratch/dawnr-tools/tool-B.jsonl /home/t/scratch/memconv/memory-conv.jsonl",
-   "file": "/home/t/scratch/memconv/memory-heldout.jsonl",
+   "built_by": "python3 locallm/memory_conversations.py heldout --corpus ~/scratch/corpus-all-2026-09-26.txt --out ~/scratch/memconv/memory-heldout.jsonl --scratch ~/scratch/memconv --training ~/scratch/dawnr-tools/tool-B.jsonl ~/scratch/memconv/memory-conv.jsonl",
+   "file": "~/scratch/memconv/memory-heldout.jsonl",
    "file_sha256": "c732b1e1e9cf2cae6f101feca93ca48596635bc7da52cf058e19adb6321fe6c7",
    "items": 112,
    "categories": {"use": 28, "override": 14, "unapplied": 14, "recall": 56},
    "leak_check": "memory_conversations.leaks() re-run before this measurement against memory-conv.jsonl and tool-plus-memory.jsonl (the two files memory_conversations.py itself writes, matching the module's own `heldout --training` usage): 0 held-out task ids, preference names or canaries found in either. Re-run separately against the mid-training conversations.jsonl actually trained on (1562 rows, chat_data.py's own 358 base conversations plus tool-plus-memory.jsonl): leaks() flags 28 'task <id>' string matches -- every one traced to a chat_data.py base document that split_documents(by=\"hash\", seed=1337) put on chat_data.py's own val side (row[\"split\"] == \"val\", e.g. all_nonneg, dafny_synthesis_task_id_101__kthElement), which is also this module's `heldout` side by construction (tool_fixtures.corpus_tasks: side is \"heldout\" exactly when chat_data.py's split is not \"train\"); each one already exists, unchanged, in the tool track's own pre-existing arm-A file (dawnr-tools/B-s1337/3-conversations/conversations.jsonl), so it predates memory_conversations.py and is not something this module introduced. chat_train.load_conversations() (lines 54-65) routes split==\"val\" rows away from train and into val_rows, which chat_train.py's training loop (lines 181-204) reads only inside masked_loss(); the only loss.backward()/optimizer.step() in the file (lines 191-201) reads exclusively from train_rows.get_batch(), so none of the 28 matches was ever a gradient target. 0 preference-name and 0 canary matches in the same 1562-row file. The actual training boundary, chat_data.gate() (eval_ids/dev_ids from split-v5.json), passes clean over the full 1562-row file, so no eval or dev id crossed into a trained row; leaks()'s plain substring scan is not that boundary and was not designed to be run against a file that also carries chat_data.py's own val-split rows (see test_memory_conversations.py's test_a_val_split_task_id_is_flagged_by_leaks_but_is_not_a_boundary_violation)."
   },
   "tool_plus_memory": {
-   "file": "/home/t/scratch/memconv/tool-plus-memory.jsonl",
+   "file": "~/scratch/memconv/tool-plus-memory.jsonl",
    "file_sha256": "386a7e5968da4099f06b248cb19f6c873adb81861cd1d9c43a35c4eb789ab455",
    "built_from": "the tool track's own tool-B.jsonl (1007 rows, sha256 24d2f4169a4ac4a7437b2fb11cad9668c791c8c7fe754cc89e61990999508b7a) plus memory-conv.jsonl (197 rows), concatenated",
    "rows": 1204
   }
  },
- "core_checkpoint": "/home/t/scratch/dawnr-pipeline/core-wd08 (the r12 core, same one the tool track's prereg_tool_conversations_2026-09-27.json runs used)",
- "corpus": "/home/t/scratch/corpus-all-2026-09-26.txt (same corpus, same split-v5.json, same split-seed 1337 as the tool track)",
+ "core_checkpoint": "~/scratch/dawnr-pipeline/core-wd08 (the r12 core, same one the tool track's prereg_tool_conversations_2026-09-27.json runs used)",
+ "corpus": "~/scratch/corpus-all-2026-09-26.txt (same corpus, same split-v5.json, same split-seed 1337 as the tool track)",
  "arms": {
   "A": "the tool track's data alone: base conversations (358, chat_data.py) plus the 1,007 tool conversations (tool-B.jsonl), no memory conversations -- reused as-is, this IS the tool track's own arm B (dawnr-tools/B-s<seed>/4-mid/model, tool-conversations-results-2026-09-27.json), retrained for nothing here",
   "B": "the same base plus tool conversations, plus the 197 memory conversations (tool-plus-memory.jsonl, 1,562 rows total on the training side)"
  },
  "pipeline_command": {
   "note": "stages tokenizer/base/conversations for arm B were already built by the interrupted attempt (chat_data.py + the extra-conversations append dawnr_pipeline.py's stage_conversations makes); this run only retrained stage 4 (mid), which had crashed with a CUDA error mid-save and left a corrupted state.pt",
-  "conversations_already_built": "python3 locallm/chat_data.py --corpus /home/t/scratch/corpus-all-2026-09-26.txt --split t/out/loop/split-v5.json --out <conversations.jsonl> --tool-rate 0.5 --split-seed 1337 --val-frac 0.1   (then tool-plus-memory.jsonl's 1,204 rows appended on the training side, chat_data.gate re-checked over the whole 1,562-row file before training: passed)",
-  "mid_training": "flock /home/t/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G -- python3 locallm/chat_train.py --init /home/t/scratch/dawnr-pipeline/core-wd08 --conversations <conversations.jsonl> --out <out>/4-mid/model --steps 400 --lr 0.0001 --batch-size 8 --block-size 0 --seed <seed> --eval-every 50",
-  "chat_eval": "flock /home/t/scratch/gpu.lock python3 locallm/chat_eval.py --model <out>/4-mid/model --conversations <conversations.jsonl> --split t/out/loop/split-v5.json --out <out>/chat-eval.json --dev 100 --max-tokens 800 --grammar --max-calls 2 --answer best-verdict",
-  "memory_eval": "flock /home/t/scratch/gpu.lock python3 locallm/memory_eval.py --model <out>/4-mid/model --items /home/t/scratch/memconv/memory-heldout.jsonl --out <out>/memory-eval.json --max-tokens 400",
-  "report": "python3 locallm/memory_eval.py --report /home/t/scratch/memconv/runs --json /home/t/scratch/memconv/report.json"
+  "conversations_already_built": "python3 locallm/chat_data.py --corpus ~/scratch/corpus-all-2026-09-26.txt --split t/out/loop/split-v5.json --out <conversations.jsonl> --tool-rate 0.5 --split-seed 1337 --val-frac 0.1   (then tool-plus-memory.jsonl's 1,204 rows appended on the training side, chat_data.gate re-checked over the whole 1,562-row file before training: passed)",
+  "mid_training": "flock ~/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G -- python3 locallm/chat_train.py --init ~/scratch/dawnr-pipeline/core-wd08 --conversations <conversations.jsonl> --out <out>/4-mid/model --steps 400 --lr 0.0001 --batch-size 8 --block-size 0 --seed <seed> --eval-every 50",
+  "chat_eval": "flock ~/scratch/gpu.lock python3 locallm/chat_eval.py --model <out>/4-mid/model --conversations <conversations.jsonl> --split t/out/loop/split-v5.json --out <out>/chat-eval.json --dev 100 --max-tokens 800 --grammar --max-calls 2 --answer best-verdict",
+  "memory_eval": "flock ~/scratch/gpu.lock python3 locallm/memory_eval.py --model <out>/4-mid/model --items ~/scratch/memconv/memory-heldout.jsonl --out <out>/memory-eval.json --max-tokens 400",
+  "report": "python3 locallm/memory_eval.py --report ~/scratch/memconv/runs --json ~/scratch/memconv/report.json"
  },
  "gpu": {
-  "card": "desktop RTX 4080, one job at a time under flock /home/t/scratch/gpu.lock",
+  "card": "desktop RTX 4080, one job at a time under flock ~/scratch/gpu.lock",
   "training_commands_under_systemd_run_MemoryMax_6G": ["mid B-s1337 (139.0s)", "mid B-s1338 (138.4s)"],
   "seconds_used": {"mid_train_s1337": 139.0, "chat_eval_s1337": 95.4, "memory_eval_A_s1337": 87.4, "memory_eval_B_s1337": 63.7,
                    "mid_train_s1338": 138.4, "chat_eval_s1338": 116.3, "memory_eval_A_s1338": 84.6, "memory_eval_B_s1338": 52.9,

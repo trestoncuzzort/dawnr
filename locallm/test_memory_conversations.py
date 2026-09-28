@@ -23,7 +23,7 @@ try:
 except ImportError:                                   # pragma: no cover
     torch = None
 
-CORPUS = Path("/home/t/scratch/corpus-all-2026-09-26.txt")
+CORPUS = Path.home() / "scratch" / "corpus-all-2026-09-26.txt"   # this machine's build of the proved corpus; the test skips without it
 SPLIT = HERE.parent / "t" / "out" / "loop" / "split-v5.json"
 
 PROGRAM_SEQ = """t 1
