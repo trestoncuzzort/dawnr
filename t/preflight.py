@@ -54,6 +54,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shlex
 import shutil
@@ -441,13 +442,42 @@ def check_keys() -> bool:
     return say(dup == 0, f"copy-check keys unique ({len(keys)})", "" if not dup else f"{dup} duplicates")
 
 
+def grader_run(lab: str, cmd: str, timeout: float) -> subprocess.CompletedProcess:
+    """Run `cmd` on the grading machine: over ssh for `user@host`, or here
+    when T_LAB is `local`, the value t/out/r12-run/run.sh and
+    t/r12_data_queue.sh already accept for "this machine grades" (2026-09-28:
+    the lab's own conf names its own address, so the checklist's step 2 run
+    there died on host-key verification of an ssh to itself). The local
+    branch runs a login shell from $HOME, the cwd an ssh login starts in, so
+    `cd ~/tup` and `cd tup` resolve exactly as they do over ssh. Ansible's
+    builtin `local` connection plugin is the same reading: execute on the
+    controller instead of a remote host, chosen by configuration."""
+    if lab == "local":
+        return subprocess.run(["bash", "-lc", cmd], capture_output=True, text=True,
+                              timeout=timeout, cwd=str(Path.home()))
+    return subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab, cmd],
+                          capture_output=True, text=True, timeout=timeout)
+
+
+def grading_machine(env=None, conf: Path | None = None) -> str | None:
+    """T_LAB as the launcher reads it: the environment wins, else
+    t/lab-workstation.conf (gitignored, the one place a machine address
+    lives), else None (no grading machine to check)."""
+    env = os.environ if env is None else env
+    lab = env.get("T_LAB") or None
+    conf = HERE / "lab-workstation.conf" if conf is None else conf
+    if not lab and conf.exists():
+        m = re.search(r"^T_LAB=(\S+)", conf.read_text(), re.M)
+        lab = m.group(1) if m else None
+    return lab
+
+
 def check_space(lab: str | None) -> bool:
     free = shutil.disk_usage(HERE).free / 1e9
     ok = say(free > 20, f"this machine has {free:.0f} GB free")
     if lab:
         try:
-            out = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab,
-                                  "df -B1 --output=avail / | tail -1"], capture_output=True, text=True, timeout=30)
+            out = grader_run(lab, "df -B1 --output=avail / | tail -1", 30)
             gb = int(out.stdout.strip() or 0) / 1e9
             ok = say(gb > 20, f"the grading machine has {gb:.0f} GB free") and ok
         except (OSError, ValueError, subprocess.SubprocessError) as e:
@@ -477,12 +507,12 @@ def check_evaluator(lab: str | None) -> bool:
         # contradiction and trains the reader to skip the line. A check that
         # cries wolf every round is worse than no check, because this is the one
         # that catches a genuinely stale evaluator.
-        out = subprocess.run(
-            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab,
-             "cd ~/tup && git rev-parse --short HEAD"
-             " && git status --porcelain --untracked-files=no | wc -l"
-             " && git ls-files --others --exclude-standard | wc -l"],
-            capture_output=True, text=True, timeout=45)
+        out = grader_run(
+            lab,
+            "cd ~/tup && git rev-parse --short HEAD"
+            " && git status --porcelain --untracked-files=no | wc -l"
+            " && git ls-files --others --exclude-standard | wc -l",
+            45)
         lines = [line.strip() for line in out.stdout.splitlines() if line.strip()]
         if len(lines) < 3:
             return warn("grading machine state unreadable", out.stderr.strip()[:60])
@@ -710,9 +740,7 @@ def check_data(split_path: Path, lab: str | None, pool_files: list[Path] = (),
         names = [p for p in sorted(need) if p not in later]      # nothing has written the others yet
         script = "; ".join(f"[ -e {shlex.quote(n)} ] || printf '%s\\n' {shlex.quote(n)}" for n in names)
         try:
-            r = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab,
-                                f"cd {shlex.quote(LAB_DIR)} 2>/dev/null || exit 9; {script}"],
-                               capture_output=True, text=True, timeout=30)
+            r = grader_run(lab, f"cd {shlex.quote(LAB_DIR)} 2>/dev/null || exit 9; {script}", 30)
             if r.returncode == 9:
                 ok = say(False, f"the grading machine has a clone at ~/{LAB_DIR}") and ok
             else:
@@ -906,9 +934,7 @@ def check_lab_quiet(lab: str | None) -> bool:
     if not lab:
         return ok
     try:
-        out = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", lab,
-                              "cd ~/tup && python3 t/stall_check.py"],
-                             capture_output=True, text=True, timeout=90)
+        out = grader_run(lab, "cd ~/tup && python3 t/stall_check.py", 90)
         detail = " ".join((out.stdout + out.stderr).split())[:160]
         ok = say(out.returncode == 0, "the grading machine quiet: nothing of ours stopped, frozen or orphaned",
                  detail) and ok
@@ -985,11 +1011,7 @@ def main() -> int:
                     help="skip the one check that costs seconds (the tokenizer round-trip)")
     ap.add_argument("--strict", action="store_true")
     a = ap.parse_args()
-    lab = None
-    conf = HERE / "lab-workstation.conf"
-    if conf.exists():
-        m = re.search(r"^T_LAB=(\S+)", conf.read_text(), re.M)
-        lab = m.group(1) if m else None
+    lab = grading_machine()          # the environment wins, else t/lab-workstation.conf
 
     print("the machines")
     ok = check_lab_quiet(lab)
