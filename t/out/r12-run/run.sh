@@ -45,9 +45,14 @@ CORE="$PRETRAIN_DIR/best.pt"
 CORPUS=t/out/loop/corpus-r12-headed.txt
 SPLIT=t/out/loop/split-v5.json
 DEV_IDS=t/r12-dev-ids.json
-SEEDS="1 2 3 4 5 6 7 8 9 10"
+# R12_RUN_SEEDS: a subset, for a second launcher on another card or machine (2026-09-29, the
+# move to the lab: one launcher per free card, disjoint seeds, each with its own R12_RUN_GPU_LOCK
+# and CUDA_VISIBLE_DEVICES; every stage still skips when its own output exists, so a seed that
+# finished here is skipped there once its t/out/locallm-r12-s<seed>/, t/out/spec-experiment/
+# locallm-r12-s<seed>*/ and gen sentinel are copied over).
+SEEDS=${R12_RUN_SEEDS:-"1 2 3 4 5 6 7 8 9 10"}
 BASE_TAGS="locallm-r11-rerun locallm-r11-s1 locallm-r11-s2 locallm-r11-s3 locallm-r11-s4 locallm-r11-s5 locallm-r11-s6 locallm-r11-s7 locallm-r11-s8 locallm-r11-s9"
-GPU_LOCK="$HOME/scratch/gpu.lock"
+GPU_LOCK=${R12_RUN_GPU_LOCK:-$HOME/scratch/gpu.lock}
 MEM_CAP=6G
 # T_LAB: the environment wins, else t/lab-workstation.conf (gitignored; the only place this
 # repository names a machine address, AGENTS.md's public-repo rule), same lookup as
@@ -55,7 +60,7 @@ MEM_CAP=6G
 [ -z "${T_LAB:-}" ] && [ -f t/lab-workstation.conf ] && . t/lab-workstation.conf
 T_LAB=${T_LAB:?set T_LAB=user@host or T_LAB=local in t/lab-workstation.conf, or export it}
 GRADE_CELLS=${R12_RUN_GRADE_CELLS:-2}          # ~8 cores; see the header note
-PY="$HOME/.venv-locallm/bin/python"   # every stage that imports torch runs under this venv: training,
+PY=${R12_RUN_PY:-$HOME/.venv-locallm/bin/python}   # every stage that imports torch runs under this venv: training,
                                        # the stopping-step choice (it decodes) and gen_fleet.sh (T_PY;
                                        # its default is the lab's vLLM venv, absent here). 2026-09-29:
                                        # the first launch died at pick-step on the system python3.
