@@ -94,7 +94,7 @@ def verdict_ok(verdict: str) -> bool:
     """Nothing wrong in a t-tool verdict: parses, well formed, every example passes."""
     lines = [ln for ln in verdict.split("\n") if ln.strip()]
     return bool(lines) and all(ln in ("parses: yes", "well formed: yes") or
-                               (ln.startswith("example ") and ln.endswith(": pass")) for ln in lines)
+                               (ln.startswith(("example ", "drawn ")) and ln.endswith(": pass")) for ln in lines)
 
 
 def verdict_kind(verdict: str) -> str:
@@ -200,11 +200,18 @@ def pass_conversation(conv: dict, proved: str, proved_verdict: str) -> dict:
 
 
 def build(convs: list[dict], drafts: list[dict], *, max_repairs: int = 2, max_passes: int = 1,
-          fits=None, gate=None) -> tuple[list[dict], dict]:
+          fits=None, gate=None, drawn: int = 0) -> tuple[list[dict], dict]:
     """Repair and pass conversations from drafts of training conversations; and a summary.
 
     fits(conv) -> bool drops a conversation too long for the model; gate(conv)
     raises ValueError for one the trainers would refuse (it is dropped by name).
+    `drawn` (2026-09-29): that many Example lines the prompt does not show, computed
+    from the proved program, go into every verdict here as `drawn i: ...`; a draft that
+    passes the shown examples but fails a drawn one becomes a repair conversation
+    (built "repair-drawn"), the case the held-out look found on unseen problems: a
+    program fitting two shown examples with a specification the problem rejects.
+    Without `drawn` such a draft is dropped as before (two examples passed; nothing
+    proved it).
     """
     import chat
     import t_tool
@@ -224,7 +231,8 @@ def build(convs: list[dict], drafts: list[dict], *, max_repairs: int = 2, max_pa
             raise ValueError(f"drafts for conversation {i} were made from another prompt; rebuild the drafts")
         proved = chat.final_program(conv["messages"][1]["content"])
         proved = proved.strip("\n") + "\n"
-        proved_verdict = t_tool.call(proved, user)
+        extra = t_tool.drawn_examples(proved, user, drawn) if drawn else []
+        proved_verdict = t_tool.call(proved, user, drawn=extra)
         if not verdict_ok(proved_verdict):
             counts["proved_program_fails_its_examples"] += 1
             continue
@@ -242,22 +250,33 @@ def build(convs: list[dict], drafts: list[dict], *, max_repairs: int = 2, max_pa
             is_proved = norm(d["draft"]) == norm(proved)
             per_sample[tag][kind] += 1
             per_sample[tag]["is the proved program"] += is_proved
+            failing_verdict = None                 # the verdict a repair conversation shows
             if verdict_ok(d["verdict"]):
                 if not is_proved:
-                    counts["passed_not_proved"] += 1
-                    continue
-                if passes >= max_passes:
-                    counts["pass_over_cap"] += 1
-                    continue
-                built = pass_conversation(conv, proved, proved_verdict)
+                    drawn_verdict = t_tool.call(d["draft"], user, drawn=extra) if extra else None
+                    if drawn_verdict is not None and not verdict_ok(drawn_verdict):
+                        counts["passed_shown_failed_drawn"] += 1
+                        failing_verdict = drawn_verdict
+                    else:
+                        counts["passed_not_proved"] += 1
+                        continue
+                else:
+                    if passes >= max_passes:
+                        counts["pass_over_cap"] += 1
+                        continue
+                    built = pass_conversation(conv, proved, proved_verdict)
             else:
+                failing_verdict = t_tool.call(d["draft"], user, drawn=extra) if extra else d["verdict"]
+            if failing_verdict is not None:
                 if norm(d["draft"]) in seen:
                     counts["repeated_failing_draft"] += 1
                     continue
                 if repairs >= max_repairs:
                     counts["repair_over_cap"] += 1
                     continue
-                built = repair_conversation(conv, d["draft"], d["verdict"], proved, proved_verdict)
+                built = repair_conversation(conv, d["draft"], failing_verdict, proved, proved_verdict)
+                if verdict_ok(d["verdict"]):
+                    built["built"] = "repair-drawn"
             if fits is not None and not fits(built):
                 counts["over_context"] += 1
                 continue
@@ -267,7 +286,7 @@ def build(convs: list[dict], drafts: list[dict], *, max_repairs: int = 2, max_pa
                 except ValueError as e:
                     refused.append({"index": i, "source": conv.get("source"), "why": str(e)[:300]})
                     continue
-            if built["built"] == "repair":
+            if built["built"].startswith("repair"):
                 seen.add(norm(d["draft"]))
                 repairs += 1
             else:
@@ -275,7 +294,9 @@ def build(convs: list[dict], drafts: list[dict], *, max_repairs: int = 2, max_pa
             out.append(dict(built, draft_fold=d["fold"], draft_sample=d["sample"]))
         counts["problems_with_repair"] += repairs > 0
         counts["problems_with_pass"] += passes > 0
-    summary = {**dict(counts), "repair_conversations": sum(r["built"] == "repair" for r in out),
+    summary = {**dict(counts), "drawn": drawn,
+               "repair_conversations": sum(r["built"] == "repair" for r in out),
+               "repair_drawn_conversations": sum(r["built"] == "repair-drawn" for r in out),
                "pass_conversations": sum(r["built"] == "pass" for r in out), "draft_verdicts": dict(kinds),
                "by_draft": {k: dict(v) for k, v in per_sample.items()}, "refused_by_gate": refused,
                "max_repairs": max_repairs, "max_passes": max_passes}
@@ -298,7 +319,8 @@ def cmd_build(a) -> int:
     def gate(conv):
         chat_data.gate(json.dumps(conv, ensure_ascii=False), f"repair conversation {conv.get('source')}", a.split)
 
-    rows, summary = build(convs, drafts, max_repairs=a.max_repairs, max_passes=a.max_passes, fits=fits, gate=gate)
+    rows, summary = build(convs, drafts, max_repairs=a.max_repairs, max_passes=a.max_passes, fits=fits, gate=gate,
+                          drawn=a.drawn)
     text = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
     gate_all = "\n\n".join(json.dumps(r, ensure_ascii=False) for r in rows)
     chat_data.gate(gate_all, "repair conversations", a.split)            # the whole file, as the trainers see it
@@ -348,6 +370,8 @@ def main(argv=None) -> int:
             p.add_argument("--split", type=Path, default=ROOT / "t" / "out" / "loop" / "split-v5.json")
             p.add_argument("--max-repairs", type=int, default=2)
             p.add_argument("--max-passes", type=int, default=1)
+            p.add_argument("--drawn", type=int, default=0,
+                           help="Example lines the prompt does not show, checked in every verdict (2026-09-29)")
     a = ap.parse_args(argv)
     a.conversations, a.out = a.conversations.resolve(), a.out.resolve()
     if getattr(a, "core", None):

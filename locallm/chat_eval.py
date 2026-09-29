@@ -109,7 +109,7 @@ def verdict_ok(verdict: str) -> bool:
     """A t-tool verdict with nothing wrong in it: parses, well formed, every example passes."""
     lines = [ln for ln in verdict.split("\n") if ln.strip()]
     return bool(lines) and all(ln in ("parses: yes", "well formed: yes") or
-                               (ln.startswith("example ") and ln.endswith(": pass")) for ln in lines)
+                               (ln.startswith(("example ", "drawn ")) and ln.endswith(": pass")) for ln in lines)
 
 
 def judge(got: dict, user: str) -> dict:

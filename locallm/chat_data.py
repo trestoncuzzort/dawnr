@@ -80,8 +80,11 @@ def uses_tool(doc: str, seed: int, rate: float) -> bool:
     return int.from_bytes(digest[:8], "big") < rate * 2 ** 64
 
 
-def conversation(doc: str, *, tool: bool) -> dict:
-    """One conversation from one proved document. Raises ValueError on a document it cannot use."""
+def conversation(doc: str, *, tool: bool, drawn: int = 0) -> dict:
+    """One conversation from one proved document. Raises ValueError on a document it cannot use.
+    `drawn` (2026-09-29): that many Example lines the prompt does not show go into the tool's
+    verdict as `drawn i: pass`, computed from the proved program (t_tool.drawn_examples), so the
+    model sees the check reach past the shown examples."""
     head, program = split_head(doc)
     if any(line.strip() == "Spec:" for line in program.split("\n")):
         raise ValueError("a Spec: document holds no program")
@@ -95,18 +98,19 @@ def conversation(doc: str, *, tool: bool) -> dict:
     else:
         user = "\n".join([SPEC_PROMPT, spec_text(program)] + examples)
         kind = "spec"
+    extra = t_tool.drawn_examples(program, user, drawn) if tool and drawn else []
     if tool:
         answer = [{"type": "t", "text": program},
-                  {"type": "t_output", "text": t_tool.call(program, user)}]
+                  {"type": "t_output", "text": t_tool.call(program, user, drawn=extra)}]
     else:
         answer = program
     name = next((ln.split()[1].split("(")[0] for ln in program.split("\n") if ln.startswith("task ")), "?")
     return {"messages": [{"role": "user", "content": user}, {"role": "assistant", "content": answer}],
-            "source": name, "kind": kind, "tool": tool, "examples": len(examples)}
+            "source": name, "kind": kind, "tool": tool, "examples": len(examples), "drawn": len(extra)}
 
 
 def build(text: str, *, split_seed: int = 1337, val_frac: float = 0.1, tool_rate: float = 0.5,
-          tool_seed: int = 0) -> tuple[list[dict], dict]:
+          tool_seed: int = 0, drawn: int = 0) -> tuple[list[dict], dict]:
     """Every usable document as a conversation, with its split side; and a summary."""
     from data import split_documents
     train, val = split_documents(text, val_frac=val_frac, seed=split_seed, by="hash")
@@ -114,7 +118,7 @@ def build(text: str, *, split_seed: int = 1337, val_frac: float = 0.1, tool_rate
     for side, docs in (("train", train), ("val", val)):
         for doc in docs:
             try:
-                conv = conversation(doc, tool=uses_tool(doc, tool_seed, tool_rate))
+                conv = conversation(doc, tool=uses_tool(doc, tool_seed, tool_rate), drawn=drawn)
             except Exception as e:                               # noqa: BLE001  (named and counted below)
                 skipped.append({"doc": doc.strip()[:80], "why": f"{type(e).__name__}: {e}"[:200]})
                 continue
@@ -129,6 +133,7 @@ def build(text: str, *, split_seed: int = 1337, val_frac: float = 0.1, tool_rate
                "with_examples": sum(r["examples"] > 0 for r in rows),
                "tool_example_pass": sum(ln.endswith(": pass") for ln in tool_lines),
                "tool_example_other": sum(ln.startswith("example") and not ln.endswith(": pass") for ln in tool_lines),
+               "drawn": drawn, "drawn_lines": sum(ln.startswith("drawn ") for ln in tool_lines),
                "skipped": skipped, "split_seed": split_seed, "val_frac": val_frac, "tool_rate": tool_rate,
                "tool_seed": tool_seed, "corpus_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest()}
     return rows, summary
@@ -151,13 +156,15 @@ def main(argv=None) -> int:
     ap.add_argument("--tool-seed", type=int, default=0)
     ap.add_argument("--split-seed", type=int, default=1337)
     ap.add_argument("--val-frac", type=float, default=0.1)
+    ap.add_argument("--drawn", type=int, default=0,
+                    help="Example lines the prompt does not show, checked in the tool's verdict (2026-09-29)")
     a = ap.parse_args(argv)
     if not 0 <= a.tool_rate <= 1:
         ap.error("--tool-rate must lie in [0, 1]")
     text = a.corpus.read_text(encoding="utf-8")
     gate(text, str(a.corpus), a.split)
     rows, summary = build(text, split_seed=a.split_seed, val_frac=a.val_frac, tool_rate=a.tool_rate,
-                          tool_seed=a.tool_seed)
+                          tool_seed=a.tool_seed, drawn=a.drawn)
     gate("\n\n".join(json.dumps(r, ensure_ascii=False) for r in rows), f"conversations from {a.corpus}", a.split)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     with a.out.open("w", encoding="utf-8") as f:
