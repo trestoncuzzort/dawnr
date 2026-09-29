@@ -429,3 +429,10 @@ found `continue_from_checkpoint --init` unable to take the pretraining run's `be
 only a directory's `ckpt.pt`, the last state, not the early-stopped best); the trainer now takes
 a checkpoint file with its tokenizer beside it, the reading `checkpoint.load_checkpoint` already
 gives kept checkpoints (`locallm/test_continue_init_paths.py`).
+
+2026-09-29 (seed 1's first pass): the reply stop and the `--doc-batches` rows disagreed on where
+a document ends (the rule waited for the next head; a document-trained model writes the blank line
+and drifts), so all 832 replies ran to the token budget unparseable. The stop is now the document
+terminator (`t/loop_locallm.py`, `t/test_reply_stop.py`); recorded in `t/PREDICT-r12.md` before any
+held-out answer was scored; seed 1 redone from its stopping-step choice. An answer set with no
+well-formed answer is now a scored zero in the launcher, not a refusal.
