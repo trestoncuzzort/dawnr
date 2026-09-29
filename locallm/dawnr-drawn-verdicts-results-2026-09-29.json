@@ -1,0 +1,379 @@
+{
+  "registered": "locallm/PREDICT-2026-09-29-dawnr-drawn-verdicts.md (e00cad93, before the run)",
+  "baseline_A_rescored": {
+    "1337": {
+      "well_formed": 51,
+      "examples_all_pass": 0,
+      "spec_agrees": 0,
+      "examples_pass_spec_disagrees": 0
+    },
+    "1338": {
+      "well_formed": 36,
+      "examples_all_pass": 1,
+      "spec_agrees": 0,
+      "examples_pass_spec_disagrees": 0
+    },
+    "1339": {
+      "well_formed": 61,
+      "examples_all_pass": 3,
+      "spec_agrees": 0,
+      "examples_pass_spec_disagrees": 1
+    }
+  },
+  "repairs": {
+    "drawn": 4,
+    "repair_conversations": 800,
+    "repair_drawn_conversations": 13,
+    "pass_conversations": 84,
+    "passed_shown_failed_drawn": 22,
+    "passed_not_proved": 247,
+    "problems": 485,
+    "drafts": 1940
+  },
+  "arms": {
+    "D": {
+      "1337": {
+        "dev": {
+          "asked": 100,
+          "parses": 66,
+          "well_formed": 48,
+          "examples_all_pass": 0,
+          "spec_agrees": 0,
+          "examples_pass_spec_disagrees": 0,
+          "spec_unchecked": 0,
+          "got_failing_verdict": 11,
+          "acted_on_failure": 0,
+          "used_tool": 11,
+          "opened_call": 12,
+          "closed_every_call": 11
+        },
+        "mid": {
+          "final": {
+            "step": 400,
+            "train": 0.06493082292483163,
+            "val": 0.22586078646442811,
+            "batch_loss": 0.07786254584789276,
+            "lr": 1.0001537845112144e-05,
+            "seconds": 76.3
+          },
+          "seconds": 77.1,
+          "dropped_over_block": [
+            {
+              "split": "train",
+              "source": "vericoding_da0085__findMinimumTotalDistance",
+              "tokens": 2109
+            }
+          ]
+        },
+        "conversations": {
+          "conversations": 531,
+          "train": 485,
+          "val": 46,
+          "tool_conversations": 274,
+          "drawn": 4,
+          "drawn_lines": 1051
+        },
+        "extra": null
+      },
+      "1338": {
+        "dev": {
+          "asked": 100,
+          "parses": 57,
+          "well_formed": 36,
+          "examples_all_pass": 0,
+          "spec_agrees": 0,
+          "examples_pass_spec_disagrees": 0,
+          "spec_unchecked": 0,
+          "got_failing_verdict": 38,
+          "acted_on_failure": 1,
+          "used_tool": 38,
+          "opened_call": 45,
+          "closed_every_call": 38
+        },
+        "mid": {
+          "final": {
+            "step": 400,
+            "train": 0.06517191231297997,
+            "val": 0.22502791366792058,
+            "batch_loss": 0.12782151997089386,
+            "lr": 1.0001537845112144e-05,
+            "seconds": 76.2
+          },
+          "seconds": 77.0,
+          "dropped_over_block": [
+            {
+              "split": "train",
+              "source": "vericoding_da0085__findMinimumTotalDistance",
+              "tokens": 2109
+            }
+          ]
+        },
+        "conversations": {
+          "conversations": 531,
+          "train": 485,
+          "val": 46,
+          "tool_conversations": 274,
+          "drawn": 4,
+          "drawn_lines": 1051
+        },
+        "extra": null
+      },
+      "1339": {
+        "dev": {
+          "asked": 100,
+          "parses": 77,
+          "well_formed": 60,
+          "examples_all_pass": 1,
+          "spec_agrees": 0,
+          "examples_pass_spec_disagrees": 1,
+          "spec_unchecked": 0,
+          "got_failing_verdict": 51,
+          "acted_on_failure": 9,
+          "used_tool": 52,
+          "opened_call": 58,
+          "closed_every_call": 51
+        },
+        "mid": {
+          "final": {
+            "step": 400,
+            "train": 0.06626167084656219,
+            "val": 0.22414061621883027,
+            "batch_loss": 0.11652293801307678,
+            "lr": 1.0001537845112144e-05,
+            "seconds": 76.1
+          },
+          "seconds": 76.9,
+          "dropped_over_block": [
+            {
+              "split": "train",
+              "source": "vericoding_da0085__findMinimumTotalDistance",
+              "tokens": 2109
+            }
+          ]
+        },
+        "conversations": {
+          "conversations": 531,
+          "train": 485,
+          "val": 46,
+          "tool_conversations": 274,
+          "drawn": 4,
+          "drawn_lines": 1051
+        },
+        "extra": null
+      }
+    },
+    "DR": {
+      "1337": {
+        "dev": {
+          "asked": 100,
+          "parses": 79,
+          "well_formed": 58,
+          "examples_all_pass": 2,
+          "spec_agrees": 0,
+          "examples_pass_spec_disagrees": 1,
+          "spec_unchecked": 1,
+          "got_failing_verdict": 90,
+          "acted_on_failure": 38,
+          "used_tool": 91,
+          "opened_call": 95,
+          "closed_every_call": 89
+        },
+        "mid": {
+          "final": {
+            "step": 400,
+            "train": 0.09512376432340416,
+            "val": 0.2292061036191028,
+            "batch_loss": 0.13531923294067383,
+            "lr": 1.0001537845112144e-05,
+            "seconds": 149.7
+          },
+          "seconds": 150.5,
+          "dropped_over_block": [
+            {
+              "split": "train",
+              "source": "vericoding_da0085__findMinimumTotalDistance",
+              "tokens": 2109
+            }
+          ]
+        },
+        "conversations": {
+          "conversations": 531,
+          "train": 485,
+          "val": 46,
+          "tool_conversations": 274,
+          "drawn": 4,
+          "drawn_lines": 1051
+        },
+        "extra": {
+          "file": "/home/t/scratch/dawnr-drawn/repair/repairs.jsonl",
+          "rows": 897,
+          "built": {
+            "repair-drawn": 13,
+            "pass": 84,
+            "repair": 800
+          }
+        }
+      },
+      "1338": {
+        "dev": {
+          "asked": 100,
+          "parses": 76,
+          "well_formed": 62,
+          "examples_all_pass": 2,
+          "spec_agrees": 0,
+          "examples_pass_spec_disagrees": 2,
+          "spec_unchecked": 0,
+          "got_failing_verdict": 90,
+          "acted_on_failure": 33,
+          "used_tool": 92,
+          "opened_call": 99,
+          "closed_every_call": 90
+        },
+        "mid": {
+          "final": {
+            "step": 400,
+            "train": 0.0945836917020375,
+            "val": 0.23373265014755748,
+            "batch_loss": 0.1658639758825302,
+            "lr": 1.0001537845112144e-05,
+            "seconds": 149.9
+          },
+          "seconds": 150.7,
+          "dropped_over_block": [
+            {
+              "split": "train",
+              "source": "vericoding_da0085__findMinimumTotalDistance",
+              "tokens": 2109
+            }
+          ]
+        },
+        "conversations": {
+          "conversations": 531,
+          "train": 485,
+          "val": 46,
+          "tool_conversations": 274,
+          "drawn": 4,
+          "drawn_lines": 1051
+        },
+        "extra": {
+          "file": "/home/t/scratch/dawnr-drawn/repair/repairs.jsonl",
+          "rows": 897,
+          "built": {
+            "repair-drawn": 13,
+            "pass": 84,
+            "repair": 800
+          }
+        }
+      },
+      "1339": {
+        "dev": {
+          "asked": 100,
+          "parses": 70,
+          "well_formed": 60,
+          "examples_all_pass": 1,
+          "spec_agrees": 0,
+          "examples_pass_spec_disagrees": 1,
+          "spec_unchecked": 0,
+          "got_failing_verdict": 90,
+          "acted_on_failure": 26,
+          "used_tool": 91,
+          "opened_call": 99,
+          "closed_every_call": 90
+        },
+        "mid": {
+          "final": {
+            "step": 400,
+            "train": 0.09492587405617485,
+            "val": 0.22967793287102098,
+            "batch_loss": 0.16769836843013763,
+            "lr": 1.0001537845112144e-05,
+            "seconds": 149.9
+          },
+          "seconds": 150.7,
+          "dropped_over_block": [
+            {
+              "split": "train",
+              "source": "vericoding_da0085__findMinimumTotalDistance",
+              "tokens": 2109
+            }
+          ]
+        },
+        "conversations": {
+          "conversations": 531,
+          "train": 485,
+          "val": 46,
+          "tool_conversations": 274,
+          "drawn": 4,
+          "drawn_lines": 1051
+        },
+        "extra": {
+          "file": "/home/t/scratch/dawnr-drawn/repair/repairs.jsonl",
+          "rows": 897,
+          "built": {
+            "repair-drawn": 13,
+            "pass": 84,
+            "repair": 800
+          }
+        }
+      }
+    }
+  },
+  "means": {
+    "D": {
+      "well_formed": 48,
+      "examples_all_pass": 0.33,
+      "spec_agrees": 0,
+      "examples_pass_spec_disagrees": 0.33,
+      "used_tool": 33.67
+    },
+    "DR": {
+      "well_formed": 60,
+      "examples_all_pass": 1.67,
+      "spec_agrees": 0,
+      "examples_pass_spec_disagrees": 1.33,
+      "used_tool": 91.33
+    }
+  },
+  "baseline_means": {
+    "well_formed": 49.33,
+    "examples_all_pass": 1.33,
+    "spec_agrees": 0,
+    "examples_pass_spec_disagrees": 0.33
+  },
+  "predictions": {
+    "1_DR_spec_agrees_off_zero": {
+      "holds": false,
+      "measured": [
+        0,
+        0,
+        0
+      ]
+    },
+    "2_DR_examples_pass_spec_disagrees_not_above_0.33": {
+      "holds": false,
+      "measured": 1.33
+    },
+    "3_well_formed_within_a_tenth": {
+      "holds": true,
+      "measured": {
+        "D": 48,
+        "DR": 60
+      }
+    },
+    "4_D_at_or_below_DR_on_spec_agrees": {
+      "holds": true,
+      "measured": {
+        "D": [
+          0,
+          0,
+          0
+        ],
+        "DR": [
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  }
+}

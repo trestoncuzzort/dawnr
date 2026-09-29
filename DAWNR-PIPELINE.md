@@ -442,3 +442,24 @@ seed), ahead of unparseable answers (54 to 65). The dev signal has the same hole
 runs the prompt's examples. The next stage is chosen against that: verdicts that draw inputs
 beyond the shown examples, at training time from the proved program and at evaluation time from
 the problem's own solution, so that fitting two examples stops counting as solving the problem.
+
+## Drawn verdicts as data (2026-09-29)
+
+The stage after the held-out look put inputs the prompt does not show into the tool's verdicts:
+`t_tool.call(..., drawn=...)` judges `drawn i:` lines drawn from the proved program
+(`t_tool.drawn_examples`), `chat_data --drawn 4` carries four of them in every tool
+conversation's verdict, and `repair_data build --drawn 4` turns a cross-fitted draft that
+passes the shown examples but fails a drawn input into a `repair-drawn` conversation
+(registered in `locallm/PREDICT-2026-09-29-dawnr-drawn-verdicts.md`, results in
+`locallm/dawnr-drawn-verdicts-results-2026-09-29.json`). Two arms, three seeds each: D (drawn
+verdicts only) and DR (drawn verdicts plus the repair conversations built with them). The
+specification column did not move: `spec_agrees` 0 on all six seeds, 0 of 600 dev answers.
+What moved was form: DR is well formed on 60 of 100 (A: 49.3) and uses the tool in 91 of 100
+(D: 34), and it passes more shown examples (1.67 against 1.33) with every one of those
+disagreeing with the specification. Two of the four registered predictions were falsified. The
+reason the data could not carry the signal is its dose: 13 of 800 repair conversations hold a
+drawn failure, because most wrong drafts fail a shown example already. The registered
+consequence is a reward that carries the drawn signal, and the gathered research adds its
+precondition: RL reweights toward successes that exist, so the reward must be dense (fraction
+of drawn inputs matched) and the base rate must move first. The general-English pretraining
+pilot, registered the same morning, is the test of whether the core can move it.
