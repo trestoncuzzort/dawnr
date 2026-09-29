@@ -88,3 +88,31 @@ launcher gains a `--stage2` path for it before then), and both run directories c
 Nothing here touches the held-out 232 or the dev 100: the English set was decontaminated against
 them (7.1) and the code corpus is the one every earlier arm trained on. One look per decision: the
 numbers land in `locallm/dawnr-r12-core-results-2026-09-30.json` and this file's outcome section.
+
+## Amendment, 2026-09-29 21:50Z, before any training: the budget is the free limit
+
+The operator set the budget to the free compute available (Modal's month credit, about $20 left of
+$30, and the desktop). The run above does not fit ($150), so it is re-registered at the size the
+free compute allows, with everything downstream unchanged (the 93M `core-medium` is what every
+pipeline stage, r12's recipe and the held-out export already take):
+
+**Stage 1, English, from random weights, on the desktop (free).** `core-medium` (12 layers, 12
+heads, 768 wide, block 2,048, vocabulary 8,192, 92,920,320 parameters), the first **3.7B tokens**
+of the same FineWeb-Edu set in file order (files 000 to 003, twice the plan's Chinchilla point for
+this size, `--data-tokens-limit 3700000000`), validation the last 1,000,000 tokens of the used range.
+Recipe: micro-batch 8 x block 2,048 x gradient accumulation 4 = **65,536 tokens per step** (the
+sweep's batch), **56,457 steps** (one pass), lr 6e-4 with warmup 2,000 and cosine to a tenth, weight
+decay 0.1, gradient clip 1.0, bf16, gradient checkpointing (the 16 GB card), dropout 0, seed 1337,
+deterministic; checkpoint and validation every 500 steps. About 17 hours at the pilot's measured
+rate (65k tokens/s). Run directory `t/out/dawnr-r12-core-2026-09-30/stage1-english`.
+
+**Stage 2, code, on the desktop**, as registered above but at micro-batch 16 x 2,048 for the 93M
+model (15,000 steps, wd 0.8, lr 1e-3, `--keep-every 1000`, the kept copy with the lowest validation
+loss is the core). Run directory `t/out/dawnr-r12-core-2026-09-30/stage2-code`.
+
+**Predictions**, restated for the size: 1. stage 1's English validation loss ends **below 2.30**
+(the pilot's 300M-token stage: 2.525); 2. stage 2's best code validation loss is **below 1.20**
+(arm B: 1.214); 3 to 6 unchanged (well formed at least 50; `spec_agrees` at least 1, the reason
+for the run, held with about one chance in four at this size; held-out loss below 3.60; r12's round
+at least 1 clean, spec checked, on some seed). The 312M run stays registered above for the day a
+free allocation covers it (the Google Cloud credit once its GPU quota is granted, or a grant).
