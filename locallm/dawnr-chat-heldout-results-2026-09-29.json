@@ -1,0 +1,380 @@
+{
+  "registered": "t/PREDICT-2026-09-29-dawnr-chat-heldout.md (dac0be3e, before any answer was generated)",
+  "arms": {
+    "new": [
+      "dawnr-chat-r12c-s1337",
+      "dawnr-chat-r12c-s1338",
+      "dawnr-chat-r12c-s1339"
+    ],
+    "base": [
+      "locallm-r11-rerun",
+      "locallm-r11-s1",
+      "locallm-r11-s2",
+      "locallm-r11-s3",
+      "locallm-r11-s4",
+      "locallm-r11-s5",
+      "locallm-r11-s6",
+      "locallm-r11-s7",
+      "locallm-r11-s8",
+      "locallm-r11-s9"
+    ]
+  },
+  "export": "locallm/chat_heldout.py: greedy, 800 tokens, grammar on, max 2 calls, best-verdict; graded by t/grade_lab.sh heldout at 4 lab cells; scored by t/score_heldout.py with --corpus for the chat arms; spec_check --pool v5 --only clean over every arm (registry t/out/spec-disagree.json)",
+  "clean_200": {
+    "locallm-r11-rerun": {
+      "well_formed": 90,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 51,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s1": {
+      "well_formed": 107,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 62,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s2": {
+      "well_formed": 106,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 61,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s3": {
+      "well_formed": 104,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 66,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s4": {
+      "well_formed": 86,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 62,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s5": {
+      "well_formed": 89,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 51,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s6": {
+      "well_formed": 83,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 54,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s7": {
+      "well_formed": 111,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 81,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s8": {
+      "well_formed": 99,
+      "tests_pass": 2,
+      "clean": 1,
+      "spec_disagrees": 1,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 66,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "locallm-r11-s9": {
+      "well_formed": 99,
+      "tests_pass": 0,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 61,
+      "clean_recited": "-",
+      "clean_novel": "-"
+    },
+    "dawnr-chat-r12c-s1337": {
+      "well_formed": 115,
+      "tests_pass": 3,
+      "clean": 2,
+      "spec_disagrees": 2,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 72,
+      "clean_recited": "0",
+      "clean_novel": "2"
+    },
+    "dawnr-chat-r12c-s1338": {
+      "well_formed": 95,
+      "tests_pass": 1,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 0,
+      "wrong_but_proven": 51,
+      "clean_recited": "0",
+      "clean_novel": "0"
+    },
+    "dawnr-chat-r12c-s1339": {
+      "well_formed": 124,
+      "tests_pass": 6,
+      "clean": 5,
+      "spec_disagrees": 4,
+      "clean_spec_checked": 0,
+      "spec_unchecked": 1,
+      "wrong_but_proven": 79,
+      "clean_recited": "1",
+      "clean_novel": "4"
+    }
+  },
+  "all_232": {
+    "locallm-r11-rerun": {
+      "well_formed": 110,
+      "tests_pass": 2,
+      "clean": 2,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 2,
+      "wrong_but_proven": 62
+    },
+    "locallm-r11-s1": {
+      "well_formed": 125,
+      "tests_pass": 3,
+      "clean": 3,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 3,
+      "wrong_but_proven": 72
+    },
+    "locallm-r11-s2": {
+      "well_formed": 128,
+      "tests_pass": 3,
+      "clean": 2,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 2,
+      "wrong_but_proven": 72
+    },
+    "locallm-r11-s3": {
+      "well_formed": 127,
+      "tests_pass": 2,
+      "clean": 2,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 2,
+      "wrong_but_proven": 79
+    },
+    "locallm-r11-s4": {
+      "well_formed": 102,
+      "tests_pass": 5,
+      "clean": 5,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 5,
+      "wrong_but_proven": 70
+    },
+    "locallm-r11-s5": {
+      "well_formed": 107,
+      "tests_pass": 4,
+      "clean": 3,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 3,
+      "wrong_but_proven": 58
+    },
+    "locallm-r11-s6": {
+      "well_formed": 98,
+      "tests_pass": 3,
+      "clean": 2,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 2,
+      "wrong_but_proven": 63
+    },
+    "locallm-r11-s7": {
+      "well_formed": 133,
+      "tests_pass": 3,
+      "clean": 3,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 3,
+      "wrong_but_proven": 95
+    },
+    "locallm-r11-s8": {
+      "well_formed": 121,
+      "tests_pass": 7,
+      "clean": 5,
+      "spec_disagrees": 1,
+      "clean_spec_checked": 4,
+      "wrong_but_proven": 77
+    },
+    "locallm-r11-s9": {
+      "well_formed": 120,
+      "tests_pass": 3,
+      "clean": 3,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 3,
+      "wrong_but_proven": 74
+    },
+    "dawnr-chat-r12c-s1337": {
+      "well_formed": 132,
+      "tests_pass": 4,
+      "clean": 3,
+      "spec_disagrees": 2,
+      "clean_spec_checked": 1,
+      "wrong_but_proven": 83
+    },
+    "dawnr-chat-r12c-s1338": {
+      "well_formed": 115,
+      "tests_pass": 2,
+      "clean": 0,
+      "spec_disagrees": 0,
+      "clean_spec_checked": 0,
+      "wrong_but_proven": 60
+    },
+    "dawnr-chat-r12c-s1339": {
+      "well_formed": 142,
+      "tests_pass": 7,
+      "clean": 6,
+      "spec_disagrees": 4,
+      "clean_spec_checked": 1,
+      "wrong_but_proven": 92
+    }
+  },
+  "failure_modes_232": {
+    "s1337": {
+      "unparseable": 61,
+      "wf_refused": 39,
+      "well_formed": 132,
+      "ended": 215,
+      "used_tool": 41,
+      "failing_verdict": 26,
+      "called_twice": 9,
+      "proved_in_seven": 86,
+      "tests_fail": 107,
+      "tests_pass": 4
+    },
+    "s1338": {
+      "unparseable": 65,
+      "wf_refused": 52,
+      "well_formed": 115,
+      "ended": 213,
+      "used_tool": 96,
+      "failing_verdict": 64,
+      "called_twice": 16,
+      "proved_in_seven": 60,
+      "tests_fail": 100,
+      "tests_pass": 2
+    },
+    "s1339": {
+      "unparseable": 54,
+      "wf_refused": 36,
+      "well_formed": 142,
+      "ended": 209,
+      "used_tool": 107,
+      "failing_verdict": 84,
+      "called_twice": 43,
+      "proved_in_seven": 98,
+      "tests_fail": 124,
+      "tests_pass": 7
+    }
+  },
+  "spec_check": {
+    "disagree": {
+      "dawnr-chat-r12c-s1337": [
+        "mbpp_711__product_Equal",
+        "mbpp_72__dif_Square"
+      ],
+      "dawnr-chat-r12c-s1339": [
+        "mbpp_20__is_woodall",
+        "mbpp_72__dif_Square",
+        "mbpp_741__all_Characters_Same",
+        "mbpp_768__check_Odd_Parity"
+      ],
+      "locallm-r11-s8": [
+        "mbpp_541__check_abundant"
+      ]
+    },
+    "agree": {
+      "dawnr-chat-r12c-s1337": [
+        "mbpp_887__is_odd (a contaminated problem, outside the 200)"
+      ]
+    },
+    "note": "the same program `r := n % 2 == 1` answered product_Equal, dif_Square and is_odd; two of the three problems' shown examples happen to agree with parity"
+  },
+  "compare_arms": {
+    "registered": "refused: the prereg registers seeds: 3 and the base arm has 10 tags (the format holds one seed count for all arms)",
+    "unregistered_exploratory": {
+      "metric": "clean, decontam",
+      "base_mean": 0.1,
+      "new_mean": 2.333,
+      "permutation_p": 0.0385,
+      "p_new_gt_base": 0.817,
+      "verdict": "ADOPT (unregistered, exploratory)"
+    },
+    "spec_checked_column": "0 for every arm, base and new"
+  },
+  "predictions": {
+    "1_well_formed_mean_above_91": {
+      "holds": true,
+      "measured": [
+        132,
+        115,
+        142
+      ],
+      "mean": 129.7
+    },
+    "2_a_seed_with_a_clean_answer_on_the_200": {
+      "holds_by_the_registered_metric": true,
+      "measured_clean": [
+        2,
+        0,
+        5
+      ],
+      "spec_checked": [
+        0,
+        0,
+        0
+      ],
+      "reading": "every such answer disagrees with the problem's own solution (6) or is a recitation (1): the metric admits a trivially specified answer that fits the shown examples; the honest number is 0"
+    },
+    "3_compare_inconclusive": {
+      "tested": false,
+      "reading": "the registered comparison refused the unequal seed counts; the exploratory reading on the raw metric is ADOPT (p = 0.0385), and on the spec-checked column there is nothing to compare"
+    },
+    "4_written_not_recited": {
+      "holds": true,
+      "measured": "6 novel, 1 recited among the 7 raw clean answers; the novel ones are the ones that disagree"
+    }
+  }
+}
