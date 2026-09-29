@@ -250,7 +250,8 @@ def stage_chat(st: Stage, a, init: Path, conversations: Path, steps: int, lr: fl
     ident = run["identities"]
     return {"model": str(out), "initial": run["initial"], "final": run["final"], "seconds": run["seconds"],
             "chat_tokens_added": ident["chat_tokens_added"], "train": ident["train"], "val": ident["val"],
-            "parameters": ident["parameters"], "steps": steps, "lr": lr, "peak_cuda_bytes": run["peak_cuda_bytes"]}
+            "parameters": ident["parameters"], "steps": steps, "lr": lr, "peak_cuda_bytes": run["peak_cuda_bytes"],
+            "dropped_over_block": ident.get("dropped_over_block", [])}
 
 
 def stage_eval(st: Stage, a, model: Path, conversations: Path) -> dict:
