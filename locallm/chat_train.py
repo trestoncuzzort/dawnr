@@ -117,6 +117,30 @@ def main(argv=None) -> int:
                  chat.with_harness_tokens(tokenizer) if harness else chat.with_chat_tokens(tokenizer))
     added = chat.grow_embeddings(model, tokenizer.vocab_size)
     model.to(device)
+    # 2026-09-29 (the r12 corpus through the pipeline): a conversation longer than the
+    # model's context cannot be trained without cutting it, and ConversationBatches
+    # refuses a cut conversation by design (a cut one is not the conversation that was
+    # built). Such conversations are dropped whole, by name, on both sides (the
+    # validation loss is batched the same way), recorded in run.json under
+    # identities["dropped_over_block"], and the run refuses only when no training
+    # conversation remains. TRL's SFTTrainer truncates to max_length instead
+    # (huggingface.co/docs/trl/main/en/sft_trainer) and nanochat's render_conversation
+    # truncates at max_tokens; here nothing is cut, so every trained row is a whole,
+    # gated conversation. First hit: vericoding_da0085__findMinimumTotalDistance,
+    # 2,109 tokens against a context of 2,048.
+    def rendered(convs):
+        return [(c, len(chat.render_conversation(tokenizer, c)[0])) for c in convs]
+    sides = {"train": rendered(train_convs), "val": rendered(val_convs)}
+    dropped = [{"split": side, "source": c.get("source", "?"), "tokens": n}
+               for side, rows in sides.items() for c, n in rows if n > config.block_size + 1]
+    if dropped:
+        train_convs = [c for c, n in sides["train"] if n <= config.block_size + 1]
+        val_convs = [c for c, n in sides["val"] if n <= config.block_size + 1]
+        for d in dropped:
+            print(f"dropped ({d['split']}): {d['source']} is {d['tokens']} tokens, over the model's "
+                  f"context of {config.block_size}; a whole conversation or none")
+        if not train_convs:
+            raise SystemExit("every training conversation is over the model's context; nothing to train on")
     if a.block_size == 0:
         longest = max(len(chat.render_conversation(tokenizer, c)[0]) for c in train_convs + val_convs) - 1
         a.block_size = min(config.block_size, -(-longest // 64) * 64)
@@ -133,6 +157,7 @@ def main(argv=None) -> int:
                   "config": asdict(model.config), "parameters": sum(p.numel() for p in model.parameters()),
                   "train": train_rows.record(), "val": val_rows.record() if val_rows else None,
                   "seed": a.seed, "block_size": a.block_size, "batch_size": a.batch_size, "steps": a.steps,
+                  "dropped_over_block": dropped,
                   **({"harness_tokens": list(chat.HARNESS_TOKENS)} if harness or memory else {}),
                   **({"memory_tokens": list(chat.MEMORY_TOKENS)} if memory else {}),
                   "lr": a.lr, "warmup": a.warmup, "weight_decay": a.weight_decay, "dropout": a.dropout,
