@@ -41,3 +41,38 @@ seeds and 2 in one) and the r12 seeds as they land (head-prompt, same corpus and
 **What follows.** If 2 holds: the chat pipeline replaces the head-prompt fine-tune as the arm
 the scoreboard reports for locallm, and the next round adds seeds and the repair, stop and RL
 stages in the pipeline plan's order. If 2 fails: the sampling pilot, through the engine.
+
+## Outcome (2026-09-29 09:40Z; `locallm/dawnr-chat-heldout-results-2026-09-29.json`)
+
+| seed | well formed / 232 | clean on the 200 (registered metric) | spec disagrees | clean, spec checked | recited |
+|---|---|---|---|---|---|
+| 1337 | 132 | 2 | 2 | 0 | 0 |
+| 1338 | 115 | 0 | 0 | 0 | 0 |
+| 1339 | 142 | 5 | 4 | 0 | 1 |
+| r11 base, ten seeds | 98 to 133 | 0 in nine, 1 in one | that 1 | 0 | - |
+
+1. **Holds.** Well formed 129.7 of 232 on average against r12 seed 1's 91.
+2. **Holds by the letter, fails in substance.** Seeds 1337 and 1339 have 2 and 5 clean answers
+   on the 200 by the registered metric (tests pass, verified in seven, twins refuted). The
+   specification check against each problem's own solution, 200 drawn inputs each (`spec_check`,
+   the plan's step 8), rejects six of the seven and the seventh is a recitation: the same
+   program `r := n % 2 == 1` answered three unrelated problems whose two shown examples happen
+   to agree with parity. **The honest number is 0, for these three seeds and for every one of
+   the ten base seeds** (the base's one clean answer, r11-s8's check_abundant, fails the same
+   check). The finding is about the metric: a proof of the model's own trivial specification
+   plus agreement on the shown examples is not correctness, and "clean, spec checked" is the
+   column to register from now on.
+3. **Not tested as registered.** `compare_arms.py --prereg` refused: the file registers one
+   seed count (3) and the base arm has ten tags. Run unregistered, on the raw metric, it reads
+   ADOPT (new 2.33 against base 0.10 per seed, one-sided p = 0.0385, P(new > base) 0.82), which
+   this file said would be reported as a headline and then rerun; on the spec-checked column
+   there is nothing to compare, 0 against 0.
+4. **Holds.** Six of the seven raw clean answers are novel (not a training document with names
+   erased); they are also the six the specification check rejects.
+
+The largest failure mode on the 232, every seed: proved against a specification the tests
+reject (60 to 98 answers proved in all seven kernels, 51 to 79 of them wrong on the 200), then
+unparseable (54 to 65) and checker-refused (36 to 52). The tool was called on 41 / 96 / 107
+answers and a failing verdict was followed by a second call on 9 / 16 / 43. What follows, per
+the pipeline plan: the stage that attacks proved-but-wrong at its root, registered before it
+trains.

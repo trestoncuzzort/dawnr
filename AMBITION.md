@@ -34,6 +34,14 @@ baseline regraded the same day by the same evaluator
 (`locallm/FINDINGS-round8-2026-09-19.md`). On the column that survives the
 specification check it is 3 against 2.
 
+**2026-09-29:** with the specification check applied to the held-out 200 (each
+answer's specification against the problem's own solution on 200 drawn inputs),
+every locallm arm measured so far reads 0: the ten r11 seeds, the r12 head-prompt
+seeds, and the chat pipeline's three seeds, whose 2 and 5 "clean" answers were
+the same trivial program fitting two shown examples by coincidence
+(`t/PREDICT-2026-09-29-dawnr-chat-heldout.md`). The bar in this section is
+measured on that column from now on.
+
 **What counts as the win, written down so it cannot be softened later:**
 
 - **4 clean of 232**, which is beating Phi on its own scoreboard.
@@ -205,7 +213,7 @@ is judged by the same rule: nothing is trusted without evidence.
 | dawnr needs | the machine-learning idea | where it stands |
 |---|---|---|
 | a brain that understands language and code | transformer pretraining from random weights | **built**: the locallm core; the weight-decay sweep is running. It has no general-English layer underneath (pretrained directly on ~150 MB of source code); surveyed, budgeted and decontaminated but not yet run (`internal/PRETRAIN-DAWNR-GENERAL.md`) |
-| to learn, not memorise | regularisation, denoising (fill in the middle), early stopping, more verified data | **in progress**: the chat pipeline on the 531-document corpus and the early-stopped core answers 49 of 100 dev problems well formed (from 19) and passes all examples on 1.3 (from 0.3) at three seeds (`locallm/PREDICT-2026-09-29-dawnr-r12-corpus.md`); still memorises (validation loss 0.23 against train 0.07) |
+| to learn, not memorise | regularisation, denoising (fill in the middle), early stopping, more verified data | **in progress**: the chat pipeline on the 531-document corpus and the early-stopped core answers 49 of 100 dev problems well formed (from 19) and passes all examples on 1.3 (from 0.3) at three seeds (`locallm/PREDICT-2026-09-29-dawnr-r12-corpus.md`); on the held-out 232 it is well formed on 130 (the head-prompt fine-tune: 91) but 0 of 200 survive the specification check, like every other arm (`t/PREDICT-2026-09-29-dawnr-chat-heldout.md`); still memorises (validation loss 0.23 against train 0.07) |
 | to know when it is right | verification as the judge, calibration, uncertainty, refusal | **the seven-kernel proof engine is this**; calibration not started |
 | to get better at reasoning | reinforcement learning with the verifier as the reward | **built, waiting on data**: tiered proof reward inspected by hand, GRPO trainer (Dr. GRPO advantages hold; plain GRPO unlearned). The model solves 0.6% of problems outside its corpus, too few to reinforce, so new verified data comes first (`t/RL-DESIGN-2026-09-26.md`) |
 | to know what it was not trained on | retrieval, embeddings, a vector index | not started |
