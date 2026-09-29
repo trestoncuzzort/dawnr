@@ -129,6 +129,41 @@ def judge(got: dict, user: str) -> dict:
             "repeated_after_failure": repeated, "repaired": bool(failed) and failed[0] == 0 and pass_all}
 
 
+def _jsonable(v):
+    try:
+        json.dumps(v)
+        return v
+    except (TypeError, ValueError):
+        return repr(v)
+
+
+def spec_agreement(program: str | None, entry: dict, n: int = 200, seed: int = 0) -> dict:
+    """The answer's specification against the problem's own solution on n drawn inputs
+    (t/spec_check.check_task, the check the held-out scorer applies as step 8), brought to
+    the dev split (2026-09-29). Two shown examples underdetermine a problem: on the held-out
+    232 one parity program answered three unrelated problems, passed each one's shown
+    examples, was proved against its own specification in seven kernels, and failed every
+    problem on drawn inputs. CodeT (arXiv:2207.10397) selects code by execution on generated
+    tests beyond the given examples for the same reason. The status is "agrees" only when
+    every drawn input the reference computes satisfies the ensures; "disagrees" names the
+    first input that does not; anything else is the check's own refusal, reported, never
+    counted as either."""
+    import random
+    import spec_check
+    import surface
+    if not program:
+        return {"status": "no program"}
+    try:
+        task = surface.parse(program)
+    except Exception as e:                                        # noqa: BLE001
+        return {"status": "parse", "why": str(e)[:120]}
+    try:
+        r = spec_check.check_task(task, entry, n, random.Random(seed))
+    except Exception as e:                                        # noqa: BLE001
+        return {"status": f"check failed: {type(e).__name__}"}
+    return {k: _jsonable(v) for k, v in r.items()}
+
+
 COUNTED = ("parses", "well_formed", "examples_all_pass", "got_failing_verdict", "acted_on_failure",
            "repeated_after_failure", "repaired")
 
@@ -244,8 +279,15 @@ def main(argv=None) -> int:
             tiers[tier] += 1
             judged = judge(got, user)
             tally(counts, got, judged)
+            # the specification against the problem's own solution on drawn inputs, counted
+            # beside "pass all examples" (spec_agreement above): the honest dev number is
+            # an answer that passes the shown examples AND agrees on the draws
+            spec = spec_agreement(got["program"], entry, seed=tid)
+            counts["spec_agrees"] += judged["examples_all_pass"] and spec.get("status") == "agrees"
+            counts["examples_pass_spec_disagrees"] += judged["examples_all_pass"] and spec.get("status") == "disagrees"
+            counts["spec_unchecked"] += judged["examples_all_pass"] and spec.get("status") not in ("agrees", "disagrees")
             rows_file.write(json.dumps({"set": "dev", "task_id": tid, "tier": tier, "stage": sig.get("stage"),
-                                        "tests": sig.get("tests"), "verdict": judged["verdict"],
+                                        "tests": sig.get("tests"), "verdict": judged["verdict"], "spec": spec,
                                         **{k: judged[k] for k in COUNTED}, **{k: got[k] for k in ROW_KEYS}}) + "\n")
         out["dev"] = {**dict(counts), "asked": len(dev), "tiers": {t: tiers.get(t, 0) for t in rl_reward.ORDER},
                       "at_least_typed": sum(tiers[t] for t in rl_reward.ORDER[2:]),
