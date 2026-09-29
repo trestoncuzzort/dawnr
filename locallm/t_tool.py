@@ -425,11 +425,36 @@ def spec_changed(prompt_task: dict, draft_task: dict) -> str | None:
     return None
 
 
-def call(program: str, context: str = "") -> str:
+def _judge_example(task: dict, types: list, ex: dict) -> str:
+    """One example's verdict text: pass, fail with both values, or the tool's own reason."""
+    if "error" in ex:
+        return f"unreadable: {_short(ex['error'])}"
+    if len(ex["args"]) != len(types):
+        return f"arity: {len(ex['args'])} arguments for {len(types)} parameters"
+    try:
+        args = [_value(ty, v) for ty, v in zip(types, ex["args"])]
+    except TypeError as e:
+        return f"cannot run: {_short(e)}"
+    got = run(task, args)
+    if got["verdict"] != "ok":
+        return got["verdict"] + (f": {got['why']}" if got.get("why") else "")
+    if json.dumps(got["got"]) == json.dumps(ex["expected"]):
+        return "pass"
+    return f"fail: got {json.dumps(got['got'])}, expected {json.dumps(ex['expected'])}"
+
+
+def call(program: str, context: str = "", drawn=()) -> str:
     """The tool: check the draft, compare its specification with the
     prompt's own when `context` states one (before running anything, and
     skipped silently when it does not -- see the section above), then run
-    it on every Example line in `context`."""
+    it on every Example line in `context`, and then on every `drawn` line
+    (2026-09-29: Example lines the prompt does not show, computed from the
+    proved program at training time and never available at inference; the
+    verdict names them `drawn i` so the model learns that the check reaches
+    past the shown examples. CodeT, arXiv:2207.10397, selects code on
+    generated tests beyond the given examples for the same reason: on the
+    held-out 232 one parity program answered three unrelated problems,
+    passing each one's two shown examples)."""
     task, lines = check(program)
     if task is None:
         return "\n".join(lines)
@@ -443,24 +468,9 @@ def call(program: str, context: str = "") -> str:
                 return "\n".join(lines)
     types = [p["type"] for p in task["params"]]
     for i, ex in enumerate(parse_examples(context), 1):
-        if "error" in ex:
-            lines.append(f"example {i}: unreadable: {_short(ex['error'])}")
-            continue
-        try:
-            args = [_value(ty, v) for ty, v in zip(types, ex["args"])]
-        except TypeError as e:
-            lines.append(f"example {i}: cannot run: {_short(e)}")
-            continue
-        if len(ex["args"]) != len(types):
-            lines.append(f"example {i}: arity: {len(ex['args'])} arguments for {len(types)} parameters")
-            continue
-        got = run(task, args)
-        if got["verdict"] != "ok":
-            lines.append(f"example {i}: {got['verdict']}" + (f": {got['why']}" if got.get("why") else ""))
-        elif json.dumps(got["got"]) == json.dumps(ex["expected"]):
-            lines.append(f"example {i}: pass")
-        else:
-            lines.append(f"example {i}: fail: got {json.dumps(got['got'])}, expected {json.dumps(ex['expected'])}")
+        lines.append(f"example {i}: {_judge_example(task, types, ex)}")
+    for j, ex in enumerate(parse_examples("\n".join(drawn)), 1):
+        lines.append(f"drawn {j}: {_judge_example(task, types, ex)}")
     return "\n".join(lines)
 
 
@@ -475,29 +485,10 @@ def examples_from_program(program: str, n: int = 2, limit: int = 256) -> list[st
     Only int, bool and seq parameters are shown (what parse_examples reads
     back); anything else gives no examples.
     """
-    import interp
-    import surface
-    task = surface.parse(program)
-    names = [(p["name"], p["type"]) for p in task["params"]]
-    if not names or any(ty not in RUNNABLE_TYPES for _, ty in names):
-        return []
-    rows = []
-    for env in interp.domain(task, names, limit):
-        args = [env[name] for name, _ in names]
-        got = run(task, args)
-        if got["verdict"] == "ok":
-            rows.append(([interp._j(a) for a in args], got["got"]))
+    task, rows = _program_rows(program, limit)
     if not rows:
         return []
-
-    def size(row):
-        return len(json.dumps(row[0]))
-
-    # from the median input size upward, then the smaller ones: the smallest
-    # inputs (0, []) rarely separate programs and the largest are the ladders'
-    # 2**31 boundary values
-    ordered = sorted(rows, key=size)
-    ordered = ordered[len(ordered) // 2:] + ordered[:len(ordered) // 2]
+    ordered = _median_up(rows)
     chosen, seen = [], set()
     for row in ordered:
         key = json.dumps(row[1])
@@ -509,3 +500,55 @@ def examples_from_program(program: str, n: int = 2, limit: int = 256) -> list[st
     fn = task["name"]
     return [f"Example: {fn}({', '.join(json.dumps(a) for a in args)}) == {json.dumps(out)}"
             for args, out in chosen]
+
+
+def _program_rows(program: str, limit: int = 256):
+    """(task, [(args, out), ...]) for a program on the interpreter's own domain ladders: the rows
+    examples_from_program and drawn_examples both draw from."""
+    import interp
+    import surface
+    task = surface.parse(program)
+    names = [(p["name"], p["type"]) for p in task["params"]]
+    if not names or any(ty not in RUNNABLE_TYPES for _, ty in names):
+        return task, []
+    rows = []
+    for env in interp.domain(task, names, limit):
+        args = [env[name] for name, _ in names]
+        got = run(task, args)
+        if got["verdict"] == "ok":
+            rows.append(([interp._j(a) for a in args], got["got"]))
+    return task, rows
+
+
+def _median_up(rows):
+    """From the median input size upward, then the smaller ones: the smallest inputs (0, []) rarely
+    separate programs and the largest are the ladders' 2**31 boundary values."""
+    ordered = sorted(rows, key=lambda row: len(json.dumps(row[0])))
+    return ordered[len(ordered) // 2:] + ordered[:len(ordered) // 2]
+
+
+def drawn_examples(program: str, prompt: str, k: int, limit: int = 256) -> list[str]:
+    """Up to k `Example:` lines from a PROVED program on inputs the prompt does not show
+    (2026-09-29). Unlike examples_from_program, distinct outputs are not required: the point of
+    a drawn line is another input, and a bool-valued task has only two outputs to give. Inputs
+    already shown in the prompt (by their argument text) are skipped, and each drawn input is
+    distinct. Seven kernels proved the program meets its specification, so every line is a true
+    statement about the problem the document answers."""
+    if k <= 0:
+        return []
+    task, rows = _program_rows(program, limit)
+    if not rows:
+        return []
+    shown = {m.group(2).replace(" ", "") for m in EXAMPLE.finditer(prompt or "")}
+    fn = task["name"]
+    out, seen = [], set()
+    for args, val in _median_up(rows):
+        key = ", ".join(json.dumps(a) for a in args)
+        if key.replace(" ", "") in shown or key in seen:
+            continue
+        seen.add(key)
+        out.append(f"Example: {fn}({key}) == {json.dumps(val)}")
+        if len(out) == k:
+            break
+    return out
+

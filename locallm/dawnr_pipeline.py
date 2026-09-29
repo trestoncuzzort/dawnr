@@ -213,7 +213,7 @@ def stage_conversations(st: Stage, a) -> dict:
     out = st.dir / "conversations.jsonl"
     run_logged([sys.executable, "chat_data.py", "--corpus", str(a.corpus), "--split", str(a.split),
                 "--out", str(out), "--tool-rate", str(a.tool_rate), "--split-seed", str(a.split_seed),
-                "--val-frac", str(a.val_frac)], st.dir / "log.txt")
+                "--val-frac", str(a.val_frac), "--drawn", str(a.drawn)], st.dir / "log.txt")
     summary = json.loads(out.with_suffix(".summary.json").read_text(encoding="utf-8"))
     result = {"file": str(out), **{k: v for k, v in summary.items() if k != "skipped"},
               "skipped": len(summary["skipped"])}
@@ -279,6 +279,8 @@ def main(argv=None) -> int:
     ap.add_argument("--block-size", type=int, default=0,
                     help="chat row length and held-out row length; 0: chat_train's automatic choice, the model's context")
     ap.add_argument("--tool-rate", type=float, default=0.5)
+    ap.add_argument("--drawn", type=int, default=0,
+                    help="Example lines the prompt does not show, checked in the tool's verdicts (2026-09-29)")
     ap.add_argument("--extra-conversations", type=Path, default=None,
                     help="training-side conversations to add to the mid stage's data (repair_data.py build, "
                          "tool_conversations.py build)")
@@ -344,7 +346,7 @@ def main(argv=None) -> int:
                          "train_py": HERE / "train.py",
                          "core_ckpt": a.core / "ckpt.pt" if a.core else None, "block_size": a.block_size},
                 lambda st: stage_base(st, a, sides, tok["result"]))
-    conv = step("conversations", {**common, "tool_rate": a.tool_rate, "chat_data": HERE / "chat_data.py",
+    conv = step("conversations", {**common, "tool_rate": a.tool_rate, "drawn": a.drawn, "chat_data": HERE / "chat_data.py",
                                   "t_tool": HERE / "t_tool.py", "extra_conversations": a.extra_conversations},
                 lambda st: stage_conversations(st, a))
     base_model = Path(base["result"]["model"]) if base.get("result") else None
