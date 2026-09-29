@@ -31,7 +31,11 @@ exists to answer is whether a model built from that data does more per parameter
    soften. A report that stops at the bad number throws away the useful half.
 5. **Look for it before you write it.** Every implementation checks for a repository, a paper or an online
    source that already solves the problem, *before* any code is written — not after, and not only when the
-   problem looks hard. If nothing usable exists, say so in the commit message with the word `INVENTED:` and what
+   problem looks hard. The first place to look is this repository's own record: `internal/` (the RESEARCH-*
+   and PRETRAIN-* notes), `t/PREDICT-*.md`, `locallm/FINDINGS-*.md`, the `DAWNR-*.md` plans and the mirrored
+   research library at `~/resources` (`python3 ~/resources/mirror.py search <terms>`); the web comes second.
+   Added 2026-09-29, after a plan written in `internal/` days earlier went unread while the card ran a round
+   whose answer the notes had already given. If nothing usable exists, say so in the commit message with the word `INVENTED:` and what
    was searched for. This is enforced rather than remembered: the `commit-msg` hook (tracked in `.githooks/`; install
    with `cp .githooks/commit-msg .git/hooks/`) refuses a commit that
    changes Python and cites neither a source nor `INVENTED:`. It is enforced because it was skipped twice in one
