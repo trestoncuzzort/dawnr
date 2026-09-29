@@ -37,6 +37,15 @@ bound, the spec_fun-call certificates in Dafny and Frama-C) grew it to the build
 same builder, same gates, same `--min-kernels 7`. The predictions below are unchanged;
 prediction 1's document count reads the new total.
 
+**Split seed 1338, recorded 2026-09-29 before any seed trained.** On the first launch
+the trainer refused the recipe's `--split-seed 1337`: the hash split's holdout on this
+corpus is 6.9% of the characters (46 of 531 documents), under the 8% floor for
+`--val-frac 0.1`. Section C of `t/RUN-NEXT-locallm-r12.md` wrote the rule for this
+case in advance (the next registered split seed is used and recorded): 1338 holds out
+10.7% by characters, so every r12 arm trains with `--split-seed 1338`. The validation
+holdout is the trainer's loss curve only; the held-out evaluation set (split-v5, the
+232) and the dev split are untouched, and the predictions stand as written.
+
 ## Arms
 
 **Base** (r11, already graded, `t/DATA-r12.md` / `t/r12_data_queue.sh R11_TAGS`):
