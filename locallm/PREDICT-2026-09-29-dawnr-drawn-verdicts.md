@@ -1,6 +1,6 @@
 # Drawn verdicts: the tool checks inputs the prompt does not show, registered before the run (2026-09-29)
 
-**Written 2026-09-29 10:30Z, before any training.** The held-out look
+**Written 2026-09-29 09:30Z, before any training.** The held-out look
 (`t/PREDICT-2026-09-29-dawnr-chat-heldout.md`) found the pipeline's largest failure on unseen
 problems: a program that fits the two shown examples with a specification the problem rejects,
 proved in seven kernels against itself (60 to 98 of 232 per seed), and the dev signal had the
