@@ -27,7 +27,7 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from data import CharTokenizer, Corpus, build_tokenizer, load_tokenizer, tokenizer_fingerprint
+from data import CharTokenizer, Corpus, build_tokenizer, load_tokenizer, tokenizer_fingerprint, TokenShards
 from model import GPT, GPTConfig
 from train import (BETAS, EARLY_STOP_MIN_DELTA, EARLY_STOP_PATIENCE, MODEL_PRESETS, EarlyStopper,
                    auto_lr, cosine_lr, decay_split, enable_fast_math, make_optimizer)
@@ -39,7 +39,14 @@ EVAL_SEED = 12345
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--data", required=True)
+    parser.add_argument("--data", help="a text corpus (tokenized at start; see --data-tokens for a big one)")
+    parser.add_argument("--data-tokens", help="uint16 token shard files (a glob or a directory of .bin files) written "
+                        "by t/dawnr_english_corpus.py with the frozen tokenizer, read by memmap (2026-09-29); "
+                        "needs --tokenizer-file, since shards carry no text to train a tokenizer on")
+    parser.add_argument("--data-tokens-limit", type=int, default=0,
+                        help="use only the first N tokens of the shards in file order (0: all)")
+    parser.add_argument("--data-tokens-val", type=int, default=1_000_000,
+                        help="the last N tokens of the used range are the validation split")
     parser.add_argument("--validation-data", help="an already separated validation file; neither file is resplit")
     parser.add_argument("--out", default=str(HERE / "out/distributed"))
     parser.add_argument("--preset", choices=MODEL_PRESETS, default="core-small")
@@ -115,6 +122,16 @@ def write_json(path: Path, value: dict) -> None:
     temp.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temp.replace(path)
 
+
+
+def token_shard_paths(spec: str) -> list:
+    """The shard files a --data-tokens argument names, in file order: a directory of .bin files or a glob."""
+    import glob
+    p = Path(spec)
+    paths = sorted(p.glob("*.bin")) if p.is_dir() else sorted(Path(x) for x in glob.glob(spec))
+    if not paths:
+        raise ValueError(f"--data-tokens {spec}: no shard files")
+    return paths
 
 def training_identity(args, cfg: GPTConfig, corpus: Corpus, text: str, token_hash: str, world: int) -> dict:
     explicit = args.validation_data is not None
@@ -298,7 +315,17 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
         enable_fast_math()
 
     out = Path(args.out)
-    text = Path(args.data).read_bytes().decode("utf-8")
+    if bool(args.data) == bool(args.data_tokens):
+        raise ValueError("give exactly one of --data (a text corpus) and --data-tokens (uint16 shards)")
+    shard_paths = None
+    if args.data_tokens:
+        if not args.tokenizer_file and not args.resume:
+            raise ValueError("--data-tokens needs --tokenizer-file: shards carry no text to train a tokenizer on")
+        shard_paths = token_shard_paths(args.data_tokens)
+        text = (f"token shards: limit {args.data_tokens_limit}, val {args.data_tokens_val}\n"
+                + TokenShards.manifest(shard_paths))
+    else:
+        text = Path(args.data).read_bytes().decode("utf-8")
     validation_text = Path(args.validation_data).read_bytes().decode("utf-8") if args.validation_data else None
     if validation_text is not None and validation_text == text:
         raise ValueError("Explicit training and validation files are identical")
@@ -328,8 +355,11 @@ def run(args, rank: int, world: int, local_rank: int) -> dict | None:
     dist.all_gather_object(fingerprints, token_hash)
     if len(set(fingerprints)) != 1:
         raise ValueError("Ranks loaded different tokenizers")
-    corpus = Corpus(text, tokenizer, "cpu", val_frac=args.val_frac, seed=args.split_seed,
-                    validation_text=validation_text)
+    if shard_paths is not None:
+        corpus = TokenShards(shard_paths, val_tokens=args.data_tokens_val, limit_tokens=args.data_tokens_limit)
+    else:
+        corpus = Corpus(text, tokenizer, "cpu", val_frac=args.val_frac, seed=args.split_seed,
+                        validation_text=validation_text)
     if min(len(corpus.train), len(corpus.val)) <= args.block_size:
         raise ValueError("Both document splits must contain more tokens than --block-size")
     cfg = GPTConfig(vocab_size=tokenizer.vocab_size, block_size=args.block_size, n_layer=args.n_layer,
