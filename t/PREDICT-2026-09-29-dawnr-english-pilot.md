@@ -70,3 +70,42 @@ cadence does not touch the training stream). The arms, the tokens, the judgement
 predictions above are unchanged; no arm has been evaluated. Two trainer defects found on the way
 are fixed in the repository: a CUDA resume moved the generator state to the GPU and refused it
 (74fc41e6), and the decay above.
+
+## Outcome (written 2026-09-29 21:30Z, after all three arms were judged)
+
+Results: `locallm/dawnr-english-pilot-results-2026-09-29.json`. Arm B trained on the desktop
+(stage 1 76 min; stage 2 3.1 h at the registered decay, after the amendment above); arm C
+trained on a rented H100 through `locallm/cloud_train.py` (the same command, 235k tokens/s
+against the desktop's 65k) and was judged on the desktop like the others. Dev numbers are the
+registered judgement at seed 1337 (100 problems); the held-out loss is the pipeline's base
+stage on the 46 proved validation documents.
+
+| arm | core | well formed | pass all shown | `spec_agrees` | pass shown, spec disagrees | used tool | held-out nats/token |
+|---|---|---:|---:|---:|---:|---:|---:|
+| A | the r12 sweep's best.pt (~485M code tokens, best validation 1.166) | 49 | 1 | 0 | 1 | 17 | 3.7154 |
+| B | 300M English then 734M code (wd 0.8; code validation 1.214 at the end) | 29 | 0 | 0 | 0 | 24 | 3.6425 |
+| C | 1,034M code from random weights (code validation 1.245 best, 1.256 final) | 23 | 1 | 0 | 1 | 17 | 3.6686 |
+
+1. **Holds.** B's held-out loss on the proved documents, 3.6425, is below A's 3.7154 (C: 3.6686).
+2. **Falsified.** B is well formed on 29 dev problems, not more than A's 51 (A judged again here: 49).
+3. **Falsified.** B passes all shown examples on 0 dev problems; A and C on 1 each.
+4. **Holds.** `spec_agrees` is 0 on every arm: no answer from any core agrees with the problem's own
+   solution on drawn inputs. The base rate the drawn-verdicts run found is unchanged by a
+   different core at this scale.
+
+**Reading.** At matched total tokens, English before code beats code alone on both measures
+(B against C: held-out loss 3.6425 against 3.6686, well formed 29 against 23), so the English
+layer does something. But both trail the existing core on form by a wide margin (49), while
+scoring a slightly lower held-out loss than it, so the pipeline's form is not monotone in the
+base loss. The difference between A and the two new arms is the number of passes over the same
+48.8M-token code corpus: A is the sweep's best-validation checkpoint after about 10 epochs, B's
+stage 2 is the final state after 15 and C after 21. The sweep already recorded that this corpus
+memorises past step 7,400 (validation rising while training falls); the pilot shows the cost of
+that on the chat pipeline's form. Two consequences for the r12 core run: keep the code
+continuation short with best-validation checkpointing (the sweep's regime, not 15 epochs), and
+expect the English layer's gain to be small at 300M tokens; the plan's own budget (1.9B to 17.8B
+tokens for this size) is where the question is answered. The held-out 232 were not touched.
+
+**Costs.** Arm C on the rented H100: about 80 minutes including startup, under $6 of the
+month's free credit. The two trainer defects found on the way (the CUDA resume, the missing decay
+flag) are fixed in 74fc41e6 and b0ff259d.
