@@ -13,6 +13,8 @@ pilot's launcher judges it the way it judges every arm.
     modal volume put dawnr-data <tokenizer.json> tokenizer.json
     modal volume put dawnr-data <corpus.txt> corpus/train.txt
     DAWNR_GPU=H100 modal run --detach locallm/cloud_train.py --steps 63111 --out runs/arm-c-matched-code
+    DAWNR_GPU=H100:8 DAWNR_MEMORY_MB=65536 modal run --detach locallm/cloud_train.py --nproc 8 \
+        --data "english/file-*/english-*.bin" --recipe "<the registered flags>" --steps N --out runs/<name>
 
 Research only (release.py names it so): it imports modal, which the shipped app never does.
 Nothing here names a person, a machine or an account; the workspace comes from ~/.modal.toml.
@@ -27,7 +29,8 @@ from pathlib import Path
 
 import modal
 
-GPU = os.environ.get("DAWNR_GPU", "H100")
+GPU = os.environ.get("DAWNR_GPU", "H100")            # "H100", "A100-80GB", "H100:8" ...
+MEMORY_MB = int(os.environ.get("DAWNR_MEMORY_MB", "24576"))
 HERE = Path(__file__).resolve().parent
 
 volume = modal.Volume.from_name("dawnr-data", create_if_missing=True)
@@ -46,13 +49,21 @@ RECIPE = ["--tokenizer-file", "/data/tokenizer.json", "--architecture", "gpt", "
           "--deterministic", "--bf16"]
 
 
-@app.function(gpu=GPU, timeout=12 * 3600, volumes={"/data": volume}, cpu=4.0, memory=24576)
-def train(steps: int, out: str, data: str = "corpus/train.txt", save_every: int = 2000) -> str:
-    """Run the arm; commit the volume every ten minutes so a checkpoint outlives the container."""
+@app.function(gpu=GPU, timeout=24 * 3600, volumes={"/data": volume}, cpu=8.0, memory=MEMORY_MB)
+def train(steps: int, out: str, data: str = "corpus/train.txt", save_every: int = 2000,
+          recipe: str = "", nproc: int = 1) -> str:
+    """Run the arm; commit the volume every ten minutes so a checkpoint outlives the container.
+
+    `recipe` replaces RECIPE (the pilot's) with the registered run's own trainer flags, one
+    string; `data` is a text corpus path (--data) or, when it names .bin shards, a --data-tokens
+    glob; `nproc` is the number of ranks torchrun starts, one per GPU in the gpu spec.
+    """
     run_dir = Path("/data") / out
     run_dir.mkdir(parents=True, exist_ok=True)
-    cmd = ["python", "-m", "torch.distributed.run", "--standalone", "--nproc-per-node=1",
-           "/root/locallm/train_distributed.py", "--data", f"/data/{data}", *RECIPE,
+    flags = recipe.split() if recipe else list(RECIPE)
+    data_flag = ["--data-tokens", f"/data/{data}"] if ".bin" in data else ["--data", f"/data/{data}"]
+    cmd = ["python", "-m", "torch.distributed.run", "--standalone", f"--nproc-per-node={nproc}",
+           "/root/locallm/train_distributed.py", *data_flag, *flags,
            "--steps", str(steps), "--save-every", str(save_every), "--out", str(run_dir)]
     if (run_dir / "ckpt.pt").exists():
         cmd.append("--resume")
@@ -79,5 +90,5 @@ def train(steps: int, out: str, data: str = "corpus/train.txt", save_every: int 
 
 @app.local_entrypoint()
 def main(steps: int = 63111, out: str = "runs/arm-c-matched-code", data: str = "corpus/train.txt",
-         save_every: int = 2000):
-    print(train.remote(steps, out, data, save_every))
+         save_every: int = 2000, recipe: str = "", nproc: int = 1):
+    print(train.remote(steps, out, data, save_every, recipe, nproc))
