@@ -40,3 +40,24 @@ evaluation, `locallm/tool-conversations-results-2026-09-27.json`): dev well form
 
 Seeds and numbers land in `locallm/dawnr-r12-corpus-results-2026-09-29.json`; the run
 directories are `~/scratch/dawnr-r12/A-s<seed>` on the desktop (not in the repository).
+
+## Outcome (2026-09-29 05:38Z, three seeds, `locallm/dawnr-r12-corpus-results-2026-09-29.json`)
+
+| seed | parses | well formed | pass all examples | used the tool |
+|---|---|---|---|---|
+| 1337 | 68 | 51 | 0 | 16 |
+| 1338 | 61 | 36 | 1 | 35 |
+| 1339 | 76 | 61 | 3 | 52 |
+| mean | 68.3 | **49.3** (baseline 18.7) | **1.33** (baseline 0.33) | 34.3 |
+
+1. **Holds.** Well formed 49.3 against 18.7: the format is learned far better from 531 headed
+   documents and the early-stopped core.
+2. **Holds.** 1.33 against 0.33, and seed 1339 passes 3. Small numbers at three seeds; the
+   direction is the corpus and core, the size is inside seed noise until more seeds run.
+3. **Holds.** r12 seed 1's head-prompt model passes 0 of the same 100 at every checkpoint (5
+   assertions at best); the pipeline passes 0, 1 and 3.
+4. **Kept.** The held-out 200 were not asked. Next: one held-out answer set from the chat model.
+
+One conversation was dropped whole at mid-training on every seed
+(`vericoding_da0085__findMinimumTotalDistance`, 2,109 tokens against a 2,048 context; the drop
+rule and its record, 453fc1a5). Each seed took about seven minutes on the desktop card.
