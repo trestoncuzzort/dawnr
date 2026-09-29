@@ -404,3 +404,21 @@ the model does not follow those instructions from the person either.
 `chat.final_program`
 now takes a registry `t` call or an MCP `t_check` as submitting a program, and
 `chat_eval.py` ranks only the calls that submit one.
+
+## The r12 corpus and core (2026-09-29)
+
+The pipeline had only ever trained on the 358-document corpus of 2026-09-26. Registered first
+(`locallm/PREDICT-2026-09-29-dawnr-r12-corpus.md`), then run at three seeds on the 531-document
+corpus (463 clean in seven kernels, 147 English heads; 485 train / 46 validation conversations
+by the hash split, 274 with a t-tool call) from the r12 pretraining run's early-stopped core:
+on the 100 dev problems, **well formed 51 / 36 / 61 (mean 49.3, from 18.7)** and **pass all
+examples 0 / 1 / 3 (mean 1.33, from 0.33)**, the tool used on 16 / 35 / 52. The head-prompt
+fine-tune of the same corpus and core (r12, seed 1) passes 0 of the same 100 at every
+checkpoint. All four predictions held; the numbers are in
+`locallm/dawnr-r12-corpus-results-2026-09-29.json`. Two rules landed on the way: the reply stop
+for the head-prompt path is the document terminator (`t/loop_locallm.py`, since a
+document-trained model never writes the next head), and a conversation over the model's
+context is dropped whole, by name, never cut (`chat_train.py`; one of 531 here). Next, in
+the order the plan gives: one held-out answer set from the chat model, exported once and graded
+by the seven kernels like every other arm; repairs as edits; the honest stop; RL through the
+engine.

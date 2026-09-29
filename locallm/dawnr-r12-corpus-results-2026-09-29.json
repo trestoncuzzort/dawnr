@@ -1,0 +1,246 @@
+{
+  "registered": "locallm/PREDICT-2026-09-29-dawnr-r12-corpus.md (commit 0ee087ad, before the run)",
+  "run": {
+    "corpus": "t/out/loop/corpus-r12-headed.txt",
+    "corpus_sha256": "12491a7f067ea0b96a6ee6217b9869c9d81e743904603f202109d8f878daf943",
+    "core": "the r12 pretraining run's best.pt (step 7,600) as ckpt.pt",
+    "core_sha256": "df4048e2f62eb8adbe425a357a2b96cf825e97f7950177f652edfae865763692",
+    "pipeline": "locallm/dawnr_pipeline.py --harness-tokens --tool-rate 0.5 --mid-steps 400 --mid-lr 1e-4 --dev 100 --max-tokens 800",
+    "evaluation": "chat_eval.py greedy, 800 tokens, --grammar --max-calls 2 --answer best-verdict, 100 dev problems (t/r12-dev-ids.json)",
+    "machine": "desktop RTX 4080 under the GPU lock beside the r12 launcher",
+    "code": "453fc1a5"
+  },
+  "baseline_2026_09_27_A_arms": {
+    "corpus": "358 documents",
+    "well_formed": [
+      30,
+      9,
+      17
+    ],
+    "examples_all_pass": [
+      0,
+      1,
+      0
+    ],
+    "used_tool": [
+      29,
+      44,
+      16
+    ]
+  },
+  "seeds": {
+    "1337": {
+      "dev": {
+        "asked": 100,
+        "parses": 68,
+        "well_formed": 51,
+        "examples_all_pass": 0,
+        "got_failing_verdict": 16,
+        "acted_on_failure": 1,
+        "repeated_after_failure": 1,
+        "used_tool": 16,
+        "opened_call": 16,
+        "closed_every_call": 16
+      },
+      "eval": {
+        "max_tokens": 800,
+        "decoding": "greedy",
+        "grammar": true,
+        "max_calls": 2,
+        "answer": "best-verdict"
+      },
+      "mid": {
+        "steps": 400,
+        "lr": 0.0001,
+        "seconds": 77.2,
+        "initial": {
+          "step": 0,
+          "train": 2.0851321775067153,
+          "val": 2.192927341368824
+        },
+        "final": {
+          "step": 400,
+          "train": 0.06566705249053874,
+          "val": 0.22513681969357008,
+          "batch_loss": 0.07652757316827774,
+          "lr": 1.0001537845112144e-05,
+          "seconds": 76.5
+        },
+        "dropped_over_block": [
+          {
+            "split": "train",
+            "source": "vericoding_da0085__findMinimumTotalDistance",
+            "tokens": 2109
+          }
+        ]
+      },
+      "conversations": {
+        "documents": 531,
+        "conversations": 531,
+        "train": 485,
+        "val": 46,
+        "problem_heads": 215,
+        "tool_conversations": 274
+      }
+    },
+    "1338": {
+      "dev": {
+        "asked": 100,
+        "parses": 61,
+        "well_formed": 36,
+        "examples_all_pass": 1,
+        "got_failing_verdict": 35,
+        "acted_on_failure": 4,
+        "repeated_after_failure": 3,
+        "used_tool": 35,
+        "opened_call": 41,
+        "closed_every_call": 35
+      },
+      "eval": {
+        "max_tokens": 800,
+        "decoding": "greedy",
+        "grammar": true,
+        "max_calls": 2,
+        "answer": "best-verdict"
+      },
+      "mid": {
+        "steps": 400,
+        "lr": 0.0001,
+        "seconds": 77.1,
+        "initial": {
+          "step": 0,
+          "train": 2.0851321775067153,
+          "val": 2.192927341368824
+        },
+        "final": {
+          "step": 400,
+          "train": 0.06496139821004224,
+          "val": 0.22506611169163618,
+          "batch_loss": 0.13172514736652374,
+          "lr": 1.0001537845112144e-05,
+          "seconds": 76.3
+        },
+        "dropped_over_block": [
+          {
+            "split": "train",
+            "source": "vericoding_da0085__findMinimumTotalDistance",
+            "tokens": 2109
+          }
+        ]
+      },
+      "conversations": {
+        "documents": 531,
+        "conversations": 531,
+        "train": 485,
+        "val": 46,
+        "problem_heads": 215,
+        "tool_conversations": 274
+      }
+    },
+    "1339": {
+      "dev": {
+        "asked": 100,
+        "parses": 76,
+        "well_formed": 61,
+        "examples_all_pass": 3,
+        "got_failing_verdict": 51,
+        "acted_on_failure": 10,
+        "repeated_after_failure": 9,
+        "used_tool": 52,
+        "opened_call": 56,
+        "closed_every_call": 51
+      },
+      "eval": {
+        "max_tokens": 800,
+        "decoding": "greedy",
+        "grammar": true,
+        "max_calls": 2,
+        "answer": "best-verdict"
+      },
+      "mid": {
+        "steps": 400,
+        "lr": 0.0001,
+        "seconds": 77.1,
+        "initial": {
+          "step": 0,
+          "train": 2.0851321775067153,
+          "val": 2.192927341368824
+        },
+        "final": {
+          "step": 400,
+          "train": 0.06645609244708536,
+          "val": 0.22591686978599138,
+          "batch_loss": 0.11987050622701645,
+          "lr": 1.0001537845112144e-05,
+          "seconds": 76.3
+        },
+        "dropped_over_block": [
+          {
+            "split": "train",
+            "source": "vericoding_da0085__findMinimumTotalDistance",
+            "tokens": 2109
+          }
+        ]
+      },
+      "conversations": {
+        "documents": 531,
+        "conversations": 531,
+        "train": 485,
+        "val": 46,
+        "problem_heads": 215,
+        "tool_conversations": 274
+      }
+    }
+  },
+  "means": {
+    "well_formed": 49.3,
+    "examples_all_pass": 1.33
+  },
+  "r12_head_prompt_seed1_dev": {
+    "passed_problems_per_step": {
+      "50": 0,
+      "100": 0,
+      "150": 0,
+      "200": 0,
+      "250": 0,
+      "300": 0
+    },
+    "best_assertions": 5,
+    "chosen_step": 250,
+    "note": "t/out/locallm-r12-s1/selection.json under the fixed reply stop; same 100 dev problems"
+  },
+  "predictions": {
+    "1_well_formed_mean_at_or_above_18.7": {
+      "holds": true,
+      "measured": [
+        51,
+        36,
+        61
+      ]
+    },
+    "2_all_pass_mean_above_0.33_and_a_seed_at_2_or_more": {
+      "holds": true,
+      "measured": [
+        0,
+        1,
+        3
+      ]
+    },
+    "3_at_least_r12_seed1_best_checkpoint": {
+      "holds": true,
+      "measured": {
+        "pipeline": [
+          0,
+          1,
+          3
+        ],
+        "r12_head_prompt": 0
+      },
+      "note": "holds, and r12's head-prompt model passes none"
+    },
+    "4_held_out_untouched": {
+      "holds": true,
+      "next": "one held-out answer set from the chat model, graded by the seven kernels, under the one-look rule"
+    }
+  }
+}
