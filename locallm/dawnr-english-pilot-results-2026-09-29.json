@@ -1,0 +1,81 @@
+{
+ "registered": "t/PREDICT-2026-09-29-dawnr-english-pilot.md (amended 15:45Z: stage 2 at the registered decay 0.8)",
+ "judgement": "dawnr_pipeline mid stage (400 steps, 1e-4, tool rate 0.5, harness tokens, seed 1337) on the 531-document r12 corpus, then chat_eval on 100 dev problems (greedy, 800 tokens, grammar, two calls, best-verdict) with spec_agrees; base held-out loss on the 46 proved validation documents (8,501 target tokens)",
+ "arms": {
+  "A": {
+   "core": "the r12 sweep's best.pt (wd 0.8, lr 1e-3, best validation 1.166 at step 7,400 of 11,200; about 485M code tokens, ~10 epochs)",
+   "dev": {
+    "well_formed": 49,
+    "examples_all_pass": 1,
+    "spec_agrees": 0,
+    "examples_pass_spec_disagrees": 1,
+    "used_tool": 17
+   },
+   "heldout_nats_per_token": 3.7154,
+   "heldout_nats_per_char": 1.4643
+  },
+  "B": {
+   "core": "stage 1: 300,015,104 English tokens from random weights (18,311 steps, desktop, final English validation 2.525); stage 2: 734,003,200 code tokens continued at wd 0.8 (44,800 steps, ~15 epochs, desktop, code validation 1.903 at step 2,000 -> 1.214 at 44,800, monotone)",
+   "dev": {
+    "well_formed": 29,
+    "examples_all_pass": 0,
+    "spec_agrees": 0,
+    "examples_pass_spec_disagrees": 0,
+    "used_tool": 24
+   },
+   "heldout_nats_per_token": 3.6425,
+   "heldout_nats_per_char": 1.4356
+  },
+  "C": {
+   "core": "1,034,018,304 code tokens from random weights (63,111 steps, ~21 epochs, rented H100 via locallm/cloud_train.py at 235k tokens/s; code validation best 1.245, final 1.256 on its own split)",
+   "dev": {
+    "well_formed": 23,
+    "examples_all_pass": 1,
+    "spec_agrees": 0,
+    "examples_pass_spec_disagrees": 1,
+    "used_tool": 17
+   },
+   "heldout_nats_per_token": 3.6686,
+   "heldout_nats_per_char": 1.4459
+  }
+ },
+ "predictions": {
+  "1_B_heldout_loss_below_A": {
+   "holds": true,
+   "measured": {
+    "B": 3.6425,
+    "A": 3.7154,
+    "C": 3.6686
+   }
+  },
+  "2_B_well_formed_above_51": {
+   "holds": false,
+   "measured": {
+    "B": 29,
+    "A_registered": 51,
+    "A_judged_here": 49
+   }
+  },
+  "3_B_passes_more_than_A_and_C": {
+   "holds": false,
+   "measured": {
+    "B": 0,
+    "A": 1,
+    "C": 1
+   }
+  },
+  "4_spec_agrees_zero_everywhere": {
+   "holds": true,
+   "measured": {
+    "A": 0,
+    "B": 0,
+    "C": 0
+   }
+  }
+ },
+ "discarded_runs": {
+  "arm-b-stage2-code-wd0.1-diverged": "stage 2 at the trainer's default decay 0.1, diverged (val 1.52 at 8k -> 3.59 at 10k), stopped at step ~29,400, not an arm",
+  "arm-c-matched-code-desktop-aborted / -desktop-partial": "desktop attempts at arm C, killed in startup or by the 8 GB memory cap; nothing trained"
+ },
+ "run_dirs": "t/out/dawnr-english-pilot-2026-09-27/ (desktop); Modal volume dawnr-data runs/arm-c-matched-code; ~/scratch/dawnr-english-pilot/eval-{A,B,C}"
+}

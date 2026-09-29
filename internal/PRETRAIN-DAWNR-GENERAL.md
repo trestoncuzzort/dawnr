@@ -517,3 +517,30 @@ flock ~/scratch/gpu.lock systemd-run --user --scope -p MemoryMax=6G \
 the calibration's measured throughput, committed first -- section 6's own rule, unchanged. This
 section only makes the commands exist and checks them against the tools as they are today; it
 does not pre-register the run itself, and none of the above has been executed.
+
+## 8. The pilot's result (2026-09-29)
+
+Section 6's three arms ran on 2026-09-29 (`t/PREDICT-2026-09-29-dawnr-english-pilot.md`,
+outcome section; results `locallm/dawnr-english-pilot-results-2026-09-29.json`). Arm B on the
+desktop: stage 1 over the 300M-token English slice (final English validation 2.525 nats per
+token), stage 2 over the code corpus continued at the sweep's decay 0.8 (an amendment: the
+continue trainer had no decay flag and its 0.1 default diverged the way the sweep's control
+did; `--weight-decay` exists now). Arm C on a rented H100 through `locallm/cloud_train.py`,
+the same command at 3.6 times the desktop's rate. Judged the pipeline's way at seed 1337:
+
+| arm | well formed | pass all shown | `spec_agrees` | held-out nats/token |
+|---|---:|---:|---:|---:|
+| A (the sweep's best.pt, ~485M code tokens) | 49 | 1 | 0 | 3.7154 |
+| B (300M English, then 734M code) | 29 | 0 | 0 | 3.6425 |
+| C (1,034M code) | 23 | 1 | 0 | 3.6686 |
+
+English before code beats code alone at matched tokens on both measures, and both trail the
+existing core on form because they are final states after 15 and 21 passes over the 48.8M-token
+corpus, past the point where the sweep saw memorisation begin (step 7,400). `spec_agrees` is 0
+for every core. What this fixes for the next run (the r12 core, section 2's budget on the full
+FineWeb-Edu sample): the code continuation stays short with best-validation checkpointing, the
+English stage is where the tokens go, and the English shards for it exist: all 14 parquet files
+and TinyStories tokenized on 2026-09-29 with the section 7.3 tool, 16.4B tokens in 31 GB of
+uint16 shards (file 000 is section 7.3's; files 001-013 hold 1.17B each but the last, 295M;
+TinyStories 811M), decontaminated by the widened set of 7.1, and uploaded to the rented
+volume `dawnr-data` under `english/file-*/`.
