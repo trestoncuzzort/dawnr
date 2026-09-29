@@ -420,3 +420,12 @@ corpus (synced; this commit carries it). The core checkpoint the launcher waits 
 reads `stopped` at its best in `run.json`, which `t/out/r12-run/run.sh` accepts. Nothing has
 trained. What r12 still waits for is the operator's word; everything the lane could do before it
 is done or named here.
+
+2026-09-29 (launch): the section C rule fired. The trainer refused `--split-seed 1337` on the
+531-document corpus (holdout 6.9% by characters, 46 documents, under the 8% floor); the next
+registered split seed, 1338, holds out 10.7% and is what `t/out/r12-run/run.sh` now passes,
+recorded in `t/PREDICT-r12.md` before any seed trained. The launcher's first attempt had also
+found `continue_from_checkpoint --init` unable to take the pretraining run's `best.pt` (it read
+only a directory's `ckpt.pt`, the last state, not the early-stopped best); the trainer now takes
+a checkpoint file with its tokenizer beside it, the reading `checkpoint.load_checkpoint` already
+gives kept checkpoints (`locallm/test_continue_init_paths.py`).
