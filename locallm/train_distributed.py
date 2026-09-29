@@ -27,7 +27,8 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from data import CharTokenizer, Corpus, build_tokenizer, load_tokenizer, tokenizer_fingerprint, TokenShards
+from data import CharTokenizer, Corpus, build_tokenizer, load_tokenizer, tokenizer_fingerprint
+from token_shards import TokenShards
 from model import GPT, GPTConfig
 from train import (BETAS, EARLY_STOP_MIN_DELTA, EARLY_STOP_PATIENCE, MODEL_PRESETS, EarlyStopper,
                    auto_lr, cosine_lr, decay_split, enable_fast_math, make_optimizer)
