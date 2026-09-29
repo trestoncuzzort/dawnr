@@ -33,26 +33,27 @@ trusted because what it writes is checked.
 - **It is built, not borrowed.** The model is trained from random weights on
   one machine; no one else's base model is underneath it.
 
-## Where it stands (2026-09-26)
+## Where it stands (2026-09-29)
 
 | part | state |
 |---|---|
 | core model (`locallm/`): a GPT trained from scratch | built; pretraining sweep done |
 | proof engine (`t/`): `t`, seven provers, twins, specification checks | built and hardened |
 | data engine: lifting verified Dafny, Verus, Lean and C programs into `t` | **464 documents clean in all seven provers** (from 194 on 2026-09-26), 569 with graded trust (six clean, the missing prover recorded); r12 trains on the 463 registered before its launch |
-| learning instead of memorising | the main open problem: on problems it was not trained on, the model rarely succeeds; early stopping, best checkpoints and denoising are in place, and more data is the lever |
+| learning instead of memorising | the main open problem. On the held-out 200 with the specification check applied, every arm reads 0: the ten r11 seeds, the r12 head-prompt seeds so far, and the chat pipeline's three seeds (which reach 2 and 5 by the looser metric, all rejected by the check or recited). Early stopping, best checkpoints and denoising are in place; the next lever is verdicts that draw inputs beyond the shown examples ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md), 2026-09-29) |
 | reinforcement learning with the provers as the reward | built and tested; waits until the model succeeds often enough on new problems to have something to reinforce |
 | the model's own verified answers as new data (expert iteration) | running with a local teacher model |
-| a chat pipeline (format, mid-training, tools, report card), adapted from nanochat | runs end to end ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md)); its first tool is the t interpreter, which the model calls on its own draft; it does not yet act on a failed check |
+| a chat pipeline (format, mid-training, tools, report card), adapted from nanochat | runs end to end ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md)); its first tool is the t interpreter, which the model calls on its own draft. On the 531-document corpus and the early-stopped core it is well formed on 49 of 100 dev problems (from 19) and on 130 of the held-out 232 (the head-prompt fine-tune: 91), measured 2026-09-29 with a registered prediction; it does not yet act well on a failed check, and its correct-looking answers do not survive the specification check |
 | acting on the machine: files, commands, processes, plans | built, not yet learned by any model: every action through the harness's permissions, plans shown in a dry run and approved as a whole; 0 escapes on 5,000 generated paths, 0 of 80 injected actions run ([DAWNR-AGENT.md](DAWNR-AGENT.md)) |
 | learning from each person between sessions ([DAWNR-LEARNING.md](DAWNR-LEARNING.md)) | built: feedback kept per person under their control, a per-person adapter trained in guarded sleeps, a style profile inferred from their edits. Measured on four simulated persons: the profile halves their edit cost with every checked answer unchanged; the adapter fits their style only in likelihood, and where it changes what dawnr writes it costs correct answers |
 | retrieval, memory, tool use, speech, vision | not started; in the order [AMBITION.md](AMBITION.md) gives |
 
 The honest headline: the machinery that makes dawnr trustworthy works; the
-model is not yet good at problems it has not seen. The last baseline passed
-0 of 200 clean held-out problems in eight of nine seeds. Every number here
-links back to the run that produced it, and failures are published beside
-successes ([CORRECTIONS.md](CORRECTIONS.md), [LIMITS.md](LIMITS.md)).
+model is not yet good at problems it has not seen. With the specification
+check applied, 0 of 200 clean held-out problems for every arm measured so far
+(2026-09-29); the check is what caught answers that fit the shown examples by
+coincidence. Every number here links back to the run that produced it, and
+failures are published beside successes ([CORRECTIONS.md](CORRECTIONS.md), [LIMITS.md](LIMITS.md)).
 
 ## How progress is measured
 

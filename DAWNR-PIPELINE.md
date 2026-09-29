@@ -422,3 +422,23 @@ context is dropped whole, by name, never cut (`chat_train.py`; one of 531 here).
 the order the plan gives: one held-out answer set from the chat model, exported once and graded
 by the seven kernels like every other arm; repairs as edits; the honest stop; RL through the
 engine.
+
+## The chat model's first look at the held-out 232 (2026-09-29)
+
+`locallm/chat_heldout.py` exports a chat-trained checkpoint's answers in the record every other
+arm has, gated by a registered prediction and never overwriting a set; the three r12-corpus seeds
+went through `t/grade_lab.sh heldout` and `t/score_heldout.py` unchanged
+(`t/PREDICT-2026-09-29-dawnr-chat-heldout.md`, results in
+`locallm/dawnr-chat-heldout-results-2026-09-29.json`). Well formed 132 / 115 / 142 of 232 (the
+head-prompt r12 seed: 91). Clean on the 200 by the registered metric: 2 / 0 / 5, against 0 in
+nine of the ten base seeds; `compare_arms` unregistered reads ADOPT on that metric. The
+specification check (`spec_check`, 200 draws against each problem's own solution) rejects six
+of those seven and the seventh is a recitation: `r := n % 2 == 1` answered product_Equal,
+dif_Square and is_odd alike, and two shown examples per problem happen to agree with parity. On
+the spec-checked column every arm, base and new, is 0. Two lessons: the primary metric is
+"clean, spec checked" from here on, and the pipeline's largest failure mode on unseen problems
+is a program proved against a specification of its own that the problem rejects (60 to 98 per
+seed), ahead of unparseable answers (54 to 65). The dev signal has the same hole, since it only
+runs the prompt's examples. The next stage is chosen against that: verdicts that draw inputs
+beyond the shown examples, at training time from the proved program and at evaluation time from
+the problem's own solution, so that fitting two examples stops counting as solving the problem.
