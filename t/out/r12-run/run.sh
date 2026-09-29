@@ -142,7 +142,7 @@ train_seed() {
     "$PY" locallm/continue_from_checkpoint.py \
       --init "$CORE" --data "$CORPUS" --split "$SPLIT" \
       --out "$out" --steps 300 --lr 3e-5 --block-size 512 \
-      --doc-batches --keep-every 50 --dropout 0.1 --split-seed 1337 --seed "$s" --deterministic
+      --doc-batches --keep-every 50 --dropout 0.1 --split-seed 1338 --seed "$s" --deterministic
 }
 pick_step_seed() {
   local s=$1 out=t/out/locallm-r12-s$s

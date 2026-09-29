@@ -102,8 +102,25 @@ def text_sha256(text: str) -> str:
     return sha256(text.encode("utf-8")).hexdigest()
 
 
+def init_paths(init) -> tuple[Path, Path]:
+    """The checkpoint file and the tokenizer behind `--init` (2026-09-29): a
+    run directory (its ckpt.pt, the full training state) or a weights-only
+    checkpoint file with the tokenizer beside it (a pretraining run's best.pt,
+    a kept ckpt-step-N.pt), the reading checkpoint.load_checkpoint already
+    gives a generation path. PyTorch's own guide keeps the two shapes apart
+    (docs.pytorch.org/tutorials/beginner/saving_loading_models.html: a model
+    state_dict for inference or warm-starting, a general checkpoint with the
+    optimizer for resuming); both initialize a continuation here, since only
+    "model" and "config" are read. The r12 launcher hands over best.pt, the
+    early-stopped state, which the directory reading could never reach."""
+    p = Path(init)
+    if p.is_file():
+        return p, p.parent / "tokenizer.json"
+    return p / "ckpt.pt", p / "tokenizer.json"
+
+
 def load_core(init_dir, device, dropout, torch_module, gpt, config_type):
-    checkpoint = torch_module.load(Path(init_dir) / "ckpt.pt", map_location="cpu", weights_only=True)
+    checkpoint = torch_module.load(init_paths(init_dir)[0], map_location="cpu", weights_only=True)
     checkpoint.pop("optimizer", None)
     config = config_type(**{**checkpoint["config"], "dropout": dropout})
     model = gpt(config)
@@ -439,7 +456,9 @@ def pair_summary(model, rows, reference, batch_size, beta, torch_module, ignore_
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--init", type=Path, required=True, help="checkpoint directory to continue")
+    parser.add_argument("--init", type=Path, required=True,
+                        help="checkpoint directory to continue (its ckpt.pt), or a weights-only checkpoint "
+                             "file with the tokenizer beside it (best.pt, ckpt-step-N.pt)")
     parser.add_argument("--data", type=Path, required=True, help="corpus .txt")
     parser.add_argument("--split", type=Path, required=True,
                         help="evaluation split whose eval_ids must be absent from --data")
@@ -552,7 +571,7 @@ def main():
     reproducibility = configure_determinism(args.deterministic, torch)   # before pick_device
     device = args.device or core_train.pick_device()
     args.out.mkdir(parents=True, exist_ok=True)
-    tokenizer_source = Path(args.init) / "tokenizer.json"
+    tokenizer_source = init_paths(args.init)[1]
     tokenizer = load_tokenizer(tokenizer_source)
     torch.manual_seed(args.seed)
     if device.startswith("cuda"):
@@ -645,7 +664,7 @@ def main():
     # from its own generator, and the reference copy is not loaded at all
     # (GPT() initializes from the global stream before its weights are replaced).
     pairs_rows = pairs_reference = pairs_record = None
-    init_sha256 = file_sha256(args.init / "ckpt.pt")
+    init_sha256 = file_sha256(init_paths(args.init)[0])
     if pair_rows is not None:
         pairs_rows = PairBatches(pair_rows, tokenizer, args.block_size, args.seed, device)
         pairs_record = {"file": str(args.pairs), "sha256": file_sha256(args.pairs), "loss": args.pref_loss,
