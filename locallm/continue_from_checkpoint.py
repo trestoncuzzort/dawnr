@@ -454,6 +454,16 @@ def pair_summary(model, rows, reference, batch_size, beta, torch_module, ignore_
             "pairs_chosen_deficit": float(torch_module.clamp(reference_chosen - chosen, min=0.0).mean())}
 
 
+def decay_matches(saved: dict, current: dict) -> bool:
+    """A resume keeps the weight decay it started with.
+
+    Runs recorded before 2026-09-29 have no "weight_decay" in their identities;
+    they all ran at make_optimizer's 0.1, so a missing key reads as 0.1 rather
+    than refusing every older resume.
+    """
+    return float(saved.get("weight_decay", 0.1)) == float(current.get("weight_decay", 0.1))
+
+
 def restore_rng(state: dict, device: str, torch_module) -> None:
     """Put the saved generator states back, on the CPU where the generators keep them.
 
@@ -486,6 +496,11 @@ def main():
     parser.add_argument("--block-size", type=int, default=512)
     parser.add_argument("--lr", type=float, default=3e-5,
                         help="low by default: this continues a trained core rather than starting one")
+    parser.add_argument("--weight-decay", type=float, default=0.1,
+                        help="AdamW decay on the matrices (train.make_optimizer): 0.1 is what every recorded "
+                             "fine-tune ran with; a continued pretraining stage passes the pretraining recipe's "
+                             "(the r12 sweep's 0.8 at lr 1e-3; its 0.1 control diverged, and so did the English "
+                             "pilot's stage 2 at this default, 2026-09-29)")
     parser.add_argument("--warmup", type=int, default=20)
     parser.add_argument("--dropout", type=float, default=0.0)
     parser.add_argument("--val-frac", type=float, default=0.1)
@@ -700,8 +715,8 @@ def main():
             pairs_reference = pair_logps(reference_model, pairs_rows, args.pair_batch_size, torch, IGNORE_INDEX)
             del reference_model
         print(json.dumps({"pairs": pairs_record}), flush=True)
-    optimizer = core_train.make_optimizer(model, args.lr)
-    identities = {"init": str(args.init), "init_ckpt_sha256": init_sha256,
+    optimizer = core_train.make_optimizer(model, args.lr, args.weight_decay)
+    identities = {"init": str(args.init), "init_ckpt_sha256": init_sha256, "weight_decay": args.weight_decay,
                   "tokenizer_file_sha256": file_sha256(tokenizer_source),
                   "tokenizer_fingerprint": tokenizer_fingerprint(tokenizer),
                   "corpus": str(args.data), "corpus_sha256": file_sha256(args.data),
@@ -734,6 +749,8 @@ def main():
         for path in RESUME_PATHS:
             if nested(state["identities"], path) != nested(identities, path):
                 raise ValueError(f"cannot resume: {'.'.join(path)} changed since this run started")
+        if not decay_matches(state["identities"], identities):
+            raise ValueError("cannot resume: weight decay changed since this run started")
         model.load_state_dict(state["model"])
         optimizer.load_state_dict(state["optimizer"])
         restore_rng(state, device, torch)

@@ -54,3 +54,19 @@ arms start after this line is committed.
 Nothing here touches the held-out 232. Results and the calibration's measured throughput are
 recorded below when they land; run directories under `t/out/dawnr-english-pilot-2026-09-27/`
 and `~/scratch/dawnr-english-pilot/`.
+
+## Amendment, 2026-09-29 15:45Z, before any arm is judged: arm B's stage 2 reran at the registered decay
+
+Stage 2 as first launched ran at weight decay 0.1, not the sweep recipe's 0.8 this registration
+names: `continue_from_checkpoint.py` had no decay flag and took `train.make_optimizer`'s
+fine-tune default. At lr 1e-3 over 44,800 steps (15 passes over the 48.8M-token code corpus) it
+showed the sweep control's signature (`internal/PRETRAIN-R12-2026-09-25.md`, results): validation
+1.52 nats per token at step 8,000, a spike to 3.59 at 10,000, then 2.3 to 3.3 through step
+28,000 with the fixed training windows the same, instability rather than memorisation. That run
+is kept as `arm-b-stage2-code-wd0.1-diverged` and is not an arm. Stage 2 restarts from stage 1's
+checkpoint with `--weight-decay 0.8` (the flag added for it) and `--eval-every 2000` (the default
+50 spent 42% of the wall clock on validation; evaluation draws from its own generator, so the
+cadence does not touch the training stream). The arms, the tokens, the judgement and the four
+predictions above are unchanged; no arm has been evaluated. Two trainer defects found on the way
+are fixed in the repository: a CUDA resume moved the generator state to the GPU and refused it
+(74fc41e6), and the decay above.
