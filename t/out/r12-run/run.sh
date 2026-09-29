@@ -167,7 +167,18 @@ generate_seed() {
 grade_seed() {
   local s=$1 tag=locallm-r12-s$s
   [ -f "t/out/spec-experiment/$tag/kernels.md" ] && { log "seed $s: already graded"; return 0; }
-  run env T_LAB="$T_LAB" T_LAB_JOBS="$GRADE_CELLS" T_LAB_RUN_PAR=--no-cache bash t/grade_lab.sh heldout "$tag"
+  run env T_LAB="$T_LAB" T_LAB_JOBS="$GRADE_CELLS" T_LAB_RUN_PAR=--no-cache bash t/grade_lab.sh heldout "$tag" \
+    && return 0
+  # 2026-09-29: an answer set with no well-formed answer has nothing for the kernels, and
+  # run_par refuses an empty task set (exit 2), which grade_lab.sh reports as a failure. That
+  # is a measured outcome, not a fault: 0 well-formed, 0 clean, which score_heldout.py counts
+  # from extract.json and tests.json with no kernels.md present. Recorded, and the run goes on.
+  if [ "$DRY" != 1 ] && [ -d "t/out/spec-experiment/$tag/tasks" ] \
+     && [ -z "$(ls -A "t/out/spec-experiment/$tag/tasks" 2>/dev/null)" ]; then
+    log "seed $s: no well-formed answer parsed, nothing to grade; scored as 0 (extract.json, tests.json)"
+    return 0
+  fi
+  return 1
 }
 
 # ------------------------------------------------------------------ compare --
