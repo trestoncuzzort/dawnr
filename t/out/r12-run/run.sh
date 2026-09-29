@@ -55,7 +55,10 @@ MEM_CAP=6G
 [ -z "${T_LAB:-}" ] && [ -f t/lab-workstation.conf ] && . t/lab-workstation.conf
 T_LAB=${T_LAB:?set T_LAB=user@host or T_LAB=local in t/lab-workstation.conf, or export it}
 GRADE_CELLS=${R12_RUN_GRADE_CELLS:-2}          # ~8 cores; see the header note
-PY="$HOME/.venv-locallm/bin/python"
+PY="$HOME/.venv-locallm/bin/python"   # every stage that imports torch runs under this venv: training,
+                                       # the stopping-step choice (it decodes) and gen_fleet.sh (T_PY;
+                                       # its default is the lab's vLLM venv, absent here). 2026-09-29:
+                                       # the first launch died at pick-step on the system python3.
 OUT_DIR=t/out/r12-run
 LOG="$OUT_DIR/run.log"
 mkdir -p "$OUT_DIR"
@@ -148,13 +151,13 @@ pick_step_seed() {
   local s=$1 out=t/out/locallm-r12-s$s
   [ -f "$out/selection.json" ] && { log "seed $s: stopping step already chosen"; return 0; }
   run flock "$GPU_LOCK" systemd-run --user --scope -p MemoryMax="$MEM_CAP" \
-    python3 t/pick_stopping_step.py --run "$out" --split "$SPLIT" --dev-ids "$DEV_IDS" --install
+    "$PY" t/pick_stopping_step.py --run "$out" --split "$SPLIT" --dev-ids "$DEV_IDS" --install
 }
 generate_seed() {
   local s=$1 tag=locallm-r12-s$s out=t/out/locallm-r12-s$s
   [ -f "t/out/gen-$tag.done" ] && { log "seed $s: already generated (t/out/gen-$tag.done)"; return 0; }
   run flock "$GPU_LOCK" systemd-run --user --scope -p MemoryMax="$MEM_CAP" \
-    bash t/gen_fleet.sh "$out" "$tag" 1 "0" --temperature 0
+    env T_PY="$PY" bash t/gen_fleet.sh "$out" "$tag" 1 "0" --temperature 0
 }
 grade_seed() {
   local s=$1 tag=locallm-r12-s$s
