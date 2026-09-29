@@ -454,6 +454,24 @@ def pair_summary(model, rows, reference, batch_size, beta, torch_module, ignore_
             "pairs_chosen_deficit": float(torch_module.clamp(reference_chosen - chosen, min=0.0).mean())}
 
 
+def restore_rng(state: dict, device: str, torch_module) -> None:
+    """Put the saved generator states back, on the CPU where the generators keep them.
+
+    state.pt is loaded with map_location=device, which moves every tensor in it
+    to that device, the generator states included; torch.set_rng_state takes a
+    CPU ByteTensor and nothing else ("RNG state must be a torch.ByteTensor",
+    docs.pytorch.org torch.set_rng_state: "This function only works for CPU"),
+    which is how the English pilot's arm B stage 2 refused its own resume on
+    2026-09-29. train_distributed.py's restore had `.cpu()` from the start; this
+    is the same. Window batches and dropout draw from the device's generator,
+    so a GPU run that restored only the CPU stream replayed its batch sequence:
+    both streams come back.
+    """
+    torch_module.set_rng_state(state["rng"].cpu())
+    if device.startswith("cuda") and state.get("cuda_rng") is not None:
+        torch_module.cuda.set_rng_state_all([s.cpu() for s in state["cuda_rng"]])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--init", type=Path, required=True,
@@ -718,11 +736,7 @@ def main():
                 raise ValueError(f"cannot resume: {'.'.join(path)} changed since this run started")
         model.load_state_dict(state["model"])
         optimizer.load_state_dict(state["optimizer"])
-        torch.set_rng_state(state["rng"])
-        # Window batches and dropout draw from the device's generator, so a GPU
-        # run that restored only the CPU stream replayed its batch sequence.
-        if device.startswith("cuda") and state.get("cuda_rng") is not None:
-            torch.cuda.set_rng_state_all(state["cuda_rng"])
+        restore_rng(state, device, torch)
         if pairs_reference is not None and state.get("pairs_reference") is not None:
             # the values the run started with, so a resumed run continues against the same reference
             pairs_reference = tuple(t.to(device) for t in state["pairs_reference"])
