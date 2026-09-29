@@ -126,7 +126,7 @@ RESEARCH = tuple(re.compile(p) for p in (
     r"audit_.*\.py$", r"bench_.*\.py$", r"measure_.*\.py$", r"latent_.*\.py$",
     r"research_model\.py$", r"train_factorial\.py$", r"train_distributed\.py$",
     r"score_execution\.py$", r"sample_.*\.py$", r"completion_batch\.py$",
-    r"continue_from_checkpoint\.py$", r"next_latent\.py$", r"test_.*\.py$",
+    r"continue_from_checkpoint\.py$", r"next_latent\.py$", r"token_shards\.py$", r"test_.*\.py$",
 ))
 
 # Research files inside a package, named exactly (the RESEARCH patterns match

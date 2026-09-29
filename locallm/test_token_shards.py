@@ -1,4 +1,4 @@
-"""data.TokenShards (2026-09-29): a pretraining corpus read from uint16 token shards through
+"""token_shards.TokenShards (2026-09-29): a pretraining corpus read from uint16 token shards through
 memmap, serving Corpus's get_batch contract without holding Python ints. nanoGPT's design
 (github.com/karpathy/nanoGPT, prepare.py and train.py get_batch). Needs numpy and torch."""
 from __future__ import annotations
@@ -14,7 +14,7 @@ sys.path.insert(0, str(HERE))
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
-from data import TokenShards  # noqa: E402
+from token_shards import TokenShards  # noqa: E402
 
 
 def _shards(d: Path, sizes) -> list:
