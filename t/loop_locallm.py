@@ -54,12 +54,24 @@ import surface                                                  # noqa: E402
 
 OUT = HERE / "out" / "loop-locallm"
 CLEAN = "verified / refuted"
-# The boundary an answer ends at: the next head this project writes. A corpus
-# whose documents begin with a head teaches the model to emit that head between
-# documents (2026-09-19, when a Signature: corpus left two programs in one reply
-# and 216 of 232 answers unparseable). One constant, because the stop rule in
-# locallm/model.py has to stop at exactly the boundary this file cuts at.
-REPLY_BOUNDARY = re.compile(r"\n\s*\n(?=Problem: |Signature: |t \d)")
+# The boundary an answer ends at: the document terminator, a blank line. No corpus
+# document and no committed task holds a blank line inside it (measured 2026-09-29:
+# 0 of 531 documents, 0 of 43 task files), so the first blank line after the body
+# starts is exactly where the document ends. Until 2026-09-29 the rule required the
+# NEXT head after the blank line (`(?=Problem: |Signature: |t \d)`), which a model
+# trained on random windows emits between documents (2026-09-19, when a Signature:
+# corpus left two programs in one reply and 216 of 232 answers unparseable). A model
+# fine-tuned with --doc-batches (r12, section C) is trained on `document + DOC_END`
+# and nothing after it (data.DocumentBatches, DOC_END = "\n\n"), so it writes the
+# program, the blank line, and then drifts into its pretraining text: r12 seed 1
+# ran 832 of 832 replies to the 1,200-token budget, every one unparseable, with a
+# complete program before the first blank line. The terminator the training rows
+# end with is the stop, as a stop string or eos is in Hugging Face generation
+# (huggingface.co/docs/transformers/main/en/generation_strategies). For a reply
+# that goes on to the next head the cut is the same byte as before. One constant,
+# because the stop rule in locallm/model.py has to stop at exactly the boundary
+# this file cuts at.
+REPLY_BOUNDARY = re.compile(r"\n\s*\n")
 
 
 def reply_cut(head: str, text: str) -> int | None:

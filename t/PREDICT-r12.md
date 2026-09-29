@@ -46,6 +46,23 @@ case in advance (the next registered split seed is used and recorded): 1338 hold
 holdout is the trainer's loss curve only; the held-out evaluation set (split-v5, the
 232) and the dev split are untouched, and the predictions stand as written.
 
+**The reply stop is the document terminator, recorded 2026-09-29 before any held-out
+answer was scored.** Seed 1's first pass, under the old rule, decoded 832 replies
+(600 dev, 232 held-out) and every one ran to the 1,200-token budget unparseable:
+each holds a complete program, then a blank line, then text drifted from the
+pretraining corpus. The cause is a mismatch between section C's `--doc-batches`
+rows, which end every document with a blank line and nothing after it, and the
+2026-09-25 stop rule, which waited for the *next document's head* after the blank
+line, something a windows-trained model emits and a document-trained model never
+does. The stop is now the blank line itself (`t/loop_locallm.py` REPLY_BOUNDARY;
+no corpus document or committed task holds an internal blank line, measured). For
+a reply that goes on to the next head the cut is the same byte as before, so the
+base arm's answers are unaffected; seed 1's first-pass replies are kept aside in
+the run record (`~/scratch/r12-s1-nostop` on the desktop, not scored) and its
+stopping step and held-out answers are redone under the stop. The launcher also
+records an answer set with no well-formed answer as 0 well-formed, 0 clean instead
+of stopping the run. The predictions stand as written.
+
 ## Arms
 
 **Base** (r11, already graded, `t/DATA-r12.md` / `t/r12_data_queue.sh R11_TAGS`):
