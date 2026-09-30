@@ -91,5 +91,13 @@ def train(steps: int, out: str, data: str = "corpus/train.txt", save_every: int 
 
 @app.local_entrypoint()
 def main(steps: int = 63111, out: str = "runs/arm-c-matched-code", data: str = "corpus/train.txt",
-         save_every: int = 2000, recipe: str = "", nproc: int = 1):
+         save_every: int = 2000, recipe: str = "", nproc: int = 1, spawn: bool = False):
+    """With --spawn the call is a future the caller does not hold open (modal.FunctionCall): a
+    client whose network drops cancels nothing, which is what happened to a run on 2026-09-30.
+    The id it prints is polled with FunctionCall.from_id(id).get(timeout=0); progress is read
+    from the volume, which the function commits every ten minutes."""
+    if spawn:
+        call = train.spawn(steps, out, data, save_every, recipe, nproc)
+        print(f"SPAWNED {call.object_id}")
+        return
     print(train.remote(steps, out, data, save_every, recipe, nproc))
