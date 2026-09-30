@@ -21,12 +21,14 @@ Disagreements are reported with the input that shows them. The reference solutio
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime
 import hashlib
 import json
 import random
 import signal
 import sys
+import threading
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -70,6 +72,43 @@ class Timeout(Exception):
 
 def _alarm(_sig, _frm):
     raise Timeout()
+
+
+@contextlib.contextmanager
+def _deadline_alarm(seconds: int):
+    """Unix: the interval alarm (signal.alarm, "Availability: Unix"), set and cleared as before."""
+    signal.signal(signal.SIGALRM, _alarm)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
+
+@contextlib.contextmanager
+def _deadline_thread(seconds: float):
+    """Elsewhere: a watchdog thread raises Timeout in this thread with PyThreadState_SetAsyncExc
+    (docs.python.org/3/c-api/threads.html), the mechanism stopit's ThreadingTimeout uses
+    (github.com/glenfant/stopit). It interrupts Python bytecode only: a reference stuck inside one
+    C call ends when that call returns. A firing that has not landed when the block ends is cleared
+    by passing NULL; one that lands in the same instant is reported as a timeout."""
+    import ctypes
+    target = ctypes.c_ulong(threading.get_ident())
+    timer = threading.Timer(seconds, ctypes.pythonapi.PyThreadState_SetAsyncExc,
+                            (target, ctypes.py_object(Timeout)))
+    timer.daemon = True
+    timer.start()
+    try:
+        yield
+    finally:
+        timer.cancel()
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(target, None)
+
+
+def deadline(seconds: int):
+    """Raise Timeout in the calling thread if the block runs longer than `seconds` (2026-09-30: the
+    evaluation path runs on Windows too). Unix keeps the alarm, so nothing measured there changes."""
+    return _deadline_alarm(seconds) if hasattr(signal, "SIGALRM") else _deadline_thread(seconds)
 
 
 def draw(kind: str, rnd: random.Random, like=None):
@@ -393,10 +432,9 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
         args = [draw(k, rnd, ex) for k, ex in zip(kinds, examples)]
         if any(a is None for a in args):
             return {"status": f"cannot draw {kinds}"}
-        signal.signal(signal.SIGALRM, _alarm)
-        signal.alarm(5)
         try:
-            out = fn(*[x if not isinstance(x, list) else list(x) for x in args])
+            with deadline(5):
+                out = fn(*[x if not isinstance(x, list) else list(x) for x in args])
         except Timeout:
             return {"status": "reference did not finish"}
         except Exception:                                       # noqa: BLE001
@@ -405,7 +443,6 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
             # it is incomplete on the input side. Timeouts are handled above and
             # deliberately do not reach here: not finishing is a different
             # failure from not being defined.
-            signal.alarm(0)
             try:
                 env_in = {p["name"]: to_t(a) for p, a in zip(task["params"], args)}
             except TypeError:
@@ -424,8 +461,6 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
                 if domain_witness is None:
                     domain_witness = {"args": args, "reference_raised": True}
             continue
-        finally:
-            signal.alarm(0)
         reference_ran += 1
         try:
             env = {p["name"]: to_t(a) for p, a in zip(task["params"], args)}

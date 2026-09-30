@@ -9,7 +9,11 @@ from __future__ import annotations
 import argparse
 import contextlib
 from datetime import datetime, timezone
-import fcntl
+try:
+    import fcntl                       # Unix (docs.python.org/3/library/fcntl.html)
+except ImportError:                    # Windows: msvcrt.locking is its byte-range lock
+    fcntl = None                       # (docs.python.org/3/library/msvcrt.html)
+    import msvcrt
 import hashlib
 import json
 import math
@@ -95,8 +99,12 @@ def study_lock():
     LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
     with LOCK_FILE.open("a+") as stream:
         try:
-            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
+            if fcntl is not None:
+                fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            else:
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
             raise ValueError("Another pretraining study already holds the process lock") from None
         stream.seek(0)
         stream.truncate()
@@ -105,7 +113,11 @@ def study_lock():
         try:
             yield
         finally:
-            fcntl.flock(stream, fcntl.LOCK_UN)
+            if fcntl is not None:
+                fcntl.flock(stream, fcntl.LOCK_UN)
+            else:
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 def tokenizer_identity(path: Path):

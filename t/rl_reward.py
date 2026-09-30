@@ -193,7 +193,6 @@ def drawn_tests(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     or a crash counts against it.
     """
     import copy
-    import signal
     import spec_check
     fn = spec_check.reference(entry["rec"], entry["fn"])
     if fn is None:
@@ -204,12 +203,8 @@ def drawn_tests(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     ekind = points[0]["expected"][0]
 
     def call(args):
-        signal.signal(signal.SIGALRM, spec_check._alarm)
-        signal.alarm(2)
-        try:
+        with spec_check.deadline(2):
             return fn(*copy.deepcopy([list(a) if isinstance(a, tuple) else a for a in args]))
-        finally:
-            signal.alarm(0)
 
     def as_expected(out):
         if (ekind == "bool") != isinstance(out, bool):
