@@ -119,10 +119,17 @@ def init_paths(init) -> tuple[Path, Path]:
     return p / "ckpt.pt", p / "tokenizer.json"
 
 
-def load_core(init_dir, device, dropout, torch_module, gpt, config_type):
+def load_core(init_dir, device, dropout, torch_module, gpt, config_type, gradient_checkpointing=None):
+    """`gradient_checkpointing` None keeps the init's own setting; True or False overrides it. It
+    changes memory and step time, not the gradients (torch.utils.checkpoint recomputes each block's
+    forward in the backward pass; Chen et al., arXiv:1604.06174), so a core trained on a large card
+    with it off can continue on a small one."""
     checkpoint = torch_module.load(init_paths(init_dir)[0], map_location="cpu", weights_only=True)
     checkpoint.pop("optimizer", None)
-    config = config_type(**{**checkpoint["config"], "dropout": dropout})
+    overrides = {"dropout": dropout}
+    if gradient_checkpointing is not None:
+        overrides["gradient_checkpointing"] = bool(gradient_checkpointing)
+    config = config_type(**{**checkpoint["config"], **overrides})
     model = gpt(config)
     model.load_state_dict(checkpoint["model"])
     return model.to(device), config, checkpoint.get("tokenizer_fingerprint")
@@ -553,6 +560,13 @@ def main():
                         help="of the FIM documents, the share in SPM order (the paper's joint training: 0.5)")
     parser.add_argument("--fim-span", choices=("char", "t"), default="char",
                         help="char: two uniform character cuts; t: a whole t clause or statement half the time")
+    parser.add_argument("--gradient-checkpointing", action=argparse.BooleanOptionalAction, default=None,
+                        help="recompute each block's activations in the backward pass instead of keeping them "
+                             "(docs.pytorch.org/docs/stable/checkpoint.html; arXiv:1604.06174): the same "
+                             "gradients, about half the peak memory and about 2.2x the step time here "
+                             "(locallm/CORE-2026-09-19.md). Default: the init checkpoint's own setting. A core "
+                             "trained on an 80 GB card with it off ran out of memory continuing at batch "
+                             "16 x 2048 on a 16 GB card (2026-09-30)")
     parser.add_argument("--device", default=None)
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
@@ -610,7 +624,8 @@ def main():
     if device.startswith("cuda"):
         torch.cuda.manual_seed_all(args.seed)
         torch.cuda.reset_peak_memory_stats()
-    model, config, fingerprint = load_core(args.init, device, args.dropout, torch, GPT, GPTConfig)
+    model, config, fingerprint = load_core(args.init, device, args.dropout, torch, GPT, GPTConfig,
+                                           gradient_checkpointing=args.gradient_checkpointing)
     if fingerprint and fingerprint != tokenizer_fingerprint(tokenizer):
         raise ValueError("initialization checkpoint and its tokenizer disagree")
     if tokenizer.vocab_size != config.vocab_size:
