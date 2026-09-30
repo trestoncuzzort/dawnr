@@ -93,6 +93,17 @@ capability has to come from the corpus.
 - **Held-out generation** is one row at a time, the key-value cache off on CUDA by default, fp32,
   and the stop rule decodes the whole text at every token (`t/loop_locallm.py:855,955`;
   `locallm/checkpoint.py:89-118`). `sample_many` exists (`model.py:360-431`).
+- **Where one r12 seed's hour goes** (measured on seed 1 of the round on the new core, from
+  `t/out/r12-run/run.log`, 2026-09-30 19:18Z on): the fine-tune itself is 45 seconds (300 steps);
+  the dev-chosen stopping step is 52 minutes (seven kept checkpoints x 100 dev problems, greedy,
+  one row at a time, about 4.5 s a problem); the held-out generation is about 23 minutes (232
+  problems, about 6 s each); then the lab grades. About 75 GPU-minutes of every seed is batch-1
+  greedy decoding of a 93M model, which is per-token overhead, not arithmetic: the cache finding
+  (`locallm/FINDINGS-kv-cache-2026-09-19.md`) already showed the key-value cache does not shorten
+  it at these prefixes. The lever is batching the dev problems (and the held-out ones) through
+  `sample_many`-style decoding, eight or sixteen rows at a time, behind an identity test (batched
+  greedy output equal to the one-row output on every dev problem of one checkpoint) and a
+  registered speed prediction. Not touched while the round runs from the working tree.
 - **Activation checkpointing** is inherited from the init checkpoint by the continuation. A core
   trained on an 80 GB card with it off ran out of memory at batch 16 x 2048 on the 16 GB card
   (2026-09-30 05:55Z). Fixed the same morning: `--gradient-checkpointing` (commit eee3c9c6, the
@@ -155,7 +166,9 @@ self-sampling have nothing to work with on this core, so the teacher items come 
    firmware slot setting at the next reboot.
 2. **After the r12 core is judged, before r12's round:** token shards for the code corpus and
    `--data-tokens` in the continuation, with a token-identity test; a profile of where one r12
-   seed's hour goes before any change to generation.
+   seed's hour goes before any change to generation. The profile is in section 4 now (2026-09-30
+   20:40Z): 75 of a seed's minutes are batch-1 greedy decoding; batched decoding behind an
+   identity test is the registration to write once the round is off the working tree.
 3. **With the next month's free credit:** the staged teacher generation on one rented H100 (row 1),
    then k specifications per problem through `spec_check` plus the exploit check (row 2), then a
    corpus registration that includes the specification documents and the relabel rows (rows 3, 4).
