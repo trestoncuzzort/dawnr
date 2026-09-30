@@ -445,9 +445,11 @@ class DomainHypothesisLoopValueCertificateKernelTest(unittest.TestCase):
         # the exit code and OK line are checked.
         import sys as _sys
         limit = "" if _sys.platform == "darwin" else "ulimit -v 4194304 && "
-        proc = subprocess.run(
-            ["bash", "-c", limit + "exec python3 -c \"$0\"", code],
-            capture_output=True, text=True, timeout=60)
+        if _sys.platform == "win32":                    # no ulimit and no bash (2026-09-30): unbounded, as on macOS
+            command = [_sys.executable, "-c", code]
+        else:
+            command = ["bash", "-c", limit + "exec python3 -c \"$0\"", code]
+        proc = subprocess.run(command, capture_output=True, text=True, timeout=60)
         self.assertEqual(proc.returncode, 0, proc.stderr[-800:])
         self.assertIn("OK", proc.stdout, proc.stdout)
 

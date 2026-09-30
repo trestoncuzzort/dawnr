@@ -10,12 +10,12 @@ import argparse
 from hashlib import sha256
 import json
 from pathlib import Path
-import signal
 import time
 
 import check_wf
 from execution_trace import digest
 import interp
+import spec_check
 import surface
 
 SCHEMA = 1
@@ -25,13 +25,6 @@ VERDICTS = ("correct", "wrong_output", "malformed", "not_well_formed", "contract
 
 class Timeout(BaseException):
     """Deliberately not an Exception: interpreter handlers must not absorb it."""
-
-
-def _alarm(seconds):
-    def raise_timeout(signum, frame):
-        raise Timeout()
-    signal.signal(signal.SIGALRM, raise_timeout)
-    signal.setitimer(signal.ITIMER_REAL, seconds)
 
 
 def run_case(task, x):
@@ -96,13 +89,13 @@ def score_candidate(entry, completion, *, time_limit, max_chars):
     if len(completion) > max_chars:
         return {**result, "verdict": "too_long", "seconds": 0.0}
     started = time.monotonic()
-    _alarm(time_limit)
     try:
-        outcome = _evaluate(entry, completion, result)
+        # spec_check.deadline: the same ITIMER_REAL on Unix, a watchdog thread where there is no
+        # SIGALRM (2026-09-30); Timeout stays this module's BaseException.
+        with spec_check.deadline(time_limit, exc=Timeout):
+            outcome = _evaluate(entry, completion, result)
     except Timeout:
         outcome = {"verdict": "timeout"}
-    finally:
-        signal.setitimer(signal.ITIMER_REAL, 0)
     return {**result, **outcome, "seconds": time.monotonic() - started}
 
 

@@ -415,7 +415,8 @@ def read_hung(path: Path) -> dict[int, str]:
 
 
 _HAS_ITIMER = hasattr(signal, "setitimer") and hasattr(signal, "SIGVTALRM")
-_WATCHDOG: dict = {"timer": None, "target": None}
+_WATCHDOG: dict = {"timer": None, "target": None, "armed": None, "ticks": 0}
+_BACKSTOP_TICKS = 10             # the Unix backstop first rings at 10 x timeout_s; the watchdog exits on that tick too
 
 
 def _arm(timeout_s: float) -> None:
@@ -425,7 +426,10 @@ def _arm(timeout_s: float) -> None:
     the budget spent and raises ReferenceTimeout in this thread with PyThreadState_SetAsyncExc
     (docs.python.org/3/c-api/threads.html, the mechanism of stopit's ThreadingTimeout), then again
     every timeout_s for a reference that swallowed it; a reference stuck inside one C call ends
-    when that call returns, and the hung-worker exit of the Unix backstop is not available there."""
+    when that call returns. On the tenth tick (the wall-clock mark where the Unix backstop first
+    rings) a budget still marked spent means the reference swallowed every interrupt, and the
+    worker names it and exits with HUNG_EXIT from the watchdog thread, as pytest-timeout's thread
+    method does (pytest_timeout.py, timeout_timer: dump, flush, os._exit)."""
     if _HAS_ITIMER:
         signal.signal(signal.SIGVTALRM, _cpu_timeout)
         signal.signal(signal.SIGALRM, _wall_backstop)
@@ -434,8 +438,15 @@ def _arm(timeout_s: float) -> None:
         return
     import ctypes
     target = ctypes.c_ulong(threading.get_ident())
+    token = object()                                            # this arming; _disarm retires it
 
     def fire():
+        if _WATCHDOG.get("armed") is not token:                 # disarmed while this tick was in flight
+            return
+        _WATCHDOG["ticks"] += 1
+        if _TIMER["fired"] and _WATCHDOG["ticks"] >= _BACKSTOP_TICKS:
+            _report_hung()
+            os._exit(HUNG_EXIT)
         _TIMER["fired"] = True
         ctypes.pythonapi.PyThreadState_SetAsyncExc(target, ctypes.py_object(ReferenceTimeout))
         again = threading.Timer(timeout_s, fire)
@@ -444,7 +455,7 @@ def _arm(timeout_s: float) -> None:
         again.start()
     timer = threading.Timer(timeout_s, fire)
     timer.daemon = True
-    _WATCHDOG["timer"], _WATCHDOG["target"] = timer, target
+    _WATCHDOG.update(timer=timer, target=target, armed=token, ticks=0)
     timer.start()
 
 
@@ -457,6 +468,7 @@ def _disarm() -> None:
         signal.signal(signal.SIGALRM, signal.SIG_IGN)
         return
     import ctypes
+    _WATCHDOG["armed"] = None                                   # a tick in flight sees this and does nothing
     timer = _WATCHDOG.get("timer")
     if timer is not None:
         timer.cancel()
@@ -1060,7 +1072,11 @@ def run_pool(version: str, split_path: Path, progress: Path, jobs: int = 1, time
                       f"{counts} in {result['seconds']}s; {time.time() - started:.0f}s so far", file=log, flush=True)
         if jobs > 1:
             import multiprocessing
-            context = multiprocessing.get_context("fork")
+            # fork is "Available on POSIX systems" only (docs.python.org/3/library/multiprocessing.rst,
+            # start methods); spawn everywhere else (2026-09-30). The workers re-import this module
+            # by name there, so the initializer's arguments travel by pickle: plain dicts and a path.
+            methods = multiprocessing.get_all_start_methods()
+            context = multiprocessing.get_context("fork" if "fork" in methods else "spawn")
             pending = {int(t[0]) for t in tasks}
             with context.Pool(jobs, initializer=_worker_init,
                               initargs=(pool, draws, timeout_s, memory_bytes, known, refuse, hung),

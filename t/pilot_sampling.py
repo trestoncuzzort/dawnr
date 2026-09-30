@@ -204,14 +204,18 @@ def main(argv=None) -> int:
                                  f"refusing to mix samples (A6 of t/RUN-NEXT-locallm-r12.md)")
             entry = pool[tid]
             head = loop_locallm.problem_head(entry, a.examples)
-            started = time.monotonic()
+            # perf_counter, not monotonic: on Windows CPython 3.12's monotonic is GetTickCount64
+            # (Python/pytime.c, py_get_monotonic_clock), millisecond ticks that read 0.0 across a
+            # short sample and divided by zero below (2026-09-30); perf_counter is the
+            # highest-resolution clock on every platform (docs.python.org/3/library/time.html)
+            started = time.perf_counter()
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
             rows = sample_rows(model, tok, head, a.k, tokens=a.tokens, temperature=temperature, top_k=a.top_k,
                                seed=a.seed, task_id=tid, rows_per_batch=rows_per_batch, device=device)
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
-            seconds = time.monotonic() - started
+            seconds = time.perf_counter() - started
             lines = []
             for sample, row in enumerate(rows):
                 lines.append(json.dumps({"task_id": tid, "fn": entry["fn"], "sample": sample, "head": head,
@@ -219,7 +223,8 @@ def main(argv=None) -> int:
             write_atomic(path, "\n".join(lines) + "\n")
             new_tokens = sum(r["new_tokens"] for r in rows)
             timing.append({"task_id": tid, "temperature": temperature, "k": a.k, "seconds": round(seconds, 3),
-                           "new_tokens": new_tokens, "tokens_per_second": round(new_tokens / seconds, 2),
+                           "new_tokens": new_tokens,
+                           "tokens_per_second": round(new_tokens / seconds, 2) if seconds > 0 else None,
                            "stopped": sum(r["stopped"] for r in rows),
                            "max_new_tokens": max(r["new_tokens"] for r in rows)})
             print(f"pilot: {tid} T={temperature} k={a.k}: {new_tokens} tokens in {seconds:.1f}s, "
@@ -229,12 +234,12 @@ def main(argv=None) -> int:
         for tid in ids[:3]:
             head = loop_locallm.problem_head(pool[tid], a.examples)
             for stopped in (False, True):
-                started = time.monotonic()
+                started = time.perf_counter()
                 text = checkpoint.sample(model, tok, head, tokens=a.tokens, temperature=0, top_k=None,
                                          use_cache=True, stop=reply_stop(head) if stopped else None)
                 if device.type == "cuda":
                     torch.cuda.synchronize(device)
-                seconds = time.monotonic() - started
+                seconds = time.perf_counter() - started
                 greedy.append({"task_id": tid, "stopped": stopped, "seconds": round(seconds, 3),
                                "new_tokens": len(tok.encode(text)) - len(tok.encode(head))})
         a.timing.parent.mkdir(parents=True, exist_ok=True)
