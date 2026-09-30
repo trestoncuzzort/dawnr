@@ -127,3 +127,52 @@ is kept as a replicate and not judged. The predictions are unchanged.
 **Amendment, 2026-09-30 01:50Z, before the relaunch: the single-pass recipe diverged; stage 1 reruns at the sweep's recipe.** Both stage-1 runs at weight decay 0.1 and lr 6e-4 (the published single-epoch values, receipt f3d8ea9162ef) diverged past step 10,000 at lr about 5.7e-4: validation fell to 2.444 (desktop, step 10,000) and 2.373 (rented H100, step 15,500), then recurrent loss spikes (desktop 2.97 at 11,000 and 2.62 at 13,500; H100 4.87 at 19,000 and 5.40 at 25,500, training loss back to 3 to 7). This is the third divergence of this model at weight decay 0.1 (the sweep's control, the pilot's first stage 2, now this), against a stable record at weight decay 0.8 with lr 1e-3 at the same batch (the sweep, 11,200 steps) and on English (the pilot's stage 1, 18,311 steps); Wortsman et al. (arXiv:2309.14322) place these small-model instabilities at high learning rate and name weight decay among the interventions that tame them (receipt 8a65930c39ea). Stage 1 therefore reruns with **weight decay 0.8 and lr 1e-3**, warmup 2,000 and cosine to a tenth, everything else unchanged (data, 65,536 tokens per step, 56,457 steps, seed), again on one rented H100 within the free credit (about $11, a 3-hour cap) with the desktop as the replicate; the diverged runs are kept as `stage1-english-wd0.1-diverged` (desktop) and `runs/r12-core-english` (volume) and are not arms. Predictions unchanged; prediction 1 (English validation below 2.30) now carries the note that the diverged runs reached 2.37 to 2.44 before spiking.
 
 **Amendment, 2026-09-30 06:41Z, before stage 2 trains a step: stage 1 is complete; stage 2 on the desktop runs with activation checkpointing on.** Stage 1 (weight decay 0.8, lr 1e-3) finished its 56,457 steps on the rented H100 without a spike: English validation 2.1797 nats per token at the end, 2.1795 at its best (step 56,000). Prediction 1 (below 2.30) holds at the stage-1 level. The run was landed on the desktop at 05:18Z. The first start of stage 2 there failed before any step: the continuation inherits the init checkpoint's configuration, the H100 run had activation checkpointing off, and batch 16 x 2048 needed more than the 16 GB card has (CUDA out of memory at 14.98 GiB, 05:55Z; the launcher then marked the lane done with no judgement, which is corrected: a failed stage now stops it). Stage 2 reruns from the same stage-1 checkpoint with `--gradient-checkpointing`: each block's activations are recomputed in the backward pass (torch.utils.checkpoint, docs.pytorch.org/docs/stable/checkpoint.html; Chen et al., arXiv:1604.06174), which changes memory and step time and not the gradients (`locallm/test_continue_gradient_checkpointing.py` checks the loss and every gradient for equality). Nothing in the recipe changes: batch 16 x 2048, lr 1e-3, weight decay 0.8, warmup 560, 15,000 steps, seed 1337, a kept copy every 1,000 steps, the core = the kept copy with the lowest validation loss. The failed attempt is kept as `stage2-code-oom-batch16` and is not an arm. Predictions unchanged.
+
+## Outcome (written 2026-09-30 09:30Z, after the core was judged)
+
+Stage 1 ran on one rented H100 at weight decay 0.8 and lr 1e-3 (the two starts at 0.1 diverged and
+are not arms), resumed once from its own checkpoint at step 25,500 when the launching client's
+network dropped. Stage 2 ran on the desktop with activation checkpointing (the amendment above).
+The judgement is the registered one: the pipeline's mid stage (400 steps, 1e-4, tool rate 0.5,
+harness tokens, seed 1337) on the 531-document corpus, then `chat_eval` on the 100 dev problems
+(greedy, 800 tokens, grammar, two calls, best verdict). Numbers:
+`locallm/dawnr-r12-core-results-2026-09-30.json`.
+
+| | this core | A (the sweep's core) | B (pilot: English, then code) | C (pilot: code only) |
+|---|---:|---:|---:|---:|
+| English tokens, then code tokens | 3.70B, 459M | 0, 485M | 300M, 734M | 0, 1,034M |
+| well formed, of 100 | 45 | 49 | 29 | 23 |
+| passes all shown examples | 0 | 1 | 0 | 1 |
+| `spec_agrees` | 0 | 0 | 0 | 0 |
+| used the tool | 31 | 17 | 24 | 17 |
+| held-out loss on the proved documents, nats per token | 3.7125 | 3.7154 | 3.6425 | 3.6686 |
+
+1. **English validation below 2.30: holds.** 2.1797 at the end, 2.1795 at its best (step 56,000),
+   with no spike anywhere in the 56,457 steps.
+2. **Code validation below 1.20: holds.** 1.1366 at the step-13,500 evaluation; the kept copy with
+   the lowest validation loss, which is the core, reads 1.1398 at step 14,000; the last step reads
+   1.1468 with the training loss at 0.757, the gap opening. Arm B, on the same split and trainer,
+   ended at 1.214.
+3. **Well formed at least 50: falsified.** 45 (44 without the grammar, by the pipeline's own
+   evaluation).
+4. **`spec_agrees` at least 1: falsified.** 0 of 100, and no answer passes its shown examples.
+5. **Held-out loss below 3.60: falsified.** 3.7125.
+6. **r12's round on this core:** open; the round has not run.
+
+**Reading.** Twelve times the pilot's English and the lowest code validation loss of any core
+bought nothing the judgement measures. Against the sweep's core at about the same code exposure
+this core is level on the proved documents (3.7125 against 3.7154) and within the seed spread on
+form (A's three seeds read 51, 36 and 61 on 2026-09-29). The pilot's arms, which made 15 and 21
+passes over the code, read lower on the proved documents; at this core's code exposure the English
+stage shows no gain over A.
+The one movement is tool use (31 of 100 against 17 to 24). On the 46 proved validation documents,
+which are the corpus's own distribution, 35 answers are well formed and 16 pass their examples:
+the model does the task where the corpus reaches and nowhere else.
+
+**What follows, as registered.** Before any reward is built, the base rate is measured by
+sampling (64 draws per problem through the checker). The proved corpus, not the core, is the next
+lever; the queue for it is in `internal/RESEARCH-2026-09-30-stage-sweep.md` section 7 (the staged
+teacher generation, k specifications per problem through the specification check, the
+specification documents and relabel rows left out of this corpus). The 312M run stays registered
+for a free allocation and is no longer the next step.
+

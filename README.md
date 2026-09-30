@@ -37,7 +37,7 @@ trusted because what it writes is checked.
 
 | part | state |
 |---|---|
-| core model (`locallm/`): a GPT trained from scratch | built; pretraining sweep done; the general-English pilot ran 2026-09-29 ([outcome](t/PREDICT-2026-09-29-dawnr-english-pilot.md)): English before code beats code alone at matched tokens, no core moves the specification column off 0, and the 16B-token English set for the next core run is tokenized and staged |
+| core model (`locallm/`): a GPT trained from scratch | built; pretraining sweep done; the general-English pilot ran 2026-09-29 ([outcome](t/PREDICT-2026-09-29-dawnr-english-pilot.md)): English before code beats code alone at matched tokens, no core moves the specification column off 0. r12's core ran 2026-09-30 ([outcome](t/PREDICT-2026-09-30-dawnr-r12-core.md)): 3.7B English tokens, then code, the lowest code validation loss of any core (1.140), and the judgement unchanged: well formed on 45 of 100 dev problems, none passing its shown examples, the specification column at 0. By its registration the proved corpus, not the core, is the next lever; the 16B-token English set stays staged for a larger core when a free allocation exists |
 | proof engine (`t/`): `t`, seven provers, twins, specification checks | built and hardened |
 | data engine: lifting verified Dafny, Verus, Lean and C programs into `t` | **464 documents clean in all seven provers** (from 194 on 2026-09-26), 569 with graded trust (six clean, the missing prover recorded); r12 trains on the 463 registered before its launch |
 | learning instead of memorising | the main open problem. On the held-out 200 with the specification check applied, every arm reads 0: the ten r11 seeds, the r12 head-prompt seeds so far, and the chat pipeline's three seeds (which reach 2 and 5 by the looser metric, all rejected by the check or recited). Early stopping, best checkpoints and denoising are in place; the next lever is verdicts that draw inputs beyond the shown examples ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md), 2026-09-29) |
@@ -52,7 +52,7 @@ The honest headline: the machinery that makes dawnr trustworthy works; the
 model is not yet good at problems it has not seen. With the specification
 check applied, 0 of 200 clean held-out problems for every arm measured so far
 (2026-09-29); the check is what caught answers that fit the shown examples by
-coincidence. Two more registered runs on 2026-09-29 read the same zero: verdicts on drawn inputs as training data, and a core pretrained on English before code; the next core is a properly sized pretraining run on rented GPUs. Every number here links back to the run that produced it, and
+coincidence. Three more registered runs read the same zero: verdicts on drawn inputs as training data and a core pretrained on English before code (2026-09-29), and a core given 3.7B English tokens before its code stage (2026-09-30). The next lever is the proved corpus, which is one to two orders smaller than the corpora comparable work trains on ([internal/RESEARCH-2026-09-30-stage-sweep.md](internal/RESEARCH-2026-09-30-stage-sweep.md)). Every number here links back to the run that produced it, and
 failures are published beside successes ([CORRECTIONS.md](CORRECTIONS.md), [LIMITS.md](LIMITS.md)).
 
 ## How progress is measured
