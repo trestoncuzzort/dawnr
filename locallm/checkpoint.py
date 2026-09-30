@@ -111,11 +111,15 @@ def cache_by_default(device, prompt_tokens: int, block_size: int) -> bool:
     4 threads. CPU with a prompt that already fills the window: off; there every
     step rebuilds the whole window either way, and the cached path, which also
     keeps keys it then discards, measured 0.93 to 1.06 times, up to 7 percent
-    slower on the Medium shape. CUDA: off; the 2026-09-19 runs measured 0.92 to
-    1.21 times at core-small. Apple's MPS and every other backend: off,
-    unchanged and not measured.
+    slower on the Medium shape. CUDA: on since 2026-09-30, the same window rule.
+    The 2026-09-19 runs measured 0.92 to 1.21 times at core-small and 128 new
+    tokens; on the round's own path (t/PREDICT-2026-09-30-cached-decoding-pick.md,
+    the 93M core, 100 dev problems, up to 1,200 new tokens, an RTX 5050) the cached
+    run took 0.14 of the uncached wall clock, 7.3 to 8.2 times faster on replies
+    that hit the cap and 1.4 to 2.0 times on 50-token ones, every reply byte-equal.
+    Apple's MPS and every other backend: off, unchanged and not measured.
     """
-    return torch.device(device).type == "cpu" and prompt_tokens < block_size
+    return torch.device(device).type in ("cpu", "cuda") and prompt_tokens < block_size
 
 
 def sample(model, tok, prompt: str, tokens: int = 400,
