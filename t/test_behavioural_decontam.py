@@ -204,9 +204,12 @@ class PairTests(unittest.TestCase):
             while True:
                 pass
         self.assertEqual(bd.run_reference(spin, [1], timeout_s=0.2), ("timeout",))
-        self.assertEqual(signal.getitimer(signal.ITIMER_VIRTUAL), (0.0, 0.0))
-        self.assertEqual(signal.getitimer(signal.ITIMER_REAL), (0.0, 0.0))
-        self.assertEqual(signal.getsignal(signal.SIGVTALRM), signal.SIG_IGN)
+        if bd._HAS_ITIMER:
+            self.assertEqual(signal.getitimer(signal.ITIMER_VIRTUAL), (0.0, 0.0))
+            self.assertEqual(signal.getitimer(signal.ITIMER_REAL), (0.0, 0.0))
+            self.assertEqual(signal.getsignal(signal.SIGVTALRM), signal.SIG_IGN)
+        else:                                                   # the watchdog thread (no setitimer here)
+            self.assertIsNone(bd._WATCHDOG["armed"])
         self.assertEqual((sys.stdin, sys.stdout, sys.stderr), streams)
 
     def test_a_worker_failure_is_reported_by_held_out_id_not_swallowed(self):

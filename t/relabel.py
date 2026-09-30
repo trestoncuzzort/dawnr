@@ -93,7 +93,6 @@ import fnmatch
 import hashlib
 import json
 import random
-import signal
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
@@ -434,17 +433,14 @@ def execute_against_reference(renamed: dict, entry: dict, tid: int, n: int, seed
             args = [spec_check.draw(k, rnd, ex) for k, ex in zip(kinds, examples)]
             if any(a is None for a in args):
                 return {"status": f"exec-cannot draw {kinds}", "shape": shape}
-            signal.signal(signal.SIGALRM, spec_check._alarm)
-            signal.alarm(5)
             try:
-                out = fn(*[list(a) if isinstance(a, list) else a for a in args])
+                with spec_check.deadline(5):                    # portable since 2026-09-30 (SIGALRM is Unix-only)
+                    out = fn(*[list(a) if isinstance(a, list) else a for a in args])
             except spec_check.Timeout:
                 return {"status": "exec-reference did not finish", "shape": shape}
             except Exception:                                   # noqa: BLE001 -- the reference refused the input
                 tally["reference-raised"] += 1
                 continue
-            finally:
-                signal.alarm(0)
             try:
                 expected = spec_check.to_t(out)
             except TypeError:

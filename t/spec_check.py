@@ -76,27 +76,32 @@ def _alarm(_sig, _frm):
 
 
 @contextlib.contextmanager
-def _deadline_alarm(seconds: int):
-    """Unix: the interval alarm (signal.alarm, "Availability: Unix"), set and cleared as before."""
-    signal.signal(signal.SIGALRM, _alarm)
-    signal.alarm(seconds)
+def _deadline_alarm(seconds: float, exc=Timeout):
+    """Unix: the real-time interval timer (signal.setitimer, "Availability: Unix"), the same clock
+    signal.alarm rang before 2026-09-30 and score_synthesis rang on its own; float seconds allowed."""
+    def _raise(_sig, _frm):
+        raise exc()
+    signal.signal(signal.SIGALRM, _raise)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
     try:
         yield
     finally:
-        signal.alarm(0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
 
 
 @contextlib.contextmanager
-def _deadline_thread(seconds: float):
-    """Elsewhere: a watchdog thread raises Timeout in this thread with PyThreadState_SetAsyncExc
+def _deadline_thread(seconds: float, exc=Timeout):
+    """Elsewhere: a watchdog thread raises `exc` in this thread with PyThreadState_SetAsyncExc
     (docs.python.org/3/c-api/threads.html), the mechanism stopit's ThreadingTimeout uses
-    (github.com/glenfant/stopit). It interrupts Python bytecode only: a reference stuck inside one
-    C call ends when that call returns. A firing that has not landed when the block ends is cleared
-    by passing NULL; one that lands in the same instant is reported as a timeout."""
+    (github.com/glenfant/stopit) and pytest-timeout's thread method reaches for where SIGALRM is
+    missing (pytest_timeout.py: HAVE_SIGALRM decides the method). It interrupts Python bytecode
+    only: a reference stuck inside one C call ends when that call returns. A firing that has not
+    landed when the block ends is cleared by passing NULL; one that lands in the same instant is
+    reported as a timeout."""
     import ctypes
     target = ctypes.c_ulong(threading.get_ident())
     timer = threading.Timer(seconds, ctypes.pythonapi.PyThreadState_SetAsyncExc,
-                            (target, ctypes.py_object(Timeout)))
+                            (target, ctypes.py_object(exc)))
     timer.daemon = True
     timer.start()
     try:
@@ -106,10 +111,13 @@ def _deadline_thread(seconds: float):
         ctypes.pythonapi.PyThreadState_SetAsyncExc(target, None)
 
 
-def deadline(seconds: int):
-    """Raise Timeout in the calling thread if the block runs longer than `seconds` (2026-09-30: the
-    evaluation path runs on Windows too). Unix keeps the alarm, so nothing measured there changes."""
-    return _deadline_alarm(seconds) if hasattr(signal, "SIGALRM") else _deadline_thread(seconds)
+def deadline(seconds: float, exc=Timeout):
+    """Raise `exc` (default Timeout) in the calling thread if the block runs longer than `seconds`
+    (2026-09-30: the evaluation path runs on Windows too). Unix keeps the real-time signal, so
+    nothing measured there changes. `exc` lets a caller keep its own class: score_synthesis's
+    Timeout is a BaseException on purpose, so an interpreter's `except Exception` cannot absorb it."""
+    return (_deadline_alarm(seconds, exc) if hasattr(signal, "SIGALRM")
+            else _deadline_thread(seconds, exc))
 
 
 def draw(kind: str, rnd: random.Random, like=None):

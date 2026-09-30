@@ -5,7 +5,9 @@ PyThreadState_SetAsyncExc (docs.python.org/3/c-api/threads.html) as stopit's Thr
 forces the watchdog path on every platform. No kernel."""
 from __future__ import annotations
 
+import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -48,6 +50,36 @@ class Watchdog(unittest.TestCase):
         def boom(_):
             raise ValueError("x")
         self.assertEqual(bd.run_reference(boom, [1], timeout_s=0.5), ("raised", "ValueError"))
+
+    def test_a_reference_that_swallows_every_tick_exits_the_worker_on_the_tenth(self):
+        # the thread-method backstop: pytest-timeout's timeout_timer ends the process with os._exit
+        # when no exception can reach the test; here the tenth tick (10 x timeout_s, where the Unix
+        # backstop first rings) names the reference on stderr and in the sidecar and exits HUNG_EXIT
+        with tempfile.TemporaryDirectory() as tmp:
+            sidecar = Path(tmp) / "v5.jsonl.hung"
+            code = (
+                "import sys\n"
+                "sys.path.insert(0, sys.argv[1])\n"
+                "import behavioural_decontam as bd\n"
+                "bd._HAS_ITIMER = False\n"
+                "bd._TIMER.update(tid=7, name='mbpp_7__spin', eval_id=5, hung_path=sys.argv[2])\n"
+                "def spin(n):\n"
+                "    while True:\n"
+                "        try:\n"
+                "            for i in range(1000):\n"
+                "                n = (n * 31 + i) % 1000003\n"
+                "        except BaseException:\n"
+                "            pass\n"
+                "print(bd.run_reference(spin, [1], timeout_s=0.1))\n")
+            t0 = time.monotonic()
+            done = subprocess.run([sys.executable, "-c", code, str(HERE), str(sidecar)], capture_output=True,
+                                  text=True, timeout=30)
+            self.assertEqual(done.returncode, bd.HUNG_EXIT, done.stderr[-500:])
+            self.assertLess(time.monotonic() - t0, 10.0)
+            self.assertNotIn("timeout", done.stdout)
+            self.assertIn("worker exiting", done.stderr)
+            self.assertIn("mbpp_7__spin", done.stderr)
+            self.assertEqual(bd.read_hung(sidecar), {7: bd.HUNG_WHY})
 
 
 if __name__ == "__main__":  # pragma: no cover
