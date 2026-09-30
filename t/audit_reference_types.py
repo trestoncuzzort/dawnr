@@ -31,7 +31,6 @@ import argparse
 import ast
 import json
 import random
-import signal
 import sys
 from pathlib import Path
 
@@ -43,10 +42,6 @@ import spec_check                                                # noqa: E402
 
 class _Timeout(Exception):
     pass
-
-
-def _alarm(_sig, _frm):
-    raise _Timeout()
 
 
 def str_positions(entry: dict) -> list[int]:
@@ -94,16 +89,13 @@ def as_the_assertion_types(args: list, positions: list[int]) -> list:
 
 
 def _call(fn, args, seconds: int = 2):
-    signal.signal(signal.SIGALRM, _alarm)
-    signal.alarm(seconds)
     try:
-        return "ok", normalise(fn(*args))
+        with spec_check.deadline(seconds, exc=_Timeout):          # portable since 2026-09-30 (SIGALRM is Unix-only)
+            return "ok", normalise(fn(*args))
     except _Timeout:
         return "timeout", None
     except Exception as e:                                        # noqa: BLE001
         return "raise", type(e).__name__
-    finally:
-        signal.alarm(0)
 
 
 def classify(entry: dict, draws: int = 200, seed: int = 0) -> dict | None:

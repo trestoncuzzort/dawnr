@@ -2,6 +2,7 @@
 import argparse
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import loop_locallm
@@ -21,7 +22,8 @@ class CoreWiringTests(unittest.TestCase):
             self.assertEqual(command[command.index("--architecture") + 1], "modern")
             self.assertEqual(command[command.index("--tokenizer") + 1], "bpe")
             self.assertIn("--gradient-checkpointing", command)
-            self.assertTrue(run.call_args.kwargs["env"]["LOCALLM_RUN_LOG"].endswith("/model/runs.jsonl"))
+            run_log = Path(run.call_args.kwargs["env"]["LOCALLM_RUN_LOG"])
+            self.assertEqual(run_log.parts[-2:], ("model", "runs.jsonl"))     # either separator (2026-09-30)
 
 
 if __name__ == "__main__":

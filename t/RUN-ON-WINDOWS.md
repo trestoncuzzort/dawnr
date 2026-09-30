@@ -113,3 +113,15 @@ distributed trainer's backend (gloo on Windows, where NCCL does not exist). The 
 a machine may be System32's WSL launcher, which the launcher-parse test now recognises. The proof
 kernels are the five native ones above; the model side needs none of them to train or to sample.
 
+The whole `t/` suite was then run there three times, fixing what each pass showed. The third
+pass left 48 failures out of 1,478 run: 22 were the tests CI itself deselects (they need the
+dafny binary or the `t-corpora/` sibling checkout; use the workflow's `--deselect` list on any
+machine without them) and the rest were five more Unix assumptions, fixed the same day: the
+alarm in `t/relabel.py`, `t/score_synthesis.py` and `t/audit_reference_types.py` (all on
+`spec_check.deadline` now, which keeps its own exception class where a caller needs one);
+`multiprocessing`'s fork start method in `t/behavioural_decontam.py` (spawn where fork is not
+offered), whose watchdog thread now also exits a worker whose reference swallows every interrupt,
+as the Unix backstop does; and `time.monotonic` in `t/pilot_sampling.py`, which on Windows is
+GetTickCount64 and read 0.0 across a short sample (now `perf_counter`). Two tests assumed a
+`/`-joined path or `bash -c "ulimit -v"` and were made platform-agnostic.
+
