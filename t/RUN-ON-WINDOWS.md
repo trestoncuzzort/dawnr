@@ -97,3 +97,19 @@ assets, what `run_all.py` printed for present and absent kernels, and the
 final agreement line. Drop it in `t/` as
 `WITNESS-windows-<date>.md`. Claims here become true the moment someone
 writes down that they happened.
+
+## The model side on Windows (2026-09-30)
+
+`locallm/` runs natively too. On a Windows 11 laptop with an 8 GB RTX 5050, a per-user Python
+3.12, MinGit with git-lfs (the corpus fixtures under `nl/data/` are LFS files: without `git lfs
+pull` they are 130-byte stubs and every pool test fails), and PyTorch 2.11 with CUDA 12.8 in a
+venv, `locallm/continue_from_checkpoint.py` ran the r12 fine-tune recipe on the card (20 steps,
+kept copies written, `--deterministic` honoured) and `locallm/chat_eval.py` judged dev problems
+through the engine and the t tool with the grammar on. Three places had assumed Unix and were
+fixed the same day: the alarm around every reference call in `t/spec_check.py` and
+`t/rl_reward.py` (a watchdog thread on Windows, the alarm kept on Unix), the pretraining
+study's `fcntl` lock (`msvcrt` on Windows, as `t/spec_experiment.py` already did), and the
+distributed trainer's backend (gloo on Windows, where NCCL does not exist). The only bash on such
+a machine may be System32's WSL launcher, which the launcher-parse test now recognises. The proof
+kernels are the five native ones above; the model side needs none of them to train or to sample.
+
