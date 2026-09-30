@@ -123,5 +123,7 @@ alarm in `t/relabel.py`, `t/score_synthesis.py` and `t/audit_reference_types.py`
 offered), whose watchdog thread now also exits a worker whose reference swallows every interrupt,
 as the Unix backstop does; and `time.monotonic` in `t/pilot_sampling.py`, which on Windows is
 GetTickCount64 and read 0.0 across a short sample (now `perf_counter`). Two tests assumed a
-`/`-joined path or `bash -c "ulimit -v"` and were made platform-agnostic.
+`/`-joined path or `bash -c "ulimit -v"` and were made platform-agnostic. The fourth pass, at
+commit 027f52fc with the workflow's ignore and deselect lists: 1,455 passed, 0 failed, 159
+skipped, 25 deselected, in 2 minutes 33 seconds. The `t/` suite is green on Windows.
 
