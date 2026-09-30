@@ -85,6 +85,7 @@ import random
 import re
 import signal
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -413,12 +414,54 @@ def read_hung(path: Path) -> dict[int, str]:
     return refuse
 
 
+_HAS_ITIMER = hasattr(signal, "setitimer") and hasattr(signal, "SIGVTALRM")
+_WATCHDOG: dict = {"timer": None, "target": None}
+
+
+def _arm(timeout_s: float) -> None:
+    """The budget around one reference call. Unix: the CPU-time timer and the wall-clock backstop,
+    exactly as before. Elsewhere (Windows, 2026-09-30: no setitimer, no SIGALRM, per
+    docs.python.org/3/library/signal.html): one wall-clock watchdog thread at timeout_s that marks
+    the budget spent and raises ReferenceTimeout in this thread with PyThreadState_SetAsyncExc
+    (docs.python.org/3/c-api/threads.html, the mechanism of stopit's ThreadingTimeout), then again
+    every timeout_s for a reference that swallowed it; a reference stuck inside one C call ends
+    when that call returns, and the hung-worker exit of the Unix backstop is not available there."""
+    if _HAS_ITIMER:
+        signal.signal(signal.SIGVTALRM, _cpu_timeout)
+        signal.signal(signal.SIGALRM, _wall_backstop)
+        signal.setitimer(signal.ITIMER_VIRTUAL, timeout_s)
+        signal.setitimer(signal.ITIMER_REAL, 10 * timeout_s, timeout_s)
+        return
+    import ctypes
+    target = ctypes.c_ulong(threading.get_ident())
+
+    def fire():
+        _TIMER["fired"] = True
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(target, ctypes.py_object(ReferenceTimeout))
+        again = threading.Timer(timeout_s, fire)
+        again.daemon = True
+        _WATCHDOG["timer"] = again
+        again.start()
+    timer = threading.Timer(timeout_s, fire)
+    timer.daemon = True
+    _WATCHDOG["timer"], _WATCHDOG["target"] = timer, target
+    timer.start()
+
+
 def _disarm() -> None:
     """Both timers off and both handlers ignored, so a tick that already tripped is dropped, not raised later."""
-    signal.setitimer(signal.ITIMER_VIRTUAL, 0)
-    signal.setitimer(signal.ITIMER_REAL, 0)
-    signal.signal(signal.SIGVTALRM, signal.SIG_IGN)
-    signal.signal(signal.SIGALRM, signal.SIG_IGN)
+    if _HAS_ITIMER:
+        signal.setitimer(signal.ITIMER_VIRTUAL, 0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGVTALRM, signal.SIG_IGN)
+        signal.signal(signal.SIGALRM, signal.SIG_IGN)
+        return
+    import ctypes
+    timer = _WATCHDOG.get("timer")
+    if timer is not None:
+        timer.cancel()
+    if _WATCHDOG.get("target") is not None:
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(_WATCHDOG["target"], None)   # a firing not yet landed is dropped
 
 
 def run_reference(fn, native: list, timeout_s: float = TIMEOUT_S, read=canon) -> tuple:
@@ -459,10 +502,7 @@ def run_reference(fn, native: list, timeout_s: float = TIMEOUT_S, read=canon) ->
     try:
         try:
             sys.setrecursionlimit(RECURSION_LIMIT)
-            signal.signal(signal.SIGVTALRM, _cpu_timeout)
-            signal.signal(signal.SIGALRM, _wall_backstop)
-            signal.setitimer(signal.ITIMER_VIRTUAL, timeout_s)
-            signal.setitimer(signal.ITIMER_REAL, 10 * timeout_s, timeout_s)
+            _arm(timeout_s)
             with _quiet():
                 out = fn(*native)
             result = ("timeout",) if _TIMER["fired"] else ("ok", read(out))
