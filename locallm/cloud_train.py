@@ -31,6 +31,7 @@ import modal
 
 GPU = os.environ.get("DAWNR_GPU", "H100")            # "H100", "A100-80GB", "H100:8" ...
 MEMORY_MB = int(os.environ.get("DAWNR_MEMORY_MB", "24576"))
+TIMEOUT_S = int(os.environ.get("DAWNR_TIMEOUT_S", str(24 * 3600)))   # a hard cap on one container: the spend it can reach
 HERE = Path(__file__).resolve().parent
 
 volume = modal.Volume.from_name("dawnr-data", create_if_missing=True)
@@ -49,7 +50,7 @@ RECIPE = ["--tokenizer-file", "/data/tokenizer.json", "--architecture", "gpt", "
           "--deterministic", "--bf16"]
 
 
-@app.function(gpu=GPU, timeout=24 * 3600, volumes={"/data": volume}, cpu=8.0, memory=MEMORY_MB)
+@app.function(gpu=GPU, timeout=TIMEOUT_S, volumes={"/data": volume}, cpu=8.0, memory=MEMORY_MB)
 def train(steps: int, out: str, data: str = "corpus/train.txt", save_every: int = 2000,
           recipe: str = "", nproc: int = 1) -> str:
     """Run the arm; commit the volume every ten minutes so a checkpoint outlives the container.
