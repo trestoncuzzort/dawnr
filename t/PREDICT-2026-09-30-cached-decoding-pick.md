@@ -56,3 +56,33 @@ the NEXT round (not this one, which runs from the working tree as registered), a
 `cache_by_default` in `locallm/checkpoint.py` is re-registered for CUDA at long replies. If 1
 fails: a finding, and nothing changes. The laptop's absolute times are not the desktop's; the
 ratios are what is registered.
+
+## Outcome, 2026-09-30 21:47Z
+
+Run as written on the laptop's RTX 5050, head edccc742, both answer sets copied to the desktop
+(`~/scratch/cache-probe/`).
+
+| run | wall clock | replies | to the cap |
+|---|---:|---:|---:|
+| uncached | 2,144.5 s | 100 | 60 |
+| cached | 304.6 s | 100 | 60 |
+
+1. **Identity: held.** 100 of 100 replies byte-equal, `done_reason` equal on every one.
+2. **Speed: held.** 0.142 of the uncached wall clock (7.0 times faster).
+3. **Length dependence: half held, half falsified.** The generate command records no per-reply
+   time, so a second script timed the ten longest capped replies and the ten shortest stopped ones
+   on the same call (`checkpoint.sample` with the round's prompt, seed and stop; two repeats each
+   way, medians): capped replies (1,200 new tokens) 34.4 to 36.5 s uncached against 4.4 to 4.9 s
+   cached, **7.3 to 8.2 times**, so the first half held. Short replies (43 to 56 new tokens) 0.27 to
+   0.41 s against 0.17 to 0.24 s, **1.4 to 2.0 times (median 1.64)**: the second half said below 1.5
+   and is falsified in the direction of more speed. The 2026-09-19 finding's "no gain at 128 tokens"
+   was on a different card (RTX 6000 Ada) and a random-weight core-small; on this card the cache
+   pays even for a 50-token reply. Every reply hashed identically across all four runs.
+
+**Consequences taken.** `locallm/checkpoint.py cache_by_default` now answers on for CUDA under the
+same window rule as CPU (commit noted in the file), so every caller that does not say gets the
+cache; the pick and `gen_fleet` still pass the flag explicitly, so the round in flight is untouched.
+`t/out/r12-run/run.sh` gets `--use-cache` for the pick and the held-out generation after this round
+ends (the file is being executed by the running launcher and is not edited under it). At today's
+ratio a seed's 75 minutes of decoding become about 12, and a ten-seed round about 3.5 hours
+instead of 14.

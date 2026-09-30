@@ -169,17 +169,22 @@ def _seeded_model(block_size=16):
 
 
 def test_default_cache_follows_the_device():
-    """CPU decodes on the cache by default when the prompt is shorter than the
-    window, where it measured faster; a prompt that fills the window stays
-    uncached, where the cache measured up to 7 percent slower; CUDA stays
-    uncached as measured on 2026-09-19; MPS is unchanged because it was never
-    measured (FINDINGS-kv-cache-2026-09-19.md). No GPU is touched here: the
-    rule is a function of the device, and sample() is checked to consult it."""
+    """CPU and CUDA decode on the cache by default when the prompt is shorter
+    than the window, where it measured faster (CPU on 2026-09-26; CUDA on
+    2026-09-30, t/PREDICT-2026-09-30-cached-decoding-pick.md: 0.14 of the
+    uncached wall clock on the round's own path, every reply byte-equal); a
+    prompt that fills the window stays uncached, where the cache measured up
+    to 7 percent slower; MPS is unchanged because it was never measured
+    (FINDINGS-kv-cache-2026-09-19.md). No GPU is touched here: the rule is a
+    function of the device, and sample() is checked to consult it."""
     assert checkpoint.cache_by_default("cpu", 4, 16) is True
     assert checkpoint.cache_by_default(torch.device("cpu"), 15, 16) is True
     assert checkpoint.cache_by_default("cpu", 16, 16) is False
     assert checkpoint.cache_by_default("cpu", 40, 16) is False
-    for device in ("cuda", "cuda:1", torch.device("cuda", 0), "mps", "meta"):
+    for device in ("cuda", "cuda:1", torch.device("cuda", 0)):
+        assert checkpoint.cache_by_default(device, 4, 16) is True, device
+        assert checkpoint.cache_by_default(device, 16, 16) is False, device
+    for device in ("mps", "meta"):
         assert checkpoint.cache_by_default(device, 4, 16) is False, device
 
     model, tok = _seeded_model(block_size=16)
