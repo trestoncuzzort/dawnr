@@ -273,6 +273,13 @@ class TestTheFilesThemselves(unittest.TestCase):
         bash = shutil.which("bash")
         if bash is None:
             self.skipTest("no bash on this machine")
+        # On Windows the bash on PATH is usually System32's, the deprecated launcher of the default
+        # WSL distribution (learn.microsoft.com/en-us/windows/wsl/basic-commands); with no
+        # distribution installed it prints an explanation and fails, which says nothing about
+        # these scripts. A bash that cannot run `true` is not a bash for this test.
+        probe = subprocess.run([bash, "-c", "true"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        if probe.returncode != 0:
+            self.skipTest("the bash on this machine cannot run a command (a WSL launcher without a distribution?)")
         for name in SHELL_LAUNCHERS:
             done = subprocess.run([bash, "-n", str(HERE / name)],
                                   stdout=subprocess.PIPE,
