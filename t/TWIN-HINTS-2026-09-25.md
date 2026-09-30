@@ -185,3 +185,40 @@ is refused by solvers nobody is waiting for. Nothing was killed here; the state 
 - Nothing here is training data yet. `loop_dataset.py` reads the loop's pair files, not this layout;
   turning `proof-breaking` and `behavioural` twins into `pairs-*.jsonl` rows is a separate change
   (callers_to_update in the track's result), and `redundant` twins must never become negatives.
+
+## 9. The full run (lab, 2026-09-30 21:39Z to 22:58Z)
+
+Section 6's three commands, `--jobs 4 --no-cache`, from a detached script on the lab (head 819c1a6f).
+365 twins from 141 programs, 2,555 cells, 15,330 kernel runs, 79 minutes. A first run the same
+evening (20:00Z to 21:17Z) is set aside: it was launched from a non-login shell without rustup on
+its PATH, Verus's launcher failed on every cell, and the adapter read that as `malformed` in all
+365 cells of the column (fixed in 819c1a6f: a kernel that did not run is `TOOL_ERROR`). The rerun's
+script sources the cargo environment and refuses to grade unless every kernel reports a version.
+
+| class | twins | drop-invariant | drop-requires |
+|---|---:|---:|---:|
+| `redundant` | 132 | 4 | 128 |
+| `proof-breaking` | 209 | 198 | 11 |
+| `behavioural` | 24 | 0 | 24 |
+| `undecided` | 0 | 0 | 0 |
+
+| kernel | refuted | timeout | unproved | verified |
+|---|---:|---:|---:|---:|
+| dafny | 24 | 0 | 166 | 175 |
+| verus | 24 | 0 | 184 | 157 |
+| spark | 24 | 160 | 24 | 157 |
+| framac | 23 | 180 | 0 | 162 |
+| lean | 21 | 0 | 187 | 157 |
+| rocq | 24 | 12 | 197 | 132 |
+| fstar | 24 | 0 | 184 | 157 |
+
+**Reading.** An invariant is load-bearing almost always: 198 of 202 stripped invariants break the
+proof somewhere, 160 of them in five kernels at once, and only 4 are redundant everywhere. A
+`requires` is the opposite: 128 of 163 are needed by no kernel, 11 break a proof, and 24 admit an
+input the specification fails on, every one of the 24 with an interpreter witness. SPARK and
+Frama-C answer a stripped invariant with a timeout (160 and 180) where the other five say
+`unproved`, so they rarely count as "needing" the hint; the class rules read a timeout as no
+verdict and the twin's class comes from the kernels that did answer. No twin is undecided because
+every twin has at least one kernel with a verdict. The pairs, index and README are in
+`t/out/twins-hints/` on the lab and the desktop (`grade/out` stays on the lab). Section 8 still
+holds: the 209 + 24 are candidate negatives for the next corpus registration, the 132 never.
