@@ -42,6 +42,19 @@ samples by their behaviour on the problem's example tests. `--rescore ROWS`
 recomputes every number from an earlier run's rows under `--answer` without
 generating anything (the rows hold every call and verdict).
 
+`--samples N` (N above 1) asks each dev problem N times by sampling instead of once
+greedily: the base rate a reward or a selector would have to work with. It draws at
+`--temperature` and `--top-k` (defaults 0.8 and 20, the sampler t/RL-DESIGN-2026-09-26.md
+section 3 measured with) through the same engine, grammar, call budget and answer rule, in
+batches of `--sample-batch` rows, each batch seeded by t/pilot_sampling.derive_seed. Every
+draw is graded like a greedy answer. The report gives, for well formed, passes all shown
+examples, the tests tier, and agrees with the specification check: the problems with any
+such draw, the rate per draw, pass@k (human-eval's unbiased estimate
+1 - comb(n - c, k) / comb(n, k), arXiv:2107.03374,
+https://github.com/openai/human-eval), and the problems whose rate lies in the design's
+difficulty band (0, 1/4]. Draws that pass their examples and disagree with the
+specification are counted: they are the negatives t/NEGATIVES-2026-09-25.md lacked.
+
 The held-out evaluation problems are never asked: an id in the split's
 eval_ids is refused by name.
 
@@ -69,11 +82,31 @@ sys.path.insert(0, str(ROOT / "t"))
 
 def ask(engine, tok, user: str, max_tokens: int) -> dict:
     import chat
-    from engine import reply_parts
     prompt = chat.render_for_completion(tok, {"messages": [{"role": "user", "content": user}]})
     results, _masks = engine.generate_batch(prompt, 1, max_tokens=max_tokens, temperature=0.0, seed=0)
-    parts = reply_parts(tok, results[0])
-    row = engine.rows[0]
+    return row_record(tok, results[0], engine.rows[0])
+
+
+def ask_many(engine, tok, user: str, max_tokens: int, samples: int, temperature: float, top_k, seed_of,
+             batch: int = 32) -> list[dict]:
+    """`samples` sampled replies to one prompt, `batch` rows at a time (the engine copies the prompt's
+    cache to every row, so the batch bounds the memory); `seed_of(b)` seeds batch b's generator."""
+    import chat
+    prompt = chat.render_for_completion(tok, {"messages": [{"role": "user", "content": user}]})
+    out = []
+    for b, start in enumerate(range(0, samples, batch)):
+        n = min(batch, samples - start)
+        results, _masks = engine.generate_batch(prompt, n, max_tokens=max_tokens, temperature=temperature,
+                                                top_k=top_k, seed=seed_of(b))
+        out.extend(row_record(tok, results[i], engine.rows[i]) for i in range(n))
+    return out
+
+
+def row_record(tok, new_tokens: list[int], row) -> dict:
+    """One generated row as the answer record every scorer here reads."""
+    import chat
+    from engine import reply_parts
+    parts = reply_parts(tok, new_tokens)
     # the calls that submitted a program (a t span, or a registry call to t or an MCP t_check: chat.call_program),
     # with their verdicts; a registry call that submits none (a fetch, an unknown tool) is not a draft
     checked = [(program, out) for (text, out), kind in zip(row.tool_calls, row.call_kinds)
@@ -84,7 +117,7 @@ def ask(engine, tok, user: str, max_tokens: int) -> dict:
             "unclosed_call": row.in_tool_block or row.ended_in_call, "ended_in_call": row.ended_in_call,
             "budget_in_call": row.in_tool_block and not row.completed,
             "grammar_overrides": row.grammar_overrides, "budget_refusals": row.budget_refusals,
-            "new_tokens": len(results[0])}
+            "new_tokens": len(new_tokens)}
 
 
 def verdict_rank(verdict: str) -> int:
@@ -204,6 +237,38 @@ def answered(got: dict, policy: str) -> dict:
     return dict(got, program=answer_program(got, policy), last_program=got["program"])
 
 
+def pass_at_k(n: int, c: int, k: int) -> float:
+    """The unbiased estimate that at least one of k draws is correct, from n draws of which c were:
+    1 - comb(n - c, k) / comb(n, k) (human-eval's estimate_pass_at_k, arXiv:2107.03374)."""
+    from math import comb
+    if not (0 <= c <= n and 1 <= k <= n):
+        raise ValueError(f"pass@{k} needs 0 <= c <= n and 1 <= k <= n; got n={n}, c={c}")
+    return 1.0 - comb(n - c, k) / comb(n, k)
+
+
+SAMPLED = ("well_formed", "examples_all_pass", "tests", "spec_agrees", "examples_pass_spec_disagrees")
+
+
+def sampled_summary(per_problem: list[dict], ks=(1, 8, 16, 64)) -> dict:
+    """Per-problem counts over n draws -> what sampling reaches, per measure: the problems with any
+    such draw, the rate per draw, pass@k averaged over problems (a k above some problem's n is left
+    out, as human-eval does), and the problems whose rate lies in (0, 1/4], the difficulty band
+    t/RL-DESIGN-2026-09-26.md takes from STP."""
+    if not per_problem:
+        raise ValueError("no problems were sampled")
+    fewest = min(p["n"] for p in per_problem)
+    total = sum(p["n"] for p in per_problem)
+    out: dict = {"problems": len(per_problem), "draws": total}
+    for key in SAMPLED:
+        out[key] = {"problems_with_any": sum(p[key] > 0 for p in per_problem),
+                    "draws": sum(p[key] for p in per_problem),
+                    "per_draw": round(sum(p[key] for p in per_problem) / total, 5),
+                    "in_band": sum(0 < p[key] / p["n"] <= 0.25 for p in per_problem),
+                    "pass_at": {str(k): round(sum(pass_at_k(p["n"], p[key], k) for p in per_problem)
+                                              / len(per_problem), 5) for k in ks if k <= fewest}}
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--model", type=Path, required=True)
@@ -218,10 +283,22 @@ def main(argv=None) -> int:
     ap.add_argument("--answer", choices=("last", "best-verdict"), default="last")
     ap.add_argument("--rescore", type=Path, default=None,
                     help="an earlier run's .rows.jsonl: recompute its numbers under --answer, generate nothing")
+    ap.add_argument("--samples", type=int, default=1,
+                    help="draws per dev problem; above 1 the dev problems are sampled instead of answered "
+                         "greedily, and only they are asked")
+    ap.add_argument("--temperature", type=float, default=0.8, help="with --samples above 1")
+    ap.add_argument("--top-k", type=int, default=20, help="with --samples above 1")
+    ap.add_argument("--sample-batch", type=int, default=32, help="rows generated at once, with --samples above 1")
+    ap.add_argument("--seed", type=int, default=1, help="with --samples above 1: the seed every batch's is derived from")
     ap.add_argument("--device", default=None)
     a = ap.parse_args(argv)
     if a.max_calls is not None and not a.grammar:
         ap.error("--max-calls works through the grammar; add --grammar")
+    if a.samples < 1 or a.sample_batch < 1:
+        ap.error("--samples and --sample-batch are at least 1")
+    if a.samples > 1 and (a.rescore or a.conversations is not None or not a.dev or a.temperature <= 0):
+        ap.error("--samples above 1 samples the dev problems only: no --rescore, no --conversations, "
+                 "--dev above 0 and a temperature above 0")
 
     import chat
     import loop_filter
@@ -260,6 +337,60 @@ def main(argv=None) -> int:
     rows_path = a.out.with_suffix(".rows.jsonl")
     a.out.parent.mkdir(parents=True, exist_ok=True)
     rows_file = rows_path.open("w", encoding="utf-8")
+
+    if a.samples > 1:
+        import pilot_sampling
+        dev = sorted(loop_filter.r12_dev_ids())[:a.dev]
+        leak = set(dev) & eval_ids
+        if leak:
+            raise SystemExit(f"dev ids overlap the held-out evaluation ids: {sorted(leak)[:5]}")
+        pool = se.pool("v5")
+        out.update(decoding="sampled", samples=a.samples, temperature=a.temperature, top_k=a.top_k,
+                   sample_batch=a.sample_batch, seed=a.seed)
+        per_problem, generating, grading = [], 0.0, 0.0
+        for tid in dev:
+            entry = pool[tid]
+            user = loop_locallm.problem_head(entry, with_examples=True).rstrip("\n")
+            t0 = time.monotonic()
+            draws = ask_many(engine, tok, user, a.max_tokens, a.samples, a.temperature, a.top_k,
+                             lambda b, tid=tid: pilot_sampling.derive_seed(a.seed, tid, a.temperature, b),
+                             a.sample_batch)
+            t1 = time.monotonic()
+            generating += t1 - t0
+            counts = Counter()
+            for i, raw in enumerate(draws):
+                got = answered(raw, a.answer)
+                tier = rl_reward.tier(rl_reward.local_signals(tid, got["program"] or "", entry))
+                judged = judge(got, user)
+                # the drawn-input check only where it can count: an answer that fails a shown example
+                # is not an agreeing answer whatever its specification says
+                spec = (spec_agreement(got["program"], entry, seed=tid) if judged["examples_all_pass"]
+                        else {"status": "not checked: an example fails"})
+                counts["well_formed"] += judged["well_formed"]
+                counts["examples_all_pass"] += judged["examples_all_pass"]
+                counts["tests"] += tier in rl_reward.ORDER[3:]
+                counts["spec_agrees"] += judged["examples_all_pass"] and spec.get("status") == "agrees"
+                counts["examples_pass_spec_disagrees"] += (judged["examples_all_pass"]
+                                                           and spec.get("status") == "disagrees")
+                counts["used_tool"] += got["tool_calls"] > 0
+                rows_file.write(json.dumps({"set": "dev-sampled", "task_id": tid, "draw": i, "tier": tier,
+                                            "verdict": judged["verdict"], "spec": spec,
+                                            "well_formed": judged["well_formed"],
+                                            "examples_all_pass": judged["examples_all_pass"],
+                                            **{k: got[k] for k in ROW_KEYS}}) + "\n")
+            grading += time.monotonic() - t1
+            per_problem.append({"task_id": tid, "n": len(draws), **{k: counts[k] for k in SAMPLED},
+                                "used_tool": counts["used_tool"]})
+            rows_file.flush()
+            print(json.dumps(per_problem[-1]), flush=True)
+        rows_file.close()
+        out["dev_sampled"] = {**sampled_summary(per_problem), "per_problem": per_problem,
+                              "generate_seconds": round(generating, 1), "grade_seconds": round(grading, 1)}
+        out["seconds"] = round(time.monotonic() - started, 1)
+        out["rows"] = str(rows_path)
+        a.out.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps({k: v for k, v in out["dev_sampled"].items() if k != "per_problem"}))
+        return 0
 
     if a.dev:
         dev = sorted(loop_filter.r12_dev_ids())[:a.dev]
