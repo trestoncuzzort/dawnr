@@ -107,7 +107,9 @@ remaining steps and why neither is the split file.
 
 ### 17.1 Install stories per operating system
 
-Pages exist for Linux, macOS, and Windows.
+Pages exist for Linux, macOS, and Windows. The whole `t/` test suite runs natively on Windows
+(2026-09-30: 1,455 passed, 0 failed, with CI's deselect list for the tests that need the dafny
+binary or the corpora checkout; `t/RUN-ON-WINDOWS.md`), and so does the model side.
 
 ### 17.2 The tag
 
