@@ -82,10 +82,14 @@ a reader reaching a particular paragraph. The headline is in
   a wrong answer and reject a right one, and it has rejected one: the 27B
   teacher's answer to MBPP 387 disagrees as the check stands and agrees on 174
   draws when the reference is fed the string. No locallm arm passes its tests
-  on any of the three, so the published locallm zeros stand; the teachers'
-  specification-checked counts can be one short. Not yet repaired: the
-  reference should be called with the type its own assertions use, and the
-  held-out answers re-scored.
+  on any of the three, so the published locallm zeros stand. **Repaired the
+  same day**: the check now calls the reference with the types its own
+  assertions use (`spec_check.python_arguments`) and reads its outputs the way
+  the pool reads assertion values. Re-scoring all 89 fully graded answer sets
+  on this machine moved no published count on either panel: the teacher
+  answers whose verdict flipped were never clean in seven kernels, so they
+  never counted. The 771 "agreement" became a disagreement, and ten dev
+  answers that the old call could not check at all now get verdicts.
 - A proof covers the specification, not the intent. Hence the tests, the
   proven-but-wrong column and the specification check.
 - t covers integers, booleans, sequences, pairs, strings as character

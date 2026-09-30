@@ -21,6 +21,7 @@ Disagreements are reported with the input that shows them. The reference solutio
 from __future__ import annotations
 
 import argparse
+import ast
 import contextlib
 import datetime
 import hashlib
@@ -142,17 +143,62 @@ def draw(kind: str, rnd: random.Random, like=None):
     return None
 
 
-def to_t(value):
-    """A Python value from the reference solution as an interpreter value."""
+def to_t(value, kind: str | None = None):
+    """A Python value from the reference solution as an interpreter value, read the way the pool
+    reads the problem's own assertions (t/mbpp_dfy.py `_literal`, SPEC.md "Strings as sequences of
+    code points"). A string is a seq of code points; where the declared `kind` is int, a
+    one-character string is that character, as the notation's 'a' is sugar for 97; a list whose
+    every element is a one-character string is a flat seq of code points (`split('python') ==
+    ['p', 'y', ...]`), as the assertion parser reads that literal, unless the kind is seq-of-seq."""
     if isinstance(value, bool):
         return value
     if isinstance(value, int):
         return value
     if isinstance(value, str):
+        if kind == "int" and len(value) == 1:
+            return ord(value)
         return tuple(ord(c) for c in value)
     if isinstance(value, (list, tuple)):
-        return tuple(to_t(x) for x in value)
+        if kind != "seq-of-seq" and value and all(isinstance(x, str) and len(x) == 1 for x in value):
+            return tuple(ord(x) for x in value)
+        inner = "seq" if kind == "seq-of-seq" else None
+        return tuple(to_t(x, inner) for x in value)
     raise TypeError(f"unsupported reference result: {type(value).__name__}")
+
+
+def string_positions(entry: dict) -> list[int]:
+    """The argument positions that are str literals in the problem's first parseable assertion:
+    the positions where the reference expects a str, which t represents as a seq of code points
+    (a one-character str as an int)."""
+    for src in entry.get("rec", {}).get("test_list", []) or []:
+        try:
+            tree = ast.parse(src)
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and getattr(node.func, "id", None) == entry.get("fn"):
+                return [i for i, a in enumerate(node.args)
+                        if isinstance(a, ast.Constant) and isinstance(a.value, str)]
+    return []
+
+
+def python_arguments(args: list, positions: list[int]) -> list:
+    """The drawn arguments as the reference's own assertions pass them (2026-09-30, receipt
+    ad806d032e1a): a str where the assertion passed a str literal, joined from the code points,
+    a one-character str for a character argument, a list elsewhere. Before this the reference was
+    handed a list of integers for every string, and a solution that compares against character
+    literals then ran and computed another function without raising (MBPP 771's bracket balancer
+    answered "the length is even"). EvalPlus keeps a str a str when it grows test inputs
+    (arXiv:2305.01210); this is the same rule for the reference call."""
+    out = []
+    for i, a in enumerate(args):
+        if i in positions and isinstance(a, (list, tuple)):
+            out.append("".join(chr(c) for c in a))
+        elif i in positions and isinstance(a, int) and not isinstance(a, bool):
+            out.append(chr(a))
+        else:
+            out.append(list(a) if isinstance(a, (list, tuple)) else a)
+    return out
 
 
 def mutations(value):
@@ -396,6 +442,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     examples = [v for _k, v in entry["points"][0]["args"]]
     if len(kinds) != len(task["params"]):
         return {"status": "arity differs from the problem"}
+    positions = string_positions(entry)
     funs = interp.funs_of(task, task["body"])
     agreed = 0
     rejected = accepted = 0            # the completeness half: wrong outputs the ensures catches
@@ -434,7 +481,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
             return {"status": f"cannot draw {kinds}"}
         try:
             with deadline(5):
-                out = fn(*[x if not isinstance(x, list) else list(x) for x in args])
+                out = fn(*python_arguments(args, positions))
         except Timeout:
             return {"status": "reference did not finish"}
         except Exception:                                       # noqa: BLE001
@@ -464,7 +511,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
         reference_ran += 1
         try:
             env = {p["name"]: to_t(a) for p, a in zip(task["params"], args)}
-            env[task["returns"][0]["name"]] = to_t(out)
+            env[task["returns"][0]["name"]] = to_t(out, task["returns"][0].get("type"))
         except TypeError:
             return {"status": "reference result has no t value"}
         st = interp.St()

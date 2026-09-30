@@ -101,8 +101,13 @@ check as it stands says its specification disagrees (the reference fed integers 
 "Odd"), and with the reference fed the string it agrees on 174 draws. Of the 126 graded arms on
 the desktop no locallm arm passes its tests on any of the three problems, so the published
 locallm zeros stand; four teacher arms pass them on 387, so the teachers' specification-checked
-counts can be one short. Recorded in `LIMITS.md`. The repair is to call the
-reference with the type its own assertions use (EvalPlus keeps a str a str when it grows inputs,
-arXiv:2305.01210; receipt ad806d032e1a) and re-score; until then no reward, selector or new
-held-out number should rest on the check for a string problem.
+counts can be one short. Recorded in `LIMITS.md`.
+
+**Repaired the same day** (receipt ad806d032e1a; EvalPlus keeps a str a str when it grows inputs,
+arXiv:2305.01210): `spec_check` now calls the reference with the types its own assertions use and
+reads outputs the way the pool reads assertion values. Under the repaired check the 3 "agreeing"
+draws on 771 disagree, the 3 tests-tier draws on 459 (which the old call could not check) disagree,
+and every other verdict stands: **0 problems, 0 draws agree**. The judgement's dev block is
+unchanged (10 answers move from "no valid draws" to a real verdict, none of them agreeing).
+Re-scoring all 89 fully graded held-out answer sets on this machine changed no published count.
 
