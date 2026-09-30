@@ -1,0 +1,166 @@
+{
+ "registered": "t/PREDICT-2026-09-30-dawnr-r12-core.md (amended 2026-09-29 21:50Z to the free limit; 2026-09-30 01:50Z stage 1 at weight decay 0.8, lr 1e-3; 06:41Z stage 2 with activation checkpointing)",
+ "judgement": "dawnr_pipeline mid stage (400 steps, 1e-4, tool rate 0.5, harness tokens, seed 1337) on the 531-document r12 corpus, then chat_eval on 100 dev problems (greedy, 800 tokens, grammar, two calls, best-verdict) with spec_agrees; base held-out loss on the 46 proved validation documents",
+ "stage1_english": {
+  "where": "one rented H100 (locallm/cloud_train.py), resumed once from its own checkpoint at step 25,500",
+  "steps": 56457,
+  "tokens_per_step": 65536,
+  "train_tokens": 3699000000,
+  "parameters": 92920320,
+  "val_final": 2.1797,
+  "val_final_step": 56457,
+  "val_best": 2.1795,
+  "val_best_step": 56000
+ },
+ "stage2_code": {
+  "where": "the desktop's 16 GB card, activation checkpointing on",
+  "steps": 15000,
+  "batch": "16 x 2048",
+  "val_best_at_an_eval": 1.1366,
+  "val_best_step": 13500,
+  "val_final": 1.1468,
+  "train_final": 0.757,
+  "seconds": 7734
+ },
+ "core": {
+  "kept_step": 14000,
+  "val": 1.1398,
+  "kept": [
+   {
+    "step": 1000,
+    "val": 1.7582
+   },
+   {
+    "step": 2000,
+    "val": 1.5691
+   },
+   {
+    "step": 3000,
+    "val": 1.5102
+   },
+   {
+    "step": 4000,
+    "val": 1.4654
+   },
+   {
+    "step": 5000,
+    "val": 1.4255
+   },
+   {
+    "step": 6000,
+    "val": 1.3938
+   },
+   {
+    "step": 7000,
+    "val": 1.357
+   },
+   {
+    "step": 8000,
+    "val": 1.3053
+   },
+   {
+    "step": 9000,
+    "val": 1.2687
+   },
+   {
+    "step": 10000,
+    "val": 1.2256
+   },
+   {
+    "step": 11000,
+    "val": 1.1861
+   },
+   {
+    "step": 12000,
+    "val": 1.1573
+   },
+   {
+    "step": 13000,
+    "val": 1.1423
+   },
+   {
+    "step": 14000,
+    "val": 1.1398
+   },
+   {
+    "step": 15000,
+    "val": 1.1468
+   }
+  ]
+ },
+ "dev": {
+  "well_formed": 45,
+  "examples_all_pass": 0,
+  "spec_agrees": 0,
+  "examples_pass_spec_disagrees": 0,
+  "used_tool": 31
+ },
+ "dev_tiers": {
+  "none": 33,
+  "parses": 22,
+  "typed": 45,
+  "tests": 0,
+  "proved-weak": 0,
+  "proved": 0
+ },
+ "dev_pipeline_eval_no_grammar_last_answer": {
+  "well_formed": 44,
+  "examples_all_pass": 0,
+  "spec_agrees": 0,
+  "examples_pass_spec_disagrees": 0,
+  "used_tool": 22
+ },
+ "validation_documents_46": {
+  "asked": 46,
+  "well_formed": 35,
+  "examples_all_pass": 16,
+  "spec_agrees": null,
+  "examples_pass_spec_disagrees": null,
+  "used_tool": 31
+ },
+ "heldout": {
+  "documents": 46,
+  "target_tokens": 8501,
+  "nats_per_token": 3.7125,
+  "nats_per_char": 1.4632,
+  "cut_documents": 0
+ },
+ "comparison": {
+  "A": {
+   "dev": {
+    "well_formed": 49,
+    "examples_all_pass": 1,
+    "spec_agrees": 0,
+    "used_tool": 17
+   },
+   "heldout_nats_per_token": 3.7154
+  },
+  "B": {
+   "dev": {
+    "well_formed": 29,
+    "examples_all_pass": 0,
+    "spec_agrees": 0,
+    "used_tool": 24
+   },
+   "heldout_nats_per_token": 3.6425
+  },
+  "C": {
+   "dev": {
+    "well_formed": 23,
+    "examples_all_pass": 1,
+    "spec_agrees": 0,
+    "used_tool": 17
+   },
+   "heldout_nats_per_token": 3.6686
+  },
+  "source": "locallm/dawnr-english-pilot-results-2026-09-29.json"
+ },
+ "predictions": {
+  "1_english_val_below_2.30": "holds",
+  "2_code_val_below_1.20": "holds",
+  "3_well_formed_at_least_50": "falsified",
+  "4_spec_agrees_at_least_1": "falsified",
+  "5_heldout_below_3.60": "falsified",
+  "6_r12_round_at_least_1_clean": "open (the round has not run)"
+ }
+}

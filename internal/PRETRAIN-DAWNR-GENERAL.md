@@ -544,3 +544,29 @@ and TinyStories tokenized on 2026-09-29 with the section 7.3 tool, 16.4B tokens 
 uint16 shards (file 000 is section 7.3's; files 001-013 hold 1.17B each but the last, 295M;
 TinyStories 811M), decontaminated by the widened set of 7.1, and uploaded to the rented
 volume `dawnr-data` under `english/file-*/`.
+
+## 9. r12's core at the free limit: the result (2026-09-30)
+
+Registered in `t/PREDICT-2026-09-30-dawnr-r12-core.md`, outcome there and in
+`locallm/dawnr-r12-core-results-2026-09-30.json`. The 93M core read the first 3.7B tokens of the
+English set once (one rented H100, 65,536 tokens per step, 56,457 steps, weight decay 0.8 and
+lr 1e-3 after two starts at weight decay 0.1 diverged), then 15,000 steps of code at 16 x 2,048
+with a kept copy every 1,000 steps; the core is the kept copy with the lowest validation loss.
+
+| core | English, code tokens | code validation | well formed | pass all | `spec_agrees` | held-out loss |
+|---|---|---:|---:|---:|---:|---:|
+| r12's core (kept step 14,000) | 3.70B, 459M | 1.140 | 45 | 0 | 0 | 3.7125 |
+| A (the sweep's core) | 0, 485M | 1.166 (its own split) | 49 | 1 | 0 | 3.7154 |
+| B (pilot) | 300M, 734M | 1.214 | 29 | 0 | 0 | 3.6425 |
+| C (pilot) | 0, 1,034M | 1.245 (its own split) | 23 | 1 | 0 | 3.6686 |
+
+English validation ended at 2.180 (the pilot's 300M-token stage: 2.525) and the code stage fell at
+every evaluation to 1.137 before the gap to the training loss opened in the last thousand steps.
+Neither moved the judgement: form and the held-out loss are level with the sweep's core at the
+same code exposure, and the specification column is 0. What this fixes: section 2's budget
+argument held for the language-model loss and did not reach the task; the 312M run is no longer
+the next step, and the corpus is (`internal/RESEARCH-2026-09-30-stage-sweep.md`). Two operating
+lessons: weight decay 0.1 at lr 6e-4 or above diverges with this model (three times now), and a
+core trained on a large card must carry `--gradient-checkpointing` into a continuation on the
+16 GB card.
+
