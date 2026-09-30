@@ -116,3 +116,10 @@ loss is the core). Run directory `t/out/dawnr-r12-core-2026-09-30/stage2-code`.
 for the run, held with about one chance in four at this size; held-out loss below 3.60; r12's round
 at least 1 clean, spec checked, on some seed). The 312M run stays registered above for the day a
 free allocation covers it (the Google Cloud credit once its GPU quota is granted, or a grant).
+
+**Addendum, 2026-09-30 00:25Z, stage 1 still training:** at the operator's word, the same stage 1
+also runs on one rented H100 within Modal's remaining month credit (micro-batch 32 with no
+gradient accumulation and no gradient checkpointing, the same 65,536 tokens per step, data, steps,
+optimizer and seed; a hard cap of 4.5 hours on the container bounds the spend at about $18). The
+first of the two stage-1 runs to complete is the one continued into stage 2 and judged; the other
+is kept as a replicate and not judged. The predictions are unchanged.
