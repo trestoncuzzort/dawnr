@@ -4,6 +4,10 @@ The prediction of at least 1.5 times faster generation failed. Caching is correc
 and remains opt-in through `generate(..., use_cache=True)`; the default stays
 uncached because the measured small-prefix runs did not get faster.
 
+**Superseded for CUDA on 2026-09-30** (see the last section): at the round's own
+shape, up to 1,200 new tokens, the cache is 7 times faster with byte-equal output,
+and `cache_by_default` answers on for CUDA under the CPU's window rule.
+
 | prefix tokens | core | uncached median, seconds | cached median, seconds | speed ratio |
 |---:|---|---:|---:|---:|
 | 512 | GPT | 0.1813 | 0.1973 | 0.919 |
@@ -277,3 +281,13 @@ What this bought: on the CPU most people run, the included model now writes the
 window's default 400 characters at about 3 ms per token instead of 44 on one
 thread (2.9 instead of 17.1 on four), and the prediction that failed located a real cost (discarded key and
 value tensors on every rebuild) that the GPU measurement could not see.
+
+## CUDA at the round's shape, 2026-09-30
+
+Registered and measured in `t/PREDICT-2026-09-30-cached-decoding-pick.md`: the r12 round's own
+generate command (the 93M core's seed-1 fine-tune, 100 dev problems, greedy, up to 1,200 new
+tokens, 60 of 100 replies hitting the cap) on an RTX 5050, cached against uncached. 100 of 100
+replies byte-equal; 304.6 s against 2,144.5 s (0.14); per reply, 7.3 to 8.2 times on capped replies
+and 1.4 to 2.0 times on 50-token ones. The 2026-09-19 table above measured 128 new tokens, where
+the quadratic term of uncached decoding is still small; at the round's lengths it dominates.
+`cache_by_default` therefore answers on for CUDA (prompt shorter than the window) since d01a7a4a.
