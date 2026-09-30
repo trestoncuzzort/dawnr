@@ -18,6 +18,7 @@ import os
 import platform
 import random
 import shutil
+import sys
 import time
 from dataclasses import asdict
 from datetime import timedelta
@@ -519,7 +520,10 @@ def main(argv=None) -> int:
         raise SystemExit("Each local rank needs its own visible CUDA device")
     if args.device == "cuda":
         torch.cuda.set_device(local_rank)
-    dist.init_process_group("nccl" if args.device == "cuda" else "gloo", timeout=timedelta(minutes=10))
+    # "As of PyTorch v1.8, Windows supports all collective communications backends but NCCL"; Gloo
+    # moves GPU tensors for broadcast and all_reduce (docs.pytorch.org/docs/stable/distributed.html)
+    backend = "nccl" if args.device == "cuda" and sys.platform != "win32" else "gloo"
+    dist.init_process_group(backend, timeout=timedelta(minutes=10))
     try:
         run(args, rank, world, local_rank)
     finally:
