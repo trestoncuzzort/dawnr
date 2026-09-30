@@ -41,7 +41,17 @@ for a in "$@"; do
 done
 
 PRETRAIN_DIR=t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337-desktop-best
-CORE="$PRETRAIN_DIR/best.pt"
+# 2026-09-30: the round can run on another core under another arm name, so the seeds already
+# trained on the sweep's core (t/out/locallm-r12-s<seed>) are neither reused nor overwritten:
+#   R12_RUN_CORE        the checkpoint file to continue from (default: the sweep's best.pt)
+#   R12_RUN_CORE_READY  a file whose existence says that core is final (e.g. its CHOSEN.json);
+#                       without it the pretraining run.json's status is the test, as before
+#   R12_RUN_ARM         the arm prefix (default locallm-r12): run directories, tags, sentinels
+#   R12_RUN_OUTCOMES    the outcomes file the final scoring writes (default t/out/r12-outcomes.json)
+CORE=${R12_RUN_CORE:-$PRETRAIN_DIR/best.pt}
+CORE_READY=${R12_RUN_CORE_READY:-}
+ARM=${R12_RUN_ARM:-locallm-r12}
+OUTCOMES=${R12_RUN_OUTCOMES:-t/out/r12-outcomes.json}
 CORPUS=t/out/loop/corpus-r12-headed.txt
 SPLIT=t/out/loop/split-v5.json
 DEV_IDS=t/r12-dev-ids.json
@@ -107,6 +117,7 @@ preflight_ok() {
 
 # --------------------------------------------------------- wait for the core --
 core_ready() {
+  if [ -n "$CORE_READY" ]; then [ -f "$CORE" ] && [ -f "$CORE_READY" ]; return; fi
   # "complete" = ran every step; "stopped" = the early-stop rule ended it at its best (the trainer
   # writes "stopped" for any run that ends before --steps, and best.pt is the state to use)
   [ -f "$CORE" ] && { json_field_is "$PRETRAIN_DIR/run.json" status complete \
@@ -117,7 +128,7 @@ core_failed() {
 }
 wait_for_core() {
   if core_ready; then
-    log "core ready: $CORE ($PRETRAIN_DIR/run.json status complete)"
+    log "core ready: $CORE ($([ -n "$CORE_READY" ] && echo "$CORE_READY exists" || echo "$PRETRAIN_DIR/run.json status complete"))"
     return 0
   fi
   if core_failed; then
@@ -144,7 +155,7 @@ wait_for_core() {
 
 # -------------------------------------------------------------- per-seed steps --
 train_seed() {
-  local s=$1 out=t/out/locallm-r12-s$s
+  local s=$1 out=t/out/$ARM-s$s
   if json_field_is "$out/run.json" status complete; then log "seed $s: already trained ($out/run.json complete)"; return 0; fi
   run flock "$GPU_LOCK" systemd-run --user --scope -p MemoryMax="$MEM_CAP" \
     "$PY" locallm/continue_from_checkpoint.py \
@@ -153,19 +164,19 @@ train_seed() {
       --doc-batches --keep-every 50 --dropout 0.1 --split-seed 1338 --seed "$s" --deterministic
 }
 pick_step_seed() {
-  local s=$1 out=t/out/locallm-r12-s$s
+  local s=$1 out=t/out/$ARM-s$s
   [ -f "$out/selection.json" ] && { log "seed $s: stopping step already chosen"; return 0; }
   run flock "$GPU_LOCK" systemd-run --user --scope -p MemoryMax="$MEM_CAP" \
     "$PY" t/pick_stopping_step.py --run "$out" --split "$SPLIT" --dev-ids "$DEV_IDS" --install
 }
 generate_seed() {
-  local s=$1 tag=locallm-r12-s$s out=t/out/locallm-r12-s$s
+  local s=$1 tag=$ARM-s$s out=t/out/$ARM-s$s
   [ -f "t/out/gen-$tag.done" ] && { log "seed $s: already generated (t/out/gen-$tag.done)"; return 0; }
   run flock "$GPU_LOCK" systemd-run --user --scope -p MemoryMax="$MEM_CAP" \
     env T_PY="$PY" bash t/gen_fleet.sh "$out" "$tag" 1 "0" --temperature 0
 }
 grade_seed() {
-  local s=$1 tag=locallm-r12-s$s
+  local s=$1 tag=$ARM-s$s
   [ -f "t/out/spec-experiment/$tag/kernels.md" ] && { log "seed $s: already graded"; return 0; }
   run env T_LAB="$T_LAB" T_LAB_JOBS="$GRADE_CELLS" T_LAB_RUN_PAR=--no-cache bash t/grade_lab.sh heldout "$tag" \
     && return 0
@@ -184,13 +195,13 @@ grade_seed() {
 # ------------------------------------------------------------------ compare --
 score_and_compare() {
   local new_tags="" s
-  for s in $SEEDS; do new_tags="$new_tags locallm-r12-s$s"; done
-  run python3 t/score_heldout.py --split "$SPLIT" --outcomes t/out/r12-outcomes.json $BASE_TAGS $new_tags
+  for s in $SEEDS; do new_tags="$new_tags $ARM-s$s"; done
+  run python3 t/score_heldout.py --split "$SPLIT" --outcomes "$OUTCOMES" $BASE_TAGS $new_tags
   local new_csv; new_csv=$(echo "$new_tags" | tr -s ' ' ',' | sed 's/^,//')
   local base_csv; base_csv=$(echo "$BASE_TAGS" | tr -s ' ' ',')
-  run python3 t/compare_arms.py --outcomes t/out/r12-outcomes.json \
+  run python3 t/compare_arms.py --outcomes "$OUTCOMES" \
     --arm "base=$base_csv" --arm "new=$new_csv" --prereg t/PREDICT-r12.md \
-    --json "$OUT_DIR/compare.json"
+    --json "$OUT_DIR/compare$([ "$ARM" = locallm-r12 ] || echo "-$ARM").json"
 }
 
 # ------------------------------------------------------------------- main --
@@ -207,6 +218,6 @@ main() {
     grade_seed "$s" || { log "REFUSED: seed $s grading failed"; exit 1; }
   done
   score_and_compare || { log "REFUSED: scoring or comparison failed"; exit 1; }
-  log "== r12 run done: see $OUT_DIR/compare.json and t/out/r12-outcomes.json"
+  log "== r12 run done ($ARM): see $OUT_DIR and $OUTCOMES"
 }
 main
