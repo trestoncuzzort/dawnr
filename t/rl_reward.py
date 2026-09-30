@@ -186,11 +186,14 @@ def drawn_tests(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     same unstated preconditions (a sorted example stays sorted).
 
     The reference is trusted only after it reproduces every one of the problem's
-    own assertions when called the way the draws will call it (a string problem
-    whose Python solution wants a `str` and gets a list of character codes
-    fails here and is skipped, not scored). An input the program's `requires`
-    excludes, or where it runs out of budget, says nothing; only a wrong value
-    or a crash counts against it.
+    own assertions when called the way the draws will call it. Since 2026-09-30
+    that is the way its own assertions call it (spec_check.python_arguments: a
+    str where the assertion passed one), so a string problem's solution gets a
+    `str`; before, it got a list of character codes and either raised (skipped)
+    or, comparing against character literals, silently computed another
+    function that still reproduced the assertions. An input the program's
+    `requires` excludes, or where it runs out of budget, says nothing; only a
+    wrong value or a crash counts against it.
     """
     import copy
     import spec_check
@@ -201,16 +204,17 @@ def drawn_tests(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     kinds = [k for k, _v in points[0]["args"]]
     examples = [v for _k, v in points[0]["args"]]
     ekind = points[0]["expected"][0]
+    positions = spec_check.string_positions(entry)
 
     def call(args):
         with spec_check.deadline(2):
-            return fn(*copy.deepcopy([list(a) if isinstance(a, tuple) else a for a in args]))
+            return fn(*spec_check.python_arguments(copy.deepcopy(list(args)), positions))
 
     def as_expected(out):
         if (ekind == "bool") != isinstance(out, bool):
             return None
         try:
-            value = spec_check.to_t(out)
+            value = spec_check.to_t(out, ekind)
         except TypeError:
             return None
         if ekind == "int" and not isinstance(value, int):
