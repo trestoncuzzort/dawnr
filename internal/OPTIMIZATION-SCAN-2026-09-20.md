@@ -90,6 +90,20 @@ whole corpus twice, then once with `--no-cache`, and require all three tables to
 agree apart from the timestamp. Until that passes, the cache stays exactly where
 it is.
 
+**Bar passed, 2026-09-30 23:11Z (lab, head 39295428, `--jobs 4`).** The committed
+39-task matrix graded three times in a row into scratch tables: `--cache`
+(3 min 10 s; the lab's cache was warm from earlier grades), `--cache` again
+(1 min 11 s; 256 of 260 cells whole from the cache, 516 of 520 sides, the 4
+timeout cells re-run as the rule says), then `--no-cache` (7 min 36 s; 260
+cells, 1,560 kernel runs, every verdict measured). The three tables are
+byte-identical below the header line, timeout cells included. So a cached
+verdict equals a fresh one on every cell of the matrix, which is the claim the
+cache makes and the reason the lab's `run_par.py` carries it now (the paragraph
+above predates that). What the bar does not say: whether an UNPROVED produced
+under load may be cached; `t/DATA-r12.md`'s rule that queue grades run
+`--no-cache` rests on that and stands. Script and tables:
+`~/scratch/cache-bar/` on the lab.
+
 ## Queued, with its bar: wall-clock backstops are unsound under contention
 
 **Measured, in the repo's own words.** `t/verifiers/framac.py:325-328`: *"how
