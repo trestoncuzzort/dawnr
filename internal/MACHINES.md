@@ -9,6 +9,7 @@ Where the project runs from 2026-09-17 on, and what each machine is for. Numbers
 | The lab workstation | 502 GB | 4 x RTX 6000 Ada, 48 GB each, shared | 120 threads | All seven kernels installed. CPU work only. |
 | Home desktop | to measure | RTX 4080, 16 GB | to measure | Lubuntu, minimal installation, native (2026-09-17). Kernels to install; setup in `internal/HANDOFF-2026-09-17-rtx4080.md`. |
 | MacBook Pro, M3 Max | 36 GB unified | Apple M3 Max GPU (Metal, PyTorch MPS) | 14 cores in the 36 GB configuration | All seven kernels installed 2026-09-16; the committed matrix reads 30 of 34, every cell as the Dell's (`t/WITNESS-2026-09-16-macos-m3max.md`). |
+| Windows laptop (2026-09-30) | 16 GB | RTX 5050 Laptop, 8 GB GDDR7 | Core 7 240H | Windows 11 24H2, native: Python 3.12, MinGit with LFS, torch 2.11 + CUDA 12.8 in a per-user venv; no WSL, no kernels. Reached from the desktop over a direct Ethernet link (the desktop shares its connection) with key SSH. The model side runs natively: a fine-tune and a chat evaluation both ran on the card. 
 
 ## What each machine is for
 
@@ -17,6 +18,8 @@ Where the project runs from 2026-09-17 on, and what each machine is for. Numbers
 - Training the student (QLoRA on Qwen2.5-Coder-1.5B, `t/loop_train.py`), which fit well under 16 GB on the lab workstation.
 - The Phi-4-mini baseline in bf16 (about 8 GB).
 - locallm builds. Its README's measured experiments ran on an RTX 4080.
+
+**Windows laptop (RTX 5050, 8 GB).** The first Windows machine, added at the operator's direction that dawnr is not to be stuck on Linux and macOS. Measured 2026-09-30, natively on Windows: bf16 matmul about 20 TFLOPS in bursts, fp32 about 3.8; the r12 fine-tune recipe at 1 step/s (the desktop: 9); a chat evaluation at about 12 s per 800-token answer (the desktop: under 1 s), inference being fp32. So: a second lane for small jobs (fine-tunes at block 512, generation, dev evaluations, sampling in 16-row batches), not for the code-continuation stage (batch 16 needs 7.6 GB with checkpointing). Its GPU sits at 180 MHz in P8 between jobs and clocks up under load; the machine stays awake on mains with the lid closed (set 2026-09-30). Driven from the desktop over SSH; a Claude Code on it takes Windows-side setup jobs headless.
 
 **MacBook Pro (M3 Max, 36 GB).**
 - locallm builds on the Apple GPU (the locallm README reports its Dafny corpus example on Apple silicon).
