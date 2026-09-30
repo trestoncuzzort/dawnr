@@ -2674,3 +2674,15 @@ iteration and graded-trust admission started; the pretraining sweep done with it
 (the trainer now keeps `best.pt`). Next: re-run pretraining to its best point, finish the data
 tracks, train r12 on the full corpus and score it on the clean 200; then dawnr's next rows
 (retrieval, memory) in the table's order.
+
+## Stage sweep, 2026-09-30
+
+Between the two stages of r12's core the operator asked for everything usable at this stage, found
+the rule-5 way. The result is `internal/RESEARCH-2026-09-30-stage-sweep.md`: sixteen plans on the
+shelf that were written and never run (the teacher and expert iteration first among them, waiting
+on a 30 GB card since 09-26), the free-compute routes that had never been looked up, what the
+fetched literature adds (SAFE's and AlphaVerus's filters, the scale of their corpora against our
+531 documents), the code's present speed losses (the continuation re-reads the code corpus from
+text at every start), the desktop card's failure evidence with a test order, and a queue. The
+README's expert-iteration row said "running"; it was staged and is corrected. Nothing in the run
+in flight changed except the continuation's activation checkpointing, amended in its registration.
