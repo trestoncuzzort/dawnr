@@ -142,6 +142,15 @@ branch; reseat the card and its power connector; the supply. The first three wer
 
 Each item is its own registration or receipt; none changes the run in flight.
 
+**Added the same day, after the core was judged** (well formed 45 of 100, `spec_agrees` 0:
+`t/PREDICT-2026-09-30-dawnr-r12-core.md`) **and its base rate sampled** (6,400 draws, no correct
+answer: `t/PREDICT-2026-09-30-dawnr-base-rate.md`): item 0 is now the specification check itself.
+It calls a string problem's reference with a list of integers, and on 3 of the 232 held-out
+problems the reference then computes another function (`t/audit_reference_types.py`, `LIMITS.md`).
+Repair it (type-faithful reference calls, EvalPlus's rule) and re-score before any reward,
+selector or new held-out number rests on it. The base rate confirms the rest of this queue: RL and
+self-sampling have nothing to work with on this core, so the teacher items come first.
+
 1. **The operator, any time:** the advisor message and the academic-credit application; the
    firmware slot setting at the next reboot.
 2. **After the r12 core is judged, before r12's round:** token shards for the code corpus and

@@ -1,6 +1,6 @@
 # The base rate by sampling on r12's core
 
-Registered 2026-09-30 09:50Z, before any draw. `t/PREDICT-2026-09-30-dawnr-r12-core.md` prediction
+Registered 2026-09-30 09:29Z, before any draw. `t/PREDICT-2026-09-30-dawnr-r12-core.md` prediction
 4 read 0 (`spec_agrees` on the 100 dev problems, greedy), and its registered consequence is this
 measurement: "the base rate is measured by sampling (64 draws per problem through the checker)
 before any reward is built". A greedy 0 does not say whether the model never writes an agreeing
@@ -56,3 +56,53 @@ discarded.
 One checkpoint, one seed of draws, 100 problems from one source (MBPP's train side). The dev set
 is not the held-out set: a rate here bounds what training on these problems could use, and says
 nothing about the clean 200, which stays unseen.
+
+## Outcome (written 2026-09-30, after all 6,400 draws were graded)
+
+100 problems, 64 draws each, 19 minutes of generation on the desktop card. Numbers and every
+problem's counts: `locallm/dawnr-base-rate-results-2026-09-30.json`.
+
+| measure | problems with any such draw | draws of 6,400 | pass@1 | pass@16 | pass@64 |
+|---|---:|---:|---:|---:|---:|
+| well formed | 98 | 1,750 | 0.273 | 0.905 | 0.980 |
+| passes every shown example | 4 | 28 | 0.0044 | 0.031 | 0.040 |
+| tests tier | 2 | 6 | 0.0009 | 0.012 | 0.020 |
+| agrees with the specification check | 1 | 3 | 0.0005 | 0.006 | 0.010 |
+| passes its examples, disagrees with the check | 3 | 22 | | | |
+
+1. **At least 3 problems pass their shown examples: holds** (4: MBPP 92, 188, 459, 771).
+2. **At least 1 problem agrees with the specification check: holds as counted, and the count is
+   an artifact.** The one problem is MBPP 771, "check if the given expression is balanced". Its
+   three agreeing draws say `r == (len(s) % 2 == 0)`. The check calls the problem's Python
+   solution with a list of integers, because t represents a string as a sequence of integers; no
+   integer equals a bracket character, so the solution fed integers computes exactly "the length
+   is even" (on the check's own draws it differs from the solution fed the string on 13% of
+   inputs). The model's answer matches the check's degenerate reference, not the problem.
+   **Read by hand, no draw on any problem is a correct answer.**
+3. **pass@16 below 0.10 for the tests tier and for agreement: holds** (0.012 and 0.006). The
+   document-format policy of 2026-09-26 stood at 0.6% of problems outside its corpus; a larger
+   English stage, the chat format and the tool have not moved it.
+
+**What it decides.** By the counted numbers the second branch applies (something to select, RL
+off); by inspection the first does: on this core there is nothing for a reward to reinforce or a
+selector to select, and only a teacher can supply agreeing answers. RL through the engine and the
+sampling pilot stay off. The 22 draws that pass their examples and disagree with the check sit on
+3 problems; the preference trainer needs 15.
+
+**What it found about the instrument.** The artifact is a class. `t/audit_reference_types.py`
+calls each reference both ways on the check's own draws: of the 100 dev problems 35 take a string;
+for 15 the reference raises on every integer list (known since 2026-09-18: the check counts
+nothing), for 18 it behaves the same, and for **2 it runs and silently computes another function**
+(MBPP 315 and 771). Of the 232 held-out problems 41 take a string: 18 raise, 20 are the same, and
+**3 silently differ (MBPP 125, 387 and 776, all on the clean 200)**. On those problems the check
+can call a wrong answer agreeing and a right answer disagreeing, and it has: the 27B teacher's
+second seed answers MBPP 387 (is the hexadecimal number even or odd) with its tests passing, the
+check as it stands says its specification disagrees (the reference fed integers always answers
+"Odd"), and with the reference fed the string it agrees on 174 draws. Of the 126 graded arms on
+the desktop no locallm arm passes its tests on any of the three problems, so the published
+locallm zeros stand; four teacher arms pass them on 387, so the teachers' specification-checked
+counts can be one short. Recorded in `LIMITS.md`. The repair is to call the
+reference with the type its own assertions use (EvalPlus keeps a str a str when it grows inputs,
+arXiv:2305.01210; receipt ad806d032e1a) and re-score; until then no reward, selector or new
+held-out number should rest on the check for a string problem.
+

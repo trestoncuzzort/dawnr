@@ -68,6 +68,24 @@ a reader reaching a particular paragraph. The headline is in
   admits about 97 percent wrong and the tests catch what the proofs cannot. The
   honest claim is tests **and** proofs together, not seven provers rather than
   one.
+- **The specification check calls a string problem's reference with a list of
+  integers, and some references then compute another function.** t represents
+  a string as a sequence of integers. A Python solution handed that list either
+  raises (the check then counts nothing, known since 2026-09-18) or runs and
+  silently differs, because no integer equals a character literal: MBPP 771's
+  bracket balancer becomes "the length is even", and a specification saying so
+  agreed with it on all 200 draws (found 2026-09-30,
+  [`t/PREDICT-2026-09-30-dawnr-base-rate.md`](t/PREDICT-2026-09-30-dawnr-base-rate.md)).
+  [`t/audit_reference_types.py`](t/audit_reference_types.py) finds 2 such
+  problems among the 100 dev problems and **3 among the 232 held-out problems
+  (MBPP 125, 387, 776), all on the clean 200**; on these the check can accept
+  a wrong answer and reject a right one, and it has rejected one: the 27B
+  teacher's answer to MBPP 387 disagrees as the check stands and agrees on 174
+  draws when the reference is fed the string. No locallm arm passes its tests
+  on any of the three, so the published locallm zeros stand; the teachers'
+  specification-checked counts can be one short. Not yet repaired: the
+  reference should be called with the type its own assertions use, and the
+  held-out answers re-scored.
 - A proof covers the specification, not the intent. Hence the tests, the
   proven-but-wrong column and the specification check.
 - t covers integers, booleans, sequences, pairs, strings as character

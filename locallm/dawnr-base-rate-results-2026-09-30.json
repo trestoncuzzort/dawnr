@@ -1,0 +1,1187 @@
+{
+ "registered": "t/PREDICT-2026-09-30-dawnr-base-rate.md (commit c2aa2e34, 09:29Z, before any draw)",
+ "model": "the pipeline's mid-trained checkpoint on r12's core (ckpt.pt sha256 d74ee05a7f9d9790...)",
+ "settings": {
+  "decoding": "sampled",
+  "samples": 64,
+  "temperature": 0.8,
+  "top_k": 20,
+  "sample_batch": 32,
+  "seed": 1,
+  "grammar": true,
+  "max_calls": 2,
+  "answer": "best-verdict",
+  "max_tokens": 800
+ },
+ "seconds": {
+  "generate": 1160.9,
+  "grade": 2.5
+ },
+ "summary": {
+  "problems": 100,
+  "draws": 6400,
+  "well_formed": {
+   "problems_with_any": 98,
+   "draws": 1750,
+   "per_draw": 0.27344,
+   "in_band": 50,
+   "pass_at": {
+    "1": 0.27344,
+    "8": 0.80382,
+    "16": 0.90489,
+    "64": 0.98
+   }
+  },
+  "examples_all_pass": {
+   "problems_with_any": 4,
+   "draws": 28,
+   "per_draw": 0.00438,
+   "in_band": 4,
+   "pass_at": {
+    "1": 0.00438,
+    "8": 0.02227,
+    "16": 0.03074,
+    "64": 0.04
+   }
+  },
+  "tests": {
+   "problems_with_any": 2,
+   "draws": 6,
+   "per_draw": 0.00094,
+   "in_band": 2,
+   "pass_at": {
+    "1": 0.00094,
+    "8": 0.00669,
+    "16": 0.0117,
+    "64": 0.02
+   }
+  },
+  "spec_agrees": {
+   "problems_with_any": 1,
+   "draws": 3,
+   "per_draw": 0.00047,
+   "in_band": 1,
+   "pass_at": {
+    "1": 0.00047,
+    "8": 0.00335,
+    "16": 0.00585,
+    "64": 0.01
+   }
+  },
+  "examples_pass_spec_disagrees": {
+   "problems_with_any": 3,
+   "draws": 22,
+   "per_draw": 0.00344,
+   "in_band": 3,
+   "pass_at": {
+    "1": 0.00344,
+    "8": 0.01814,
+    "16": 0.02469,
+    "64": 0.03
+   }
+  }
+ },
+ "used_tool_draws": 2437,
+ "problems_with_a_draw_passing_its_examples": [
+  {
+   "task_id": 92,
+   "n": 64,
+   "well_formed": 20,
+   "examples_all_pass": 8,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 8,
+   "used_tool": 28
+  },
+  {
+   "task_id": 188,
+   "n": 64,
+   "well_formed": 16,
+   "examples_all_pass": 3,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 3,
+   "used_tool": 42
+  },
+  {
+   "task_id": 459,
+   "n": 64,
+   "well_formed": 29,
+   "examples_all_pass": 3,
+   "tests": 3,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 17
+  },
+  {
+   "task_id": 771,
+   "n": 64,
+   "well_formed": 20,
+   "examples_all_pass": 14,
+   "tests": 3,
+   "spec_agrees": 3,
+   "examples_pass_spec_disagrees": 11,
+   "used_tool": 17
+  }
+ ],
+ "inspection": {
+  "771": "the 3 agreeing draws say r == (len(s) % 2 == 0) for 'is the bracket expression balanced'; the check calls the Python reference with a list of integers, on which it computes exactly 'the length is even' (no integer equals a bracket character), so the agreement and the tests tier are an artifact; the 11 disagreeing draws are other wrong guesses",
+  "459": "3 draws keep only lower-case letters for 'remove uppercase substrings'; they pass the problem's assertions; the reference (a regex) never runs on a list of integers, so the check reports 'no valid draws' and counts nothing; their ensures len(r) == len(s) is false of their own body",
+  "92": "8 draws pass both shown examples and disagree with the reference on drawn inputs",
+  "188": "3 draws answer 'x is even' for 'product of two squares'; disagree on drawn inputs"
+ },
+ "correct_answers_found_on_inspection": 0,
+ "predictions": {
+  "1_at_least_3_problems_pass_their_examples": "holds (4)",
+  "2_at_least_1_problem_agrees_with_the_specification_check": "holds as counted (1 problem, 3 draws); the agreement is an artifact of the check, no draw is a correct answer",
+  "3_pass_at_16_below_0.10_for_tests_and_agreement": "holds (0.0117 and 0.0059)"
+ },
+ "reference_type_audit": {
+  "script": "t/audit_reference_types.py",
+  "draws": 200,
+  "dev": {
+   "problems": 100,
+   "take_a_string": 35,
+   "raises": 15,
+   "differs": 2,
+   "same": 18,
+   "unclassified": 0,
+   "differs_ids": [
+    315,
+    771
+   ]
+  },
+  "held_out": {
+   "problems": 232,
+   "take_a_string": 41,
+   "raises": 18,
+   "differs": 3,
+   "same": 20,
+   "unclassified": 0,
+   "differs_ids": [
+    125,
+    387,
+    776
+   ],
+   "differs_on_the_clean_200": [
+    125,
+    387,
+    776
+   ]
+  },
+  "a_verdict_it_changes": "the 27B teacher's second seed (qwen3.8-27b-fp8-v3-s2) answers held-out MBPP 387 (is the hexadecimal number even or odd) with tests passing; t/spec_check.check_task as it stands says its specification disagrees (the reference fed integers always answers Odd), and says it agrees on 174 draws when the reference is fed the string",
+  "arms_with_tests_passing_on_an_affected_held_out_problem": {
+   "387": [
+    "qwen235-heldout",
+    "qwen235-heldout-s3",
+    "qwen3.8-27b-fp8-v3",
+    "qwen3.8-27b-fp8-v3-s2"
+   ],
+   "125": [],
+   "776": []
+  },
+  "arms_scanned": 126
+ },
+ "per_problem": [
+  {
+   "task_id": 5,
+   "n": 64,
+   "well_formed": 28,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 8
+  },
+  {
+   "task_id": 7,
+   "n": 64,
+   "well_formed": 13,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 11
+  },
+  {
+   "task_id": 11,
+   "n": 64,
+   "well_formed": 23,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 55
+  },
+  {
+   "task_id": 15,
+   "n": 64,
+   "well_formed": 23,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 21
+  },
+  {
+   "task_id": 30,
+   "n": 64,
+   "well_formed": 7,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 14
+  },
+  {
+   "task_id": 42,
+   "n": 64,
+   "well_formed": 11,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 26
+  },
+  {
+   "task_id": 57,
+   "n": 64,
+   "well_formed": 8,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 61
+  },
+  {
+   "task_id": 67,
+   "n": 64,
+   "well_formed": 41,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 41
+  },
+  {
+   "task_id": 92,
+   "n": 64,
+   "well_formed": 20,
+   "examples_all_pass": 8,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 8,
+   "used_tool": 28
+  },
+  {
+   "task_id": 107,
+   "n": 64,
+   "well_formed": 24,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 33
+  },
+  {
+   "task_id": 113,
+   "n": 64,
+   "well_formed": 4,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 9
+  },
+  {
+   "task_id": 128,
+   "n": 64,
+   "well_formed": 9,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 28
+  },
+  {
+   "task_id": 133,
+   "n": 64,
+   "well_formed": 2,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 24
+  },
+  {
+   "task_id": 134,
+   "n": 64,
+   "well_formed": 18,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 44
+  },
+  {
+   "task_id": 148,
+   "n": 64,
+   "well_formed": 16,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 13
+  },
+  {
+   "task_id": 150,
+   "n": 64,
+   "well_formed": 17,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 11
+  },
+  {
+   "task_id": 155,
+   "n": 64,
+   "well_formed": 53,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 14
+  },
+  {
+   "task_id": 165,
+   "n": 64,
+   "well_formed": 11,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 46
+  },
+  {
+   "task_id": 181,
+   "n": 64,
+   "well_formed": 20,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 0
+  },
+  {
+   "task_id": 186,
+   "n": 64,
+   "well_formed": 21,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 42
+  },
+  {
+   "task_id": 188,
+   "n": 64,
+   "well_formed": 16,
+   "examples_all_pass": 3,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 3,
+   "used_tool": 42
+  },
+  {
+   "task_id": 200,
+   "n": 64,
+   "well_formed": 28,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 0
+  },
+  {
+   "task_id": 207,
+   "n": 64,
+   "well_formed": 8,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 43
+  },
+  {
+   "task_id": 244,
+   "n": 64,
+   "well_formed": 26,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 30
+  },
+  {
+   "task_id": 251,
+   "n": 64,
+   "well_formed": 16,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 19
+  },
+  {
+   "task_id": 256,
+   "n": 64,
+   "well_formed": 14,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 16
+  },
+  {
+   "task_id": 270,
+   "n": 64,
+   "well_formed": 4,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 6
+  },
+  {
+   "task_id": 288,
+   "n": 64,
+   "well_formed": 21,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 0
+  },
+  {
+   "task_id": 291,
+   "n": 64,
+   "well_formed": 27,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 52
+  },
+  {
+   "task_id": 296,
+   "n": 64,
+   "well_formed": 11,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 1
+  },
+  {
+   "task_id": 303,
+   "n": 64,
+   "well_formed": 4,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 29
+  },
+  {
+   "task_id": 311,
+   "n": 64,
+   "well_formed": 36,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 14
+  },
+  {
+   "task_id": 315,
+   "n": 64,
+   "well_formed": 20,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 11
+  },
+  {
+   "task_id": 319,
+   "n": 64,
+   "well_formed": 0,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 33
+  },
+  {
+   "task_id": 321,
+   "n": 64,
+   "well_formed": 17,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 31
+  },
+  {
+   "task_id": 323,
+   "n": 64,
+   "well_formed": 1,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 0
+  },
+  {
+   "task_id": 326,
+   "n": 64,
+   "well_formed": 6,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 7
+  },
+  {
+   "task_id": 328,
+   "n": 64,
+   "well_formed": 16,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 22
+  },
+  {
+   "task_id": 337,
+   "n": 64,
+   "well_formed": 24,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 3
+  },
+  {
+   "task_id": 338,
+   "n": 64,
+   "well_formed": 8,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 22
+  },
+  {
+   "task_id": 350,
+   "n": 64,
+   "well_formed": 11,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 28
+  },
+  {
+   "task_id": 360,
+   "n": 64,
+   "well_formed": 44,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 11
+  },
+  {
+   "task_id": 377,
+   "n": 64,
+   "well_formed": 11,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 40
+  },
+  {
+   "task_id": 384,
+   "n": 64,
+   "well_formed": 21,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 25
+  },
+  {
+   "task_id": 407,
+   "n": 64,
+   "well_formed": 38,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 2
+  },
+  {
+   "task_id": 439,
+   "n": 64,
+   "well_formed": 15,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 4
+  },
+  {
+   "task_id": 449,
+   "n": 64,
+   "well_formed": 1,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 44
+  },
+  {
+   "task_id": 450,
+   "n": 64,
+   "well_formed": 18,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 35
+  },
+  {
+   "task_id": 459,
+   "n": 64,
+   "well_formed": 29,
+   "examples_all_pass": 3,
+   "tests": 3,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 17
+  },
+  {
+   "task_id": 476,
+   "n": 64,
+   "well_formed": 3,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 3
+  },
+  {
+   "task_id": 480,
+   "n": 64,
+   "well_formed": 7,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 16
+  },
+  {
+   "task_id": 485,
+   "n": 64,
+   "well_formed": 19,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 32
+  },
+  {
+   "task_id": 501,
+   "n": 64,
+   "well_formed": 21,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 12
+  },
+  {
+   "task_id": 505,
+   "n": 64,
+   "well_formed": 4,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 3
+  },
+  {
+   "task_id": 508,
+   "n": 64,
+   "well_formed": 4,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 22
+  },
+  {
+   "task_id": 520,
+   "n": 64,
+   "well_formed": 24,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 9
+  },
+  {
+   "task_id": 522,
+   "n": 64,
+   "well_formed": 7,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 50
+  },
+  {
+   "task_id": 523,
+   "n": 64,
+   "well_formed": 13,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 4
+  },
+  {
+   "task_id": 537,
+   "n": 64,
+   "well_formed": 22,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 39
+  },
+  {
+   "task_id": 543,
+   "n": 64,
+   "well_formed": 0,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 33
+  },
+  {
+   "task_id": 547,
+   "n": 64,
+   "well_formed": 32,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 58
+  },
+  {
+   "task_id": 549,
+   "n": 64,
+   "well_formed": 62,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 9
+  },
+  {
+   "task_id": 563,
+   "n": 64,
+   "well_formed": 15,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 20
+  },
+  {
+   "task_id": 602,
+   "n": 64,
+   "well_formed": 12,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 43
+  },
+  {
+   "task_id": 608,
+   "n": 64,
+   "well_formed": 29,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 55
+  },
+  {
+   "task_id": 620,
+   "n": 64,
+   "well_formed": 13,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 47
+  },
+  {
+   "task_id": 621,
+   "n": 64,
+   "well_formed": 15,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 8
+  },
+  {
+   "task_id": 634,
+   "n": 64,
+   "well_formed": 57,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 20
+  },
+  {
+   "task_id": 649,
+   "n": 64,
+   "well_formed": 11,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 8
+  },
+  {
+   "task_id": 659,
+   "n": 64,
+   "well_formed": 17,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 9
+  },
+  {
+   "task_id": 661,
+   "n": 64,
+   "well_formed": 8,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 37
+  },
+  {
+   "task_id": 685,
+   "n": 64,
+   "well_formed": 38,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 27
+  },
+  {
+   "task_id": 689,
+   "n": 64,
+   "well_formed": 13,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 13
+  },
+  {
+   "task_id": 697,
+   "n": 64,
+   "well_formed": 6,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 63
+  },
+  {
+   "task_id": 700,
+   "n": 64,
+   "well_formed": 9,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 47
+  },
+  {
+   "task_id": 708,
+   "n": 64,
+   "well_formed": 24,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 15
+  },
+  {
+   "task_id": 714,
+   "n": 64,
+   "well_formed": 17,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 54
+  },
+  {
+   "task_id": 725,
+   "n": 64,
+   "well_formed": 14,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 3
+  },
+  {
+   "task_id": 727,
+   "n": 64,
+   "well_formed": 11,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 31
+  },
+  {
+   "task_id": 745,
+   "n": 64,
+   "well_formed": 1,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 53
+  },
+  {
+   "task_id": 747,
+   "n": 64,
+   "well_formed": 6,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 32
+  },
+  {
+   "task_id": 771,
+   "n": 64,
+   "well_formed": 20,
+   "examples_all_pass": 14,
+   "tests": 3,
+   "spec_agrees": 3,
+   "examples_pass_spec_disagrees": 11,
+   "used_tool": 17
+  },
+  {
+   "task_id": 772,
+   "n": 64,
+   "well_formed": 12,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 32
+  },
+  {
+   "task_id": 784,
+   "n": 64,
+   "well_formed": 12,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 32
+  },
+  {
+   "task_id": 807,
+   "n": 64,
+   "well_formed": 20,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 12
+  },
+  {
+   "task_id": 829,
+   "n": 64,
+   "well_formed": 18,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 16
+  },
+  {
+   "task_id": 832,
+   "n": 64,
+   "well_formed": 5,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 33
+  },
+  {
+   "task_id": 843,
+   "n": 64,
+   "well_formed": 17,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 28
+  },
+  {
+   "task_id": 861,
+   "n": 64,
+   "well_formed": 29,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 10
+  },
+  {
+   "task_id": 864,
+   "n": 64,
+   "well_formed": 27,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 30
+  },
+  {
+   "task_id": 874,
+   "n": 64,
+   "well_formed": 27,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 14
+  },
+  {
+   "task_id": 892,
+   "n": 64,
+   "well_formed": 22,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 11
+  },
+  {
+   "task_id": 905,
+   "n": 64,
+   "well_formed": 16,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 9
+  },
+  {
+   "task_id": 910,
+   "n": 64,
+   "well_formed": 1,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 4
+  },
+  {
+   "task_id": 915,
+   "n": 64,
+   "well_formed": 18,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 33
+  },
+  {
+   "task_id": 926,
+   "n": 64,
+   "well_formed": 43,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 27
+  },
+  {
+   "task_id": 958,
+   "n": 64,
+   "well_formed": 18,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 31
+  },
+  {
+   "task_id": 967,
+   "n": 64,
+   "well_formed": 15,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 18
+  },
+  {
+   "task_id": 968,
+   "n": 64,
+   "well_formed": 25,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 45
+  },
+  {
+   "task_id": 971,
+   "n": 64,
+   "well_formed": 11,
+   "examples_all_pass": 0,
+   "tests": 0,
+   "spec_agrees": 0,
+   "examples_pass_spec_disagrees": 0,
+   "used_tool": 44
+  }
+ ]
+}
