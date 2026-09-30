@@ -176,7 +176,14 @@ self-sampling have nothing to work with on this core, so the teacher items come 
    the weight-decay-0.8 baseline; RL when the base rate clears its bar, with the dense reward and
    the difficulty band.
 5. **Lab CPU, any time it is free:** the hint-stripped twins grade; the Dafny standard library
-   lift; the verdict-cache bar.
+   lift; the verdict-cache bar. Checked 2026-09-30 20:45Z: the standard library is not a lab job
+   yet. Its files are modules of generic functions, predicates and lemmas
+   (`Std/Collections/Seq.dfy`: 18 opaque functions, 6 ghost predicates, lemmas, every one inside
+   `module Std.Collections.Seq` and most over a type parameter); the lifter lifts a *method with
+   an ensures* and skips module bodies by design (`t/LIFTER-DESIGN.md` section 3: `module` is a
+   census gap, and the type grammar has no type parameters). Lifting it means a lifter extension
+   (modules, functions as tasks, monomorphising `T` to `int`), a design registration, not a run.
+   The twins grade ran 2026-09-30 20:00Z on; the cache bar is queued behind it.
 
 ## 8. Not taken, and why
 
