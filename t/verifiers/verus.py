@@ -661,6 +661,10 @@ def version() -> str:
     return f"verus {line.split(':', 1)[-1].strip()}"
 
 
+_LAUNCH_FAILURE = re.compile(r"rustup not found|needs a rustup installation|failed to execute rust_verify"
+                             r"|failed to execute z3")
+
+
 def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
     src_hash = sha256_file(path)
     # safe_text, not read_text: a non-UTF8 probe killed this adapter with an
@@ -720,6 +724,18 @@ def verify(path: Path, budget: int = DEFAULT_RLIMIT) -> Result:
         outcome = Outcome.VACUOUS
     elif req_false:
         outcome = Outcome.VACUOUS
+    elif vr is None and (p.returncode == 128 or _LAUNCH_FAILURE.search(p.stderr)):
+        # The kernel did not run at all. verus's launcher (source/verus/src/main.rs)
+        # prints "verus: rustup not found, or not executable" / "verus needs a rustup
+        # installation" when rustup is off the PATH, then "error: failed to execute
+        # rust_verify" and exits 128; rust_verify prints "failed to execute z3" for
+        # a missing solver. No JSON and one of these is the tool, not the source:
+        # TOOL_ERROR, never evidence. Until 2026-09-30 this read MALFORMED, and a
+        # grade launched from a shell without ~/.cargo/bin on its PATH wrote
+        # "malformed" into all 365 cells of a column while every other kernel
+        # answered (t/out/twins-hints on the lab).
+        outcome = Outcome.TOOL_ERROR
+        err = "kernel did not run: " + " ".join(p.stderr.split())[-300:]
     elif vr is None:
         outcome = Outcome.MALFORMED
     elif (vr.get("errors", 1) == 0 and vr.get("success")
