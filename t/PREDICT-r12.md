@@ -130,3 +130,21 @@ ADOPT: report it as the headline it would be, with the same skepticism section E
 applies to any single look -- rerun the comparison at 20 seeds before repeating the
 claim anywhere public, per Dodge et al. (arXiv:2002.06305, already the receipt
 behind `--split-seed`, A7).
+
+**Amendment, 2026-09-30 19:17Z, before any seed trains on the new core: the New arm runs on r12's
+core.** The 2026-09-29 launch trained three seeds on the sweep's core (`locallm-r12-s1` to `s3`)
+and was paused after all three read 0 clean, spec checked, on the 200; they stay recorded as the
+head-prompt control of the chat pipeline's registration and are not part of the New arm. r12 was
+reframed the same day: its core is `t/out/dawnr-r12-core-2026-09-30/core`, registered and judged
+in `t/PREDICT-2026-09-30-dawnr-r12-core.md` (3.7B English tokens, then 15,000 code steps; the
+kept copy at step 14,000, code validation 1.140). The New arm is therefore `locallm-r12core-s1`
+to `s10`: the section C recipe unchanged (300 steps, lr 3e-5, block 512, document rows, dropout
+0.1, keep-every 50, dev-chosen stopping step, split seed 1338 as recorded above), initialised from
+that core's `ckpt.pt` through the launcher's overrides (`R12_RUN_CORE`, `R12_RUN_CORE_READY`,
+`R12_RUN_ARM=locallm-r12core`, outcomes in `t/out/r12core-outcomes.json`), decoded and graded as
+registered (lab grading at 6 cells). The Base arm is unchanged. Predictions 1 to 5 stand as
+written; prediction 6 of the core's registration (at least 1 clean, spec checked, on the 200 for
+at least one seed) is what this round answers. The specification check applied at scoring is the
+repaired one (commit 9243383b: string problems' references called with str arguments), which
+moved no published count when every graded arm was re-scored.
+
