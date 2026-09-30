@@ -15,8 +15,10 @@ t/PREDICT-2026-09-30-dawnr-base-rate.md).
 
 For every dev and held-out problem whose first assertion passes a str literal, this draws the
 check's own inputs (spec_check.draw, shaped like the problem's example), calls the reference
-both ways, and classes the problem: raises on every draw, silently differs on some draw, or the
-same on every draw. It reads references and assertions only; no model answer is involved.
+both ways (the old list-of-integers call and the assertion-typed call spec_check makes since the
+repair of 2026-09-30), and classes the problem: raises on every draw, silently differs on some
+draw, or the same on every draw. It reads references and assertions only; no model answer is
+involved. It stays as the record of the class the repair closed.
 
 EvalPlus (arXiv:2305.01210; https://github.com/evalplus/evalplus, evalplus/gen/type_mut.py)
 grows test inputs by type-aware mutation in which a str stays a str and every new input is

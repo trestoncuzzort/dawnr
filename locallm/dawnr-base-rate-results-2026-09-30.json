@@ -1183,5 +1183,17 @@
    "examples_pass_spec_disagrees": 0,
    "used_tool": 44
   }
- ]
+ ],
+ "after_the_check_repair": {
+  "spec_agrees": {
+   "problems_with_any": 0,
+   "draws": 0
+  },
+  "changes": {
+   "771": "3 agreeing draws -> disagrees",
+   "459": "3 tests-tier draws, previously 'no valid draws' -> disagrees"
+  },
+  "dev_judgement_block": "unchanged (45 / 0 / 0 / 31); 10 dev answers moved from 'no valid draws' to a real verdict, none agreeing",
+  "held_out_rescore": "89 fully graded answer sets, both panels: no published count changed"
+ }
 }
