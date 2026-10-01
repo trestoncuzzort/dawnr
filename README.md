@@ -72,7 +72,10 @@ rejects: 3 of 3 and 94%, for a fifth of the right answers
 One question now goes through all of it with one command
 ([`t/answer.py`](t/answer.py)): the student and the base model at 4 bits on a
 CPU, the seven provers on the same machine, an answer shown with what stands
-behind it or refused with the gate that stopped it. **A pretrained model
+behind it or refused with the gate that stopped it. At 4 bits the student is a
+2.71 GB file that writes 15.5 tokens a second on 12 CPU threads; it keeps its
+dev results and loses about one proof in six when given a specification (23 of
+33 against 28; [registration and outcome](t/PREDICT-2026-10-01-small-hardware.md)). **A pretrained model
 behind the gate works at low coverage**: with no training, pooled prompted
 answers are proved and specification-checked on 19 of the 200 unseen problems
 by all seven provers, and on 50 when one prover's proof is counted and none
