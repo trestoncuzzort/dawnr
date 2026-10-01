@@ -1018,6 +1018,15 @@ def _generate(args, d: Path) -> int:
         ids = ids[:args.limit]
     options = {"temperature": args.temperature, "seed": args.seed, "num_ctx": args.num_ctx,
                "num_predict": args.num_predict}
+    # 2026-10-01: a reference model has to be sampled the way the student is (t/student_generate.py:
+    # nucleus 0.95, no top-k, no repetition penalty). Ollama's own defaults are top_p 0.9, top_k 40,
+    # repeat_penalty 1.1; these are sent only when asked for, so every earlier answer set's
+    # recorded options stay what they were.
+    for key in ("top_p", "top_k", "repeat_penalty"):
+        if getattr(args, key, None) is not None:
+            if getattr(args, "api", "ollama") != "ollama":
+                raise SystemExit(f"generate: --{key.replace('_', '-')} is sent in Ollama's options; not wired for --api openai")
+            options[key] = getattr(args, key)
     if getattr(args, "think", None) is not None:
         if getattr(args, "api", "ollama") != "ollama":
             raise SystemExit("generate: --think is Ollama's request field; an OpenAI-shaped server takes its "
@@ -1589,6 +1598,10 @@ def main(argv=None) -> int:
             p.add_argument("--num-predict", type=int, default=1024)
             p.add_argument("--timeout", type=float, default=600.0)
             p.add_argument("--jobs", type=int, default=1)
+            p.add_argument("--top-p", dest="top_p", type=float, default=None, help="Ollama option; sent only when given")
+            p.add_argument("--top-k", dest="top_k", type=int, default=None, help="Ollama option (0 turns top-k off)")
+            p.add_argument("--repeat-penalty", dest="repeat_penalty", type=float, default=None,
+                           help="Ollama option (1.0 turns the penalty off)")
             p.add_argument("--temperature", type=float, default=0.0,
                             help="0 (default, the frozen experiments) or a sampling "
                                  "temperature for several answers per problem, one "
