@@ -18,14 +18,21 @@ runner sets an address-space limit, forbids new processes, and gives each assert
 
 There is no unsandboxed fallback: where bubblewrap is missing, `available()` is False and
 `run_tests` refuses. Model-written code is never exec'd in this process.
+
+`Session` keeps one such interpreter alive and calls the model's function on many inputs (the
+gate's agreement stage, t/spec_gate.py: Clover's doc2code edge, arXiv:2310.17807, compares two
+artifacts by their outputs on a set of inputs). Same namespaces, same limits, one alarm a call.
 """
 from __future__ import annotations
 
 import json
+import os
+import select
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 RESULT = "@@py_sandbox result@@ "
@@ -75,6 +82,91 @@ done({"verdicts": out})
 '''
 
 
+SESSION_RUNNER = r'''
+import json, resource, signal, sys
+MEM = %(memory)d * 1024 * 1024
+resource.setrlimit(resource.RLIMIT_AS, (MEM, MEM))
+resource.setrlimit(resource.RLIMIT_NPROC, (0, 0))
+resource.setrlimit(resource.RLIMIT_FSIZE, (1 << 20, 1 << 20))
+RESULT = %(result)r
+
+
+def _alarm(*_):
+    raise TimeoutError()
+
+
+def say(payload):
+    sys.stdout.write("\n" + RESULT + json.dumps(payload) + "\n")
+    sys.stdout.flush()
+
+
+def plain(v, depth=0):
+    """The value as JSON carries it faithfully, or TypeError: a set, a dict, bytes, an object."""
+    if v is None or isinstance(v, (bool, int, str)):
+        return v
+    if isinstance(v, float):
+        if v != v or v in (float("inf"), float("-inf")):
+            raise TypeError("float")
+        return v
+    if isinstance(v, (list, tuple)) and depth < 8:
+        return [plain(x, depth + 1) for x in v]
+    raise TypeError(type(v).__name__)
+
+
+signal.signal(signal.SIGALRM, _alarm)
+g = {"__name__": "solution"}
+signal.alarm(%(per_call)d)
+try:
+    exec(compile(open("/job/solution.py").read(), "solution", "exec"), g)
+    f = g[%(fn)r]
+    if not callable(f):
+        raise TypeError("not callable")
+except BaseException as e:
+    signal.alarm(0)
+    say({"load": (type(e).__name__ + ": " + str(e))[:200]})
+    raise SystemExit(0)
+signal.alarm(0)
+say({"ready": True})
+for line in sys.stdin:
+    try:
+        args = json.loads(line)
+    except ValueError:
+        say({"error": "bad request"})
+        continue
+    signal.alarm(%(per_call)d)
+    try:
+        out = f(*args)
+        signal.alarm(0)
+        try:
+            say({"value": plain(out)})
+        except (TypeError, ValueError) as e:
+            say({"unrepresentable": str(e)[:60]})
+    except TimeoutError:
+        say({"timeout": True})
+    except BaseException as e:
+        signal.alarm(0)
+        say({"error": type(e).__name__})
+    finally:
+        signal.alarm(0)
+'''
+
+
+class CallTimeout(Exception):
+    """The function did not return within the session's time for one call."""
+
+
+class CallError(Exception):
+    """The function raised; str() is the exception's class name."""
+
+
+class Unrepresentable(Exception):
+    """The function returned a value JSON cannot carry faithfully (a set, a dict, an object)."""
+
+
+class LoadError(Exception):
+    """The code did not load, or does not define the function."""
+
+
 def available() -> bool:
     return shutil.which("bwrap") is not None
 
@@ -112,6 +204,110 @@ def run_tests(code: str, asserts: list[str], per_test: int = 3, memory_mb: int =
             v = payload["verdicts"]
             return {"status": "ran", "verdicts": v, "all_pass": bool(v) and all(x == "pass" for x in v)}
     return {"status": "sandbox-error", "why": (p.stderr or p.stdout)[-300:]}
+
+
+class Session:
+    """A model-written function held in one sandboxed interpreter and called many times.
+
+        with py_sandbox.Session(code, "f") as s:
+            s.call([2])            # -> the value | CallError | CallTimeout | Unrepresentable
+
+    A call that overruns kills the interpreter; the next call starts a fresh one. Values cross as
+    JSON: a tuple comes back as a list, None as None."""
+
+    def __init__(self, code: str, fn: str, per_call: int = 3, memory_mb: int = 1024):
+        if not available():
+            raise RuntimeError("py_sandbox: bubblewrap is not installed; model-written code is not run without it")
+        self.code, self.fn, self.per_call, self.memory_mb = code, fn, per_call, memory_mb
+        self._tmp = tempfile.TemporaryDirectory(prefix="py-sandbox-")
+        job = Path(self._tmp.name)
+        (job / "solution.py").write_text(code, encoding="utf-8")
+        (job / "runner.py").write_text(SESSION_RUNNER % {"memory": memory_mb, "per_call": per_call,
+                                                         "result": RESULT, "fn": fn}, encoding="utf-8")
+        self._job, self._p, self._buf, self.restarts = job, None, b"", 0
+        self._start()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.close()
+
+    def _start(self) -> None:
+        self._buf = b""
+        self._p = subprocess.Popen(_command(self._job), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                   stderr=subprocess.DEVNULL)
+        first = self._read(self.per_call + 5)
+        if first is None or "load" in first:
+            why = "the sandbox did not start" if first is None else first["load"]
+            self._kill()
+            raise LoadError(why)
+
+    def _kill(self) -> None:
+        if self._p is not None:
+            try:
+                self._p.kill()
+                self._p.wait(timeout=5)
+            except Exception:                                   # noqa: BLE001
+                pass
+            for f in (self._p.stdin, self._p.stdout):
+                try:
+                    f.close()
+                except Exception:                               # noqa: BLE001
+                    pass
+            self._p = None
+
+    def _read(self, seconds: float) -> dict | None:
+        """The next protocol line, or None when the time is up or the interpreter is gone. Anything
+        the model's code prints is not a protocol line and is skipped."""
+        end, fd = time.monotonic() + seconds, self._p.stdout.fileno()
+        while True:
+            while b"\n" in self._buf:
+                line, self._buf = self._buf.split(b"\n", 1)
+                text = line.decode("utf-8", "replace")
+                if text.startswith(RESULT):
+                    try:
+                        return json.loads(text[len(RESULT):])
+                    except ValueError:
+                        return None
+            left = end - time.monotonic()
+            if left <= 0:
+                return None
+            ready, _, _ = select.select([fd], [], [], left)
+            if not ready:
+                return None
+            chunk = os.read(fd, 1 << 16)
+            if not chunk:
+                return None
+            self._buf += chunk
+            if len(self._buf) > (8 << 20):                      # a function that prints without end
+                return None
+
+    def call(self, args: list):
+        if self._p is None or self._p.poll() is not None:
+            self.restarts += 1
+            self._start()
+        try:
+            self._p.stdin.write((json.dumps(list(args)) + "\n").encode("utf-8"))
+            self._p.stdin.flush()
+        except (BrokenPipeError, OSError, TypeError, ValueError) as e:
+            if isinstance(e, (TypeError, ValueError)):
+                raise CallError("arguments JSON cannot carry") from None
+            self._kill()
+            raise CallTimeout() from None
+        reply = self._read(self.per_call + 1.5)
+        if reply is None or reply.get("timeout"):
+            self._kill()                                        # it may still be running; never reuse it
+            raise CallTimeout()
+        if "value" in reply:
+            return reply["value"]
+        if "unrepresentable" in reply:
+            raise Unrepresentable(reply["unrepresentable"])
+        raise CallError(str(reply.get("error", "error")))
+
+    def close(self) -> None:
+        self._kill()
+        self._tmp.cleanup()
 
 
 def main(argv: list[str] | None = None) -> int:

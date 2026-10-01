@@ -508,9 +508,14 @@ def check_points(task: dict, entry: dict) -> dict:
     return out
 
 
-def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
-    """One task against its problem's solution: how many draws agreed, and the first that did not."""
-    fn = reference(entry["rec"], entry["fn"])
+def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None) -> dict:
+    """One task against its problem's solution: how many draws agreed, and the first that did not.
+
+    `oracle`, when given, is called in place of the problem's reference solution, with the same
+    arguments (t/spec_gate.py passes a sandboxed Python function the model itself wrote: Clover's
+    doc2code edge, arXiv:2310.17807, which compares two artifacts by their outputs on inputs).
+    Nothing else changes: the draws, the mutants and the statuses are the reference check's."""
+    fn = oracle if oracle is not None else reference(entry["rec"], entry["fn"])
     if fn is None:
         return {"status": "no reference"}
     kinds = [k for k, _v in entry["points"][0]["args"]]
@@ -529,6 +534,11 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     skipped = {"reference did not finish": 0, "reference result has no t value": 0}
     rejected = accepted = 0            # the completeness half: wrong outputs the ensures catches
     weak_witness = None
+    # 2026-10-01: inputs the solution answers and the task's `requires` excludes. They say nothing
+    # about the `ensures`, and they were not counted, so a task whose `requires` admits little more
+    # than the problem's own examples read "agrees" on the few draws that landed inside. Counted
+    # now and reported (`outside_requires`); t/spec_gate.py decides on it, this check does not.
+    outside = 0
     # The fourth quadrant. vACT's four-way split (arXiv:2604.00280) wants inputs
     # the problem REJECTS, and this corpus ships none, which is why
     # spec_scorecard.py has printed "pre-completeness NOT MEASURED" since it was
@@ -603,7 +613,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
         st = interp.St()
         try:
             if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
-                continue                                        # outside the precondition, says nothing
+                outside += 1                                    # outside the precondition, says nothing
+                continue
             bad = [i for i, e in enumerate(task.get("ensures", []))
                    if interp.ev(e, env, funs, st) is not True]
         except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
@@ -638,6 +649,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
               "reference result has no t value" if skipped["reference result has no t value"] else
               "reference did not finish" if skipped["reference did not finish"] else "no valid draws")
     result = {"status": status, "draws": agreed}
+    if outside:
+        result["outside_requires"] = outside
     if any(skipped.values()):
         result["skipped"] = {k: v for k, v in skipped.items() if v}
     if rejected or accepted:

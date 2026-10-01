@@ -36,7 +36,8 @@ class SpecificationChecks(unittest.TestCase):
 
     def test_zero_accepted_inputs_are_not_agreement(self):
         result = sc.check_task(task(requires="  requires a < 0"), entry(), 20, random.Random(1))
-        self.assertEqual(result, {"status": "no valid draws", "draws": 0})
+        # 2026-10-01: the draws the `requires` excluded are counted, so the result says why
+        self.assertEqual(result, {"status": "no valid draws", "draws": 0, "outside_requires": 20})
 
     def test_reference_disagreement_is_observed(self):
         result = sc.check_task(task(), entry("def f(a): return a"), 20, random.Random(1))

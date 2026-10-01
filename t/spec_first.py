@@ -290,6 +290,11 @@ def main(argv: list[str] | None = None) -> int:
           f"({sum(len(per[t]) for t in ids)} specifications)", flush=True)
 
     d = se.outdir(a.tag)
+    if a.python and python:
+        # the student's own tested Python is the gate's second artifact (t/spec_gate.py); keep it
+        (d / "python.jsonl").write_text("".join(
+            json.dumps({"task_id": int(t), "code": python[t], "attempt": python_counts.get(t, {}).get("python")}) + "\n"
+            for t in ids if t in python), encoding="utf-8")
     (d / "kept-specs.jsonl").write_text("".join(
         json.dumps({"task_id": int(t), "tasks": [k["task"] for k in per[t]], "sources": [k["source"] for k in per[t]],
                     "scores": [k["scores"] for k in per[t]]}) + "\n" for t in with_spec), encoding="utf-8")
