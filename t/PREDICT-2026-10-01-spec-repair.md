@@ -52,3 +52,34 @@ to send back; 2 have none (one has no Python, one witness does not render).
 50. No repair it does produce is refuted by a kernel or disagrees with the reference: the stage
     does not let a wrong repair through. Falsified by any repaired answer that the reference
     check calls wrong.
+
+## Outcome of the baseline, 2026-10-01 10:22Z (read at 10:33Z)
+
+The 4B on v4 at 4 bits, the stage's witness in the rows' words, two rounds of one greedy and two
+sampled repairs. Of 17 dev problems with a test-passing answer, 3 passed the stage untouched (113,
+377, 727), 2 had no witness, 12 were sent back:
+
+| round | sent back | repaired (the stage passes it) | replaced by a repair with a new witness | refused before the stage |
+|---|---:|---:|---:|---|
+| 1 | 12 | 0 | 6 | 10 fail a test, 10 do not parse, 2 not well formed |
+| 2 | 12 | 2 | 5 | 14 do not parse, 8 fail a test |
+
+The two repairs, through the seven kernels and the reference check:
+
+- **807 (first odd number in a list)**: six kernels refute the program. Not shown.
+- **67 (the nth Bell number)**: five kernels prove it, and the reference check as it then stood
+  called it right and complete. It is a lookup table, wrong for every n from 11 to 55. The
+  check drew every input from the first example (n = 2), so no draw went past 4; that fault is
+  repaired and registered in `t/PREDICT-2026-10-01-spec-check-inputs.md`, and under the repaired
+  check this answer disagrees with the reference.
+
+49. **The untrained student repairs at most 2 of the 12: holds, at exactly 2**, and neither is a
+    right answer.
+50. **No repair is refuted by a kernel or wrong by the reference: falsified.** 807 is refuted;
+    67 is wrong, which only the repaired check sees.
+
+**Reading.** Handed a concrete witness it was never trained on, the student does not use it:
+nothing it wrote in two rounds is right. VeriMed's gain is a frontier model's; for this student
+the witness has to be taught first (the 116 specification rows built today go into the next row
+set). The baseline also did what a baseline is for: its one apparent success exposed a hole in
+the instrument every count rests on.
