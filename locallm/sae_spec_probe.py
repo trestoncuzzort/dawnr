@@ -91,6 +91,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--threads", type=int, default=12)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--feature", type=int, default=None,
+                    help="also score this one feature within quartiles of answer length on the test problems")
     a = ap.parse_args(argv)
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -108,7 +110,7 @@ def main(argv=None) -> int:
     resid_ss = recon_ss = 0.0
     n_pos = 0
     total = None
-    feats, labels, splits, ids = [], [], [], []
+    feats, labels, splits, ids, rows_kept = [], [], [], [], []
     started = time.monotonic()
     with torch.no_grad():
         for k, r in enumerate(rows):
@@ -134,6 +136,7 @@ def main(argv=None) -> int:
             n_pos += len(ans_pos)
             pos_in_ans = [ans_pos.index(i) for i in ens if i in ans_pos]
             feats.append(acts[pos_in_ans].mean(0).to_sparse())
+            rows_kept.append(r)
             labels.append(bool(r["right"]))
             splits.append(split_of(int(r["task_id"])))
             ids.append(int(r["task_id"]))
@@ -162,10 +165,31 @@ def main(argv=None) -> int:
             best = {"feature": j, "direction": "higher means right" if sign > 0 else "higher means not right",
                     "auroc on the choosing problems": round(max(s_c, 1 - s_c), 4), "auroc on the test problems": round(s_t, 4) if s_t is not None else None,
                     "features considered": len(scored)}
+    controlled = None
+    if a.feature is not None and dense is not None and test:
+        # the feature's AUROC within each quartile of answer length on the test problems, pooled by pairs:
+        # whatever the feature adds beyond how long the answer is
+        lengths = [len(rows_kept[i]["answer"]) for i in range(len(rows_kept))]
+        t_sorted = sorted(test, key=lambda i: lengths[i])
+        quarters = [t_sorted[q * len(t_sorted) // 4:(q + 1) * len(t_sorted) // 4] for q in range(4)]
+        num = den = 0.0
+        per = []
+        for qs in quarters:
+            ys = [labels[i] for i in qs]
+            pos, neg = sum(ys), len(ys) - sum(ys)
+            s_q = auroc([float(dense[i, a.feature]) for i in qs], ys)
+            per.append({"answers": len(qs), "right": pos, "auroc": round(s_q, 4) if s_q is not None else None})
+            if s_q is not None:
+                num += s_q * pos * neg
+                den += pos * neg
+        controlled = {"feature": a.feature, "auroc within length quartiles (pair-weighted)": round(num / den, 4) if den else None,
+                      "quartiles": per,
+                      "auroc on the test problems, all": round(auroc([float(dense[i, a.feature]) for i in test],
+                                                                     [labels[i] for i in test]), 4)}
     report = {"model": str(a.model), "sae": str(a.sae), "layer": a.layer, "answers read": len(feats),
               "positions": n_pos, "fraction of variance explained": round(fve, 4) if fve is not None else None,
               "right": sum(labels), "choose answers": len(choose), "test answers": len(test),
-              "test problems": len({ids[i] for i in test}), "best feature": best,
+              "test problems": len({ids[i] for i in test}), "best feature": best, "length-controlled": controlled,
               "seconds": round(time.monotonic() - started)}
     a.out.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
     print(json.dumps(report))
