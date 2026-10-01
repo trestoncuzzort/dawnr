@@ -6,6 +6,26 @@ the route, and every number here links to the run that produced it. The ideas
 being worked toward are kept at the end of this file, stated plainly, with
 where each one stands.
 
+## The direction since 2026-10-01
+
+The operator, the evening of 2026-09-30, after the question "are we holding out for math that does
+not exist" was answered yes for the from-scratch model
+(`internal/RESEARCH-2026-10-01-is-the-bet-supported.md`):
+
+- **Nothing it says is relied on until it is proved. That is the whole point.**
+- **Build from the ladders others have made.** No step may rest on a maybe; every step cites the
+  published method or the measurement it stands on.
+- **Other people's weights are fine**, if they are the best for this job and usable by everyone:
+  chosen by measurement through the gate, permissively licensed, small enough for ordinary
+  hardware.
+- **Meet every goal below on those weights.** `internal/LADDER-PLAN-2026-10-01.md` maps each one
+  to its ladder and its measurement.
+
+Sections 1 to 3 below were written for the from-scratch model. They stand as the record of what
+was aimed at and are re-read as follows: section 1's comparison is now the student against the
+same reference on the clean 200; section 2's product is the gate with the student behind it;
+section 3's curve is fine-tuned small models against prompted large ones.
+
 ## The north star: dawnr, a model you could trust on a spaceship
 
 **dawnr is the track this project is on** (the operator, 2026-09-26). Work is
@@ -55,7 +75,7 @@ measured on that column from now on.
 - **Then double it.** 6 clean against Phi's 3, which is the first number that
   makes the method, not the margin, the story.
 
-## 2. locallm is the product
+## 2. locallm is the product (until 2026-10-01; now the gate with the student behind it)
 
 Not the fine-tuned student, which is someone else's base model. Not the
 prompted 27B or the prover, which are tools this pipeline uses. **The claim is
@@ -203,16 +223,17 @@ its line changes here.
 
 ## dawnr: what the whole thing grows into
 
-dawnr is the assistant this project is building: trained here from random
-weights, running on its own hardware with nothing behind it, able to
-understand, reason, act and remember, and trustworthy because what it produces
-is checked before anyone relies on it. It is a system, not one model. Each
+dawnr is the assistant this project is building: running on its own hardware
+with nothing behind it, able to understand, reason, act and remember, and
+trustworthy because what it produces is checked before anyone relies on it
+(its weights are borrowed and openly licensed since 2026-10-01; the proof is
+what is its own). It is a system, not one model. Each
 machine-learning idea earns its place by doing one job in it, and every part
 is judged by the same rule: nothing is trusted without evidence.
 
 | dawnr needs | the machine-learning idea | where it stands |
 |---|---|---|
-| a brain that understands language and code | transformer pretraining from random weights | **built**: the locallm core from the weight-decay sweep (wd 0.8, lr 1e-3). The general-English pilot ran 2026-09-29 (`internal/PRETRAIN-DAWNR-GENERAL.md` section 8): English before code beats code alone at matched tokens on held-out loss and form. r12's core ran 2026-09-30 (section 9): 3.7B English tokens and a short code stage reached the lowest code validation loss of any core (1.140) and judged no better than the sweep's core (well formed 45 of 100, held-out loss 3.7125, specification column 0). No core moves the specification column off 0; by that run's registration the proved corpus is the next lever. The 16.4B-token English set stays staged for the 312M core when a free allocation exists |
+| a brain that understands language and code | an openly licensed pretrained model chosen by measurement (`t/PREDICT-2026-10-01-base-model-selection.md`); before 2026-10-01, transformer pretraining from random weights | **built**: the locallm core from the weight-decay sweep (wd 0.8, lr 1e-3). The general-English pilot ran 2026-09-29 (`internal/PRETRAIN-DAWNR-GENERAL.md` section 8): English before code beats code alone at matched tokens on held-out loss and form. r12's core ran 2026-09-30 (section 9): 3.7B English tokens and a short code stage reached the lowest code validation loss of any core (1.140) and judged no better than the sweep's core (well formed 45 of 100, held-out loss 3.7125, specification column 0). No core moves the specification column off 0; by that run's registration the proved corpus is the next lever. The 16.4B-token English set stays staged for the 312M core when a free allocation exists |
 | to learn, not memorise | regularisation, denoising (fill in the middle), early stopping, more verified data | **in progress**: the chat pipeline on the 531-document corpus and the early-stopped core answers 49 of 100 dev problems well formed (from 19) and passes all examples on 1.3 (from 0.3) at three seeds (`locallm/PREDICT-2026-09-29-dawnr-r12-corpus.md`); on the held-out 232 it is well formed on 130 (the head-prompt fine-tune: 91) but 0 of 200 survive the specification check, like every other arm (`t/PREDICT-2026-09-29-dawnr-chat-heldout.md`); still memorises (validation loss 0.23 against train 0.07) |
 | to know when it is right | verification as the judge, calibration, uncertainty, refusal | **the seven-kernel proof engine is this**; calibration not started |
 | to get better at reasoning | reinforcement learning with the verifier as the reward | **built, waiting on data**: tiered proof reward inspected by hand, GRPO trainer (Dr. GRPO advantages hold; plain GRPO unlearned). The model solves 0.6% of problems outside its corpus, too few to reinforce, so new verified data comes first (`t/RL-DESIGN-2026-09-26.md`) |
