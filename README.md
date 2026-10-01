@@ -60,7 +60,19 @@ trusted because what it writes is checked.
 
 Part by part (2026-10-01). **The gate works**: seven provers, the sabotaged
 twins, the specification check and the grading stack; across 4,700 graded
-programs no prover has verified what another refuted. **A pretrained model
+programs no prover has verified what another refuted. **What the gate could
+not see until 2026-10-01**: a proof says the program meets its specification,
+not that the specification is the question's, and with no reference solution
+the gate showed a right answer 4 times in 10 on the student's unseen problems
+(79% on 1,038 proved training answers). It now carries a stage for that which
+needs no reference, a tested Python solution written beside the question as a
+second opinion and a floor on how many wrong outputs the specification
+rejects: 3 of 3 and 94%, for a fifth of the right answers
+([registration and outcomes](t/PREDICT-2026-10-01-gate-without-reference.md)).
+One question now goes through all of it with one command
+([`t/answer.py`](t/answer.py)): the student and the base model at 4 bits on a
+CPU, the seven provers on the same machine, an answer shown with what stands
+behind it or refused with the gate that stopped it. **A pretrained model
 behind the gate works at low coverage**: with no training, pooled prompted
 answers are proved and specification-checked on 19 of the 200 unseen problems
 by all seven provers, and on 50 when one prover's proof is counted and none
