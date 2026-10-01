@@ -150,3 +150,10 @@ def test_a_reference_that_never_finishes_keeps_its_old_status(monkeypatch):
                    [["int", 3]], ["int", 3])
     out = spec_check.check_task(_int_task("never", "", "r == n", "r := n;"), entry, 100, random.Random(1))
     assert out["status"] == "reference did not finish" and out["draws"] == 0
+
+
+def test_a_list_of_one_character_strings_is_nested_under_a_task_that_returns_nested():
+    assert spec_check.to_t(["i"], {"seq": "seq"}) == ((105,),)
+    assert spec_check.to_t(["i"], "seq-of-seq") == ((105,),)
+    assert spec_check.to_t(["i", "j"], "seq") == (105, 106)      # a string, where the task returns one
+    assert spec_check.to_t(["ab", "c"], {"seq": "seq"}) == ((97, 98), (99,))

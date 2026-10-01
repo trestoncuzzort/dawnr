@@ -189,9 +189,15 @@ def to_t(value, kind: str | None = None):
             return ord(value)
         return tuple(ord(c) for c in value)
     if isinstance(value, (list, tuple)):
-        if kind != "seq-of-seq" and value and all(isinstance(x, str) and len(x) == 1 for x in value):
+        # `kind` is the pool's name for a nested value (`seq-of-seq`) when a point is read and the
+        # TASK's declared type (surface.py's {"seq": "seq"} for `seq<seq>`) when a reference result
+        # is read. Until 2026-10-01 only the first spelling counted as nested here, so a reference
+        # that returned ['i'] for a task returning `seq<seq>` was read as the flat string (105,)
+        # and the `ensures` then took len() of an integer ("interpreter refused").
+        nested = kind == "seq-of-seq" or kind == {"seq": "seq"}
+        if not nested and value and all(isinstance(x, str) and len(x) == 1 for x in value):
             return tuple(ord(x) for x in value)
-        inner = "seq" if kind == "seq-of-seq" else None
+        inner = "seq" if nested else None
         return tuple(to_t(x, inner) for x in value)
     raise TypeError(f"unsupported reference result: {type(value).__name__}")
 
