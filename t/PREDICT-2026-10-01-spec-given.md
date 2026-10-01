@@ -65,3 +65,29 @@ MBPP dev problems.
 
 Tonight's record on predictions is five wrong, most of them too hopeful. These are set where a
 miss in either direction is informative.
+
+## Amendment, 2026-10-01 02:52Z, before any held-out question was asked: two counts, and a ceiling
+
+**Both a name-strict and a name-normalised count are reported for every arm.** The scoring path
+was exercised end to end on three TRAINING-side specification-given rows with a model that is not
+in this registration (the English-only 1.5B student, on the CPU); no held-out question has been
+asked of any model. One of its answers named the task differently from the question. Under the
+registered rule that is "the specification was changed" and the answer stops there. The matched
+control here was trained on answers that carry an invented `mbpp_<number>__` prefix (the earlier
+students wrote one on 99 of 100 answers), so it may fail that gate on naming alone, and
+prediction 11 could then hold because of a naming habit rather than because the
+specification-given rows teach anything about proving. So `t/score_spec_given.py prepare` gains
+`--normalise-name`: the answer is renamed to the question's task name, self-calls with it, before
+the specification is compared. Tested: a redefined spec fun is still refused with the name
+normalised. In the case that prompted this the answer had also changed the `ensures`, and it is
+refused either way.
+
+The predictions stay as written and are judged on the name-strict count, as registered. The
+normalised count is printed beside it for each arm, and a prediction that holds on one count and
+not the other is reported as exactly that.
+
+**The ceiling is measured first.** The 33 questions' own corpus answers go through the same
+scorer and the same seven kernels on the lab (started 02:46Z). Whatever they score is the most
+any model can score on this instrument today; it is reported before any model's number. A row
+the grader can build no sabotaged twin for is not run by the grader at all (`no-twin` in every
+cell): it is counted apart as a missing measurement, not as unproved.

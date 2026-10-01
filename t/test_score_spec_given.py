@@ -41,6 +41,19 @@ class Judge(unittest.TestCase):
         self.assertIn("abs_v was redefined", why)
         self.assertIsNone(task)
 
+    def test_a_renamed_answer_is_refused_strictly_and_judged_on_its_contract_when_the_name_is_normalised(self):
+        renamed = ROW["chosen"].replace("task abs(", "task mbpp_7__abs(")
+        q = ssg.question_task(ROW)
+        self.assertEqual(ssg.judge(q, renamed)[:2], ("spec-changed", "the task was renamed"))
+        stage, why, task = ssg.judge(q, renamed, normalise_name=True)
+        self.assertEqual((stage, why, task["name"]), ("ready", None, "abs"))
+
+    def test_normalising_the_name_does_not_let_a_redefined_spec_fun_through(self):
+        cheat = ROW["chosen"].replace("task abs(", "task other(").replace("= if x_v > 0 then x_v else -x_v", "= 0")
+        stage, why, _task = ssg.judge(ssg.question_task(ROW), cheat, normalise_name=True)
+        self.assertEqual(stage, "spec-changed")
+        self.assertIn("abs_v was redefined", why)
+
     def test_prepare_writes_only_ready_answers_and_records_every_stage(self):
         with tempfile.TemporaryDirectory() as tmp:
             report = ssg.prepare([ROW], {"abs": ROW["chosen"]}, Path(tmp))
