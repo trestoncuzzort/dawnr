@@ -204,3 +204,20 @@ the oracle, so both the labels and the stage were recomputed on the same 1,038 a
 same Python: 790 right before the stage (76.1%, was 79.3%); the stage shows 682 and 644 are
 right (**94.4%**, was 94.0%), 81.5% of the right answers; 229 problems shown, 213 with a right
 answer, 16 with none. Prediction 42 stays falsified, 43 and 44 hold.
+
+## Outcome of C, 2026-10-01 13:05Z: the 4B on v5's dev answers
+
+Every answer set of the 4B on v5 on dev (greedy, ten sampled, specification first, Python first,
+retrieved examples), the stage with the student's own tested Python (the Python-first route's, 51 of
+100 problems) and, separately, with the base model's (72 of 100); scored by `t/score_gate.py`:
+
+| | the gate as built (tests and a proof) | with the stage, the student's own Python | with the stage, the base's Python |
+|---|---:|---:|---:|
+| problems with an answer shown | 16 | 5 | 5 |
+| of those with a right and complete answer | 6 | 4 | 4 |
+| shown with no right answer | 10 | 1 (150) | 1 (708) |
+| by all seven: shown / right | 6 / 2 | 1 / 1 | 1 / 1 |
+
+As in A, the stage turns a gate that is right on fewer than half of what it shows into one that is
+right on four of five, at the cost of two right problems of six. Which Python stands beside the
+answer moves which single wrong problem slips through, not how many.
