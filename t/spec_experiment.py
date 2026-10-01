@@ -890,6 +890,15 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
 
 # -------------------------------------------------------------- generate --
 
+def llama_gbnf(grammar: str) -> str:
+    """t.gbnf as llama.cpp's grammar parser reads it. llama.cpp ends a rule at a newline unless the newline is
+    inside parentheses or follows a `|` ("a newline after an alternate marker | will continue the current rule",
+    github.com/ggml-org/llama.cpp grammars/README.md); t.gbnf starts its continuation lines with the `|`, which
+    xgrammar reads and llama.cpp refuses ("expecting name"). Joining each such line to the one before changes
+    only whitespace between symbols, so the language is the same."""
+    return re.sub(r"\n[ \t]+\|", " |", grammar)
+
+
 def chat(host: str, model: str, messages: list[dict], options: dict, timeout: float, api: str = "ollama",
          flavour: str = "vllm") -> dict:
     """One reply, from Ollama's own API or from an OpenAI-shaped one (vLLM, 2026-09-18). The reply is returned
@@ -1050,6 +1059,8 @@ def _generate(args, d: Path) -> int:
         # the comments are ours, not xgrammar's
         options["grammar"] = "\n".join(line for line in gpath.read_text(encoding="utf-8").splitlines()
                                        if not line.lstrip().startswith("#"))
+        if getattr(args, "flavour", "vllm") == "llamacpp":
+            options["grammar"] = llama_gbnf(options["grammar"])
         options["grammar_sha256"] = hashlib.sha256(options["grammar"].encode("utf-8")).hexdigest()[:16]
         if getattr(args, "api", "ollama") != "openai":
             print("generate: --grammar needs --api openai (vLLM); ignoring it", file=sys.stderr)
