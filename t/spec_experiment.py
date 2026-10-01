@@ -74,6 +74,7 @@ new `PROMPT_VERSIONS` member).
 from __future__ import annotations
 
 import argparse
+import ast
 try:
     import fcntl                       # Unix (docs.python.org/3/library/fcntl.html)
 except ImportError:                    # Windows: msvcrt.locking is its byte-range lock
@@ -123,6 +124,44 @@ def outdir(model: str) -> Path:
 POOL_VERSIONS = ("v1", "v2", "v3", "v4", "v5", "v6")
 APPS_BASE = 200000      # pool v5: an APPS record is task id 200000 + its own id, clear of MBPP and HumanEval
 HUMANEVAL_BASE = 100000     # pool v4: HumanEval/<n> is task id 100000 + n, clear of every MBPP id
+
+
+def mark_characters(entry: dict) -> dict:
+    """Record, on each parsed point, which integers are one-character STRINGS in the assertion.
+
+    The assertion parser reads a one-character string as a character, an int (SPEC.md "Strings
+    as sequences of code points"), and a longer one as a seq. That is a reading, and the point
+    kept no trace of it, so a task that declared the parameter a string (`seq`) was refused with
+    "is seq, test passes int", and a task that returned a string failed any test whose expected
+    string happened to be one character long. Nine of the 100 dev problems had tests that
+    disagreed with each other this way and no answer could pass them. run_point now reads such a
+    value at the type the task declares, which is how MultiPL-E types a test's data for a typed
+    target: "from the type of the function signature" (arXiv:2208.08227, III-C.2). The marks are
+    extra keys on the point (`char_args`, `char_expected`); kinds and values are untouched, so
+    everything that read a point before reads the same thing."""
+    points, sources = entry.get("points", []), entry.get("rec", {}).get("test_list", []) or []
+    if len(points) != len(sources):
+        return entry
+    for point, src in zip(points, sources):
+        try:
+            test = ast.parse(src.strip()).body[0].test
+        except (SyntaxError, IndexError, AttributeError):
+            continue
+        if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+            test = test.operand
+        call, rhs = (test.left, test.comparators[0]) if isinstance(test, ast.Compare) else (test, None)
+        if not isinstance(call, ast.Call):
+            continue
+
+        def one_char(node) -> bool:
+            return isinstance(node, ast.Constant) and isinstance(node.value, str) and len(node.value) == 1
+
+        chars = [i for i, a in enumerate(call.args) if one_char(a)]
+        if chars:
+            point["char_args"] = chars
+        if rhs is not None and one_char(rhs):
+            point["char_expected"] = True
+    return entry
 
 
 def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
@@ -204,7 +243,7 @@ def pool(version: str = "v1") -> dict[int, dict]:
                            any(a[0] == "seq-of-seq" for a in p["args"]) for p in pts):
             if not mbpp_dfy.string_lib_v1_only(r.get("code", ""), fn):
                 continue
-        out[tid] = {"rec": r, "points": pts, "fn": fn}
+        out[tid] = mark_characters({"rec": r, "points": pts, "fn": fn})
     return out
 
 
@@ -245,7 +284,7 @@ def humaneval_pool() -> dict[int, dict]:
         n = int(r["task_id"].split("/")[1])
         rec = {"task_id": HUMANEVAL_BASE + n, "text": r["prompt"].strip(), "test_list": asserts, "code": code,
                "source": r["task_id"]}
-        out[HUMANEVAL_BASE + n] = {"rec": rec, "points": pts, "fn": ep}
+        out[HUMANEVAL_BASE + n] = mark_characters({"rec": rec, "points": pts, "fn": ep})
     return out
 
 
@@ -1243,7 +1282,9 @@ def run_point(task: dict, point: dict) -> dict:
     if len(args) != len(params):
         return {"verdict": "arity", "why": f"{len(args)} args for {len(params)} params"}
     env = {}
-    for p, (kind, val) in zip(params, args):
+    for i, (p, (kind, val)) in enumerate(zip(params, args)):
+        if kind == "int" and p["type"] == "seq" and i in point.get("char_args", ()):
+            kind, val = "seq", [val]            # a one-character string, where the task declares a string
         if not kind_fits(kind, val, p["type"]):
             return {"verdict": "type", "why": f"{p['name']} is {p['type']}, test passes {kind}"}
         env[p["name"]] = _as_interp_value(kind, val)
@@ -1267,6 +1308,8 @@ def run_point(task: dict, point: dict) -> dict:
         # candidate failing, recorded with the interpreter's message
         return {"verdict": "crash", "why": f"{type(c).__name__}: {c}"[:120]}
     ekind, eval_ = point["expected"]
+    if ekind == "int" and point.get("char_expected") and task["returns"][0].get("type") == "seq":
+        ekind, eval_ = "seq", [eval_]           # the expected string is one character long
     if got is None:
         return {"verdict": "undefined", "why": "no path assigned the return"}
     # interp represents a seq value as a tuple, and a nested seq as a
