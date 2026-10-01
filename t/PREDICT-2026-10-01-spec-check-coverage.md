@@ -67,3 +67,16 @@ Order: this file is committed before the repaired check has been run on any answ
 18. The fault cut both ways: on the 135 list-of-strings problems, at least one answer that read
     `agrees` reads `disagrees` once the solution is called with strings. Falsified if none
     does. (No prediction on the net change in training rows.)
+
+## Amendment, 2026-10-01 04:09Z: a third fault, found by the repaired check's first run
+
+The first run of the repaired check (dev and re-read answer sets, after this file's commit)
+ended one answer with `interpreter refused`. The cause is in the same function and is older
+than the repair: a reference result is converted with the TASK's declared return type, and for
+`seq<seq>` that is the parser's own value, which the converter did not recognise as nested. A
+solution that returned `['i']` was therefore read as the flat string `(105,)`, and the
+`ensures` then took the length of an integer. It could not show before, because a nested
+argument was drawn from -4 to 4 and never produced a one-character string. The converter now
+treats the declared `seq<seq>` as nested (test). It is part of the repair: without it the
+list-of-strings problems that RETURN such lists would be read wrongly in the other direction.
+Two of the five `agrees` to `disagrees` moves of that first run were this fault and are gone.
