@@ -43,7 +43,7 @@ it and how many independent provers gave it, or it is refused.
 | know what it was not trained on | retrieval of proved examples into the prompt (the dynamic few-shot of arXiv:2402.00247); `DAWNR-RETRIEVAL.md`'s index | dev coverage with and without retrieval | open |
 | remember the person | per-person adapters on the base (the harness already keeps them) | the four simulated-person measurements re-run on the base | open |
 | act through tools | the base's native tool calls through the existing harness (permissions, hooks, MCP) | the 1,007-conversation tool evaluation re-run on the base | harness built; re-measure |
-| hear and speak | pretrained recognisers and voices with permissive licences | word error rate on a public test set; offline | open |
+| hear and speak | pretrained recognisers and voices with permissive licences | word error rate on a public test set; offline | **hearing done (2026-10-01)**: Whisper base.en under whisper.cpp, 4.14% on LibriSpeech test-clean (paper 4.2), 16x real time on 8 CPU threads; speaking (Piper, MIT) measured next |
 | see | the base's own vision input if it has one, else a permissive pretrained encoder | a small image check through the harness | open |
 | small hardware | 4-bit GGUF of the student | tokens per second on an 8 GB card and on a CPU | R7 |
 | understood from inside | published sparse autoencoders for the base family where they exist | a feature that tracks specifications, registered before looking | open |
