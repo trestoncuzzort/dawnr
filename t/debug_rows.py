@@ -84,11 +84,20 @@ def spec_message(entry: dict, task: dict, result: dict) -> str | None:
             clause = lines[i] if isinstance(i, int) and 0 <= i < len(lines) else None
             said = (SPEC_WRONG + f"For {call(result['args'])} the answer is {result.get('reference_said')!r}, and "
                     + (f"this clause does not hold there:\n  {clause}" if clause else "the specification does not hold there."))
-        elif (result.get("status") == "agrees" and isinstance(result.get("completeness"), (int, float))
-              and result["completeness"] < MIN_COMPLETENESS and result.get("weak_witness")):
-            w = result["weak_witness"]
-            said = (SPEC_WEAK + f"For {call(w['args'])} the answer is {w.get('reference_said')!r}, and the "
-                    f"specification also accepts {_shaped(w.get('also_accepts'), w.get('reference_said'))!r}.")
+        elif result.get("status") == "agrees" and spec_check.complete(result, MIN_COMPLETENESS) is False:
+            # the family that fell short gives the witness; an input-blind specification first
+            cross = result.get("cross_completeness")
+            if isinstance(cross, (int, float)) and cross < MIN_COMPLETENESS and result.get("cross_witness"):
+                w = result["cross_witness"]
+                said = (SPEC_WEAK + f"For {call(w['args'])} the answer is {w.get('reference_said')!r}, and the "
+                        f"specification also accepts {_shaped(w.get('also_accepts'), w.get('reference_said'))!r}, "
+                        f"which is the answer for {call(w['which_is_the_answer_for'])}.")
+            elif result.get("weak_witness"):
+                w = result["weak_witness"]
+                said = (SPEC_WEAK + f"For {call(w['args'])} the answer is {w.get('reference_said')!r}, and the "
+                        f"specification also accepts {_shaped(w.get('also_accepts'), w.get('reference_said'))!r}.")
+            else:
+                return None
         else:
             return None
     except Exception:                                           # noqa: BLE001  (a witness that does not render says nothing)

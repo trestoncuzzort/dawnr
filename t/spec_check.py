@@ -121,6 +121,18 @@ def deadline(seconds: float, exc=Timeout):
 
 
 MAX_REFERENCE_TIMEOUTS = 5      # draws the reference did not finish before a check stops drawing
+CROSS_PER_DRAW = 3              # earlier draws whose answers are put to the ensures as wrong ones
+MIN_COMPLETENESS = 0.6          # SAFE's floor for a usable specification (arXiv:2410.15756, 3.2)
+
+
+def complete(result: dict, floor: float = MIN_COMPLETENESS) -> bool | None:
+    """Does an agreeing specification also pin the answer down? False when either mutant family
+    measured (outputs near the right one; other inputs' answers) is rejected less than `floor` of
+    the time, True when every family measured clears it, None when no mutant was judged."""
+    shares = [result[k] for k in ("completeness", "cross_completeness") if isinstance(result.get(k), (int, float))]
+    if not shares:
+        return None
+    return all(x >= floor for x in shares)
 
 
 def draw(kind: str, rnd: random.Random, like=None, strings: bool = False):
@@ -519,9 +531,17 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None)
     if fn is None:
         return {"status": "no reference"}
     kinds = [k for k, _v in entry["points"][0]["args"]]
-    examples = [v for _k, v in entry["points"][0]["args"]]
     if len(kinds) != len(task["params"]):
         return {"status": "arity differs from the problem"}
+    # 2026-10-01 (t/PREDICT-2026-10-01-spec-check-inputs.md): every draw is shaped like ONE example,
+    # and until now that was always the problem's first assertion. MBPP 67 (bell_number) tests
+    # n = 2, 10 and 56; every draw fell in [0, 4], and a lookup-table answer that is wrong for every
+    # n from 11 to 55 read "agrees on 100 draws". EvalPlus seeds its input generation with ALL of
+    # a problem's inputs and mutates a random one each time (gen/__init__.py `seed_pool`,
+    # gen/mut_gen.py `random.choice(self.seed_pool)`); so does this, over the points whose kinds
+    # match the first point's.
+    seeds = [[v for _k, v in p["args"]] for p in entry["points"]
+             if [k for k, _v in p.get("args", [])] == kinds]
     positions = string_positions(entry)
     nested = nested_string_positions(entry)
     funs = interp.funs_of(task, task["body"])
@@ -534,6 +554,15 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None)
     skipped = {"reference did not finish": 0, "reference result has no t value": 0}
     rejected = accepted = 0            # the completeness half: wrong outputs the ensures catches
     weak_witness = None
+    # 2026-10-01: the mutants above are wrong outputs NEAR the right one, so a specification that
+    # never ties the result to the input ("r is one of these eleven numbers") rejects most of them.
+    # nl2postcond (arXiv:2310.01831) measures completeness against the outputs of whole buggy
+    # programs; the simplest buggy program answers a different question. So the solution's answers
+    # to the last CROSS_PER_DRAW earlier draws, where they differ from this one's, are put to the
+    # ensures as wrong answers for this input, and counted apart (`cross_completeness`).
+    answered = []
+    cross_rejected = cross_accepted = 0
+    cross_witness = None
     # 2026-10-01: inputs the solution answers and the task's `requires` excludes. They say nothing
     # about the `ensures`, and they were not counted, so a task whose `requires` admits little more
     # than the problem's own examples read "agrees" on the few draws that landed inside. Counted
@@ -570,6 +599,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None)
     for _ in range(n):
         if skipped["reference did not finish"] >= MAX_REFERENCE_TIMEOUTS:
             break
+        examples = seeds[0] if len(seeds) == 1 else rnd.choice(seeds)
         args = [draw(k, rnd, ex, strings=i in nested) for i, (k, ex) in enumerate(zip(kinds, examples))]
         if any(a is None for a in args):
             return {"status": f"cannot draw {kinds}"}
@@ -645,6 +675,27 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None)
                     weak_witness = {"args": args, "reference_said": out, "also_accepts": wrong}
             else:
                 rejected += 1
+        right = env[task["returns"][0]["name"]]
+        for other_args, other_out, other in answered[-CROSS_PER_DRAW:]:
+            if other == right:
+                continue                   # the same answer is not a wrong one here
+            probe = dict(env)
+            probe[task["returns"][0]["name"]] = other
+            st3 = interp.St()
+            try:
+                holds = all(interp.ev(e, probe, funs, st3) is True for e in task.get("ensures", []))
+            except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
+                continue
+            except Exception:            # noqa: BLE001
+                continue
+            if holds:
+                cross_accepted += 1
+                if cross_witness is None:
+                    cross_witness = {"args": args, "reference_said": out, "also_accepts": other_out,
+                                     "which_is_the_answer_for": other_args}
+            else:
+                cross_rejected += 1
+        answered.append((args, out, right))
     status = ("agrees" if agreed else
               "reference result has no t value" if skipped["reference result has no t value"] else
               "reference did not finish" if skipped["reference did not finish"] else "no valid draws")
@@ -662,6 +713,11 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None)
                       weak=accepted > 0)
         if weak_witness is not None:
             result["weak_witness"] = weak_witness
+    if cross_rejected or cross_accepted:
+        result.update(cross_rejected=cross_rejected, cross_accepted=cross_accepted,
+                      cross_completeness=round(cross_rejected / (cross_rejected + cross_accepted), 3))
+        if cross_witness is not None:
+            result["cross_witness"] = cross_witness
     if domain_probes and not reference_ran:
         # The reference refused every draw, so this problem has no measurable
         # domain boundary here and the refusals are the harness's, not the

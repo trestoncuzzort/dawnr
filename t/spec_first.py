@@ -184,8 +184,8 @@ def reference_keeps(r: dict) -> bool:
     training example for specification writing."""
     if r.get("status") != "agrees" or r.get("draws", 0) < MIN_REFERENCE_DRAWS:
         return False
-    share = r.get("completeness")
-    return not isinstance(share, (int, float)) or share >= MIN_REFERENCE_COMPLETENESS
+    import spec_check
+    return spec_check.complete(r, MIN_REFERENCE_COMPLETENESS) is not False
 
 
 def main(argv: list[str] | None = None) -> int:

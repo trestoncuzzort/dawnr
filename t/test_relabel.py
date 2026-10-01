@@ -273,7 +273,9 @@ class RelabelTests(unittest.TestCase):
         table = task("task mbpp_2009__table(n: int) returns (r: bool)\n  ensures r == (n == 16)\n{ r := n == 16; }")
         honest = task("task mbpp_2010__gt(n: int) returns (r: bool)\n  ensures r == (n > 10)\n{ r := n > 10; }")
         caught = relabel.qualify(table, pool[1008], 1008, 50, 1)
-        self.assertEqual((caught["status"], caught["shape"]), ("spec-disagrees", 1))
+        # 2026-10-01: check_task itself now draws from every example (EvalPlus's seed pool), so the
+        # first rotation already reaches 11 to 14; until then it took the second
+        self.assertEqual((caught["status"], caught["shape"]), ("spec-disagrees", 0))
         first_only = relabel.qualify(table, {**pool[1008], "points": pool[1008]["points"][:1]}, 1008, 50, 1)
         self.assertEqual(first_only["status"], "qualifies")       # the old evidence, one shape, let it through
         ok = relabel.qualify(honest, pool[1008], 1008, 50, 1)

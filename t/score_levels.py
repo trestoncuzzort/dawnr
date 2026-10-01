@@ -73,8 +73,7 @@ def tag_levels(tag: str, ids: set[int], verdicts: dict, min_completeness: float 
         name = t.get("name") or e.get("name") or ""
         raw = verdicts.get(f"{tag}/{name}") or {}
         status = score_heldout.checked_spec(raw, d / "tasks" / f"{name}.json")
-        if (status == "agrees" and min_completeness is not None
-                and isinstance(raw.get("completeness"), (int, float)) and raw["completeness"] < min_completeness):
+        if status == "agrees" and min_completeness is not None and spec_check.complete(raw, min_completeness) is False:
             status = "weak"                                     # true of the right answer and of most wrong ones
         level, bare = answer_level(t.get("overall"), cells.get(name), status)
         out[tid] = (level, bare, e.get("stage") == "task", t.get("overall") == "pass")
