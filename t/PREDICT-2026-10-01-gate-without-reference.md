@@ -239,3 +239,20 @@ The stage's verdicts on the 43 answers: 25 pass, 12 have a specification false a
 answer, 4 have no test-passing Python beside them, 2 a weak specification. It keeps 15 of the 18
 problems with a right answer and every one of the 5 at all seven. The reference's half of D waits
 for its answers.
+
+The three shown with no right answer, read by hand against the problem text, the reference solution
+and the check's witness:
+
+- **768** "check for odd parity of a given number": the reference counts 1 bits (odd parity); the
+  answer, and the base's Python beside it, test for an odd number. The three assertions (13, 21, 18)
+  cannot tell the two apart; at 15 (four 1 bits) the reference says False. A misreading of the
+  English shared by the answer and the Python: Clover's stated limit, here once in 18.
+- **665** "shift first element to the end of given list": the reference moves every copy of the first
+  element (at [-1, -1, 0] it returns [0, -1, -1]); the answer moves the first element only, which is
+  what the sentence says.
+- **680** "check whether a sequence of numbers has an increasing trend": the reference is
+  `sorted(nums) == nums`, so [0, 1, 2, 3, 3, 5] is increasing; the answer asks for strictly
+  increasing. The sentence allows either.
+
+So one of the three is the gate showing a wrong reading; two are places where "right by the
+reference" means "does what this particular reference does beyond what the problem states".
