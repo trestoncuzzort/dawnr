@@ -30,7 +30,7 @@ it and how many independent provers gave it, or it is refused.
 
 | goal | ladder | measured by | state |
 |---|---|---|---|
-| 1. beat the 3.8B reference | the student against the same prompted model on the clean 200, same scorer | proved, specification-checked answers, per trust level | reference reads 1 of 200 at seven with one answer; the student, 18 of 200 on complete specifications at one prover and 5 at seven with its route (14:46Z); the reference given the same 17 answers a problem is being graded |
+| 1. beat the 3.8B reference | the student against the same prompted model on the clean 200, same scorer | proved, specification-checked answers, per trust level | reference reads 1 of 200 at seven with one answer; the student, 18 of 200 on complete specifications at one prover and 5 at seven with its route (14:46Z); the reference given the same 17 answers a problem: 3 and 2 (15:36Z). Not yet the win as `AMBITION.md` writes it (three seeds; the reference under `t`'s grammar) |
 | 2. the product | the gate plus the student (this file) | R7 | restated here; README and AMBITION follow when R1 names the base |
 | 3. size as a curve | the same table across sizes: fine-tuned small against prompted large | coverage against parameters | prompted points exist (1.5B to 235B) |
 | 4. scale the engine | R6 | rows the gate admits per round | 693 rows over 323 problems at one prover (333 at seven) after the first round on our own machines (2026-10-01); 527 over 262 before it |
