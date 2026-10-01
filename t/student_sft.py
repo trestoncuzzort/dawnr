@@ -60,6 +60,23 @@ def encode_row(tokenizer, row: dict, max_len: int) -> dict | None:
             "labels": [-100] * len(prompt_ids) + answer_ids}
 
 
+def response_loss(base, batch: dict):
+    """Cross-entropy on the response tokens, with the output layer applied ONLY at the positions
+    that predict them. The standard forward builds logits for every position: with a 248,320-word
+    vocabulary one 2,845-token row is 2.6 GiB of logits and ended the 4B and 9B runs on a 16 GB
+    card (2026-10-01), though the loss reads only the response. `base.model` is the backbone and
+    `base.lm_head` the output layer (measured equal to the model's own logits, to 0.0, on
+    Qwen3.5-2B); a base without those two names takes the standard forward."""
+    import torch
+    labels = batch["labels"]
+    if not (hasattr(base, "model") and hasattr(base, "lm_head")):
+        return base(**batch).loss
+    hidden = base.model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]).last_hidden_state
+    predicts = labels[:, 1:] != -100                            # position i predicts token i + 1
+    logits = base.lm_head(hidden[:, :-1][predicts])
+    return torch.nn.functional.cross_entropy(logits.float(), labels[:, 1:][predicts])
+
+
 def load_rows(path: Path) -> list[dict]:
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     for n, r in enumerate(rows):
@@ -124,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     if not a.model or not a.sft:
         ap.error("--model and --sft are required to train")
 
+    os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     import torch
     from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Trainer,
                               TrainingArguments, set_seed)
@@ -173,8 +191,14 @@ def main(argv: list[str] | None = None) -> int:
         def __getitem__(self, i):
             return encoded[i]
 
-    trainer = Trainer(model=model, args=args, train_dataset=Rows(),
-                      data_collator=lambda fs: pad_batch(fs, tokenizer.pad_token_id))
+    class ResponseOnly(Trainer):
+        def compute_loss(self, model, inputs, return_outputs=False, **_kw):
+            base = model.get_base_model() if hasattr(model, "get_base_model") else model
+            loss = response_loss(base, inputs)
+            return (loss, None) if return_outputs else loss
+
+    trainer = ResponseOnly(model=model, args=args, train_dataset=Rows(),
+                           data_collator=lambda fs: pad_batch(fs, tokenizer.pad_token_id))
     started = time.time()
     result = trainer.train()
     seconds = round(time.time() - started, 1)
