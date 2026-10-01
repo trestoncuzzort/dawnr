@@ -139,3 +139,14 @@ calls right say something else. They are refused; the other eight are shown.
 **Reading.** On these answers the gate as built was right 4 times in 10; with the stage it is
 right 3 times in 3 and shows one right answer fewer. That is ten problems. B is the measurement
 with enough answers to carry a percentage.
+
+## Amendment, 2026-10-01 09:12Z, before any Python exists for a held-out question: whose Python stands beside the student in D
+
+D said each system is given the stage "with its own Python". For the reference that is Phi-4-mini
+writing Python itself. For the student it is the base model's Python, written exactly as in A
+and B (Qwen3.5-4B at 4 bits on a CPU, one greedy attempt and two sampled, kept only if it passes
+the question's tests): the student is that base plus an adapter, so the base's Python is the
+student's own with the adapter off, and no student has been measured writing Python under this
+prompt. The held-out Python is written once, by the queue, and nothing is chosen after seeing
+it. Scored by `t/score_gate.py`: problems shown, problems shown and right by the reference, and
+the problems shown with no right answer, by name.
