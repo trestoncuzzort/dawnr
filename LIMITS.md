@@ -52,7 +52,28 @@ a reader reaching a particular paragraph. The headline is in
   program is correct; its proof establishes almost nothing. 7-29% of the
   proven-but-wrong population is exploitable the same way
   ([`locallm/FINDINGS-exploit-2026-09-20.md`](locallm/FINDINGS-exploit-2026-09-20.md)).
-- **The specifications are usually wrong rather than weak**, and that took a
+- **With no reference solution, the gate showed a right answer about three
+  times in four; with the stage added on 2026-10-01, about nineteen in twenty.**
+  A person asking a question has no reference, so what they are shown is what
+  passes the question's tests and a proof. Measured on 1,038 proved answers to
+  training problems, 79% of those carry a specification that is right and
+  complete; on the fine-tuned student's unseen dev problems it was 4 of 10
+  (four weak, two a different function that fits the three tests). The gate
+  now also asks that the specification hold at the answers of a Python
+  solution written beside the question and tested on its examples, and that it
+  reject at least 60% of mutated outputs: 94% on the 1,038 (3 of 3 on dev),
+  while refusing a fifth of the right answers, most of them because no tested
+  Python could be written. The remaining 6% is measured against reference
+  solutions that are themselves sometimes wrong (MBPP 412's deletes from the
+  list it iterates), and the stage cannot catch an edge case that the English,
+  the tests and the Python all miss
+  ([`t/PREDICT-2026-10-01-gate-without-reference.md`](t/PREDICT-2026-10-01-gate-without-reference.md)).
+- **A fine-tuned student writes weak specifications where it cannot write the
+  right one**, which the from-scratch models did not: five of the first
+  student's eight counted dev problems rested on one, and the counts now ask
+  for completeness too ([`CORRECTIONS.md`](CORRECTIONS.md)).
+- **The specifications are usually wrong rather than weak** (for the
+  from-scratch models this was measured on), and that took a
   correction to establish. Across 1,295 wrong answers tested against 14 scored
   specifications, 1 was weak. The first version of that measurement reported
   "not one weak specification"; widening the search found one, a
