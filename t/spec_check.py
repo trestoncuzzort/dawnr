@@ -218,6 +218,21 @@ def string_positions(entry: dict) -> list[int]:
     return []
 
 
+def bound_inputs(params: list, args: list, positions: list[int]) -> dict:
+    """The drawn arguments as interpreter values under the task's parameters. A character drawn
+    for a string position is a one-character string where the task declares a string: the
+    problem's first assertion passed a one-character literal, the kinds therefore say `int`, and
+    a task that (rightly) declares `seq` used to be handed an integer and the check ended with
+    "interpreter refused" (spec_experiment.mark_characters has the test-harness half, 2026-10-01)."""
+    env = {}
+    for i, (p, a) in enumerate(zip(params, args)):
+        if i in positions and p.get("type") == "seq" and isinstance(a, int) and not isinstance(a, bool):
+            env[p["name"]] = (a,)
+        else:
+            env[p["name"]] = to_t(a)
+    return env
+
+
 def nested_string_positions(entry: dict) -> list[int]:
     """The argument positions that are a list of str literals in the problem's first parseable
     assertion: where the reference expects a list of str. t holds such a value as a seq<seq> of
@@ -561,7 +576,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
             # deliberately do not reach here: not finishing is a different
             # failure from not being defined.
             try:
-                env_in = {p["name"]: to_t(a) for p, a in zip(task["params"], args)}
+                env_in = bound_inputs(task["params"], args, positions)
             except TypeError:
                 continue                     # no t value for the input: cannot ask
             st_in = interp.St()
@@ -580,7 +595,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
             continue
         reference_ran += 1
         try:
-            env = {p["name"]: to_t(a) for p, a in zip(task["params"], args)}
+            env = bound_inputs(task["params"], args, positions)
             env[task["returns"][0]["name"]] = to_t(out, task["returns"][0].get("type"))
         except TypeError:
             skipped["reference result has no t value"] += 1

@@ -157,3 +157,13 @@ def test_a_list_of_one_character_strings_is_nested_under_a_task_that_returns_nes
     assert spec_check.to_t(["i"], "seq-of-seq") == ((105,),)
     assert spec_check.to_t(["i", "j"], "seq") == (105, 106)      # a string, where the task returns one
     assert spec_check.to_t(["ab", "c"], {"seq": "seq"}) == ((97, 98), (99,))
+
+
+def test_a_character_drawn_for_a_string_parameter_is_a_one_character_string():
+    entry = _entry("def shout(s):\n    return s.upper()\n", 'assert shout("a") == "A"', "shout",
+                   [["int", 97]], ["int", 65])
+    task = surface.parse("t 1\ntask shout(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n{\n  r := s;\n}\n")
+    out = spec_check.check_task(task, entry, 50, random.Random(1))
+    assert out["status"] == "agrees" and out["draws"] == 50, out
+    assert spec_check.bound_inputs(task["params"], [97], [0]) == {"s": (97,)}
+    assert spec_check.bound_inputs(task["params"], [97], []) == {"s": 97}       # not a string position: as before
