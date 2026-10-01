@@ -482,6 +482,11 @@ with nothing counted are left out.
 | **Qwen3.5-4B, fine-tuned on the 527 rows** | 6 | 5 | 3 | 1 | **4** | 2 | 0 |
 | Qwen3.5-2B, fine-tuned on the v4 rows | 5 | 2 | 2 | 1 | 2 | 2 | 1 |
 
+**10:36Z, under the repaired check** (`t/PREDICT-2026-10-01-spec-check-inputs.md`: draws from
+every example, other inputs' answers as mutants): the prompted 9B's two drop to **0**; both of
+its specifications ignore part of the input (186 says only that the answer is one of the two
+strings; 543 ignores the second argument). The fine-tuned rows do not move.
+
 One of the 4B's five does not stand: problem 449 (is it a triangle), proved by five kernels on a
 specification that says what must hold if the answer is "Yes" and if it is "No" and never that
 the answer is one of them; it rejects none of the wrong outputs tried. The rule's pick is the

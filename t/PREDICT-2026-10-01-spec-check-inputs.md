@@ -58,3 +58,37 @@ pooled table (on the lab), and the 1,038 proved training answers of the gate mea
 
 The held-out rule, the held-out run and the reference's run use the repaired check, since none
 of them has started; the 4B on v4's numbers the rule compares against are re-read under it.
+
+## Outcome, 2026-10-01 10:36Z
+
+Every verdict recomputed under the repaired check. Where an earlier check had found an input at
+which a specification is false and the task's contents are the same, that disagreement is kept
+(`spec_check.keep_witnesses`: a counterexample does not expire because a later check drew other
+inputs; EvalPlus grows a problem's tests and never drops one). That kept 2 dev verdicts and 15
+held-out ones.
+
+| | before | after |
+|---|---:|---:|
+| the 4B on v4, dev, complete specification: one answer / ten / ten and the specification first | 2 / 3 / 4 | **2 / 3 / 4** |
+| the prompted 9B, dev, complete specification | 2 | **0** |
+| the 2B on v4, dev, complete specification | 2 | 2 |
+| pretrained pooled, clean 200, complete specification, by one kernel or more | 48 | **47** |
+| the same, by all seven | 19 | 19 |
+| proved training answers right and complete by the reference | 823 of 1,038 | **790** |
+
+57. **The 4B on v4's dev counts do not move: holds.** The same four problems.
+58. **The clean-200 pooled count falls by at most 3, and at most 1 at seven: holds.** By one
+    (problem 482, "one upper-case letter followed by lower-case letters", loses its only counted
+    answer), and none at seven.
+59. **At most 41 of the 823 right training answers stop being right: holds.** 33 by this
+    count (790 right after, with the disagreements kept).
+
+**The prompted 9B's two dev answers were both input-blind.** Problem 186's specification says
+the answer is "Matched!" or "Not Matched!" without saying which; it was counted at six kernels,
+and every other input's answer satisfies it. Problem 543's says the result is the number of
+digits of the first argument and ignores the second; draws shaped like the first example (9875,
+10) never carried into a new digit, and draws shaped like the second and third do.
+
+**The gate without a reference, outcome B, under the repaired check**: of the 1,038 proved
+training answers, 790 are right (76.1%, was 79.3%); the stage shows 682 and 644 of them are right
+(**94.4%**, was 94.0%), 81.5% of the right answers. Prediction 42 (at least 95%) stays falsified.
