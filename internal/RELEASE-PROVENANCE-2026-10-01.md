@@ -8,7 +8,7 @@ today) or dataset card, not remembered.
 
 | rows | from | licence of the source |
 |---:|---|---|
-| 2,926 | proved answers, their Python, specifications, proof and debugging rows, all on MBPP, HumanEval and APPS problems | MBPP CC-BY-4.0; HumanEval MIT; APPS MIT |
+| 3,226 | proved answers, their Python, specifications, proof and debugging rows, all on MBPP, HumanEval and APPS problems | MBPP CC-BY-4.0; HumanEval MIT; APPS MIT |
 | 185 | memory conversations written by this project | this repository's |
 | 217 | specification-given rows from the vericoding benchmark's programs | MIT (github.com/Beneficial-AI-Foundation/vericoding) |
 | 127 | specification-given rows from DafnyBench programs other than dafny-synthesis (collected from many GitHub repositories) | DafnyBench's repository: Apache-2.0 (github.com/sun-wendy/DafnyBench); the original repositories' own licences not checked one by one |
@@ -17,7 +17,7 @@ today) or dataset card, not remembered.
 | 16 | specification-given rows from HumanEval-Dafny | Apache-2.0 (github.com/JetBrains-Research/HumanEval-Dafny) |
 | 15 | specification-given rows from Clover | MIT (github.com/ChuyueSun/Clover) |
 
-52 rows in all name a dafny-synthesis program (the 44 above and 8 debugging or memory rows that
+52 rows in all name a dafny-synthesis program (the 44 above and 8 memory conversations that
 reuse one).
 
 ## Finding
