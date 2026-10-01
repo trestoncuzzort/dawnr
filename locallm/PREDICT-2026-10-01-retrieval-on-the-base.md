@@ -124,3 +124,33 @@ one's best support, by design ("taking the average prevents a single inconsisten
 dominating the final score", the paper, 3.2): right for grading a summary, the opposite of what a gate wants, where one
 unsupported sentence is the failure. That is the suspected cause of 88; it is measured next (the same
 scores with the minimum over sentences in place of the mean) and stays a suspicion until then.
+
+## The suspected cause of 88, measured, 2026-10-01 18:08Z: not the mean (this corrects the reading above)
+
+Every reply rescored on the lab with each sentence's best support kept (`rag_gate.sentence_support`; the mean
+at 0.5 reproduces the registered 144 and 266 exactly). Post hoc, on the same 300 questions, so nothing here
+is a new rule:
+
+| rule | noise 1: shown of answered | noise 1: shown, documents lack it | noise 0.4: right kept | noise 0.4: right among shown |
+|---|---:|---:|---:|---:|
+| mean >= 0.3 | 196 (94%) | 178 (94%) | 285 of 287 (99%) | 285 of 295 (96.6%) |
+| mean >= 0.5 | 144 (69%) | 127 (67%) | 266 of 287 (93%) | 266 of 275 (96.7%) |
+| mean >= 0.7 | 63 (30%) | 50 (26%) | 182 of 287 (63%) | 182 of 187 (97.3%) |
+| mean >= 0.9 | 12 (6%) | 7 (4%) | 87 of 287 (30%) | 87 of 90 (96.7%) |
+| min >= 0.3 | 80 (38%) | 68 (36%) | 203 of 287 (71%) | 203 of 209 (97.1%) |
+| min >= 0.5 | 39 (19%) | 29 (15%) | 149 of 287 (52%) | 149 of 153 (97.4%) |
+| min >= 0.7 | 18 (9%) | 12 (6%) | 110 of 287 (38%) | 110 of 113 (97.3%) |
+| min >= 0.9 | 9 (4%) | 5 (3%) | 64 of 287 (22%) | 64 of 65 (98.5%) |
+
+Scoring only each reply's first sentence (where it usually states the answer) traces the same line: 30%
+of the no-answer replies shown at 0.9 for 66% of the right answers kept.
+
+**Reading.** The minimum over sentences cuts the no-answer replies shown, but it cuts right answers at the
+same rate, and so does the first sentence alone: every way of reading the scores lies on one trade-off,
+roughly "to show a third of the no-answer replies, give up a third of the right ones". So the mean was not
+the cause, as the reading above suspected. What the check cannot do on this data is tell an answer the
+documents state from an answer the model knew that sits on the documents' topic: RGB's documents without
+the answer are about the same event (a 2022 French Open document beside "Świątek won the 2022 French
+Open"), and AlignScore scores the reply as consistent with them. A gate for retrieved answers needs the
+answer itself located in a document, not the reply's overall agreement with them; that is the next
+registration, on the 93 integration questions RGB holds that these 300 do not.
