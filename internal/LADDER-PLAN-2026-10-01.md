@@ -38,7 +38,7 @@ it and how many independent provers gave it, or it is refused.
 | 6. matter to others | R7 and the twins | release artifacts | twins graded 2026-09-30 (233 usable negatives) |
 | a brain | the chosen pretrained base | R1 | running |
 | learn, not memorise | the clean 200 with the specification check, by trust level | R5 on the clean 200 | pending |
-| know when it is right | the gate; then P(True) against the gate's verdict (arXiv:2207.05221) | calibration error of the student's own confidence against proof outcomes | gate done; calibration open |
+| know when it is right | the gate; then P(True) against the gate's verdict (arXiv:2207.05221) | calibration error of the student's own confidence against proof outcomes | **measured (2026-10-01)**: ECE 0.047, AUROC 0.86 / 0.98 (zero / four-shot) across problems but 0.13 / 0.62 between answers to the same problem; the gate is the judge |
 | better reasoning | SAFE's rounds (expert iteration); RL only where a published result supports it at this scale | coverage per round | R6 |
 | know what it was not trained on | retrieval of proved examples into the prompt (the dynamic few-shot of arXiv:2402.00247); `DAWNR-RETRIEVAL.md`'s index | dev coverage with and without retrieval | open |
 | remember the person | per-person adapters on the base (the harness already keeps them) | the four simulated-person measurements re-run on the base | open |
