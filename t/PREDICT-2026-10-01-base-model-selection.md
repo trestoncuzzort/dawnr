@@ -448,3 +448,19 @@ problems that no task could pass, six were unreachable only because of this faul
 with no signature that fits all of their tests (15 `split_lowerstring`, 407 `rearrange_bigger`,
 910 `check_date`), computed by trying every signature; the held-out set has one (699). Counts
 on dev are of at most 97.
+
+## Can the 9B be trained on this card at all? A memory probe, 2026-10-01 07:49Z
+
+Not a result about the 9B's answers. Three optimizer steps (48 rows) on the longest v5 rows
+under each length cap, rank 16, the response-only output layer, the 16 GB card:
+
+| rows no longer than | outcome |
+|---|---|
+| 2,048 tokens | out of memory |
+| 1,536 tokens | the run died with a CUDA illegal memory access (the kernel logged Xid 31, a GPU memory page fault in that process); the card kept working afterwards |
+| 1,024 tokens | fits: three steps in 72 seconds |
+
+So a 9B student can be trained here only on rows of at most 1,024 tokens: 406 of the 3,767 v5
+rows (11%) would be dropped, most of them debugging and APPS rows, and a full run would take
+about four hours. By the rule the 9B matters only if it more than doubles the 4B's tests passed.
+It is not trained tonight; the card is spent on the 4B.
