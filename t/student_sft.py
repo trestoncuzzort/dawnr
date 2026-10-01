@@ -82,10 +82,31 @@ def pad_batch(features: list[dict], pad_id: int) -> dict:
     return {"input_ids": ids, "labels": labels, "attention_mask": mask}
 
 
+def merge(adapter: Path, out: Path) -> int:
+    """The adapter folded into its full-precision base and saved as one model, the form that is
+    served and later converted for release (peft's merge_and_unload, as t/loop_train.py's export
+    does: in bf16 against the unquantised base, never the 4-bit one)."""
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from peft import PeftModel
+    base_id = json.loads((adapter / "adapter_config.json").read_text(encoding="utf-8"))["base_model_name_or_path"]
+    base = AutoModelForCausalLM.from_pretrained(base_id, dtype=torch.bfloat16, device_map={"": 0})
+    merged = PeftModel.from_pretrained(base, str(adapter)).merge_and_unload()
+    out.mkdir(parents=True, exist_ok=True)
+    merged.save_pretrained(str(out))
+    AutoTokenizer.from_pretrained(str(adapter)).save_pretrained(str(out))
+    (out / "merged-from.json").write_text(json.dumps({"base": base_id, "adapter": str(adapter)}, indent=1) + "\n",
+                                          encoding="utf-8")
+    print(f"merged {adapter} into {base_id}: {out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--model", required=True, help="the base's hub id or a local directory")
-    ap.add_argument("--sft", type=Path, required=True, help="t/graded_pool.py rows (prompt, chosen)")
+    ap.add_argument("--model", help="the base's hub id or a local directory")
+    ap.add_argument("--sft", type=Path, help="t/graded_pool.py rows (prompt, chosen)")
+    ap.add_argument("--merge", type=Path, metavar="ADAPTER",
+                    help="instead of training: fold this adapter into its base and save the model to --out")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--epochs", type=float, default=5.0, help="SAFE trains five epochs a round")
     ap.add_argument("--lr", type=float, default=2e-4, help="QLoRA table 9 (7B, 13B)")
@@ -98,6 +119,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--limit", type=int, default=0, help="first N rows only (a smoke run)")
     a = ap.parse_args(argv)
+    if a.merge:
+        return merge(a.merge, a.out)
+    if not a.model or not a.sft:
+        ap.error("--model and --sft are required to train")
 
     import torch
     from transformers import (AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Trainer,
