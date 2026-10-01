@@ -62,3 +62,28 @@ prompt `s2`), the 476 specification-given rows and the 788 debugging rows. Same 
     on 5). Falsified below 10.
 29. At least 5 dev problems are proved by at least one kernel with the reference check agreeing
     (the v4 student: 2). Falsified below 5.
+
+## Amendment, 2026-10-01 07:00Z, before any v5 row is trained on: straight to the 4B, no 2B pilot
+
+Since this file was registered the 4B on v4 has been trained and measured on dev every way this
+file needs for a control (one greedy answer: 9 tests passed, 4 proved; ten answers: 16 and 7;
+ten answers and the specification first: 8), so the base the rule named is its own matched
+control and the 2B pilot would only delay it: the one card would spend an hour and three
+quarters on the 2B before the 4B's three and a half hours. The pilot was stopped before its
+training began (its rows had been assembled; no answer exists). The measurement is otherwise as
+registered, on the 4B, with the rows as they stand after the proof round
+(`t/PREDICT-2026-10-01-proof-round.md`) is graded.
+
+The controls are the 4B on v4's dev rows above, and the predictions are restated for the 4B:
+
+26. The student's own Python passes the tests on at least 60 dev problems. Falsified below 60.
+27. At least 20 dev problems get a kept specification (the 4B on v4, from eleven one-shot
+    answers: 9). Falsified below 20.
+28. At least 16 dev problems get a taken answer by the Python-first route (the 4B on v4's ten
+    answers pass the tests on 16). Falsified below 16.
+29. The Python-first route proves at least 8 dev problems by at least one kernel with the
+    reference check agreeing (the 4B on v4's best route: 8). Falsified below 8.
+
+The v5 student is also measured the ways the v4 student was (one greedy answer, ten answers,
+the specification first, the 33 specification-given questions), so that the rows' effect and
+the route's effect can be told apart.
