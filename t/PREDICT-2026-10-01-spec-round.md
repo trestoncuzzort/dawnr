@@ -55,3 +55,9 @@ asks that the specification reject at least 60% of the mutated outputs judged on
 asks the same (`t/graded_pool.py`, `spec-too-weak`). Predictions 36 to 38 keep their numbers and
 are judged under this stricter rule.
 
+
+## Amendment, 2026-10-01 14:24Z, before the round has started: the student
+
+The round was registered with the 4B on v5. The 4B on v6 will exist before the card is free for it
+(it trains after the held-out reference, `t/PREDICT-2026-10-01-v6.md`), so the round runs with the 4B
+on v6, and with the 4B on v5 only if v6 fails to train. Predictions 36 to 38 are unchanged.
