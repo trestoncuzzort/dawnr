@@ -61,7 +61,7 @@ The teacher has read the public MBPP and HumanEval; some of its answers will be 
 held-out 232 are never prompted, so the scoreboard stays clean, but a document admitted here is
 admitted for being proved, not for being novel, and the clean-200 gate stays where it is.
 
-## Launch note, 2026-10-01 01:53Z (before any teacher sample)
+## Launch note, 2026-10-01 01:52Z (before any teacher sample)
 
 - **Credit.** The provider's own billing summary reads October's metered cost as 0.00 and
   September's as 32.19 against 30.00 of credit, 2.07 billed: the last month ran over the free
