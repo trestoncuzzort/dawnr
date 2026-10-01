@@ -27,3 +27,20 @@ the share answered yes.
 69. F1 at least 0.80 on the adversarial setting. Falsified below 0.80.
 70. It hallucinates less than it misses: precision at least recall (a model that answers "yes" too
     readily has precision below recall). Falsified if precision is below recall.
+
+## Outcome, 2026-10-01 12:36Z
+
+All 3,000 adversarial questions, four CPU servers on the lab, 72 minutes, no request failed:
+
+| accuracy | precision | recall | F1 | answered yes | true yes | false yes | true no | false no |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0.877 | 0.901 | 0.847 | **0.873** | 47.0% | 1,271 | 140 | 1,360 | 229 |
+
+69. **F1 at least 0.80: holds.** 0.873.
+70. **Precision at least recall: holds.** 0.901 against 0.847: when it errs it more often misses an
+    object that is there than names one that is not.
+
+**Reading.** The chosen base sees, offline on a CPU at 4 bits, and on POPE's hardest setting it
+says an absent object is present on 140 of 1,500 questions (9.3%). That is the visual form of the
+failure the gate exists for; nothing yet checks a claim about an image the way the provers check a
+program, so this rate is what a person would see unchecked.

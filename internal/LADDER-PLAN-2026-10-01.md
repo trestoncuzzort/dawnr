@@ -44,7 +44,7 @@ it and how many independent provers gave it, or it is refused.
 | remember the person | per-person adapters on the base (the harness already keeps them) | the four simulated-person measurements re-run on the base | open |
 | act through tools | the base's native tool calls through the existing harness (permissions, hooks, MCP) | the 1,007-conversation tool evaluation re-run on the base | harness built; re-measure |
 | hear and speak | pretrained recognisers and voices with permissive licences | word error rate on a public test set; offline | **hearing done (2026-10-01)**: Whisper base.en under whisper.cpp, 4.14% on LibriSpeech test-clean (paper 4.2), 16x real time on 8 CPU threads; speaking done: Piper (MIT) with a public-domain-data voice, 6.44% WER by the same recogniser against 3.19% for the human recordings of the same 200 sentences |
-| see | the base's own vision input if it has one, else a permissive pretrained encoder | a small image check through the harness | open |
+| see | the base's own vision input if it has one, else a permissive pretrained encoder | a small image check through the harness | **measured (2026-10-01)**: POPE adversarial F1 0.873, 9.3% of absent objects named present, the base at 4 bits with its own projector on a CPU |
 | small hardware | 4-bit GGUF of the student | tokens per second on an 8 GB card and on a CPU | R7 |
 | understood from inside | published sparse autoencoders for the base family where they exist | a feature that tracks specifications, registered before looking | open |
 | improve itself safely | the data engine (built) driving R6 | R6 | built |
