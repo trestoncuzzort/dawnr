@@ -170,3 +170,23 @@ dev problems still have no passing answer, and four turn out to have been answer
 
 These answers go through the provers and the repaired check as `rr2-*` sets; the registered
 tables stay as measured and the counts under this reading are printed beside them.
+
+## Outcome of the one-character-string amendment, 2026-10-01 05:05Z
+
+The 36 answers that pass their tests only under the reading went through the seven kernels and
+the repaired check as 22 `rr2-*` sets (36 checked: 29 agree, 6 disagree, 1 could not be checked).
+
+19. **No held-out count changes: holds.** One held-out answer newly passes its tests on the
+    clean 200 and no kernel proves it. The pooled table stays 50 and 19.
+
+Dev moves. The fine-tuned 4B's two newly passing answers both count: 113 `check_integer`
+(four kernels) and 377 `remove_Char` (one kernel), each with the specification agreeing. Its
+row is now 6 tests passed and 5 proved with a checked specification, where the harness had shown
+4 and 3. The full dev table under the three repairs is in
+`t/PREDICT-2026-10-01-base-model-selection.md`.
+
+On the lab the same two harness repairs let 53 stored TRAINING answers pass their tests (41 by
+this reading, 12 by the nested one); 46 reached the kernels' tables, 33 with the specification
+agreeing. With them, the repaired check, a floor of ten agreeing draws and five of sixteen chunks
+of the never-graded answers, the training pool reads 548 rows over 288 problems at 04:57Z, from
+527 over 262. (The figure of 542 over 277 given above was the 04:15Z build under the old check.)

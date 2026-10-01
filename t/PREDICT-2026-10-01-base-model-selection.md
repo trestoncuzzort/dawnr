@@ -420,3 +420,28 @@ longer one as a sequence; 6 in the result, 3 in an argument), and no answer set 
 one. Every count in this file is of 100 with at most 91 reachable. The held-out 200 has two
 such problems. Not repaired here: it changes the pool, so it needs a new pool version and a
 re-measurement.
+
+## The dev table under all three instrument repairs, 2026-10-01 05:05Z
+
+A third fault surfaced after the section above: a one-character string in a test was read as an
+integer, so a string parameter or result failed such a test
+(`t/PREDICT-2026-10-01-spec-check-coverage.md`, the amendment). This table replaces the one in
+the section above; the registered tables further up stay as measured.
+
+| candidate | reach a task | tests pass | proved by at least 1, spec checked | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen2.5-Coder-1.5B, prompted | 5 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-2B, prompted | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-4B, prompted | 9 | 3 | 0 | 0 | 0 | 0 | 0 |
+| Qwen2.5-Coder-7B, prompted | 4 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-9B, prompted | 12 | 6 | 2 | 2 | 1 | 1 | 0 |
+| Qwen2.5-Coder-14B, prompted | 15 | 4 | 0 | 0 | 0 | 0 | 0 |
+| Qwen2.5-Coder-1.5B, fine-tuned on the 527 rows | 23 | 4 | 1 | 1 | 0 | 0 | 0 |
+| Qwen3.5-2B, fine-tuned on the 527 rows | 45 | 5 | 1 | 1 | 0 | 0 | 0 |
+| **Qwen3.5-4B, fine-tuned on the 527 rows** | 35 | 6 | **5** | 3 | 1 | 0 | 0 |
+| Qwen3.5-2B, fine-tuned on the v4 rows | 53 | 5 | 2 | 2 | 1 | 1 | 1 |
+
+The instruments had been hiding two of the 4B student's five proved answers. The rule's pick is
+the same and stands on more: 5 against 1 and 1. A paired test still does not make it certain
+(the 4B and the 2B differ on six problems, five to one; exact p = 0.22). Four of the nine dev
+problems that no task could pass were unreachable only because of this fault; five remain.
