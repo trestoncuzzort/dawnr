@@ -128,3 +128,11 @@ specification-checked answer), and no 8 GB candidate is separable by prompting: 
 the table of candidates: the 9B at 4-bit is about 6.6 GB, so it answers on an 8 GB card too; it
 was listed as a 16 GB model for training, not for use. The fine-tuned half (the amendment above)
 decides the small base and now includes the 9B.
+
+**Two notes before the 9B's fine-tuned answers exist, 2026-10-01 01:42Z.** (1) The 9B is trained
+at LoRA rank 16 instead of 64: the 4B at rank 64 already takes 14.7 GB of the 16 GB card, and
+QLoRA reports that "LoRA r is unrelated to final performance if LoRA is used on all layers"
+(arXiv:2305.14314 B.2, figure 4). Everything else is unchanged. (2) Answers are extracted with
+`--promote-header` (608ac34a) for every fine-tuned candidate and the counts without it are given
+beside them: a task that states `t 0` over a body that is well formed only as `t 1` is read as
+`t 1`, since the format line is derivable.
