@@ -35,6 +35,44 @@ def problem_seed(seed: int, tid: str) -> int:
     return int(hashlib.sha256(f"{seed}:{tid}".encode()).hexdigest()[:8], 16)
 
 
+def load(model_dir: str):
+    """(model, tokenizer) for batched decoding: bf16 on the card, left padding."""
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16, device_map={"": 0})
+    model.eval()
+    return model, tokenizer
+
+
+def decode(model, tokenizer, conversations: list[list[dict]], max_new: int, temperature: float = 0.0,
+           top_p: float = 0.95, seed: int | None = None) -> list[tuple[str, bool, int]]:
+    """One reply per conversation, decoded as one batch: (text, stopped at the end token, tokens)."""
+    import torch
+    prompts = [student_sft.render_prompt(tokenizer, m) for m in conversations]
+    enc = tokenizer(prompts, return_tensors="pt", padding=True, add_special_tokens=False).to(model.device)
+    with torch.no_grad():
+        if temperature > 0:
+            if seed is not None:
+                torch.manual_seed(seed)
+            out = model.generate(**enc, max_new_tokens=max_new, do_sample=True, temperature=temperature,
+                                 top_p=top_p, top_k=0, pad_token_id=tokenizer.pad_token_id)
+        else:
+            out = model.generate(**enc, max_new_tokens=max_new, do_sample=False,
+                                 pad_token_id=tokenizer.pad_token_id)
+    replies = []
+    for row in out[:, enc["input_ids"].shape[1]:]:
+        tokens = [int(x) for x in row if int(x) != tokenizer.pad_token_id]
+        stopped = tokenizer.eos_token_id in tokens
+        if stopped:
+            tokens = tokens[: tokens.index(tokenizer.eos_token_id)]
+        replies.append((tokenizer.decode(tokens, skip_special_tokens=True), stopped, len(tokens)))
+    return replies
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True, help="a merged model directory or a hub id")
@@ -54,21 +92,13 @@ def main(argv: list[str] | None = None) -> int:
     if a.tag and len(a.seeds) != 1:
         ap.error("--tag names one answer set; use --tag-prefix for several seeds")
 
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-
     P = {str(k): v for k, v in se.pool(a.pool).items()}
     ids = [line.strip() for line in a.ids_file.read_text(encoding="utf-8").split() if line.strip()]
     missing = [t for t in ids if t not in P]
     if missing:
         raise SystemExit(f"student_generate: ids not in pool {a.pool}: {missing[:5]}")
 
-    tokenizer = AutoTokenizer.from_pretrained(a.model)
-    tokenizer.padding_side = "left"
-    if tokenizer.pad_token_id is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(a.model, dtype=torch.bfloat16, device_map={"": 0})
-    model.eval()
+    model, tokenizer = load(a.model)
     digest = hashlib.sha256(json.dumps(sorted(str(p.name) for p in Path(a.model).glob("*.safetensors"))
                                        if Path(a.model).is_dir() else a.model).encode()).hexdigest()[:12]
 
@@ -87,30 +117,15 @@ def main(argv: list[str] | None = None) -> int:
         for start in range(0, len(todo), a.batch):
             chunk = todo[start:start + a.batch]
             messages = [se.build_prompt(P[t], a.prompt) for t in chunk]
-            prompts = [student_sft.render_prompt(tokenizer, m) for m in messages]
-            enc = tokenizer(prompts, return_tensors="pt", padding=True, add_special_tokens=False).to(model.device)
-            with torch.no_grad():
-                if a.temperature > 0:
-                    # one generator per row would need a custom sampler; seeding the batch from its
-                    # first problem keeps a resumed run identical as long as batches start at the
-                    # same problems, which the fixed order and the batch size guarantee
-                    torch.manual_seed(problem_seed(seed, chunk[0]))
-                    out = model.generate(**enc, max_new_tokens=a.max_new, do_sample=True,
-                                         temperature=a.temperature, top_p=a.top_p, top_k=0,
-                                         pad_token_id=tokenizer.pad_token_id)
-                else:
-                    out = model.generate(**enc, max_new_tokens=a.max_new, do_sample=False,
-                                         pad_token_id=tokenizer.pad_token_id)
-            new = out[:, enc["input_ids"].shape[1]:]
-            for tid, msg, row in zip(chunk, messages, new):
-                tokens = [int(x) for x in row if int(x) != tokenizer.pad_token_id]
-                stopped = tokenizer.eos_token_id in tokens
-                if stopped:
-                    tokens = tokens[: tokens.index(tokenizer.eos_token_id)]
+            # sampling is seeded per batch from its first problem: a resumed run is identical as
+            # long as batches start at the same problems, which the fixed order and size guarantee
+            replies = decode(model, tokenizer, messages, a.max_new, a.temperature, a.top_p,
+                             problem_seed(seed, chunk[0]))
+            for tid, msg, (text, stopped, ntok) in zip(chunk, messages, replies):
                 record = {"task_id": tid, "fn": P[tid]["fn"], "model": str(a.model), "digest": digest,
                           "pool_version": a.pool, "prompt_version": a.prompt, "options": options,
-                          "messages": msg, "reply": tokenizer.decode(tokens, skip_special_tokens=True),
-                          "reply_tokens": len(tokens), "done_reason": "stop" if stopped else "length"}
+                          "messages": msg, "reply": text,
+                          "reply_tokens": ntok, "done_reason": "stop" if stopped else "length"}
                 se.write_record(d / "raw" / f"{tid}.json", record)
             done = min(start + a.batch, len(todo))
             print(f"student_generate: {tag}: {done}/{len(todo)} ({time.monotonic() - started:.0f} s)", flush=True)
