@@ -89,3 +89,19 @@ problems proved on complete specifications) and loses about one proof in six whe
 specification is given, by writing bodies a kernel refutes. llama.cpp's own remedies are a
 higher-precision type or an importance matrix; the next measurement is the same 33 questions at
 Q8_0 and at Q4_K_M with an importance matrix computed from training rows.
+
+## Amendment, 2026-10-01 10:20Z, before either file exists: which quantization keeps the proofs
+
+llama.cpp's own answers to a quantization loss (`tools/quantize/README.md` and
+`tools/imatrix/README.md`, fetched 2026-10-01) are a type with more bits and an importance matrix
+computed on calibration text (`llama-imatrix -m model.gguf -f text -o imatrix.gguf`, then
+`llama-quantize --imatrix imatrix.gguf ... Q4_K_M`). Both are measured the same way as above:
+
+- **Q8_0** from the same bf16 file (8.5 bits a weight in the README's table).
+- **Q4_K_M with an importance matrix** computed on the student's own training rows rendered with
+  its chat template (the v4 rows it was trained on; checked to hold none of the 33 questions),
+  100 chunks of 512 tokens, the output layer left out as the README advises.
+
+51. At Q8_0 at least 30 of the 33 replies are word for word the bf16 student's. Falsified below 30.
+52. At Q8_0 at least 27 of 33 are proved by one kernel or more (bf16 28). Falsified below 27.
+53. Q4_K_M with the importance matrix proves at least 26 (plain Q4_K_M 23). Falsified below 26.
