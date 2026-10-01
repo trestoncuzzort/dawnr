@@ -31,7 +31,7 @@ eleven sets it started from, as the specification-first arm was.
 34. Of the answers sent back in the first round, at least 1 in 10 is repaired (Dafny verifies a
     repair). Falsified below 10%.
 
-**On the training side (a second round of the proof round).** The first round left 153 training
+**On the training side (a second round of the proof round).** The first round left 156 training
 problems with a right specification and a test-passing program that no kernel proves or that a
 kernel refutes (`t/PREDICT-2026-10-01-proof-round.md`). Each goes back with Dafny's message.
 
