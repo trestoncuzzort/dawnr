@@ -161,3 +161,20 @@ same three problems as before (459, 549, 634).
 29c. **On complete specifications at least 4: holds.** The same 5; every specification the route
     kept is complete. 450 is a problem no answer of the 4B on v4 proved; with the greedy answer the
     two routes together reach 5 dev problems on complete specifications.
+
+## Every route of the 4B on v5, 2026-10-01 13:05Z (complete specifications)
+
+| route | model calls a problem | pass the tests | proved by one kernel or more | by all seven | problems |
+|---|---:|---:|---:|---:|---|
+| one greedy answer | 1 | 13 | 4 | 1 | 113, 377, 476, 727 |
+| ten sampled and the greedy one | 11 | 27 | 4 | 1 | the same |
+| the same and the specification first | 12 | 28 | 4 | 1 | the same |
+| the Python first | 17 | 10 | **5** | 1 | adds 450 |
+| five retrieved examples | 1 | 11 | 3 | 1 | 11, 113, 377 |
+| every route together | | 31 | 6 | 2 | 11, 113, 377, 450, 476, 727 |
+
+Sampling more answers passes twice the tests (27 against 13) and proves no further problem on a
+complete specification: the extra passing answers carry weak or wrong specifications. The route
+that changes what is proved is the one that puts a tested program in front of the specification.
+The proof-repair arm is still at the gate; by the held-out rule as it stands the pair named is the
+4B on v5 with the Python first (5 problems, 1 by all seven, 17 calls).
