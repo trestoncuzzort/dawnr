@@ -649,7 +649,15 @@ def main() -> int:
             except ValueError as e:
                 tid = None
                 r = {"status": "problem mapping refused", "reason": str(e)}
-            r.update(task_id=tid, task_sha256=task_sha256(task), pool=a.pool,
+            try:
+                sha = task_sha256(task)
+            except Exception as e:                              # noqa: BLE001
+                # An answer written before a word became a keyword of the surface syntax (`card`,
+                # 2026-10-01, in a train-side set) no longer prints, so it has no identity to bind
+                # a verdict to. It is not a valid program today: recorded, never admitted, and the
+                # other answers are still checked (the run used to end here with a traceback).
+                r, sha = {"status": "task no longer prints", "reason": f"{type(e).__name__}: {e}"}, None
+            r.update(task_id=tid, task_sha256=sha, pool=a.pool,
                      seed=a.seed, attempts=a.n)
             key = "agrees" if r["status"] == "agrees" else ("disagrees" if r["status"] == "disagrees" else "other")
             tally[key] += 1
