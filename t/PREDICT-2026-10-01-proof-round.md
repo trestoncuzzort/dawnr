@@ -94,3 +94,15 @@ needs an invariant that ties it to the function. 32 of the 167 are wrong program
 did not catch and a kernel did. The 94 unproved ones are right-looking programs with a right
 specification and no proof: the material a proof-repair step would work on, and the kernels'
 messages as this project feeds them back (one verdict a kernel) say too little to repair from.
+
+## Outcome of the second pass, 2026-10-01 07:50Z
+
+Six more sampled answers a specification for the 106 problems the first pass left: 20 problems
+got a taken answer (4, 13, 17, 20 and 20 after the successive samples; the greedy repeat took
+none, as it must). Of the 20, the kernels prove 6 and refute 6, and 5 are admitted.
+
+32. **The second pass takes an answer on at most 20 of the 106: holds, at exactly 20.**
+
+**The round in all:** 273 training problems that had a right specification and no admitted
+answer; 187 got a test-passing answer; 34 were proved by at least one kernel with none refuting;
+**31 are admitted to the training pool**, each a problem the pool did not have.
