@@ -142,6 +142,7 @@ def main(argv=None) -> int:
     s.add_argument("--weights", type=Path, required=True); s.add_argument("--data", type=Path, required=True)
     s.add_argument("--answers", type=Path, nargs="+", required=True); s.add_argument("--out", type=Path, required=True)
     s.add_argument("--device", default="cpu"); s.add_argument("--threads", type=int, default=0)
+    s.add_argument("--base", default="FacebookAI/roberta-large", help="RoBERTa-large's config and tokenizer: hub id or a folder")
     r = sub.add_parser("report")
     r.add_argument("--data", type=Path, required=True); r.add_argument("--scores", type=Path, required=True)
     r.add_argument("--answers", type=Path, nargs="+", required=True); r.add_argument("--json", type=Path)
@@ -157,7 +158,7 @@ def main(argv=None) -> int:
         done = set()
         if a.out.exists():
             done = {(x["id"], x["noise_rate"]) for x in map(json.loads, a.out.read_text().splitlines()) if x}
-        align = Aligner(a.weights, a.device)
+        align = Aligner(a.weights, a.device, base=a.base)
         with a.out.open("a", encoding="utf-8") as f:
             for x in rows:
                 if x["passage_num"] == 0 or rejected(x["prediction"]) or (x["id"], x["noise_rate"]) in done:
