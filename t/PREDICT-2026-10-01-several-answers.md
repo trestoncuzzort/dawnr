@@ -220,3 +220,20 @@ reads more. Showing the student similar solved problems, or handing its failed a
 the gate's message, did nothing a single sampled set's noise would not: what Misu et al. measured
 on GPT-4 with retrieved examples (19% to 58%) is not there for a 4B fine-tuned on a few hundred
 rows.
+
+## Amendment, 2026-10-01 08:02Z, before any result of the 4B on v5 exists: the held-out rule chooses a student and a route together
+
+The rule of 05:38Z says the student is "the 4B on whichever rows it was last trained on". That
+was written on the assumption that a later training is never worse. Nothing has been measured on
+the 4B on v5 yet (it is at step 40 of 1,240), so the rule is tightened now, while it cannot
+follow a number:
+
+- What goes to the held-out 200 is the **pair** of a student and a route with the most dev
+  problems proved by at least one kernel with the reference check agreeing, among every pair
+  measured on dev: the 4B on v4 (one greedy answer 4, ten answers 7, ten answers and the
+  specification first 8, a second try 4, retrieved examples 3) and the 4B on v5 (the same arms
+  where they are run, the Python-first route, and ten answers with proof repair).
+- Ties: more problems proved by all seven; then fewer model calls a problem; then the later
+  student.
+- Everything else stands: once, unchanged, repaired instruments, every level reported, the
+  reference given the same number of answers a problem.
