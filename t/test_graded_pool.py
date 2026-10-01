@@ -61,6 +61,23 @@ class Gate(unittest.TestCase):
             ev[key].update(change)
             self.assertEqual(graded_pool.rejection(s, ev, "v5", 1), expected, change)
 
+    def test_the_answer_names_the_task_as_the_prompt_asks_and_its_self_calls_follow(self):
+        import surface
+        task = surface.parse("t 1\ngate recursion\ntask mbpp_9__fact(n: int) returns (r: int)\n"
+                             "  requires n >= 0\n  ensures r >= 1\n  decreases n\n{\n"
+                             "  if n == 0 { r := 1; } else { r := mbpp_9__fact(n - 1); r := r * n; }\n}\n")
+        before = spec_check.task_sha256(task)
+        text = graded_pool.answer_text(task, "fact")
+        self.assertIn("task fact(n: int)", text)
+        self.assertIn("r := fact(n - 1)", text)
+        self.assertNotIn("mbpp_9__", text)
+        self.assertEqual(spec_check.task_sha256(task), before)          # the graded task is untouched
+
+    def test_a_name_the_surface_syntax_cannot_print_keeps_the_internal_one(self):
+        import surface
+        task = surface.parse("t 0\ntask mbpp_3__f(a: int) returns (r: int)\n  ensures r == a\n{ r := a; }\n")
+        self.assertIn("task mbpp_3__f(", graded_pool.answer_text(task, "task"))
+
     def test_the_level_is_one_to_seven(self):
         for bad in (0, 8):
             with self.assertRaises(SystemExit):

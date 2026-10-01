@@ -65,12 +65,23 @@ def decode(model, tokenizer, conversations: list[list[dict]], max_new: int, temp
                                  pad_token_id=tokenizer.pad_token_id)
     replies = []
     for row in out[:, enc["input_ids"].shape[1]:]:
-        tokens = [int(x) for x in row if int(x) != tokenizer.pad_token_id]
-        stopped = tokenizer.eos_token_id in tokens
-        if stopped:
-            tokens = tokens[: tokens.index(tokenizer.eos_token_id)]
-        replies.append((tokenizer.decode(tokens, skip_special_tokens=True), stopped, len(tokens)))
+        replies.append(reply_of([int(x) for x in row], tokenizer))
     return replies
+
+
+def reply_of(tokens: list[int], tokenizer) -> tuple[str, bool, int]:
+    """(text, stopped, tokens) of one generated row. The end token is looked for BEFORE padding is
+    removed: a row that finishes early is padded after its end token, and for a tokenizer whose
+    pad token is its end token (load() sets that when there is no pad token) stripping padding
+    first would delete the end token and label every finished reply as cut off at the budget."""
+    eos, pad = tokenizer.eos_token_id, tokenizer.pad_token_id
+    stopped = eos in tokens
+    if stopped:
+        tokens = tokens[: tokens.index(eos)]
+    else:
+        while tokens and tokens[-1] == pad:                     # trailing padding only
+            tokens = tokens[:-1]
+    return tokenizer.decode(tokens, skip_special_tokens=True), stopped, len(tokens)
 
 
 def main(argv: list[str] | None = None) -> int:
