@@ -22,7 +22,7 @@ it and how many independent provers gave it, or it is refused.
 | R3 proof repair with the verifier's message | SAFE's self-debugging (arXiv:2410.15756): incorrect proof plus error to a fixed proof, trained, not only prompted | conversion from tests-pass to proved measured before and after on dev | open; our prompted single round moved 3 cells of 182 (`t/FINDINGS-repair-2026-09-20.md`) |
 | R4 several answers and the gate as the filter | SAFE's Accuracy@10; the gate makes sampling safe | coverage at k samples on dev | open |
 | R5 the student | SAFE's loop with QLoRA's recipe (arXiv:2305.14314 B.2); `t/graded_pool.py`, `t/student_sft.py` | the student's dev table, then the clean 200 once | first students training |
-| R6 more proved data each round | SAFE's rounds: the teacher and the student write, the gate filters, retrain | pool size and student coverage per round | teacher round registered (`t/PREDICT-2026-10-01-dawnr-teacher-round.md`), free credit only |
+| R6 more proved data each round | SAFE's rounds: the teacher and the student write, the gate filters, retrain | pool size and student coverage per round | the rented teacher round was stopped unfinished on 2026-10-01 at the operator's instruction (own machines only; outside compute only on Google or AWS); a teacher on our own hardware is to be registered |
 | R7 usable by everyone | Apache-2.0 base; merged weights and a 4-bit GGUF; the gate as a tool | a fresh machine runs the student and the gate offline | open |
 
 ## Every goal in AMBITION.md
@@ -33,7 +33,7 @@ it and how many independent provers gave it, or it is refused.
 | 2. the product | the gate plus the student (this file) | R7 | restated here; README and AMBITION follow when R1 names the base |
 | 3. size as a curve | the same table across sizes: fine-tuned small against prompted large | coverage against parameters | prompted points exist (1.5B to 235B) |
 | 4. scale the engine | R6 | rows the gate admits per round | 527 rows over 262 problems at one prover (271 at seven) |
-| 5. own the whole loop | local generator, local gate, free compute only | no paid call in a round | holds; the teacher runs on free credit or locally at 9 to 14B |
+| 5. own the whole loop | local generator, local gate, our own machines (the operator, 2026-10-01: nothing outside them except Google or AWS) | no outside call in a round | holds from 2026-10-01 02:22Z; the teacher is whatever model our own cards can run |
 | 6. matter to others | R7 and the twins | release artifacts | twins graded 2026-09-30 (233 usable negatives) |
 | a brain | the chosen pretrained base | R1 | running |
 | learn, not memorise | the clean 200 with the specification check, by trust level | R5 on the clean 200 | pending |
