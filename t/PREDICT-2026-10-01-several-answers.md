@@ -48,3 +48,39 @@ for the from-scratch model and never run on a pretrained student.
     TRAINED on debugging pairs does. This student was.)
 23. Ten answers beat the second try: more problems pass the tests with ten samples than after
     two repair rounds. Falsified otherwise.
+
+## Amendment, 2026-10-01 04:35Z, before the 4B on v4 exists: a third arm, the specification first
+
+**What was measured since.** Given the specification, the 2B student proves 19 of 33 unseen
+specifications by all seven kernels (`t/PREDICT-2026-10-01-spec-given.md`). From English it
+proves 1 to 3 of 100, and what fails is the specification. SAFE splits the work the same way
+(arXiv:2410.15756, 3.2 and 3.3, read from the HTML): specifications are synthesized first and
+kept only when they score at least 80% Correctness (the share of the problem's test cases they
+hold on) and 60% Completeness (the share of mutated test cases they reject), up to three a
+function; proofs are then synthesized for the kept specifications. Neither score needs a
+reference solution.
+
+**Is that filter any good here?** `t/spec_quality.py` computes the two scores from a problem's
+own tests. On 1,600 stored answers that have a reference verdict: of the 1,084 specifications
+the thresholds keep, 875 agree with the reference (81%); of the 443 dropped for Correctness, 425
+disagree (96%); of the 73 dropped for Completeness, 28 disagree. It keeps 92% of the right
+specifications and drops 66% of the wrong ones, with no reference.
+
+**The arm.** No new training: the same 4B on v4, used twice.
+
+1. Specifications: every well-formed task among the problem's eleven one-shot answers (the
+   greedy one and the ten samples) gives up its body and is scored on the problem's own tests.
+   Up to three distinct specifications a problem are kept, the most complete first.
+2. Proofs: each kept specification is put to the student as a specification-given question, in
+   the words it was trained on, once greedy and twice sampled at 0.7. An answer is taken when it
+   parses, is well formed, carries the given specification unchanged (`t/spec_given.kept`) and
+   passes the problem's tests; the first such answer is the problem's.
+3. Those answers go to the seven kernels and the reference check like any others.
+
+The arm's count for a problem is the best level among its own answers and the eleven one-shot
+answers it started from, so it can only add to the ten-answer arm; what it adds is the measure.
+
+24. At least 15 dev problems have a kept specification among their eleven one-shot answers.
+    Falsified below 15.
+25. The arm adds at least 2 problems proved by at least one kernel with the reference check
+    agreeing, beyond the ten-answer arm. Falsified by fewer than 2.
