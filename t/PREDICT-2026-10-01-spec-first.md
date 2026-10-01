@@ -116,3 +116,44 @@ The 4B on v5 is at step 138 of 1,240 as this is written. Forty of the 693 proved
 rows are built from carry a weak specification (found after training started); the run is left
 to finish, since the rows are the same for every arm it is compared on, and the pool refuses
 such rows from the next build.
+
+## Outcome so far, 2026-10-01 12:00Z: the 4B on v5
+
+Trained 11:20Z: 1,240 steps on the 3,988 v5 rows, final training loss 0.024, 3.4 hours on the card.
+Everything below is under the repaired instruments (`t/PREDICT-2026-10-01-spec-check-inputs.md`).
+
+**The 33 specification-given questions** (paired with the 4B on v4):
+
+| | 4B on v4 | 4B on v5 |
+|---|---:|---:|
+| keep the specification, well formed | 33 | 33 |
+| a kernel refutes it | 4 | 3 |
+| proved by one kernel or more | 28 | 29 |
+| proved by all seven | 26 | 28 |
+
+At one kernel or more it gains 5 questions and loses 4; by all seven it gains 6 and loses 4: no
+difference a sign test can see.
+
+**One greedy answer on the 100 dev problems** (prompt `s2`):
+
+| | 4B on v4 | 4B on v5 |
+|---|---:|---:|
+| valid tasks | 38 | 58 |
+| pass the tests | 9 | 13 |
+| proved by one kernel or more, specification agrees | 4 | 7 |
+| the same on a complete specification | 2 | **4** (113, 377, 476, 727) |
+| by all seven on a complete specification | 0 | **1** (476, the sum of a list's largest and smallest) |
+
+With one answer the 4B on v5 proves as many dev problems on complete specifications as the 4B on
+v4 did with twelve calls (four), and one by all seven kernels. Its three weak answers are on the
+same three problems as before (459, 549, 634).
+
+**The Python-first route:**
+
+26. **The student's own Python passes the tests on at least 60 dev problems: falsified.** 51. The
+    untrained base model's Python, written for the gate measurement, passes on 72: fine-tuning on
+    `t` cost the student Python it had.
+27. **At least 20 dev problems get a kept specification: falsified.** 15 (26 specifications), from 9
+    with the 4B on v4's eleven one-shot answers.
+28. **At least 16 dev problems get a taken answer: falsified.** 10, all passing their tests.
+29. Pending: the ten answers are at the gate.
