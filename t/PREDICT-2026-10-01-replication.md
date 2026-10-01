@@ -32,3 +32,26 @@ RL run ahead of the seeds would hold it for most of a day. Goal 1's claim waits 
 the RL run do not, so both seeds now train and take their held-out route back to back under one hold of
 the card, before the round. The recipe is unchanged: `t/student_sft.py` has not changed since 02:48Z,
 before seed 1 trained. Predictions 99 and 100 are unchanged.
+
+## Amendment, 2026-10-01 19:00Z, before any constrained answer to a held-out question: the reference under the grammar runs on our own CPU
+
+The lab's cards have been held by another user's jobs for three days (each 7 to 8.5 GB free of 49 GB, 43 to
+74% busy, polled 18:41Z to 18:45Z), and the desktop card trains the seeds. So part 2 runs where it can:
+
+- **Engine:** llama.cpp's grammar sampler (llama-server, the lab's CPU-only build) in place of vLLM's xgrammar,
+  on **the same file the unconstrained reference used**: Ollama's `phi4-mini` blob (Q4_K_M, sha256 3c168af1...),
+  copied to the lab. vLLM would have decoded the bf16 weights, a different build from the reference's.
+- **Grammar:** `t/t.gbnf` with its continuation lines joined (`spec_experiment.llama_gbnf`: llama.cpp ends a
+  rule at a newline before a `|`; only whitespace changes, tested). `t/grammar_check.py` on the joined file
+  gives the original's counts exactly: 8,752 of 8,756 parser-accepted programs accepted in canonical form,
+  7,055 of 7,055 as written, 493 of 493 refusals refused. The 4 it refuses are hand-written tasks using sets,
+  a user datatype and a sequence-valued specification function; none of the 11,794 tasks in every answer set
+  on record (Phi's 53, the student's held-out 43, every dev set) uses any of the three, so the gap cannot
+  cost either side here. The 9/18 rule asked for exact agreement before any arm; this is a stated exception,
+  measured.
+- **Sampling** as the unconstrained reference: greedy, then temperature 0.7, top-p 0.95, no top-k, no
+  repetition penalty, min-p 0 (Ollama's default), prompt v5, 3,072 tokens. The chat template is the one in the
+  GGUF (llama.cpp's Jinja), where Ollama applied its own copy of it.
+- **Speed, measured on a dev problem:** about 6 tokens a second for one request on 12 threads. One server
+  with four slots on 40 threads (nice 19; our four idle Qwen servers stopped to make room) runs the greedy
+  set first, then the sixteen sampled sets, as long as they take.
