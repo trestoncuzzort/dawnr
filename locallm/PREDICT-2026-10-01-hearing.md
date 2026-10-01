@@ -32,3 +32,21 @@ on a public test set, offline. This is the hearing half.
     point for the port and for this machine's arithmetic). Falsified outside.
 66. It transcribes faster than real time by at least ten times on 8 threads (5.4 hours of audio
     in under 33 minutes). Falsified otherwise.
+
+## Amendment, 2026-10-01 10:57Z, before any voice is downloaded: speaking
+
+The same row asks for a voice. Seed-TTS's public evaluation (github.com/BytedanceSpeech/seed-tts-eval,
+fetched; arXiv:2406.02430) scores synthesized English speech by an ASR model's word error rate on
+it. Here:
+
+- **Voice**: Piper (github.com/rhasspy/piper, MIT; the repository was archived in 2025 and its
+  successor is GPL, so the last MIT release, 2023.11.14-2, is the one used) with the
+  `en_US-ljspeech-medium` voice (trained on LJ Speech, public domain; its model card fetched).
+- **Sentences**: the transcripts of the first 200 LibriSpeech test-clean utterances in sorted order.
+- **Score**: Whisper base.en (the recogniser measured above, greedy) transcribes Piper's speech;
+  word error rate against the sentences after Whisper's normaliser, beside the same recogniser's
+  rate on the human recordings of the same 200 sentences.
+
+67. Piper's speech is transcribed with a word error rate of at most 10%. Falsified above.
+68. That rate is within 5 points of the recogniser's rate on the human recordings of the same
+    sentences. Falsified otherwise.
