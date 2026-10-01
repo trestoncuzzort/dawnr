@@ -70,3 +70,21 @@ test-clean's 2,620 utterances (16 kHz WAV converted with ffmpeg); scored after W
 
 **Reading.** dawnr can hear: a recogniser with a permissive licence, running offline on a CPU,
 reproduces its paper's accuracy on the standard test set here.
+
+## Outcome of the speaking half, 2026-10-01 11:23Z
+
+Piper's MIT release with the `en_US-ljspeech-medium` voice spoke the 200 sentences (1,495 seconds of
+speech in 172 seconds, ffmpeg's resampling included: nine times faster than real time, on the lab's
+CPU at the lowest priority); Whisper base.en transcribed them as above:
+
+| | sentences | reference words | word errors | word error rate |
+|---|---:|---:|---:|---:|
+| Piper's voice | 200 | 4,675 | 301 | **6.44%** |
+| the human recordings of the same sentences | 200 | 4,675 | 149 | 3.19% |
+
+67. **At most 10%: holds.** 6.44%.
+68. **Within 5 points of the human recordings: holds.** 3.25 points above them.
+
+**Reading.** dawnr can speak and hear itself offline on permissive weights: a listener with the
+system's own recogniser misses about one word in sixteen of what the voice says, against one in
+thirty for a person reading the same text.
