@@ -99,7 +99,7 @@ full-precision base (`t/student_sft.py --merge`, peft's `merge_and_unload` in bf
 model is served in bf16, not on the 4-bit base. That is the form that would be released, so it is
 the form measured. Reply budget 1,024 tokens (a `t` answer is a few hundred).
 
-## Outcome of the prompted half, 2026-10-01 01:24Z
+## Outcome of the prompted half, 2026-10-01 01:23Z
 
 Six candidates, the 100 dev problems, prompt v5, temperature 0, one answer each; kernels on the
 lab (12 cells), the specification check on every task-stage answer (100 draws).
