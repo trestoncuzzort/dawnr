@@ -116,7 +116,17 @@ def build(tags: list[str], split_path: Path, verdicts_path: Path, min_kernels: i
     rows, reasons, seen = [], Counter(), {}
     problems_with_samples = 0
     for tid in sorted(ids):
-        samples = loop_dataset.gather_samples(tag_dirs, tid)
+        samples = []
+        for k, tagdata in enumerate(tag_dirs):                  # loop_dataset.gather_samples, one tag at a time
+            try:
+                sample = loop_dataset.grade_sample(tagdata, k, tid)
+            except surface.SurfaceError:
+                # an answer from before a word became a keyword (`card`): it does not print in
+                # today's syntax, so it is not a program the student should be taught
+                reasons["task-no-longer-prints"] += 1
+                continue
+            if sample is not None:
+                samples.append(sample)
         if samples:
             problems_with_samples += 1
         for sample in samples:
