@@ -378,3 +378,45 @@ What follows from the count: rows that show those idioms are the lever, and the 
 rows in the next training set (476 lifted programs with recursion, loops and specification
 functions) are the first test of that; the dev result of the student trained on them is
 prediction 12 of `t/PREDICT-2026-10-01-spec-given.md`.
+
+## Two instrument faults touch this file's tables, 2026-10-01 04:17Z
+
+Found while following the students' answers gate by gate (the section above).
+
+**The test harness.** `run_point` refused an answer that declared a nested parameter `seq<seq>`
+(fixed in cf84b8ea). Of this file's answer sets it touched six answers of three prompted
+candidates, and three of them pass their problem's tests once read correctly: the 4B and the 9B
+on dev problem 186, the 14B on 450. The fine-tuned students were not touched (they did not write
+`seq<seq>`).
+
+**The specification check.** It could not check the 9B's answer to 186 (the problem's solution
+returns None when given no patterns); repaired and registered in
+`t/PREDICT-2026-10-01-spec-check-coverage.md`.
+
+Both tables again, under the repaired check and with the refused answers read (the registered
+tables above stay as measured):
+
+| candidate | reach a task | tests pass | proved by at least 1, spec checked | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen2.5-Coder-1.5B, prompted | 5 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-2B, prompted | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-4B, prompted | 9 | 2 (was 1) | 0 | 0 | 0 | 0 | 0 |
+| Qwen2.5-Coder-7B, prompted | 4 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-9B, prompted | 12 | 5 (was 4) | **2** (was 1) | 2 | 1 | 1 | 0 |
+| Qwen2.5-Coder-14B, prompted | 15 | 3 (was 2) | 0 | 0 | 0 | 0 | 0 |
+| Qwen2.5-Coder-1.5B, fine-tuned | 23 | 4 | 1 | 1 | 0 | 0 | 0 |
+| Qwen3.5-2B, fine-tuned | 45 | 4 | 1 | 1 | 0 | 0 | 0 |
+| Qwen3.5-4B, fine-tuned | 35 | 4 | 3 | 2 | 1 | 0 | 0 |
+| all nine pooled | 69 | 15 | 5 | 4 | 2 | 1 | 0 |
+
+The rule's pick among the fine-tuned candidates is unchanged. What changes is the reference
+beside it: the untrained 9B, prompted, has 2 proved and specification-checked answers of 100, one
+of them by six kernels, against the fine-tuned 4B's 3. Prediction 5 ("the fine-tuned 4B passes
+more tests than the prompted 9B") now reads 4 against 5 and stays falsified.
+
+**The denominator.** Nine of these 100 dev problems cannot be passed by any task: their own
+tests disagree about the type at one position (a one-character string is read as an integer, a
+longer one as a sequence; 6 in the result, 3 in an argument), and no answer set has ever passed
+one. Every count in this file is of 100 with at most 91 reachable. The held-out 200 has two
+such problems. Not repaired here: it changes the pool, so it needs a new pool version and a
+re-measurement.
