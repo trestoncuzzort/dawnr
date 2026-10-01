@@ -2725,7 +2725,8 @@ them the model:
    answer. All 661 went through the seven kernels on the lab in sixteen chunks, finished
    06:51Z: 323 are proved by at least one kernel with none refuting (139 by all seven). With
    them, the answers the two harness faults had refused and the repaired check, the training
-   pool reads 664 rows over 300 problems at 06:53Z, from 527 over 262.
+   pool read 664 rows over 300 problems at 06:53Z, from 527 over 262; the proof round below
+   takes it to 693 over 323.
 4. **The student's prompt names a type the language does not have** (`seq-of-seq` for
    `seq<seq>`), and of the 527 training answers 9 use a specification function and none a nested
    sequence, while 73 of the 100 dev problems are sequence and string problems. Corrected
@@ -2734,9 +2735,19 @@ them the model:
    type (a one-character string is read as an integer, a longer one as a sequence). The held-out
    200 has two. Not repaired: it needs a new pool version and a re-measurement.
 
-The one measurement of the evening that reads well is the one with a published ladder under it:
-given the specification, a fine-tuned 2B proves 19 of 33 unseen specifications by all seven
-kernels (`t/PREDICT-2026-10-01-spec-given.md`). Next in the order the counts give: finish proving
-the never-graded answers and rebuild the training pool; train the base the rule named on it;
-then several answers a problem with the gate as the filter, and the specification written
-first and proved second, which is the split the published results use.
+The measurement that reads well is the one with a published ladder under it: given the
+specification, the fine-tuned 4B proves 28 of 33 unseen specifications, 26 by all seven kernels
+(a 2B: 19; `t/PREDICT-2026-10-01-spec-given.md`). From English the same student proves 4 dev
+problems of 100 with one answer and 8 with ten answers and the specification proved separately
+(`t/PREDICT-2026-10-01-several-answers.md`); showing it similar solved problems or handing its
+failed answer back changes nothing. The distance between 4 of 100 and 28 of 33 is the
+specification, and it is not this student's alone: over every answer set on record, 28 of the 100
+dev problems have ever received a specification their own tests support.
+
+The same skill was turned on the training side as SAFE's rounds do it: 273 training problems had a
+right specification on record and no admitted answer; the student wrote a test-passing program
+for 187 and a proof for 34, and 31 joined the pool (`t/PREDICT-2026-10-01-proof-round.md`). The
+4B is now training on rows built from the larger pool, with three new kinds of row that put the
+problem's Python solution in front of the specification (`t/PREDICT-2026-10-01-spec-first.md`)
+and proof-repair rows that quote Dafny's own diagnostics. The held-out 200 is run once, by the
+route a rule fixed beforehand picks, against Phi-4-mini given the same number of answers.
