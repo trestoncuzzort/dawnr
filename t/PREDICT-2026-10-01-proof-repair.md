@@ -64,3 +64,17 @@ sampled repairs a round, two rounds:
     verify (116 of 141 replaced, 11 verified).
 
 33 (dev problems added at the gate) and 35 (training problems admitted) are at the kernels.
+
+## Outcome, 2026-10-01 14:11Z
+
+33. **Repair adds at least 1 dev problem proved with the reference agreeing: falsified.** The
+    repaired set proves 4 dev problems on complete specifications, all four already proved by
+    the greedy answer and the ten samples (113, 377, 476, 727); with the eleven answers it reads 9
+    on agreement and 4 on complete specifications, exactly as without it.
+35. **At least 15 training problems are admitted after repair: falsified.** Of the 156 sent through
+    two rounds, 16 are proved by a kernel with none refuting and 12 are admitted (agreeing on at
+    least ten draws, complete under the repaired check). They join the next pool.
+
+**Reading.** Dafny's own words make a better message than the generic line (12 training problems
+gained where the generic second try gained none), and they are still not what the student needs:
+it repairs about one proof in twelve it is sent.
