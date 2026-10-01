@@ -97,12 +97,22 @@ def spec_message(entry: dict, task: dict, result: dict) -> str | None:
 
 
 def message_for(stage: str, why: str | None, tests_entry: dict | None, row: dict | None,
-                cols: list[str] | None, dafny: list[str] | None = None) -> tuple[str, str] | None:
+                cols: list[str] | None, dafny: list[str] | None = None,
+                attempt: str | None = None) -> tuple[str, str] | None:
     """(kind, what the gate said) for a refused attempt, or None when the gate did not refuse it
     or there is nothing useful to say. The repair loop calls this too, so the student is asked
     at inference in the words it was trained on."""
     if stage in ("parse", "wf"):
-        return (stage, "The t checker rejected it: " + (why or "not a well-formed task").strip())
+        said = "The t checker rejected it: " + (why or "not a well-formed task").strip()
+        if stage == "parse" and attempt:
+            # 2026-10-01: where the refused line reaches for a construct t spells another way, name
+            # the idiom (t/idiom_hints.py; AutoVerus's error-type-specific instructions,
+            # arXiv:2409.13082). The parser's own words stay first.
+            import idiom_hints
+            tip = idiom_hints.hint(se.find_block(attempt) or attempt, why)
+            if tip:
+                said += "\n" + tip
+        return (stage, said)
     if stage != "task":
         return None
     overall = (tests_entry or {}).get("overall")
@@ -136,7 +146,7 @@ def attempt_text(sample: dict) -> str | None:
 
 
 def build(tags: list[str], split_path: Path, pool_rows: list[dict], per_problem: int,
-          verdicts: dict | None = None) -> tuple[list[dict], dict]:
+          verdicts: dict | None = None, hints: bool = False) -> tuple[list[dict], dict]:
     split = json.loads(split_path.read_text(encoding="utf-8"))
     pool = se.pool(split.get("pool", "v1"))
     best = {}
@@ -174,7 +184,8 @@ def build(tags: list[str], split_path: Path, pool_rows: list[dict], per_problem:
                     said = ("spec", words)
             if said is None:
                 said = message_for(sample["stage"], e.get("why"), tagdata["tests"].get(str(tid)),
-                                   sample.get("kernel_row"), sample.get("kernel_columns"))
+                                   sample.get("kernel_row"), sample.get("kernel_columns"),
+                                   attempt=text if hints else None)
             if said is None:
                 continue
             seen.add(text)
@@ -204,10 +215,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--per-problem", type=int, default=6)
     ap.add_argument("--verdicts", type=Path, help="the specification check's verdict file: adds rows whose failure "
                                                   "is the specification, with the check's own witness")
+    ap.add_argument("--hints", action="store_true", help="a parse refusal also names the t idiom for the construct "
+                                                         "on the refused line (t/idiom_hints.py)")
     a = ap.parse_args(argv)
     pool_rows = [json.loads(l) for l in a.pool_rows.read_text(encoding="utf-8").splitlines() if l.strip()]
     verdicts = json.loads(a.verdicts.read_text(encoding="utf-8")).get("results", {}) if a.verdicts else None
-    rows, report = build(a.from_samples, a.split, pool_rows, a.per_problem, verdicts)
+    rows, report = build(a.from_samples, a.split, pool_rows, a.per_problem, verdicts, a.hints)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows), encoding="utf-8")
     print(json.dumps(report))
