@@ -195,3 +195,12 @@ the reference as it is, and it is a floor on how often the shown answer is what 
 on answers and 76% on problems. With a tested Python beside the question as a second opinion,
 94% and 93.5%, for a fifth of the right answers, most of that because there was no Python to
 compare with. The stage stays in the gate; what it shows is reported with what it rests on.
+
+## B again under the repaired check, 2026-10-01 10:36Z
+
+The reference check drew every input from a problem's first example until 10:31Z
+(`t/PREDICT-2026-10-01-spec-check-inputs.md`). The stage uses the same check with the Python as
+the oracle, so both the labels and the stage were recomputed on the same 1,038 answers with the
+same Python: 790 right before the stage (76.1%, was 79.3%); the stage shows 682 and 644 are
+right (**94.4%**, was 94.0%), 81.5% of the right answers; 229 problems shown, 213 with a right
+answer, 16 with none. Prediction 42 stays falsified, 43 and 44 hold.
