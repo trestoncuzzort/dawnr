@@ -56,3 +56,12 @@ def test_a_second_answer_to_the_same_problem_adds_only_what_is_new():
 def test_a_problem_without_a_python_solution_gives_no_row():
     rows, report = sfr.build([ROW], {7: dict(ENTRY, rec=dict(ENTRY["rec"], code=""))})
     assert rows == [] and report["no python solution"] == 1
+
+
+def test_a_kept_specification_without_a_proof_gives_a_python_row_and_a_spec_row():
+    spec = surface.parse(TASK.replace("task square", "task mbpp_7__square")); spec["body"] = []
+    rows, report = sfr.build_from_specs([{"task_id": 7, "tasks": [spec, spec]}], {7: ENTRY}, set())
+    assert [r["source"] for r in rows] == ["python", "spec"] and report == {"problems": 1, "python": 1, "spec": 1}
+    answer = surface.parse(se.find_block(rows[1]["chosen"]))
+    assert answer["name"] == "square" and answer["body"] == []        # named as the prompt asks
+    assert sfr.build_from_specs([{"task_id": 7, "tasks": [spec]}], {7: ENTRY}, {7})[0] == []

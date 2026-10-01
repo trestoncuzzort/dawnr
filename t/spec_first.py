@@ -184,6 +184,11 @@ def main(argv: list[str] | None = None) -> int:
                          "t/py_sandbox.py), then specifications from the problem and that Python, and the "
                          "proof question shows it too; rows of t/spec_first_rows.py")
     ap.add_argument("--spec-samples", type=int, default=4, help="--python: sampled specifications after the greedy one")
+    ap.add_argument("--reference-python", action="store_true",
+                    help="TRAINING PROBLEMS ONLY: the Python shown is the problem's own solution (no step 0), and a "
+                         "specification is kept only if it also agrees with that solution on drawn inputs "
+                         "(t/spec_check.py, at least 10 of 100). Refused for any id outside the training side.")
+    ap.add_argument("--specs-only", action="store_true", help="write the kept specifications and ask for no proof")
     ap.add_argument("--tag", required=True)
     ap.add_argument("--ids-file", type=Path, required=True)
     ap.add_argument("--pool", choices=se.POOL_VERSIONS, default="v5")
@@ -196,8 +201,16 @@ def main(argv: list[str] | None = None) -> int:
 
     P = {str(k): v for k, v in se.pool(a.pool).items()}
     ids = [x for x in a.ids_file.read_text(encoding="utf-8").split() if x.strip()]
-    if not a.from_samples and not a.python and not a.given_specs:
-        ap.error("give --from-samples, --given-specs, --python, or a mix")
+    if not a.from_samples and not a.python and not a.given_specs and not a.reference_python:
+        ap.error("give --from-samples, --given-specs, --python, --reference-python, or a mix")
+    if a.reference_python:
+        if a.python:
+            ap.error("--reference-python replaces step 0; do not give --python with it")
+        import graded_pool                                      # noqa: E402
+        allowed = graded_pool.training_ids(HERE / "out" / "loop" / "split-v5.json", se.pool(a.pool))
+        outside = [t for t in ids if int(t) not in allowed]
+        if outside:
+            raise SystemExit(f"spec_first: --reference-python is for training problems; not on the training side: {outside[:5]}")
     given = {}
     if a.given_specs:
         for line in a.given_specs.read_text(encoding="utf-8").splitlines():
@@ -205,18 +218,21 @@ def main(argv: list[str] | None = None) -> int:
                 g = json.loads(line)
                 given[str(g["task_id"])] = list(zip(g["sources"], g["tasks"]))
     python, python_counts, written, model, tokenizer, student_generate = {}, {}, {}, None, None, None
-    if a.python:
+    if a.python or a.reference_python:
         if a.stage1_only:
-            ap.error("--python needs the model; it cannot run with --stage1-only")
+            ap.error("--python and --reference-python need the model; they cannot run with --stage1-only")
         import student_generate                                 # noqa: E402  (loads torch)
         model, tokenizer = student_generate.load(a.model)
 
         def decode(conversations, temperature, salt, first, max_new):
             return student_generate.decode(model, tokenizer, conversations, max_new, temperature, TOP_P,
                                            student_generate.problem_seed(salt, first))
-        python, python_counts = written_python(decode, ids, P, a.python, a.batch, a.max_new)
-        print(f"spec_first: {len(python)} of {len(ids)} problems have a Python solution that passes "
-              "their tests", flush=True)
+        if a.reference_python:
+            python = {t: P[t]["rec"]["code"].strip("\n") for t in ids if (P[t]["rec"].get("code") or "").strip()}
+        else:
+            python, python_counts = written_python(decode, ids, P, a.python, a.batch, a.max_new)
+            print(f"spec_first: {len(python)} of {len(ids)} problems have a Python solution that passes "
+                  "their tests", flush=True)
         written = written_specifications(decode, python, P, a.spec_samples, a.batch, a.max_new)
     per, stats = {}, {}
     for tid in ids:
@@ -233,14 +249,36 @@ def main(argv: list[str] | None = None) -> int:
         stats[tid] = {"one-shot tasks": len(tasks) - len(written.get(tid, [])),
                       "written specifications": len(written.get(tid, [])), **python_counts.get(tid, {}),
                       **counts, "asked": 0, "taken": None, "refusals": {}}
+    if a.reference_python:
+        # training problems: the reference check as a second filter (never available for a real question)
+        import random
+        import spec_check                                       # noqa: E402
+        rnd, dropped = random.Random(1), 0
+        for tid in ids:
+            keep = []
+            for k in per[tid]:
+                try:
+                    r = spec_check.check_task(k["task"], P[tid], 100, rnd)
+                except Exception:                               # noqa: BLE001
+                    r = {"status": "check raised"}
+                if r.get("status") == "agrees" and r.get("draws", 0) >= 10:
+                    keep.append(dict(k, reference={"draws": r["draws"], "skipped": r.get("skipped")}))
+                else:
+                    dropped += 1
+            per[tid] = keep
+            stats[tid]["kept"] = len(keep)
+        print(f"spec_first: the reference check drops {dropped} specifications the tests had kept", flush=True)
     with_spec = [t for t in ids if per[t]]
     print(f"spec_first: {len(with_spec)} of {len(ids)} problems have a kept specification "
           f"({sum(len(per[t]) for t in ids)} specifications)", flush=True)
 
     d = se.outdir(a.tag)
+    (d / "kept-specs.jsonl").write_text("".join(
+        json.dumps({"task_id": int(t), "tasks": [k["task"] for k in per[t]], "sources": [k["source"] for k in per[t]],
+                    "scores": [k["scores"] for k in per[t]]}) + "\n" for t in with_spec), encoding="utf-8")
     summary = {"problems": len(ids), "with a kept specification": len(with_spec), "per_problem": stats,
                "thresholds": {"correctness": spec_quality.MIN_CORRECTNESS, "completeness": spec_quality.MIN_COMPLETENESS}}
-    if a.stage1_only:
+    if a.stage1_only or a.specs_only:
         (d / "spec_first.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
         return 0
 
