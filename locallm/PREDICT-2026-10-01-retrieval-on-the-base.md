@@ -154,3 +154,27 @@ the answer are about the same event (a 2022 French Open document beside "Świąt
 Open"), and AlignScore scores the reply as consistent with them. A gate for retrieved answers needs the
 answer itself located in a document, not the reply's overall agreement with them; that is the next
 registration, on the 93 integration questions RGB holds that these 300 do not.
+
+## Amendment, 2026-10-01 18:10Z, before any answer to these questions exists: a gate that finds the answer's quote
+
+**Method:** GopherCite's inline evidence (Menick et al., "Teaching language models to support answers with
+verified quotes", arXiv:2203.11147, 2.1): the answer is written `%<Claim>%(Document title)%[Quote from
+document]%`, and the quote is checked to be verbatim from the document it names ("constrained sampling
+ensures that the model quotes are verbatim from the claimed source"; here the check is post hoc, by
+parsing). The base is prompted for that form (RGB's system prompt plus the syntax and one example; it is
+not fine-tuned for it as GopherCite was). A reply is shown when it parses, every quote is found word for
+word in a given document (whitespace folded), and every content word of every claim is in its quote
+(diacritics, case and ordinal suffixes folded; the last rule is ours, invented: GopherCite judges support
+with raters and a reward model). Two claims are allowed for questions that ask two things.
+
+**Questions:** the 93 of RGB's information-integration set (`en_int.json`) that are not among the 300
+used above, in the plain layout (one document from each positive group first, as its evalue.py takes
+them; then the rest). Noise rate 1 (five documents without the answer) and 0.4. The base at Q4_K_M on
+the lab's CPU, greedy.
+
+101. With no document holding the answer, the quote gate shows at most 20% of the replies that do not
+     say the information is insufficient.
+102. At noise rate 0.4 it shows at least 60% of the replies that are right by RGB's answer check.
+103. Of what it shows at noise rate 0.4, a larger share is right than of all replies.
+
+Reported beside them: AlignScore's mean on the same replies, and how often the base keeps the syntax.
