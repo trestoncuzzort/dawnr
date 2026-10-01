@@ -57,7 +57,12 @@ def api_decode(api: str, hosts: list[str], name: str, extra: dict | None = None,
                 body = {"model": name, "messages": messages, "stream": False, "think": False,
                         "options": {"temperature": temperature, "top_p": TOP_P, "seed": seed, "num_predict": max_new}}
                 body["options"].update(extra or {})
-                return post(f"http://{host}/api/chat", body, timeout)["message"]["content"] or ""
+                try:
+                    return post(f"http://{host}/api/chat", body, timeout)["message"]["content"] or ""
+                except Exception:                               # noqa: BLE001
+                    # a model with no thinking mode may refuse the field; ask once more without it
+                    body.pop("think")
+                    return post(f"http://{host}/api/chat", body, timeout)["message"]["content"] or ""
             body = {"model": name, "messages": messages, "temperature": temperature, "top_p": TOP_P, "seed": seed,
                     "max_tokens": max_new, **(extra or {})}
             return post(f"http://{host}/v1/chat/completions", body, timeout)["choices"][0]["message"]["content"] or ""

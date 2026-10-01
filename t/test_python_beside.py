@@ -66,3 +66,18 @@ def test_the_ollama_shape_puts_sampling_in_options_and_turns_thinking_off():
     url, body = bodies[0]
     assert url == "http://h:1/api/chat" and body["think"] is False
     assert body["options"] == {"temperature": 0.7, "top_p": 0.95, "seed": 2, "num_predict": 32, "num_gpu": 0}
+
+
+def test_a_server_that_refuses_the_thinking_field_is_asked_again_without_it():
+    bodies = []
+
+    def post(url, body, timeout):
+        bodies.append(dict(body))
+        if "think" in body:
+            raise OSError("400: this model does not support thinking")
+        return {"message": {"content": "ok"}}
+
+    decode = python_beside.api_decode("ollama", ["h:1"], "phi4-mini", post=post)
+    assert decode([[{"role": "user", "content": "a"}]], 0.0, 0, "1", 32)[0][0] == "ok"
+    assert "think" in bodies[0] and "think" not in bodies[1]
+
