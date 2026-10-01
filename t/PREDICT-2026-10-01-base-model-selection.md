@@ -137,7 +137,7 @@ QLoRA reports that "LoRA r is unrelated to final performance if LoRA is used on 
 beside them: a task that states `t 0` over a body that is well formed only as `t 1` is read as
 `t 1`, since the format line is derivable.
 
-## The 4B's fine-tune was damaged in its first steps; a stability probe, registered 2026-10-01 02:18Z
+## The 4B's fine-tune was damaged in its first steps; a stability probe, registered 2026-10-01 02:17Z
 
 Three students have trained on the same 527 rows with the same command. Their logged losses:
 
