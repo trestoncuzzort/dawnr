@@ -45,7 +45,7 @@ says an absent object is present on 140 of 1,500 questions (9.3%). That is the v
 failure the gate exists for; nothing yet checks a claim about an image the way the provers check a
 program, so this rate is what a person would see unchecked.
 
-## Amendment, 2026-10-01 13:09Z, before any detector has run: the gate for images
+## Amendment, 2026-10-01 13:07Z, before any detector has run: the gate for images
 
 The code gate shows an answer only when something that did not write it agrees. The same for images:
 Woodpecker (Yin et al., arXiv:2310.16045, read) validates every object an MLLM claims with an open-set
