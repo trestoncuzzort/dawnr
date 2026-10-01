@@ -221,3 +221,21 @@ retrieved examples), the stage with the student's own tested Python (the Python-
 As in A, the stage turns a gate that is right on fewer than half of what it shows into one that is
 right on four of five, at the cost of two right problems of six. Which Python stands beside the
 answer moves which single wrong problem slips through, not how many.
+
+## Outcome of D for the student, 2026-10-01 14:46Z: the held-out run
+
+The student's held-out answers (the 4B on v5, the Python first, 43 answers on the clean 200), the
+stage with the base model's tested Python as the amendment of 09:11Z fixed it, scored by
+`t/score_gate.py`:
+
+| | the gate as built (tests and a proof) | with the stage |
+|---|---:|---:|
+| problems with an answer shown, at least one kernel | 31 | **18** |
+| of those with a right and complete answer | 18 (58%) | **15 (83%)** |
+| shown with no right answer | 13 | 3 (665, 680, 768) |
+| by all seven: shown / right | 9 / 5 | 7 / 5 |
+
+The stage's verdicts on the 43 answers: 25 pass, 12 have a specification false at the Python's
+answer, 4 have no test-passing Python beside them, 2 a weak specification. It keeps 15 of the 18
+problems with a right answer and every one of the 5 at all seven. The reference's half of D waits
+for its answers.
