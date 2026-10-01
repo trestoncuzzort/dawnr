@@ -156,4 +156,8 @@ same three problems as before (459, 549, 634).
 27. **At least 20 dev problems get a kept specification: falsified.** 15 (26 specifications), from 9
     with the 4B on v4's eleven one-shot answers.
 28. **At least 16 dev problems get a taken answer: falsified.** 10, all passing their tests.
-29. Pending: the ten answers are at the gate.
+29. **The Python-first route proves at least 8 dev problems with the reference agreeing: falsified.**
+    5 (12:10Z): 113 by six kernels, 476 by seven, 727 by three, 377 and 450 by two.
+29c. **On complete specifications at least 4: holds.** The same 5; every specification the route
+    kept is complete. 450 is a problem no answer of the 4B on v4 proved; with the greedy answer the
+    two routes together reach 5 dev problems on complete specifications.
