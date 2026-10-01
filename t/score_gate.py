@@ -58,8 +58,7 @@ def tag_answers(tag: str, ids: set[int], verdicts: dict, gate: dict) -> dict[int
             shown = bool(g.get("passes")) and bound             # a verdict for other task contents shows nothing
             raw = verdicts.get(f"{tag}/{name}") or {}
             status = score_heldout.checked_spec(raw, path)
-            complete = not isinstance(raw.get("completeness"), (int, float)) or raw["completeness"] >= score_levels.MIN_COMPLETENESS
-            right = status == "agrees" and complete
+            right = status == "agrees" and spec_check.complete(raw, score_levels.MIN_COMPLETENESS) is not False
         out[tid] = {"proved": proved, "shown": shown, "right": right}
     return out
 

@@ -1,0 +1,66 @@
+"""The specification check's repair of 2026-10-01 (t/PREDICT-2026-10-01-spec-check-inputs.md):
+draws are shaped by every example (EvalPlus's seed pool, github.com/evalplus/evalplus
+gen/mut_gen.py), and another input's answer is a wrong answer here (nl2postcond's buggy-program
+completeness, arXiv:2310.01831). The case is MBPP 67's: a lookup table that is right on the first
+example's neighbourhood and wrong beyond it."""
+import random
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import spec_check                                               # noqa: E402
+import surface                                                  # noqa: E402
+
+REF = "def big(n):\n    return n * n\n"
+ENTRY = {"fn": "big", "rec": {"code": REF, "test_list": ["assert big(1)==1", "assert big(7)==49", "assert big(16)==256"], "text": ""},
+         "points": [{"ok": True, "fn": "big", "args": [("int", a)], "expected": ("int", a * a)} for a in (1, 7, 16)]}
+FIRST_ONLY = dict(ENTRY, points=ENTRY["points"][:1])
+
+
+def task(ensures, body):
+    return surface.parse(f"t 1\ntask big(n: int) returns (r: int)\n  requires n >= 0\n  ensures {ensures}\n{{\n  {body}\n}}\n")
+
+
+# right for n in 0..2 (the first example's neighbourhood), wrong above
+TABLE = task("r == 0 or r == 1 or r == 4", "if n == 0 { r := 0; } else { if n == 1 { r := 1; } else { r := 4; } }")
+HONEST = task("r == n * n", "r := n * n;")
+
+
+def check(t, entry, seed=1):
+    return spec_check.check_task(t, entry, 100, random.Random(seed))
+
+
+def test_a_lookup_table_right_only_near_the_first_example_is_caught_by_draws_from_the_others():
+    old = check(TABLE, FIRST_ONLY)
+    assert old["status"] == "agrees"                            # what the check said before
+    assert check(TABLE, ENTRY)["status"] == "disagrees"
+
+
+def test_an_input_blind_specification_is_caught_by_another_inputs_answer_even_on_the_old_draws():
+    r = check(TABLE, FIRST_ONLY)
+    assert r["cross_completeness"] < spec_check.MIN_COMPLETENESS
+    assert spec_check.complete(r) is False
+    w = r["cross_witness"]
+    assert w["also_accepts"] != w["reference_said"] and w["which_is_the_answer_for"] != w["args"]
+
+
+def test_an_honest_specification_agrees_and_rejects_every_other_inputs_answer():
+    r = check(HONEST, ENTRY)
+    assert (r["status"], r["cross_completeness"], spec_check.complete(r)) == ("agrees", 1.0, True)
+    assert r["draws"] >= 90
+
+
+def test_complete_reads_both_families_and_says_none_when_nothing_was_judged():
+    assert spec_check.complete({"completeness": 0.9, "cross_completeness": 0.7}) is True
+    assert spec_check.complete({"completeness": 0.9, "cross_completeness": 0.5}) is False
+    assert spec_check.complete({"completeness": 0.5}) is False
+    assert spec_check.complete({"status": "agrees"}) is None
+
+
+def test_one_example_draws_exactly_as_before_the_repair():
+    """A problem with a single example consumes no extra randomness, so its verdicts do not move."""
+    assert check(HONEST, FIRST_ONLY)["draws"] == check(HONEST, FIRST_ONLY)["draws"]
+    a = spec_check.check_task(HONEST, FIRST_ONLY, 30, random.Random(5))
+    b = spec_check.check_task(HONEST, FIRST_ONLY, 30, random.Random(5))
+    assert a == b
