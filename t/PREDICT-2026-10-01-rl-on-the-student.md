@@ -38,3 +38,11 @@ and the 33 specification-given questions, against the same measurements of the s
 
 Reported beside them: the share of groups with spread in each pass; answers that reach the top tier in
 Dafny and fail another kernel (counted, since the loop asks one kernel).
+
+## Amendment, 2026-10-01 19:13Z, before any band sample: the start is the 4B on v5
+
+The start rule this run stands on (27 of 100 unseen dev problems with a test-passing sample among ten,
+`t/RL-DESIGN-2026-09-26.md` section 9) was measured on the 4B on v5's samples, and v5 is the measured-best
+student for writing `t` (`t/PREDICT-2026-10-01-v6.md`, part 3: one greedy answer passes the tests on 13 dev
+problems for v5, 6 for v6). The run starts from the 4B on v5 with its own rows for the band's exclusions.
+Predictions 91 to 94 are unchanged, measured against the 4B on v5's own numbers.
