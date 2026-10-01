@@ -42,6 +42,12 @@ import spec_experiment                                          # noqa: E402
 import surface                                                  # noqa: E402
 
 VERIFIED = "verified / refuted"
+# INVENTED (no outside source gives the number): an `agrees` needs one agreeing draw, and since
+# 2026-10-01 the specification check skips draws the reference cannot answer, so an `agrees` can
+# rest on very few (9 training answers under 10, one on a single draw). SAFE's table 3
+# (arXiv:2410.15756) is the reason to be strict here: wrong specifications in the training data
+# cost its model 26 points. A row is trained on only when at least this many draws agreed.
+MIN_AGREEING_DRAWS = 10
 
 
 def kernel_level(sample: dict) -> tuple[int, list[str], list[str]]:
@@ -74,6 +80,8 @@ def rejection(sample: dict, results: dict, pool_name: str, min_kernels: int) -> 
         return "spec-not-agrees"
     if type(result.get("draws")) is not int or result["draws"] <= 0:
         return "spec-no-valid-draws"
+    if result["draws"] < MIN_AGREEING_DRAWS:
+        return "spec-agrees-on-too-few-draws"
     if type(result.get("task_id")) is not int or result["task_id"] != sample["task_id"]:
         return "spec-problem-mismatch"
     if result.get("pool") != pool_name:
