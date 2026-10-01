@@ -195,8 +195,8 @@ that is proved is proved by all seven kernels; none sits between one and six.
 - The added rows help where there is no loop: 15 of 22 against the control's 9. On the 11
   questions with a loop both prove 4. Invariants are the part still missing.
 - The gate is what makes the 19 usable. Ten of the v4 student's 30 well-formed answers are wrong
-  and a kernel refutes each: its `abs` returns 0 for a negative input, its `divmod_pair` loops
-  on a negative dividend, and all seven refute both. A reader of these 30 answers without the
+  and a kernel refutes each: its `abs` returns 0 for a negative input, its `divmod_pair` returns
+  (0, 0) whenever the dividend is smaller than the divisor, and all seven refute both. A reader of these 30 answers without the
   provers would be wrong one time in three.
 - The six answers left unproved (one of the v4 student's, five of the control's) carry timeout
   cells, and the lab's load average passed 120 on its 120 threads while the three arms ran
