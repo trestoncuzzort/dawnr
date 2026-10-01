@@ -89,6 +89,24 @@ def rejection(sample: dict, results: dict, pool_name: str, min_kernels: int) -> 
     return None
 
 
+def answer_text(task: dict, asked_name: str) -> str:
+    """The answer as the student should write it: the task named as the prompt asks.
+
+    The graded task carries the pipeline's own name, `mbpp_<id>__<fn>`, which extract assigns;
+    the prompt asks for `<fn>` and never states the id. Printed under the internal name, all 527
+    rows of the first pool contradicted their own instruction, and a student trained on them wrote
+    an `mbpp_<number>__` prefix on 99 of 100 dev answers with the real id in none (2026-10-01).
+    The target must be a function of the prompt. A copy is renamed, self-calls with it
+    (spec_experiment.rename_task); the graded task and its evidence hash are not touched, and
+    extract gives every answer the internal name again before grading. A name the surface syntax
+    cannot print (a keyword) keeps the internal one."""
+    import copy
+    try:
+        return surface.print_task(spec_experiment.rename_task(copy.deepcopy(task), asked_name)).strip()
+    except surface.SurfaceError:
+        return surface.print_task(task).strip()
+
+
 def training_ids(split_path: Path, pool: dict) -> set[int]:
     """Train ids minus everything held out: the eval half, the dev split, the policy's exclusions."""
     split = json.loads(split_path.read_text(encoding="utf-8"))
@@ -134,7 +152,7 @@ def build(tags: list[str], split_path: Path, verdicts_path: Path, min_kernels: i
             if why:
                 reasons[why] += 1
                 continue
-            text = surface.print_task(sample["task"]).strip()
+            text = answer_text(sample["task"], pool[tid]["fn"])
             proved, _refuted, undecided = kernel_level(sample)
             key = (tid, text)
             if key in seen:                                     # the same program twice: keep the stronger evidence
