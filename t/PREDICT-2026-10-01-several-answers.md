@@ -357,3 +357,20 @@ specifications that agree with that Python (kept for 50), and answers each kept 
 
 On dev the same pair read 5 and 1 of 100. The reference's answers (Phi-4-mini, one greedy and
 sixteen sampled a problem) are being generated now and are reported beside these when graded.
+
+## Outcome of the reference, 2026-10-01 15:36Z: Phi-4-mini on the clean 200, the same number of answers
+
+Phi-4-mini as Ollama serves it, prompt v5, one greedy answer and sixteen sampled a problem (the 17
+calls the student's route makes), the same kernels, the repaired reference check and the same
+scorer. It wrote a `t` task 22 times in 3,400 answers.
+
+| the clean 200, complete specifications | tests pass | at least 1 | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|
+| the student (the 4B on v5, Python first) | 43 | **18** | 14 | 13 | 9 | **5** |
+| the reference, 17 answers a problem | 8 | **3** | 3 | 3 | 2 | **2** |
+| the reference, its one greedy answer | 1 | 1 | 1 | 1 | 0 | 0 |
+
+This is the comparison the rule of 05:38Z registered. It is not yet the win `AMBITION.md` section 1
+writes down: that asks for three seeds of the same recipe (this is one trained student) and the
+reference decoding under `t`'s grammar so it cannot emit what does not parse (here it was prompted
+only, as every earlier Phi set was).

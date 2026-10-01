@@ -256,3 +256,11 @@ and the check's witness:
 
 So one of the three is the gate showing a wrong reading; two are places where "right by the
 reference" means "does what this particular reference does beyond what the problem states".
+
+## Outcome of D for the reference, 2026-10-01 15:36Z
+
+Phi-4-mini's 23 answers that pass their tests, with its own tested Python beside each question (132 of
+200 problems have one): the stage passes 15 and finds the specification false at the Python's answer
+on 8. Before the stage the gate as built shows 5 problems and 3 are right; with it, 3 shown and 3
+right (at all seven: 2 and 2). Small numbers, the same direction as the student's: the stage removes
+what the reference calls wrong and keeps what it calls right.
