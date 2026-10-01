@@ -4,6 +4,22 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **Three faults in our own instruments hid answers that were right (2026-10-01).**
+  Found by counting where proved answers stop. The test harness refused any
+  answer that declared a nested parameter `seq<seq>`, the type the language
+  specification gives it: 39 answers in 19 answer sets, 26 of which pass their
+  tests. The specification check handed a list of strings to the problem's
+  solution as lists of integers, so the solution computed another function,
+  and it abandoned a whole answer when one drawn input made the solution
+  return a float or None or run too long. And 661 training answers that pass
+  their tests had never been sent to the provers at all. Repaired and
+  re-measured, the pooled table of pretrained models on the 200 unseen
+  problems reads **50** proved with a checked specification (was 45) and
+  **19** by all seven provers (was 16); five problems gained a counted answer
+  and none lost one. The fault cut both ways: 18 answers that had read
+  "agrees" disagree once the solution is called correctly
+  ([registration and outcome](t/PREDICT-2026-10-01-spec-check-coverage.md)).
+
 - **A column said "checked" when nothing had checked it.**
   `score_heldout.py` counted an answer as specification-checked whenever it was
   absent from the disagreement list, so an answer set nobody had run
