@@ -112,3 +112,28 @@ strict specification gate stops no correct answer, and the path from an answer t
 on answers known to be right. This is the ceiling for the reference bodies: a correct answer with
 a different body can still time out in a kernel and land at a lower level, which is a fact about
 proving it and not about the scorer.
+
+## Amendment, 2026-10-01 03:10Z, before any model's answer: the order of the run, and a 4B arm
+
+No held-out question has been asked of any model yet (the 2B is still training).
+
+**Order.** The three arms are asked back to back under one hold of the card, and their kernel
+runs then go to the lab together (4 cells each), where the first driver asked and graded one arm
+at a time. The asks and the scoring are unchanged; the card is free about half an hour sooner.
+
+**A 4B arm.** At 03:02Z the base-selection rule named Qwen3.5-4B the base
+(`t/PREDICT-2026-10-01-base-model-selection.md`: 3 proved, specification-checked answers of 100
+against 1 and 1, not separated statistically). It is trained on the same v4 rows with the same
+recipe and seed, with one difference forced by the 16 GB card: rows longer than 2,845 tokens (the
+longest the 4B has already trained on inside the card's memory) are dropped, 7 of 1,791. It then
+answers the same 33 questions and the same 100 dev problems through the same gates. It starts
+when the card is free, about 03:55Z, and takes about 80 minutes.
+
+Predictions for the 4B arm, set before the 2B's results are known:
+
+13. On the 33 questions the 4B on v4 is proved by at least one prover on at least as many as
+    the 2B on v4. Falsified if it proves fewer.
+14. On the 100 dev problems it reaches a valid task on at least 40 (the 4B on the 527 rows: 35).
+    Falsified below 40.
+15. On the 100 dev problems it has at least 3 answers proved by at least one prover with the
+    specification checked (the 4B on the 527 rows: 3). Falsified below 3.

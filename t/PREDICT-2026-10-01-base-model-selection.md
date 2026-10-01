@@ -337,3 +337,44 @@ step from English to the right specification on 527 rows.
 measurement already training on the 2B (`t/PREDICT-2026-10-01-spec-given.md`) finishes as
 registered; the ranking between bases is settled by counting more successes (several answers per
 problem with the gate as the filter), registered separately before it runs.
+
+## Where the students' 300 answers stop, counted 2026-10-01 03:10Z; a correction to "they learned the language"
+
+Every answer of the three students, by the first gate it fails (from each set's
+`extract.json`, `tests.json` and the specification-check verdicts):
+
+| | 1.5B | 2B | 4B | all | share |
+|---|---:|---:|---:|---:|---:|
+| does not parse | 45 | 43 | 54 | 142 | 47% |
+| parses, not well formed | 32 | 12 | 11 | 55 | 18% |
+| a valid task | 23 | 45 | 35 | 103 | 34% |
+
+The 103 valid tasks, two ways:
+
+| tests | | specification against the reference | |
+|---|---:|---|---:|
+| pass | 12 | agrees | 13 |
+| fail | 76 | disagrees | 83 |
+| signature differs, undefined, or outside its own `requires` | 15 | could not be checked | 7 |
+
+Six answers have both (tests pass and the specification agrees); five of those are proved by at
+least one kernel. Six pass the tests on a specification that is not the problem's, and five carry
+the right specification over a program that fails the tests.
+
+**The correction.** The outcome above and the README said the students "learned the language"
+and that the specification is the failing step. The count does not support the first half: two
+answers in three are not valid `t` at all. Fine-tuning raised valid tasks from 2 to 9 of 100 to
+23 to 45, and it stopped there. The failing parse errors are not typos. They are constructs the
+language does not have or spells another way, on problems whose natural statement needs them:
+the 4B writes `seq of seq` for a nested result (9 answers), a Python-style comprehension inside
+`sum([...])` (8), a quantifier where an expression must start (4). The 527 training answers come
+from 262 problems the earlier models could already prove, which are the easy ones; the dev
+problems are 73 sequence and string problems of 100. So the measured order of losses is: the
+language's sequence and specification-function idioms first (197 of 300 answers), then the
+program and the specification together (76 of 103 valid tasks fail the tests, 83 of 96 carry a
+wrong specification), then the proof.
+
+What follows from the count: rows that show those idioms are the lever, and the specification-given
+rows in the next training set (476 lifted programs with recursion, loops and specification
+functions) are the first test of that; the dev result of the student trained on them is
+prediction 12 of `t/PREDICT-2026-10-01-spec-given.md`.
