@@ -85,3 +85,54 @@ and they are the idea the project started from (a verdict the candidate cannot f
 The trust claim changes from "trained here from random weights" to "nothing it says is relied on
 until it is proved", which is the stronger claim and the one that does not depend on a maybe.
 The decision is the operator's.
+
+## What our own answer sets already show (2026-10-01 00:26Z)
+
+The audit above looked outward. The answer was already on the lab's disk: nineteen held-out answer
+sets written by pretrained models through this same gate between 2026-09-08 and 2026-09-28
+(`t/out/spec-experiment/`), never read together. Scored today by `t/score_heldout.py` on the clean
+200, after running `t/spec_check.py` on the seven sets it had never been run on (100 draws each,
+merged into `t/out/spec-disagree.json`):
+
+| model, prompted unless noted | answer sets | best single set: tests pass | best single set: proved in seven and specification checked |
+|---|---:|---:|---:|
+| from-scratch core, every arm and seed | many | 0 | 0 |
+| 3.8B (phi4-mini) | 1 | 4 | 1 |
+| 1.5B base (qwen15b-base) | 1 | 8 | 1 |
+| 7B proof-tuned (prover-v2) | 1 | 6 | 2 |
+| fine-tuned student, round 6 | 2 | 7 | 0 |
+| 14B (qwen2.5-coder) | 8 | 29 | 4 |
+| 27B (qwen3.8) | 2 | 66 | 5 |
+| 235B | 4 | 52 | 11 |
+
+Pooled over the nineteen sets, one problem counted once (the gate makes pooling safe: an answer
+counts only if it is proved and its specification agrees with the reference):
+
+| stage on the clean 200 | problems |
+|---|---:|
+| some pretrained answer passes the problem's tests | 121 |
+| ... and some kernel verifies it (twin refuted) | 63 |
+| ... and at least five kernels verify it | 42 |
+| ... and all seven verify it | 23 |
+| ... all seven, and the specification agrees on drawn inputs | 15 |
+
+Dafny alone verifies the best answer on 53 problems. Where an answer has five or six kernels, the
+missing ones mostly did not refute it: Frama-C abstained 9 times, Rocq timed out 6, SPARK 3.
+
+**What this says we were doing wrong, in order of size.**
+
+1. **The wrong model.** Pretrained models, with no training at all, write a program that passes the
+   tests on 121 of 200 unseen problems and a fully proved, specification-checked one on 15. The
+   from-scratch core is at zero on both after every round. The system the project describes
+   (nothing relied on until proved) already works with a pretrained generator behind the gate; it
+   answers 15 of 200 and refuses the rest.
+2. **The loss is in the proof, not the program.** 121 correct programs, 63 with any proof: on 57
+   problems a correct program had a specification or invariants no kernel could prove. That is
+   the step SAFE's self-debugging and AlphaVerus's refinement exist for (the verifier's message
+   goes back to the model), and where our own repair rounds (`*-fix1..3`) should be measured.
+3. **Unanimity costs two thirds of what is proved.** 63 problems have a kernel-verified answer and
+   23 have seven. The project's own rule admits data by graded trust with the missing prover
+   recorded; held-out answers have been counted only at seven of seven.
+
+No new compute was needed for any of this. Answer-set summaries: `~/scratch/scan_tags.py`,
+`~/scratch/kernel_counts.py`, `~/scratch/pretrained-outcomes.json` on the lab.
