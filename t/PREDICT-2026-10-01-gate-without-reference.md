@@ -150,3 +150,48 @@ student's own with the adapter off, and no student has been measured writing Pyt
 prompt. The held-out Python is written once, by the queue, and nothing is chosen after seeing
 it. Scored by `t/score_gate.py`: problems shown, problems shown and right by the reference, and
 the problems shown with no right answer, by name.
+
+## Outcome of B, 2026-10-01 09:46Z: 1,038 proved training answers
+
+The base Qwen3.5-4B at 4 bits wrote a test-passing Python solution for 303 of the 397 problems
+(76%). Every one of the 1,038 answers passes its tests and a proof, so the gate as built shows
+all of them.
+
+| the reference calls it | answers | the stage shows | refused: no Python | false at the Python's answer | weak | requires too narrow | other |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| right and complete | 823 | 659 | 127 | 24 | 1 | 9 | 3 |
+| weak | 43 | 1 | 4 | 3 | 35 | 0 | 0 |
+| wrong | 146 | 41 | 35 | 49 | 15 | 0 | 6 |
+| unsettled (fewer than ten agreeing draws) or unchecked | 26 | 0 | 1 | 2 | 1 | 4 | 18 |
+
+| | the gate as built | with the stage |
+|---|---:|---:|
+| answers shown | 1,038 | 701 |
+| of those, right and complete by the reference | 823 (79.3%) | 659 (**94.0%**) |
+| problems with an answer shown | 397 | 232 |
+| problems with a right answer shown | 301 (75.8%) | 217 (93.5%) |
+| problems shown with no right answer | 96 | 15 |
+
+42. **At least 95% of what the stage shows is right and complete: falsified, at 94.0%.** 42 of
+    the 701 shown are not right by the reference: 1 weak, 41 wrong, on 17 problems.
+43. **It shows at least 70% of the right answers: holds.** 659 of 823, 80.1%. Of the 164 lost,
+    127 are on problems where the base model wrote no Python that passes the tests; where a
+    Python stands beside the answer, 659 of 696 right answers are shown (94.7%).
+44. **The half-domain floor costs at most 3% of right answers: holds.** It refuses 9 of the 668
+    that pass the other two conditions (1.3%).
+
+**The 41 wrong answers that were shown, read one problem at a time.** They sit on 17 problems.
+On 14 of them the model's Python and the problem's reference solution give different answers on
+the input where the reference check found the disagreement, so the `t` answer agrees with the
+Python and not with the reference. In at least two the reference is the one that is wrong:
+problem 412 ("remove the odd numbers from a list") ships a solution that deletes from the list
+it is iterating and returns `[5]` for `[3, 5, 5]`; problem 803's solution says 0 is not a perfect
+square. In others the English can be read both ways (249: intersection as a set, or keeping
+repeats; 406: parity of a number, or of its bits). Clover found six incorrect reference programs
+in MBPP-DFY-50 the same way. None of this is used to move the count: 94.0% is measured against
+the reference as it is, and it is a floor on how often the shown answer is what was asked.
+
+**Reading.** Without a reference, tests and a proof alone showed a right answer 79% of the time
+on answers and 76% on problems. With a tested Python beside the question as a second opinion,
+94% and 93.5%, for a fifth of the right answers, most of that because there was no Python to
+compare with. The stage stays in the gate; what it shows is reported with what it rests on.
