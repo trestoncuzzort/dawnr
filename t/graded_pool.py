@@ -90,7 +90,7 @@ def rejection(sample: dict, results: dict, pool_name: str, min_kernels: int) -> 
         return "spec-no-valid-draws"
     if result["draws"] < MIN_AGREEING_DRAWS:
         return "spec-agrees-on-too-few-draws"
-    if isinstance(result.get("completeness"), (int, float)) and result["completeness"] < MIN_COMPLETENESS:
+    if spec_check.complete(result, MIN_COMPLETENESS) is False:     # either mutant family (spec_check.complete)
         return "spec-too-weak"
     if type(result.get("task_id")) is not int or result["task_id"] != sample["task_id"]:
         return "spec-problem-mismatch"

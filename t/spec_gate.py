@@ -92,8 +92,7 @@ def passes(result: dict) -> bool:
         return False
     if domain(result) < MIN_DOMAIN:
         return False
-    share = result.get("completeness")
-    return not isinstance(share, (int, float)) or share >= MIN_COMPLETENESS
+    return spec_check.complete(result, MIN_COMPLETENESS) is not False
 
 
 def reason(result: dict) -> str:

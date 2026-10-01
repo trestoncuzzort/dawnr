@@ -164,7 +164,7 @@ def answers(tags: list[str], ids: set[int], verdicts: dict, gate: dict | None = 
             _lvl, proved = score_levels.answer_level(t.get("overall"), cells.get(name), None)
             raw = verdicts.get(f"{tag}/{name}") or {}
             status = score_heldout.checked_spec(raw, path)
-            complete = not isinstance(raw.get("completeness"), (int, float)) or raw["completeness"] >= score_levels.MIN_COMPLETENESS
+            complete = spec_check.complete(raw, score_levels.MIN_COMPLETENESS) is not False
             row = {"tag": tag, "tid": int(tid), "name": name, "path": str(path),
                    "tests pass": t.get("overall") == "pass", "proved": proved,
                    "right": bool(proved) and status == "agrees" and complete}
