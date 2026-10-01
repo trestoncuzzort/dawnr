@@ -28,9 +28,11 @@ Python solution can be checked by running the problem's tests. So the route is:
 3. the taken answers go to the seven kernels and the reference check like any others.
 
 Translation from a language the model knows is the published way into one it does not:
-MultiPL-T fine-tunes on validated translations of Python functions (arXiv:2308.09895, not
-re-fetched tonight; cited from our notes), and AlphaVerus bootstraps Verus from Dafny
-(arXiv:2412.06176).
+MultiPL-T translates Python functions into a low-resource language with a code model, keeps a
+translation only when translated tests pass, and fine-tunes on the tens of thousands of items
+that survive (arXiv:2308.09895, abstract and section 4 read on 2026-10-01); AlphaVerus
+bootstraps Verus from Dafny (arXiv:2412.06176). What differs here: they have tens of thousands
+of validated items a language and we have a few hundred.
 
 ## Training rows
 
