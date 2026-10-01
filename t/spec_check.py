@@ -120,8 +120,16 @@ def deadline(seconds: float, exc=Timeout):
             else _deadline_thread(seconds, exc))
 
 
-def draw(kind: str, rnd: random.Random, like=None):
+MAX_REFERENCE_TIMEOUTS = 5      # draws the reference did not finish before a check stops drawing
+
+
+def draw(kind: str, rnd: random.Random, like=None, strings: bool = False):
     """A random value of the kind a problem's own assertions use, shaped like the problem's own example.
+
+    `strings` (2026-10-01, t/PREDICT-2026-10-01-spec-check-coverage.md): the position is one where
+    the assertion passes a LIST OF STRINGS. Its rows are then drawn in the example's shape, as every
+    other kind is: about as many rows, about as long, code points near the example's. Without it a
+    nested value is drawn as it always was (integers from -4 to 4), so no other draw moves.
 
     2026-09-18: drawing freely finds disagreements that are the REFERENCE's fault, not the specification's.
     mbpp_733's reference is a binary search, so it answers -1 on an unsorted array although the element is
@@ -147,6 +155,13 @@ def draw(kind: str, rnd: random.Random, like=None):
             return vals
         return [rnd.randint(-6, 6) for _ in range(n)]
     if kind == "seq-of-seq":
+        rows = [list(r) for r in like if isinstance(r, (list, tuple))] if isinstance(like, (list, tuple)) else []
+        points = [x for r in rows for x in r if isinstance(x, int) and not isinstance(x, bool)]
+        if strings and points:
+            lo, hi = max(0, min(points) - 2), max(points) + 2
+            longest = max(len(r) for r in rows)
+            return [[rnd.randint(lo, hi) for _ in range(rnd.randint(0, longest + 2))]
+                    for _ in range(rnd.randint(0, len(rows) + 2))]
         return [[rnd.randint(-4, 4) for _ in range(rnd.randint(0, 3))] for _ in range(rnd.randint(0, 3))]
     return None
 
@@ -162,6 +177,13 @@ def to_t(value, kind: str | None = None):
         return value
     if isinstance(value, int):
         return value
+    if isinstance(value, float):
+        # The problem's own assertions compare with Python equality, under which 3.0 == 3
+        # (EvalPlus compares outputs the same way: evalplus/eval/__init__.py, `out == exp`).
+        # MBPP 78's solution returns (n + 1) / 2. A float that is not a whole number has no t value.
+        if value != value or value in (float("inf"), float("-inf")) or value != int(value):
+            raise TypeError("unsupported reference result: a float that is not a whole number")
+        return int(value)
     if isinstance(value, str):
         if kind == "int" and len(value) == 1:
             return ord(value)
@@ -190,7 +212,24 @@ def string_positions(entry: dict) -> list[int]:
     return []
 
 
-def python_arguments(args: list, positions: list[int]) -> list:
+def nested_string_positions(entry: dict) -> list[int]:
+    """The argument positions that are a list of str literals in the problem's first parseable
+    assertion: where the reference expects a list of str. t holds such a value as a seq<seq> of
+    code points, or as a flat seq when every string is one character."""
+    for src in entry.get("rec", {}).get("test_list", []) or []:
+        try:
+            tree = ast.parse(src)
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and getattr(node.func, "id", None) == entry.get("fn"):
+                return [i for i, a in enumerate(node.args)
+                        if isinstance(a, (ast.List, ast.Tuple)) and a.elts
+                        and all(isinstance(x, ast.Constant) and isinstance(x.value, str) for x in a.elts)]
+    return []
+
+
+def python_arguments(args: list, positions: list[int], nested: list[int] | tuple = ()) -> list:
     """The drawn arguments as the reference's own assertions pass them (2026-09-30, receipt
     ad806d032e1a): a str where the assertion passed a str literal, joined from the code points,
     a one-character str for a character argument, a list elsewhere. Before this the reference was
@@ -200,7 +239,14 @@ def python_arguments(args: list, positions: list[int]) -> list:
     (arXiv:2305.01210); this is the same rule for the reference call."""
     out = []
     for i, a in enumerate(args):
-        if i in positions and isinstance(a, (list, tuple)):
+        if i in nested and isinstance(a, (list, tuple)):
+            # 2026-10-01: a list of strings stays a list of strings (EvalPlus's typed mutation keeps
+            # types element by element, evalplus/gen/type_mut.py). Until now the rows went over as
+            # lists of integers and MBPP 91's `any(sub in s for s in words)` asked whether a string
+            # is an element of a list of numbers. chr() raises on a value that is no code point,
+            # and the caller treats that draw as one the problem does not define.
+            out.append(["".join(chr(c) for c in row) if isinstance(row, (list, tuple)) else chr(row) for row in a])
+        elif i in positions and isinstance(a, (list, tuple)):
             out.append("".join(chr(c) for c in a))
         elif i in positions and isinstance(a, int) and not isinstance(a, bool):
             out.append(chr(a))
@@ -451,8 +497,15 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     if len(kinds) != len(task["params"]):
         return {"status": "arity differs from the problem"}
     positions = string_positions(entry)
+    nested = nested_string_positions(entry)
     funs = interp.funs_of(task, task["body"])
     agreed = 0
+    # 2026-10-01 (t/PREDICT-2026-10-01-spec-check-coverage.md): one draw the reference could not
+    # finish, or whose result t cannot represent, used to end the whole check, and the answer was
+    # then never counted. EvalPlus drops such an input and goes on (gen/util/__init__.py,
+    # trusted_check_exec); so does this, counting what it dropped. A check stops early after
+    # MAX_REFERENCE_TIMEOUTS draws the reference did not finish, so one task costs seconds.
+    skipped = {"reference did not finish": 0, "reference result has no t value": 0}
     rejected = accepted = 0            # the completeness half: wrong outputs the ensures catches
     weak_witness = None
     # The fourth quadrant. vACT's four-way split (arXiv:2604.00280) wants inputs
@@ -484,14 +537,17 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
     reference_ran = 0                  # draws where the reference returned a value
     domain_witness = None
     for _ in range(n):
-        args = [draw(k, rnd, ex) for k, ex in zip(kinds, examples)]
+        if skipped["reference did not finish"] >= MAX_REFERENCE_TIMEOUTS:
+            break
+        args = [draw(k, rnd, ex, strings=i in nested) for i, (k, ex) in enumerate(zip(kinds, examples))]
         if any(a is None for a in args):
             return {"status": f"cannot draw {kinds}"}
         try:
             with deadline(5):
-                out = fn(*python_arguments(args, positions))
+                out = fn(*python_arguments(args, positions, nested))
         except Timeout:
-            return {"status": "reference did not finish"}
+            skipped["reference did not finish"] += 1
+            continue
         except Exception:                                       # noqa: BLE001
             # The reference refuses this input, so the problem does not define
             # it. Does the specification exclude it too? A requires that admits
@@ -521,7 +577,8 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
             env = {p["name"]: to_t(a) for p, a in zip(task["params"], args)}
             env[task["returns"][0]["name"]] = to_t(out, task["returns"][0].get("type"))
         except TypeError:
-            return {"status": "reference result has no t value"}
+            skipped["reference result has no t value"] += 1
+            continue
         st = interp.St()
         try:
             if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
@@ -556,7 +613,12 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
                     weak_witness = {"args": args, "reference_said": out, "also_accepts": wrong}
             else:
                 rejected += 1
-    result = {"status": "agrees" if agreed else "no valid draws", "draws": agreed}
+    status = ("agrees" if agreed else
+              "reference result has no t value" if skipped["reference result has no t value"] else
+              "reference did not finish" if skipped["reference did not finish"] else "no valid draws")
+    result = {"status": status, "draws": agreed}
+    if any(skipped.values()):
+        result["skipped"] = {k: v for k, v in skipped.items() if v}
     if rejected or accepted:
         # Reported, never silently turned into a failure: a problem with more
         # than one right answer can accept a mutated output legitimately, so
