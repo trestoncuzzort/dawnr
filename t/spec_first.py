@@ -114,8 +114,12 @@ def _nameless(spec: dict) -> str:
     return surface.print_task(se.rename_task(copy.deepcopy(spec), "f"))
 
 
-def kept_specifications(tasks: list[tuple[str, dict]], entry: dict, per_problem: int) -> tuple[list[dict], dict]:
-    """([{"source", "task", "scores"}] most complete first, counts) from (source, extracted task) pairs."""
+def kept_specifications(tasks: list[tuple[str, dict]], entry: dict, per_problem: int,
+                        record: list | None = None) -> tuple[list[dict], dict]:
+    """([{"source", "task", "scores"}] most complete first, counts) from (source, extracted task) pairs.
+
+    `record`, when given, receives every scored specification with its scores and verdict (kept, dropped,
+    duplicate, unscorable), so what SAFE's two thresholds (arXiv:2410.15756 3.2) drop can be read afterwards."""
     seen, kept = set(), []
     counts = {"scored": 0, "kept": 0, "duplicate": 0, "dropped": 0, "unscorable": 0}
     for order, (source, task) in enumerate(tasks):
@@ -130,13 +134,19 @@ def kept_specifications(tasks: list[tuple[str, dict]], entry: dict, per_problem:
         counts["scored"] += 1
         if "unscorable" in s:
             counts["unscorable"] += 1
+            verdict = "unscorable"
         elif not spec_quality.keeps(s):
             counts["dropped"] += 1
+            verdict = "dropped"
         elif text in seen:
             counts["duplicate"] += 1
+            verdict = "duplicate"
         else:
             seen.add(text)
             kept.append({"source": source, "task": spec, "scores": s, "order": order})
+            verdict = "kept"
+        if record is not None:
+            record.append({"source": source, "verdict": verdict, "scores": s, "spec": text})
     kept.sort(key=lambda k: (-k["scores"]["completeness"], -k["scores"]["correctness"], k["order"]))
     counts["kept"] = min(len(kept), per_problem)
     return kept[:per_problem], counts
@@ -250,7 +260,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"spec_first: {len(python)} of {len(ids)} problems have a Python solution that passes "
                   "their tests", flush=True)
         written = written_specifications(decode, python, P, a.spec_samples, a.batch, a.max_new)
-    per, stats = {}, {}
+    per, stats, all_scored = {}, {}, []
     for tid in ids:
         tasks = list(written.get(tid, [])) + list(given.get(tid, []))
         for tag in a.from_samples:
@@ -261,7 +271,9 @@ def main(argv: list[str] | None = None) -> int:
                 e = {}
             if e.get("stage") == "task" and (d / "tasks" / f"{e['name']}.json").exists():
                 tasks.append((f"{tag}/{e['name']}", harness.load(d / "tasks" / f"{e['name']}.json")))
-        per[tid], counts = kept_specifications(tasks, P[tid], a.per_problem)
+        scored = []
+        per[tid], counts = kept_specifications(tasks, P[tid], a.per_problem, record=scored)
+        all_scored += [{"task_id": int(tid), **r} for r in scored]
         stats[tid] = {"one-shot tasks": len(tasks) - len(written.get(tid, [])),
                       "written specifications": len(written.get(tid, [])), **python_counts.get(tid, {}),
                       **counts, "asked": 0, "taken": None, "refusals": {}}
@@ -295,6 +307,7 @@ def main(argv: list[str] | None = None) -> int:
         (d / "python.jsonl").write_text("".join(
             json.dumps({"task_id": int(t), "code": python[t], "attempt": python_counts.get(t, {}).get("python")}) + "\n"
             for t in ids if t in python), encoding="utf-8")
+    (d / "scored-specs.jsonl").write_text("".join(json.dumps(r) + "\n" for r in all_scored), encoding="utf-8")
     (d / "kept-specs.jsonl").write_text("".join(
         json.dumps({"task_id": int(t), "tasks": [k["task"] for k in per[t]], "sources": [k["source"] for k in per[t]],
                     "scores": [k["scores"] for k in per[t]]}) + "\n" for t in with_spec), encoding="utf-8")

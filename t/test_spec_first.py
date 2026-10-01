@@ -147,3 +147,13 @@ def test_the_reference_keep_rule_refuses_a_weak_specification():
     assert not spec_first.reference_keeps(dict(ok, draws=9))
     assert not spec_first.reference_keeps(dict(ok, status="disagrees"))
 
+
+
+def test_every_scored_specification_is_recorded_with_its_verdict():
+    import copy
+    rec = []
+    kept, counts = spec_first.kept_specifications([("r/x", RIGHT), ("r2/x", copy.deepcopy(RIGHT))], ENTRY, 3,
+                                                  record=rec)
+    assert [r["verdict"] for r in rec] == ["kept", "duplicate"]
+    assert len(rec) == counts["scored"]
+    assert all("scores" in r and "spec" in r and "source" in r for r in rec)
