@@ -40,3 +40,11 @@ kernel refutes (`t/PREDICT-2026-10-01-proof-round.md`). Each goes back with Dafn
 What would make all three fail for a reason that is not the idea: 260 rows is very little to
 learn to act on a message from, and the message quotes the clause in Dafny's spelling, not
 `t`'s.
+
+## Amendment, 2026-10-01 08:18Z, before any repair has been asked for: read on complete specifications
+
+Prediction 33 is judged as registered and also on specifications that reject at least 60% of the
+mutated outputs tried (`t/PREDICT-2026-10-01-several-answers.md`, the correction of 08:16Z); the
+second reading is the one that counts toward the held-out rule. "Admitted to the pool" in
+prediction 35 is by `t/graded_pool.py` as it now stands, which refuses a specification below
+that floor; the line the run logs counts agreement only and is not the outcome.
