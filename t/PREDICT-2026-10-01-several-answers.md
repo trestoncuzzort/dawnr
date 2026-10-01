@@ -191,3 +191,32 @@ student trains. Fixed before the first one exists:
   is given the difference in further sampled answers before anything is compared.
 - Same gate: extract, the problem's tests, the seven kernels on every answer that passes them,
   the repaired specification check, `t/score_levels.py` pooled over the reference's sets.
+
+## Outcome, 2026-10-01 07:55Z: the second try and the retrieved examples through the gate
+
+The same 4B on v4, the same 100 dev problems, the same gate.
+
+| arm | reach a task | tests pass | proved by at least 1, spec checked | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| one greedy answer | 38 | 9 | 4 | 3 | 1 | 1 | 1 |
+| a second try (two repair rounds) | 37 | 10 | 4 | 3 | 1 | 1 | 1 |
+| five retrieved examples, one greedy answer | 41 | 8 | 3 | 3 | 2 | 2 | 2 |
+| ten answers at 0.7 (with the greedy one) | 67 | 16 | 7 | 5 | 4 | 3 | 3 |
+| ten answers and the specification first | 67 | 16 | **8** | 6 | 5 | 3 | 3 |
+
+26b. **With retrieved examples the student passes the tests on more problems than plain greedy:
+    falsified.** 8 against 9. (The first run of this arm ended out of memory at eight problems a
+    batch and wrote nothing; it was run again at two a batch, same everything else.)
+27b. **It proves at least 2 more: falsified.** 3 against 4. Its specifications agree with the
+    reference a little more often (10 of 40 checked against 7 of 36), which is inside what one
+    sampled set moves.
+
+The second try's one repaired answer passes the tests and is not proved, so its row equals the
+greedy one.
+
+**By the rule fixed at 05:38Z the route is ten answers and the specification first** (8 dev
+problems proved with a checked specification, 3 by all seven), unless a route of the 4B on v5
+reads more. Showing the student similar solved problems, or handing its failed answer back with
+the gate's message, did nothing a single sampled set's noise would not: what Misu et al. measured
+on GPT-4 with retrieved examples (19% to 58%) is not there for a 4B fine-tuned on a few hundred
+rows.
