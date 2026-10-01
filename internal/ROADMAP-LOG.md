@@ -2686,3 +2686,18 @@ fetched literature adds (SAFE's and AlphaVerus's filters, the scale of their cor
 text at every start), the desktop card's failure evidence with a test order, and a queue. The
 README's expert-iteration row said "running"; it was staged and is corrected. Nothing in the run
 in flight changed except the continuation's activation checkpointing, amended in its registration.
+
+## Borrowed ladders, 2026-10-01
+
+The operator asked whether the project was resting on a result nobody has shown. It was: a 93M
+model from random weights writing correct `t` after about 500 documents has no published
+precedent, and every round read zero (`internal/RESEARCH-2026-10-01-is-the-bet-supported.md`).
+The same evening the answer sets already on the lab were read together: pretrained models, with
+no training, put proved, specification-checked answers through this gate on 15 of the clean 200
+(45 when one prover's proof is counted and none refutes). The operator's direction: build on
+other people's ladders, use the best permissively licensed weights for the job, nothing relied on
+until it is proved, every goal met on those weights. The plan of record is
+`internal/LADDER-PLAN-2026-10-01.md`. Stopped: r12's round on the new core after four seeds (zero
+tests passed on each), the lab-card watcher, the from-scratch boot service. Started: the weights
+selection (`t/PREDICT-2026-10-01-base-model-selection.md`), a graded-trust training pool
+(`t/graded_pool.py`), a QLoRA student trainer on SAFE's data rule (`t/student_sft.py`).
