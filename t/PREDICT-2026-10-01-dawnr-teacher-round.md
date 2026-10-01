@@ -60,3 +60,17 @@ teacher on one rented H100 within the month's free credit, so the round runs as 
 The teacher has read the public MBPP and HumanEval; some of its answers will be recall. The
 held-out 232 are never prompted, so the scoreboard stays clean, but a document admitted here is
 admitted for being proved, not for being novel, and the clean-200 gate stays where it is.
+
+## Launch note, 2026-10-01 01:53Z (before any teacher sample)
+
+- **Credit.** The provider's own billing summary reads October's metered cost as 0.00 and
+  September's as 32.19 against 30.00 of credit, 2.07 billed: the last month ran over the free
+  limit by 2.07, which the running estimate (about 27) had not shown. From this run on the limit
+  is enforced against the billing summary itself, not an estimate: a guard reads it every ten
+  minutes and stops the server at 14.00 metered for the month, well inside the 30.00.
+- **What the samples are for now.** The direction changed on 2026-10-01
+  (`internal/LADDER-PLAN-2026-10-01.md`): the answers this round's gate admits train a pretrained
+  student (`t/graded_pool.py`, `t/student_sft.py`), not the from-scratch core. The generation
+  commands, the prompts and the four predictions above are unchanged; the corpus re-registration
+  the text mentions is replaced by the student's pool, at every trust level with the level
+  recorded.
