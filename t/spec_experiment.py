@@ -1059,10 +1059,10 @@ def rename_task(task: dict, new: str) -> dict:
 
 
 def cmd_extract(args) -> int:
-    return extract_tag(outdir(args.model))
+    return extract_tag(outdir(args.model), getattr(args, "promote_header", False))
 
 
-def extract_tag(d: Path) -> int:
+def extract_tag(d: Path, promote_header: bool = False) -> int:
     """Extract every raw record of one answer set into tasks/ and extract.json.
 
     Every record is parsed before any task is written. On 2026-09-20 the walk
@@ -1119,6 +1119,24 @@ def extract_tag(d: Path) -> int:
             errs = fuzz_lower.check_wf(task)
         except Exception as e:                                  # noqa: BLE001
             errs = [f"check_wf raised {type(e).__name__}: {e}"[:200]]
+        if errs and promote_header and task.get("t") == 0:
+            # The format line is bookkeeping the body determines: v1 is a strict superset of v0
+            # (SPEC.md, "v1: the three gates"), so a task that states `t 0` and uses a v1 form is
+            # the same program under `t 1`. Scoring that line as the model's failure measures
+            # the instrument, not the answer: the operator's own study found half of a benchmark
+            # gain was an adapter learning the import line its verifier demanded ("Automated
+            # Oracles Are Not Enough", the typing-import decomposition), and EvalPlus normalises
+            # model output before grading for the same reason (evalplus/sanitize.py). Opt-in and
+            # recorded on the answer; everything after this line checks the promoted program in
+            # full, so nothing is admitted that was not proved as written.
+            promoted = dict(task, t=1)
+            try:
+                errs1 = fuzz_lower.check_wf(promoted)
+            except Exception as e:                              # noqa: BLE001
+                errs1 = [f"check_wf raised {type(e).__name__}: {e}"[:200]]
+            if not errs1:
+                task, errs = promoted, []
+                entry["header_promoted"] = True
         if errs:
             entry["stage"] = "wf"
             entry["why"] = "; ".join(errs)[:300]
@@ -1483,6 +1501,11 @@ def main(argv=None) -> int:
                                  "when it differs from the served model name "
                                  "(a second pool for the same model); later "
                                  "stages take it as --model")
+        if name == "extract":
+            p.add_argument("--promote-header", action="store_true",
+                           help="a task that states `t 0` and is well formed only as `t 1` is read as "
+                                "`t 1` (the format line is derivable; recorded as header_promoted). "
+                                "Off by default: the frozen experiments keep their numbers")
         if name == "table":
             p.add_argument("--out", default=str(HERE / "SPEC-EXPERIMENT-mbpp.md"))
     args = ap.parse_args(argv)
