@@ -125,6 +125,24 @@ CROSS_PER_DRAW = 3              # earlier draws whose answers are put to the ens
 MIN_COMPLETENESS = 0.6          # SAFE's floor for a usable specification (arXiv:2410.15756, 3.2)
 
 
+def keep_witnesses(old: dict, new: dict) -> dict:
+    """Verdicts after a re-check, where a disagreement found earlier is not forgotten.
+
+    A `disagrees` verdict carries an input at which the specification is false of the
+    problem's own answer: a counterexample, and it does not expire because a later check drew
+    other inputs. EvalPlus grows a problem's tests and never drops one (gen/mut_gen.py appends
+    to the seed pool). So where `new` reads `agrees` and `old` held a disagreement for the SAME
+    task contents (task_sha256), the old verdict stands, marked as kept. Everything else is
+    `new`'s."""
+    out = dict(new)
+    for key, n in new.items():
+        o = old.get(key) or {}
+        if (n.get("status") == "agrees" and o.get("status") == "disagrees"
+                and o.get("task_sha256") and o.get("task_sha256") == n.get("task_sha256")):
+            out[key] = dict(o, kept_from_an_earlier_check=True)
+    return out
+
+
 def complete(result: dict, floor: float = MIN_COMPLETENESS) -> bool | None:
     """Does an agreeing specification also pin the answer down? False when either mutant family
     measured (outputs near the right one; other inputs' answers) is rejected less than `floor` of

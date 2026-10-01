@@ -52,16 +52,16 @@ a reader reaching a particular paragraph. The headline is in
   program is correct; its proof establishes almost nothing. 7-29% of the
   proven-but-wrong population is exploitable the same way
   ([`locallm/FINDINGS-exploit-2026-09-20.md`](locallm/FINDINGS-exploit-2026-09-20.md)).
-- **With no reference solution, 79% of what the gate showed was right; with
-  the stage added on 2026-10-01, 94%.**
+- **With no reference solution, 76% of what the gate showed was right; with
+  the stage added on 2026-10-01, 94.4%.**
   A person asking a question has no reference, so what they are shown is what
   passes the question's tests and a proof. Measured on 1,038 proved answers to
-  training problems, 79% of those carry a specification that is right and
+  training problems, 76% of those carry a specification that is right and
   complete; on the fine-tuned student's unseen dev problems it was 4 of 10
   (four weak, two a different function that fits the three tests). The gate
   now also asks that the specification hold at the answers of a Python
   solution written beside the question and tested on its examples, and that it
-  reject at least 60% of mutated outputs: 94% on the 1,038 (3 of 3 on dev),
+  reject at least 60% of mutated outputs: 94.4% on the 1,038 (3 of 3 on dev),
   while refusing a fifth of the right answers, most of them because no tested
   Python could be written. The remaining 6% is measured against reference
   solutions that are themselves sometimes wrong (MBPP 412's deletes from the

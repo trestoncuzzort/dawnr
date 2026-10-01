@@ -221,3 +221,7 @@ complete specification). The 37 pretrained answer sets on the clean 200:
 
 The students' own dev answers are hit much harder by the same floor (5 of the 4B on v4's 8
 counted problems): `t/PREDICT-2026-10-01-several-answers.md`, the correction of 08:16Z.
+
+**10:36Z, under the check repaired again** (draws from every example, other inputs' answers as
+mutants; `t/PREDICT-2026-10-01-spec-check-inputs.md`): 49 / 43 / 33 / 27 / 19 on agreement and
+**47** / 42 / 33 / 27 / 19 on complete specifications. Problem 482 loses its only counted answer.

@@ -64,3 +64,16 @@ def test_one_example_draws_exactly_as_before_the_repair():
     a = spec_check.check_task(HONEST, FIRST_ONLY, 30, random.Random(5))
     b = spec_check.check_task(HONEST, FIRST_ONLY, 30, random.Random(5))
     assert a == b
+
+
+def test_a_disagreement_found_earlier_on_the_same_task_is_kept_and_nothing_else_is():
+    old = {"a": {"status": "disagrees", "task_sha256": "x", "args": [3]},
+           "b": {"status": "disagrees", "task_sha256": "old contents"},
+           "c": {"status": "agrees", "task_sha256": "z"}}
+    new = {"a": {"status": "agrees", "task_sha256": "x"}, "b": {"status": "agrees", "task_sha256": "new contents"},
+           "c": {"status": "disagrees", "task_sha256": "z"}, "d": {"status": "agrees", "task_sha256": "w"}}
+    out = spec_check.keep_witnesses(old, new)
+    assert out["a"]["status"] == "disagrees" and out["a"]["args"] == [3] and out["a"]["kept_from_an_earlier_check"]
+    assert out["b"]["status"] == "agrees"                      # another task: the old witness says nothing about it
+    assert out["c"]["status"] == "disagrees" and out["d"]["status"] == "agrees"
+

@@ -64,10 +64,10 @@ programs no prover has verified what another refuted. **What the gate could
 not see until 2026-10-01**: a proof says the program meets its specification,
 not that the specification is the question's, and with no reference solution
 the gate showed a right answer 4 times in 10 on the student's unseen problems
-(79% on 1,038 proved training answers). It now carries a stage for that which
+(76% on 1,038 proved training answers). It now carries a stage for that which
 needs no reference, a tested Python solution written beside the question as a
 second opinion and a floor on how many wrong outputs the specification
-rejects: 3 of 3 and 94%, for a fifth of the right answers
+rejects: 3 of 3 and 94.4%, for a fifth of the right answers
 ([registration and outcomes](t/PREDICT-2026-10-01-gate-without-reference.md)).
 One question now goes through all of it with one command
 ([`t/answer.py`](t/answer.py)): the student and the base model at 4 bits on a
@@ -79,7 +79,7 @@ dev results and loses about one proof in six when given a specification (23 of
 behind the gate works at low coverage**: with no training, pooled prompted
 answers are proved and specification-checked on 19 of the 200 unseen problems
 by all seven provers, and on 50 when one prover's proof is counted and none
-refutes (48 where the specification also pins the answer down). **The from-scratch model does not**: zero on every held-out measure,
+refutes (47 where the specification also pins the answer down). **The from-scratch model does not**: zero on every held-out measure,
 after every round, core and sampling run, which is what published results
 predict at its size and data. **What is being built now**: a small openly
 licensed model fine-tuned on everything the gate admits, measured on problems
