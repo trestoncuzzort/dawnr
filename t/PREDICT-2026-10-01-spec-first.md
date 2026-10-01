@@ -87,3 +87,16 @@ The controls are the 4B on v4's dev rows above, and the predictions are restated
 The v5 student is also measured the ways the v4 student was (one greedy answer, ten answers,
 the specification first, the 33 specification-given questions), so that the rows' effect and
 the route's effect can be told apart.
+
+## Amendment, 2026-10-01 07:46Z, before any v5 row is trained on: the proof-repair rows carry Dafny's own message
+
+The second try on the 4B on v4 repaired 1 answer of 91
+(`t/PREDICT-2026-10-01-several-answers.md`, prediction 22). Its debugging rows said, for a
+failed proof, one generic line a kernel. SAFE's triplets carry the verifier's error
+(arXiv:2410.15756, 3.3). So for the v5 rows every debugging row whose failure is a proof is
+rebuilt with what Dafny says about that attempt: the attempt is lowered, `dafny verify` runs
+with the adapter's budget, and each error becomes one line quoting the clause it points at
+(`t/dafny_feedback.py`; on twelve stored attempts ten get a specific line). Rows of the other
+kinds, and proof rows Dafny has nothing to say about, are unchanged. Nothing else about the v5
+rows changes. A repair measurement that uses these messages at inference is registered
+separately before it runs.

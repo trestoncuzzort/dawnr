@@ -43,7 +43,7 @@ MAX_ATTEMPT_CHARS = 3000
 
 
 def message_for(stage: str, why: str | None, tests_entry: dict | None, row: dict | None,
-                cols: list[str] | None) -> tuple[str, str] | None:
+                cols: list[str] | None, dafny: list[str] | None = None) -> tuple[str, str] | None:
     """(kind, what the gate said) for a refused attempt, or None when the gate did not refuse it
     or there is nothing useful to say. The repair loop calls this too, so the student is asked
     at inference in the words it was trained on."""
@@ -65,6 +65,12 @@ def message_for(stage: str, why: str | None, tests_entry: dict | None, row: dict
         return None
     if all(row.get(k) == "verified / refuted" for k in cols):
         return None                                             # proved everywhere: not a failure
+    if dafny:
+        # Dafny's own diagnostics (t/dafny_feedback.py, 2026-10-01): the clause that failed, where
+        # the line a kernel below names nothing. The rows are rebuilt with these, so the words
+        # are the trained ones.
+        import dafny_feedback
+        return ("proof", dafny_feedback.message(dafny))
     return ("proof", "It passes the tests, but the provers report:\n" + repair.feedback(row, cols))
 
 
