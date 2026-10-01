@@ -1,4 +1,4 @@
-# Understood from inside: a published sparse autoencoder on the student, registered 2026-10-01 11:33Z
+# Understood from inside: a published sparse autoencoder on the student, registered 2026-10-01 11:30Z
 
 ## What this is
 
