@@ -140,7 +140,7 @@ calls right say something else. They are refused; the other eight are shown.
 right 3 times in 3 and shows one right answer fewer. That is ten problems. B is the measurement
 with enough answers to carry a percentage.
 
-## Amendment, 2026-10-01 09:12Z, before any Python exists for a held-out question: whose Python stands beside the student in D
+## Amendment, 2026-10-01 09:11Z, before any Python exists for a held-out question: whose Python stands beside the student in D
 
 D said each system is given the stage "with its own Python". For the reference that is Phi-4-mini
 writing Python itself. For the student it is the base model's Python, written exactly as in A
