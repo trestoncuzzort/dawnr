@@ -93,6 +93,50 @@ def diagnostics(task: dict, wall: int = 150) -> list[str]:
     return parse(p.stdout + p.stderr, source)
 
 
+_TALLY = re.compile(r"finished with (\d+) verified, (\d+) errors?")
+
+
+def judge(task: dict, wall: int = 150) -> dict:
+    """{"verified": bool, "said": [...]} from ONE Dafny run on the lowered task: verified when
+    Dafny exits 0 having discharged at least one obligation with no error. This is the in-loop
+    verdict a repair step acts on (SAFE repairs against Verus alone); it is weaker than the
+    adapter's (no vacuity or certificate checks), and all seven kernels and the twins still judge
+    whatever comes out of the loop."""
+    import lower_dafny                                          # noqa: E402
+    from verifiers import dafny as adapter                      # noqa: E402
+    if not adapter.DAFNY:
+        return {"verified": False, "said": [], "why": "no dafny"}
+    try:
+        source = lower_dafny.lower(task, task["body"])
+    except Exception as e:                                      # noqa: BLE001
+        return {"verified": False, "said": [], "why": f"does not lower: {type(e).__name__}"}
+    with tempfile.TemporaryDirectory(prefix="dafny-feedback-") as tmp:
+        path = Path(tmp) / "task.dfy"
+        path.write_text(source, encoding="utf-8")
+        try:
+            p = subprocess.run([adapter.DAFNY, "verify", "--resource-limit", str(adapter.DEFAULT_RLIMIT),
+                                "--warn-contradictory-assumptions", str(path)],
+                               capture_output=True, text=True, errors="replace", timeout=wall)
+        except subprocess.TimeoutExpired:
+            return {"verified": False, "said": ["- Dafny did not finish within its time limit"]}
+    out = p.stdout + p.stderr
+    m = _TALLY.search(out)
+    verified = p.returncode == 0 and m is not None and int(m.group(1)) >= 1 and int(m.group(2)) == 0
+    return {"verified": verified, "said": [] if verified else parse(out, source)}
+
+
+def judge_file(argv: list[str]) -> int:
+    """`--judge TASKS.jsonl OUT.jsonl [--jobs N]`: one task JSON a line in, one verdict a line out."""
+    from multiprocessing import Pool
+    jobs = int(argv[argv.index("--jobs") + 1]) if "--jobs" in argv else 8
+    tasks = [json.loads(l) for l in Path(argv[1]).read_text(encoding="utf-8").splitlines() if l.strip()]
+    with Pool(jobs) as pool:
+        out = pool.map(judge, tasks, chunksize=2)
+    Path(argv[2]).write_text("".join(json.dumps(r) + "\n" for r in out), encoding="utf-8")
+    print(json.dumps({"tasks": len(out), "verified": sum(1 for r in out if r["verified"])}))
+    return 0
+
+
 def message(said: list[str]) -> str:
     """The words a student is trained on and asked with (without the closing request)."""
     return HEAD + "\n".join(said)
@@ -123,6 +167,8 @@ def main(argv: list[str] | None = None) -> int:
     if len(argv) < 2:
         print(__doc__)
         return 2
+    if argv[0] == "--judge":
+        return judge_file(argv)
     from multiprocessing import Pool
     jobs = int(argv[argv.index("--jobs") + 1]) if "--jobs" in argv else 8
     rows = [json.loads(l) for l in Path(argv[0]).read_text(encoding="utf-8").splitlines() if l.strip()]
