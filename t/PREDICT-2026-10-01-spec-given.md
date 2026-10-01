@@ -261,3 +261,24 @@ on 26 of 33 specifications it has not seen.**
 
 14. **On dev it reaches a valid task on at least 40: falsified.** 38 (the 4B on the 527 rows:
     35). It passes the tests on 9 (6 before). The kernels' verdict on those answers follows.
+
+## The 4B on v4, its dev answers through the gate, 2026-10-01 06:01Z
+
+One greedy answer a dev problem, repaired harness and specification check (38 checked: 7 agree,
+29 disagree, 2 could not be checked).
+
+| student (Qwen3.5-4B) | reach a task | tests pass | proved by at least 1, spec checked | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| on the 527 English rows | 35 | 6 | 5 | 3 | 1 | 0 | 0 |
+| on the v4 rows | 38 | 9 | 4 | 3 | 1 | 1 | 1 |
+
+15. **At least 3 dev answers proved by at least one kernel with the specification checked:
+    holds.** 4: 459 `remove_uppercase` by all seven, 113 `check_integer` and 727 `remove_char`
+    by four, 549 `odd_Num_Sum` by two.
+
+Nine answers pass the tests, three more than before, and the count that matters did not rise:
+four of the nine carry a specification that is not the problem's (three of those are refuted by
+six or seven kernels, which is the gate catching a program that does not do what its own
+specification says), and one right specification has no proof. The same student proves 28 of 33
+when the specification is handed to it. The distance between 4 of 100 and 28 of 33 is the
+specification.
