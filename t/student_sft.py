@@ -135,6 +135,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-len", type=int, default=4096)
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--limit", type=int, default=0, help="first N rows only (a smoke run)")
+    ap.add_argument("--warmup-steps", type=int, default=0,
+                    help="linear warm-up of the learning rate over the first N optimizer steps (default 0: "
+                         "QLoRA's constant rate from the first step)")
+    ap.add_argument("--max-steps", type=int, default=0, help="stop after N optimizer steps (a stability probe)")
+    ap.add_argument("--log-every", type=int, default=5, help="log the loss every N optimizer steps")
     a = ap.parse_args(argv)
     if a.merge:
         return merge(a.merge, a.out)
@@ -180,8 +185,10 @@ def main(argv: list[str] | None = None) -> int:
     args = TrainingArguments(
         output_dir=str(a.out / "trainer"), per_device_train_batch_size=a.batch,
         gradient_accumulation_steps=a.grad_accum, num_train_epochs=a.epochs, learning_rate=a.lr,
-        lr_scheduler_type="constant", adam_beta2=0.999, max_grad_norm=0.3, bf16=True,
-        optim="paged_adamw_32bit", logging_steps=5, save_strategy="no",
+        lr_scheduler_type="constant_with_warmup" if a.warmup_steps else "constant",
+        warmup_steps=a.warmup_steps, max_steps=a.max_steps or -1,
+        adam_beta2=0.999, max_grad_norm=0.3, bf16=True,
+        optim="paged_adamw_32bit", logging_steps=a.log_every, save_strategy="no",
         report_to=[], seed=a.seed, data_seed=a.seed, remove_unused_columns=False)
 
     class Rows(torch.utils.data.Dataset):
@@ -210,6 +217,7 @@ def main(argv: list[str] | None = None) -> int:
               "recipe": {"quantisation": "nf4, double, bf16 compute", "lora": {"r": a.rank, "alpha": a.alpha,
                          "dropout": a.dropout, "target_modules": "all-linear"},
                          "lr": a.lr, "schedule": "constant", "adam_beta2": 0.999, "max_grad_norm": 0.3,
+                         "warmup_steps": a.warmup_steps, "max_steps": a.max_steps or None,
                          "batch": a.batch, "grad_accum": a.grad_accum, "epochs": a.epochs,
                          "max_len": a.max_len, "seed": a.seed, "loss": "response only",
                          "sources": ["arXiv:2305.14314 B.2, table 9", "arXiv:2410.15756 C.3"]},
