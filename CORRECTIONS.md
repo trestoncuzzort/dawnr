@@ -4,6 +4,19 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **The specification check drew every input from the problem's first example (2026-10-01).**
+  A lookup table for "the nth Bell number", wrong for every n from 11 to 55, was proved by five
+  provers and read "agrees with the reference on 100 draws": the tests are at n = 2, 10 and 56,
+  and every drawn input copied the first, so none went past 4. The same fault had been found
+  and fixed on 2026-09-25 in one tool only (the relabelling step) and was left in the check
+  every count rests on. The check now draws from all of a problem's examples, as EvalPlus does,
+  and also rejects other inputs' answers, which catches a specification that never ties the
+  result to the input. Re-measured: the prompted 9B's two counted dev answers were both of that
+  kind ("the answer is Matched! or Not Matched!", counted at six provers) and it now has none;
+  the pretrained pooled count on the 200 unseen problems moves from 48 to 47, with the 19 by
+  all seven unchanged; the student's dev counts do not move; 33 of the 823 training answers
+  called right are not ([registration and outcome](t/PREDICT-2026-10-01-spec-check-inputs.md)).
+
 - **"Specification checked" counted specifications that say almost nothing (2026-10-01).**
   An answer was counted when it passed its tests, was proved, and its
   specification agreed with the problem's reference on drawn inputs. Agreement
