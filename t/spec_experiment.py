@@ -847,6 +847,15 @@ def chat(host: str, model: str, messages: list[dict], options: dict, timeout: fl
                 "eval_count": usage.get("completion_tokens"),
                 "done_reason": ch.get("finish_reason")}
     body = {"model": model, "stream": False, "messages": messages, "options": options}
+    if "think" in options:
+        # Ollama's `think` is a field of the request, not a sampling option (docs/api.md: "for
+        # thinking models, should the model think before responding?"). A thinking model left to
+        # its default spends the whole reply budget in `message.thinking` and returns empty
+        # content (measured 2026-10-01 on qwen3.5:2b: 200 tokens of thinking, content ''), which
+        # is why an earlier thinking set read 0. The record keeps it under options so two answer
+        # sets decoded differently are never mixed.
+        body["options"] = {k: v for k, v in options.items() if k != "think"}
+        body["think"] = options["think"]
     req = urllib.request.Request(f"http://{host}/api/chat", data=json.dumps(body).encode("utf-8"),
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -936,6 +945,11 @@ def _generate(args, d: Path) -> int:
         ids = ids[:args.limit]
     options = {"temperature": args.temperature, "seed": args.seed, "num_ctx": args.num_ctx,
                "num_predict": args.num_predict}
+    if getattr(args, "think", None) is not None:
+        if getattr(args, "api", "ollama") != "ollama":
+            raise SystemExit("generate: --think is Ollama's request field; an OpenAI-shaped server takes its "
+                             "own switch (not wired here)")
+        options["think"] = args.think == "on"
     if getattr(args, "grammar", ""):
         gpath = Path(args.grammar)
         # the comments are ours, not xgrammar's
@@ -1446,6 +1460,10 @@ def main(argv=None) -> int:
                             help="0 (default, the frozen experiments) or a sampling "
                                  "temperature for several answers per problem, one "
                                  "--seed and --tag per answer set")
+            p.add_argument("--think", choices=("on", "off"), default=None,
+                            help="for a thinking model served by Ollama: send think=true/false with the "
+                                 "request (default: not sent, the model's own default). Recorded in the "
+                                 "answer's options")
             p.add_argument("--tag", default="",
                             help="record directory under out/spec-experiment "
                                  "when it differs from the served model name "
