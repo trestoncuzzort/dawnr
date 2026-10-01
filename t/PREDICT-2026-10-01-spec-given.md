@@ -156,3 +156,55 @@ stays the `s1` one.
 16. Under `s2` the student reaches a valid task on more of the 18 than under `s1`. Falsified
     if it reaches the same number or fewer. No prediction on tests passed: the student has seen
     six `seq<seq>` answers in training, all specification-given.
+
+## Outcome, 2026-10-01 04:00Z
+
+The 2B trained on the v4 rows (560 steps, corrected loss, logged 0.33 over its first five steps
+and 0.013 at the end), the matched control and the floor each answered the 33 held-out questions
+once, greedy. The three arms' kernel runs went to the lab together (`--no-cache`, every verdict
+measured today).
+
+| arm | keeps the given specification, well formed | no twin (not graded) | a kernel refutes it | unproved | proved by at least 1 | proved by all seven |
+|---|---:|---:|---:|---:|---:|---:|
+| the reference answers (ceiling, 02:54Z) | 33 | 0 | 0 | 0 | 33 | 33 |
+| **2B on v4** (English, specification-given and debugging rows) | 30 | 0 | 10 | 1 | **19** | **19** |
+| 2B on the English rows only (matched control) | 29 (31 with the name normalised) | 3 | 9 | 4 (5) | 13 (14) | 13 (14) |
+| untrained 2B under the v5 prompt (floor) | 9 | 4 | 0 | 2 | 3 | 3 |
+
+The v4 arm's counts are the same strict and with the name normalised. In every arm an answer
+that is proved is proved by all seven kernels; none sits between one and six.
+
+9. **The v4 student keeps the given specification on at least 25 of 33: holds.** 30 (1 does not
+   parse, 2 are not well formed, none changes the specification).
+10. **Proved by at least one prover on at least 5: holds.** 19, each by all seven.
+11. **At least 3 more than the matched control: holds.** 19 against 13 on the name-strict count
+    (the registered one), 19 against 14 with the name normalised. Question by question: both
+    prove 11, only the v4 student 8, only the control 2, neither 12. On those ten discordant
+    questions an exact paired test gives p = 0.11: the registered margin is met, and 33
+    questions do not make the difference certain.
+12. **On the 100 dev problems the v4 student passes the tests on at least 3: holds.** 5 (the
+    control: 4); it reaches a valid task on 53 (the control: 45). The kernels' and the
+    specification check's verdict on those answers is recorded below when it lands.
+
+**What the answers show.**
+
+- The setting with a published ladder under it works here: given the specification, a 2B
+  student writes a body all seven kernels accept on 19 of 33 specifications it has not seen,
+  from 3 for the same model untrained. The control, which never saw such a question, proves 13:
+  most of the skill comes from the English rows, and the specification-given rows add to it.
+- The added rows help where there is no loop: 15 of 22 against the control's 9. On the 11
+  questions with a loop both prove 4. Invariants are the part still missing.
+- The gate is what makes the 19 usable. Ten of the v4 student's 30 well-formed answers are wrong
+  and a kernel refutes each: its `abs` returns 0 for a negative input, its `divmod_pair` loops
+  on a negative dividend, and all seven refute both. A reader of these 30 answers without the
+  provers would be wrong one time in three.
+- The six answers left unproved (one of the v4 student's, five of the control's) carry timeout
+  cells, and the lab's load average passed 120 on its 120 threads while the three arms ran
+  (SPARK was running eight provers a cell; the arm grader now runs it serially). They were
+  graded again alone at 03:56Z to 04:00Z, not niced, no cache: every row came back cell for cell
+  the same, four or five kernels answering `unproved`. The counts stand.
+
+16. **Under `s2` the student reaches a valid task on more of the 18 nested-type dev problems
+    than under `s1`: holds by one, and it changes nothing that matters.** 9 valid tasks against
+    8; no test passes under either (7 fail under each). The spelling in the prompt is not what
+    stops these problems.
