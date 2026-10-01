@@ -103,7 +103,8 @@ def training_ids(split_path: Path, pool: dict) -> set[int]:
     return ids
 
 
-def build(tags: list[str], split_path: Path, verdicts_path: Path, min_kernels: int) -> tuple[list[dict], dict]:
+def build(tags: list[str], split_path: Path, verdicts_path: Path, min_kernels: int,
+          prompt_version: str = "v5") -> tuple[list[dict], dict]:
     if not 1 <= min_kernels <= loop_dataset.ALL_KERNELS:
         raise SystemExit("graded_pool: --min-kernels is 1 to 7")
     split = json.loads(split_path.read_text(encoding="utf-8"))
@@ -131,11 +132,18 @@ def build(tags: list[str], split_path: Path, verdicts_path: Path, min_kernels: i
                     seen[key].update(kernels_verified=proved, undecided=undecided, tag=sample["tag"], name=sample["name"])
                 reasons["duplicate-program"] += 1
                 continue
-            row = {"task_id": tid, "tag": sample["tag"], "name": sample["name"], "text": text,
+            # t/loop_train.py's row: the recorded system+user messages and the fenced answer. The
+            # prompt is rebuilt at ONE version for every row (the answers were asked under five),
+            # so the student is trained and later asked under the same words; the answer is the
+            # printer's canonical text, which is today's syntax whatever the model typed.
+            row = {"task_id": tid, "tag": sample["tag"], "name": sample["name"],
+                   "prompt": spec_experiment.build_prompt(pool[tid], prompt_version),
+                   "chosen": loop_dataset.fence(text),
                    "kernels_verified": proved, "undecided": undecided, "source": "graded"}
             seen[key] = row
             rows.append(row)
-    report = {"min_kernels": min_kernels, "pool": pool_name, "tags": len(tags), "train_ids": len(ids),
+    report = {"min_kernels": min_kernels, "pool": pool_name, "prompt": prompt_version, "tags": len(tags),
+              "train_ids": len(ids),
               "problems_with_samples": problems_with_samples, "rows": len(rows),
               "problems": len({r["task_id"] for r in rows}),
               "by_level": dict(sorted(Counter(r["kernels_verified"] for r in rows).items())),
@@ -152,8 +160,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-kernels", type=int, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--report", type=Path)
+    ap.add_argument("--prompt", choices=spec_experiment.PROMPT_VERSIONS, default="v5",
+                    help="the prompt version every row is rebuilt under (default v5)")
     a = ap.parse_args(argv)
-    rows, report = build(a.from_samples, a.split, a.verdicts, a.min_kernels)
+    rows, report = build(a.from_samples, a.split, a.verdicts, a.min_kernels, a.prompt)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows), encoding="utf-8")
     if a.report:
