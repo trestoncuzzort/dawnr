@@ -362,7 +362,7 @@ sixteen sampled a problem) are being generated now and are reported beside these
 
 Phi-4-mini as Ollama serves it, prompt v5, one greedy answer and sixteen sampled a problem (the 17
 calls the student's route makes), the same kernels, the repaired reference check and the same
-scorer. It wrote a `t` task 22 times in 3,400 answers.
+scorer. 53 of its 3,400 answers are well-formed `t` tasks, on 22 of the 200 problems.
 
 | the clean 200, complete specifications | tests pass | at least 1 | at least 3 | at least 5 | at least 6 | all seven |
 |---|---:|---:|---:|---:|---:|---:|
