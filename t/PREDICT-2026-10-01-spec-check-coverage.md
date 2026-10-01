@@ -190,3 +190,22 @@ this reading, 12 by the nested one); 46 reached the kernels' tables, 33 with the
 agreeing. With them, the repaired check, a floor of ten agreeing draws and five of sixteen chunks
 of the never-graded answers, the training pool reads 548 rows over 288 problems at 04:57Z, from
 527 over 262. (The figure of 542 over 277 given above was the 04:15Z build under the old check.)
+
+## A limit of the counts, measured 2026-10-01 08:06Z: two of the 50 rest on a weak specification
+
+"Agrees" means the specification is true of the reference's answer on every drawn input. It does
+not mean it pins the answer down. The check has always also measured that, as the share of
+mutated outputs the `ensures` rejects, and only reported it. Read for the counted answers:
+
+- **Clean 200, pooled:** of the 50 problems counted at one prover or more, 46 rest on a
+  specification that rejects every mutated output tried, 2 on one that rejects at least 60%,
+  and **2 on one below 60%** (problem 18, counted at four kernels, rejects 11%; problem 318, at
+  one kernel, 31%). None of the 19 counted at all seven is below 60%. By SAFE's rule for a usable
+  specification (arXiv:2410.15756, 3.2: at least 60% of mutated test cases rejected) the first
+  number would read 48.
+- **Training pool:** 40 of its 693 rows are below 60% (23 problems have no other row). They are
+  in the rows the 4B is training on tonight. From the next rebuild the pool refuses them
+  (`t/graded_pool.py`, `spec-too-weak`).
+
+The levels table keeps its registered rule (tests, kernels, agreement); this is stated beside it
+so that "specification-checked" is not read as more than it is.
