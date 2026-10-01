@@ -110,3 +110,24 @@ step-by-step decomposition; one answer, not five tries.
     problems than the plain greedy answers. Falsified by fewer than 2 more.
 
 (Numbered 26b and 27b: 26 to 29 are taken by `t/PREDICT-2026-10-01-spec-first.md`.)
+
+## Amendment, 2026-10-01 05:38Z, before any dev result of the 4B on v4 is read: which route goes to the held-out 200
+
+Five ways of using the same student are about to be measured on dev (one greedy answer, ten
+answers, ten answers and the specification first, retrieved examples, a second try), and a
+sixth may follow (the student's own Python first, `t/PREDICT-2026-10-01-spec-first.md`). The
+held-out 200 is to be used once. The choice is fixed now so it cannot follow the numbers:
+
+- **The route** is the one with the most dev problems proved by at least one kernel with the
+  reference check agreeing; ties go to the route with more problems proved by all seven, then
+  to the one that asks the model fewer times a problem. Routes that share answers are counted
+  as registered (ten answers includes the greedy one; the specification-first arm includes the
+  eleven it starts from).
+- **The student** is the 4B on whichever rows it was last trained on when the route is chosen.
+- **The held-out run** is that route, unchanged, on the clean 200, once, with the repaired
+  instruments; every level is reported.
+- **The reference** (section 1 of `AMBITION.md`) is Phi-4-mini prompted under v5, given the
+  same number of answers a problem through the same gate, sampled the same way, graded the
+  same day. Its single greedy answer on record reads 4 tests passed and 1 proved of 200.
+- The route is a property of the system, not of the model: the reference gets every answer the
+  budget allows, and no stage that needs fine-tuning on `t`.
