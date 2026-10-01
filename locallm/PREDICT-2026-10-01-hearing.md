@@ -1,0 +1,34 @@
+# Hearing with pretrained weights: registered 2026-10-01 10:55Z
+
+## What this is
+
+`AMBITION.md`'s row "to hear and speak" was started from scratch (a CTC recogniser that overfits a
+handful of utterances, `DAWNR-SPEECH.md`). The plan of record (`internal/LADDER-PLAN-2026-10-01.md`)
+takes it to pretrained recognisers and voices with permissive licences, measured by word error rate
+on a public test set, offline. This is the hearing half.
+
+## What it stands on
+
+- Whisper (Radford et al., arXiv:2212.04356, the paper's text read 2026-10-01): appendix D.1.1,
+  greedy decoding, LibriSpeech test-clean word error rate 5.6 for tiny.en and **4.2 for base.en**;
+  D.1.2, beam search with temperature fallback, 5.4 and 4.1. The rate is computed after the
+  paper's own text normaliser (`whisper/normalizers/english.py` in openai/whisper, fetched).
+- whisper.cpp (github.com/ggml-org/whisper.cpp, MIT, README fetched): the C/C++ port that runs the
+  same weights on a CPU with no Python and no network once the model file is on disk.
+- LibriSpeech (openslr.org/12, CC BY 4.0): test-clean, 2,620 utterances, 5.4 hours.
+
+## The measurement
+
+- **Model**: Whisper base.en (74M parameters, MIT), the ggml file whisper.cpp's own download script
+  fetches; greedy decoding with no temperature fallback; 8 threads of the lab's CPU at the lowest
+  priority; nothing reaches the network while it transcribes.
+- **Data**: every utterance of LibriSpeech test-clean, FLAC converted to 16 kHz 16-bit WAV with ffmpeg.
+- **Score**: word error rate over the whole set (total edits over total reference words), both
+  sides passed through Whisper's `EnglishTextNormalizer`.
+
+## Predictions
+
+65. The word error rate is between 3.7 and 4.7 (the paper's 4.2 for greedy, plus or minus half a
+    point for the port and for this machine's arithmetic). Falsified outside.
+66. It transcribes faster than real time by at least ten times on 8 threads (5.4 hours of audio
+    in under 33 minutes). Falsified otherwise.
