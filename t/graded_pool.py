@@ -48,6 +48,14 @@ VERIFIED = "verified / refuted"
 # (arXiv:2410.15756) is the reason to be strict here: wrong specifications in the training data
 # cost its model 26 points. A row is trained on only when at least this many draws agreed.
 MIN_AGREEING_DRAWS = 10
+# SAFE keeps a specification for training only when it rejects at least 60% of mutated test cases
+# (arXiv:2410.15756, 3.2). The reference check has always measured the same thing on its drawn
+# inputs (`completeness`: the share of mutated outputs the ensures rejects) and only reported it.
+# On 2026-10-01, 40 of the pool's 693 rows sat below 0.6 (an `ensures` true of the right answer
+# and of most wrong ones, e.g. "every character of r is alphanumeric" for a function that removes
+# the others). A row is trained on only at this completeness or above; a verdict that tried no
+# mutant is let through, as before.
+MIN_COMPLETENESS = 0.6
 
 
 def kernel_level(sample: dict) -> tuple[int, list[str], list[str]]:
@@ -82,6 +90,8 @@ def rejection(sample: dict, results: dict, pool_name: str, min_kernels: int) -> 
         return "spec-no-valid-draws"
     if result["draws"] < MIN_AGREEING_DRAWS:
         return "spec-agrees-on-too-few-draws"
+    if isinstance(result.get("completeness"), (int, float)) and result["completeness"] < MIN_COMPLETENESS:
+        return "spec-too-weak"
     if type(result.get("task_id")) is not int or result["task_id"] != sample["task_id"]:
         return "spec-problem-mismatch"
     if result.get("pool") != pool_name:
