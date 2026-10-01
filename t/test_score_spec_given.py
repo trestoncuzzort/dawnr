@@ -82,5 +82,32 @@ class Level(unittest.TestCase):
         self.assertEqual(ssg.level_of(partial), ("no-table", 0))
 
 
+class AskAServer(unittest.TestCase):
+    """The same question to a model a server holds (the 4-bit GGUF student under llama.cpp,
+    github.com/ggml-org/llama.cpp): greedy, the same budget, and a run resumes."""
+
+    def test_the_conversation_goes_over_greedy_and_the_answer_is_recorded_once(self):
+        import json
+        sent = []
+
+        def post(url, body, timeout=0):
+            sent.append((url, body))
+            return {"choices": [{"message": {"content": ROW["chosen"]}, "finish_reason": "stop"}],
+                    "usage": {"completion_tokens": 17}}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "answers.jsonl"
+            self.assertEqual(ssg.ask("student-q4", [ROW], out, "s1", 256, host="127.0.0.1:1", post=post), 0)
+            self.assertEqual(ssg.ask("student-q4", [ROW], out, "s1", 256, host="127.0.0.1:1", post=post), 0)
+            rows = [json.loads(line) for line in out.read_text().splitlines()]
+        self.assertEqual(len(sent), 1)                              # the second run asked nothing
+        url, body = sent[0]
+        self.assertEqual(url, "http://127.0.0.1:1/v1/chat/completions")
+        self.assertEqual((body["temperature"], body["max_tokens"]), (0, 256))
+        self.assertEqual(body["messages"], ssg.conversation(ROW, "s1"))
+        self.assertEqual((rows[0]["name"], rows[0]["reply"], rows[0]["stopped"], rows[0]["tokens"], rows[0]["model"]),
+                         (ROW["name"], ROW["chosen"], True, 17, "student-q4"))
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
