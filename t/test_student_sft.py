@@ -91,5 +91,38 @@ class ResponseLoss(unittest.TestCase):
         self.assertEqual(seen["rows"], 5)                 # five response tokens, not 2 x 6 positions
 
 
+    def test_given_the_windows_token_count_the_micro_batches_add_up_to_the_mean_over_its_tokens(self):
+        # transformers' contract under gradient accumulation (loss/loss_utils.py fixed_cross_entropy):
+        # sum over this batch's target tokens, divided by the target tokens of the whole window. A
+        # loss that returns its own batch mean is NOT divided by the Trainer afterwards, and reads
+        # (and backpropagates) as many times too large as there are accumulated batches.
+        import torch
+
+        torch.manual_seed(0)
+        vocab, width = 11, 5
+        embed = torch.nn.Embedding(vocab, width)
+        head = torch.nn.Linear(width, vocab, bias=False)
+
+        class Backbone:
+            def __call__(self, input_ids, attention_mask):
+                return type("Out", (), {"last_hidden_state": embed(input_ids)})()
+
+        class Base:
+            model = Backbone()
+            lm_head = staticmethod(head)
+
+        rows = [{"input_ids": [1, 2, 3, 4, 5, 6], "labels": [-100, -100, -100, 4, 5, 6]},     # 3 target tokens
+                {"input_ids": [7, 8, 9], "labels": [-100, 8, 9]}]                             # 2 target tokens
+        window_tokens = 5
+        parts = [student_sft.response_loss(Base, student_sft.pad_batch([r], pad_id=0), torch.tensor(window_tokens))
+                 for r in rows]
+        both = student_sft.pad_batch(rows, pad_id=0)
+        mean_over_tokens = student_sft.response_loss(Base, both)                  # no count: the plain mean
+        self.assertAlmostEqual(float(sum(parts)), float(mean_over_tokens), places=5)
+        # and the old behaviour, a batch mean per micro-batch, would have summed to about twice that
+        old = sum(student_sft.response_loss(Base, student_sft.pad_batch([r], pad_id=0)) for r in rows)
+        self.assertGreater(float(old), 1.5 * float(mean_over_tokens))
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

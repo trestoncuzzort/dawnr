@@ -223,3 +223,64 @@ further candidates are one or two problems. Ranking needs more successes to coun
 several answers per problem with the gate as the filter (SAFE reports its 1.3B backbone at 21.6%
 with one answer and 40.3% with ten, arXiv:2410.15756 table 8). That measurement is registered
 separately before it runs.
+
+## Correction, 2026-10-01 02:35Z: the 4B run was not damaged; the logging was wrong, and it was my change
+
+The section above ("The 4B's fine-tune was damaged in its first steps") is wrong in its title, its
+table's reading and its account. It is left in place as written; this replaces it.
+
+**What the probe showed.** Three arms ran on the code as it was (A constant 2e-4, B with a
+ten-step warm-up, C constant 1e-4); D was stopped. All three log the same loss at step 1, 16.564,
+and step 1 is logged before any update. From there each only falls (A to 3.55, B to 4.66, C to
+4.23 by step 12). Nothing raises the loss; it starts there.
+
+7. **Arm A reproduces the damage: falsified.** No step exceeds step 1. There was no damage to
+   reproduce.
+8. **At least one of B, C, D is stable:** true and empty, since A is stable too.
+
+**The cause, from the library's source.** `transformers/trainer.py` divides a micro-batch's loss
+by the accumulation count only when the model does not take loss arguments or no token count is
+given, and says of a custom loss: "If you are not using `num_items_in_batch` when computing your
+loss, make sure to overwrite `self.model_accepts_loss_kwargs` to `False`." The library's own
+loss (`loss/loss_utils.py`, `fixed_cross_entropy`) sums the token losses and divides by the
+window's token count. The `compute_loss` override added in a08bd1a8 ignored that count and
+returned each row's mean, so with sixteen accumulated rows the logged loss was the SUM of sixteen
+row means and the gradient before clipping was sixteen times too large. Earlier tonight this
+file said the loss change "is not the cause". That was wrong: the function's value was checked
+and is right; how the override met the trainer was not checked, and that is where the fault was.
+Fixed: `response_loss` takes the count and reduces as the library does (a test pins it).
+
+**Measured afterwards.**
+
+- One step of the corrected code on the same first batch logs 0.651 where the old code logged
+  16.564, a factor of 25.4, not 16. Sixteen accounts for the sum; the rest is that the old code
+  averaged over rows and the library averages over tokens. On 66 training rows the untrained 4B
+  reads 0.998 as a mean of row means and 0.808 token-weighted (a ratio of 1.23), so the direction
+  is measured; that it makes up all of the extra factor on that one batch is not.
+- **The 4B student is sound.** Plain forward passes on 66 training rows, no trainer involved:
+
+  | | mean of row means | token-weighted |
+  |---|---:|---:|
+  | 4B, untrained | 0.998 | 0.808 |
+  | 4B student | 0.042 | 0.038 |
+  | 2B, untrained | 1.341 | 1.132 |
+  | 2B student | 0.061 | 0.048 |
+
+  It fits the training rows better than the 2B student does.
+
+**What the 4B student's result is.** A valid measurement, with one difference from the other two
+stated beside it: it was trained on the row-weighted loss with the oversized, clipped gradient;
+they were trained on the library's token-weighted loss. On the 100 dev problems it reaches a
+task on 35 and passes the tests on 4 (extracted with `--promote-header`). Its answers went to
+the provers at 02:30Z.
+
+**So far, three bases from 1.5B to 4B, each fine-tuned on these rows, pass the tests on 4, 4 and
+4 of 100.** The best training fit (the 4B) writes fewer valid tasks than the 2B (35 against 45)
+and passes no more tests.
+
+**Decisions taken on the wrong reading, and undone.** The 4B's answers were held out of the
+ranking: they are in. The 9B was stopped before training: it was restarted at 02:31Z with the
+corrected loss and ran out of memory at its second step (13.9 GiB allocated, a further 1.5 GiB
+asked for, 16 GB card, rank 16, response-only output layer). It has no result. The four-schedule
+probe answered a question that did not exist; its numbers are kept in
+`~/scratch/student/probe/`.
