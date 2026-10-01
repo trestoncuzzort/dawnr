@@ -76,7 +76,12 @@ SPEC_DRAWS = 50
 DRAWN_TESTS = 50
 # Bumped whenever local_signals changes what it measures: a cached row of another
 # version is re-graded (its proof is cheap to redo, run_par caches verdicts).
-REWARD_VERSION = 2
+REWARD_VERSION = 3
+# 3 (2026-10-01): `weak` is the gate's own rule, spec_check.complete() is False (both mutant families,
+# near outputs and other inputs' answers, rejected at least 60% of the time: SAFE arXiv:2410.15756), where
+# version 2 read spec_check's `weak` (any near-output mutant accepted: stricter on that family, blind to the
+# other). The top tier now pays what the gate counts. The header promotion of spec_experiment.extract_tag
+# is available, so a reward grades an answer as its measurement does.
 SPLIT = HERE / "out" / "loop" / "split-v5.json"
 
 
@@ -136,7 +141,7 @@ def overall_verdict(verdicts: list[str]) -> str:
     return "undefined"
 
 
-def local_signals(task_id: int, reply: str, entry: dict, spec_seed: int = 1) -> dict:
+def local_signals(task_id: int, reply: str, entry: dict, spec_seed: int = 1, promote_header: bool = False) -> dict:
     """Everything the CPU can say about one reply: extraction stage, tests, and
     (for a test-passing answer) the three specification checks. The t task is
     returned under "task" when the answer is well formed, for the prover."""
@@ -154,6 +159,17 @@ def local_signals(task_id: int, reply: str, entry: dict, spec_seed: int = 1) -> 
         errs = se.fuzz_lower.check_wf(task)
     except Exception as e:                                      # noqa: BLE001
         errs = [f"check_wf raised {type(e).__name__}: {e}"[:200]]
+    if errs and promote_header and task.get("t") == 0:
+        # spec_experiment.extract_tag --promote-header: `t 0` stated over a v1 form is the same program under
+        # `t 1` (SPEC.md, v1 is a strict superset of v0); the promoted program is checked in full.
+        promoted = dict(task, t=1)
+        try:
+            errs1 = se.fuzz_lower.check_wf(promoted)
+        except Exception as e:                                  # noqa: BLE001
+            errs1 = [f"check_wf raised {type(e).__name__}: {e}"[:200]]
+        if not errs1:
+            task, errs = promoted, []
+            out["header_promoted"] = True
     if errs:
         return {**out, "stage": "wf", "why": "; ".join(errs)[:300]}
     out["stage"] = "task"
@@ -166,7 +182,8 @@ def local_signals(task_id: int, reply: str, entry: dict, spec_seed: int = 1) -> 
     if out["tests"] == "pass":
         out["drawn"] = drawn_tests(task, entry, DRAWN_TESTS, random.Random(spec_seed))
         spec = spec_check.check_task(task, entry, SPEC_DRAWS, random.Random(spec_seed))
-        out["spec"] = {k: spec[k] for k in ("status", "draws", "weak") if k in spec}
+        out["spec"] = {k: spec[k] for k in ("status", "draws", "completeness", "cross_completeness") if k in spec}
+        out["spec"]["weak"] = spec_check.complete(spec) is False
         out["spec_points"] = spec_check.check_points(task, entry)
         out["exploit"] = spec_check.exploit(task, entry).get("exploited_by")
     return out
