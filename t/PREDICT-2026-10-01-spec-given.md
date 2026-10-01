@@ -91,3 +91,24 @@ scorer and the same seven kernels on the lab (started 02:46Z). Whatever they sco
 any model can score on this instrument today; it is reported before any model's number. A row
 the grader can build no sabotaged twin for is not run by the grader at all (`no-twin` in every
 cell): it is counted apart as a missing measurement, not as unproved.
+
+## The ceiling, measured 2026-10-01 02:54Z (before any model's answer)
+
+The 33 questions' own corpus answers, passed through `t/score_spec_given.py` as if they were a
+model's replies and then through all seven kernels on the lab (`--no-cache`, 4 cells, 6 minutes
+42 seconds, 231 cells, 1,386 kernel runs, every verdict measured today):
+
+| stage | of 33 |
+|---|---:|
+| a task block found, parses, carries the given specification, well formed | 33 |
+| no sabotaged twin could be built (not graded) | 0 |
+| a kernel refutes the program | 0 |
+| no row came back | 0 |
+| proved by at least one kernel | 33 |
+| proved by all seven | 33 |
+
+All 231 cells read `verified / refuted`. So the instrument can award 33 of 33 at every level, the
+strict specification gate stops no correct answer, and the path from an answer to a level works
+on answers known to be right. This is the ceiling for the reference bodies: a correct answer with
+a different body can still time out in a kernel and land at a lower level, which is a fact about
+proving it and not about the scorer.
