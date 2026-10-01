@@ -178,3 +178,30 @@ the lab's CPU, greedy.
 103. Of what it shows at noise rate 0.4, a larger share is right than of all replies.
 
 Reported beside them: AlignScore's mean on the same replies, and how often the base keeps the syntax.
+
+## Outcome of the quote gate, 2026-10-01 18:22Z: it refuses everything
+
+The 93 fresh questions, the base prompted for GopherCite's syntax, the lab's CPU servers, greedy:
+
+| | noise rate 1 | noise rate 0.4 |
+|---|---:|---:|
+| replies | 93 | 93 |
+| say the information is insufficient | 51 | 3 |
+| right by RGB's answer check | (51 rejections) | 60 |
+| written in the syntax | 6 | 18 |
+| every quote found word for word | 2 | 8 |
+| shown (every claim's words in its quote) | **0** | **0** |
+
+101. **With no document holding the answer it shows at most 20%: holds**, at 0 of 42, which says nothing
+     here: it shows nothing anywhere.
+102. **At noise rate 0.4 it shows at least 60% of the right replies: falsified.** 0 of 60.
+103. **What it shows is more often right: falsified**, nothing is shown.
+
+**Why, read from the replies.** The prompted base keeps the syntax on 18 of 90 answers; most of the rest
+are one character off (`%Frank Marshall%(Document 1)%[...]%`, the angle brackets dropped) or plain prose.
+Where the quotes are verbatim, the base writes a two-part answer as one claim with one quote that states
+only one part ("Chris Stapleton and Lainey Wilson" with a quote naming only Wilson), so the support rule
+refuses it, rightly; and a right claim can fail the word rule against a paraphrase ("January 2, 2022"
+against "Jan. 2"). GopherCite fine-tuned its model on the syntax and constrained its sampling to it; the
+prompt alone does not get a 4B there. The quote check refused nothing it should have shown wrongly; the
+failure is that almost nothing reached it.
