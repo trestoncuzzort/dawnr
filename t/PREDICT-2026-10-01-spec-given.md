@@ -230,3 +230,34 @@ answers was touched by either.
 It is two problems of a hundred, and one more than the control: the added rows did not harm the
 English task (prediction 12) and did not solve it. 44 of the 50 specifications that could be
 checked are still not the problem's.
+
+## The 4B arm, 2026-10-01 05:51Z
+
+Qwen3.5-4B on the v4 rows (560 steps, logged loss 0.0246 over the run, rows over 2,845 tokens
+dropped as registered), the same 33 questions, one greedy answer each, the kernels alone on the
+lab with SPARK serial (`--no-cache`).
+
+| arm | keeps the given specification, well formed | no twin (not graded) | a kernel refutes it | proved by at least 1 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| the reference answers (ceiling) | 33 | 0 | 0 | 33 | 33 | 33 | 33 |
+| **4B on v4** | **33** | 1 | 4 | **28** | 28 | 27 | **26** |
+| 2B on v4 | 30 | 0 | 10 | 19 | 19 | 19 | 19 |
+| 2B on the English rows only | 29 | 3 | 9 | 13 | 13 | 13 | 13 |
+| untrained 2B | 9 | 4 | 0 | 3 | 3 | 3 | 3 |
+
+13. **The 4B on v4 is proved on at least as many as the 2B on v4: holds.** 28 against 19 by at
+    least one kernel, 26 against 19 by all seven. Question by question: both 18, only the 4B 10,
+    only the 2B 1, neither 4; an exact paired test on the eleven discordant questions gives
+    p = 0.012. Here the larger base is better, and 33 questions are enough to say so.
+
+Every one of its 33 answers carries the given specification unchanged and is well formed. With a
+loop it proves 8 of 11 (the 2B: 4); without, 20 of 22 (the 2B: 15). Four answers are wrong and
+a kernel refutes each; one could not be given a sabotaged twin and so was not graded, which is a
+missing measurement, not a failure. Two of the 28 are proved by five and six kernels, the rest
+by all seven.
+
+**Given the specification, the base the rule named writes a body that all seven kernels accept
+on 26 of 33 specifications it has not seen.**
+
+14. **On dev it reaches a valid task on at least 40: falsified.** 38 (the 4B on the 527 rows:
+    35). It passes the tests on 9 (6 before). The kernels' verdict on those answers follows.
