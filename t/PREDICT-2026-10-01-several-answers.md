@@ -300,3 +300,34 @@ and with one answer on 2. Where it cannot write the specification it writes a tr
 and the gate as it stood let those through. The gate needs a stage that refuses them without a
 reference; the test-based score in `t/spec_quality.py` is one, and a score from the proved
 program's own outputs is being built next.
+
+## What the student's invalid answers are, counted 2026-10-01 09:41Z
+
+The 4B on v4 gave 1,100 dev answers over its eleven one-shot sets. 426 are valid tasks, 153 are
+refused as not well formed, and **521 do not parse**. The line the parser stops on, by what is
+written there:
+
+| what the student wrote | answers | of the 521 |
+|---|---:|---:|
+| the type `seq of seq` or `seq-of-seq` (the student prompt's own word for `seq<seq>`) | 67 | 13% |
+| a comprehension or an aggregate over one: `sum([x in s . x < 0])`, `len([i in [0, n) . P])`, `max(len(s[i]) for i in ...)` | 83 | 16% |
+| a quantifier over elements or a set, not an index range: `exists l in literals . ...` | 27 | 5% |
+| a method or function the language does not have: `count(s, 0)`, chained `.replace` | 22 | 4% |
+| operators the language does not have (`^`, `**`, `!`), Python slices, `for`, `&&` | 59 | 11% |
+| other, most often an unbounded quantifier: `exists k: int . a + k * b == c`, `exists i1 i2 such that ...` | 262 | 50% |
+
+Two readings. First, 67 answers were lost to our own prompt: `s1` calls the nested type
+`seq-of-seq`, the student copies the word, and the parser has no such type. `s2` (the prompt the
+4B on v5 is trained and asked under) spells it `seq<seq>`. Second, the rest is one failure seen
+from the syntax side: the student writes specifications in a richer language than `t` has
+(unbounded quantifiers, comprehensions, sums and counts as built-ins). In `t` a count or a sum
+is a recursive specification function and a quantifier ranges over indices, and the pool the
+student learned from held 11 rows with a specification function. On a fresh question ("count
+how many elements of a list are negative", `t/answer.py`) all five answers died this way:
+`ensures r == len([x in s . x < 0])`.
+
+What follows from it, for the next row set and not for tonight's runs: more rows that show the
+idiom (the proof round and the specification round both produce them), and repair rows whose
+message names the idiom, since a model repairs from a concrete message and not from "expected
+'in', found ':'" (VeriMed, arXiv:2605.13817: 98.5% with the concrete witness, 58.5% with a
+generic retry).
