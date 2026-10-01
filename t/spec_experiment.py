@@ -1274,20 +1274,38 @@ def kind_fits(kind: str, val, ptype) -> bool:
     return False
 
 
-def run_point(task: dict, point: dict) -> dict:
-    """One assertion against the task: {"verdict": pass|fail|requires-excluded|
-    undefined|budget|arity|type, ...}. Arguments map positionally."""
+def bind_point(task: dict, point: dict) -> tuple[dict | None, dict | None]:
+    """(the point's arguments bound to the task's parameters, None), or (None, the refusal).
+    The one place a test value is read at a declared type: run_point and the test-based
+    specification scores (t/spec_quality.py) both go through it."""
     params = task["params"]
     args = point["args"]
     if len(args) != len(params):
-        return {"verdict": "arity", "why": f"{len(args)} args for {len(params)} params"}
+        return None, {"verdict": "arity", "why": f"{len(args)} args for {len(params)} params"}
     env = {}
     for i, (p, (kind, val)) in enumerate(zip(params, args)):
         if kind == "int" and p["type"] == "seq" and i in point.get("char_args", ()):
             kind, val = "seq", [val]            # a one-character string, where the task declares a string
         if not kind_fits(kind, val, p["type"]):
-            return {"verdict": "type", "why": f"{p['name']} is {p['type']}, test passes {kind}"}
+            return None, {"verdict": "type", "why": f"{p['name']} is {p['type']}, test passes {kind}"}
         env[p["name"]] = _as_interp_value(kind, val)
+    return env, None
+
+
+def expected_value(task: dict, point: dict):
+    """(kind, value) of the point's expected result, read at the type the task returns."""
+    ekind, eval_ = point["expected"]
+    if ekind == "int" and point.get("char_expected") and task["returns"][0].get("type") == "seq":
+        ekind, eval_ = "seq", [eval_]           # the expected string is one character long
+    return ekind, eval_
+
+
+def run_point(task: dict, point: dict) -> dict:
+    """One assertion against the task: {"verdict": pass|fail|requires-excluded|
+    undefined|budget|arity|type, ...}. Arguments map positionally."""
+    env, refusal = bind_point(task, point)
+    if refusal is not None:
+        return refusal
     ret = task["returns"][0]["name"]
     funs = interp.funs_of(task, task["body"])
     st = interp.St()
@@ -1307,9 +1325,7 @@ def run_point(task: dict, point: dict) -> dict:
         # a pair and crashed the whole stage; a crash on one candidate is that
         # candidate failing, recorded with the interpreter's message
         return {"verdict": "crash", "why": f"{type(c).__name__}: {c}"[:120]}
-    ekind, eval_ = point["expected"]
-    if ekind == "int" and point.get("char_expected") and task["returns"][0].get("type") == "seq":
-        ekind, eval_ = "seq", [eval_]           # the expected string is one character long
+    ekind, eval_ = expected_value(task, point)
     if got is None:
         return {"verdict": "undefined", "why": "no path assigned the return"}
     # interp represents a seq value as a tuple, and a nested seq as a
