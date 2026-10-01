@@ -427,7 +427,7 @@ ints and a yes/no answer as bool.
 Reply with exactly one t task inside a ```t fenced block and nothing else.
 """
 
-PROMPT_VERSIONS = ("v1", "v2", "v3", "v4", "v5", "s1")
+PROMPT_VERSIONS = ("v1", "v2", "v3", "v4", "v5", "s1", "s2")
 
 # "s1" (2026-10-01) is the prompt of a FINE-TUNED student: no grammar text and no few-shot tasks,
 # because a model trained on t answers knows the language and the 10,000-character description
@@ -436,6 +436,16 @@ PROMPT_VERSIONS = ("v1", "v2", "v3", "v4", "v5", "s1")
 # untrained frontier model. The user message is the same as every other version's, so the problem,
 # its tests and the signature instruction are worded identically. A prompted (untrained) model
 # should not be asked under s1: it has never seen t.
+#
+# "s2" (2026-10-01) is s1 with the parameter and result types spelled as the language spells
+# them. Every earlier version prints the test points' internal kind, and for a nested sequence
+# that is `seq-of-seq`, which is not t: the type is written `seq<seq>` (SPEC.md "Nested
+# sequences"). A prompted model reads the right spelling in the grammar text; a fine-tuned
+# student under s1 has only this sentence, and copies it: on the 18 dev problems whose prompt
+# says `seq-of-seq` the first three students pass no test, and the 4B writes `seq of seq` in 9
+# signatures (t/PREDICT-2026-10-01-base-model-selection.md). s1 stays byte for byte what the
+# registered students were asked under.
+SURFACE_KIND = {"seq-of-seq": "seq<seq>"}
 STUDENT_SYSTEM = ("You write tasks in t, a small verified language. Reply with one fenced t task and "
                   "nothing else: the header line, the task with the requested name and parameters, "
                   "requires and ensures clauses that specify the result, and a body the provers can "
@@ -815,12 +825,15 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
     arity = len(entry["points"][0]["args"])
     kinds = ", ".join(a[0] for a in entry["points"][0]["args"])
     ret = entry["points"][0]["expected"][0]
+    if version == "s2":
+        kinds = ", ".join(SURFACE_KIND.get(a[0], a[0]) for a in entry["points"][0]["args"])
+        ret = SURFACE_KIND.get(ret, ret)
     user = (f"Problem: {r['text'].strip()}\n\nTests:\n{tests}\n\n"
             f"Write the t task named `{entry['fn']}` with {arity} parameter(s) "
             f"of type(s) {kinds}, in the order the tests pass them, returning "
             f"{ret}. The tests must pass and the ensures must specify the "
             f"result.")
-    if version == "s1":
+    if version in ("s1", "s2"):
         return [{"role": "system", "content": STUDENT_SYSTEM}, {"role": "user", "content": user}]
     grammar = (GRAMMAR_V5 if version == "v5" else GRAMMAR_V4 if version == "v4"
                else GRAMMAR_V3 if version == "v3"
