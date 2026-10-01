@@ -59,3 +59,26 @@ adversarial questions and the base's answers above.
 77. At 0.1, of the "yes" answers the gate shows, at least 95% are right (the model alone: 90.1%).
     Falsified below 95%.
 78. At 0.1 the gate keeps at least 85% of the model's right "yes" answers. Falsified below 85%.
+
+## Outcome of the image gate, 2026-10-01 13:35Z
+
+OWLv2 scored every object POPE asks about in each of the 500 images (28 minutes on 8 CPU threads):
+
+| threshold | "yes" shown | of them right (precision) | false "yes" shown | the model's right "yes" kept |
+|---|---:|---:|---:|---:|
+| the model alone | 1,411 | 0.901 | 140 | |
+| 0.1 (the card's example) | 1,345 | **0.917** | 112 | **97.0%** |
+| 0.2 | 985 | 0.947 | 52 | 73.4% |
+| 0.3 | 706 | 0.977 | 16 | 54.3% |
+
+77. **At 0.1 at least 95% of what the gate shows is right: falsified.** 91.7%: at the card's threshold
+    the detector agrees with most of the model's mistakes too.
+78. **At 0.1 it keeps at least 85% of the model's right answers: holds.** 97.0%.
+
+**Reading.** An independent detector does what the provers do for code, at a price that has to be
+chosen: at 0.3 the false claims shown fall from 140 to 16 (precision 97.7%) and half of the true
+ones are withheld as unconfirmed; at 0.1 almost nothing true is lost and a fifth of the false
+claims are stopped. The detector alone at 0.1 is worse than the model (precision 0.789), so it is
+the agreement of two independent judges that helps, not the second judge. Unlike a proof, neither
+judge here is sound; the threshold is a trust level, stated with the answer, the way the code gate
+states how many provers agreed.
