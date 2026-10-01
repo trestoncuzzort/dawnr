@@ -284,3 +284,56 @@ corrected loss and ran out of memory at its second step (13.9 GiB allocated, a f
 asked for, 16 GB card, rank 16, response-only output layer). It has no result. The four-schedule
 probe answered a question that did not exist; its numbers are kept in
 `~/scratch/student/probe/`.
+
+## Outcome for the fine-tuned 4B, 2026-10-01 03:02Z
+
+The 4B student's answers (the run of the correction above: trained on the row-weighted loss with
+the oversized, clipped gradient; the other two on the library's token-weighted loss) went through
+the same gate: all seven kernels on the lab (exit 0, table written), the specification check on
+every task-stage answer (100 draws: 7 agree, 26 disagree, 2 could not be checked), scored by
+`t/score_levels.py`. The evidence record was saved before the check and restored after it.
+
+| candidate | reach a task | tests pass | proved by at least 1, spec checked | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen3.5-4B, prompted (v5) | 9 | 1 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-4B, fine-tuned | 35 | 4 | **3** | 2 | 1 | 0 | 0 |
+| Qwen3.5-2B, fine-tuned | 45 | 4 | 1 | 1 | 0 | 0 | 0 |
+| Qwen2.5-Coder-1.5B, fine-tuned | 23 | 4 | 1 | 1 | 0 | 0 | 0 |
+| the three students pooled | 62 | 10 | 4 | 3 | 1 | 0 | 0 |
+| the three students and the prompted 9B pooled | 64 | 12 | 4 | 3 | 1 | 0 | 0 |
+
+5. **The fine-tuned 4B passes more tests than the prompted 9B and the prompted 14B: falsified.**
+   It passes 4, the same as the prompted 9B (and more than the 14B's 2).
+
+**Answer by answer.** The 4B's four test-passing answers, by kernel (`verified / refuted` counts
+toward the level; anything else does not):
+
+| problem | specification | kernels that prove it and refute its twin | the others |
+|---|---|---|---|
+| 449 `check_Triangle` | agrees | Dafny, Verus, SPARK, Frama-C, Lean (5) | Rocq proves it and leaves the twin unproved; F\* leaves it unproved |
+| 727 `remove_char` | agrees | Dafny, SPARK, Frama-C, F\* (4) | Verus unproved; Lean and Rocq time out |
+| 459 `remove_uppercase` | agrees | Verus, SPARK (2) | Dafny and Lean prove it and time out on the twin; Frama-C and F\* abstain; the task is too big for the Rocq lowering |
+| 92 `is_undulating` | disagrees | Frama-C (1) | six leave it unproved; not counted: its specification is not the problem's |
+
+The first two students' one proved answer is the same problem for both (543 `count_digits`, four
+kernels, the same one the prompted 9B proves). So the three students answer four different
+problems at the first level, and no answer of any of them is proved by six or seven kernels.
+
+**The rule's reading.** All three are at zero for all seven, so the tie goes to at-least-one-kernel:
+the 4B has 3, the other two 1 each. By the rule fixed before any answer, **Qwen3.5-4B is the base**
+for the 8 GB class, and it is the best measured candidate for the 16 GB class too (the 9B has no
+fine-tuned result: it does not fit the card for training at these row lengths).
+
+**What that reading is worth.** The rule picks; the instrument has not shown a difference. The
+4B and the 2B differ on four problems (three only the 4B answers, one only the 2B); an exact
+paired test on four discordant problems gives p = 0.63. The 4B's specification agrees with the
+reference on 7 of the 33 it could be checked on, the first two students' on 6 of 63: more often,
+on counts this small. What it does establish: 25 of the 4B's 35 valid tasks fail their problem's
+tests and 26 of 33 carry a specification that is not the problem's, the same failure as the
+smaller students, at the best training fit of the three. Size from 1.5B to 4B did not move the
+step from English to the right specification on 527 rows.
+
+**What follows.** The 4B is the base for the runs after this one. The specification-given
+measurement already training on the 2B (`t/PREDICT-2026-10-01-spec-given.md`) finishes as
+registered; the ranking between bases is settled by counting more successes (several answers per
+problem with the gate as the filter), registered separately before it runs.
