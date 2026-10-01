@@ -83,3 +83,20 @@ nothing it wrote in two rounds is right. VeriMed's gain is a frontier model's; f
 the witness has to be taught first (the 116 specification rows built today go into the next row
 set). The baseline also did what a baseline is for: its one apparent success exposed a hole in
 the instrument every count rests on.
+
+## Amendment, 2026-10-01 15:20Z, before the 4B on v6 exists: the trained student
+
+The 4B on v6 trains on 79 rows that answer a specification witness with the fixed task
+(`t/PREDICT-2026-10-01-v6.md`). The same loop, unchanged, is put to it on dev: every test-passing
+answer of its greedy and Python-first dev sets as candidates, the base model's Python beside each
+question, two rounds of one greedy and two sampled repairs, on the card between its own dev
+measurements and the specification round. The repaired set goes through the seven kernels and the
+reference check like any other. Why now: scoring the 611 well-formed specifications the 4B on v5 wrote
+on dev (greedy and ten samples) by SAFE's two thresholds, 358 contradict the problem's own examples
+(correctness below 0.8, 70 problems), 125 are too weak (completeness below 0.6, 28), 74 are kept (20)
+and 54 cannot be scored: the specifications are mostly wrong, not merely weak, and the witness is
+the one signal that names how.
+
+51. The 4B on v6 repairs (the stage passes it) at least a third of the dev problems that have a
+    witness to send back.
+52. At least half of the problems it repairs are right by the reference on a complete specification.
