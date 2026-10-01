@@ -52,8 +52,8 @@ a reader reaching a particular paragraph. The headline is in
   program is correct; its proof establishes almost nothing. 7-29% of the
   proven-but-wrong population is exploitable the same way
   ([`locallm/FINDINGS-exploit-2026-09-20.md`](locallm/FINDINGS-exploit-2026-09-20.md)).
-- **With no reference solution, the gate showed a right answer about three
-  times in four; with the stage added on 2026-10-01, about nineteen in twenty.**
+- **With no reference solution, 79% of what the gate showed was right; with
+  the stage added on 2026-10-01, 94%.**
   A person asking a question has no reference, so what they are shown is what
   passes the question's tests and a proof. Measured on 1,038 proved answers to
   training problems, 79% of those carry a specification that is right and
