@@ -139,3 +139,34 @@ agreeing draws, `t/graded_pool.py`).
 **Training pool.** With the repaired check, the one re-read training answer and the first two of
 sixteen chunks of never-graded answers (see the roadmap log), the pool reads 542 rows over 277
 problems, from 527 over 262.
+
+## Amendment, 2026-10-01 04:25Z: a one-character string is read at the type the task declares
+
+The same family of fault, in the test harness and in the check's inputs. The assertion parser
+reads a one-character string as a character (an int) and a longer one as a seq, and the parsed
+test kept no trace of the choice. So a task that declared its parameter a string was refused
+(`is seq, test passes int`) by any test that passed a one-character string, and a task that
+returned a string failed any test whose expected string was one character long. Nine dev
+problems and two held-out ones have tests that disagree with each other this way; no answer
+could pass them.
+
+The repair (after MultiPL-E, arXiv:2208.08227 III-C.2, which types a test's values from the
+function signature): each parsed test records which of its integers are one-character strings
+in the assertion's source (`spec_experiment.mark_characters`; kinds and values are untouched),
+`run_point` reads such a value as a one-character string where the task declares a string, and
+the specification check binds a character drawn for a string position the same way. A task that
+declares a character still reads it as a character. A number is never read as a string.
+
+**What is already known, so it is not a prediction.** Before this amendment the stored answers
+were re-run under the reading: 36 pass every test that did not before. Dev: 25 answers on 4
+problems (11, 113, 377, 958), among them two of the fine-tuned 4B's (113, which four kernels
+already prove, and 377, which one does), one of the fine-tuned 2B's (377) and the prompted 4B's
+and 9B's (377). Held-out: 3 answers on 2 problems (269: two answers of the from-scratch core,
+one of them refuted by two kernels; 961: one answer no kernel has seen). So five of the nine
+dev problems still have no passing answer, and four turn out to have been answered.
+
+19. The one thing not yet seen: no held-out count changes (961's answer does not end proved and
+    specification-checked). Falsified if it does.
+
+These answers go through the provers and the repaired check as `rr2-*` sets; the registered
+tables stay as measured and the counts under this reading are printed beside them.
