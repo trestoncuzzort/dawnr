@@ -60,21 +60,38 @@ def encode_row(tokenizer, row: dict, max_len: int) -> dict | None:
             "labels": [-100] * len(prompt_ids) + answer_ids}
 
 
-def response_loss(base, batch: dict):
+def response_loss(base, batch: dict, num_items_in_batch=None):
     """Cross-entropy on the response tokens, with the output layer applied ONLY at the positions
     that predict them. The standard forward builds logits for every position: with a 248,320-word
     vocabulary one 2,845-token row is 2.6 GiB of logits and ended the 4B and 9B runs on a 16 GB
     card (2026-10-01), though the loss reads only the response. `base.model` is the backbone and
     `base.lm_head` the output layer (measured equal to the model's own logits, to 0.0, on
-    Qwen3.5-2B); a base without those two names takes the standard forward."""
+    Qwen3.5-2B); a base without those two names takes the standard forward.
+
+    The reduction is transformers' own (loss/loss_utils.py, fixed_cross_entropy): given
+    `num_items_in_batch`, the number of target tokens in the whole accumulation window, the token
+    losses are SUMMED and divided by it, so the micro-batches of a window add up to the mean over
+    its tokens; without it, the mean over this batch's tokens. The first version returned the
+    batch mean whatever it was given. The Trainer does not divide such a loss by the accumulation
+    count (trainer.py: "If you are not using `num_items_in_batch` when computing your loss, make
+    sure to overwrite `self.model_accepts_loss_kwargs` to `False`"), so with sixteen accumulated
+    rows the logged loss and the gradient before clipping were sixteen times too large: the 4B
+    run logged 16.56 at its first step where the true loss was 1.04."""
     import torch
     labels = batch["labels"]
     if not (hasattr(base, "model") and hasattr(base, "lm_head")):
-        return base(**batch).loss
+        inputs = dict(batch) if num_items_in_batch is None else {**batch, "num_items_in_batch": num_items_in_batch}
+        return base(**inputs).loss
     hidden = base.model(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]).last_hidden_state
     predicts = labels[:, 1:] != -100                            # position i predicts token i + 1
-    logits = base.lm_head(hidden[:, :-1][predicts])
-    return torch.nn.functional.cross_entropy(logits.float(), labels[:, 1:][predicts])
+    logits = base.lm_head(hidden[:, :-1][predicts]).float()
+    targets = labels[:, 1:][predicts]
+    if num_items_in_batch is None:
+        return torch.nn.functional.cross_entropy(logits, targets)
+    total = torch.nn.functional.cross_entropy(logits, targets, reduction="sum")
+    if torch.is_tensor(num_items_in_batch):
+        num_items_in_batch = num_items_in_batch.to(total.device)
+    return total / num_items_in_batch
 
 
 def load_rows(path: Path) -> list[dict]:
@@ -199,9 +216,9 @@ def main(argv: list[str] | None = None) -> int:
             return encoded[i]
 
     class ResponseOnly(Trainer):
-        def compute_loss(self, model, inputs, return_outputs=False, **_kw):
+        def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **_kw):
             base = model.get_base_model() if hasattr(model, "get_base_model") else model
-            loss = response_loss(base, inputs)
+            loss = response_loss(base, inputs, num_items_in_batch)
             return (loss, None) if return_outputs else loss
 
     trainer = ResponseOnly(model=model, args=args, train_dataset=Rows(),
