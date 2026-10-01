@@ -890,7 +890,8 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
 
 # -------------------------------------------------------------- generate --
 
-def chat(host: str, model: str, messages: list[dict], options: dict, timeout: float, api: str = "ollama") -> dict:
+def chat(host: str, model: str, messages: list[dict], options: dict, timeout: float, api: str = "ollama",
+         flavour: str = "vllm") -> dict:
     """One reply, from Ollama's own API or from an OpenAI-shaped one (vLLM, 2026-09-18). The reply is returned
     in Ollama's shape either way, so every caller and every raw record keeps the same fields."""
     if api == "openai":
@@ -906,7 +907,18 @@ def chat(host: str, model: str, messages: list[dict], options: dict, timeout: fl
             # WS-21: decode against t's own grammar, so the reply cannot be something the parser would refuse.
             # vLLM passes this to xgrammar; the reply is then the task alone, with no prose and no code fence,
             # which is why find_block() has to take a bare task as well (2026-09-18).
-            body["structured_outputs"] = {"grammar": options["grammar"]}
+            if flavour == "llamacpp":
+                body["grammar"] = options["grammar"]          # llama-server's own field (tools/server/README.md)
+            else:
+                body["structured_outputs"] = {"grammar": options["grammar"]}
+        if flavour == "llamacpp":
+            # 2026-10-01: llama-server reads these sampler fields beside the OpenAI ones (tools/server/README.md);
+            # min_p 0 is Ollama's default, so a reference sampled through Ollama and through llama-server is
+            # sampled alike (llama-server's own default is 0.05)
+            for key in ("top_p", "top_k", "repeat_penalty"):
+                if options.get(key) is not None:
+                    body[key] = options[key]
+            body["min_p"] = 0.0
         req = urllib.request.Request(base.rstrip("/") + "/chat/completions",
                                      data=json.dumps(body).encode("utf-8"),
                                      headers={"Content-Type": "application/json",
@@ -1024,8 +1036,9 @@ def _generate(args, d: Path) -> int:
     # recorded options stay what they were.
     for key in ("top_p", "top_k", "repeat_penalty"):
         if getattr(args, key, None) is not None:
-            if getattr(args, "api", "ollama") != "ollama":
-                raise SystemExit(f"generate: --{key.replace('_', '-')} is sent in Ollama's options; not wired for --api openai")
+            if getattr(args, "api", "ollama") != "ollama" and getattr(args, "flavour", "vllm") != "llamacpp":
+                raise SystemExit(f"generate: --{key.replace('_', '-')} is sent in Ollama's options and llama-server's; "
+                                 "not wired for vLLM")
             options[key] = getattr(args, key)
     if getattr(args, "think", None) is not None:
         if getattr(args, "api", "ollama") != "ollama":
@@ -1051,7 +1064,8 @@ def _generate(args, d: Path) -> int:
         messages = build_prompt(P[tid], args.prompt)
         t0 = time.monotonic()
         try:
-            resp = chat(args.host, args.model, messages, options, args.timeout, getattr(args, "api", "ollama"))
+            resp = chat(args.host, args.model, messages, options, args.timeout, getattr(args, "api", "ollama"),
+                        getattr(args, "flavour", "vllm"))
         except (urllib.error.URLError, OSError) as e:
             print(f"generate: task {tid}: no answer from {args.host}: {e}", file=sys.stderr)
             with lock:
@@ -1588,6 +1602,9 @@ def main(argv=None) -> int:
                            help="openai: an OpenAI-shaped server such as vLLM, at --host/v1/chat/completions")
             p.add_argument("--limit", type=int, default=0)
             p.add_argument("--ids-file", default="", help="answer only the task ids in this file, one per line")
+            p.add_argument("--flavour", choices=("vllm", "llamacpp"), default="vllm",
+                           help="--api openai: which server; llamacpp sends the grammar and the sampler fields "
+                                "the way llama-server reads them")
             p.add_argument("--grammar", default="",
                            help="decode against this grammar (t/t.gbnf), so the reply cannot be something the "
                                 "parser would refuse; needs --api openai (WS-21)")
