@@ -44,7 +44,7 @@ trusted because what it writes is checked.
 
 | part | state |
 |---|---|
-| the model behind the gate | **being chosen by measurement**: six Apache-2.0 candidates from 1.5B to 14B answered 100 dev problems through the gate; prompted, none that fits a small card knows `t` (0 to 1 tests passed; the 9B passes 4 and is the only one with a proved, specification-checked answer), so each small candidate is fine-tuned on the same 527 proved answers and re-measured ([registration and outcomes](t/PREDICT-2026-10-01-base-model-selection.md)) |
+| the model behind the gate | **not chosen yet; first fine-tuned results are in and are weak.** Six Apache-2.0 candidates from 1.5B to 14B answered 100 dev problems through the gate. Prompted, none that fits a small card knows `t` (0 to 1 tests passed; the 9B passes 4 and has 1 proved, specification-checked answer). Fine-tuned on 527 proved answers, the 1.5B and 2B write valid `t` far more often (23 and 45 of 100, from 5 and 2) but each has **1 proved, specification-checked answer in 100**, the same as the untrained 9B: 57 of their 68 valid tasks carry a specification that disagrees with the problem's reference. A 4B fine-tune was damaged in its first training steps and is not counted; the cause is being measured. One answer per problem cannot rank bases at this rate ([registration and outcomes](t/PREDICT-2026-10-01-base-model-selection.md)) |
 | core model (`locallm/`): a GPT trained from scratch (research since 2026-10-01) | built; pretraining sweep done; the general-English pilot ran 2026-09-29 ([outcome](t/PREDICT-2026-09-29-dawnr-english-pilot.md)): English before code beats code alone at matched tokens, no core moves the specification column off 0. r12's core ran 2026-09-30 ([outcome](t/PREDICT-2026-09-30-dawnr-r12-core.md)): 3.7B English tokens, then code, the lowest code validation loss of any core (1.140), and the judgement unchanged: well formed on 45 of 100 dev problems, none passing its shown examples, the specification column at 0. By its registration the proved corpus, not the core, is the next lever; the 16B-token English set stays staged for a larger core when a free allocation exists |
 | proof engine (`t/`): `t`, seven provers, twins, specification checks | built and hardened |
 | data engine: lifting verified Dafny, Verus, Lean and C programs into `t` | **464 documents clean in all seven provers** (from 194 on 2026-09-26), 569 with graded trust (six clean, the missing prover recorded); r12 trains on the 463 registered before its launch |
@@ -67,7 +67,9 @@ refutes. **The from-scratch model does not**: zero on every held-out measure,
 after every round, core and sampling run, which is what published results
 predict at its size and data. **What is being built now**: a small openly
 licensed model fine-tuned on everything the gate admits, measured on problems
-it has not seen. Every number links back to the run that produced it, and
+it has not seen. Its first measurement (2026-10-01) is 1 proved answer in 100
+for each of two small students: they learned the language, and their
+specifications are mostly wrong. Every number links back to the run that produced it, and
 failures are published beside successes ([CORRECTIONS.md](CORRECTIONS.md), [LIMITS.md](LIMITS.md)).
 
 ## How progress is measured
