@@ -90,3 +90,37 @@ measured with sampling at 0.7 where this is greedy; they are context for the sca
 noise. When they are silent it more often answers anyway, from memory or from nothing, than says it
 cannot. That is the case the support check (predictions 88 to 90) is for; it scores these same replies
 on the lab next.
+
+## Outcome of the gate, 2026-10-01 17:30Z: AlignScore-large on every reply, the rule of 14:27Z
+
+1,680 replies scored on the lab's CPU (`locallm/rag_gate.py`); a reply is shown when it does not say the
+information is insufficient and its score is at least 0.5. Other thresholds reported, not chosen from:
+
+| noise rate | replies | rejected | right | shown / right at 0.3 | shown / right at 0.5 | shown / right at 0.7 | shown / right at 0.9 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 0.0 | 300 | 2 | 294 | 295 / 292 | 273 / 270 | 193 / 192 | 79 / 79 |
+| 0.2 | 300 | 2 | 290 | 295 / 287 | 279 / 274 | 190 / 187 | 85 / 83 |
+| 0.4 | 300 | 3 | 287 | 295 / 285 | 275 / 266 | 187 / 182 | 90 / 87 |
+| 0.6 | 300 | 6 | 279 | 290 / 275 | 259 / 245 | 171 / 163 | 68 / 64 |
+| 0.8 | 300 | 15 | 259 | 280 / 255 | 240 / 219 | 145 / 133 | 49 / 44 |
+| 1.0 | 300 | 92 | 92 | 196 | 144 | 63 | 12 |
+
+88. **With no document holding the answer it shows at most 20% of the replies that do not reject:
+    falsified.** It shows 144 of 208 (69.2%).
+89. **At noise rate 0.4 it keeps at least 80% of the right answers: holds.** 266 of 287 (92.7%).
+90. **At noise rate 0.4 the share right among what it shows is higher than among all replies: holds,
+    barely.** 96.7% (266 of 275) against 95.7% (287 of 300).
+
+**What 88's 144 are, measured.** RGB's answer check is an exact substring, so "Świątek" misses "Swiatek"
+and "21st October" misses "October 21". Read again with diacritics, ordinal suffixes and case folded, the
+five noise-rate-1 documents hold the answer for 19 of the 300 questions (2 by the exact check); that
+accounts for 17 of the 144 shown. The other 127 were shown although their documents lack the answer; 45
+of them state the right answer anyway (from what the model knew), and the rest state something else. Read
+by hand, the shown replies quote the documents at length and put one answer sentence among the quotes,
+sometimes a wrong one ("Xander Schauffele (referred to as Scheffler in the text)").
+
+**Reading, and what it does not yet say.** AlignScore's score is the mean over a reply's sentences of each
+one's best support, by design ("taking the average prevents a single inconsistent claim sentence from
+dominating the final score", the paper, 3.2): right for grading a summary, the opposite of what a gate wants, where one
+unsupported sentence is the failure. That is the suspected cause of 88; it is measured next (the same
+scores with the minimum over sentences in place of the mean) and stays a suspicion until then.
