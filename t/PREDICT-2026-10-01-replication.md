@@ -56,7 +56,7 @@ The lab's cards have been held by another user's jobs for three days (each 7 to 
   with four slots on 40 threads (nice 19; our four idle Qwen servers stopped to make room) runs the greedy
   set first, then the sixteen sampled sets, as long as they take.
 
-Serving note, 2026-10-01 20:44Z (speed only; weights, grammar, prompt and sampling unchanged): the four-slot
+Serving note, 2026-10-01 20:40Z (speed only; weights, grammar, prompt and sampling unchanged): the four-slot
 server ran about one core's worth (llama.cpp samples under a grammar on the server's main thread; the grammar
 README warns of "performance gotchas"): 29 answers in the hour to 20:37Z, a third of them running to the 3,072-
 token cap. It was replaced by six one-slot servers of six threads each, six workers each taking its own answer
