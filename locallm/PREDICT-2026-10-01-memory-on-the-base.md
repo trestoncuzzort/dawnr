@@ -26,3 +26,29 @@ tokens. Two models, at the lab's CPU through llama.cpp:
 72. Neither invents a preference when the store is empty: at most 1 of the 28. Falsified above 1.
 73. The student applies the remembered parameter name to a program that still passes its examples on
     at least 3 of the 14 `use` items (the from-scratch model: 0). Falsified below 3.
+
+## Outcome, 2026-10-01 13:04Z
+
+The 112 held-out items, dawnr's own recall in a system turn, greedy:
+
+| | from-scratch, trained on memory (on record) | the base, untrained | the student (4B on v4, Q8_0) |
+|---|---:|---:|---:|
+| recalls the remembered preference when there is one (28) | 0.46 | **1.00** | 0.61 |
+| says it remembers nothing when there is nothing (28) | 1.00 | 0.64 | 0.00 |
+| invents a preference when there is nothing (28) | 0 | **0** | **0** |
+| applies the remembered parameter name, program passing its examples (14) | 0 | 0 | 0 |
+| follows the person's current words over a contradicting memory, program passing (14) | 0 | 0 | **0.79** |
+| leaves a program alone when the memory does not apply (14) | 0.07 | 0 | 0.36 |
+
+71. **Both recall at least 80%: falsified.** The base recalls every remembered preference (28 of 28);
+    the student only 17 of 28.
+72. **Neither invents a preference from an empty store: holds.** Neither did, on any of the 28.
+73. **The student applies the remembered name on at least 3 of 14: falsified.** None.
+
+**Reading.** The chosen base remembers a person from dawnr's store perfectly in conversation and
+never invents a memory; it cannot apply a preference to a `t` program because it cannot yet write
+one. Fine-tuning on `t` cost the student its conversational recall (it answers "what do you
+remember about me?" with a task more often than with the memory) but it writes programs, and when
+the person's words and the memory disagree it follows the person, as it should, 11 times in 14. No
+one model does all of it yet; the memory conversations (197 rows, built for the from-scratch core)
+are the published-shaped way to teach the student the rest, and they go into the next row set.
