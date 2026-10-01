@@ -74,3 +74,16 @@ admitted for being proved, not for being novel, and the clean-200 gate stays whe
   commands, the prompts and the four predictions above are unchanged; the corpus re-registration
   the text mentions is replaced by the student's pool, at every trust level with the level
   recorded.
+
+## Stopped, 2026-10-01 02:22Z: not an outcome
+
+The operator's instruction at 02:21Z: use our own machines; no outside compute unless it is
+Google or AWS. The rented server was stopped at once (the provider lists the app as stopped and
+nothing deployed), 30 minutes after launch and 19 minutes after it became healthy. October's
+metered cost at the stop reads 2.36, all of it credit, 0.00 billed.
+
+What exists: 74 of the specification-prompt sample files on the lab
+(`t/out/rl-2026-10-01/specpool/samples`); none of the eight training-problem answer sets was
+started. Nothing was scored. **None of the four predictions above was tested**, and this round is
+not a result. A teacher round on our own hardware, with whatever model fits it, is a new
+registration with its own predictions; these stand unresolved.
