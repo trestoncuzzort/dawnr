@@ -34,5 +34,8 @@ The released adapters are trained without the 52 rows that name a dafny-synthesi
 the release states every source above. Whether the 47 translated programs stay in this repository
 under its licence is the operator's decision; this note records the fact.
 
-The 127 DafnyBench programs from other GitHub repositories carry the licences of those repositories,
-which have not been checked one by one; that check comes before the release too.
+The 127 DafnyBench programs from other GitHub repositories are used under DafnyBench's own
+Apache-2.0, as a published dataset is. They cannot be traced one by one: DafnyBench records each
+program's file name with its repository's name and no owner (`test_file`, e.g.
+`630-dafny_tmp_tmpz2kokaiq_Solution.dfy`, read from its dataset viewer today). The dafny-synthesis
+programs are treated differently because their upstream licence is known and is share-alike.
