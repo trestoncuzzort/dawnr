@@ -427,7 +427,19 @@ ints and a yes/no answer as bool.
 Reply with exactly one t task inside a ```t fenced block and nothing else.
 """
 
-PROMPT_VERSIONS = ("v1", "v2", "v3", "v4", "v5")
+PROMPT_VERSIONS = ("v1", "v2", "v3", "v4", "v5", "s1")
+
+# "s1" (2026-10-01) is the prompt of a FINE-TUNED student: no grammar text and no few-shot tasks,
+# because a model trained on t answers knows the language and the 10,000-character description
+# then costs ten times the tokens of the answer on every row, in training and at every question.
+# SAFE (arXiv:2410.15756) fine-tunes on the task alone and keeps long engineered prompts for the
+# untrained frontier model. The user message is the same as every other version's, so the problem,
+# its tests and the signature instruction are worded identically. A prompted (untrained) model
+# should not be asked under s1: it has never seen t.
+STUDENT_SYSTEM = ("You write tasks in t, a small verified language. Reply with one fenced t task and "
+                  "nothing else: the header line, the task with the requested name and parameters, "
+                  "requires and ensures clauses that specify the result, and a body the provers can "
+                  "verify (loop invariants and decreases where there is a loop).")
 
 # GRAMMAR_V2 is GRAMMAR plus the sequence trio (literal, concatenation,
 # slice) and the string sugar (SPEC.md "Sequences: literals, concatenation,
@@ -808,6 +820,8 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
             f"of type(s) {kinds}, in the order the tests pass them, returning "
             f"{ret}. The tests must pass and the ensures must specify the "
             f"result.")
+    if version == "s1":
+        return [{"role": "system", "content": STUDENT_SYSTEM}, {"role": "user", "content": user}]
     grammar = (GRAMMAR_V5 if version == "v5" else GRAMMAR_V4 if version == "v4"
                else GRAMMAR_V3 if version == "v3"
                else GRAMMAR_V2 if version == "v2" else GRAMMAR)

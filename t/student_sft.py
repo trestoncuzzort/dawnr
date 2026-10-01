@@ -14,8 +14,9 @@ Two published recipes, neither ours:
   the fine-tuning is QLoRA's (arXiv:2305.14314, appendix B.2 and table 9): the base in 4-bit NF4
   with double quantisation and bf16 compute, LoRA r 64, alpha 16, dropout 0.1 on all linear layers
   of the transformer blocks, a constant learning rate of 2e-4, Adam beta2 0.999, gradient norm
-  clipped at 0.3, batches of 16 grouped by length, and the loss on the response only (B.3: "only
-  training on the target is beneficial").
+  clipped at 0.3, batches of 16, and the loss on the response only (B.3: "only training on the
+  target is beneficial"). QLoRA also groups rows by length inside a batch; here a batch is one row
+  with sixteen accumulated, so there is nothing to group (and transformers 5 dropped the option).
 
 The seed is set before the adapter is created. In TRL's trainers the adapter is initialised before
 the seed is set, so two runs of one configuration start from different adapters (the operator's
@@ -137,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=str(a.out / "trainer"), per_device_train_batch_size=a.batch,
         gradient_accumulation_steps=a.grad_accum, num_train_epochs=a.epochs, learning_rate=a.lr,
         lr_scheduler_type="constant", adam_beta2=0.999, max_grad_norm=0.3, bf16=True,
-        optim="paged_adamw_32bit", group_by_length=True, logging_steps=5, save_strategy="no",
+        optim="paged_adamw_32bit", logging_steps=5, save_strategy="no",
         report_to=[], seed=a.seed, data_seed=a.seed, remove_unused_columns=False)
 
     class Rows(torch.utils.data.Dataset):
