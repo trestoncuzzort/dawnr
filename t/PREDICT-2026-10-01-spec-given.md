@@ -208,3 +208,25 @@ that is proved is proved by all seven kernels; none sits between one and six.
     than under `s1`: holds by one, and it changes nothing that matters.** 9 valid tasks against
     8; no test passes under either (7 fail under each). The spelling in the prompt is not what
     stops these problems.
+
+## The v4 student's dev answers through the gate, 2026-10-01 04:42Z
+
+The 100 dev problems, one greedy answer each (served and asked exactly as the first students
+were), all seven kernels on the lab, the specification check on every task-stage answer (53
+checked: 6 agree, 44 disagree, 3 could not be checked).
+
+| student (Qwen3.5-2B) | reach a task | tests pass | proved by at least 1, spec checked | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| on the 527 English rows (the control) | 45 | 4 | 1 | 1 | 0 | 0 | 0 |
+| on the v4 rows | 53 | 5 | 2 | 2 | 1 | 1 | **1** |
+
+The two answers that count: 476 `big_sum`, proved by all seven kernels (the control's answer to
+the same problem had the right specification and a program all seven refuted), and 727
+`remove_char`, proved by four. This is the first student answer from English that all seven
+kernels prove with the specification checked. The table is the same under the repaired harness
+and specification check (`t/PREDICT-2026-10-01-spec-check-coverage.md`): none of this student's
+answers was touched by either.
+
+It is two problems of a hundred, and one more than the control: the added rows did not harm the
+English task (prediction 12) and did not solve it. 44 of the 50 specifications that could be
+checked are still not the problem's.
