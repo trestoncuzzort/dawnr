@@ -856,17 +856,24 @@ def fewshot_text(version: str = "v1") -> str:
     return "\n\n".join(parts)
 
 
+def signature_words(entry: dict, surface: bool = False) -> tuple[int, str, str]:
+    """(number of parameters, their kinds, the result's kind) as the prompt states them, read
+    from the problem's first test. `surface` spells a nested sequence as the language does
+    (`seq<seq>`, prompt s2); without it the pool's own kind names are printed, as every prompt
+    before s2 did."""
+    args = entry["points"][0]["args"]
+    ret = entry["points"][0]["expected"][0]
+    if surface:
+        return len(args), ", ".join(SURFACE_KIND.get(a[0], a[0]) for a in args), SURFACE_KIND.get(ret, ret)
+    return len(args), ", ".join(a[0] for a in args), ret
+
+
 def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
     if version not in PROMPT_VERSIONS:
         raise ValueError("prompt version must be one of %s, got %r" % (", ".join(PROMPT_VERSIONS), version))
     r = entry["rec"]
     tests = "\n".join(r["test_list"])
-    arity = len(entry["points"][0]["args"])
-    kinds = ", ".join(a[0] for a in entry["points"][0]["args"])
-    ret = entry["points"][0]["expected"][0]
-    if version == "s2":
-        kinds = ", ".join(SURFACE_KIND.get(a[0], a[0]) for a in entry["points"][0]["args"])
-        ret = SURFACE_KIND.get(ret, ret)
+    arity, kinds, ret = signature_words(entry, surface=version == "s2")
     user = (f"Problem: {r['text'].strip()}\n\nTests:\n{tests}\n\n"
             f"Write the t task named `{entry['fn']}` with {arity} parameter(s) "
             f"of type(s) {kinds}, in the order the tests pass them, returning "
