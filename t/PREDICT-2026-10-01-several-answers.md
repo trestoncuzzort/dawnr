@@ -331,3 +331,13 @@ idiom (the proof round and the specification round both produce them), and repai
 message names the idiom, since a model repairs from a concrete message and not from "expected
 'in', found ':'" (VeriMed, arXiv:2605.13817: 98.5% with the concrete witness, 58.5% with a
 generic retry).
+
+## The rule applied, 2026-10-01 14:11Z
+
+`~/scratch/heldout/choose_arms.py` (the rule as amended at 08:16Z, complete specifications, both
+students read under the repaired check) named **the 4B on v5 with the Python first**: 5 dev
+problems proved on complete specifications, 1 by all seven, 17 model calls a problem. Every other
+measured pair read 4 or fewer (the 4B on v4's best, ten answers and the specification first: 4;
+the 4B on v5's greedy, ten-answer, specification-first and repair arms: 4 each; retrieved: 3). The
+held-out run started at 14:11:50Z, once, on the clean 200. The reference is owed the same 17 calls
+a problem: one greedy answer and sixteen sampled.
