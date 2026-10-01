@@ -2722,8 +2722,10 @@ them the model:
 3. **661 training answers that pass their tests had never been sent to the provers.** 456 are
    the 235B's answers over the whole training pool (`qwen235-train-p4`, generated in September,
    2,766 answers); the rest are repair sets. They cover 557 problems, 344 with no admitted
-   answer. They are being proved on the lab in sixteen chunks, new problems first; the first
-   two chunks (120 answers) admit 11 new problems.
+   answer. All 661 went through the seven kernels on the lab in sixteen chunks, finished
+   06:51Z: 323 are proved by at least one kernel with none refuting (139 by all seven). With
+   them, the answers the two harness faults had refused and the repaired check, the training
+   pool reads 664 rows over 300 problems at 06:53Z, from 527 over 262.
 4. **The student's prompt names a type the language does not have** (`seq-of-seq` for
    `seq<seq>`), and of the 527 training answers 9 use a specification function and none a nested
    sequence, while 73 of the 100 dev problems are sequence and string problems. Corrected
