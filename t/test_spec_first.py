@@ -128,3 +128,11 @@ def test_given_specifications_are_read_stripped_and_scored(tmp_path, monkeypatch
     out = json.loads((tmp_path / "g" / "spec_first.json").read_text())
     assert out["with a kept specification"] == 1 and out["per_problem"]["1"]["kept"] == 1
     assert out["per_problem"]["1"]["dropped"] == 1
+
+
+def test_the_reference_python_route_refuses_a_problem_that_is_not_on_the_training_side(tmp_path):
+    import pytest
+    ids = tmp_path / "ids.txt"; ids.write_text("7\n")                 # a dev problem
+    with pytest.raises(SystemExit) as e:
+        spec_first.main(["--model", "none", "--reference-python", "--tag", "x", "--ids-file", str(ids)])
+    assert "not on the training side" in str(e.value)

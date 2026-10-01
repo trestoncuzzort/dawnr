@@ -113,14 +113,51 @@ def build(pool_rows: list[dict], pool: dict) -> tuple[list[dict], dict]:
     return rows, {"pool_rows": len(pool_rows), "problems": len(seen_python), **counts}
 
 
+def build_from_specs(kept: list[dict], pool: dict, skip: set[int]) -> tuple[list[dict], dict]:
+    """python and spec rows for problems that have a kept specification and no proved answer:
+    t/spec_first.py --reference-python writes them (kept by the problem's own tests AND by the
+    reference check), and a right specification teaches specification writing whether or not a
+    proof for it exists yet (SAFE keeps up to three a function, arXiv:2410.15756 3.2). Problems
+    in `skip` (the pool's, which already give rows) are left out."""
+    rows, counts = [], Counter()
+    for k in kept:
+        tid = int(k["task_id"])
+        if tid in skip:
+            counts["already in the pool"] += 1
+            continue
+        entry = pool[tid]
+        code = (entry["rec"].get("code") or "").strip("\n")
+        if not code.strip():
+            continue
+        base = {"task_id": tid, "tag": "kept-specs", "name": None, "kernels_verified": 0, "undecided": []}
+        rows.append({**base, "source": "python", "prompt": python_question(entry), "chosen": python_block(code)})
+        counts["python"] += 1
+        seen = set()
+        for task in k["tasks"][:3]:
+            spec = se.rename_task(specification_of(json.loads(json.dumps(task))), entry["fn"])
+            text = loop_dataset.fence(surface.print_task(spec).strip())
+            if text in seen:
+                continue
+            seen.add(text)
+            rows.append({**base, "source": "spec", "prompt": spec_question(entry, code), "chosen": text})
+            counts["spec"] += 1
+    return rows, {"problems": counts["python"], **counts}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pool-rows", type=Path, required=True)
+    ap.add_argument("--kept-specs", type=Path, help="t/spec_first.py's kept-specs.jsonl for unproved training problems")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--pool", choices=se.POOL_VERSIONS, default="v5")
     a = ap.parse_args(argv)
     pool_rows = [json.loads(l) for l in a.pool_rows.read_text(encoding="utf-8").splitlines() if l.strip()]
     rows, report = build(pool_rows, se.pool(a.pool))
+    if a.kept_specs:
+        kept = [json.loads(l) for l in a.kept_specs.read_text(encoding="utf-8").splitlines() if l.strip()]
+        more, rep2 = build_from_specs(kept, se.pool(a.pool), {int(r["task_id"]) for r in pool_rows})
+        rows += more
+        report["from kept specifications"] = rep2
     a.out.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
     print(json.dumps(report))
     return 0
