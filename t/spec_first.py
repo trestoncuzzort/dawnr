@@ -176,6 +176,9 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True)
     ap.add_argument("--from-samples", nargs="*", default=[], metavar="TAG")
+    ap.add_argument("--given-specs", type=Path, metavar="JSONL",
+                    help='specifications to prove, one problem a line: {"task_id", "tasks": [task JSON, ...], '
+                         '"sources": [...]}; each is stripped of its body and scored like any other candidate')
     ap.add_argument("--python", type=int, default=0, metavar="K",
                     help="the student first writes Python (K attempts, each run on the problem's tests in "
                          "t/py_sandbox.py), then specifications from the problem and that Python, and the "
@@ -193,8 +196,14 @@ def main(argv: list[str] | None = None) -> int:
 
     P = {str(k): v for k, v in se.pool(a.pool).items()}
     ids = [x for x in a.ids_file.read_text(encoding="utf-8").split() if x.strip()]
-    if not a.from_samples and not a.python:
-        ap.error("give --from-samples, --python, or both")
+    if not a.from_samples and not a.python and not a.given_specs:
+        ap.error("give --from-samples, --given-specs, --python, or a mix")
+    given = {}
+    if a.given_specs:
+        for line in a.given_specs.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                g = json.loads(line)
+                given[str(g["task_id"])] = list(zip(g["sources"], g["tasks"]))
     python, python_counts, written, model, tokenizer, student_generate = {}, {}, {}, None, None, None
     if a.python:
         if a.stage1_only:
@@ -211,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         written = written_specifications(decode, python, P, a.spec_samples, a.batch, a.max_new)
     per, stats = {}, {}
     for tid in ids:
-        tasks = list(written.get(tid, []))
+        tasks = list(written.get(tid, [])) + list(given.get(tid, []))
         for tag in a.from_samples:
             d = se.OUT_ROOT / se.model_tag(tag)
             try:
