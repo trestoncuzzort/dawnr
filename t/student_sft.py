@@ -221,7 +221,17 @@ def main(argv: list[str] | None = None) -> int:
             loss = response_loss(base, inputs, num_items_in_batch)
             return (loss, None) if return_outputs else loss
 
-    trainer = ResponseOnly(model=model, args=args, train_dataset=Rows(),
+    from transformers import TrainerCallback
+
+    class PrintLoss(TrainerCallback):
+        """Each logged loss, printed as it happens. The Trainer keeps them in memory until the end;
+        a run whose loss is wrong (2026-10-01: sixteen times too large) was visible only after it
+        finished."""
+        def on_log(self, _args, state, _control, logs=None, **_kw):
+            if logs and "loss" in logs:
+                print(f"step {state.global_step}: loss {float(logs['loss']):.4f}", flush=True)
+
+    trainer = ResponseOnly(model=model, args=args, train_dataset=Rows(), callbacks=[PrintLoss()],
                            data_collator=lambda fs: pad_batch(fs, tokenizer.pad_token_id))
     started = time.time()
     result = trainer.train()
