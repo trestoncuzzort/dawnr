@@ -61,3 +61,10 @@ are judged under this stricter rule.
 The round was registered with the 4B on v5. The 4B on v6 will exist before the card is free for it
 (it trains after the held-out reference, `t/PREDICT-2026-10-01-v6.md`), so the round runs with the 4B
 on v6, and with the 4B on v5 only if v6 fails to train. Predictions 36 to 38 are unchanged.
+
+## Amendment, 2026-10-01 19:13Z, before the round has generated anything: back to the 4B on v5
+
+The amendment of 14:16Z moved the round to the 4B on v6. Measured since (`t/PREDICT-2026-10-01-v6.md`, part 3),
+v6 is worse at both halves of the round's task: given a specification it proves 26 of 33 by all seven where v5
+proves 28, and from tested Python it keeps a specification on 10 dev problems where v5 keeps 15. The round
+runs with the measured-best student for it, the 4B on v5. Predictions 36 to 38 are unchanged.
