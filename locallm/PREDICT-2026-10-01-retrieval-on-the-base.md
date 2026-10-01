@@ -38,3 +38,23 @@ answer anyway (from memory) and how many hold neither (an invention), counted by
 
 Runs on the lab after the tools measurement gives the servers back (`~/scratch/rgb/run.sh`, sentinel
 `RGB-DONE`).
+
+## Amendment, 2026-10-01 14:27Z, before any answer: the gate for retrieved answers
+
+The proofs are dawnr's filter for programs; the image gate (`locallm/PREDICT-2026-10-01-seeing.md`) is one
+for what it says it sees. For what it says from documents the filter is a check, by a separate model, that
+the documents support the reply: **AlignScore** (Zha et al., ACL 2023, arXiv:2305.16739;
+github.com/yuh-zha/AlignScore and huggingface.co/yzha/AlignScore, both MIT). Its method, taken whole: the
+context is split into chunks of about 350 words at sentence boundaries, the claim into sentences; each claim
+sentence is scored against every chunk by the probability of ALIGNED from its three-way head; the score is the
+mean over claim sentences of the best chunk (its `nli_sp` mode; the paper's Table 2: AlignScore-large 88.6
+average AUC on SummaC, base 87.4). Here the context is the five documents the question was given and the claim
+is the reply. AlignScore-large, ported to load its checkpoint without PyTorch Lightning (`locallm/rag_gate.py`).
+
+**The rule, fixed now:** a reply is shown when it does not say the information is insufficient and its
+AlignScore is at least 0.5. Other thresholds are reported, not chosen from.
+
+88. With no document holding the answer (noise rate 1), the gate shows at most 20% of the replies that do
+    not reject.
+89. At noise rate 0.4 it keeps at least 80% of the right answers.
+90. At noise rate 0.4 the share right among the replies it shows is higher than among all replies.
