@@ -137,3 +137,22 @@ Predictions for the 4B arm, set before the 2B's results are known:
     Falsified below 40.
 15. On the 100 dev problems it has at least 3 answers proved by at least one prover with the
     specification checked (the 4B on the 527 rows: 3). Falsified below 3.
+
+## Amendment, 2026-10-01 03:16Z, before any answer: a prompt-spelling diagnostic on 18 dev problems
+
+Counted from the first three students' answers
+(`t/PREDICT-2026-10-01-base-model-selection.md`, "Where the students' 300 answers stop"): 18 of
+the 100 dev prompts tell the student a parameter or the result is `seq-of-seq`. That is the test
+points' internal name, not the language's: the type is written `seq<seq>`. On those 18 the three
+students pass no test and reach a valid task on 1, 4 and 2; the 4B writes `seq of seq` in nine
+signatures. None of the 527 English training answers contains `seq<seq>`.
+
+Prompt `s2` is `s1` with that one spelling corrected and nothing else (4 tests). The diagnostic:
+the 2B trained on v4 answers those 18 problems twice with the same decoder
+(`t/student_generate.py`, greedy, one at a time), once under `s1` and once under `s2`; extract
+and tests on both. It is a diagnostic of the prompt, not a new score: the registered dev result
+stays the `s1` one.
+
+16. Under `s2` the student reaches a valid task on more of the 18 than under `s1`. Falsified
+    if it reaches the same number or fewer. No prediction on tests passed: the student has seen
+    six `seq<seq>` answers in training, all specification-given.
