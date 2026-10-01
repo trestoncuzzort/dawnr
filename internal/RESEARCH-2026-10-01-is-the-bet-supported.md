@@ -137,7 +137,7 @@ missing ones mostly did not refute it: Frama-C abstained 9 times, Rocq timed out
 No new compute was needed for any of this. Answer-set summaries: `~/scratch/scan_tags.py`,
 `~/scratch/kernel_counts.py`, `~/scratch/pretrained-outcomes.json` on the lab.
 
-## What "proved" costs at each trust level (2026-10-01 00:38Z)
+## What "proved" costs at each trust level (2026-10-01 00:35Z)
 
 Two measurements on the lab, no new generation.
 
