@@ -51,5 +51,56 @@ class Message(unittest.TestCase):
         self.assertEqual(debug_rows.attempt_text({"wellformed": True, "text": "ok"}), "ok")
 
 
+class SpecificationWitness(unittest.TestCase):
+    """The specification check's own witness, in words (VeriMed, arXiv:2605.13817: the concrete
+    counterexample is what drives repair, 98.5% against 58.5% for a generic retry)."""
+
+    def setUp(self):
+        import random
+        import surface
+        self.random, self.surface = random, surface
+        self.entry = {"fn": "remove_upper", "rec": {"code": "def remove_upper(s):\n    return ''.join(c for c in s if not c.isupper())\n",
+                                                    "test_list": ['assert remove_upper("aBc") == "ac"'], "text": ""},
+                      "points": [{"ok": True, "fn": "remove_upper", "args": [["seq", [97, 66, 99]]], "expected": ["seq", [97, 99]]}]}
+
+    def task(self, ensures):
+        return self.surface.parse("t 1\ntask remove_upper(s: seq) returns (r: seq)\n" + "".join(f"  ensures {e}\n" for e in ensures)
+                                  + "{\n  r := s;\n}\n")
+
+    def check(self, task):
+        return spec_check.check_task(task, self.entry, 100, self.random.Random(1))
+
+    def test_a_weak_specification_is_told_a_wrong_output_it_also_accepts_in_the_problems_notation(self):
+        task = self.task(["len(r) <= len(s)", "forall k in [0, len(r)) . r[k] < 65 or r[k] > 90"])
+        result = self.check(task)
+        self.assertEqual(result["status"], "agrees")
+        said = debug_rows.spec_message(self.entry, task, result)
+        self.assertTrue(said.startswith(debug_rows.SPEC_WEAK))
+        self.assertIn("remove_upper('", said)                       # the call, with a string as a string
+        self.assertIn("the answer is '", said)
+        self.assertIn("also accepts '", said)
+
+    def test_a_false_specification_is_told_the_input_the_answer_and_the_clause(self):
+        task = self.task(["len(r) == len(s)"])
+        result = self.check(task)
+        self.assertEqual(result["status"], "disagrees")
+        said = debug_rows.spec_message(self.entry, task, result)
+        self.assertTrue(said.startswith(debug_rows.SPEC_WRONG))
+        self.assertIn("this clause does not hold there:\n  ensures len(r) == len(s)", said)
+
+    def test_a_right_and_complete_specification_gets_no_message(self):
+        task = self.surface.parse("t 1\ntask remove_upper(s: seq) returns (r: seq)\n  ensures r == s\n{\n  r := s;\n}\n")
+        lower = dict(self.entry, rec=dict(self.entry["rec"], code="def remove_upper(s):\n    return s\n"))
+        result = spec_check.check_task(task, lower, 100, self.random.Random(1))
+        self.assertEqual((result["status"], result.get("completeness")), ("agrees", 1.0))
+        self.assertIsNone(debug_rows.spec_message(lower, task, result))
+
+    def test_a_verdict_without_a_witness_or_one_that_does_not_render_says_nothing(self):
+        task = self.task(["len(r) <= len(s)"])
+        self.assertIsNone(debug_rows.spec_message(self.entry, task, {"status": "disagrees"}))
+        self.assertIsNone(debug_rows.spec_message(self.entry, task, {"status": "agrees", "completeness": 0.1}))
+        self.assertIsNone(debug_rows.spec_message(self.entry, task, {"status": "no valid draws"}))
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
