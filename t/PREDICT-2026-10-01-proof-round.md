@@ -46,3 +46,17 @@ disagree with the reference, 71 are taken, for 63 more problems. The round is no
 problems and 352 specifications. Predictions 30 and 31 stay as written (their thresholds were
 set for 210; they are now easier to meet by a quarter, and the outcome will say how many of each
 count come from the 63).
+
+## Amendment, 2026-10-01 07:01Z: a second pass on the problems the first pass left
+
+The first pass (one greedy answer and two sampled for each of 352 specifications) took an
+answer on 167 of the 273 problems: 135 on the greedy answer, 25 more on the first sample, 7 more
+on the second. Those 167 are with the kernels now. Prediction 30 (at least 40 taken) holds on
+the first pass alone.
+
+The card is free for about three quarters of an hour before the next training can start (it
+waits for these answers to be graded), so the 106 problems left get six more sampled answers a
+specification, same temperature, as a second answer set (`round1b-proofs-4b-v4`). Same gates,
+same admission rule. The falling yield of the first pass (135, 25, 7) says to expect few.
+
+32. The second pass takes an answer on at most 20 of the 106. Falsified by more than 20.
