@@ -224,7 +224,7 @@ several answers per problem with the gate as the filter (SAFE reports its 1.3B b
 with one answer and 40.3% with ten, arXiv:2410.15756 table 8). That measurement is registered
 separately before it runs.
 
-## Correction, 2026-10-01 02:35Z: the 4B run was not damaged; the logging was wrong, and it was my change
+## Correction, 2026-10-01 02:33Z: the 4B run was not damaged; the logging was wrong, and it was my change
 
 The section above ("The 4B's fine-tune was damaged in its first steps") is wrong in its title, its
 table's reading and its account. It is left in place as written; this replaces it.
@@ -272,7 +272,7 @@ Fixed: `response_loss` takes the count and reduces as the library does (a test p
 stated beside it: it was trained on the row-weighted loss with the oversized, clipped gradient;
 they were trained on the library's token-weighted loss. On the 100 dev problems it reaches a
 task on 35 and passes the tests on 4 (extracted with `--promote-header`). Its answers went to
-the provers at 02:30Z.
+the provers at 02:31Z.
 
 **So far, three bases from 1.5B to 4B, each fine-tuned on these rows, pass the tests on 4, 4 and
 4 of 100.** The best training fit (the 4B) writes fewer valid tasks than the 2B (35 against 45)
