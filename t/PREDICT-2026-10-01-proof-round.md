@@ -60,3 +60,37 @@ specification, same temperature, as a second answer set (`round1b-proofs-4b-v4`)
 same admission rule. The falling yield of the first pass (135, 25, 7) says to expect few.
 
 32. The second pass takes an answer on at most 20 of the 106. Falsified by more than 20.
+
+## Outcome of the first pass, 2026-10-01 07:40Z
+
+The 4B on v4 was given 352 specifications for 273 training problems (one greedy answer and two
+sampled each). 167 problems got an answer that parses, keeps the specification, is well formed
+and passes the problem's tests. Those went to the seven kernels (24 cells; the lab's load passed
+130 for part of the run, after which every process of ours there was set to the lowest
+priority) and to the repaired reference check (167 checked: 159 agree, 8 disagree).
+
+| of the 167 test-passing answers | |
+|---|---:|
+| proved by at least one kernel, none refuting | 28 |
+| of those, by all seven | 11 |
+| a kernel refutes the program | 32 |
+| no kernel proves it (Dafny, Verus and Lean answer `unproved` on nearly all of these; the timeouts are SPARK's and Frama-C's) | 94 |
+| no sabotaged twin could be built (not graded) | 10 |
+| verified by a kernel whose twin was not refuted | 3 |
+| **admitted to the training pool** | **26** |
+
+30. **At least 40 problems get a taken answer: holds.** 167 (145 of the original 210, 22 of the
+    63 added by the scan).
+31. **At least 20 are admitted: holds on the round as amended, and misses by one on the
+    original 210.** 26 admitted: 19 from the 210, 7 from the 63. APPS 20, MBPP 4, HumanEval 2;
+    16 have a loop, 2 a specification function; 11 are proved by all seven kernels.
+
+**Reading.** Given a right specification for a problem none of the larger models had solved, the
+student writes a program that passes the tests on six problems in ten and a proof on one in ten.
+On the 33 held-out corpus specifications it proved 28. The difference is the kind of
+specification: these come from MBPP and APPS answers whose proofs had already defeated the model
+that wrote them, and 102 of the 352 lean on a recursive specification function, where a loop
+needs an invariant that ties it to the function. 32 of the 167 are wrong programs that the tests
+did not catch and a kernel did. The 94 unproved ones are right-looking programs with a right
+specification and no proof: the material a proof-repair step would work on, and the kernels'
+messages as this project feeds them back (one verdict a kernel) say too little to repair from.
