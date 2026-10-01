@@ -2701,3 +2701,40 @@ until it is proved, every goal met on those weights. The plan of record is
 tests passed on each), the lab-card watcher, the from-scratch boot service. Started: the weights
 selection (`t/PREDICT-2026-10-01-base-model-selection.md`), a graded-trust training pool
 (`t/graded_pool.py`), a QLoRA student trainer on SAFE's data rule (`t/student_sft.py`).
+
+## Counting where answers stop, 2026-10-01
+
+The first three students answered 1, 1 and 3 of 100 dev problems. Before training anything
+else, every answer was followed to the first gate that stopped it, and the same count was run
+over the pretrained models' answers and the training answers. Five things were wrong, none of
+them the model:
+
+1. **The test harness refused the language's own nested type.** An answer that declared a
+   parameter `seq<seq>` failed its tests with a type error; one that declared `seq` could not
+   look inside a row. 39 answers in 19 answer sets; 26 pass their tests once read at the declared
+   type (cf84b8ea, after MultiPL-E, arXiv:2208.08227).
+2. **The specification check asked the wrong function.** A list of strings went to the problem's
+   solution as lists of integers, and one drawn input that made the solution return a float or
+   None, or run long, ended the whole check. Repaired and registered first
+   (`t/PREDICT-2026-10-01-spec-check-coverage.md`, after EvalPlus): the pooled table of pretrained
+   models on the clean 200 moves from 45 to 50 proved with a checked specification and from 16 to
+   19 by all seven; 18 answers that had read `agrees` disagree.
+3. **661 training answers that pass their tests had never been sent to the provers.** 456 are
+   the 235B's answers over the whole training pool (`qwen235-train-p4`, generated in September,
+   2,766 answers); the rest are repair sets. They cover 557 problems, 344 with no admitted
+   answer. They are being proved on the lab in sixteen chunks, new problems first; the first
+   two chunks (120 answers) admit 11 new problems.
+4. **The student's prompt names a type the language does not have** (`seq-of-seq` for
+   `seq<seq>`), and of the 527 training answers 9 use a specification function and none a nested
+   sequence, while 73 of the 100 dev problems are sequence and string problems. Corrected
+   spelling alone changes nothing measurable (prediction 16).
+5. **Nine of the 100 dev problems cannot be answered at all**: their own tests disagree about a
+   type (a one-character string is read as an integer, a longer one as a sequence). The held-out
+   200 has two. Not repaired: it needs a new pool version and a re-measurement.
+
+The one measurement of the evening that reads well is the one with a published ladder under it:
+given the specification, a fine-tuned 2B proves 19 of 33 unseen specifications by all seven
+kernels (`t/PREDICT-2026-10-01-spec-given.md`). Next in the order the counts give: finish proving
+the never-graded answers and rebuild the training pool; train the base the rule named on it;
+then several answers a problem with the gate as the filter, and the specification written
+first and proved second, which is the split the published results use.

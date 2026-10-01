@@ -54,6 +54,7 @@ class Gate(unittest.TestCase):
         key = f"{s['tag']}/{s['name']}"
         for change, expected in (({"status": "disagrees"}, "spec-not-agrees"),
                                  ({"draws": 0}, "spec-no-valid-draws"),
+                                 ({"draws": graded_pool.MIN_AGREEING_DRAWS - 1}, "spec-agrees-on-too-few-draws"),
                                  ({"task_sha256": "0" * 64}, "spec-hash-missing-or-stale"),
                                  ({"pool": "v4"}, "spec-pool-mismatch"),
                                  ({"points_failed": 1}, "spec-contradicts-example")):
