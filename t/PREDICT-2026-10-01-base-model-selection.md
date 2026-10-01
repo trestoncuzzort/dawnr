@@ -92,3 +92,9 @@ Predictions for this half:
    Falsified otherwise.
 6. Fine-tuning moves well-formed output most: every candidate reaches a valid task on at least 40
    of the 100 (prompted: 2 to 9). Falsified by any under 40.
+
+**Correction to the evaluation line, 2026-10-01 01:08Z, before any fine-tuned answer.** The
+server (`transformers serve`) does not load an adapter folder, so each adapter is folded into its
+full-precision base (`t/student_sft.py --merge`, peft's `merge_and_unload` in bf16) and the merged
+model is served in bf16, not on the 4-bit base. That is the form that would be released, so it is
+the form measured. Reply budget 1,024 tokens (a `t` answer is a few hundred).
