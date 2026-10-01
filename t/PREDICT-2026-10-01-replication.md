@@ -61,3 +61,15 @@ server ran about one core's worth (llama.cpp samples under a grammar on the serv
 README warns of "performance gotchas"): 29 answers in the hour to 20:37Z, a third of them running to the 3,072-
 token cap. It was replaced by six one-slot servers of six threads each, six workers each taking its own answer
 sets. The 92 greedy answers already written stay.
+
+## Outcome, seed 2, 2026-10-01 22:34Z
+
+Trained as seed 1 (1,240 steps, final loss 0.0238, seed 1's 0.0238), the Python first on the clean 200 once,
+graded by the same kernels, check and scorer (complete specifications):
+
+| | Python that passes its tests | a kept specification | answers (all pass tests) | at least 1 | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| seed 1 (14:46Z) | 110 | 50 | 43 | 18 | 14 | 13 | 9 | 5 |
+| **seed 2** | 106 | 44 | 36 | **19** | 16 | 12 | 7 | **6** |
+
+99 (seed 2): **at least 12 at one kernel and 3 at seven: holds**, 19 and 6. Seed 3 is training.

@@ -62,7 +62,7 @@ the same trivial program fitting two shown examples by coincidence
 (`t/PREDICT-2026-09-29-dawnr-chat-heldout.md`). The bar in this section is
 measured on that column from now on.
 
-**2026-10-01, the clean 200 with the specification check and the completeness rule:** the pretrained 4B student, fine-tuned on what the gate admitted, is proved on 18 problems by at least one kernel and 5 by all seven; Phi-4-mini, given the same 17 answers a problem, the same gate and the same day, on 3 and 2 (`t/PREDICT-2026-10-01-several-answers.md`). Two conditions below are not met yet: one trained student, not three seeds, and Phi prompted rather than decoding under `t`'s grammar.
+**2026-10-01, the clean 200 with the specification check and the completeness rule:** the pretrained 4B student, fine-tuned on what the gate admitted, is proved on 18 problems by at least one kernel and 5 by all seven; Phi-4-mini, given the same 17 answers a problem, the same gate and the same day, on 3 and 2 (`t/PREDICT-2026-10-01-several-answers.md`). A second seed of the same recipe reads 19 and 6 (2026-10-01 22:34Z); the third is training, and Phi under `t`'s grammar is being generated (`t/PREDICT-2026-10-01-replication.md`). Until both are in, this is not the win written below.
 
 **What counts as the win, written down so it cannot be softened later:**
 
