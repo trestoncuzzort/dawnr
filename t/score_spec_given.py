@@ -150,22 +150,45 @@ def conversation(row: dict, system: str) -> list[dict]:
     return [described] + [m for m in row["prompt"] if m["role"] != "system"]
 
 
-def ask(model_dir: str, questions: list[dict], out: Path, system: str, max_new: int) -> int:
+def _post(url: str, body: dict, timeout: float = 1800.0) -> dict:
+    import urllib.request
+    req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read())
+
+
+def ask(model_dir: str, questions: list[dict], out: Path, system: str, max_new: int,
+        host: str | None = None, post=_post) -> int:
     """One greedy answer per question, one question at a time (no batch, so padding cannot move a
-    near-tie token). Resumable: a question already answered in `out` is not asked again."""
-    import student_generate
+    near-tie token). Resumable: a question already answered in `out` is not asked again.
+
+    With `host` the model is one an OpenAI-compatible server holds (llama.cpp serving the student
+    as a 4-bit GGUF, github.com/ggml-org/llama.cpp): the same conversation, temperature 0, the same
+    token budget. `model_dir` is then only the name recorded with each answer."""
     done = {}
     if out.exists():
         for line in out.read_text(encoding="utf-8").splitlines():
             if line.strip():
                 r = json.loads(line)
                 done[r["name"]] = r
-    model, tokenizer = student_generate.load(model_dir)
+    if host is None:
+        import student_generate
+        model, tokenizer = student_generate.load(model_dir)
+
+        def one(messages):
+            return student_generate.decode(model, tokenizer, [messages], max_new)[0]
+    else:
+        def one(messages):
+            r = post(f"http://{host}/v1/chat/completions",
+                     {"model": str(model_dir), "messages": messages, "temperature": 0, "max_tokens": max_new})
+            choice = r["choices"][0]
+            return (choice["message"].get("content") or "", choice.get("finish_reason") == "stop",
+                    (r.get("usage") or {}).get("completion_tokens", 0))
     with out.open("a", encoding="utf-8") as fh:
         for n, row in enumerate(questions):
             if row["name"] in done:
                 continue
-            text, stopped, tokens = student_generate.decode(model, tokenizer, [conversation(row, system)], max_new)[0]
+            text, stopped, tokens = one(conversation(row, system))
             fh.write(json.dumps({"name": row["name"], "reply": text, "stopped": stopped, "tokens": tokens,
                                  "model": str(model_dir), "system": system}) + "\n")
             fh.flush()
@@ -183,6 +206,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--system", choices=("s1", "v5"), default="s1")
     p.add_argument("--max-new", type=int, default=1024)
+    p.add_argument("--host", help="host:port of an OpenAI-compatible server holding the model (then --model is its name)")
     p = sub.add_parser("prepare")
     p.add_argument("--questions", type=Path, required=True)
     p.add_argument("--answers", type=Path, required=True)
@@ -197,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     if a.cmd == "ask":
         questions = [json.loads(l) for l in a.questions.read_text(encoding="utf-8").splitlines() if l.strip()]
-        return ask(a.model, questions, a.out, a.system, a.max_new)
+        return ask(a.model, questions, a.out, a.system, a.max_new, a.host)
     if a.cmd == "prepare":
         questions = [json.loads(l) for l in a.questions.read_text(encoding="utf-8").splitlines() if l.strip()]
         answers = {}
