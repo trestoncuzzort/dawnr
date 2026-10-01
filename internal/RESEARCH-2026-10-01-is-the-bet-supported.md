@@ -1,4 +1,4 @@
-# Is the project resting on a result nobody has shown? (2026-10-01 00:35Z)
+# Is the project resting on a result nobody has shown? (2026-10-01 00:17Z)
 
 The operator's question, 2026-09-30 evening: are we doing something for no reason, holding out
 for math that does not exist; if the project rests on a maybe, we are doing it wrong. This file
