@@ -1208,6 +1208,33 @@ def _as_interp_value(kind: str, val):
     return val
 
 
+NESTED_SEQ = {"seq": "seq"}                     # surface.py's `seq<seq>` (SPEC.md "Nested sequences")
+
+
+def kind_fits(kind: str, val, ptype) -> bool:
+    """Whether a parsed test value may be bound to a parameter of the declared type.
+
+    The value is read at the declared type, which is how MultiPL-E types a unit test's data
+    structure for a typed target: "from the type of the function signature" (arXiv:2208.08227,
+    III-C.2). So a list of lists is a value of `seq<seq>`, the type SPEC.md "Nested sequences"
+    gives it, and an empty list is a value of either sequence type.
+
+    Until 2026-10-01 the rule was name equality plus one exception: a nested value was accepted
+    only under a parameter declared plain `seq` (pool v3, 2026-09-11, written when a type name
+    carried no depth). A task that declared the parameter `seq<seq>` was refused with verdict
+    `type`, and one that declared it `seq` cannot look inside a row (check_wf: "len of a
+    non-seq"), so a problem that passes a nested list and needs its rows had no passing answer.
+    39 answers in 19 answer sets were refused that way. The `seq` reading stays accepted: such
+    a task treats each row as an opaque element, and answers already admitted rely on it."""
+    if kind == ptype:
+        return True
+    if kind == "seq-of-seq":
+        return ptype == "seq" or ptype == NESTED_SEQ
+    if kind == "seq" and ptype == NESTED_SEQ:
+        return len(val) == 0
+    return False
+
+
 def run_point(task: dict, point: dict) -> dict:
     """One assertion against the task: {"verdict": pass|fail|requires-excluded|
     undefined|budget|arity|type, ...}. Arguments map positionally."""
@@ -1217,12 +1244,7 @@ def run_point(task: dict, point: dict) -> dict:
         return {"verdict": "arity", "why": f"{len(args)} args for {len(params)} params"}
     env = {}
     for p, (kind, val) in zip(params, args):
-        # A seq-of-seq argument is still a t `seq` PARAMETER: t's type
-        # name carries no nesting depth, only the runtime value does
-        # (2026-09-11, pool v3), so it is accepted wherever the task
-        # declares "seq", the same as a plain seq argument always was.
-        decl_ok = kind == p["type"] or (kind == "seq-of-seq" and p["type"] == "seq")
-        if not decl_ok:
+        if not kind_fits(kind, val, p["type"]):
             return {"verdict": "type", "why": f"{p['name']} is {p['type']}, test passes {kind}"}
         env[p["name"]] = _as_interp_value(kind, val)
     ret = task["returns"][0]["name"]
