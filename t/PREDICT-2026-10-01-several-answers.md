@@ -131,3 +131,45 @@ held-out 200 is to be used once. The choice is fixed now so it cannot follow the
   same day. Its single greedy answer on record reads 4 tests passed and 1 proved of 200.
 - The route is a property of the system, not of the model: the reference gets every answer the
   budget allows, and no stage that needs fine-tuning on `t`.
+
+## Outcome so far, 2026-10-01 07:00Z: one answer, ten answers, the specification first, a second try
+
+The 4B on v4 (560 steps, merged), the 100 dev problems, repaired harness and specification check.
+Three dev problems have no signature that fits their own tests (found after this file's first
+section said nine; `t/PREDICT-2026-10-01-base-model-selection.md`), so counts are of at most 97.
+
+| arm | reach a task | tests pass | proved by at least 1, spec checked | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| one greedy answer | 38 | 9 | 4 | 3 | 1 | 1 | 1 |
+| ten answers at 0.7 (with the greedy one) | 67 | 16 | **7** | 5 | 4 | 3 | 3 |
+| ten answers and the specification first | 67 | 16 | **8** | 6 | 5 | 3 | 3 |
+| a second try (two repair rounds), tests only | | 10 | pending | | | | |
+
+A single sampled set reads 2 to 5 at the first level (the ten sets: 3, 3, 4, 3, 2, 3, 3, 5, 5,
+4), which is the size of the noise in every one-answer comparison in these files.
+
+20. **Ten answers pass the tests on at least 1.5 times as many problems as one: holds.** 16
+    against 9.
+21. **Ten answers prove at least 2 more problems than one: holds.** 7 against 4 (113, 377, 449,
+    459, 549, 634, 727; three of them by all seven kernels, where one answer had one).
+22. **The second try helps by at least one problem: holds, by exactly one.** 9 pass parse,
+    well-formedness and the tests on the first answer, 9 after one repair round, 10 after two
+    (the loop decoded eight problems at a time). 91 failed answers were sent back twice with the
+    gate's message and one was repaired. The student was trained on 788 debugging rows and
+    still does not act on a message; SAFE's gain from self-debugging did not carry over at this
+    amount of data.
+23. **Ten answers beat the second try: holds.** 16 against 10.
+24. **At least 15 dev problems have a kept specification among their eleven answers:
+    falsified.** 9, carrying 16 distinct specifications. Of about 420 well-formed tasks the
+    student wrote across the eleven answer sets, the problem's own tests support the
+    specification on nine problems.
+25. **The specification-first arm adds at least 2 proved problems: falsified.** It adds one
+    (892, by five kernels). Of the 9 problems with a kept specification the student proved a
+    body for 6; 5 of the 6 were already answered by the ten samples.
+
+**Reading.** Sampling is worth having: the gate turns ten tries into nearly twice the answers
+at no risk. Neither a second try nor proving the student's own specifications separately moves
+the count, for the same reason every other measurement tonight gives: the student writes the
+problem's specification on about one problem in ten, however it is asked. Given a right
+specification it proves 28 of 33. The retrieved-examples arm and the Python-first pilot are the
+two attempts at the specification itself; both are running.
