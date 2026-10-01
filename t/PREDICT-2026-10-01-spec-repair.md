@@ -100,3 +100,17 @@ the one signal that names how.
 51. The 4B on v6 repairs (the stage passes it) at least a third of the dev problems that have a
     witness to send back.
 52. At least half of the problems it repairs are right by the reference on a complete specification.
+
+## Outcome of the amendment of 15:20Z, 2026-10-01 19:11Z: the 4B on v6 on dev
+
+The test-passing answers of its greedy and Python-first dev sets: 12 problems; 7 pass the stage untouched, 1 has
+no witness to send back, 4 are sent back. Round 1 repairs 1 (problem 92, "is the number undulating", which the
+earlier students answered with a wrong function); round 2 repairs none of the other 3.
+
+51. **It repairs at least a third of the problems with a witness: falsified.** 1 of 4.
+52. **At least half of what it repairs is right on a complete specification: holds.** 1 of 1: problem 92's
+    repaired answer agrees with the reference on 51 drawn inputs, rejects every mutant of both families, and
+    four kernels prove it.
+
+Trained on 79 witness rows, the student repaired one specification where the untrained one repaired none
+rightly (prediction 49, 2 of 12, both wrong).
