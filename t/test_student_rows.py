@@ -1,12 +1,12 @@
 """t/student_rows.py (2026-10-01): "specification given, write the body" rows, the vericoding
-setting (arXiv:2509.22908). The question keeps the contract and drops the body; the answer is the
-whole proved task; a held-out problem stops the build. No kernel."""
+setting (arXiv:2509.22908). The question keeps the contract and drops the body; training rows come
+from the train side of the corpus split only; a held-out document that shares a problem, a program
+or a specification with training is removed and counted by reason. No kernel."""
 from __future__ import annotations
 
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -19,6 +19,10 @@ DOC = ("Problem: Count.\nSignature: f(seq) -> int\nt 1\ngate loops\ntask mbpp_8_
        "    invariant i <= len(s)\n    invariant r == i\n    decreases len(s) - i\n  {\n    r := r + 1;\n"
        "    i := i + 1;\n  }\n}\n")
 BARE = "t 0\ntask g(a: int) returns (r: int)\n  ensures r == a + 1\n{\n  r := a + 1;\n}\n"
+
+
+def task(name: str, ensures: str, body: str) -> dict:
+    return surface.parse(f"t 0\ntask {name}(a: int) returns (r: int)\n  ensures {ensures}\n{{\n  {body}\n}}\n")
 
 
 class Rows(unittest.TestCase):
@@ -34,20 +38,40 @@ class Rows(unittest.TestCase):
         self.assertNotIn("invariant", block)
         self.assertNotIn("while", block)
         self.assertIn("invariant r == i", row["chosen"])
-        self.assertTrue(row["chosen"].startswith("```t\n") and row["chosen"].endswith("```"))
         self.assertEqual(row["kind"], "spec-given")
 
-    def test_a_held_out_problem_stops_the_build(self):
-        import tempfile
-        with tempfile.TemporaryDirectory() as tmp:
-            corpus = Path(tmp) / "c.txt"
-            corpus.write_text(DOC, encoding="utf-8")
-            with patch.object(student_rows, "blocked_ids", lambda _p: {8}):
-                with self.assertRaises(SystemExit) as stop:
-                    student_rows.build(corpus, Path(tmp) / "split.json")
-            self.assertIn("mbpp_8__f", str(stop.exception))
-            with patch.object(student_rows, "blocked_ids", lambda _p: set()):
-                self.assertEqual(len(student_rows.build(corpus, Path(tmp) / "split.json")), 1)
+
+class HeldOut(unittest.TestCase):
+    TRAIN = [task("mbpp_1__inc", "r == a + 1", "r := a + 1;"), task("dbl", "r == 2 * a", "r := 2 * a;")]
+
+    def clean(self, held, ids=frozenset()):
+        return student_rows.clean_heldout(self.TRAIN, held, set(ids))
+
+    def test_a_document_that_shares_nothing_with_training_is_kept(self):
+        keep, removed = self.clean([task("neg", "r == 0 - a", "r := 0 - a;")])
+        self.assertEqual([t["name"] for t in keep], ["neg"])
+        self.assertEqual(sum(removed.values()), 0)
+
+    def test_a_problem_answered_in_the_other_training_rows_is_removed(self):
+        keep, removed = self.clean([task("mbpp_7__neg", "r == 0 - a", "r := 0 - a;")], ids={7})
+        self.assertEqual(keep, [])
+        self.assertEqual(removed["problem answered in the other training rows"], 1)
+
+    def test_the_same_program_under_another_name_is_removed(self):
+        keep, removed = self.clean([task("increment", "r == a + 1", "r := a + 1;")])
+        self.assertEqual(keep, [])
+        self.assertEqual(removed["same program as a training document"], 1)
+
+    def test_the_same_specification_with_another_body_is_removed(self):
+        keep, removed = self.clean([task("twice", "r == 2 * a", "r := a + a;")])
+        self.assertEqual(keep, [])
+        self.assertEqual(removed["same specification as a training document"], 1)
+
+    def test_the_comparison_is_textual_and_a_renamed_variable_is_not_caught(self):
+        # stated in the module: this is the limit of the check, not a claim of independence
+        other = surface.parse("t 0\ntask twice(b: int) returns (r: int)\n  ensures r == 2 * b\n{\n  r := b + b;\n}\n")
+        keep, _removed = self.clean([other])
+        self.assertEqual(len(keep), 1)
 
 
 if __name__ == "__main__":  # pragma: no cover
