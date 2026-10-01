@@ -35,15 +35,21 @@ def problem_seed(seed: int, tid: str) -> int:
     return int(hashlib.sha256(f"{seed}:{tid}".encode()).hexdigest()[:8], 16)
 
 
-def load(model_dir: str):
-    """(model, tokenizer) for batched decoding: bf16 on the card, left padding."""
+def load(model_dir: str, device: str | None = None):
+    """(model, tokenizer) for decoding, left padding. On the card in bf16 by default; with
+    device "cpu" (or no card visible) in fp32, which is slow and is for checking the plumbing."""
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     tokenizer.padding_side = "left"
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16, device_map={"": 0})
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cpu":
+        model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.float32)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(model_dir, dtype=torch.bfloat16, device_map={"": 0})
     model.eval()
     return model, tokenizer
 

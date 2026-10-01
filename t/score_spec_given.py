@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """t/score_spec_given.py -- score answers to specification-given questions (2026-10-01).
 
+    ~/.venv-t/bin/python t/score_spec_given.py ask --model DIR --questions Q.jsonl --out A.jsonl [--system v5]
     python3 t/score_spec_given.py prepare --questions Q.jsonl --answers A.jsonl --tasks DIR --report R.json
     # then all seven kernels over DIR (t/run_par.py --tasks DIR --table TABLE), then:
     python3 t/score_spec_given.py levels --report R.json --table TABLE [--json OUT.json]
@@ -51,8 +52,16 @@ def question_task(row: dict) -> dict:
     return surface.parse(FENCED.search(user).group(1) + "\n")
 
 
-def judge(question: dict, reply: str) -> tuple[str, str | None, dict | None]:
-    """(stage, why, task): stage is no-block, parse, spec-changed, wf or ready."""
+def judge(question: dict, reply: str, normalise_name: bool = False) -> tuple[str, str | None, dict | None]:
+    """(stage, why, task): stage is no-block, parse, spec-changed, wf or ready.
+
+    normalise_name: an answer that names its task differently is renamed to the question's name,
+    self-calls with it (spec_experiment.rename_task, as extract does for every answer), before
+    the specification is compared. The name is given in the question, so a renamed answer has
+    not followed the format; it has not changed what the contract means. A student trained on
+    answers that carried an invented `mbpp_<number>__` prefix renames by habit, and counting that
+    as a changed specification would measure the habit. Off by default: the strict count is the
+    registered one, and both are reported."""
     block = se.find_block(reply)
     if block is None:
         return "no-block", None, None
@@ -60,6 +69,9 @@ def judge(question: dict, reply: str) -> tuple[str, str | None, dict | None]:
         task = surface.parse(block)
     except Exception as e:                                      # noqa: BLE001
         return "parse", str(e)[:200], None
+    if normalise_name and task.get("name") != question.get("name"):
+        import copy
+        task = se.rename_task(copy.deepcopy(task), question["name"])
     why = spec_given.kept(question, task)
     if why is not None:
         return "spec-changed", why, None
@@ -74,7 +86,7 @@ def judge(question: dict, reply: str) -> tuple[str, str | None, dict | None]:
     return "ready", None, task
 
 
-def prepare(questions: list[dict], answers: dict[str, str], tasks_dir: Path) -> dict:
+def prepare(questions: list[dict], answers: dict[str, str], tasks_dir: Path, normalise_name: bool = False) -> dict:
     tasks_dir.mkdir(parents=True, exist_ok=True)
     for old in tasks_dir.glob("*.json"):
         old.unlink()
@@ -84,12 +96,12 @@ def prepare(questions: list[dict], answers: dict[str, str], tasks_dir: Path) -> 
         if name not in answers:
             entries[name] = {"stage": "unanswered", "why": None}
         else:
-            stage, why, task = judge(question_task(row), answers[name])
+            stage, why, task = judge(question_task(row), answers[name], normalise_name)
             entries[name] = {"stage": stage, "why": why}
             if task is not None:
                 (tasks_dir / f"{name}.json").write_text(json.dumps(task, indent=1), encoding="utf-8")
         tally[entries[name]["stage"]] += 1
-    return {"questions": len(questions), "stages": dict(tally), "entries": entries}
+    return {"questions": len(questions), "name_normalised": normalise_name, "stages": dict(tally), "entries": entries}
 
 
 def level_of(row: dict | None) -> tuple[str, int]:
@@ -127,19 +139,65 @@ def levels(report: dict, table: Path) -> dict:
     return out
 
 
+def conversation(row: dict, system: str) -> list[dict]:
+    """The question as asked. `s1` is the row's own prompt (what a fine-tuned student was trained
+    under); `v5` replaces the system message with the full description of the language and its
+    few-shot tasks, for a model that was never taught t."""
+    if system == "s1":
+        return row["prompt"]
+    pool = se.pool("v5")
+    described = se.build_prompt(pool[sorted(pool)[0]], "v5")[0]
+    return [described] + [m for m in row["prompt"] if m["role"] != "system"]
+
+
+def ask(model_dir: str, questions: list[dict], out: Path, system: str, max_new: int) -> int:
+    """One greedy answer per question, one question at a time (no batch, so padding cannot move a
+    near-tie token). Resumable: a question already answered in `out` is not asked again."""
+    import student_generate
+    done = {}
+    if out.exists():
+        for line in out.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                r = json.loads(line)
+                done[r["name"]] = r
+    model, tokenizer = student_generate.load(model_dir)
+    with out.open("a", encoding="utf-8") as fh:
+        for n, row in enumerate(questions):
+            if row["name"] in done:
+                continue
+            text, stopped, tokens = student_generate.decode(model, tokenizer, [conversation(row, system)], max_new)[0]
+            fh.write(json.dumps({"name": row["name"], "reply": text, "stopped": stopped, "tokens": tokens,
+                                 "model": str(model_dir), "system": system}) + "\n")
+            fh.flush()
+            print(f"ask: {n + 1}/{len(questions)} {row['name'][:40]}: {tokens} tokens, "
+                  f"{'stopped' if stopped else 'cut at the budget'}", flush=True)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("ask")
+    p.add_argument("--model", required=True, help="a merged model directory or a hub id")
+    p.add_argument("--questions", type=Path, required=True)
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--system", choices=("s1", "v5"), default="s1")
+    p.add_argument("--max-new", type=int, default=1024)
     p = sub.add_parser("prepare")
     p.add_argument("--questions", type=Path, required=True)
     p.add_argument("--answers", type=Path, required=True)
     p.add_argument("--tasks", type=Path, required=True)
     p.add_argument("--report", type=Path, required=True)
+    p.add_argument("--normalise-name", action="store_true",
+                   help="rename an answer to the question's task name before comparing the specification")
     p = sub.add_parser("levels")
     p.add_argument("--report", type=Path, required=True)
     p.add_argument("--table", type=Path, required=True)
     p.add_argument("--json", type=Path)
     a = ap.parse_args(argv)
+    if a.cmd == "ask":
+        questions = [json.loads(l) for l in a.questions.read_text(encoding="utf-8").splitlines() if l.strip()]
+        return ask(a.model, questions, a.out, a.system, a.max_new)
     if a.cmd == "prepare":
         questions = [json.loads(l) for l in a.questions.read_text(encoding="utf-8").splitlines() if l.strip()]
         answers = {}
@@ -147,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
             if line.strip():
                 r = json.loads(line)
                 answers[r["name"]] = r["reply"]
-        report = prepare(questions, answers, a.tasks)
+        report = prepare(questions, answers, a.tasks, a.normalise_name)
         a.report.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
         print(json.dumps({k: report[k] for k in ("questions", "stages")}))
         return 0
