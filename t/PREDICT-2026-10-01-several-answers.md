@@ -84,3 +84,29 @@ answers it started from, so it can only add to the ten-answer arm; what it adds 
     Falsified below 15.
 25. The arm adds at least 2 problems proved by at least one kernel with the reference check
     agreeing, beyond the ten-answer arm. Falsified by fewer than 2.
+
+## Amendment, 2026-10-01 05:22Z, before any answer of the 4B on v4 is read: a fourth arm, retrieved examples
+
+Misu et al. (arXiv:2402.00247, abstract and section 3.4 read from the HTML on 2026-10-01) put
+178 MBPP problems to GPT-4 for verified Dafny with specifications: 19% with a bare prompt, 10%
+with the signature and tests, **58%** when the prompt carried the five most similar solved
+problems, retrieved from 50 hand-written solutions by embedding similarity, with a step-by-step
+decomposition. Similar solved examples in the prompt are the published lever for writing the
+specification, and retrieval is a row of this project's own table that was built (a BM25 index,
+`locallm/dawnr_retrieval/`) and never put in front of a model that can use it.
+
+**The arm.** The same 4B on v4, no new training. For each dev problem the five most similar
+training problems with a proved answer are retrieved by BM25 over the problem text (the pool as
+it stood at 04:57Z: 548 answers over 288 training problems; one answer a problem, the one proved
+by the most kernels) and shown as five question-and-answer turns before the question itself,
+each in the words the student was trained on. One greedy answer. Through the same gate.
+
+What differs from the paper: BM25, not an embedding model; a fine-tuned 4B, not GPT-4; no
+step-by-step decomposition; one answer, not five tries.
+
+26b. With retrieved examples the student passes the tests on more dev problems than its plain
+    greedy answers do. Falsified if it passes the same number or fewer.
+27b. It is proved by at least one kernel with the specification checked on at least 2 more
+    problems than the plain greedy answers. Falsified by fewer than 2 more.
+
+(Numbered 26b and 27b: 26 to 29 are taken by `t/PREDICT-2026-10-01-spec-first.md`.)
