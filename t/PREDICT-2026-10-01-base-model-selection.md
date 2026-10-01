@@ -136,3 +136,51 @@ QLoRA reports that "LoRA r is unrelated to final performance if LoRA is used on 
 `--promote-header` (608ac34a) for every fine-tuned candidate and the counts without it are given
 beside them: a task that states `t 0` over a body that is well formed only as `t 1` is read as
 `t 1`, since the format line is derivable.
+
+## The 4B's fine-tune was damaged in its first steps; a stability probe, registered 2026-10-01 02:18Z
+
+Three students have trained on the same 527 rows with the same command. Their logged losses:
+
+| base | loss before training (first rows) | logged at step 5 (mean of steps 1 to 5) | step 160 | whole-run mean |
+|---|---:|---:|---:|---:|
+| Qwen2.5-Coder-1.5B | not measured | 0.730 | 0.079 | 0.151 |
+| Qwen3.5-2B | 1.355 | 0.666 | 0.062 | 0.137 |
+| Qwen3.5-4B | 0.890 | **9.793** | 0.724 | 1.780 |
+
+The 4B starts better than the 2B (0.89 against 1.36, measured on the 4-bit base with a fresh
+adapter) and its first five steps raise its loss elevenfold; it ends at 0.72, hardly below where
+it began. That student is a damaged run and is **not a measurement of the 4B**. Its dev answers,
+when they are scored, are recorded as that and kept out of the ranking.
+
+What it is not. The 4B was the first run through `student_sft.response_loss` (a08bd1a8), which was
+the obvious suspect. Measured on the real stack (4-bit base, k-bit preparation with gradient
+checkpointing, a fresh rank-64 adapter), that function and the model's own forward-with-labels
+give the same loss to four decimals on six rows, in train and eval mode, on the 2B (1.3550) and on
+the 4B (0.8898). The function is not the cause. The run also completed all 165 steps on a 16 GB
+card, which the first attempt could not: the memory change does what it was for.
+
+What is not known: why. The learning rate is QLoRA's for its 7B and 13B models (2e-4, constant
+from the first step, arXiv:2305.14314 table 9), applied here to other sizes for 165 steps; that
+table lists 1e-4 for its larger models. Whether the first update at 2e-4 is what damages the 4B is
+a hypothesis until it is measured.
+
+**The probe.** The 4B, the same rows and seed (so every arm sees the same first batches), twelve
+optimizer steps, the loss logged at every step (`--max-steps 12 --log-every 1`):
+
+- A: constant 2e-4, no warm-up (the recipe as run)
+- B: 2e-4 with a ten-step linear warm-up
+- C: constant 1e-4
+- D: constant 5e-5
+
+**Stable**, fixed now: no step's loss exceeds 1.5 times the loss at step 1 (which is measured
+before any update), and the mean of steps 8 to 12 is below the loss at step 1.
+
+**Predictions.** (7) Arm A reproduces the damage: some step from 2 to 6 exceeds 1.5 times step 1.
+Falsified if A is stable; then the account above is wrong and the cause is still open.
+(8) At least one of B, C and D is stable. Falsified if none is; then the recipe needs more than a
+schedule change.
+
+**What follows.** The stable arm with the highest learning rate becomes the recipe, and all four
+candidates are trained again with that one recipe so the comparison stays like for like. The
+1.5B and 2B results already measured stand, labelled with the recipe they used. The 9B was
+stopped before it trained.
