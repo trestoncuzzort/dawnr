@@ -34,3 +34,15 @@ specification agreeing on at least 10 draws).
 
 30. At least 40 of the 210 problems get a taken answer. Falsified below 40.
 31. At least 20 are admitted to the pool. Falsified below 20.
+
+## Amendment, 2026-10-01 05:28Z, before anything is asked: 63 more problems
+
+The 298 were found among answers the specification check had already seen, and it sees only
+answers that reached a kernel table. A scan of every other valid task in the training-side sets
+(1,253 specifications of still-unsolved training problems that had never been checked, most from
+answers that fail their tests) took a specification when it passes the test-based scores AND
+agrees with the reference on at least 10 of 100 draws: 770 fall to the test-based scores, 335
+disagree with the reference, 71 are taken, for 63 more problems. The round is now 273 training
+problems and 352 specifications. Predictions 30 and 31 stay as written (their thresholds were
+set for 210; they are now easier to meet by a quarter, and the outcome will say how many of each
+count come from the 63).
