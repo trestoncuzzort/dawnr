@@ -136,3 +136,32 @@ missing ones mostly did not refute it: Frama-C abstained 9 times, Rocq timed out
 
 No new compute was needed for any of this. Answer-set summaries: `~/scratch/scan_tags.py`,
 `~/scratch/kernel_counts.py`, `~/scratch/pretrained-outcomes.json` on the lab.
+
+## What "proved" costs at each trust level (2026-10-01 00:38Z)
+
+Two measurements on the lab, no new generation.
+
+**The provers have never contradicted each other.** `t/kernel_disagreement.py` over every graded
+answer set: 4,700 programs in 72 sets, each lowered to seven proof systems; 0 cases of one kernel
+verifying a program another refutes, 0 twins verified by one kernel and refuted by another. Every
+difference between kernels is a gap (one could not decide), not a disagreement.
+
+**Coverage of the clean 200, pooled over the nineteen pretrained sets**, after running the
+specification check on every task-stage answer, not only the seven-kernel ones (1,467 answers, 100
+draws each; kept in `~/scratch/graded/` on the lab, the record of evidence untouched). An answer
+counts when it passes the problem's tests, the stated number of kernels prove it and refute its
+twin, **no** kernel refutes it, and its specification agrees with the reference:
+
+| proved by | problems of the 200 | before the specification check |
+|---|---:|---:|
+| at least one prover | 45 | 63 |
+| at least three | 39 | 55 |
+| at least five | 28 | 42 |
+| at least six | 22 | 34 |
+| all seven | 16 | 23 |
+
+Read: the specification check is doing real work at every level (it removes 18 of 63 at the first
+level: a proof of the wrong thing), 102 tests-passing answers were excluded because some kernel
+refuted the program against its own specification, and unanimity is what costs coverage (45 to
+16) while the record shows no case where it protected against anything. An answer can carry its
+level ("proved by five of seven, two could not decide") instead of being dropped.
