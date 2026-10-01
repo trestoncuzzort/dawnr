@@ -100,3 +100,42 @@ What would make B fail for a reason that is not the idea: the base model writes 
 function the `t` answer did (a shared misreading of the English; Clover's stated limit), or its
 Python is right and returns a value `t` reads differently (a tuple against a list is handled; a
 float that is not whole is skipped).
+
+## Outcome of A, 2026-10-01 09:08Z: the ten dev problems
+
+The base Qwen3.5-4B at 4 bits on the lab's CPU (about 20 tokens a second a server) wrote a
+Python solution that passes the question's tests for **72 of the 100** dev problems, and for all
+ten problems in question. The stage, answer by answer (57 answers):
+
+| the reference calls it | answers | the stage shows | refused: false at the Python's answer | refused: weak |
+|---|---:|---:|---:|---:|
+| right and complete | 30 | 25 | 5 | 0 |
+| weak | 18 | 0 | 0 | 18 |
+| wrong | 9 | 0 | 9 | 0 |
+
+By problem:
+
+| | the gate as built | with the stage |
+|---|---:|---:|
+| problems with an answer shown | 10 | 3 (113, 377, 727) |
+| of those, right and complete by the reference | 4 | 3 |
+| shown and not right | 6 | **0** |
+
+39. **The base model's Python passes the tests on at least 60 dev problems: holds.** 72.
+40. **None of the six weak-or-wrong problems is shown: holds.** Both wrong functions (67, 92)
+    fall to the Python; the four weak ones to the mutants.
+41. **At least 3 of the 4 right problems are still shown: holds, at exactly 3.** The one lost is
+    892 (collapse runs of spaces). The student's answer follows the reference
+    (`re.sub(' +', ' ', text)`); the Python is `' '.join(s.split())`, which also treats a control
+    character as a space, and a drawn input held one (code point 30). The second artifact is a
+    slightly different function on an input no question would contain, and the stage cannot tell
+    which of the two is the question's.
+
+One thing the reference check cannot see and the stage can: on problem 113 ("does the string
+represent an integer") the reference returns None for the empty string, so the reference check
+skips that input. The Python returns False there, and four of the twelve answers the reference
+calls right say something else. They are refused; the other eight are shown.
+
+**Reading.** On these answers the gate as built was right 4 times in 10; with the stage it is
+right 3 times in 3 and shows one right answer fewer. That is ten problems. B is the measurement
+with enough answers to carry a percentage.
