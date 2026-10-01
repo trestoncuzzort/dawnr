@@ -1,4 +1,4 @@
-# Which pretrained weights go behind the gate, registered 2026-10-01 00:31Z
+# Which pretrained weights go behind the gate, registered 2026-10-01 00:28Z
 
 The operator, 2026-09-30: build on the ladders others have made; someone else's weights are fine,
 but they must be the best for this job and usable by everyone. `internal/RESEARCH-2026-10-01-is-
