@@ -47,5 +47,19 @@ class Flavour(unittest.TestCase):
         self.assertEqual((b["temperature"], b["seed"], b["max_tokens"]), (0.7, 3, 64))
 
 
+
+class LlamaGbnf(unittest.TestCase):
+    def test_continuation_lines_join_and_nothing_else_changes(self):
+        g = 'a ::= "x"\n     | "y"\n\t| "z"\nb ::= ( "p"\n  "q" )'
+        self.assertEqual(se.llama_gbnf(g), 'a ::= "x" | "y" | "z"\nb ::= ( "p"\n  "q" )')
+
+    def test_the_real_grammar_keeps_its_rules(self):
+        g = "\n".join(l for l in (Path(se.__file__).parent / "t.gbnf").read_text().splitlines() if not l.lstrip().startswith("#"))
+        j = se.llama_gbnf(g)
+        names = lambda t: [l.split("::=")[0].strip() for l in t.splitlines() if "::=" in l]
+        self.assertEqual(names(g), names(j))
+        self.assertFalse(any(l.lstrip().startswith("|") for l in j.splitlines()))
+        self.assertEqual(g.split(), [w for w in j.split()])
+
 if __name__ == "__main__":
     unittest.main()
