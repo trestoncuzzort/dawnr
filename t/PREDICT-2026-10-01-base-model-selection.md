@@ -443,5 +443,8 @@ the section above; the registered tables further up stay as measured.
 
 The instruments had been hiding two of the 4B student's five proved answers. The rule's pick is
 the same and stands on more: 5 against 1 and 1. A paired test still does not make it certain
-(the 4B and the 2B differ on six problems, five to one; exact p = 0.22). Four of the nine dev
-problems that no task could pass were unreachable only because of this fault; five remain.
+(the 4B and the 2B differ on six problems, five to one; exact p = 0.22). Of the nine dev
+problems that no task could pass, six were unreachable only because of this fault. Three remain
+with no signature that fits all of their tests (15 `split_lowerstring`, 407 `rearrange_bigger`,
+910 `check_date`), computed by trying every signature; the held-out set has one (699). Counts
+on dev are of at most 97.
