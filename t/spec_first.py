@@ -172,6 +172,22 @@ def accept(reply: str, spec: dict, entry: dict) -> tuple[str | None, str]:
     return surface.print_task(task), "taken"
 
 
+MIN_REFERENCE_DRAWS = 10
+MIN_REFERENCE_COMPLETENESS = 0.6
+
+
+def reference_keeps(r: dict) -> bool:
+    """The reference check as a keep rule on the training side: the specification agrees with the
+    problem's solution on at least ten drawn inputs, and of the mutated outputs judged on those
+    inputs it rejects at least 60% (SAFE's floor for a usable specification, arXiv:2410.15756
+    3.2). A specification that is true of the right answer and of most wrong ones is not a
+    training example for specification writing."""
+    if r.get("status") != "agrees" or r.get("draws", 0) < MIN_REFERENCE_DRAWS:
+        return False
+    share = r.get("completeness")
+    return not isinstance(share, (int, float)) or share >= MIN_REFERENCE_COMPLETENESS
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True)
@@ -261,8 +277,9 @@ def main(argv: list[str] | None = None) -> int:
                     r = spec_check.check_task(k["task"], P[tid], 100, rnd)
                 except Exception:                               # noqa: BLE001
                     r = {"status": "check raised"}
-                if r.get("status") == "agrees" and r.get("draws", 0) >= 10:
-                    keep.append(dict(k, reference={"draws": r["draws"], "skipped": r.get("skipped")}))
+                if reference_keeps(r):
+                    keep.append(dict(k, reference={"draws": r["draws"], "skipped": r.get("skipped"),
+                                                   "completeness": r.get("completeness")}))
                 else:
                     dropped += 1
             per[tid] = keep

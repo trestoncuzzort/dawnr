@@ -209,3 +209,15 @@ mutated outputs the `ensures` rejects, and only reported it. Read for the counte
 
 The levels table keeps its registered rule (tests, kernels, agreement); this is stated beside it
 so that "specification-checked" is not read as more than it is.
+
+**08:16Z, the pooled row both ways.** `t/score_levels.py --min-completeness 0.6` now applies
+that floor answer by answer (a problem still counts if another of its answers is proved on a
+complete specification). The 37 pretrained answer sets on the clean 200:
+
+| | at least 1 | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|
+| agreement only (the registered rule) | 50 | 44 | 33 | 27 | 19 |
+| complete specification | **48** | **43** | 33 | 27 | 19 |
+
+The students' own dev answers are hit much harder by the same floor (5 of the 4B on v4's 8
+counted problems): `t/PREDICT-2026-10-01-several-answers.md`, the correction of 08:16Z.

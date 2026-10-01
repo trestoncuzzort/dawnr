@@ -237,3 +237,66 @@ follow a number:
   student.
 - Everything else stands: once, unchanged, repaired instruments, every level reported, the
   reference given the same number of answers a problem.
+
+## Correction and amendment, 2026-10-01 08:16Z, before any result of the 4B on v5 exists: a weak specification does not count
+
+**What was wrong with the counts above.** A problem was counted when an answer passed its tests,
+was proved, and its specification "agrees with the reference". Agreement means the specification
+is true of the right answer on every drawn input. It does not mean the specification pins the
+answer down, and a proof of a specification that says little is a proof of little. The check has
+always measured this too (the share of mutated outputs the `ensures` rejects, on the same drawn
+inputs) and only reported it. Read for the 4B on v4's eight counted dev problems, five rest on a
+specification that rejects under 60% of the wrong outputs tried:
+
+| problem | what the student's specification says | wrong outputs rejected | kernels |
+|---|---|---:|---:|
+| 459 remove the uppercase letters | the result is no longer than the input and holds no uppercase letter (true of the empty string) | 2% | 7 |
+| 449 is it a triangle | what must hold if the answer is "Yes", and if it is "No"; not that it is one of them | 0% | 5 |
+| 549 sum of fifth powers of odd numbers | the result is not negative, and is 0 when n is 0 | 45% | 2 |
+| 634 sum of fourth powers of even numbers | the same | 24% | 2 |
+| 727 keep letters and digits (the answer proved by seven) | the result is no longer and holds only letters and digits | 28% | 7 |
+
+Problem 727 has another answer, proved by four kernels, whose specification also says every
+letter and digit of the input appears in the result (72% rejected); that one stays.
+
+**The count that means something.** SAFE keeps a specification as usable when it rejects at
+least 60% of mutated test cases (arXiv:2410.15756, 3.2). `t/score_levels.py --min-completeness
+0.6` applies that floor to the check's own mutants: a problem counts when some answer of the arm
+passes the tests, is proved, agrees with the reference, and rejects at least 60% of the mutated
+outputs. Every arm of the 4B on v4 again, both ways (the "agreement only" columns are the tables
+above, unchanged):
+
+| arm | tests pass | agreement only: at least 1 | all seven | complete specification: at least 1 | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| one greedy answer | 9 | 4 | 1 | **2** | 2 | 0 | 0 | 0 |
+| a second try (two repair rounds) | 10 | 4 | 1 | **2** | 2 | 0 | 0 | 0 |
+| five retrieved examples, one greedy answer | 8 | 3 | 2 | **1** | 1 | 0 | 0 | 0 |
+| ten answers at 0.7 (with the greedy one) | 16 | 7 | 3 | **3** | 3 | 1 | 1 | 1 |
+| ten answers and the specification first | 16 | 8 | 3 | **4** | 4 | 2 | 1 | 1 |
+
+The four that stand: 113 (all seven), 892 (five, from the specification-first arm), 377 and 727
+(four each).
+
+**The predictions, read again.**
+
+- 21 ("ten answers prove at least 2 more problems than one") held at 7 against 4. On complete
+  specifications it is 3 against 2: one more. **Falsified on the count that means something.**
+- 25 (the specification-first arm adds at least 2): falsified either way; it adds 892.
+- 27b (retrieved examples prove at least 2 more than greedy): falsified either way, 1 against 2.
+- 20, 22, 23, 24 and 26b count tests or kept specifications and do not move.
+
+**The rule, amended.** The held-out rule of 05:38Z and 08:02Z counted "dev problems proved by at
+least one kernel with the reference check agreeing". From now it counts those on a complete
+specification (the bold column), ties as before. This is written with the 4B on v4's numbers
+under the new count in view (they are the table above) and before any answer of the 4B on v5
+exists (it is at step 124 of 1,240). For the 4B on v4 the amended rule names the same route as
+before, ten answers and the specification first, now on 4 problems with 1 by all seven. The
+held-out run and the reference are scored both ways and both are reported; the complete count
+is the result.
+
+**What it says about the student.** From English, with ten answers and the specification first,
+the 4B on v4 proves a specification that says what the problem asked on 4 dev problems of 100,
+and with one answer on 2. Where it cannot write the specification it writes a true and weak one,
+and the gate as it stood let those through. The gate needs a stage that refuses them without a
+reference; the test-based score in `t/spec_quality.py` is one, and a score from the proved
+program's own outputs is being built next.

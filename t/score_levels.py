@@ -51,7 +51,17 @@ def answer_level(tests_overall: str | None, row: dict | None, spec_status: str |
     return (proved if spec_status == "agrees" else 0), proved
 
 
-def tag_levels(tag: str, ids: set[int], verdicts: dict) -> dict[int, tuple[int, int, bool, bool]]:
+# 2026-10-01: "agrees" says the specification is true of the reference's answer on every drawn
+# input; it does not say the specification pins the answer down. The check has always also
+# measured that (`completeness`: the share of mutated outputs the ensures rejects) and only
+# reported it. SAFE keeps a specification as usable at 60% (arXiv:2410.15756, 3.2). With
+# --min-completeness an answer whose specification agrees and rejects fewer mutants than that is
+# not counted: five of the eight dev problems the 4B on v4 "proved" rest on such a specification.
+MIN_COMPLETENESS = 0.6
+
+
+def tag_levels(tag: str, ids: set[int], verdicts: dict, min_completeness: float | None = None
+               ) -> dict[int, tuple[int, int, bool, bool]]:
     """problem -> (level, level without the spec check, reached a task, tests passed)."""
     d = se.OUT_ROOT / se.model_tag(tag)
     ext = json.loads((d / "extract.json").read_text(encoding="utf-8")) if (d / "extract.json").exists() else {}
@@ -61,17 +71,22 @@ def tag_levels(tag: str, ids: set[int], verdicts: dict) -> dict[int, tuple[int, 
     for tid in ids:
         e, t = ext.get(str(tid), {}), tests.get(str(tid), {})
         name = t.get("name") or e.get("name") or ""
-        status = score_heldout.checked_spec(verdicts.get(f"{tag}/{name}") or {}, d / "tasks" / f"{name}.json")
+        raw = verdicts.get(f"{tag}/{name}") or {}
+        status = score_heldout.checked_spec(raw, d / "tasks" / f"{name}.json")
+        if (status == "agrees" and min_completeness is not None
+                and isinstance(raw.get("completeness"), (int, float)) and raw["completeness"] < min_completeness):
+            status = "weak"                                     # true of the right answer and of most wrong ones
         level, bare = answer_level(t.get("overall"), cells.get(name), status)
         out[tid] = (level, bare, e.get("stage") == "task", t.get("overall") == "pass")
     return out
 
 
-def table(tags: list[str], ids: set[int], verdicts: dict) -> tuple[list[dict], dict]:
+def table(tags: list[str], ids: set[int], verdicts: dict, min_completeness: float | None = None
+          ) -> tuple[list[dict], dict]:
     rows, best, best_bare = [], {tid: 0 for tid in ids}, {tid: 0 for tid in ids}
     any_task, any_pass = set(), set()
     for tag in tags:
-        lv = tag_levels(tag, ids, verdicts)
+        lv = tag_levels(tag, ids, verdicts, min_completeness)
         row = {"tag": tag, "problems": len(ids), "task": sum(1 for v in lv.values() if v[2]),
                "tests pass": sum(1 for v in lv.values() if v[3])}
         for k in LEVELS:
@@ -122,10 +137,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--verdicts", type=Path, default=HERE / "out" / "spec-disagree.json",
                     help="a spec_check verdict file covering every answer (--only all)")
     ap.add_argument("--json", type=Path, help="also write the rows and the pooled counts here")
+    ap.add_argument("--min-completeness", type=float, default=None, metavar="F",
+                    help=f"count an answer only if its specification also rejects at least this share of mutated "
+                         f"outputs on the check's drawn inputs (SAFE's rule is {MIN_COMPLETENESS})")
     a = ap.parse_args(argv)
     ids = panel_ids(a.split, a.panel, a.ids_file)
     verdicts = json.loads(a.verdicts.read_text(encoding="utf-8")).get("results", {})
-    rows, pooled = table(a.tags, ids, verdicts)
+    rows, pooled = table(a.tags, ids, verdicts, a.min_completeness)
     print(render(rows, pooled))
     if a.json:
         a.json.write_text(json.dumps({"rows": rows, "pooled": pooled, "ids": len(ids)}, indent=1) + "\n", encoding="utf-8")

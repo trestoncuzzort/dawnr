@@ -48,5 +48,64 @@ class Level(unittest.TestCase):
         self.assertEqual(score_levels.answer_level("pass", r, "agrees"), (0, 0))
 
 
+class WeakSpecification(unittest.TestCase):
+    """An agreeing specification that rejects few wrong outputs is not counted when asked
+    (SAFE's 60% rule, arXiv:2410.15756 3.2); without the option nothing changes."""
+
+    def setUp(self):
+        import json
+        import tempfile
+        from unittest import mock
+
+        import spec_experiment as se
+        import surface
+        real = surface.parse_file(str(HERE / "tasks" / "abs.t"))    # a task the canonical printer accepts
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        root = Path(self.tmp.name)
+        patch = mock.patch.object(se, "OUT_ROOT", root)
+        patch.start()
+        self.addCleanup(patch.stop)
+        d = root / se.model_tag("set")
+        (d / "tasks").mkdir(parents=True)
+        cols = sorted(spec_check.KERNELS)
+        lines = ["| task | " + " | ".join(cols) + " |", "|---|" + "---|" * len(cols)]
+        self.verdicts = {}
+        # problem -> the share of mutated outputs its specification rejects (None: no mutant was judged)
+        for tid, share in {1: 1.0, 2: 0.6, 3: 0.59, 4: 0.0, 5: None}.items():
+            name = f"p{tid}"
+            task = dict(real, name=name)
+            (d / "tasks" / f"{name}.json").write_text(json.dumps(task), encoding="utf-8")
+            lines.append(f"| {name} | " + " | ".join("verified / refuted" for _ in cols) + " |")
+            v = {"status": "agrees", "draws": 100, "task_sha256": spec_check.task_sha256(task)}
+            if share is not None:
+                v["completeness"] = share
+            self.verdicts[f"set/{name}"] = v
+        (d / "kernels.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        (d / "extract.json").write_text(json.dumps(
+            {str(i): {"name": f"p{i}", "stage": "task"} for i in range(1, 6)}), encoding="utf-8")
+        (d / "tests.json").write_text(json.dumps(
+            {str(i): {"name": f"p{i}", "overall": "pass"} for i in range(1, 6)}), encoding="utf-8")
+
+    def levels(self, floor):
+        lv = score_levels.tag_levels("set", {1, 2, 3, 4, 5}, self.verdicts, floor)
+        return {tid: v[0] for tid, v in lv.items()}
+
+    def test_without_the_option_every_agreeing_answer_counts(self):
+        self.assertEqual(self.levels(None), {1: 7, 2: 7, 3: 7, 4: 7, 5: 7})
+
+    def test_below_the_floor_is_not_counted_and_the_floor_itself_is(self):
+        self.assertEqual(self.levels(0.6), {1: 7, 2: 7, 3: 0, 4: 0, 5: 7})
+
+    def test_the_unchecked_column_does_not_move(self):
+        lv = score_levels.tag_levels("set", {3, 4}, self.verdicts, 0.6)
+        self.assertEqual({tid: v[1] for tid, v in lv.items()}, {3: 7, 4: 7})
+
+    def test_the_table_and_the_pooled_row_use_it(self):
+        rows, pooled = score_levels.table(["set"], {1, 2, 3, 4, 5}, self.verdicts, 0.6)
+        self.assertEqual((rows[0][">=7"], pooled[">=7"]), (3, 3))
+        self.assertEqual(pooled[">=7 before the specification check"], 5)
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

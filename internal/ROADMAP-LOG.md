@@ -2706,8 +2706,8 @@ selection (`t/PREDICT-2026-10-01-base-model-selection.md`), a graded-trust train
 
 The first three students answered 1, 1 and 3 of 100 dev problems. Before training anything
 else, every answer was followed to the first gate that stopped it, and the same count was run
-over the pretrained models' answers and the training answers. Five things were wrong, none of
-them the model:
+over the pretrained models' answers and the training answers. Six things were wrong with the
+instruments: five hid answers that were right, and the sixth counted answers that say little:
 
 1. **The test harness refused the language's own nested type.** An answer that declared a
    parameter `seq<seq>` failed its tests with a type error; one that declared `seq` could not
@@ -2734,12 +2734,21 @@ them the model:
 5. **Nine of the 100 dev problems cannot be answered at all**: their own tests disagree about a
    type (a one-character string is read as an integer, a longer one as a sequence). The held-out
    200 has two. Not repaired: it needs a new pool version and a re-measurement.
+6. **The count let weak specifications through** (found 08:06Z, this one against us). "Agrees
+   with the reference" means true of the right answer; the check's other half, the share of
+   mutated outputs the specification rejects, was measured and never used. Five of the eight dev
+   problems the 4B on v4 "proved" rest on a specification that rejects under 60% of wrong
+   outputs (one, proved by all seven kernels, is satisfied by the empty string). SAFE's 60%
+   floor is now an option of the scorer (`t/score_levels.py --min-completeness`), a refusal in
+   the training pool (`spec-too-weak`), and the count the held-out rule uses. The pretrained
+   pooled table moves 50 to 48 at one prover; its 19 by all seven stand.
 
 The measurement that reads well is the one with a published ladder under it: given the
 specification, the fine-tuned 4B proves 28 of 33 unseen specifications, 26 by all seven kernels
-(a 2B: 19; `t/PREDICT-2026-10-01-spec-given.md`). From English the same student proves 4 dev
-problems of 100 with one answer and 8 with ten answers and the specification proved separately
-(`t/PREDICT-2026-10-01-several-answers.md`); showing it similar solved problems or handing its
+(a 2B: 19; `t/PREDICT-2026-10-01-spec-given.md`). From English the same student proves, on a
+specification that says what was asked, 2 dev problems of 100 with one answer and 4 with ten
+answers and the specification proved separately (first reported as 4 and 8, item 6;
+`t/PREDICT-2026-10-01-several-answers.md`); showing it similar solved problems or handing its
 failed answer back changes nothing. The distance between 4 of 100 and 28 of 33 is the
 specification, and it is not this student's alone: over every answer set on record, 28 of the 100
 dev problems have ever received a specification their own tests support.

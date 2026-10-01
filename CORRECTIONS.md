@@ -4,6 +4,27 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **"Specification checked" counted specifications that say almost nothing (2026-10-01).**
+  An answer was counted when it passed its tests, was proved, and its
+  specification agreed with the problem's reference on drawn inputs. Agreement
+  means the specification is true of the right answer. It does not mean it
+  rules out wrong ones, and the check had measured that all along (the share
+  of mutated outputs the specification rejects) without the count using it.
+  The fine-tuned 4B's best dev result was reported as **8** problems of 100
+  proved with a checked specification, 3 by all seven provers. Five of the
+  eight rest on a weak specification: for "remove the uppercase letters" the
+  student proved, by all seven provers, that the result holds no uppercase
+  letter and is no longer than the input, which the empty string satisfies.
+  Counted only where the specification rejects at least 60% of the wrong
+  outputs tried (SAFE's rule for a usable specification, arXiv:2410.15756),
+  the result is **4** of 100, 1 by all seven; with one answer it is 2, not 4.
+  The pretrained models' pooled table on the 200 unseen problems moves from
+  50 to 48, and its 19 by all seven stand. Forty of the 693 rows the student
+  is trained on carry such a specification; the pool refuses them from its
+  next build. The rule that picks what goes to the held-out problems was
+  amended to the stricter count before the next student had any result
+  ([the correction](t/PREDICT-2026-10-01-several-answers.md)).
+
 - **Three faults in our own instruments hid answers that were right (2026-10-01).**
   Found by counting where proved answers stop. The test harness refused any
   answer that declared a nested parameter `seq<seq>`, the type the language

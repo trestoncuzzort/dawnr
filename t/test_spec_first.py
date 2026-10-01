@@ -136,3 +136,14 @@ def test_the_reference_python_route_refuses_a_problem_that_is_not_on_the_trainin
     with pytest.raises(SystemExit) as e:
         spec_first.main(["--model", "none", "--reference-python", "--tag", "x", "--ids-file", str(ids)])
     assert "not on the training side" in str(e.value)
+
+
+def test_the_reference_keep_rule_refuses_a_weak_specification():
+    ok = {"status": "agrees", "draws": 100, "completeness": 0.6}
+    assert spec_first.reference_keeps(ok)
+    assert spec_first.reference_keeps({"status": "agrees", "draws": 10})            # no mutant was judged
+    assert not spec_first.reference_keeps(dict(ok, completeness=0.59))
+    assert not spec_first.reference_keeps(dict(ok, completeness=0.0))
+    assert not spec_first.reference_keeps(dict(ok, draws=9))
+    assert not spec_first.reference_keeps(dict(ok, status="disagrees"))
+
