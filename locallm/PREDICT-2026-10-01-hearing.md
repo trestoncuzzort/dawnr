@@ -50,3 +50,23 @@ it. Here:
 67. Piper's speech is transcribed with a word error rate of at most 10%. Falsified above.
 68. That rate is within 5 points of the recogniser's rate on the human recordings of the same
     sentences. Falsified otherwise.
+
+## Outcome of the hearing half, 2026-10-01 11:19Z
+
+Whisper base.en (148 MB ggml file, MIT) under whisper.cpp built from source on the lab, greedy with no
+temperature fallback, 8 threads at the lowest priority beside other jobs, every one of LibriSpeech
+test-clean's 2,620 utterances (16 kHz WAV converted with ffmpeg); scored after Whisper's own normaliser
+(`locallm/speech/wer.py`):
+
+| | utterances | reference words | word errors | word error rate |
+|---|---:|---:|---:|---:|
+| this machine | 2,620 | 53,027 | 2,193 | **4.14%** |
+| the paper, greedy (arXiv:2212.04356, D.1.1) | 2,620 | | | 4.2% |
+
+5.4 hours of audio took 1,204 seconds: 16 times faster than real time.
+
+65. **Between 3.7% and 4.7%: holds.** 4.14%, within a tenth of the published figure.
+66. **At least ten times faster than real time: holds.** Sixteen.
+
+**Reading.** dawnr can hear: a recogniser with a permissive licence, running offline on a CPU,
+reproduces its paper's accuracy on the standard test set here.
