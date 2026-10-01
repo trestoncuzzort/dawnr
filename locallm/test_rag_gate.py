@@ -33,6 +33,18 @@ class TestScore(unittest.TestCase):
         finally:
             rag_gate.chunks = chunks
 
+    def test_sentence_support_keeps_each_sentence(self):
+        table = {("A.", "x."): 0.9, ("A.", "y."): 0.1, ("B.", "x."): 0.2, ("B.", "y."): 0.7}
+        align = lambda pre, hyp: [table[(p, h)] for p, h in zip(pre, hyp)]
+        one = lambda t: [s.strip() + "." for s in t.split(".") if s.strip()]
+        chunks = rag_gate.chunks
+        try:
+            rag_gate.chunks = lambda premise, split=None: ["A.", "B."]
+            self.assertEqual(rag_gate.sentence_support("A. B.", "x. y.", align, one), [0.9, 0.7])
+        finally:
+            rag_gate.chunks = chunks
+        self.assertEqual(rag_gate.sentence_support("A.", "", lambda p, h: [1.0] * len(p), split), [])
+
     def test_empty_claim_scores_zero(self):
         self.assertEqual(rag_gate.alignscore("A.", "", lambda p, h: [1.0] * len(p), split), 0.0)
 

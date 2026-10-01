@@ -46,17 +46,22 @@ def chunks(premise: str, split=sentences) -> list[str]:
     return [" ".join(sents[i:i + n_chunk]) for i in range(0, len(sents), n_chunk)]
 
 
-def alignscore(premise: str, claim: str, align, split=sentences) -> float:
-    """mean over claim sentences of the best chunk's P(ALIGNED); align(premises, hypos) -> list of floats."""
+def sentence_support(premise: str, claim: str, align, split=sentences) -> list[float]:
+    """Each claim sentence's best chunk P(ALIGNED), in order; [] for an empty claim."""
     parts = chunks(premise, split)
     claims = split(claim)
     if not claims:
-        return 0.0                                     # an empty reply claims nothing and is not shown
+        return []
     pre = [p for p in parts for _ in claims]
     hyp = [c for _ in parts for c in claims]
     probs = align(pre, hyp)
-    best = [max(probs[i * len(claims) + j] for i in range(len(parts))) for j in range(len(claims))]
-    return sum(best) / len(best)
+    return [max(probs[i * len(claims) + j] for i in range(len(parts))) for j in range(len(claims))]
+
+
+def alignscore(premise: str, claim: str, align, split=sentences) -> float:
+    """mean over claim sentences of the best chunk's P(ALIGNED); align(premises, hypos) -> list of floats."""
+    best = sentence_support(premise, claim, align, split)
+    return sum(best) / len(best) if best else 0.0         # an empty reply claims nothing and is not shown
 
 
 class Aligner:
@@ -164,8 +169,10 @@ def main(argv=None) -> int:
                 if x["passage_num"] == 0 or rejected(x["prediction"]) or (x["id"], x["noise_rate"]) in done:
                     continue
                 docs = rag_rgb.select(data[x["id"]], x["noise_rate"], x["passage_num"])
-                sc = alignscore("\n".join(docs), x["prediction"], align)
-                f.write(json.dumps({"id": x["id"], "noise_rate": x["noise_rate"], "score": sc}) + "\n"); f.flush()
+                best = sentence_support("\n".join(docs), x["prediction"], align)
+                sc = sum(best) / len(best) if best else 0.0
+                f.write(json.dumps({"id": x["id"], "noise_rate": x["noise_rate"], "score": sc,
+                                    "sentences": best}) + "\n"); f.flush()
         return 0
     scores = {(x["id"], x["noise_rate"]): x["score"] for x in map(json.loads, a.scores.read_text().splitlines()) if x}
     rep = report(data, rows, scores)
