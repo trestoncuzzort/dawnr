@@ -173,3 +173,21 @@ the count, for the same reason every other measurement tonight gives: the studen
 problem's specification on about one problem in ten, however it is asked. Given a right
 specification it proves 28 of 33. The retrieved-examples arm and the Python-first pilot are the
 two attempts at the specification itself; both are running.
+
+## Amendment, 2026-10-01 07:46Z, before any reference answer is generated: how the reference is asked
+
+The held-out comparison needs the reference's answers whatever route the student ends up with,
+so they are generated now, while the card is between jobs, and graded on the lab while the next
+student trains. Fixed before the first one exists:
+
+- Phi-4-mini as Ollama serves it (`phi4-mini`, its default 4-bit build, the same build every
+  earlier Phi answer set here used), prompt v5 (the grammar text and the few-shot tasks: it has
+  never been trained on `t`), 3,072 new tokens, context 8,192.
+- One greedy answer and ten sampled ones a problem on the clean 200: temperature 0.7, nucleus
+  0.95, no top-k, no repetition penalty, seeds 1 to 10. Those are the student's sampling
+  settings (`t/student_generate.py`); Ollama's own defaults differ (0.9, 40, 1.1) and are
+  overridden (`t/spec_experiment.py generate --top-p --top-k --repeat-penalty`).
+- If the student's chosen route asks the model more than eleven times a problem, the reference
+  is given the difference in further sampled answers before anything is compared.
+- Same gate: extract, the problem's tests, the seven kernels on every answer that passes them,
+  the repaired specification check, `t/score_levels.py` pooled over the reference's sets.
