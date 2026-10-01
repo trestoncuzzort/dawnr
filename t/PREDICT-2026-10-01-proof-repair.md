@@ -48,3 +48,19 @@ mutated outputs tried (`t/PREDICT-2026-10-01-several-answers.md`, the correction
 second reading is the one that counts toward the held-out rule. "Admitted to the pool" in
 prediction 35 is by `t/graded_pool.py` as it now stands, which refuses a specification below
 that floor; the line the run logs counts agreement only and is not the outcome.
+
+## Outcome so far, 2026-10-01 13:10Z: what Dafny's message repairs
+
+The 4B on v5, each failed proof handed back with Dafny's own diagnostics, one greedy and two
+sampled repairs a round, two rounds:
+
+| | candidates (pass their tests) | Dafny verifies untouched | sent back | repaired in round 1 | in round 2 | Dafny verifies at the end |
+|---|---:|---:|---:|---:|---:|---:|
+| dev | 27 | 9 | 18 | 1 | 0 | 10 |
+| training (the proof round's leftovers) | 156 | 15 | 141 | 11 | 1 | 27 |
+
+34. **At least 1 in 10 of the answers sent back in round 1 is repaired: falsified.** 1 of 18 on dev,
+    11 of 141 (7.8%) on the training side. Most repairs that pass the cheap gates still do not
+    verify (116 of 141 replaced, 11 verified).
+
+33 (dev problems added at the gate) and 35 (training problems admitted) are at the kernels.
