@@ -98,3 +98,33 @@ server (`transformers serve`) does not load an adapter folder, so each adapter i
 full-precision base (`t/student_sft.py --merge`, peft's `merge_and_unload` in bf16) and the merged
 model is served in bf16, not on the 4-bit base. That is the form that would be released, so it is
 the form measured. Reply budget 1,024 tokens (a `t` answer is a few hundred).
+
+## Outcome of the prompted half, 2026-10-01 01:24Z
+
+Six candidates, the 100 dev problems, prompt v5, temperature 0, one answer each; kernels on the
+lab (12 cells), the specification check on every task-stage answer (100 draws).
+
+| candidate | answers | reach a task | tests pass | some prover, none refuting | all seven | all seven, spec checked | some prover, spec checked |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen2.5-Coder-1.5B | 99 | 5 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-2B | 100 | 2 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-4B | 100 | 9 | 1 | 0 | 0 | 0 | 0 |
+| Qwen2.5-Coder-7B | 100 | 4 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-9B | 100 | 12 | 4 | 1 | 0 | 0 | 1 |
+| Qwen2.5-Coder-14B | 100 | 15 | 2 | 0 | 0 | 0 | 0 |
+
+The 1.5B's server answered HTTP 500 on dev problem 621 at every attempt; that problem is
+unanswered for it. The three Qwen3.5 models were asked with thinking off
+(`t/spec_experiment.py --think off`); left on, they spend the reply budget thinking and return
+nothing.
+
+1. **Every candidate at least 5 tests passed: falsified.** Five of six are under 5.
+2. **The 14B code model passes the most: falsified.** The 9B general model passes 4, the 14B 2.
+3. **An 8 GB candidate at half the best: falsified.** The best is 4; the 4B has 1.
+
+By the rule the 16 GB winner is **Qwen3.5-9B** (the only candidate with a proved,
+specification-checked answer), and no 8 GB candidate is separable by prompting: the dev set is
+73 sequence and string problems of 100 and none of these models has seen `t`. A correction to
+the table of candidates: the 9B at 4-bit is about 6.6 GB, so it answers on an 8 GB card too; it
+was listed as a 16 GB model for training, not for use. The fine-tuned half (the amendment above)
+decides the small base and now includes the 9B.
