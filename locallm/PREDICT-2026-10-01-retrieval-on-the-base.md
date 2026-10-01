@@ -1,4 +1,4 @@
-# Answering from retrieved documents on the chosen weights: registered 2026-10-01 14:41Z, before any answer
+# Answering from retrieved documents on the chosen weights: registered 2026-10-01 14:23Z, before any answer
 
 AMBITION's row "to know what it was not trained on" has a retriever (`DAWNR-RETRIEVAL.md`: BM25 ranks a
 problem's own proved document first 35 times in 37) but no measurement of the model answering from what is
