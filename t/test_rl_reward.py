@@ -94,6 +94,16 @@ class Tiers(unittest.TestCase):
         self.assertLess(rl_reward.reward(weak, "verified / refuted"), rl_reward.reward(s, "verified / refuted"))
         self.assertGreater(rl_reward.reward(weak, "verified / refuted"), rl_reward.TIERS["tests"])
 
+    def test_an_incomplete_spec_measured_is_weak(self):
+        # `ensures r > x` agrees with the reference but accepts x + 2, x + 3, ...: the gate's completeness rule
+        # (spec_check.complete, both mutant families at least 60%) calls it weak, so its proof is proved-weak
+        loose = ADD_ONE.replace("ensures r == x + 1", "ensures r > x")
+        s = self.sig(loose)
+        self.assertEqual(s["spec"]["status"], "agrees")
+        self.assertTrue(s["spec"]["weak"])
+        self.assertEqual(rl_reward.tier(s, "verified / refuted"), "proved-weak")
+        self.assertFalse(self.sig(ADD_ONE)["spec"]["weak"])
+
     def test_rewards_are_ordered(self):
         values = [rl_reward.TIERS[t] for t in ("none", "parses", "typed", "tests", "proved-weak", "proved")]
         self.assertEqual(values, sorted(values))
