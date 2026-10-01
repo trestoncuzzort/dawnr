@@ -43,3 +43,15 @@ The record so far for scale: with no Python in view the 4B on v4 wrote a test-su
 specification for 9 dev problems of 100 in eleven tries; given a right specification for an
 unsolved training problem it wrote a test-passing program six times in ten and a proof one time
 in ten.
+
+## Amendment, 2026-10-01 08:18Z, before the round has started: a kept specification must also be complete
+
+The keep rule above asks that a specification agree with the Python solution on at least 10
+drawn inputs. Agreement lets a weak specification through
+(`t/PREDICT-2026-10-01-several-answers.md`, the correction of 08:16Z), and a weak specification
+is the opposite of a training example for specification writing. So the reference filter also
+asks that the specification reject at least 60% of the mutated outputs judged on those inputs
+(`t/spec_first.reference_keeps`; SAFE's floor, arXiv:2410.15756 3.2), and admission to the pool
+asks the same (`t/graded_pool.py`, `spec-too-weak`). Predictions 36 to 38 keep their numbers and
+are judged under this stricter rule.
+

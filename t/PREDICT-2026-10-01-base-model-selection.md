@@ -464,3 +464,25 @@ So a 9B student can be trained here only on rows of at most 1,024 tokens: 406 of
 rows (11%) would be dropped, most of them debugging and APPS rows, and a full run would take
 about four hours. By the rule the 9B matters only if it more than doubles the 4B's tests passed.
 It is not trained tonight; the card is spent on the 4B.
+
+## The dev table on complete specifications, 2026-10-01 08:16Z
+
+"Specification checked" in the tables above means the specification is true of the reference's
+answer on every drawn input. It does not mean it pins the answer down
+(`t/PREDICT-2026-10-01-several-answers.md`, the correction of 08:16Z). The same answers, counted
+only when the specification also rejects at least 60% of the mutated outputs tried (SAFE's rule,
+arXiv:2410.15756 3.2; `t/score_levels.py --min-completeness 0.6`). The prompted candidates
+with nothing counted are left out.
+
+| candidate | tests pass | agreement only: at least 1 | at least 3 | at least 5 | complete specification: at least 1 | at least 3 | at least 5 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen3.5-9B, prompted | 6 | 2 | 2 | 1 | 2 | 2 | 1 |
+| Qwen2.5-Coder-1.5B, fine-tuned on the 527 rows | 4 | 1 | 1 | 0 | 1 | 1 | 0 |
+| Qwen3.5-2B, fine-tuned on the 527 rows | 5 | 1 | 1 | 0 | 1 | 1 | 0 |
+| **Qwen3.5-4B, fine-tuned on the 527 rows** | 6 | 5 | 3 | 1 | **4** | 2 | 0 |
+| Qwen3.5-2B, fine-tuned on the v4 rows | 5 | 2 | 2 | 1 | 2 | 2 | 1 |
+
+One of the 4B's five does not stand: problem 449 (is it a triangle), proved by five kernels on a
+specification that says what must hold if the answer is "Yes" and if it is "No" and never that
+the answer is one of them; it rejects none of the wrong outputs tried. The rule's pick is the
+same, 4 against 1 and 1.

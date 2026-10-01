@@ -100,3 +100,19 @@ with the adapter's budget, and each error becomes one line quoting the clause it
 kinds, and proof rows Dafny has nothing to say about, are unchanged. Nothing else about the v5
 rows changes. A repair measurement that uses these messages at inference is registered
 separately before it runs.
+
+## Amendment, 2026-10-01 08:18Z, before any result of the 4B on v5 exists: read on complete specifications
+
+Prediction 29's bar ("at least 8, the 4B on v4's best route") was set on a count that let weak
+specifications through (`t/PREDICT-2026-10-01-several-answers.md`, the correction of 08:16Z). It
+stays as registered and is judged as registered. Beside it, and deciding what goes to the
+held-out problems, is the same count on specifications that also reject at least 60% of the
+mutated outputs tried, where the 4B on v4's best route reads 4 and its one greedy answer 2:
+
+29c. On complete specifications the Python-first route proves at least 4 dev problems by at
+    least one kernel. Falsified below 4.
+
+The 4B on v5 is at step 138 of 1,240 as this is written. Forty of the 693 proved answers its
+rows are built from carry a weak specification (found after training started); the run is left
+to finish, since the rows are the same for every arm it is compared on, and the pool refuses
+such rows from the next build.
