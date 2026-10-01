@@ -341,3 +341,19 @@ measured pair read 4 or fewer (the 4B on v4's best, ten answers and the specific
 the 4B on v5's greedy, ten-answer, specification-first and repair arms: 4 each; retrieved: 3). The
 held-out run started at 14:11:50Z, once, on the clean 200. The reference is owed the same 17 calls
 a problem: one greedy answer and sixteen sampled.
+
+## Outcome of the held-out run, 2026-10-01 14:46Z: the 4B on v5, the Python first, the clean 200, once
+
+No v5 training row is on a clean-200 problem (checked on the rows file: 0). The route: the student
+writes Python and keeps it only if it passes the question's tests (110 of 200), writes
+specifications that agree with that Python (kept for 50), and answers each kept specification in
+`t` (43, all passing their tests). The seven kernels, the reference check (43 checked: 27 agree,
+16 disagree) and `t/score_levels.py`:
+
+| | problems | reach a task | tests pass | at least 1 | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| reference check agreeing | 200 | 43 | 43 | 21 | 15 | 13 | 9 | 5 |
+| and the specification complete (the registered count) | 200 | 43 | 43 | **18** | 14 | 13 | 9 | **5** |
+
+On dev the same pair read 5 and 1 of 100. The reference's answers (Phi-4-mini, one greedy and
+sixteen sampled a problem) are being generated now and are reported beside these when graded.
