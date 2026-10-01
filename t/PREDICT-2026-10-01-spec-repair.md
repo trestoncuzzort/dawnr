@@ -1,4 +1,4 @@
-# Specification repair with the gate's own witness: registered 2026-10-01 09:52Z
+# Specification repair with the gate's own witness: registered 2026-10-01 09:49Z
 
 ## Why, and what it stands on
 
