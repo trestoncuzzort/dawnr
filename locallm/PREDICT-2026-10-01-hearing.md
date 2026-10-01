@@ -33,7 +33,7 @@ on a public test set, offline. This is the hearing half.
 66. It transcribes faster than real time by at least ten times on 8 threads (5.4 hours of audio
     in under 33 minutes). Falsified otherwise.
 
-## Amendment, 2026-10-01 10:57Z, before any voice is downloaded: speaking
+## Amendment, 2026-10-01 10:55Z, before any voice is downloaded: speaking
 
 The same row asks for a voice. Seed-TTS's public evaluation (github.com/BytedanceSpeech/seed-tts-eval,
 fetched; arXiv:2406.02430) scores synthesized English speech by an ASR model's word error rate on
