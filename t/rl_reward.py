@@ -406,7 +406,7 @@ def prove(tasks: dict[str, dict], *, jobs: int = 2, host: str | None = None,
 # --------------------------------------------------------------- scoring --
 
 def score_many(items: list[tuple[int, str]], pool: dict, cache: RewardCache, *,
-               prove_fn=prove, **prove_kw) -> list[dict]:
+               prove_fn=prove, promote_header: bool = False, **prove_kw) -> list[dict]:
     """Rewards for (task_id, reply) pairs: CPU signals for every uncached answer,
     one prover batch for the ones that need it, then the tiers. Returns one
     dict per item with key, tier, reward, signals and proof."""
@@ -416,7 +416,7 @@ def score_many(items: list[tuple[int, str]], pool: dict, cache: RewardCache, *,
         key = answer_key(tid, reply)
         keys.append(key)
         if cache.get(key) is None and key not in fresh:
-            fresh[key] = local_signals(tid, reply, pool[int(tid)])
+            fresh[key] = local_signals(tid, reply, pool[int(tid)], promote_header=promote_header)
     to_prove = {sig["task"]["name"]: (key, sig["task"]) for key, sig in fresh.items() if needs_proof(sig)}
     cells = prove_fn({name: task for name, (_k, task) in to_prove.items()}, **prove_kw) if to_prove else {}
     proof_of = {key: cells.get(name) for name, (key, _t) in to_prove.items()}
