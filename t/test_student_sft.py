@@ -57,5 +57,39 @@ class Encoding(unittest.TestCase):
         self.assertEqual(batch["attention_mask"].tolist(), [[1, 1, 1], [1, 0, 0]])
 
 
+@unittest.skipUnless(importlib.util.find_spec("torch"), "the loss is a tensor computation; no torch on this machine")
+class ResponseLoss(unittest.TestCase):
+    def test_the_head_on_response_positions_only_equals_the_full_shifted_cross_entropy(self):
+        import torch
+
+        torch.manual_seed(0)
+        vocab, width = 11, 5
+        embed = torch.nn.Embedding(vocab, width)
+        head = torch.nn.Linear(width, vocab, bias=False)
+        seen = {}
+
+        class Backbone:
+            def __call__(self, input_ids, attention_mask):
+                return type("Out", (), {"last_hidden_state": embed(input_ids)})()
+
+        class Base:
+            model = Backbone()
+
+            @staticmethod
+            def lm_head(h):
+                seen["rows"] = h.shape[0]                 # how many positions reached the output layer
+                return head(h)
+
+        batch = student_sft.pad_batch(
+            [{"input_ids": [1, 2, 3, 4, 5, 6], "labels": [-100, -100, -100, 4, 5, 6]},
+             {"input_ids": [7, 8, 9], "labels": [-100, 8, 9]}], pad_id=0)
+        loss = student_sft.response_loss(Base, batch)
+        logits = head(embed(batch["input_ids"]))
+        full = torch.nn.functional.cross_entropy(logits[:, :-1].reshape(-1, vocab), batch["labels"][:, 1:].reshape(-1),
+                                                 ignore_index=-100)
+        self.assertAlmostEqual(float(loss), float(full), places=5)
+        self.assertEqual(seen["rows"], 5)                 # five response tokens, not 2 x 6 positions
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
