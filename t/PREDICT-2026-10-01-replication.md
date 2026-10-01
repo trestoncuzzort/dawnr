@@ -24,3 +24,11 @@ the same prompt and the same 17 answers a problem. On record it costs about 124 
 whose cards may be used only when one has 30 GB free and under 10% use on two polls (today each has about
 8 GB free). It runs when that rule is met, greedy set first; until then this condition stays open and
 the comparison is not called a win.
+
+## Amendment, 2026-10-01 18:46Z, before either seed exists: the seeds go first
+
+The desktop card is idle (the 4B on v6's grading is CPU and lab work) and the specification round and the
+RL run ahead of the seeds would hold it for most of a day. Goal 1's claim waits on the seeds, the round and
+the RL run do not, so both seeds now train and take their held-out route back to back under one hold of
+the card, before the round. The recipe is unchanged: `t/student_sft.py` has not changed since 02:48Z,
+before seed 1 trained. Predictions 99 and 100 are unchanged.
