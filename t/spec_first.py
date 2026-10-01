@@ -35,16 +35,70 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import re                                                       # noqa: E402
+
 import fuzz_lower                                               # noqa: E402
 import harness                                                  # noqa: E402
 import loop_dataset                                             # noqa: E402
+import py_sandbox                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
+import spec_first_rows                                          # noqa: E402
 import spec_given                                               # noqa: E402
 import spec_quality                                             # noqa: E402
 import student_rows                                             # noqa: E402
 import surface                                                  # noqa: E402
 
 TEMPERATURE, TOP_P = 0.7, 0.95
+_PYTHON = re.compile(r"```(?:python|py)\s*\n(.*?)```", re.S)
+
+
+def python_of(reply: str) -> str | None:
+    """The first fenced python block of a reply, or None."""
+    m = _PYTHON.search(reply or "")
+    return m.group(1) if m and m.group(1).strip() else None
+
+
+def written_python(decode, ids: list[str], P: dict, attempts: int, batch: int, max_new: int) -> tuple[dict, dict]:
+    """Step 0 of the --python route: (problem -> a Python solution the student wrote that passes the
+    problem's tests in the sandbox, problem -> counts). One greedy attempt, then sampled ones."""
+    python, counts = {}, {t: {"python attempts": 0, "python": None} for t in ids}
+    for attempt in range(attempts):
+        todo = [t for t in ids if t not in python]
+        for start in range(0, len(todo), batch):
+            chunk = todo[start:start + batch]
+            replies = decode([spec_first_rows.python_question(P[t]) for t in chunk],
+                             0.0 if attempt == 0 else TEMPERATURE, attempt, chunk[0], max_new)
+            for t, (text, _stopped, _ntok) in zip(chunk, replies):
+                counts[t]["python attempts"] += 1
+                code = python_of(text)
+                if code is None:
+                    continue
+                out = py_sandbox.run_tests(code, P[t]["rec"]["test_list"])
+                if out.get("all_pass"):
+                    python[t] = code
+                    counts[t]["python"] = attempt
+    return python, counts
+
+
+def written_specifications(decode, python: dict, P: dict, samples: int, batch: int, max_new: int) -> dict:
+    """Step 1 of the --python route: problem -> [(label, task)] the student wrote from the problem,
+    its tests and its own tested Python. They are scored with every other candidate afterwards."""
+    out = {t: [] for t in python}
+    ids = list(python)
+    for attempt in range(samples + 1):
+        for start in range(0, len(ids), batch):
+            chunk = ids[start:start + batch]
+            replies = decode([spec_first_rows.spec_question(P[t], python[t]) for t in chunk],
+                             0.0 if attempt == 0 else TEMPERATURE, 100 + attempt, chunk[0], max_new)
+            for t, (text, _stopped, _ntok) in zip(chunk, replies):
+                block = se.find_block(text)
+                if block is None:
+                    continue
+                try:
+                    out[t].append((f"written/{attempt}", surface.parse(block)))
+                except Exception:                               # noqa: BLE001
+                    continue
+    return out
 
 
 def specification_of(task: dict) -> dict:
@@ -121,7 +175,12 @@ def accept(reply: str, spec: dict, entry: dict) -> tuple[str | None, str]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", required=True)
-    ap.add_argument("--from-samples", nargs="+", required=True, metavar="TAG")
+    ap.add_argument("--from-samples", nargs="*", default=[], metavar="TAG")
+    ap.add_argument("--python", type=int, default=0, metavar="K",
+                    help="the student first writes Python (K attempts, each run on the problem's tests in "
+                         "t/py_sandbox.py), then specifications from the problem and that Python, and the "
+                         "proof question shows it too; rows of t/spec_first_rows.py")
+    ap.add_argument("--spec-samples", type=int, default=4, help="--python: sampled specifications after the greedy one")
     ap.add_argument("--tag", required=True)
     ap.add_argument("--ids-file", type=Path, required=True)
     ap.add_argument("--pool", choices=se.POOL_VERSIONS, default="v5")
@@ -134,9 +193,25 @@ def main(argv: list[str] | None = None) -> int:
 
     P = {str(k): v for k, v in se.pool(a.pool).items()}
     ids = [x for x in a.ids_file.read_text(encoding="utf-8").split() if x.strip()]
+    if not a.from_samples and not a.python:
+        ap.error("give --from-samples, --python, or both")
+    python, python_counts, written, model, tokenizer, student_generate = {}, {}, {}, None, None, None
+    if a.python:
+        if a.stage1_only:
+            ap.error("--python needs the model; it cannot run with --stage1-only")
+        import student_generate                                 # noqa: E402  (loads torch)
+        model, tokenizer = student_generate.load(a.model)
+
+        def decode(conversations, temperature, salt, first, max_new):
+            return student_generate.decode(model, tokenizer, conversations, max_new, temperature, TOP_P,
+                                           student_generate.problem_seed(salt, first))
+        python, python_counts = written_python(decode, ids, P, a.python, a.batch, a.max_new)
+        print(f"spec_first: {len(python)} of {len(ids)} problems have a Python solution that passes "
+              "their tests", flush=True)
+        written = written_specifications(decode, python, P, a.spec_samples, a.batch, a.max_new)
     per, stats = {}, {}
     for tid in ids:
-        tasks = []
+        tasks = list(written.get(tid, []))
         for tag in a.from_samples:
             d = se.OUT_ROOT / se.model_tag(tag)
             try:
@@ -146,7 +221,9 @@ def main(argv: list[str] | None = None) -> int:
             if e.get("stage") == "task" and (d / "tasks" / f"{e['name']}.json").exists():
                 tasks.append((f"{tag}/{e['name']}", harness.load(d / "tasks" / f"{e['name']}.json")))
         per[tid], counts = kept_specifications(tasks, P[tid], a.per_problem)
-        stats[tid] = {"one-shot tasks": len(tasks), **counts, "asked": 0, "taken": None, "refusals": {}}
+        stats[tid] = {"one-shot tasks": len(tasks) - len(written.get(tid, [])),
+                      "written specifications": len(written.get(tid, [])), **python_counts.get(tid, {}),
+                      **counts, "asked": 0, "taken": None, "refusals": {}}
     with_spec = [t for t in ids if per[t]]
     print(f"spec_first: {len(with_spec)} of {len(ids)} problems have a kept specification "
           f"({sum(len(per[t]) for t in ids)} specifications)", flush=True)
@@ -158,11 +235,12 @@ def main(argv: list[str] | None = None) -> int:
         (d / "spec_first.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
         return 0
 
-    import student_generate                                     # noqa: E402  (loads torch)
     lock = se.tag_lock(d)
     if lock is None:
         raise SystemExit(f"spec_first: another generator holds {a.tag}")
-    model, tokenizer = student_generate.load(a.model)
+    if model is None:
+        import student_generate                                 # noqa: E402  (loads torch)
+        model, tokenizer = student_generate.load(a.model)
     taken: dict[str, dict] = {}
     started = time.monotonic()
     for attempt in range(a.samples + 1):
@@ -170,7 +248,8 @@ def main(argv: list[str] | None = None) -> int:
         todo = [(t, k) for t in with_spec if t not in taken for k in range(len(per[t]))]
         for start in range(0, len(todo), a.batch):
             chunk = todo[start:start + a.batch]
-            conversations = [question(per[t][k]["task"]) for t, k in chunk]
+            conversations = [spec_first_rows.proof_question(per[t][k]["task"], python[t]) if t in python
+                             else question(per[t][k]["task"]) for t, k in chunk]
             replies = student_generate.decode(model, tokenizer, conversations, a.max_new, temperature, TOP_P,
                                               student_generate.problem_seed(attempt, chunk[0][0]))
             for (t, k), msgs, (text, stopped, ntok) in zip(chunk, conversations, replies):
@@ -188,7 +267,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"spec_first: attempt {attempt} ({'greedy' if attempt == 0 else 'sampled'}): "
               f"{len(taken)} of {len(with_spec)} problems answered ({time.monotonic() - started:.0f} s)", flush=True)
     options = {"temperature": TEMPERATURE, "top_p": TOP_P, "num_predict": a.max_new, "decoder": "transformers-batched",
-               "spec_first": {"from": a.from_samples, "per_problem": a.per_problem, "samples": a.samples}}
+               "spec_first": {"from": a.from_samples, "per_problem": a.per_problem, "samples": a.samples,
+                              "python": a.python, "spec_samples": a.spec_samples if a.python else None}}
     for t, r in taken.items():
         se.write_record(d / "raw" / f"{t}.json", {
             "task_id": t, "fn": P[t]["fn"], "model": str(a.model), "digest": "", "pool_version": a.pool,
@@ -196,6 +276,8 @@ def main(argv: list[str] | None = None) -> int:
             "reply_tokens": r["tokens"], "done_reason": "stop" if r["stopped"] else "length",
             "spec_first": {"attempt": r["attempt"], "specification": r["specification"], "scores": r["scores"]}})
     summary["answered"] = len(taken)
+    if a.python:
+        summary["with a tested Python solution"] = len(python)
     (d / "spec_first.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
     lock.close()
     print(f"spec_first: {len(taken)} problems answered", flush=True)

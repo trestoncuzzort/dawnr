@@ -66,3 +66,50 @@ def test_an_answer_is_taken_only_through_every_gate():
     assert spec_first.accept(_reply("r >= 0", "r := n * n;"), spec, ENTRY)[1].startswith("specification changed")
     assert spec_first.accept(_reply("r == n * n", "r := n * n;", name="other"), spec, ENTRY)[1].startswith(
         "specification changed")
+
+
+def test_python_is_taken_from_a_fenced_block_only():
+    assert spec_first.python_of("```python\ndef f():\n    return 1\n```") == "def f():\n    return 1\n"
+    assert spec_first.python_of("def f(): return 1") is None and spec_first.python_of("```python\n\n```") is None
+
+
+class _Student:
+    """Replies by what the question asks for; counts the questions."""
+
+    def __init__(self, python, spec, proof):
+        self.replies, self.asked = {"python": python, "spec": spec, "proof": proof}, []
+
+    def decode(self, conversations, temperature, salt, first, max_new):
+        out = []
+        for c in conversations:
+            kind = ("python" if c[0]["content"] == spec_first.spec_first_rows.PY_SYSTEM else
+                    "spec" if c[0]["content"] == spec_first.spec_first_rows.SPEC_SYSTEM else "proof")
+            self.asked.append((kind, temperature))
+            replies = self.replies[kind]
+            out.append((replies[min(len([a for a in self.asked if a[0] == kind]) - 1, len(replies) - 1)], True, 10))
+        return out
+
+
+PY_ENTRY = dict(ENTRY, rec=dict(ENTRY["rec"], text="Square a number.", code="def square(n):\n    return n * n\n"))
+
+
+def test_the_python_route_keeps_only_python_that_passes_the_tests_in_the_sandbox():
+    import pytest
+    import py_sandbox
+    if not py_sandbox.available():
+        pytest.skip("bubblewrap is not installed")
+    student = _Student(["```python\ndef square(n):\n    return n + n\n```", "```python\ndef square(n):\n    return n * n\n```"],
+                       [], [])
+    python, counts = spec_first.written_python(student.decode, ["1"], {"1": PY_ENTRY}, 3, 16, 64)
+    assert python == {"1": "def square(n):\n    return n * n\n"}
+    assert counts["1"] == {"python attempts": 2, "python": 1}        # the greedy one failed a test; the first sample passed
+    assert [a for a in student.asked] == [("python", 0.0), ("python", 0.7)]
+
+
+def test_written_specifications_are_parsed_candidates_with_the_python_in_the_question():
+    student = _Student([], ["```t\nt 1\ntask square(n: int) returns (r: int)\n  ensures r == n * n\n{\n}\n```", "not a task"], [])
+    out = spec_first.written_specifications(student.decode, {"1": "def square(n):\n    return n * n\n"},
+                                            {"1": PY_ENTRY}, 1, 16, 64)
+    assert [label for label, _task in out["1"]] == ["written/0"]
+    kept, _ = spec_first.kept_specifications(out["1"], PY_ENTRY, 3)
+    assert len(kept) == 1 and kept[0]["scores"]["correctness"] == 1.0
