@@ -105,3 +105,25 @@ computed on calibration text (`llama-imatrix -m model.gguf -f text -o imatrix.gg
 51. At Q8_0 at least 30 of the 33 replies are word for word the bf16 student's. Falsified below 30.
 52. At Q8_0 at least 27 of 33 are proved by one kernel or more (bf16 28). Falsified below 27.
 53. Q4_K_M with the importance matrix proves at least 26 (plain Q4_K_M 23). Falsified below 26.
+
+## Outcome of the amendment, 2026-10-01 11:13Z: which quantization keeps the proofs
+
+The same 33 specification-given questions, the same gates and kernels, the same 12 CPU threads:
+
+| file | size | replies word for word bf16's | proved by one kernel or more | by all seven | lost against bf16 | tokens a second |
+|---|---:|---:|---:|---:|---:|---:|
+| bf16 (on record) | 8.4 GB | 33 | 28 | 26 | | |
+| **Q8_0** | **4.48 GB** | **30** | **28** | **26** | **0** | 14.6 |
+| Q4_K_M with an importance matrix | 2.71 GB | 20 | 25 | 20 | 3 | 14.4 |
+| Q4_K_M | 2.71 GB | 21 | 23 | 22 | 5 | 15.5 |
+
+51. **At Q8_0 at least 30 of 33 replies are bf16's word for word: holds, at exactly 30.**
+52. **At Q8_0 at least 27 are proved: holds.** 28, the same as bf16, and the same 26 by all seven;
+    no question proved at full precision is lost.
+53. **Q4_K_M with the importance matrix proves at least 26: falsified.** 25. It loses 3 of the 28
+    where plain Q4_K_M loses 5, and proves fewer by all seven (20 against 22), so the matrix
+    computed on 100 chunks of the student's own rows does not buy the proofs back.
+
+**Reading.** The student's file for small hardware is Q8_0: 4.48 GB, the same answers as full
+precision on the measurement that counts proofs, about 15 tokens a second on 12 CPU threads. At
+4 bits it loses about one proof in six, and the importance matrix does not close the gap.
