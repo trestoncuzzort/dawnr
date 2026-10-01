@@ -44,3 +44,18 @@ All 3,000 adversarial questions, four CPU servers on the lab, 72 minutes, no req
 says an absent object is present on 140 of 1,500 questions (9.3%). That is the visual form of the
 failure the gate exists for; nothing yet checks a claim about an image the way the provers check a
 program, so this rate is what a person would see unchecked.
+
+## Amendment, 2026-10-01 13:09Z, before any detector has run: the gate for images
+
+The code gate shows an answer only when something that did not write it agrees. The same for images:
+Woodpecker (Yin et al., arXiv:2310.16045, read) validates every object an MLLM claims with an open-set
+detector before the claim stands, training-free, and gains 24 to 31 accuracy points on POPE for the
+models it was tried on. Here nothing is rewritten: a "yes, there is a <object>" is SHOWN only when OWLv2
+(google/owlv2-base-patch16-ensemble, Apache-2.0, card fetched) also gives some box at least the threshold
+score for "a photo of a <object>"; otherwise the gate says it cannot confirm it (`locallm/vision_gate.py`).
+The threshold is the model card's own example, 0.1; 0.2 and 0.3 are reported beside it. The same 3,000
+adversarial questions and the base's answers above.
+
+77. At 0.1, of the "yes" answers the gate shows, at least 95% are right (the model alone: 90.1%).
+    Falsified below 95%.
+78. At 0.1 the gate keeps at least 85% of the model's right "yes" answers. Falsified below 85%.
