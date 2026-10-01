@@ -184,3 +184,42 @@ schedule change.
 candidates are trained again with that one recipe so the comparison stays like for like. The
 1.5B and 2B results already measured stand, labelled with the recipe they used. The 9B was
 stopped before it trained.
+
+## Outcome for the first two fine-tuned students, 2026-10-01 02:19Z
+
+Qwen2.5-Coder-1.5B and Qwen3.5-2B, each fine-tuned on the 527 rows (standard loss, healthy loss
+curves, 0.73 to 0.08 and 0.67 to 0.06), merged, served, one answer per dev problem under prompt
+`s1`, extracted with `--promote-header`, all seven kernels on the lab (exit 0, both tables
+written), the specification check on every task-stage answer (100 draws), scored by
+`t/score_levels.py`.
+
+| candidate | reach a task | tests pass | proved by at least 1, spec checked | at least 3 | at least 5 | all seven |
+|---|---:|---:|---:|---:|---:|---:|
+| Qwen2.5-Coder-1.5B, prompted (v5) | 5 | 0 | 0 | 0 | 0 | 0 |
+| Qwen2.5-Coder-1.5B, fine-tuned | 23 | 4 | **1** | 1 | 0 | 0 |
+| Qwen3.5-2B, prompted (v5) | 2 | 0 | 0 | 0 | 0 | 0 |
+| Qwen3.5-2B, fine-tuned | 45 | 4 | **1** | 1 | 0 | 0 |
+| the two students pooled | 54 | 7 | 1 | 1 | 0 | 0 |
+| Qwen3.5-9B, prompted (v5), for reference | 12 | 4 | 1 | 1 | 0 | 0 |
+
+Without `--promote-header` the students reach a task on 17 and 42 and pass the tests on 3 and 4.
+
+4. **Every fine-tuned candidate at least 10 tests passed: falsified.** Both pass 4.
+6. **Every candidate a valid task on at least 40: falsified.** The 1.5B reaches 23; the 2B, 45.
+5. Not yet measurable: the 4B has no sound run (see the stability probe above).
+
+**Reading.** Fine-tuning taught the language and not the problem. The 2B went from 2 valid tasks
+to 45, and through the gate each student has one proved, specification-checked answer in a
+hundred, the same as the untrained 9B. Of the 68 task-stage answers the two students wrote, the
+specification agrees with the problem's reference on 6 and disagrees on 57: they write well-formed
+`t` whose `ensures` describes a different function. That is the step
+`internal/RESEARCH-NEXT-2026-09-20.md` named (English to specification), and 527 rows did not
+move it at this size.
+
+**What the instrument can and cannot say.** By the registered rule the two students tie on every
+criterion (0 at seven, 1 at one prover, 4 tests passed). One answer per problem on 100 problems
+cannot rank bases whose proved rate is about one percent: the differences it would show between
+further candidates are one or two problems. Ranking needs more successes to count, which means
+several answers per problem with the gate as the filter (SAFE reports its 1.3B backbone at 21.6%
+with one answer and 40.3% with ten, arXiv:2410.15756 table 8). That measurement is registered
+separately before it runs.
