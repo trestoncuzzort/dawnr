@@ -113,3 +113,18 @@ def test_written_specifications_are_parsed_candidates_with_the_python_in_the_que
     assert [label for label, _task in out["1"]] == ["written/0"]
     kept, _ = spec_first.kept_specifications(out["1"], PY_ENTRY, 3)
     assert len(kept) == 1 and kept[0]["scores"]["correctness"] == 1.0
+
+
+def test_given_specifications_are_read_stripped_and_scored(tmp_path, monkeypatch):
+    import json
+    ids = tmp_path / "ids.txt"; ids.write_text("1\n")
+    given = tmp_path / "given.jsonl"
+    given.write_text(json.dumps({"task_id": 1, "tasks": [RIGHT, WRONG], "sources": ["lab/a", "lab/b"]}) + "\n")
+    monkeypatch.setattr(se, "pool", lambda version: {1: ENTRY})
+    monkeypatch.setattr(se, "OUT_ROOT", tmp_path)
+    monkeypatch.setattr(se, "outdir", lambda tag: (tmp_path / tag).mkdir(exist_ok=True) or tmp_path / tag)
+    assert spec_first.main(["--model", "none", "--given-specs", str(given), "--tag", "g", "--ids-file", str(ids),
+                            "--stage1-only"]) == 0
+    out = json.loads((tmp_path / "g" / "spec_first.json").read_text())
+    assert out["with a kept specification"] == 1 and out["per_problem"]["1"]["kept"] == 1
+    assert out["per_problem"]["1"]["dropped"] == 1
