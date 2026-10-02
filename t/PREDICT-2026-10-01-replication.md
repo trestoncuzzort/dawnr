@@ -95,3 +95,9 @@ prompted reference proves with the same seventeen answers a problem, at one kern
 spread from 15 to 19 at one kernel and 5 to 8 at seven. The first of section 1's two remaining conditions,
 three seeds, is met. The second, the reference decoding under `t`'s grammar, is being generated on the lab
 (about 600 of 3,400 answers at this writing) and the comparison is not called a win until it is graded.
+
+Serving note, 2026-10-02 06:12Z (speed only): the desktop card is off the bus until it is power-cycled, so its
+idle CPU helps until then: three one-slot llama-servers on the desktop, built from the lab's exact llama.cpp
+commit (def4d406ae2c) and loading the same weights file (Ollama's blob, sha256 3c168af1...), take answer sets
+from the far end of the list. A set another generator is writing is skipped (the generator's tag lock), so every
+set is still written by one generator. The run was at 869 of 3,400 answers.
