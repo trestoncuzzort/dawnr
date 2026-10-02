@@ -29,9 +29,20 @@ start_one() {  # name gguf port
   echo $! > "$RUN/$1.pid"
 }
 
-wait_ready() {
-  for _ in $(seq 1 180); do healthy "$SP" && healthy "$BP" && return 0; sleep 1; done
-  echo "dawnr: the model servers did not come up; see $RUN/*.log" >&2; return 1
+wait_ready() {  # a first start on a small machine loads 7 GB and compiles its kernels: GitHub's 3-core Mac took over 3 minutes
+  local limit=${DAWNR_START_SECONDS:-600} i n pid
+  for i in $(seq 1 "$limit"); do
+    healthy "$SP" && healthy "$BP" && return 0
+    for n in student base; do
+      pid=$(cat "$RUN/$n.pid" 2>/dev/null || true)
+      if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
+        echo "dawnr: the $n model server stopped while loading; the end of $RUN/$n.log:" >&2; tail -5 "$RUN/$n.log" >&2; return 1
+      fi
+    done
+    [ $((i % 60)) = 0 ] && echo "  still loading the models ($i s)..." >&2
+    sleep 1
+  done
+  echo "dawnr: the model servers did not come up in $limit s; see $RUN/*.log" >&2; return 1
 }
 
 stop_all() {
@@ -53,7 +64,7 @@ case $cmd in
     why=$(sandbox_check) || { echo "dawnr: model-written Python only runs in a sandbox, and $why" >&2; exit 1; }
     started=0
     if ! { healthy "$SP" && healthy "$BP"; }; then
-      echo "starting the models (about half a minute)..." >&2
+      echo "starting the models (half a minute here, a few minutes the first time on a small machine)..." >&2
       start_one student "$STUDENT_GGUF" "$SP"; start_one base "$BASE_GGUF" "$BP"; started=1
       trap '[ $started = 1 ] && stop_all' EXIT
       wait_ready
