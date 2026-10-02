@@ -44,16 +44,29 @@ your computer.
 
 ## Get it
 
-dawnr is not packaged for one-step install yet; that is being built now. Until
-then the source is here:
+You need Linux or macOS, Python 3.10 or newer, and about 8 GB of disk. No
+graphics card is needed.
 
 ```bash
 git clone https://github.com/trestoncuzzort/dawnr
 cd dawnr
-git lfs pull
+./install.sh
 ```
 
-The seven provers and their versions are listed in [t/README.md](t/README.md).
+The installer needs no administrator rights. It downloads the model server,
+the two models and the first prover into `~/.local/share/dawnr`, checks each
+download against its published checksum, and adds a `dawnr` command. Then:
+
+```bash
+dawnr ask "Write a function that returns the larger of two numbers." \
+  --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9"
+```
+
+The first question takes under a minute on an ordinary CPU. `dawnr doctor`
+shows what is installed. The installer sets up Dafny; adding the other six
+provers (see [t/README.md](t/README.md)) lets an answer be proved up to seven
+times over. The student model's first public release is being prepared; see
+[DISCLAIMERS.md](DISCLAIMERS.md).
 
 ## Learn more
 

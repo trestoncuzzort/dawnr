@@ -13,6 +13,11 @@ dawnr is research software. Read this before relying on anything it does.
   examples and a second, independently written solution, and still shows a wrong answer about one time in six
   on problems it has not seen (see below). A shown answer says how many of the seven provers proved it; it is
   not a guarantee that the question was understood.
+- **The installer is new.** It was tested from an empty home directory on Linux x86_64 (install in under
+  2 minutes, a first answer proved by Dafny in under a minute). The student model is not published yet, so
+  until its release `./install.sh` stops at that step unless given `--student FILE`. It installs only Dafny
+  of the seven provers; an answer is shown with how many of the installed provers proved it. On macOS the
+  independent Python check needs a sandbox (`bwrap`) that macOS does not have, so it refuses every answer there.
 - **It does not yet solve most problems.** On held-out problems the student is proved correct on 15 to 19 of
   200. It refuses the rest rather than guessing, which is the design, but it means most questions get a refusal.
 
