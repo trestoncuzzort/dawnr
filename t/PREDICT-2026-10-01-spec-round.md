@@ -68,3 +68,12 @@ The amendment of 14:16Z moved the round to the 4B on v6. Measured since (`t/PRED
 v6 is worse at both halves of the round's task: given a specification it proves 26 of 33 by all seven where v5
 proves 28, and from tested Python it keeps a specification on 10 dev problems where v5 keeps 15. The round
 runs with the measured-best student for it, the 4B on v5. Predictions 36 to 38 are unchanged.
+
+## Amendment, 2026-10-02 02:13Z, after a failed start that asked nothing: eight long references left out
+
+The round started at 02:05Z with the 4B on v5 and stopped on its first batch: the card ran out of memory
+(15.28 of 15.57 GiB in use). Its batches of 16 are padded to their longest prompt, and one problem's reference
+Python is 289,048 characters (an embedded data table). 8 of the 2,035 problems have a reference over 3,000
+characters (4 over 10,000); the student trained on rows of at most 2,845 tokens and never saw such a prompt.
+They are left out: 2,027 problems. No specification was written and no answer taken in the failed start.
+Predictions 36 to 38 are unchanged. It reruns after the RL run's card work.
