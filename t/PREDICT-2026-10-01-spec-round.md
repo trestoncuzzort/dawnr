@@ -85,7 +85,7 @@ remain (prompts up to 59,345 characters; dev prompts are at most 1,019), and a b
 prompt. Problems whose whole prompt (statement, tests and reference Python) is over 6,000 characters are left out
 (12 more: 2,015 problems), and the round runs at batch 8 instead of 16. Predictions 36 to 38 are unchanged.
 
-## Amendment, 2026-10-02 03:05Z, after a second out-of-memory stop: a batch that does not fit is halved
+## Amendment, 2026-10-02 02:59Z, after a second out-of-memory stop: a batch that does not fit is halved
 
 The round at batch 8 ran 42 minutes and stopped out of memory (02:57Z), losing what it had written; the RL band
 was stopped by hand before it could. Decoding now does what accelerate's `find_executable_batch_size` does
