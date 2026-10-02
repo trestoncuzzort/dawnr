@@ -81,3 +81,21 @@ def test_a_server_that_refuses_the_thinking_field_is_asked_again_without_it():
     assert decode([[{"role": "user", "content": "a"}]], 0.0, 0, "1", 32)[0][0] == "ok"
     assert "think" in bodies[0] and "think" not in bodies[1]
 
+
+
+@pytest.mark.skipif(not py_sandbox.available(), reason="no sandbox")
+def test_sampled_python_keeps_every_distinct_test_passing_sample():
+    import spec_first
+    P = {"q": {"fn": "f", "rec": {"text": "Check for odd parity of a number.", "test_list": ["assert f(13) == True", "assert f(18) == False"]}}}
+    replies = iter(["```python\ndef f(n):\n    return n % 2 == 1\n```",
+                    "```python\ndef f(n):\n    return bin(n).count('1') % 2 == 1\n```",
+                    "```python\ndef f(n):\n    return n % 2 == 1\n```",
+                    "```python\ndef f(n):\n    return True\n```"])
+    seen = []
+
+    def decode(convs, temperature, salt, first, max_new):
+        seen.append((temperature, salt))
+        return [(next(replies), True, 0) for _ in convs]
+    out = spec_first.sampled_python(decode, ["q"], P, 4, 8, 256)
+    assert out["q"] == ["def f(n):\n    return n % 2 == 1\n", "def f(n):\n    return bin(n).count('1') % 2 == 1\n"]
+    assert seen == [(0.8, 1000), (0.8, 1001), (0.8, 1002), (0.8, 1003)]
