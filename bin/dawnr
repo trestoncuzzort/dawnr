@@ -59,7 +59,10 @@ case $cmd in
       wait_ready
     fi
     cd "$DAWNR_REPO"
-    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" --text "$QUESTION" "$@"
+    # --consistency 5: five more Python solutions sampled at 0.8 must not find the specification false
+    # (t/PREDICT-2026-10-02-ambiguity.md: 80% -> 87% of shown answers right); a later --consistency overrides it
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" \
+      --consistency 5 --text "$QUESTION" "$@"
     ;;
   serve)
     case ${1:-status} in
