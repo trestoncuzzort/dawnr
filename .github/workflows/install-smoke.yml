@@ -43,3 +43,9 @@ jobs:
             --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9" --test "assert larger(4, 4) == 4" \
             | tee answer.txt
           grep -q "^SHOWN:" answer.txt
+
+      - name: the model servers' logs (on failure)
+        if: failure()
+        run: |
+          for f in ~/.local/share/dawnr/run/*.log; do echo "== $f"; tail -60 "$f"; done
+          vm_stat 2>/dev/null | head -8 || free -m
