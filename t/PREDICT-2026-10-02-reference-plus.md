@@ -26,3 +26,23 @@ The original numbers stay in their registrations; this file records the second c
 109. The student's count on complete specifications, at least one kernel, rises by at least 1 for at least two of
      the three seeds.
 110. Phi-4-mini's count changes by at most 1.
+
+## Outcome of the registered rule, 2026-10-02 07:32Z, and a correction to it
+
+| the clean 200, complete specifications, at least one kernel | MBPP's references | MBPP+'s, as registered |
+|---|---:|---:|
+| seed 1 | 18 | 18 |
+| seed 2 | 19 | 18 |
+| seed 3 | 15 | 17 |
+| Phi-4-mini, prompted, 17 answers a problem | 3 | 3 |
+
+109. **At least two seeds rise: falsified.** One rises (seed 3: 605 "is prime" is now right, and 629's
+     specification is now complete), one falls (seed 2), one is unchanged.
+110. **Phi changes by at most 1: holds.** It does not change.
+
+Why seed 2 fell, read from the verdicts: on 454 ("a word containing 'z'") EvalPlus did not only fix MBPP's regular
+expression, it changed the task's contract: MBPP+'s solution returns True or False, where the problem's own tests,
+which the answers pass, expect the strings 'Found a match!' and 'Not matched!'. So the registered rule marked right
+answers wrong on seeds 1 and 2. **Correction (07:34Z, after the result above, so not a prediction):** MBPP+'s solution
+replaces MBPP's only where it passes the problem's own test assertions (`spec_check.passes_own_tests`, tested).
+Every set is re-scored with the corrected rule and reported beside both columns above.
