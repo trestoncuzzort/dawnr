@@ -42,6 +42,11 @@ case $cmd in
   ask)
     [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr ask "QUESTION" --test "assert f(x) == y" [--test ...]' >&2; exit 2; }
     QUESTION=$1; shift
+    if ! command -v bwrap >/dev/null; then
+      if [ "$(uname -s)" = Darwin ]; then echo "dawnr: 'ask' is not supported on macOS yet (it needs the Linux bwrap sandbox)" >&2
+      else echo "dawnr: install bubblewrap first; model-written Python only runs inside it (Debian/Ubuntu: sudo apt install bubblewrap)" >&2; fi
+      exit 1
+    fi
     started=0
     if ! { healthy "$SP" && healthy "$BP"; }; then
       echo "starting the models (about half a minute)..." >&2
