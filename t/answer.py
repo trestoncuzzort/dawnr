@@ -98,7 +98,7 @@ def prove(tasks: list[dict], jobs: int = 2, timeout: float = 1800.0) -> dict[str
 
 
 def answer(entry: dict, student, python, prompt_version: str = "s2", answers: int = 5, max_new: int = 1024,
-           prover=prove, jobs: int = 2) -> dict:
+           prover=prove, jobs: int = 2, consistency: int = 0) -> dict:
     """The whole gate for one question. `student` and `python` are `decode`s
     (python_beside.api_decode's shape). Returns {"shown": {...} | None, "refused": [...], ...}."""
     question = se.build_prompt(entry, prompt_version)
@@ -106,19 +106,25 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
     for seed in range(1, answers):
         replies.append(student([question], TEMPERATURE, seed, "q", max_new)[0][0])
     kept, refused = candidates(replies, entry)
-    out = {"question": entry["rec"]["text"], "tests": entry["rec"]["test_list"], "answers asked": len(replies),
+    out = {"question": entry["rec"]["text"], "fn": entry["fn"], "tests": entry["rec"]["test_list"], "answers asked": len(replies),
            "pass the tests": len(kept), "refused": refused, "shown": None}
     if not kept:
         return dict(out, why="no answer parsed, was well formed and passed the question's tests")
     code, counts = spec_first.written_python(python, ["q"], {"q": entry}, 3, 1, 768)
     out["python beside it"] = code.get("q")
+    # `consistency` further solutions sampled at 0.8 hold the specification too (ClarifyGPT's code consistency
+    # check, arXiv:2310.10996; t/PREDICT-2026-10-02-ambiguity.md): a question two solutions read differently is refused
+    others = spec_first.sampled_python(python, ["q"], {"q": entry}, consistency, 1, 768)["q"] if consistency and code.get("q") else []
     judged = []
     for c in kept:
-        v = spec_gate.judge(c["task"], entry, code.get("q"))
+        v = spec_gate.judge_all(c["task"], entry, code.get("q"), others)
+        if v.get("ambiguous") and "ambiguous" not in out:
+            out["ambiguous"] = v["ambiguous"]
         c["stage"] = v
         (judged if v["passes"] else refused).append(c if v["passes"] else f"answer {c['n']}: {v['why']}")
     if not judged:
-        return dict(out, why="no answer's specification could be supported without a reference")
+        return dict(out, why="the question can be read more than one way" if out.get("ambiguous")
+                    else "no answer's specification could be supported without a reference")
     for i, c in enumerate(judged):                              # distinct names: one table row each
         c["task"] = se.rename_task(c["task"], f"answer_{c['n']}__{entry['fn']}")
     cells = prover([c["task"] for c in judged], jobs)
@@ -160,6 +166,12 @@ def render(r: dict) -> str:
                   + " of the wrong outputs tried.", "", s["program"].rstrip()]
     if r["refused"]:
         lines += ["", f"Of {r['answers asked']} answers asked for, not shown:"] + ["  " + x for x in r["refused"]]
+    if s is None and r.get("ambiguous"):
+        a = r["ambiguous"]
+        args = ", ".join(repr(x) for x in a.get("args") or [])
+        lines += ["", f"Another solution that passes the same tests answers {r.get('fn', 'f')}({args}) with "
+                      f"{a.get('another_solution_said')!r}, and the answer's specification disagrees there. "
+                      f"Add a --test for that input to say which is meant."]
     return "\n".join(lines)
 
 
@@ -173,6 +185,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--test", action="append", default=[], help="an `assert f(arguments) == value` line; repeat")
     ap.add_argument("--prompt", choices=se.PROMPT_VERSIONS, default="s2")
     ap.add_argument("--answers", type=int, default=5)
+    ap.add_argument("--consistency", type=int, default=0,
+                    help="further Python solutions sampled at 0.8 that must not find the specification false (0: off)")
     ap.add_argument("--jobs", type=int, default=2, help="provers at once")
     ap.add_argument("--json", type=Path)
     a = ap.parse_args(argv)
@@ -181,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as e:
         raise SystemExit(f"answer: {e}")
     r = answer(entry, python_beside.api_decode("openai", [a.student], a.student_name),
-               python_beside.api_decode("openai", [a.python], a.python_name), a.prompt, a.answers, jobs=a.jobs)
+               python_beside.api_decode("openai", [a.python], a.python_name), a.prompt, a.answers, jobs=a.jobs, consistency=a.consistency)
     print(render(r))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")
