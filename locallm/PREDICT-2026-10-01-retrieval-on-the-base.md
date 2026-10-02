@@ -252,3 +252,24 @@ nothing on top and is not used. The "right" count is a lower bound: it requires 
 and read by hand several misses are the same answer under another name ("Thorgan Hazard" for "Thorgan Ganael
 Francis Hazard"; "Paige O'Hara" for her birth name), and some answers in the absent condition are stated by a
 distractor paragraph that does answer the question.
+
+## Amendment, 2026-10-02 14:49Z, before any answer under it: the quote before the claim
+
+Of the 185 right answers above, only 125 have a claim holding the answer whose own quote holds it too; in the
+rest the quote is another sentence of the cited document, although every one of those documents has a sentence
+that states the answer. The claim is written first and the quote chosen after, so the quote need not be its
+source. "Attribute First, then Generate" (Slobodkin et al., arXiv:2403.17104) selects the source spans before
+generating from them, and reports attribution as good or better with more specific citations. Here: the reply
+names the document and copies its sentence, then writes the claim (`rag_cite.py --quote-first`; the grammar is
+the same, in that order). One probe on this repository's README, before this registration and not counted, chose
+the sentence holding the answer where the claim-first order had not.
+
+The same 300 questions in both conditions, the same base, servers and settings; scored as above.
+
+120. Among the right answers with the answer present, the answer is in its claim's own quote for at least 85%
+     (claim first: 125 of 185, 68%).
+121. Right answers with the answer present stay at least 170 (claim first: 185).
+122. With the answer absent it still refuses at least 280 of 300 (claim first: 286).
+
+If 120 and 121 hold, `dawnr cite` moves to the quote-first order. It runs on the lab when the Phi run has
+finished generating, beside the tool test.
