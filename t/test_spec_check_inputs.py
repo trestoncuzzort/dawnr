@@ -77,3 +77,20 @@ def test_a_disagreement_found_earlier_on_the_same_task_is_kept_and_nothing_else_
     assert out["b"]["status"] == "agrees"                      # another task: the old witness says nothing about it
     assert out["c"]["status"] == "disagrees" and out["d"]["status"] == "agrees"
 
+
+
+def test_reference_plus_swaps_only_mbpp_problems_with_the_same_function(tmp_path):
+    import json as _json
+    import spec_check
+    pool = {605: {"fn": "prime_num", "rec": {"code": "def prime_num(n):\n    return n % 2 == 1\n"}},
+            454: {"fn": "text_match_wordz", "rec": {"code": "def text_match_wordz(t):\n    return 'x'\n"}},
+            100003: {"fn": "f", "rec": {"code": "def f(x):\n    return x\n"}}}
+    rows = [{"task_id": 605, "code": "def prime_num(n):\n    return n > 1 and all(n % i for i in range(2, n))\n"},
+            {"task_id": 454, "code": "def other_name(t):\n    return 'z' in t\n"},
+            {"task_id": 100003, "code": "def f(x):\n    return -x\n"}]
+    f = tmp_path / "plus.jsonl"; f.write_text("".join(_json.dumps(r) + "\n" for r in rows))
+    out, n = spec_check.with_reference_plus(pool, f)
+    assert n == 1
+    assert "all(n % i" in out[605]["rec"]["code"] and "n % 2 == 1" in pool[605]["rec"]["code"]
+    assert out[454] is pool[454] and out[100003] is pool[100003]
+    assert spec_check.reference(out[605]["rec"], "prime_num")(9) is False

@@ -26,6 +26,7 @@ import contextlib
 import datetime
 import hashlib
 import json
+import re
 import random
 import signal
 import sys
@@ -357,6 +358,28 @@ def mutations(value):
             seen.add(key)
             unique.append(candidate)
     return unique
+
+
+def with_reference_plus(pool: dict, path) -> tuple[dict, int]:
+    """The pool with MBPP+'s solutions (EvalPlus, arXiv:2305.01210; huggingface.co/datasets/evalplus/mbppplus) in
+    place of MBPP's own, for every MBPP problem MBPP+ holds whose solution defines the same function. EvalPlus
+    corrected MBPP solutions that disagree with their own task (2026-10-02: 605's primality test checked only the
+    divisor 2). Returns (pool, number swapped); the input pool is not changed."""
+    import copy
+    plus = {}
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            r = json.loads(line)
+            plus[int(r["task_id"])] = r["code"]
+    out, swapped = dict(pool), 0
+    for tid, entry in pool.items():
+        code = plus.get(int(tid)) if int(tid) < 100000 else None
+        if code and re.search(rf"\bdef\s+{re.escape(entry['fn'])}\s*\(", code):
+            e = copy.deepcopy(entry)
+            e["rec"]["code"] = code
+            out[tid] = e
+            swapped += 1
+    return out, swapped
 
 
 def reference(rec: dict, fn: str):
@@ -762,11 +785,16 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--only", choices=["clean", "all"], default="clean")
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--reference-plus", type=Path, default=None,
+                    help="MBPP+ rows (JSONL): use EvalPlus's corrected solution where it has the problem")
     ap.add_argument("--out", type=Path, default=HERE / "SPEC-CHECK-2026-09-18.md")
     a = ap.parse_args()
     if a.n < 1:
         ap.error("--n must be positive")
     pool = se.pool(a.pool)
+    if a.reference_plus:
+        pool, swapped = with_reference_plus(pool, a.reference_plus)
+        print(f"spec_check: MBPP+ references in place of the original for {swapped} problems", flush=True)
     # ONE generator, threaded through every task in order, so task N's arguments
     # depend on tasks 1..N-1. That is what makes `--seed 1` reproduce a report
     # exactly, and it is also why this loop cannot be parallelized for speed:
