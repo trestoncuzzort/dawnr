@@ -21,8 +21,12 @@ dawnr is research software. Read this before relying on anything it does.
   Dafny in about a minute). It installs only Dafny
   of the seven provers; an answer is shown with how many of the installed provers proved it. The independent
   Python check runs model-written code only inside a sandbox: `bwrap` on Linux, and on macOS Apple's Seatbelt with
-  the policies OpenAI's Codex CLI uses. On macOS the sandbox's
-  13 tests and the answer path's 7 pass on GitHub's macOS runner; the whole install has not yet been run on a Mac.
+  the policies OpenAI's Codex CLI uses. The whole path, install
+  then a question answered and proved, passes on GitHub's Ubuntu 24.04 and Apple-silicon Mac runners
+  (`.github/workflows/install-smoke.yml`). That Mac is a 3-core virtual machine whose virtual GPU generated under a
+  token a second, so there the models ran on its CPU (`DAWNR_GPU_LAYERS=0`), about 5 minutes for the first
+  question; a physical Mac, where llama.cpp uses Metal, has not been tried. If answers come back as "no reply from
+  the model", set `DAWNR_GPU_LAYERS=0`.
 - **Ubuntu 23.10 and newer need one root step.** They restrict the user namespaces bubblewrap uses, and the
   sandbox fails on every run until an AppArmor profile allows it (`t/apparmor-bwrap.sh`, Ubuntu's documented
   per-program way). `./install.sh` and `dawnr doctor` detect this and print the command; on GitHub's Ubuntu 24.04

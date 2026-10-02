@@ -92,7 +92,8 @@ ok = py_sandbox.available(); ok or print(py_sandbox.why_unavailable()); sys.exit
 fi
 if [ "$OS" = Darwin ]; then
   echo "  note: on macOS model-written Python runs under Apple's Seatbelt (sandbox-exec) with Codex CLI's policies;"
-  echo "        its tests pass on GitHub's macOS runner, but this installer has not yet been run end to end on a Mac."
+  echo "        install and a first question pass on GitHub's Mac runner. If answers come back as 'no reply from the"
+  echo "        model', run with DAWNR_GPU_LAYERS=0 (the CPU instead of Metal)."
 fi
 echo "  $OS $ARCH, $("$PY" -V), llama.cpp build $LLAMA_TAG ($BUILD)"
 
