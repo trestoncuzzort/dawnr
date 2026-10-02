@@ -93,3 +93,28 @@ def test_tests_that_are_not_plain_assertions_are_refused_before_anything_is_aske
         answer.entry_of("x", ["assert f(1) == 2", "assert g(1) == 2"])
     with pytest.raises(ValueError):
         answer.entry_of("x", [])
+
+
+PARITY = answer.entry_of("Check for odd parity of a number.",
+                         ["assert odd_parity(13) == True", "assert odd_parity(21) == True", "assert odd_parity(18) == False"])
+IS_ODD = "```t\nt 1\ntask odd_parity(n: int) returns (r: bool)\n  ensures r == (n % 2 == 1)\n{\n  r := n % 2 == 1;\n}\n```"
+
+
+def two_readings(conversations, temperature, salt, first, max_new):
+    """The greedy Python reads 'odd parity' as 'odd'; the sampled ones as an odd count of one bits."""
+    code = ("def odd_parity(n):\n    return n % 2 == 1\n" if temperature == 0.0
+            else "def odd_parity(n):\n    return bin(n).count('1') % 2 == 1\n")
+    return [(f"```python\n{code}```", True, 0)]
+
+
+def test_a_question_two_test_passing_solutions_read_differently_is_refused_with_the_input_that_settles_it():
+    """ClarifyGPT's consistency check (arXiv:2310.10996): with one Python the misreading is shown; with sampled
+    solutions that read the question the other way it is refused, and the refusal asks for the deciding test."""
+    shown = answer.answer(PARITY, student(IS_ODD), two_readings, answers=1, prover=prover(lambda t: ALL))
+    assert shown["shown"] is not None                                    # one Python shares the misreading
+    r = answer.answer(PARITY, student(IS_ODD), two_readings, answers=1, prover=prover(lambda t: ALL), consistency=2)
+    assert r["shown"] is None and r["refused"] == ["answer 1: the Python solutions read the question differently"]
+    assert r["ambiguous"]["another_solution_said"] in (True, False)
+    text = answer.render(r)
+    assert text.startswith("REFUSED: the question can be read more than one way.")
+    assert "Another solution that passes the same tests answers odd_parity(" in text and "--test" in text
