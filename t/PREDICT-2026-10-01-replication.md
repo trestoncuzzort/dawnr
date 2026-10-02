@@ -73,3 +73,25 @@ graded by the same kernels, check and scorer (complete specifications):
 | **seed 2** | 106 | 44 | 36 | **19** | 16 | 12 | 7 | **6** |
 
 99 (seed 2): **at least 12 at one kernel and 3 at seven: holds**, 19 and 6. Seed 3 is training.
+
+## Outcome, seed 3 and the three seeds, 2026-10-02 02:08Z
+
+Seed 3 trained as the others (1,240 steps, final loss 0.0234), the Python first on the clean 200 once, graded
+the same way. Complete specifications:
+
+| | Python that passes its tests | a kept specification | answers (all pass tests) | at least 1 | at least 3 | at least 5 | at least 6 | all seven |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| seed 1 | 110 | 50 | 43 | 18 | 14 | 13 | 9 | 5 |
+| seed 2 | 106 | 44 | 36 | 19 | 16 | 12 | 7 | 6 |
+| seed 3 | 106 | 42 | 35 | 15 | 13 | 10 | 10 | 8 |
+| **mean of three** | | | | **17.3** | | | | **6.3** |
+| Phi-4-mini, prompted, 17 answers a problem | | | | 3 | 3 | 3 | 2 | 2 |
+
+99. **Each new seed at least 12 at one kernel and 3 at seven: holds.** Seed 2: 19 and 6; seed 3: 15 and 8.
+100. **The mean of the three at least 14 at one kernel: holds.** 17.3.
+
+Every seed of the recipe proves on the clean 200, on complete specifications, five to six times what the
+prompted reference proves with the same seventeen answers a problem, at one kernel and at seven. The seeds
+spread from 15 to 19 at one kernel and 5 to 8 at seven. The first of section 1's two remaining conditions,
+three seeds, is met. The second, the reference decoding under `t`'s grammar, is being generated on the lab
+(about 600 of 3,400 answers at this writing) and the comparison is not called a win until it is graded.
