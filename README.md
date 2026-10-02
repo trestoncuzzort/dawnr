@@ -44,8 +44,9 @@ your computer.
 
 ## Get it
 
-You need Linux or macOS, Python 3.10 or newer, and about 8 GB of disk. No
-graphics card is needed.
+You need Linux or macOS, Python 3.10 or newer, about 8 GB of disk and about
+10 GB of free memory (both models stay loaded; 9.2 GB was measured at the peak
+of a question). No graphics card is needed.
 
 ```bash
 git clone https://github.com/trestoncuzzort/dawnr
@@ -62,7 +63,7 @@ dawnr ask "Write a function that returns the larger of two numbers." \
   --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9"
 ```
 
-The first question takes under a minute on an ordinary CPU. `dawnr doctor`
+A question takes one to two minutes on an ordinary CPU. `dawnr doctor`
 shows what is installed. dawnr runs code the models write only inside a sandbox
 (bubblewrap on Linux, Apple's Seatbelt on macOS). On Ubuntu 23.10 and newer,
 which restrict the sandbox by default, run once: `sudo bash t/apparmor-bwrap.sh`. The installer sets up Dafny; adding the other six
