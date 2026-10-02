@@ -46,8 +46,7 @@ solution and the provers agree (see [../README.md](../README.md)).
 In full precision (`t/PREDICT-2026-10-01-v6.md`): given 33 held-out specifications it writes a body all seven
 provers accept on 26; from English, one answer to each of 100 development problems is proved on a complete
 specification for 4. Given a person's remembered preference it recalls it 28 times in 28, invents none, and
-applies it to its program 8 times in 14. Before release it is measured again at Q8_0 through llama-server, as
-`dawnr` runs it ([registration](../t/PREDICT-2026-10-02-release-student.md), predictions 104 and 105).
+applies it to its program 8 times in 14. At Q8_0, the file published here, through llama-server as `dawnr` runs it: 26 of the 33 given specifications proved by all seven provers (27 by at least one), and 4 development problems proved on complete specifications from one answer each (0 by all seven) ([registration](../t/PREDICT-2026-10-02-release-student.md), predictions 104 and 105 hold).
 
 ## Limits
 
