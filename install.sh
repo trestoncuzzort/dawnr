@@ -85,9 +85,10 @@ command -v tar >/dev/null || fail "tar is needed"
 PY=$(command -v python3 || true)
 [ -n "$PY" ] || fail "python3 (3.10 or newer) is needed"
 "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' || fail "python3 is $("$PY" -V); 3.10 or newer is needed"
-if [ "$OS" = Linux ] && ! command -v bwrap >/dev/null; then
-  echo "  note: bubblewrap (bwrap) is missing. dawnr runs model-written Python only inside it, so 'dawnr ask'"
-  echo "        will stop until it is installed (Debian/Ubuntu: sudo apt install bubblewrap)."
+# dawnr runs model-written Python only in a sandbox; probed with the flags the jobs use (t/py_sandbox.py)
+if ! WHY=$(cd "$REPO" && "$PY" -c 'import sys; sys.path.insert(0, "t"); import py_sandbox
+ok = py_sandbox.available(); ok or print(py_sandbox.why_unavailable()); sys.exit(0 if ok else 1)'); then
+  echo "  note: 'dawnr ask' will stop until this is fixed: $WHY"
 fi
 if [ "$OS" = Darwin ]; then
   echo "  note: on macOS model-written Python runs under Apple's Seatbelt (sandbox-exec) with Codex CLI's policies;"

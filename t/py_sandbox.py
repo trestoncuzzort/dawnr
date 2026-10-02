@@ -186,10 +186,35 @@ SEATBELT_OURS = """
 """
 
 
+_PROBED: dict = {}
+
+
 def available() -> bool:
+    """A sandbox that runs here. On Linux, bwrap present is not enough: Ubuntu 23.10 and later restrict the user
+    namespaces it needs unless an AppArmor profile grants them (t/apparmor-bwrap.sh), and then every run fails
+    ("setting up uid map: Permission denied", seen on GitHub's Ubuntu 24.04 runner, 2026-10-02), so it is probed
+    once with the flags the jobs use. Codex warns at startup on the same failure (codex-rs/linux-sandbox/README.md)."""
     if sys.platform == "darwin":
         return Path(SEATBELT).exists()
-    return shutil.which("bwrap") is not None
+    if shutil.which("bwrap") is None:
+        return False
+    if "linux" not in _PROBED:
+        with tempfile.TemporaryDirectory(prefix="py-sandbox-probe-") as tmp:
+            cmd = _command(Path(tmp))[:-3] + ["/usr/bin/true"]          # the job's namespaces and mounts, no Python
+            try:
+                _PROBED["linux"] = subprocess.run(cmd, capture_output=True, timeout=20).returncode == 0
+            except (OSError, subprocess.TimeoutExpired):
+                _PROBED["linux"] = False
+    return _PROBED["linux"]
+
+
+def why_unavailable() -> str:
+    if sys.platform == "darwin":
+        return f"{SEATBELT} is missing"
+    if shutil.which("bwrap") is None:
+        return "bubblewrap is not installed (Debian/Ubuntu: sudo apt install bubblewrap)"
+    return ("bubblewrap cannot create its namespaces here; on Ubuntu 23.10 and later run once: "
+            f"sudo bash {Path(__file__).resolve().parent / 'apparmor-bwrap.sh'}")
 
 
 def seatbelt_profile() -> str:
@@ -225,7 +250,7 @@ def run_tests(code: str, asserts: list[str], per_test: int = 3, memory_mb: int =
     """{"status": "ran", "verdicts": [...], "all_pass": bool} | {"status": "load-error", "why"} |
     {"status": "timeout"} | {"status": "sandbox-error", "why"}. Raises RuntimeError without a sandbox."""
     if not available():
-        raise RuntimeError("py_sandbox: no sandbox (bubblewrap on Linux, /usr/bin/sandbox-exec on macOS); model-written code is not run without it")
+        raise RuntimeError(f"py_sandbox: no sandbox ({why_unavailable()}); model-written code is not run without it")
     with tempfile.TemporaryDirectory(prefix="py-sandbox-") as tmp:
         job = Path(tmp)
         (job / "solution.py").write_text(code, encoding="utf-8")
@@ -258,7 +283,7 @@ class Session:
 
     def __init__(self, code: str, fn: str, per_call: int = 3, memory_mb: int = 1024):
         if not available():
-            raise RuntimeError("py_sandbox: no sandbox (bubblewrap on Linux, /usr/bin/sandbox-exec on macOS); model-written code is not run without it")
+            raise RuntimeError(f"py_sandbox: no sandbox ({why_unavailable()}); model-written code is not run without it")
         self.code, self.fn, self.per_call, self.memory_mb = code, fn, per_call, memory_mb
         self._tmp = tempfile.TemporaryDirectory(prefix="py-sandbox-")
         job = Path(self._tmp.name)
