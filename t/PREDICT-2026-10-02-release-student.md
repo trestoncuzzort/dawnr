@@ -18,3 +18,11 @@ specifications, and one greedy dev answer through the gate.
 
 If either fails, the release is the 4B on v6 (trained without the 44 already), measured the same way.
 Training waits for the desktop card, which is off the bus until it is power-cycled.
+
+## Amendment, 2026-10-02 07:15Z: the operator's word, and the order of releases
+
+The operator asked for the student to be published under Apache-2.0 now (2026-10-02). The desktop card is still
+off the bus, so the recipe above cannot train yet. The registered fallback, the 4B on v6, was trained without
+the GPL-derived rows already, so it is released first as `student-v1`, once it passes the same two measurements
+at Q8_0 (predictions 104 and 105, as written). The recipe above trains when the card is back and is released as
+`student-v2` if it proves more of the 33 by all seven than v1 does.
