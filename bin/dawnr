@@ -40,17 +40,17 @@ stop_all() {
   done
 }
 
+sandbox_check() {  # prints why model-written Python cannot be sandboxed here, and fails; silent when it can
+  (cd "$DAWNR_REPO" && "$DAWNR_PYTHON" -c 'import sys; sys.path.insert(0, "t"); import py_sandbox
+ok = py_sandbox.available(); ok or print(py_sandbox.why_unavailable()); sys.exit(0 if ok else 1)')
+}
+
 cmd=${1:-help}; shift || true
 case $cmd in
   ask)
     [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr ask "QUESTION" --test "assert f(x) == y" [--test ...]' >&2; exit 2; }
     QUESTION=$1; shift
-    if [ "$(uname -s)" = Darwin ]; then
-      [ -x /usr/bin/sandbox-exec ] || { echo "dawnr: /usr/bin/sandbox-exec is missing; model-written Python only runs inside it" >&2; exit 1; }
-    elif ! command -v bwrap >/dev/null; then
-      echo "dawnr: install bubblewrap first; model-written Python only runs inside it (Debian/Ubuntu: sudo apt install bubblewrap)" >&2
-      exit 1
-    fi
+    why=$(sandbox_check) || { echo "dawnr: model-written Python only runs in a sandbox, and $why" >&2; exit 1; }
     started=0
     if ! { healthy "$SP" && healthy "$BP"; }; then
       echo "starting the models (about half a minute)..." >&2
@@ -75,8 +75,9 @@ case $cmd in
     for f in "$STUDENT_GGUF" "$BASE_GGUF"; do
       [ -s "$f" ] && echo "model: $(basename "$f") ($(du -Lh "$f" | cut -f1))" || echo "model: $(basename "$f") MISSING"
     done
-    if [ "$(uname -s)" = Linux ]; then command -v bwrap >/dev/null && echo "sandbox: bwrap" || echo "sandbox: bwrap MISSING (sudo apt install bubblewrap)"
-    else [ -x /usr/bin/sandbox-exec ] && echo "sandbox: macOS Seatbelt (sandbox-exec)" || echo "sandbox: sandbox-exec MISSING"; fi
+    if why=$(sandbox_check); then
+      [ "$(uname -s)" = Linux ] && echo "sandbox: bubblewrap, runs" || echo "sandbox: macOS Seatbelt (sandbox-exec), runs"
+    else echo "sandbox: CANNOT RUN: $why"; fi
     cd "$DAWNR_REPO" && "$DAWNR_PYTHON" - <<'PY'
 import sys
 sys.path.insert(0, "t")
