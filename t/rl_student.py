@@ -68,8 +68,13 @@ def cmd_band(a) -> int:
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     P = se.pool("v5")
     cands = candidate_ids(P, Path(a.rows), held_question_fns())
+    pool_ids = cands["other"]
+    if a.max_prompt_chars:
+        # INVENTED, measured 2026-10-02: a batch is padded to its longest prompt, and one training problem's prompt
+        # of 22,280 characters ran the card out of memory at batch 16; dev prompts are at most 1,019
+        pool_ids = [i for i in pool_ids if sum(len(m["content"]) for m in se.build_prompt(P[i], "s2")) <= a.max_prompt_chars]
     rnd = random.Random(a.seed)
-    drawn = sorted(rnd.sample(cands["other"], min(a.n, len(cands["other"]))))
+    drawn = sorted(rnd.sample(pool_ids, min(a.n, len(pool_ids))))
     (out / "band-ids.txt").write_text("\n".join(map(str, drawn)) + "\n")
     prefix = f"rlband-{Path(a.model).name}"
     cmd = [sys.executable, str(HERE / "student_generate.py"), "--model", a.model, "--tag-prefix", prefix,
@@ -92,6 +97,7 @@ def cmd_band(a) -> int:
             passes[tid] += t == "tests"
     ids, rule = band_of(passes, a.k)
     rep = {"model": a.model, "drawn": len(drawn), "k": a.k, "seed": a.seed, "candidates": {k: len(v) for k, v in cands.items()},
+           "max prompt characters": a.max_prompt_chars, "candidates under the cap": len(pool_ids),
            "sample tiers": tiers, "problems with a pass": sum(1 for n in passes.values() if n),
            "pass counts": {str(n): sum(1 for v in passes.values() if v == n) for n in range(a.k + 1)},
            "rule": rule, "band": ids}
@@ -172,6 +178,7 @@ def main(argv=None) -> int:
     b.add_argument("--n", type=int, default=800); b.add_argument("--k", type=int, default=4)
     b.add_argument("--seed", type=int, default=1); b.add_argument("--batch", type=int, default=16)
     b.add_argument("--skip-generate", action="store_true")
+    b.add_argument("--max-prompt-chars", type=int, default=0, help="leave out problems whose prompt is longer (0: none)")
     t = sub.add_parser("train")
     t.add_argument("--model", required=True); t.add_argument("--out", required=True)
     t.add_argument("--epochs", type=float, default=2); t.add_argument("--lr", type=float, default=5e-6)
