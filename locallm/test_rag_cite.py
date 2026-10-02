@@ -50,3 +50,15 @@ class Cite(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class QuoteFirst(unittest.TestCase):
+    def test_grammar_and_parse_in_the_quote_first_order(self):
+        docs = rc.documents(ROW, "present")
+        g = rc.grammar(docs, quote_first=True)
+        self.assertIn('claim ::= cite "%<" text ">%"', g)
+        r = "(Document 2)%[It was directed by Frank Marshall.]%%<Frank Marshall>%"
+        self.assertEqual(rc.parse(r), [("Frank Marshall", 2, "It was directed by Frank Marshall.")])
+        self.assertTrue(rc.right(r, "Frank Marshall"))
+        self.assertIn("(Document N)%[", rc.messages("q", docs, quote_first=True)[0]["content"])
+        self.assertIn('claim ::= "%<" text ">%" cite', rc.grammar(docs))          # the default order is unchanged
