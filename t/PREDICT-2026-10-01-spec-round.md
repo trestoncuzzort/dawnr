@@ -69,7 +69,7 @@ v6 is worse at both halves of the round's task: given a specification it proves 
 proves 28, and from tested Python it keeps a specification on 10 dev problems where v5 keeps 15. The round
 runs with the measured-best student for it, the 4B on v5. Predictions 36 to 38 are unchanged.
 
-## Amendment, 2026-10-02 02:13Z, after a failed start that asked nothing: eight long references left out
+## Amendment, 2026-10-02 02:10Z, after a failed start that asked nothing: eight long references left out
 
 The round started at 02:05Z with the 4B on v5 and stopped on its first batch: the card ran out of memory
 (15.28 of 15.57 GiB in use). Its batches of 16 are padded to their longest prompt, and one problem's reference
