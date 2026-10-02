@@ -26,3 +26,23 @@ off the bus, so the recipe above cannot train yet. The registered fallback, the 
 the GPL-derived rows already, so it is released first as `student-v1`, once it passes the same two measurements
 at Q8_0 (predictions 104 and 105, as written). The recipe above trains when the card is back and is released as
 `student-v2` if it proves more of the 33 by all seven than v1 does.
+
+## Outcome for v2 (the recipe above), 2026-10-02 13:09Z
+
+Trained when the card came back (3,944 rows, 1,225 steps, train loss 0.0239), merged, exported to Q8_0 and measured
+the same way as v1, on the desktop CPU through llama-server:
+
+| at Q8_0 | v1 (the 4B on v6, published) | v2 (the v5 recipe without the 44) |
+|---|---:|---:|
+| 33 given specifications, by all seven | 26 | 24 |
+| by at least one | 27 | 27 |
+| refuted by a kernel | 4 | 6 |
+| dev problems on complete specifications, one greedy answer | 4 | 3 |
+
+104. **Falsified for v2:** 24 of 33 by all seven, not at least 26.
+105. **Holds for v2:** 3.
+
+So v2 is not released and `student-v1` stays the installer's student. The 44 rows left out were all
+specification-given rows from dafny-synthesis programs, the kind of row these 33 questions test, and the v5 recipe
+without them proves two fewer by all seven than v1, which was trained with 185 more rows of other kinds. The v5
+numbers in the held-out results (15 to 19 of 200) are of the recipe with those rows; no released weights hold them.
