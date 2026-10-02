@@ -374,12 +374,33 @@ def with_reference_plus(pool: dict, path) -> tuple[dict, int]:
     out, swapped = dict(pool), 0
     for tid, entry in pool.items():
         code = plus.get(int(tid)) if int(tid) < 100000 else None
-        if code and re.search(rf"\bdef\s+{re.escape(entry['fn'])}\s*\(", code):
+        # EvalPlus also changed some tasks' contract (454 returns a bool where MBPP's own tests expect the strings
+        # 'Found a match!' and 'Not matched!'), so MBPP+'s solution replaces MBPP's only where it passes the
+        # problem's own test assertions (found on the first re-score, 2026-10-02)
+        if code and re.search(rf"\bdef\s+{re.escape(entry['fn'])}\s*\(", code) and passes_own_tests(code, entry):
             e = copy.deepcopy(entry)
             e["rec"]["code"] = code
             out[tid] = e
             swapped += 1
     return out, swapped
+
+
+def passes_own_tests(code: str, entry: dict) -> bool:
+    """Does this solution pass the problem's own `assert` lines (MBPP's test_list)?"""
+    tests = entry.get("rec", {}).get("test_list") or []
+    if not tests:
+        return False
+    g: dict = {"__builtins__": __builtins__}
+    try:
+        exec("import math, collections, itertools, functools, re, heapq, bisect, string\n"
+             "from typing import List, Dict, Tuple, Set, Optional, Any\n", g)
+        with deadline(5):
+            exec(compile(code, "<reference-plus>", "exec"), g)        # noqa: S102  (EvalPlus's reference solution)
+            for t in tests:
+                exec(compile(t, "<test>", "exec"), g)                 # noqa: S102  (the problem's own assertion)
+        return True
+    except BaseException:                                           # noqa: BLE001  (an assertion, an error, a timeout)
+        return False
 
 
 def reference(rec: dict, fn: str):
