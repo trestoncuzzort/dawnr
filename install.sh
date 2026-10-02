@@ -8,7 +8,8 @@
 #   - Dafny 4.11.0 (github.com/dafny-lang/dafny releases), the first of the seven provers;
 # and writes a `dawnr` command into ~/.local/bin. The other six provers are optional (see t/README.md).
 #
-#   ./install.sh [--home DIR] [--student FILE_OR_URL] [--build cpu|vulkan|cuda] [--no-dafny]
+#   ./install.sh [--home DIR] [--student FILE_OR_RELEASE_URL] [--build cpu|vulkan|cuda] [--no-dafny]
+# Every download is checked against the SHA-256 its publisher lists.
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")" && pwd)
@@ -17,7 +18,7 @@ BIN_DIR=${BIN_DIR:-$HOME/.local/bin}
 LLAMA_TAG=b11342
 DAFNY_VERSION=4.11.0
 BASE_URL=https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf
-STUDENT_URL=${DAWNR_STUDENT_URL:-https://github.com/trestoncuzzort/dawnr/releases/download/student-v1/dawnr-student-4b-q8_0.gguf}
+STUDENT_RELEASE=${DAWNR_STUDENT_RELEASE:-https://github.com/trestoncuzzort/dawnr/releases/download/student-v1}
 BUILD=cpu
 STUDENT=""
 DAFNY=1
@@ -28,20 +29,42 @@ while [ $# -gt 0 ]; do
     --student) STUDENT=$2; shift 2;;
     --build) BUILD=$2; shift 2;;
     --no-dafny) DAFNY=0; shift;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0;;
+    -h|--help) sed -n '2,/^set -euo/p' "$0" | grep '^#'; exit 0;;
     *) echo "install.sh: unknown option $1" >&2; exit 2;;
   esac
 done
 
 say() { printf '\033[1m%s\033[0m\n' "$*"; }
 fail() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
-fetch() {  # url dest: resumable, fails on HTTP errors
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -c1-64; else shasum -a 256 "$1" | cut -c1-64; fi; }
+fetch() {  # url dest [sha256]: resumable, fails on HTTP errors, and on a checksum that differs from the published one
   mkdir -p "$(dirname "$2")"
-  if [ -s "$2" ] && [ ! -e "$2.part" ]; then echo "  have $(basename "$2")"; return 0; fi
+  if [ -s "$2" ] && [ ! -e "$2.part" ]; then
+    if [ -z "${3:-}" ] || [ "$(sha256 "$2")" = "$3" ]; then echo "  have $(basename "$2")"; return 0; fi
+    echo "  $(basename "$2") does not match its checksum; downloading it again"; rm -f "$2"
+  fi
   echo "  downloading $(basename "$2")"
   if [ -t 1 ]; then QUIET=--progress-bar; else QUIET=-sS; fi       # a meter only on a terminal
   curl -L --fail --retry 3 --continue-at - $QUIET -o "$2.part" "$1" || return 1
+  if [ -n "${3:-}" ] && [ "$(sha256 "$2.part")" != "$3" ]; then
+    rm -f "$2.part"; echo "  $(basename "$2"): checksum mismatch, removed" >&2; return 1
+  fi
   mv "$2.part" "$2"
+}
+# Published SHA-256s of the pinned downloads (GitHub's release digests; Hugging Face's LFS hash), read 2026-10-02.
+sum_of() {
+  case $1 in
+    llama-b11342-bin-ubuntu-x64.tar.gz) echo 7c8f7eb14cfb4a8dceb1f6cc6220ea387a1940f0c95cab76ca63ac35d2934fd4;;
+    llama-b11342-bin-ubuntu-vulkan-x64.tar.gz) echo e88910ac1a46955f8d088a2b518245c32d620a02c954906e0a05884dca48e5be;;
+    llama-b11342-bin-ubuntu-cuda-12.8-x64.tar.gz) echo e8e5b32e1abf829c08e24c7c99aa4f66dc046100682260b1625a272d1f80e8d1;;
+    llama-b11342-bin-ubuntu-arm64.tar.gz) echo 6f5f88d9e105230c32b13ad9d8bba9611ab29ee27532717ba6bb5bb4120f3c85;;
+    llama-b11342-bin-macos-arm64.tar.gz) echo 1050318ed5fb941a1b4c1c603f6c3c7fd3f065b56af3b8cfab39aee70f3ad076;;
+    llama-b11342-bin-macos-x64.tar.gz) echo f5603510bcf2374d02ee1bd5ab1d307b60dec9f9c03fa67dd88a6c049089e49a;;
+    dafny-4.11.0-x64-ubuntu-22.04.zip) echo a46a9ff7cdd720f7955854c78e95df13f4cfe6b80691b05f8654fe19e8267179;;
+    dafny-4.11.0-arm64-macos-13.zip) echo c90c75e7d5db9c6ccbb7127840dfe43f0ac938b039a7ebed146d8ead383a572f;;
+    dafny-4.11.0-x64-macos-13.zip) echo 5fc0de946c5b2fad33f16bd22a5b06f4fd0dfa7f6d770284237e3f1f3ca9f73d;;
+    Qwen3.5-4B-Q4_K_M.gguf) echo 00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4;;
+  esac
 }
 
 say "Checking this machine"
@@ -69,7 +92,7 @@ fi
 echo "  $OS $ARCH, $("$PY" -V), llama.cpp build $LLAMA_TAG ($BUILD)"
 
 say "The model server (llama.cpp)"
-fetch "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/$LLAMA_ASSET" "$DAWNR_HOME/downloads/$LLAMA_ASSET" \
+fetch "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/$LLAMA_ASSET" "$DAWNR_HOME/downloads/$LLAMA_ASSET" "$(sum_of "$LLAMA_ASSET")" \
   || fail "could not download llama.cpp's $LLAMA_ASSET"
 if [ ! -x "$DAWNR_HOME/llama.cpp/llama-server" ]; then
   rm -rf "$DAWNR_HOME/llama.cpp.tmp"; mkdir -p "$DAWNR_HOME/llama.cpp.tmp"
@@ -82,14 +105,23 @@ fi
 echo "  llama-server ready"
 
 say "The models"
-fetch "$BASE_URL" "$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf" || fail "could not download the base model"
+fetch "$BASE_URL" "$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf" "$(sum_of Qwen3.5-4B-Q4_K_M.gguf)" || fail "could not download the base model"
 if [ -n "$STUDENT" ] && [ -f "$STUDENT" ]; then
-  ln -sf "$(cd "$(dirname "$STUDENT")" && pwd)/$(basename "$STUDENT")" "$DAWNR_HOME/models/dawnr-student.gguf"
-  echo "  student: $STUDENT"
+  # used where it is: a split model is found from its first shard's own name (llama.cpp's gguf-split)
+  STUDENT_GGUF="$(cd "$(dirname "$STUDENT")" && pwd)/$(basename "$STUDENT")"
+  echo "  student: $STUDENT_GGUF"
 else
-  URL=${STUDENT:-$STUDENT_URL}
-  fetch "$URL" "$DAWNR_HOME/models/dawnr-student.gguf" \
-    || fail "the student model is not downloadable from $URL yet; build or obtain it and pass --student FILE"
+  # the release carries the student as shards under GitHub's 2 GiB a file, listed with their SHA-256s in a manifest
+  BASE=${STUDENT:-$STUDENT_RELEASE}
+  fetch "$BASE/dawnr-student.sha256" "$DAWNR_HOME/models/dawnr-student.sha256" \
+    || fail "the student model is not published yet at $BASE; pass --student FILE"
+  STUDENT_GGUF=""
+  while read -r sum name; do
+    [ -n "$name" ] || continue
+    fetch "$BASE/$name" "$DAWNR_HOME/models/$name" "$sum" || fail "could not download $name"
+    [ -z "$STUDENT_GGUF" ] && STUDENT_GGUF="$DAWNR_HOME/models/$name"
+  done < "$DAWNR_HOME/models/dawnr-student.sha256"
+  [ -n "$STUDENT_GGUF" ] || fail "the student manifest lists no files"
 fi
 
 if [ "$DAFNY" = 1 ]; then
@@ -100,7 +132,7 @@ if [ "$DAFNY" = 1 ]; then
     echo "  have Dafny"
   else
     command -v unzip >/dev/null || fail "unzip is needed for Dafny"
-    fetch "https://github.com/dafny-lang/dafny/releases/download/v$DAFNY_VERSION/$DAFNY_ASSET" "$DAWNR_HOME/downloads/$DAFNY_ASSET" \
+    fetch "https://github.com/dafny-lang/dafny/releases/download/v$DAFNY_VERSION/$DAFNY_ASSET" "$DAWNR_HOME/downloads/$DAFNY_ASSET" "$(sum_of "$DAFNY_ASSET")" \
       || fail "could not download Dafny"
     mkdir -p "$DAWNR_HOME/provers"; rm -rf "$DAWNR_HOME/provers/dafny"
     unzip -q "$DAWNR_HOME/downloads/$DAFNY_ASSET" -d "$DAWNR_HOME/provers"
@@ -115,7 +147,7 @@ DAWNR_REPO=$REPO
 DAWNR_HOME=$DAWNR_HOME
 DAWNR_PYTHON=$PY
 LLAMA_SERVER=$DAWNR_HOME/llama.cpp/llama-server
-STUDENT_GGUF=$DAWNR_HOME/models/dawnr-student.gguf
+STUDENT_GGUF=$STUDENT_GGUF
 BASE_GGUF=$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf
 ENV
 [ -x "$DAWNR_HOME/provers/dafny/dafny" ] && echo "T_DAFNY=$DAWNR_HOME/provers/dafny/dafny" >> "$DAWNR_HOME/env"
