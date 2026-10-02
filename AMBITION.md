@@ -205,7 +205,7 @@ its line changes here.
 - **Installs in one command, no administrator rights, no graphics card.** `./install.sh` fetches a pinned
   llama.cpp, the base model, the published student (`student-v1`, Apache-2.0) and Dafny, each checked against its
   publisher's SHA-256, and adds `dawnr ask`. *State (2026-10-02):* installed from the published release into an
-  empty home and a first question answered and proved, on this desktop and on GitHub's Ubuntu 24.04 runner;
+  empty home and a first question answered and proved, on this desktop and on GitHub's Ubuntu 24.04 and Mac runners;
   model-written Python is sandboxed by bubblewrap on Linux (Ubuntu 23.10 and newer need one AppArmor step,
   `t/apparmor-bwrap.sh`) and by Seatbelt on macOS, whose tests pass on GitHub's Mac runner.
 - **Product, next:** the product installs the right PyTorch for the machine and brings
