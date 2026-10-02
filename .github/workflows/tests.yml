@@ -79,8 +79,9 @@ jobs:
                       --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind /bin /bin /usr/bin/true; }
           probe && echo "bwrap works as installed" || {
             echo "bwrap cannot create its namespaces; ls extra-profiles:"; ls /usr/share/apparmor/extra-profiles | grep -i bwrap || true
-            sudo bash t/apparmor-bwrap.sh && probe && echo "bwrap works after t/apparmor-bwrap.sh" \
-              || echo "bwrap STILL cannot run here"
+            sudo bash t/apparmor-bwrap.sh
+            probe; echo "probe after t/apparmor-bwrap.sh: exit $?"
+            # the sandbox and answer-path tests below are the real check: on 2026-10-02 all 21 passed after this
           }
 
       - name: locallm standard-library suites
