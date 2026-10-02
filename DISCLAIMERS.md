@@ -41,6 +41,9 @@ reference solution and rejects most wrong answers.
 | Phi-4-mini, prompted, the same 17 answers a problem | 3 | 2 |
 | every model trained here from scratch | 0 | 0 |
 
+Counted against EvalPlus's corrected MBPP+ solutions wherever they keep the problem's own tests, seed 3 reads 17 and 8
+([t/PREDICT-2026-10-02-reference-plus.md](t/PREDICT-2026-10-02-reference-plus.md)); nothing else moves.
+
 This is not yet claimed as a win. The bar written in [AMBITION.md](AMBITION.md)
 also asks for Phi-4-mini decoding under `t`'s grammar, so it cannot emit text
 that does not parse; that run is in progress
