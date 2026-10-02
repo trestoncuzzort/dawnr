@@ -53,3 +53,11 @@ The band's sampling stopped at 02:12Z when a batch of 16 padded to a 22,280-char
 memory (`t/rl_student.py band` had drawn 800 problems, 1 of them over 6,000 characters). Problems with prompts
 over 6,000 characters are left out before the seeded draw (`--max-prompt-chars 6000`), and sampling runs at batch
 8. The run now follows the specification round on the card. Predictions 91 to 94 are unchanged.
+
+## Amendment, 2026-10-02 03:05Z, after a second out-of-memory stop: a batch that does not fit is halved
+
+The round at batch 8 ran 42 minutes and stopped out of memory (02:57Z), losing what it had written; the RL band
+was stopped by hand before it could. Decoding now does what accelerate's `find_executable_batch_size` does
+(github.com/huggingface/accelerate, utils/memory.py): a batch that runs the card out of memory is split in half
+and decoded again, and a single prompt that still does not fit gets an empty reply, counted as no answer
+(`t/student_generate.decode`, tested). The caps and batch 8 of 02:14Z stay. Predictions unchanged.
