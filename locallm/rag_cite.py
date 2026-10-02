@@ -37,6 +37,13 @@ SYSTEM = ("You answer questions using only the documents given. Write each answe
           "sentence copied from Document N that states it]%. If the question needs two facts, write two such claims. "
           "If no document states the answer, write: " + REJECT)
 TRIPLE = re.compile(r"%<(.*?)>%\(Document (\d+)\)%\[(.*?)\]%", re.S)
+# Quote first (2026-10-02): the document and its sentence are chosen before the claim is written, as "Attribute First,
+# then Generate" selects the source spans before generating from them (Slobodkin et al., arXiv:2403.17104). Claim
+# first left a third of the right answers quoting a sentence that does not hold the answer.
+SYSTEM_QUOTE_FIRST = ("You answer questions using only the documents given. Write each answer as (Document N)%[a sentence "
+                      "copied from Document N that states it]%%<the answer, taken from that sentence>%. If the question needs "
+                      "two facts, write two such parts. If no document states the answer, write: " + REJECT)
+QUOTE_FIRST = re.compile(r"\(Document (\d+)\)%\[(.*?)\]%%<(.*?)>%", re.S)
 SEED = 2026
 
 
@@ -65,10 +72,12 @@ def gbnf_string(s: str) -> str:
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ") + '"'
 
 
-def grammar(docs: list[dict]) -> str:
-    """root: the refusal, or one or two claims; a claim citing Document k quotes one of Document k's sentences."""
+def grammar(docs: list[dict], quote_first: bool = False) -> str:
+    """root: the refusal, or one or two claims; a claim citing Document k quotes one of Document k's sentences.
+    With quote_first the citation and its quote come before the claim's text."""
+    claim = 'claim ::= cite "%<" text ">%"' if quote_first else 'claim ::= "%<" text ">%" cite'
     lines = ['root ::= reject | claims', 'reject ::= ' + gbnf_string(REJECT), 'claims ::= claim (" " claim)?',
-             'claim ::= "%<" text ">%" cite', 'text ::= [^<>%\\n]{1,160}',
+             claim, 'text ::= [^<>%\\n]{1,160}',
              'cite ::= ' + " | ".join(f"c{k}" for k in range(1, len(docs) + 1))]
     for k, d in enumerate(docs, 1):
         alts = " | ".join(gbnf_string(s) for s in d["sentences"])
@@ -76,13 +85,16 @@ def grammar(docs: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def messages(question: str, docs: list[dict]) -> list[dict]:
+def messages(question: str, docs: list[dict], quote_first: bool = False) -> list[dict]:
     body = "\n\n".join(f"Document {k} ({d['title']}):\n" + " ".join(d["sentences"]) for k, d in enumerate(docs, 1))
-    return [{"role": "system", "content": SYSTEM}, {"role": "user", "content": f"{body}\n\nQuestion:\n{question}"}]
+    return [{"role": "system", "content": SYSTEM_QUOTE_FIRST if quote_first else SYSTEM},
+            {"role": "user", "content": f"{body}\n\nQuestion:\n{question}"}]
 
 
 def parse(reply: str) -> list[tuple[str, int, str]]:
-    return [(c.strip(), int(k), q.strip()) for c, k, q in TRIPLE.findall(reply or "")]
+    """(claim, document, quote) for each part of a reply in either order."""
+    first = [(c.strip(), int(k), q.strip()) for k, q, c in QUOTE_FIRST.findall(reply or "")]
+    return first or [(c.strip(), int(k), q.strip()) for c, k, q in TRIPLE.findall(reply or "")]
 
 
 def right(reply: str, answer: str) -> bool:
@@ -112,7 +124,8 @@ def cmd_run(a) -> int:
             docs = documents(r, c)
             row = {"id": r["id"], "condition": c, "question": r["question"], "answer": r["answer"], "docs": docs}
             try:
-                body = {"messages": messages(r["question"], docs), "temperature": 0, "max_tokens": 400, "grammar": grammar(docs)}
+                body = {"messages": messages(r["question"], docs, a.quote_first), "temperature": 0, "max_tokens": 400,
+                        "grammar": grammar(docs, a.quote_first)}
                 row["reply"] = rag_rgb._post(f"http://{hosts[k]}/v1/chat/completions", body)["choices"][0]["message"]["content"] or ""
             except Exception as e:                                # noqa: BLE001
                 row["reply"], row["error"] = "", f"{type(e).__name__}: {e}"[:300]
@@ -163,6 +176,7 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run"); r.add_argument("--host", required=True); r.add_argument("--data", required=True)
     r.add_argument("--out", required=True); r.add_argument("--n", type=int, default=300)
+    r.add_argument("--quote-first", action="store_true", help="the citation and quote before the claim (arXiv:2403.17104)")
     s = sub.add_parser("score"); s.add_argument("--weights", required=True); s.add_argument("--answers", required=True)
     s.add_argument("--out", required=True); s.add_argument("--base", default="FacebookAI/roberta-large")
     p = sub.add_parser("report"); p.add_argument("--answers", required=True); p.add_argument("--scores", required=True)

@@ -77,6 +77,22 @@ case $cmd in
     T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" \
       --consistency 5 --text "$QUESTION" "$@"
     ;;
+  cite)
+    # an answer from the person's own files, every claim quoting one of their sentences word for word, or a plain
+    # "not in your files" (locallm/cite_docs.py); only the base model is needed
+    [ $# -ge 2 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr cite "QUESTION" FILE [FILE ...]' >&2; exit 2; }
+    QUESTION=$1; shift
+    FILES=(); for f in "$@"; do FILES+=("$(cd "$(dirname "$f")" && pwd)/$(basename "$f")"); done
+    started=0
+    if ! healthy "$BP"; then
+      echo "starting the base model..." >&2
+      start_one base "$BASE_GGUF" "$BP"; started=1
+      trap '[ $started = 1 ] && stop_all' EXIT
+      for i in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$BP" && break; sleep 1; done
+      healthy "$BP" || { echo "dawnr: the base model did not come up; see $RUN/base.log" >&2; exit 1; }
+    fi
+    cd "$DAWNR_REPO" && "$DAWNR_PYTHON" locallm/cite_docs.py --host "127.0.0.1:$BP" "$QUESTION" "${FILES[@]}"
+    ;;
   serve)
     case ${1:-status} in
       start) start_one student "$STUDENT_GGUF" "$SP"; start_one base "$BASE_GGUF" "$BP"; wait_ready && echo "the models are up";;
