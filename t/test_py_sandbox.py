@@ -137,8 +137,9 @@ def test_macos_command_is_seatbelt_with_codex_policies_and_ours(tmp_path, monkey
     assert profile.lstrip().startswith(";") or "(version 1)" in profile
     assert "(deny default)" in profile and '(subpath (param "TMP"))' in profile
     assert "network-outbound (remote" not in profile and "network*" not in profile
-    assert f"-DJOB={tmp_path}" in cmd and f"-DTMP={tmp_path / 'tmp'}" in cmd
-    assert cmd[-2:] == ["-I", str(tmp_path / "runner.py")]
+    real = tmp_path.resolve()                          # Seatbelt matches real paths (/var is /private/var on macOS)
+    assert f"-DJOB={real}" in cmd and f"-DTMP={real / 'tmp'}" in cmd
+    assert cmd[-2:] == ["-I", str(real / "runner.py")]
     assert (tmp_path / "tmp").is_dir()
 
 
