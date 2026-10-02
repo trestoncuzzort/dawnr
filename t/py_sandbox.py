@@ -199,9 +199,14 @@ def seatbelt_profile() -> str:
 
 
 def _seatbelt_command(job: Path, python: str | None = None, prefix: str | None = None) -> list[str]:
+    # Seatbelt matches the real path: macOS's temporary folders live under /var, a link to /private/var, so a grant
+    # on /var/folders/... denies the files in it. Codex canonicalises every path it grants for the same reason
+    # (codex-rs/sandboxing/src/seatbelt.rs); found on CI's macOS runner, 2026-10-02.
+    job = Path(job).resolve()
+    prefix = str(Path(prefix or sys.base_prefix).resolve())
     tmp = job / "tmp"
     tmp.mkdir(exist_ok=True)
-    return [SEATBELT, "-p", seatbelt_profile(), f"-DJOB={job}", f"-DPY_PREFIX={prefix or sys.base_prefix}",
+    return [SEATBELT, "-p", seatbelt_profile(), f"-DJOB={job}", f"-DPY_PREFIX={prefix}",
             f"-DTMP={tmp}", python or sys.executable, "-I", str(job / "runner.py")]
 
 
