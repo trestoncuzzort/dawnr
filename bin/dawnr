@@ -18,11 +18,14 @@ RUN=$DAWNR_HOME/run; mkdir -p "$RUN"
 
 healthy() { curl -s -m 2 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '"ok"'; }
 
+# --cache-ram 256: llama-server keeps up to 8 GiB of old prompts in RAM by default, a speed feature for switching
+# between prompts (github.com/ggml-org/llama.cpp/pull/16391); dawnr repeats one prompt, which the slot reuses anyway,
+# and the default pushed the student's server to 10.8 GB (measured 2026-10-02)
 start_one() {  # name gguf port
   healthy "$3" && return 0
   [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
   nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$THREADS" --threads-batch "$THREADS" \
-    --ctx-size 4096 --parallel 1 --reasoning off --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
+    --ctx-size 4096 --parallel 1 --reasoning off --cache-ram 256 --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
   echo $! > "$RUN/$1.pid"
 }
 
