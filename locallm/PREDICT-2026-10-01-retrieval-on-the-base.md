@@ -205,3 +205,23 @@ refuses it, rightly; and a right claim can fail the word rule against a paraphra
 against "Jan. 2"). GopherCite fine-tuned its model on the syntax and constrained its sampling to it; the
 prompt alone does not get a 4B there. The quote check refused nothing it should have shown wrongly; the
 failure is that almost nothing reached it.
+
+## Amendment, 2026-10-02 07:27Z, before any answer to these questions: quotes forced by the decoder
+
+The quote gate of 18:10Z refused everything because the prompted base kept GopherCite's syntax on 18 of 90
+answers. GopherCite constrained its sampling so quotes are verbatim (arXiv:2203.11147, 2.1); `locallm/rag_cite.py`
+does the same with llama.cpp's grammar, built per question: the reply is RGB's refusal sentence or one or two claims
+`%<claim>%(Document k)%[quote]%`, where the quote can only be one of Document k's own sentences. A claim is shown
+when AlignScore (arXiv:2305.16739) finds it supported by the one sentence it quotes, at 0.5: the question is no
+longer "does the reply agree with the documents' topic" but "does this sentence state this claim".
+
+**Questions:** 300 bridge questions drawn by a fixed seed from the first 1,000 of HotpotQA's distractor dev set
+(Yang et al., arXiv:1809.09600; CC-BY-SA-4.0, evaluation only, kept out of the repository); none was used before.
+Each is asked with five documents twice: "present" (its two gold paragraphs and three distractors) and "absent"
+(five distractors on the same topics). Comparison and yes/no questions are left out: a comparison question names
+both candidates, so containment of the gold answer cannot score it (seen on the first probe, which is the only
+answer generated before this registration and is not counted). The base at Q4_K_M on CPU, greedy.
+
+106. With the answer absent, at most 20% of the replies that do not refuse are shown.
+107. With the answer present, at least 50% of the right replies are shown.
+108. With the answer present, the share right among what is shown is higher than among all replies that answer.
