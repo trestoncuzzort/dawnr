@@ -121,9 +121,19 @@ def test_a_session_refuses_code_that_does_not_define_the_function():
 
 
 def test_a_session_cannot_read_the_home_directory():
-    probe = "import os\ndef f():\n    return sorted(os.listdir('/home'))\n"
-    with py_sandbox.Session(probe, "f") as s:
-        assert s.call([]) == []
+    """A file in the real home folder is out of reach: bwrap mounts an empty /home (Linux), Seatbelt denies the
+    read (macOS, where CI's runner showed listing /home raise PermissionError, 2026-10-02)."""
+    import uuid
+    secret = Path.home() / f".py-sandbox-probe-{uuid.uuid4().hex}"
+    secret.write_text("not for the sandbox")
+    try:
+        probe = ("def f(path):\n    try:\n        return open(path).read()\n"
+                 "    except OSError as e:\n        return type(e).__name__\n")
+        with py_sandbox.Session(probe, "f") as s:
+            got = s.call([str(secret)])
+        assert got in ("FileNotFoundError", "PermissionError"), got
+    finally:
+        secret.unlink()
 
 
 def test_macos_command_is_seatbelt_with_codex_policies_and_ours(tmp_path, monkeypatch):
