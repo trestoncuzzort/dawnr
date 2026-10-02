@@ -1,161 +1,72 @@
 # dawnr
 
-dawnr is an assistant being built to be trusted: running on its own hardware
-with nothing behind it, and checked by proof before anything it produces is
-relied on. The bar is a model you could trust on a spaceship: no network, no
-one to ask, small hardware, and a mistake that cannot be taken back.
+**An assistant whose answers come with proof.**
 
-**Nothing it says is relied on until it is proved. That is the whole point.**
-The proof engine is the product; the model behind it is whichever openly
-licensed weights measure best through that engine, fine-tuned here on what the
-proofs accept (since 2026-10-01; before that the model was trained from random
-weights, which is kept as research: [why](internal/RESEARCH-2026-10-01-is-the-bet-supported.md)).
-The full goal, every part dawnr needs, where each stands and the method each
-stands on, is in [AMBITION.md](AMBITION.md) and
-[internal/LADDER-PLAN-2026-10-01.md](internal/LADDER-PLAN-2026-10-01.md).
+dawnr writes programs together with a precise statement of what they do, then
+has seven independent mathematical provers check that the program does exactly
+that. If the provers agree, you get the answer and the evidence behind it. If
+they do not, dawnr says so instead of guessing.
 
-## The idea
+It runs entirely on your own machine: no cloud, no account, no data leaving
+your computer.
 
-Most assistants are trusted because they sound right. dawnr is meant to be
-trusted because what it writes is checked.
+## Why it is useful
 
-- **It writes programs with specifications.** Its working language is `t`, a
-  small specification language: a program says what it requires and what it
-  guarantees.
-- **Seven independent provers check them.** Every program is lowered into
-  Dafny, Verus, SPARK, Frama-C, Lean 4, Rocq and F*. A program counts as
-  **clean** only when it passes its own tests, verifies in all seven, and each
-  prover also rejects a deliberately sabotaged twin of it at a concrete
-  counterexample. A separate check asks whether the specification describes the
-  problem it was meant to solve, since a proof of the wrong thing is still
-  wrong.
-- **It only learns from what was proved.** The training corpus is made of
-  programs that passed that bar. Data can be admitted with a recorded trust
-  level, but the boundary between training data and the problems used to
-  measure it is absolute.
-- **It stands on other people's ladders, and says which.** The weights are a
-  permissively licensed pretrained model chosen by measurement
-  ([t/PREDICT-2026-10-01-base-model-selection.md](t/PREDICT-2026-10-01-base-model-selection.md));
-  the fine-tuning recipe, the data filter and every other step cite the
-  published method they come from. An answer is shown with how many of the
-  seven provers proved it, or it is refused.
+- **You can trust what it shows you.** Every answer is checked by seven provers
+  of the kind used to verify safety-critical software: Dafny, Verus, SPARK,
+  Frama-C, Lean 4, Rocq and F*. An answer is shown with how
+  many of the seven proved it.
+- **It knows when it does not know.** When no answer survives the checks, it
+  refuses and names the check that stopped it. A refusal you can see is safer
+  than a confident mistake.
+- **It catches answers to the wrong question.** A proof only shows a program
+  meets its specification. dawnr also checks the specification against the
+  problem's own examples and against a second solution written independently,
+  so a correct proof of the wrong thing does not get through.
+- **It works offline and on ordinary hardware.** The model is a small, openly
+  licensed one, fine-tuned here only on answers that passed the provers. It
+  runs on an ordinary CPU; no graphics card is needed.
+- **It is open about itself.** Every claim links to the run that measured it.
+  What it cannot do yet is in [DISCLAIMERS.md](DISCLAIMERS.md).
 
-## Where it stands (2026-10-01)
+## How it works
 
-| part | state |
-|---|---|
-| the student, given the specification | **works: 28 of 33 by all seven provers.** A fine-tuned 4B (on its v5 rows, 2026-10-01), given a specification it has not seen and asked for the body and its proof, is proved by all seven provers on 28 of 33 held-out questions and by at least one on 29; the provers refute 3 (the 4B on v6, retrained with memory conversations: 26 and 27; the 4B on v4: 26 and 28, refuting 4; a 2B: 19; the 2B trained without such questions: 13; untrained: 3; the reference answers: 33). A refuted answer is the gate doing its job. This is the setting every published result uses (SAFE, AlphaVerus, the vericoding benchmark). With a loop it proves 8 of 11, without 20 of 22 ([registration and outcome](t/PREDICT-2026-10-01-spec-given.md)) |
-| the model behind the gate | **Qwen3.5-4B (Apache-2.0), picked by the rule fixed beforehand; its results are weak.** Six Apache-2.0 candidates from 1.5B to 14B answered 100 dev problems through the gate. Prompted, none that fits a small card knows `t` (0 to 3 tests passed; the 9B passes 6 and has 2 proved, specification-checked answers, one by six provers). Fine-tuned on 527 proved answers, the 1.5B, 2B and 4B write valid `t` far more often (23, 45 and 35 of 100, from 5, 2 and 9) and pass the tests on 4, 5 and 6. Proved by at least one prover with the specification checked: 1, 1 and **5**; the 4B has one answer proved by five provers and none by six or seven (our own test harness had hidden two of the five until it was repaired that night). Trained on a larger row set (specification-given and debugging rows added), the 2B answers 2, one of them proved by all seven: the first from English. The 4B on that row set answers 4 with one answer, 7 with ten sampled answers and 8 with the specification proved separately (3 by all seven); a second try and retrieved examples add nothing ([how the student is asked](t/PREDICT-2026-10-01-several-answers.md)). **Those counts were too kind, found the same night: five of the eight rest on a specification that is true of the right answer and of most wrong ones** ("the result holds no uppercase letter" for a problem that asks for the uppercase letters removed). Counted only where the specification also rejects at least 60% of the wrong outputs tried, the 4B reads 2 with one answer, 3 with ten and **4 with the specification proved separately** (1 by all seven), and the 4B on the 527 rows reads 4, not 5. Trained on the v5 rows (the problem's Python solution beside the specification, Dafny's own messages in the repair rows), **the 4B proves 4 with one answer, 1 by all seven** ([outcome](t/PREDICT-2026-10-01-spec-first.md)). The rule ranks the 4B first; a paired test on the six problems where it and the 2B differ does not make that certain (p = 0.22). The failure is the same at every size: of 300 answers 197 are not valid `t` (they reach for sequence constructs the language spells another way), and 83 of the 96 specifications that could be checked disagree with the problem's reference. Three of the 100 dev problems cannot be passed by any answer (their own tests disagree about a type), so the counts are of at most 97. The 4B was first reported here as a damaged run, which was wrong: its logged loss was inflated by a fault in the trainer code written that night, and its fit is the best of the three. A 9B does not fit the 16 GB card for training at these row lengths and has no result ([registration and outcomes](t/PREDICT-2026-10-01-base-model-selection.md)) |
-| core model (`locallm/`): a GPT trained from scratch (research since 2026-10-01) | built; pretraining sweep done; the general-English pilot ran 2026-09-29 ([outcome](t/PREDICT-2026-09-29-dawnr-english-pilot.md)): English before code beats code alone at matched tokens, no core moves the specification column off 0. r12's core ran 2026-09-30 ([outcome](t/PREDICT-2026-09-30-dawnr-r12-core.md)): 3.7B English tokens, then code, the lowest code validation loss of any core (1.140), and the judgement unchanged: well formed on 45 of 100 dev problems, none passing its shown examples, the specification column at 0. By its registration the proved corpus, not the core, is the next lever; the 16B-token English set stays staged for a larger core when a free allocation exists |
-| proof engine (`t/`): `t`, seven provers, twins, specification checks | built and hardened |
-| data engine: lifting verified Dafny, Verus, Lean and C programs into `t` | **464 documents clean in all seven provers** (from 194 on 2026-09-26), 569 with graded trust (six clean, the missing prover recorded); r12 trains on the 463 registered before its launch |
-| learning instead of memorising | **first held-out result above zero (2026-10-01)**: the fine-tuned 4B (Python first, then the specification, then `t`) is proved with a complete, reference-checked specification on **18 of the clean 200** by at least one prover and on **5 by all seven** (three training seeds: 18 and 5, 19 and 6, 15 and 8); with no reference in hand the gate shows 18 and 15 of them are right; Phi-4-mini, given the same 17 answers a problem and the same gate, is proved on 3 and 2 ([outcome](t/PREDICT-2026-10-01-several-answers.md), [the gate](t/PREDICT-2026-10-01-gate-without-reference.md)). From scratch it is still the open problem. On the held-out 200 with the specification check applied, every from-scratch arm reads 0: the ten r11 seeds, the r12 head-prompt seeds so far, and the chat pipeline's three seeds (which reach 2 and 5 by the looser metric, all rejected by the check or recited). Early stopping, best checkpoints and denoising are in place; the next lever is verdicts that draw inputs beyond the shown examples ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md), 2026-09-29) |
-| pretrained models behind the same gate (measured 2026-09-08 to 09-28, read together 2026-10-01: [internal/RESEARCH-2026-10-01-is-the-bet-supported.md](internal/RESEARCH-2026-10-01-is-the-bet-supported.md)) | works, low coverage: pooled over nineteen prompted answer sets, 123 of the clean 200 have an answer that passes the tests, 64 one that some prover verifies, **50** one that is also specification-checked, **19** proved by all seven and specification-checked (45 and 16 before three faults in the instruments were repaired on 2026-10-01: [what was wrong](t/PREDICT-2026-10-01-spec-check-coverage.md)); the from-scratch core reads 0 at every stage |
-| reinforcement learning with the provers as the reward | built and tested; **the start rule is met on the chosen weights (2026-10-01)**: the 4B student has a test-passing answer among ten samples on 27 of 100 dev problems it never trained on (the bar is about 10%), so the run is registered and queued ([t/PREDICT-2026-10-01-rl-on-the-student.md](t/PREDICT-2026-10-01-rl-on-the-student.md), [design section 9](t/RL-DESIGN-2026-09-26.md)). Before, on r12's core by sampling, 2026-09-30 ([outcome](t/PREDICT-2026-09-30-dawnr-base-rate.md)): of 6,400 draws on 100 dev problems, 6 reach the tests tier (pass@16 0.012 against a bar of about 0.10) and none is a correct answer, by hand or by the repaired check |
-| the gate's verdicts as new data (rounds, after SAFE) | **first round run on our own machines (2026-10-01): the training pool went from 527 answers over 262 problems to 693 over 323.** 661 training answers that pass their tests had never been sent to the provers (323 are proved); three faults in our own instruments had refused right answers; and the fine-tuned 4B, given 352 right specifications for 273 unsolved training problems, wrote a test-passing program for 187 and a proof for 34, of which 31 joined the pool ([proof round](t/PREDICT-2026-10-01-proof-round.md)). Registered next: repairing failed proofs with Dafny's own diagnostics, and specifications written from each problem's Python solution for the 2,035 training problems that have none ([repair](t/PREDICT-2026-10-01-proof-repair.md), [specification round](t/PREDICT-2026-10-01-spec-round.md)). The plan that has a larger local teacher write whole answers ([t/EXPERT-ITERATION-2026-09-26.md](t/EXPERT-ITERATION-2026-09-26.md)) is still staged and has not run: it needs a 30 GB card |
-| a chat pipeline (format, mid-training, tools, report card), adapted from nanochat | runs end to end ([DAWNR-PIPELINE.md](DAWNR-PIPELINE.md)); its first tool is the t interpreter, which the model calls on its own draft. On the 531-document corpus and the early-stopped core it is well formed on 49 of 100 dev problems (from 19) and on 130 of the held-out 232 (the head-prompt fine-tune: 91), measured 2026-09-29 with a registered prediction; it does not yet act well on a failed check, and its correct-looking answers do not survive the specification check |
-| acting on the machine: files, commands, processes, plans | **measured on the chosen weights (2026-10-01)**: the base, asked to summarise an inbox holding a planted instruction, summarised it on 81 of 90 trials and planned the planted action on 10, almost only when it posed as a turn boundary, a system line or a message from the person; the harness ran none of them ([outcome](locallm/PREDICT-2026-10-01-agent-on-the-base.md)). Built: every action through the harness's permissions, plans shown in a dry run and approved as a whole; 0 escapes on 5,000 generated paths, 0 of 80 injected actions run ([DAWNR-AGENT.md](DAWNR-AGENT.md)) |
-| learning from each person between sessions ([DAWNR-LEARNING.md](DAWNR-LEARNING.md)) | built: feedback kept per person under their control, a per-person adapter trained in guarded sleeps, a style profile inferred from their edits. Measured on four simulated persons: the profile halves their edit cost with every checked answer unchanged; the adapter fits their style only in likelihood, and where it changes what dawnr writes it costs correct answers |
-| retrieval, memory, tool use, speech, vision, on the chosen weights (2026-10-01) | **hearing**: Whisper base.en offline on a CPU, 4.14% word error on LibriSpeech test-clean (the paper's 4.2); **speaking**: Piper, its speech transcribed at 6.44% word error against 3.19% for human speech of the same sentences; **seeing**: the base's own vision input answers POPE's adversarial object questions at F1 0.873, and an independent detector's check cuts its false yeses from 140 to 112 keeping 97% of true ones; **memory**: given dawnr's memory the base recalls the remembered preference 28 times in 28 and invents none, and the `t` student on v6 does too and applies it to its program on 8 of 14; **tools**: untrained on the harness, the right first tool on 84.5% of held-out items, 4.5% of injected web pages followed, no denied call repeated, but an instruction planted in a stored note followed 10 times in 33 (in dawnr that call waits for the owner's approval); **retrieval**: given five documents with the answer, the base answers RGB's 300 news questions 98% right, 86% when four of the five are noise; when none holds the answer it says so only 31% of the time, against 26% right with no documents at all; a support check on every reply (AlignScore) keeps 93% of right answers but still shows 69% of the replies with no supporting document, and no way of reading its scores (the mean, the weakest sentence, the first) does better: it cannot tell an answer the documents state from one the model knew on the documents' topic. Registrations and outcomes: `locallm/PREDICT-2026-10-01-*.md`; the row-by-row state is in [AMBITION.md](AMBITION.md) |
+1. **You ask** for a function in plain English, with a few example tests.
+2. **The model answers** in `t`, a small language where a program states what
+   it requires and what it guarantees.
+3. **Cheap checks first.** The answer must parse, type-check and pass your
+   tests. A separate solution is written and tested, and the specification must
+   agree with it.
+4. **The provers decide.** The program is translated into each prover's own
+   language. Each must prove it, and each must reject a deliberately broken
+   twin of it.
+5. **You get the answer with its evidence**, or a refusal that says why.
 
-Part by part (2026-10-01). **The gate works**: seven provers, the sabotaged
-twins, the specification check and the grading stack; across 4,700 graded
-programs no prover has verified what another refuted. **What the gate could
-not see until 2026-10-01**: a proof says the program meets its specification,
-not that the specification is the question's, and with no reference solution
-the gate showed a right answer 4 times in 10 on the student's unseen problems
-(76% on 1,038 proved training answers). It now carries a stage for that which
-needs no reference, a tested Python solution written beside the question as a
-second opinion and a floor on how many wrong outputs the specification
-rejects: 3 of 3 and 94.4%, for a fifth of the right answers
-([registration and outcomes](t/PREDICT-2026-10-01-gate-without-reference.md)).
-One question now goes through all of it with one command
-([`t/answer.py`](t/answer.py)): the student and the base model at 4 bits on a
-CPU, the seven provers on the same machine, an answer shown with what stands
-behind it or refused with the gate that stopped it. At 8 bits (Q8_0) the student
-is a 4.48 GB file that gives full precision's answers (28 of 33 given
-specifications proved, the same 26 by all seven) at about 15 tokens a second on
-12 CPU threads; at 4 bits it loses about one proof in six
-([registration and outcomes](t/PREDICT-2026-10-01-small-hardware.md)). **A pretrained model
-behind the gate works at low coverage**: with no training, pooled prompted
-answers are proved and specification-checked on 19 of the 200 unseen problems
-by all seven provers, and on 50 when one prover's proof is counted and none
-refutes (47 where the specification also pins the answer down). **The from-scratch model does not**: zero on every held-out measure,
-after every round, core and sampling run, which is what published results
-predict at its size and data. **What is being built now**: a small openly
-licensed model fine-tuned on everything the gate admits, measured on problems
-it has not seen. Two measurements (2026-10-01). Given a specification it has not seen, a
-fine-tuned 4B writes a body all seven provers accept on 26 of 33. Given only
-the English, three small students answer 1, 1 and 5 of 100 unseen problems
-with a proof and a checked specification, none proved by all seven: two of
-their three answers are not valid `t`, and most valid ones carry a wrong
-specification. Asked ten times and with the specification proved separately,
-the 4B on the larger row set answers 4 of 100 on a specification that says
-what the problem asked; where it cannot write that specification it writes a
-true and weak one, which the gate as built let through and the count now
-refuses. Writing the specification from English is the open step. Every number links back to the run that produced it, and
-failures are published beside successes ([CORRECTIONS.md](CORRECTIONS.md), [LIMITS.md](LIMITS.md)).
+## Get it
 
-## How progress is measured
-
-- **The clean 200**: held-out problems that no training document answers,
-  after an audit found that earlier "clean" answers had leaked through
-  same-task training data ([t/DECONTAMINATION-2026-09-21.md](t/DECONTAMINATION-2026-09-21.md)).
-- **Seeds and pre-registration**: every recipe runs with several seeds, the
-  prediction and decision rule are written down before the run, and a result
-  that appears at one seed is not a result.
-- **A milestone, not the goal**: a head-to-head against Phi-4-mini, a model
-  about forty times larger, under a pre-registered protocol on a fresh panel
-  ([SCOREBOARD.md](SCOREBOARD.md) has the history; no win has been claimed).
-
-## Try it
-
-The desktop app (Tk; on Debian or Ubuntu install `python3-tk` if it is
-missing):
+dawnr is not packaged for one-step install yet; that is being built now. Until
+then the source is here:
 
 ```bash
-python3 locallm/app.py
-```
-
-It can talk to the included model without PyTorch, streaming its answer as it
-writes. The standard-library generator also runs from the command line:
-
-```bash
+git clone https://github.com/trestoncuzzort/dawnr
+cd dawnr
 git lfs pull
-python3 locallm/plain_generate.py \
-  --out t/runs/2026-09-17/home-4080/models/model-r4 \
-  --prompt "function to "
 ```
 
-A plain clone holds Git LFS pointers until `git lfs pull` runs.
+The seven provers and their versions are listed in [t/README.md](t/README.md).
 
-## Find your way around
+## Learn more
 
 | If you want to... | Read... |
 |---|---|
-| know what dawnr is for and what comes next | [AMBITION.md](AMBITION.md) |
-| understand the model, trainers and desktop app | [locallm/README.md](locallm/README.md) |
-| understand `t` and the seven-prover pipeline | [t/README.md](t/README.md) |
-| see how verified corpora are brought in | [t/LIFT-2026-09-26.md](t/LIFT-2026-09-26.md), [t/LIFT-VERICODING-VERUS-LEAN.md](t/LIFT-VERICODING-VERUS-LEAN.md) |
-| see reinforcement learning with the provers | [t/RL-DESIGN-2026-09-26.md](t/RL-DESIGN-2026-09-26.md) |
+| know what is measured, what works and what does not | [DISCLAIMERS.md](DISCLAIMERS.md) |
+| see where dawnr is going | [AMBITION.md](AMBITION.md) |
+| understand `t` and the seven provers | [t/README.md](t/README.md) |
 | let dawnr act on your machine, and see its threat model | [DAWNR-AGENT.md](DAWNR-AGENT.md) |
-| see every measurement and limitation | [SCOREBOARD.md](SCOREBOARD.md), [LIMITS.md](LIMITS.md), [CORRECTIONS.md](CORRECTIONS.md) |
-| read the engineering record | [internal/ROADMAP-LOG.md](internal/ROADMAP-LOG.md) |
-
-## Repository map
-
-| Path | Contents |
-|---|---|
-| [locallm/](locallm/) | dawnr's core model: the transformer, trainers, generators and desktop app. |
-| [t/](t/) | The specification language, the seven-prover pipeline, the lifters, the data engine and evaluation. |
-| [t/twins/](t/twins/) | Verified programs, their sabotaged twins and the inputs that separate them. |
-| [nl/](nl/) | Natural-language programming problems and tests. |
-| [internal/](internal/) | Dated notes, handoffs and the engineering log. |
 
 ## License
 
-Research and education use only. See [LICENSE](LICENSE). Third-party material
-keeps its own license (see [NOTICE](NOTICE)); the problem-corpus licenses are
-documented under `nl/`.
+Research and education use only; see [LICENSE](LICENSE) and
+[DISCLAIMERS.md](DISCLAIMERS.md).
 
 Copyright (c) 2026 Treston Malachi Cuzzort.
