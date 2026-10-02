@@ -86,8 +86,12 @@ PY=$(command -v python3 || true)
 [ -n "$PY" ] || fail "python3 (3.10 or newer) is needed"
 "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' || fail "python3 is $("$PY" -V); 3.10 or newer is needed"
 if [ "$OS" = Linux ] && ! command -v bwrap >/dev/null; then
-  echo "  note: bubblewrap (bwrap) is missing. dawnr runs model-written Python only inside it, so the independent"
-  echo "        Python check will refuse every answer until it is installed (Debian/Ubuntu: sudo apt install bubblewrap)."
+  echo "  note: bubblewrap (bwrap) is missing. dawnr runs model-written Python only inside it, so 'dawnr ask'"
+  echo "        will stop until it is installed (Debian/Ubuntu: sudo apt install bubblewrap)."
+fi
+if [ "$OS" = Darwin ]; then
+  echo "  note: on macOS 'dawnr ask' is not supported yet: the sandbox it runs model-written Python in (bwrap) is"
+  echo "        Linux-only. The rest installs, and the provers can be used on their own."
 fi
 echo "  $OS $ARCH, $("$PY" -V), llama.cpp build $LLAMA_TAG ($BUILD)"
 
