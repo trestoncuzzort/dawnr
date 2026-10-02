@@ -18,8 +18,8 @@ dawnr is research software. Read this before relying on anything it does.
   until its release `./install.sh` stops at that step unless given `--student FILE`. It installs only Dafny
   of the seven provers; an answer is shown with how many of the installed provers proved it. The independent
   Python check runs model-written code only inside a sandbox: `bwrap` on Linux, and on macOS Apple's Seatbelt with
-  the policies OpenAI's Codex CLI uses. The macOS path is written and checked by construction but has not yet been
-  run on a Mac.
+  the policies OpenAI's Codex CLI uses. On macOS the sandbox's
+  13 tests and the answer path's 7 pass on GitHub's macOS runner; the whole install has not yet been run on a Mac.
 - **It does not yet solve most problems.** On held-out problems the student is proved correct on 15 to 19 of
   200. It refuses the rest rather than guessing, which is the design, but it means most questions get a refusal.
 

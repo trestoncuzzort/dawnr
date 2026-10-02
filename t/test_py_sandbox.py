@@ -138,7 +138,8 @@ def test_a_session_cannot_read_the_home_directory():
 
 def test_macos_command_is_seatbelt_with_codex_policies_and_ours(tmp_path, monkeypatch):
     """On macOS the job runs under /usr/bin/sandbox-exec with Codex CLI's vendored base and read-only platform
-    policies followed by ours; checked here by construction (no Mac on hand to run it)."""
+    policies followed by ours. The construction is checked here; the other tests in this file run it for real on
+    CI's macOS runner."""
     import sys as _sys
     monkeypatch.setattr(_sys, "platform", "darwin")
     cmd = py_sandbox._command(tmp_path)

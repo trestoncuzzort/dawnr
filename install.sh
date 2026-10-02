@@ -91,7 +91,7 @@ if [ "$OS" = Linux ] && ! command -v bwrap >/dev/null; then
 fi
 if [ "$OS" = Darwin ]; then
   echo "  note: on macOS model-written Python runs under Apple's Seatbelt (sandbox-exec) with Codex CLI's policies;"
-  echo "        this path is new and has not yet been run on a Mac by this project."
+  echo "        its tests pass on GitHub's macOS runner, but this installer has not yet been run end to end on a Mac."
 fi
 echo "  $OS $ARCH, $("$PY" -V), llama.cpp build $LLAMA_TAG ($BUILD)"
 
