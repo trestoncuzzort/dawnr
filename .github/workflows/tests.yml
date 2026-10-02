@@ -70,7 +70,10 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y python3-tk xvfb
+          sudo apt-get install -y python3-tk xvfb bubblewrap
+          # dawnr runs model-written Python only inside bwrap (t/py_sandbox.py); with it installed the sandbox
+          # tests run here instead of skipping, on the Ubuntu release most users have
+          bwrap --ro-bind / / true && echo "bwrap works" || echo "bwrap CANNOT run here (user namespaces restricted?)"
 
       - name: locallm standard-library suites
         working-directory: locallm
