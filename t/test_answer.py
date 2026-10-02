@@ -118,3 +118,9 @@ def test_a_question_two_test_passing_solutions_read_differently_is_refused_with_
     text = answer.render(r)
     assert text.startswith("REFUSED: the question can be read more than one way.")
     assert "Another solution that passes the same tests answers odd_parity(" in text and "--test" in text
+
+
+def test_a_reply_that_never_came_is_named_as_that():
+    r = answer.answer(ENTRY, student("", RIGHT), python(), answers=2, prover=prover(lambda t: ALL))
+    assert r["refused"][0] == "answer 1: no reply from the model (it did not answer in time, or the request failed)"
+    assert r["shown"] is not None

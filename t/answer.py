@@ -70,6 +70,9 @@ def candidates(replies: list[str], entry: dict) -> tuple[list[dict], list[str]]:
     each other reply was refused)."""
     kept, seen, refused = [], set(), []
     for n, reply in enumerate(replies):
+        if not (reply or "").strip():                           # python_beside.api_decode's reply to a failed request
+            refused.append(f"answer {n + 1}: no reply from the model (it did not answer in time, or the request failed)")
+            continue
         task, why = proof_repair.cheap(reply, entry, None)
         if task is None:
             refused.append(f"answer {n + 1}: {why}")
