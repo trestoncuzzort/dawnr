@@ -124,3 +124,25 @@ def test_a_session_cannot_read_the_home_directory():
     probe = "import os\ndef f():\n    return sorted(os.listdir('/home'))\n"
     with py_sandbox.Session(probe, "f") as s:
         assert s.call([]) == []
+
+
+def test_macos_command_is_seatbelt_with_codex_policies_and_ours(tmp_path, monkeypatch):
+    """On macOS the job runs under /usr/bin/sandbox-exec with Codex CLI's vendored base and read-only platform
+    policies followed by ours; checked here by construction (no Mac on hand to run it)."""
+    import sys as _sys
+    monkeypatch.setattr(_sys, "platform", "darwin")
+    cmd = py_sandbox._command(tmp_path)
+    assert cmd[0] == "/usr/bin/sandbox-exec" and cmd[1] == "-p"
+    profile = cmd[2]
+    assert profile.lstrip().startswith(";") or "(version 1)" in profile
+    assert "(deny default)" in profile and '(subpath (param "TMP"))' in profile
+    assert "network-outbound (remote" not in profile and "network*" not in profile
+    assert f"-DJOB={tmp_path}" in cmd and f"-DTMP={tmp_path / 'tmp'}" in cmd
+    assert cmd[-2:] == ["-I", str(tmp_path / "runner.py")]
+    assert (tmp_path / "tmp").is_dir()
+
+
+def test_runner_reads_its_own_folder(tmp_path):
+    """The runner finds solution.py and asserts.json beside itself: /job under bwrap, the job folder elsewhere."""
+    assert 'open("/job/' not in py_sandbox.RUNNER and 'open("/job/' not in py_sandbox.SESSION_RUNNER
+    assert "os.path.join(JOB" in py_sandbox.RUNNER and "os.path.join(JOB" in py_sandbox.SESSION_RUNNER

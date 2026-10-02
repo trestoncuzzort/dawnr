@@ -17,8 +17,9 @@ dawnr is research software. Read this before relying on anything it does.
   2 minutes, a first answer proved by Dafny in under a minute). The student model is not published yet, so
   until its release `./install.sh` stops at that step unless given `--student FILE`. It installs only Dafny
   of the seven provers; an answer is shown with how many of the installed provers proved it. The independent
-  Python check runs model-written code only inside the `bwrap` sandbox, which exists on Linux alone, so on macOS
-  `dawnr ask` stops with a message at that step: macOS is not supported yet.
+  Python check runs model-written code only inside a sandbox: `bwrap` on Linux, and on macOS Apple's Seatbelt with
+  the policies OpenAI's Codex CLI uses. The macOS path is written and checked by construction but has not yet been
+  run on a Mac.
 - **It does not yet solve most problems.** On held-out problems the student is proved correct on 15 to 19 of
   200. It refuses the rest rather than guessing, which is the design, but it means most questions get a refusal.
 

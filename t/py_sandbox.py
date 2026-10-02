@@ -37,11 +37,15 @@ from pathlib import Path
 
 RESULT = "@@py_sandbox result@@ "
 RUNNER = r'''
-import json, resource, signal, sys
+import json, os, resource, signal, sys
 MEM = %(memory)d * 1024 * 1024
-resource.setrlimit(resource.RLIMIT_AS, (MEM, MEM))
-resource.setrlimit(resource.RLIMIT_NPROC, (0, 0))
-resource.setrlimit(resource.RLIMIT_FSIZE, (1 << 20, 1 << 20))
+JOB = os.path.dirname(os.path.abspath(__file__))       # /job under bwrap; the job folder itself under Seatbelt
+for _lim, _val in ((resource.RLIMIT_AS, MEM), (resource.RLIMIT_NPROC, 0), (resource.RLIMIT_FSIZE, 1 << 20)):
+    try:
+        resource.setrlimit(_lim, (_val, _val))
+    except (ValueError, OSError):
+        if sys.platform != "darwin":                    # macOS does not enforce every limit; Linux must
+            raise
 RESULT = %(result)r
 
 
@@ -59,13 +63,13 @@ signal.signal(signal.SIGALRM, _alarm)
 g = {"__name__": "solution"}
 signal.alarm(%(per_test)d)
 try:
-    exec(compile(open("/job/solution.py").read(), "solution", "exec"), g)
+    exec(compile(open(os.path.join(JOB, "solution.py")).read(), "solution", "exec"), g)
 except BaseException as e:
     signal.alarm(0)
     done({"load": (type(e).__name__ + ": " + str(e))[:200]})
 signal.alarm(0)
 out = []
-for a in json.load(open("/job/asserts.json")):
+for a in json.load(open(os.path.join(JOB, "asserts.json"))):
     signal.alarm(%(per_test)d)
     try:
         exec(a, dict(g))
@@ -83,11 +87,15 @@ done({"verdicts": out})
 
 
 SESSION_RUNNER = r'''
-import json, resource, signal, sys
+import json, os, resource, signal, sys
 MEM = %(memory)d * 1024 * 1024
-resource.setrlimit(resource.RLIMIT_AS, (MEM, MEM))
-resource.setrlimit(resource.RLIMIT_NPROC, (0, 0))
-resource.setrlimit(resource.RLIMIT_FSIZE, (1 << 20, 1 << 20))
+JOB = os.path.dirname(os.path.abspath(__file__))       # /job under bwrap; the job folder itself under Seatbelt
+for _lim, _val in ((resource.RLIMIT_AS, MEM), (resource.RLIMIT_NPROC, 0), (resource.RLIMIT_FSIZE, 1 << 20)):
+    try:
+        resource.setrlimit(_lim, (_val, _val))
+    except (ValueError, OSError):
+        if sys.platform != "darwin":                    # macOS does not enforce every limit; Linux must
+            raise
 RESULT = %(result)r
 
 
@@ -117,7 +125,7 @@ signal.signal(signal.SIGALRM, _alarm)
 g = {"__name__": "solution"}
 signal.alarm(%(per_call)d)
 try:
-    exec(compile(open("/job/solution.py").read(), "solution", "exec"), g)
+    exec(compile(open(os.path.join(JOB, "solution.py")).read(), "solution", "exec"), g)
     f = g[%(fn)r]
     if not callable(f):
         raise TypeError("not callable")
@@ -167,11 +175,39 @@ class LoadError(Exception):
     """The code did not load, or does not define the function."""
 
 
+SEATBELT = "/usr/bin/sandbox-exec"       # only /usr/bin's copy is trusted (codex-rs/sandboxing/src/seatbelt.rs)
+SEATBELT_POLICIES = Path(__file__).resolve().parent / "third_party" / "codex_seatbelt"
+SEATBELT_OURS = """
+; t/py_sandbox.py: the job folder and the Python installation may be read; only the job's own temporary
+; folder may be written. Nothing else is granted beyond Codex's base and read-only platform policies above.
+(allow file-read* file-test-existence (subpath (param "JOB")) (subpath (param "PY_PREFIX")))
+(allow file-map-executable (subpath (param "PY_PREFIX")))
+(allow file-read* file-write* file-test-existence (subpath (param "TMP")))
+"""
+
+
 def available() -> bool:
+    if sys.platform == "darwin":
+        return Path(SEATBELT).exists()
     return shutil.which("bwrap") is not None
 
 
+def seatbelt_profile() -> str:
+    """Codex CLI's macOS policies (github.com/openai/codex, Apache-2.0, vendored unchanged) and ours after them."""
+    parts = [(SEATBELT_POLICIES / f).read_text() for f in ("seatbelt_base_policy.sbpl", "seatbelt_read_only_platform_defaults.sbpl")]
+    return "\n".join(parts) + SEATBELT_OURS
+
+
+def _seatbelt_command(job: Path, python: str | None = None, prefix: str | None = None) -> list[str]:
+    tmp = job / "tmp"
+    tmp.mkdir(exist_ok=True)
+    return [SEATBELT, "-p", seatbelt_profile(), f"-DJOB={job}", f"-DPY_PREFIX={prefix or sys.base_prefix}",
+            f"-DTMP={tmp}", python or sys.executable, "-I", str(job / "runner.py")]
+
+
 def _command(job: Path) -> list[str]:
+    if sys.platform == "darwin":
+        return _seatbelt_command(job)
     cmd = ["bwrap", "--unshare-all", "--die-with-parent", "--new-session",
            "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/home", "--chdir", "/tmp"]
     for d in ("/usr", "/lib", "/lib64", "/bin", "/etc/alternatives"):
@@ -184,7 +220,7 @@ def run_tests(code: str, asserts: list[str], per_test: int = 3, memory_mb: int =
     """{"status": "ran", "verdicts": [...], "all_pass": bool} | {"status": "load-error", "why"} |
     {"status": "timeout"} | {"status": "sandbox-error", "why"}. Raises RuntimeError without a sandbox."""
     if not available():
-        raise RuntimeError("py_sandbox: bubblewrap is not installed; model-written code is not run without it")
+        raise RuntimeError("py_sandbox: no sandbox (bubblewrap on Linux, /usr/bin/sandbox-exec on macOS); model-written code is not run without it")
     with tempfile.TemporaryDirectory(prefix="py-sandbox-") as tmp:
         job = Path(tmp)
         (job / "solution.py").write_text(code, encoding="utf-8")
@@ -217,7 +253,7 @@ class Session:
 
     def __init__(self, code: str, fn: str, per_call: int = 3, memory_mb: int = 1024):
         if not available():
-            raise RuntimeError("py_sandbox: bubblewrap is not installed; model-written code is not run without it")
+            raise RuntimeError("py_sandbox: no sandbox (bubblewrap on Linux, /usr/bin/sandbox-exec on macOS); model-written code is not run without it")
         self.code, self.fn, self.per_call, self.memory_mb = code, fn, per_call, memory_mb
         self._tmp = tempfile.TemporaryDirectory(prefix="py-sandbox-")
         job = Path(self._tmp.name)
