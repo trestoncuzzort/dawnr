@@ -35,7 +35,8 @@ solution and the provers agree (see [../README.md](../README.md)).
 
 - **Where the problems come from:** MBPP (CC-BY-4.0), HumanEval (MIT) and APPS (MIT) for the questions; the
   vericoding benchmark (MIT), DafnyBench (Apache-2.0; its programs come from many GitHub repositories),
-  HumanEval-Dafny (Apache-2.0) and Clover (MIT) for the given specifications. The 52 rows that name a
+  HumanEval-Dafny (Apache-2.0), Clover (MIT), ACSL by Example (MIT) and the Verus repository's examples (MIT) for the
+  given specifications. The 52 rows that name a
   dafny-synthesis program, GPL-3.0 at its source, are left out
   ([provenance](../internal/RELEASE-PROVENANCE-2026-10-01.md)).
 - **Kept out of training:** the 200 held-out problems, the 100 development problems and the 33 held-out
