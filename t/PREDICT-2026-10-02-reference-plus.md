@@ -46,3 +46,20 @@ which the answers pass, expect the strings 'Found a match!' and 'Not matched!'. 
 answers wrong on seeds 1 and 2. **Correction (07:34Z, after the result above, so not a prediction):** MBPP+'s solution
 replaces MBPP's only where it passes the problem's own test assertions (`spec_check.passes_own_tests`, tested).
 Every set is re-scored with the corrected rule and reported beside both columns above.
+
+## The corrected rule, 2026-10-02 07:35Z
+
+MBPP+'s solution is used for 200 MBPP problems in the pool where it passes the problem's own tests (232 by the
+first rule). On the clean 200, complete specifications, at least one kernel / all seven:
+
+| | MBPP's references | MBPP+'s where they keep the problem's contract |
+|---|---:|---:|
+| seed 1 | 18 / 5 | 18 / 5 |
+| seed 2 | 19 / 6 | 19 / 6 |
+| seed 3 | 15 / 8 | **17** / 8 |
+| mean of three | 17.3 / 6.3 | **18.0** / 6.3 |
+| Phi-4-mini, prompted | 3 / 2 | 3 / 2 |
+
+Two of seed 3's answers that the old references called wrong are right (605 "is prime"; 629 "split the even
+numbers", whose specification the old reference left looking incomplete). Nothing moves the other way. The
+original column stays the registered one; this column is reported beside it from now on.
