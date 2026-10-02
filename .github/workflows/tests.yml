@@ -71,9 +71,17 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y python3-tk xvfb bubblewrap
-          # dawnr runs model-written Python only inside bwrap (t/py_sandbox.py); with it installed the sandbox
-          # tests run here instead of skipping, on the Ubuntu release most users have
-          bwrap --ro-bind / / true && echo "bwrap works" || echo "bwrap CANNOT run here (user namespaces restricted?)"
+          # dawnr runs model-written Python only inside bwrap (t/py_sandbox.py). Ubuntu 24.04 restricts unprivileged
+          # user namespaces with AppArmor, and a program gets them back through a profile with `userns,`
+          # (ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces). This applies the fix install.sh
+          # prints, so the sandbox tests run here and the printed fix is itself tested.
+          probe() { bwrap --unshare-all --die-with-parent --new-session --proc /proc --dev /dev --tmpfs /tmp \
+                      --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind /bin /bin /usr/bin/true; }
+          probe && echo "bwrap works as installed" || {
+            echo "bwrap cannot create its namespaces; ls extra-profiles:"; ls /usr/share/apparmor/extra-profiles | grep -i bwrap || true
+            sudo bash t/apparmor-bwrap.sh && probe && echo "bwrap works after t/apparmor-bwrap.sh" \
+              || echo "bwrap STILL cannot run here"
+          }
 
       - name: locallm standard-library suites
         working-directory: locallm
