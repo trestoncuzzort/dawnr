@@ -80,6 +80,29 @@ def written_python(decode, ids: list[str], P: dict, attempts: int, batch: int, m
     return python, counts
 
 
+SAMPLE_TEMPERATURE = 0.8      # ClarifyGPT's sampling temperature for its code consistency check (arXiv:2310.10996)
+
+
+def sampled_python(decode, ids: list[str], P: dict, samples: int, batch: int, max_new: int) -> dict:
+    """problem -> every distinct sampled Python solution that passes the problem's tests in the sandbox:
+    `samples` replies at SAMPLE_TEMPERATURE, the i-th with seed 1000 + i. ClarifyGPT (arXiv:2310.10996)
+    samples several solutions and calls a requirement ambiguous when their outputs differ; t/spec_gate.py
+    holds a specification to all of them (`judge_all`)."""
+    out = {t: [] for t in ids}
+    for i in range(samples):
+        for start in range(0, len(ids), batch):
+            chunk = ids[start:start + batch]
+            replies = decode([spec_first_rows.python_question(P[t]) for t in chunk], SAMPLE_TEMPERATURE,
+                             1000 + i, chunk[0], max_new)
+            for t, (text, _stopped, _ntok) in zip(chunk, replies):
+                code = python_of(text)
+                if code is None or code in out[t]:
+                    continue
+                if py_sandbox.run_tests(code, P[t]["rec"]["test_list"]).get("all_pass"):
+                    out[t].append(code)
+    return out
+
+
 def written_specifications(decode, python: dict, P: dict, samples: int, batch: int, max_new: int) -> dict:
     """Step 1 of the --python route: problem -> [(label, task)] the student wrote from the problem,
     its tests and its own tested Python. They are scored with every other candidate afterwards."""

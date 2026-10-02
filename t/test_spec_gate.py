@@ -102,3 +102,34 @@ def test_check_task_with_an_oracle_never_loads_the_reference():
     entry = dict(DOUBLE, rec={"code": "raise SystemExit('the reference must not be run')", "test_list": DOUBLE["rec"]["test_list"]})
     r = spec_check.check_task(_task("r == 2 * n"), entry, 20, random.Random(1), oracle=lambda n: 2 * n)
     assert r["status"] == "agrees" and r["draws"] == 20
+
+
+
+def test_judge_all_refuses_when_another_test_passing_solution_reads_the_question_differently(monkeypatch):
+    """ClarifyGPT's consistency check (arXiv:2310.10996): 'odd parity' read as 'is odd' and as 'an odd number
+    of one bits' pass the same three tests (13, 21, 18); the second solution finds the first reading false."""
+    calls = []
+
+    def fake_judge(task, entry, code, seed=1, n=100):
+        calls.append(code)
+        if code == "parity":
+            return {"passes": False, "why": "the specification is false at the Python's answer",
+                    "agreement": {"status": "disagrees", "args": [3], "reference_said": False}}
+        return {"passes": True, "why": "passes", "agreement": {"status": "agrees"}}
+    monkeypatch.setattr(spec_gate, "judge", fake_judge)
+    out = spec_gate.judge_all({}, {}, "is_odd", ["is_odd", "also_is_odd", "parity"])
+    assert out["passes"] is False and out["why"] == "the Python solutions read the question differently"
+    assert out["ambiguous"] == {"args": [3], "another_solution_said": False, "solution": 2}
+    assert calls == ["is_odd", "also_is_odd", "parity"]                 # the duplicate of the first is not re-judged
+
+
+def test_judge_all_ignores_an_extra_solution_s_weak_check_and_passes_when_all_agree(monkeypatch):
+    def fake_judge(task, entry, code, seed=1, n=100):
+        if code == "narrow":
+            return {"passes": False, "why": "too few draws inside the requires", "agreement": {"status": "agrees"}}
+        return {"passes": True, "why": "passes", "agreement": {"status": "agrees"}}
+    monkeypatch.setattr(spec_gate, "judge", fake_judge)
+    out = spec_gate.judge_all({}, {}, "a", ["b", "narrow"])
+    assert out["passes"] is True and out["solutions_agreeing"] == 3
+    monkeypatch.setattr(spec_gate, "judge", lambda *a, **k: {"passes": False, "why": "weak specification"})
+    assert spec_gate.judge_all({}, {}, "a", ["b"])["why"] == "weak specification"   # the primary check decides first

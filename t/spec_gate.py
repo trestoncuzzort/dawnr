@@ -128,6 +128,26 @@ def judge(task: dict, entry: dict, code: str | None, seed: int = 1, n: int = DRA
     return dict(out, passes=passes(result), why=reason(result), agreement=keep)
 
 
+def judge_all(task: dict, entry: dict, code: str | None, others: list[str], seed: int = 1, n: int = DRAWS) -> dict:
+    """`judge` against `code`, then the same check against each of `others` (further test-passing Python
+    solutions, sampled): the answer passes only if no other solution finds its specification false.
+    ClarifyGPT's code consistency check (arXiv:2310.10996): solutions that pass the same tests and answer
+    an input differently read the question differently, so the question is ambiguous and the answer is
+    refused with that input and both answers, the test that would settle it. Only disagreement counts
+    against the answer; an extra solution's own domain or a weak check is the primary check's business."""
+    out = judge(task, entry, code, seed, n)
+    if not out["passes"]:
+        return out
+    for k, other in enumerate(o for o in others if o != code):
+        r = judge(task, entry, other, seed, n)
+        if (r.get("agreement") or {}).get("status") == "disagrees":
+            a = r["agreement"]
+            return dict(out, passes=False, why="the Python solutions read the question differently",
+                        ambiguous={"args": a.get("args"), "another_solution_said": a.get("reference_said"),
+                                   "solution": k + 1})
+    return dict(out, solutions_agreeing=1 + len([o for o in others if o != code]))
+
+
 def load_python(path: Path) -> dict[str, str]:
     """problem id -> the Python kept for it (rows {"task_id", "code"}; the last row for an id wins)."""
     out = {}

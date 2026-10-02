@@ -76,6 +76,24 @@ def api_decode(api: str, hosts: list[str], name: str, extra: dict | None = None,
     return decode
 
 
+def write_samples(decode, ids: list[str], P: dict, out: Path, samples: int, batch: int, max_new: int, writer: str) -> int:
+    """One row a problem: {"task_id", "codes" (distinct test-passing samples), "samples", "temperature", "writer"}."""
+    done = set()
+    if out.exists():
+        done = {str(json.loads(l)["task_id"]) for l in out.read_text(encoding="utf-8").splitlines() if l.strip()}
+    todo = [t for t in ids if t not in done]
+    with out.open("a", encoding="utf-8") as f:
+        for start in range(0, len(todo), batch):
+            chunk = todo[start:start + batch]
+            codes = spec_first.sampled_python(decode, chunk, P, samples, batch, max_new)
+            for t in chunk:
+                f.write(json.dumps({"task_id": int(t), "codes": codes[t], "samples": samples,
+                                    "temperature": spec_first.SAMPLE_TEMPERATURE, "writer": writer}) + "\n")
+            f.flush()
+            print(f"python_beside: {min(start + batch, len(todo))} of {len(todo)} sampled", flush=True)
+    return 0
+
+
 def write(decode, ids: list[str], P: dict, out: Path, attempts: int, batch: int, max_new: int, writer: str) -> dict:
     """Append one row per problem to `out`, a chunk at a time, and return {"asked", "kept"}."""
     done = set()
@@ -111,6 +129,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--attempts", type=int, default=3)
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--max-new", type=int, default=768)
+    ap.add_argument("--samples", type=int, default=0,
+                    help="instead: this many sampled replies a problem at 0.8, every distinct test-passing one kept "
+                         "(rows carry \"codes\"; ClarifyGPT's consistency check, arXiv:2310.10996)")
     a = ap.parse_args(argv)
     if bool(a.model) == bool(a.api):
         ap.error("give --model, or --api with --host and --name")
@@ -131,6 +152,8 @@ def main(argv: list[str] | None = None) -> int:
             return student_generate.decode(model, tokenizer, conversations, max_new, temperature, TOP_P,
                                            student_generate.problem_seed(salt, first))
         writer = str(a.model)
+    if a.samples:
+        return write_samples(decode, ids, P, a.out, a.samples, a.batch, a.max_new, writer)
     r = write(decode, ids, P, a.out, a.attempts, a.batch, a.max_new, writer)
     total = sum(1 for line in a.out.read_text(encoding="utf-8").splitlines() if line.strip() and json.loads(line).get("code"))
     print(f"python_beside: {total} of {len(ids)} problems have a Python solution that passes their tests "
