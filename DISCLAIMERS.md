@@ -10,8 +10,8 @@ dawnr is research software. Read this before relying on anything it does.
   what licence, is recorded in [internal/RELEASE-PROVENANCE-2026-10-01.md](internal/RELEASE-PROVENANCE-2026-10-01.md);
   rows that trace to share-alike programs are left out of any released weights.
 - **A proof is only as good as its specification.** dawnr checks the specification against the problem's own
-  examples and a second, independently written solution, and still shows a wrong answer about one time in six
-  on problems it has not seen (see below). A shown answer says how many of the seven provers proved it; it is
+  examples and against six independently written solutions, and still shows a wrong answer about one time in
+  eight on problems it has not seen (see below). A shown answer says how many of the seven provers proved it; it is
   not a guarantee that the question was understood.
 - **The installer is new.** It was tested from an empty home directory on Linux x86_64 (install in under
   2 minutes, a first answer proved by Dafny in under a minute). The student model is not published yet, so
@@ -57,7 +57,11 @@ Without a reference solution, the gate can still tell most right answers from
 wrong ones. It checks the specification against a tested Python solution
 written beside the question. On the student's held-out answers it shows 18
 problems and 15 are right, where tests and proofs alone would show 31 with 18
-right ([the gate](t/PREDICT-2026-10-01-gate-without-reference.md)).
+right ([the gate](t/PREDICT-2026-10-01-gate-without-reference.md)). Across the three training seeds it shows 56
+answers and 45 are right (80%). Holding each specification to five more sampled Python solutions as well, so that
+a question two solutions read differently is refused with the input they split on (ClarifyGPT's consistency check),
+it shows 47 and 41 are right (87%) ([ambiguity](t/PREDICT-2026-10-02-ambiguity.md)); `dawnr ask` does this. Read
+by hand, most of the remaining "wrong" answers are faults in the benchmark's reference solutions.
 
 ### Part by part
 

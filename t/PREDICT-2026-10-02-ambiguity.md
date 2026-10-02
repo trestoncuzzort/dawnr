@@ -44,3 +44,27 @@ references, beside the original ones.
 
 So on this reading 5 of the 56 shown are wrong (91% right), not 11 (80%). The registered count stays the
 reference's; this table is reported beside it and is not a measurement.
+
+## Outcome, 2026-10-02 08:34Z
+
+Five samples at 0.8 for each of the 28 problems gave 116 distinct test-passing solutions (the base at Q4_K_M on
+the desktop CPU). Every shown answer judged again (`~/scratch/ambiguity/report.json`):
+
+| three seeds, at least one kernel | shown | right | right share |
+|---|---:|---:|---:|
+| one Python solution (before) | 56 | 45 | 80% |
+| every test-passing sample too (after) | 47 | 41 | **87%** |
+| the same, against MBPP's original references | 56 -> 47 | 44 -> 40 | 79% -> 85% |
+
+115. **768 refused on all three seeds: holds.** A sampled solution reads "odd parity" as an odd count of one bits
+     and answers f(8) with True.
+116. **At least 4 of the 11 wrong refused: holds** (5: 768 three times, 644, 454 on seed 3).
+117. **At most 5 of the 45 right refused: holds** (4: 53 twice, 375, 454 on seed 2).
+
+The four right answers were lost to sampled solutions that pass the question's tests and are wrong elsewhere:
+for 53 ("are the first and last characters equal") one says a one-character string is "Not Equal"; for 375
+("round to the nearest multiple") one rounds 482 down to 476 instead of to 483. In `dawnr` such a refusal ends with
+the input and asks for a test that settles it, so the cost is a question to the person, not a wrong answer shown.
+On the hand reading above, 2 of the 47 shown are wrong (680 twice: strict or not), 96%.
+
+`dawnr ask` now holds every answer to five sampled solutions (`--consistency 5`).
