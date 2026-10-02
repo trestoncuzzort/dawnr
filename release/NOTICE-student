@@ -21,11 +21,15 @@ Verified programs whose specifications the training rows use
   DafnyBench. Apache License 2.0. https://github.com/sun-wendy/DafnyBench
   HumanEval-Dafny, JetBrains Research. Apache License 2.0. https://github.com/JetBrains-Research/HumanEval-Dafny
   Clover. Copyright (c) 2023 LiviaSun. MIT License. https://github.com/ChuyueSun/Clover
+  ACSL by Example. Copyright (c) 2020-2026 Fraunhofer FOKUS. MIT License.
+  https://github.com/fraunhoferfokus/acsl-by-example
+  Verus (examples from its repository). Copyright (c) 2021 The Verus Contributors. MIT License.
+  https://github.com/verus-lang/verus
 
 Rows built from dafny-synthesis programs (GPL-3.0 at their source) are not in this model's training data.
 The memory conversations in its training data were written by this project.
 
-The MIT License, under which HumanEval, APPS, vericoding and Clover are published, with each one's
+The MIT License, under which HumanEval, APPS, vericoding, Clover, ACSL by Example and Verus are published, with each one's
 copyright line above:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

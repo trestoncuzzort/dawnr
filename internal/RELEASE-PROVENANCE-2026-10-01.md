@@ -17,6 +17,12 @@ today) or dataset card, not remembered.
 | 16 | specification-given rows from HumanEval-Dafny | Apache-2.0 (github.com/JetBrains-Research/HumanEval-Dafny) |
 | 15 | specification-given rows from Clover | MIT (github.com/ChuyueSun/Clover) |
 
+**Correction, 2026-10-02:** reading the row names again, 4 of the specification-given rows come from ACSL by
+Example (MIT, Fraunhofer FOKUS, github.com/fraunhoferfokus/acsl-by-example) and 5 from the Verus repository's
+examples (MIT, The Verus Contributors, github.com/verus-lang/verus); the table above counted them under other
+headings. Both are MIT, so nothing leaves the release, but their notices were missing from
+`release/NOTICE-student` and are added there and to the published `student-v1` release.
+
 52 rows in all name a dafny-synthesis program (the 44 above and 8 memory conversations that
 reuse one).
 
