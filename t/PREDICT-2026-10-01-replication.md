@@ -101,3 +101,9 @@ idle CPU helps until then: three one-slot llama-servers on the desktop, built fr
 commit (def4d406ae2c) and loading the same weights file (Ollama's blob, sha256 3c168af1...), take answer sets
 from the far end of the list. A set another generator is writing is skipped (the generator's tag lock), so every
 set is still written by one generator. The run was at 869 of 3,400 answers.
+
+Serving note, 2026-10-02 09:15Z (time only): seven Phi answers under the grammar (problems 151, 385, 483, 571, 584,
+656, 711) ran past the client's one-hour limit, which left no record, so each was asked again from the start on
+the next pass and a set holding one could never reach 200. Every answer is capped at 3,072 tokens and ends on its
+own, so the limit is now four hours; the decoding settings are unchanged, and llama-server cancels a request whose
+client has gone (tools/server/server-queue.cpp, `server_response_reader::stop`). The run was at 1,133 of 3,400.
