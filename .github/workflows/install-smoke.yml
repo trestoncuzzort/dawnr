@@ -1,0 +1,45 @@
+name: install-smoke
+
+# Run by hand once the student is published: the README's install steps from a fresh checkout on GitHub's
+# machines (a Mac and Ubuntu 24.04), then one question, the way a new user would. It downloads about 8 GB.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install-and-ask:
+    name: install and ask (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: bubblewrap (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y bubblewrap
+          bwrap --ro-bind / / true && echo "bwrap works" || echo "bwrap CANNOT run here"
+
+      - name: install
+        run: ./install.sh
+
+      - name: doctor
+        run: ~/.local/bin/dawnr doctor
+
+      - name: ask one question
+        run: |
+          ~/.local/bin/dawnr ask "Write a function that returns the larger of two numbers." \
+            --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9" --test "assert larger(4, 4) == 4" \
+            | tee answer.txt
+          grep -q "^SHOWN:" answer.txt
