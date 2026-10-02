@@ -115,3 +115,8 @@ same request settings, eight slots of the lab servers' 8,192-token context. The 
 so no set is held by a slow worker, and the lab grades as registered once every set holds 200 answers. The k10
 sets are sampled at 0.7, so a GPU's different rounding changes which sample is drawn, not how they are drawn; the
 greedy set (s0) was completed on the lab's CPU.
+
+Serving note, 2026-10-02 11:59Z (speed only): the desktop card fell off the bus again at 11:42Z, so the card's
+share is postponed to the next power cycle. Meanwhile six more one-slot servers run on the lab (ports 8209 to 8214,
+the same binary, weights and flags as the first eight; about 70 of its 120 cores are then this run's, the rest
+free for others), fed by a second runner that shares sets through the same lock. The run was at 1,200 of 3,400.
