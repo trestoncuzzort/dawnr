@@ -77,3 +77,10 @@ Python is 289,048 characters (an embedded data table). 8 of the 2,035 problems h
 characters (4 over 10,000); the student trained on rows of at most 2,845 tokens and never saw such a prompt.
 They are left out: 2,027 problems. No specification was written and no answer taken in the failed start.
 Predictions 36 to 38 are unchanged. It reruns after the RL run's card work.
+
+## Amendment, 2026-10-02 02:14Z, before any specification is kept: prompts capped, smaller batches
+
+The rerun of 02:10Z was stopped by hand three minutes in, before writing anything: long problem statements
+remain (prompts up to 59,345 characters; dev prompts are at most 1,019), and a batch is padded to its longest
+prompt. Problems whose whole prompt (statement, tests and reference Python) is over 6,000 characters are left out
+(12 more: 2,015 problems), and the round runs at batch 8 instead of 16. Predictions 36 to 38 are unchanged.

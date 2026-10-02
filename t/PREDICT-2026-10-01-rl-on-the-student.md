@@ -46,3 +46,10 @@ The start rule this run stands on (27 of 100 unseen dev problems with a test-pas
 student for writing `t` (`t/PREDICT-2026-10-01-v6.md`, part 3: one greedy answer passes the tests on 13 dev
 problems for v5, 6 for v6). The run starts from the 4B on v5 with its own rows for the band's exclusions.
 Predictions 91 to 94 are unchanged, measured against the 4B on v5's own numbers.
+
+## Amendment, 2026-10-02 02:14Z, after a band start that ran out of memory: prompts capped, smaller batches
+
+The band's sampling stopped at 02:12Z when a batch of 16 padded to a 22,280-character prompt ran the card out of
+memory (`t/rl_student.py band` had drawn 800 problems, 1 of them over 6,000 characters). Problems with prompts
+over 6,000 characters are left out before the seeded draw (`--max-prompt-chars 6000`), and sampling runs at batch
+8. The run now follows the specification round on the card. Predictions 91 to 94 are unchanged.
