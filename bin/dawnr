@@ -24,7 +24,9 @@ healthy() { curl -s -m 2 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '"ok
 start_one() {  # name gguf port
   healthy "$3" && return 0
   [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
+  # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only)
   nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$THREADS" --threads-batch "$THREADS" \
+    ${DAWNR_GPU_LAYERS:+--n-gpu-layers "$DAWNR_GPU_LAYERS"} \
     --ctx-size 4096 --parallel 1 --reasoning off --cache-ram 256 --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
   echo $! > "$RUN/$1.pid"
 }

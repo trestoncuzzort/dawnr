@@ -38,6 +38,11 @@ jobs:
         run: ~/.local/bin/dawnr doctor
 
       - name: ask one question
+        # GitHub's Mac is a 3-core virtual machine whose virtual GPU generated under a token a second (2026-10-02:
+        # every answer passed the 15-minute limit), so there the models run on its CPU; a real Mac uses Metal
+        env:
+          DAWNR_GPU_LAYERS: ${{ runner.os == 'macOS' && '0' || '' }}
+          DAWNR_THREADS: ${{ runner.os == 'macOS' && '3' || '' }}
         run: |
           ~/.local/bin/dawnr ask "Write a function that returns the larger of two numbers." \
             --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9" --test "assert larger(4, 4) == 4" \
