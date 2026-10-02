@@ -225,3 +225,30 @@ answer generated before this registration and is not counted). The base at Q4_K_
 106. With the answer absent, at most 20% of the replies that do not refuse are shown.
 107. With the answer present, at least 50% of the right replies are shown.
 108. With the answer present, the share right among what is shown is higher than among all replies that answer.
+
+## Outcome of the 07:27Z amendment (quotes forced verbatim), 2026-10-02 14:42Z
+
+The base at Q4_K_M on two lab CPU servers, greedy, 300 HotpotQA bridge questions in each condition, every reply
+in the grammar's form (`~/scratch/rag-cite/report.json`):
+
+| | answer present | answer absent |
+|---|---:|---:|
+| refuses (RGB's sentence) | 66 | **286** |
+| answers, each claim with a verbatim quote from the document it cites | 234 | 14 |
+| of those, the gold answer is in a claim | 185 (79%) | 4 |
+| shown at AlignScore 0.5 (every claim supported by its own quote) | 134 | 8 |
+| shown and right | 102 (76%) | 2 |
+
+106. **Falsified:** with the answer absent, 8 of the 14 replies that do not refuse are shown (57%), not at most
+     20%. In absolute terms 8 of 300 absent questions get a shown answer.
+107. **Holds:** with the answer present, 102 of the 185 right replies are shown (55%).
+108. **Falsified:** the share right among what is shown (76%) is not higher than among all answers (79%). The
+     support check takes right answers out at least as often as wrong ones.
+
+Read together: forcing each claim to quote its document verbatim is what works. The base refuses 286 of 300
+questions whose answer is not in the documents (the prompted base, on RGB, said so 31% of the time), answers 78%
+of those where it is, and every claim it makes carries a sentence the person can check. The AlignScore check adds
+nothing on top and is not used. The "right" count is a lower bound: it requires the gold string inside a claim,
+and read by hand several misses are the same answer under another name ("Thorgan Hazard" for "Thorgan Ganael
+Francis Hazard"; "Paige O'Hara" for her birth name), and some answers in the absent condition are stated by a
+distractor paragraph that does answer the question.
