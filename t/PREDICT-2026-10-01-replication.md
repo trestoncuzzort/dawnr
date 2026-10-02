@@ -107,3 +107,11 @@ Serving note, 2026-10-02 09:15Z (time only): seven Phi answers under the grammar
 the next pass and a set holding one could never reach 200. Every answer is capped at 3,072 tokens and ends on its
 own, so the limit is now four hours; the decoding settings are unchanged, and llama-server cancels a request whose
 client has gone (tools/server/server-queue.cpp, `server_response_reader::stop`). The run was at 1,133 of 3,400.
+
+Serving note, 2026-10-02 09:21Z (speed only): at the lab's pace the remaining ~2,270 answers would take two more
+days. When v2's training releases the desktop card (about 12:00Z), the rest is generated there: llama.cpp b11325,
+the lab's exact commit (def4d406a), from its published CUDA build (checksums checked), the same weights file, the
+same request settings, eight slots of the lab servers' 8,192-token context. The lab's generation pauses meanwhile
+so no set is held by a slow worker, and the lab grades as registered once every set holds 200 answers. The k10
+sets are sampled at 0.7, so a GPU's different rounding changes which sample is drawn, not how they are drawn; the
+greedy set (s0) was completed on the lab's CPU.
