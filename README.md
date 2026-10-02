@@ -66,10 +66,12 @@ dawnr ask "Write a function that returns the larger of two numbers." \
 A question takes one to two minutes on an ordinary CPU. `dawnr doctor`
 shows what is installed. dawnr runs code the models write only inside a sandbox
 (bubblewrap on Linux, Apple's Seatbelt on macOS). On Ubuntu 23.10 and newer,
-which restrict the sandbox by default, run once: `sudo bash t/apparmor-bwrap.sh`. The installer sets up Dafny; adding the other six
+which restrict the sandbox by default, run once: `sudo bash t/apparmor-bwrap.sh`.
+The installer sets up Dafny; adding the other six
 provers (see [t/README.md](t/README.md)) lets an answer be proved up to seven
-times over. The student model's first public release is being prepared; see
-[DISCLAIMERS.md](DISCLAIMERS.md).
+times over. The student model is published under Apache-2.0 as the
+[`student-v1` release](../../releases/tag/student-v1), with its
+[model card](release/MODEL-CARD-student-v1.md); see also [DISCLAIMERS.md](DISCLAIMERS.md).
 
 ## Learn more
 
