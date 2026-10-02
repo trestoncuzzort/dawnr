@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# dawnr: one question through the whole gate, offline, on this machine.
+#
+#   dawnr ask "Write a function that doubles a number." --test "assert double(3) == 6" [--test ...] [--answers N]
+#   dawnr doctor          what is installed and what each part found
+#   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
+#
+# Installed by install.sh. The gate is t/answer.py: the student answers, the answers that pass the tests are checked
+# against an independent Python solution, then proved; one is shown with its evidence, or the question is refused.
+set -euo pipefail
+ENVF=${DAWNR_HOME:-$HOME/.local/share/dawnr}/env
+[ -f "$ENVF" ] || { echo "dawnr: not installed yet; run install.sh from the dawnr folder" >&2; exit 1; }
+set -a; . "$ENVF"; set +a
+CORES=$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+THREADS=${DAWNR_THREADS:-$(( CORES > 2 ? CORES / 2 : 1 ))}
+SP=${DAWNR_STUDENT_PORT:-8711}; BP=${DAWNR_BASE_PORT:-8712}
+RUN=$DAWNR_HOME/run; mkdir -p "$RUN"
+
+healthy() { curl -s -m 2 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '"ok"'; }
+
+start_one() {  # name gguf port
+  healthy "$3" && return 0
+  [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
+  nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$THREADS" --threads-batch "$THREADS" \
+    --ctx-size 4096 --parallel 1 --reasoning off --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
+  echo $! > "$RUN/$1.pid"
+}
+
+wait_ready() {
+  for _ in $(seq 1 180); do healthy "$SP" && healthy "$BP" && return 0; sleep 1; done
+  echo "dawnr: the model servers did not come up; see $RUN/*.log" >&2; return 1
+}
+
+stop_all() {
+  for n in student base; do
+    if [ -f "$RUN/$n.pid" ]; then kill "$(cat "$RUN/$n.pid")" 2>/dev/null || true; rm -f "$RUN/$n.pid"; fi
+  done
+}
+
+cmd=${1:-help}; shift || true
+case $cmd in
+  ask)
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr ask "QUESTION" --test "assert f(x) == y" [--test ...]' >&2; exit 2; }
+    QUESTION=$1; shift
+    started=0
+    if ! { healthy "$SP" && healthy "$BP"; }; then
+      echo "starting the models (about half a minute)..." >&2
+      start_one student "$STUDENT_GGUF" "$SP"; start_one base "$BASE_GGUF" "$BP"; started=1
+      trap '[ $started = 1 ] && stop_all' EXIT
+      wait_ready
+    fi
+    cd "$DAWNR_REPO"
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" --text "$QUESTION" "$@"
+    ;;
+  serve)
+    case ${1:-status} in
+      start) start_one student "$STUDENT_GGUF" "$SP"; start_one base "$BASE_GGUF" "$BP"; wait_ready && echo "the models are up";;
+      stop) stop_all; echo "stopped";;
+      status) for p in "$SP" "$BP"; do healthy "$p" && echo "port $p: up" || echo "port $p: down"; done;;
+      *) echo "dawnr serve start|stop|status" >&2; exit 2;;
+    esac;;
+  doctor)
+    echo "dawnr at $DAWNR_REPO, data in $DAWNR_HOME"
+    echo "python: $("$DAWNR_PYTHON" -V 2>&1)"
+    echo "model server: $("$LLAMA_SERVER" --version 2>&1 | grep -m1 -i version || echo MISSING)"
+    for f in "$STUDENT_GGUF" "$BASE_GGUF"; do
+      [ -s "$f" ] && echo "model: $(basename "$f") ($(du -Lh "$f" | cut -f1))" || echo "model: $(basename "$f") MISSING"
+    done
+    if [ "$(uname -s)" = Linux ]; then command -v bwrap >/dev/null && echo "sandbox: bwrap" || echo "sandbox: bwrap MISSING (sudo apt install bubblewrap)"; fi
+    cd "$DAWNR_REPO" && "$DAWNR_PYTHON" - <<'PY'
+import sys
+sys.path.insert(0, "t")
+import run_par
+cols, present = run_par.probe_backends()
+print(f"provers: {len(present)} of {len(cols)} found")
+for name, ver in cols:
+    print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
+PY
+    ;;
+  *) sed -n '2,8p' "$0";;
+esac
