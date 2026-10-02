@@ -55,8 +55,43 @@ def load(model_dir: str, device: str | None = None):
 
 
 def decode(model, tokenizer, conversations: list[list[dict]], max_new: int, temperature: float = 0.0,
-           top_p: float = 0.95, seed: int | None = None) -> list[tuple[str, bool, int]]:
-    """One reply per conversation, decoded as one batch: (text, stopped at the end token, tokens)."""
+           top_p: float = 0.95, seed: int | None = None, generate_batch=None) -> list[tuple[str, bool, int]]:
+    """One reply per conversation: (text, stopped at the end token, tokens). Decoded as one batch; a batch that
+    runs the card out of memory is split in half and each half decoded again (the halving of accelerate's
+    find_executable_batch_size, github.com/huggingface/accelerate utils/memory.py: free the cache, try a smaller
+    batch). A single conversation that still does not fit gets an empty reply, counted as no answer, so one
+    oversized prompt cannot end a run that has hours of answers in memory."""
+    run = generate_batch or _generate_batch
+    try:
+        return run(model, tokenizer, conversations, max_new, temperature, top_p, seed)
+    except Exception as e:                                      # noqa: BLE001
+        if " out of memory." not in str(e):                     # accelerate's should_reduce_batch_size test
+            raise
+        _free_cache()
+        if len(conversations) == 1:
+            print(f"student_generate: one prompt does not fit on the card; no answer for it", file=sys.stderr, flush=True)
+            return [("", False, 0)]
+        half = len(conversations) // 2
+        second = None if seed is None else seed + 1
+        print(f"student_generate: out of memory at batch {len(conversations)}; halves of {half} and "
+              f"{len(conversations) - half}", file=sys.stderr, flush=True)
+        return (decode(model, tokenizer, conversations[:half], max_new, temperature, top_p, seed, run)
+                + decode(model, tokenizer, conversations[half:], max_new, temperature, top_p, second, run))
+
+
+def _free_cache() -> None:
+    import gc
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:                                            # noqa: BLE001
+        pass
+
+
+def _generate_batch(model, tokenizer, conversations: list[list[dict]], max_new: int, temperature: float,
+                    top_p: float, seed: int | None) -> list[tuple[str, bool, int]]:
     import torch
     prompts = [student_sft.render_prompt(tokenizer, m) for m in conversations]
     enc = tokenizer(prompts, return_tensors="pt", padding=True, add_special_tokens=False).to(model.device)
