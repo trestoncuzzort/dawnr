@@ -6,16 +6,19 @@ dawnr is research software. Read this before relying on anything it does.
 
 - **Research and education use only.** See [LICENSE](LICENSE). Third-party material keeps its own licence
   ([NOTICE](NOTICE)); the problem corpora's licences are documented under `nl/`.
-- **The fine-tuned student's weights are not published yet.** Where every training row comes from, and under
-  what licence, is recorded in [internal/RELEASE-PROVENANCE-2026-10-01.md](internal/RELEASE-PROVENANCE-2026-10-01.md);
-  rows that trace to share-alike programs are left out of any released weights.
+- **The published student is v1, not the strongest one measured.** `student-v1` (Apache-2.0) is the 4B trained
+  on v6, chosen because it already left out every row that traces to GPL-licensed programs; it writes t a little
+  less well than the v5 recipe behind the held-out results above. A v5-recipe build without those rows is being
+  trained and will be released as v2 if it proves more. Where every training row comes from, and under what
+  licence, is in [internal/RELEASE-PROVENANCE-2026-10-01.md](internal/RELEASE-PROVENANCE-2026-10-01.md) and
+  [release/NOTICE-student](release/NOTICE-student).
 - **A proof is only as good as its specification.** dawnr checks the specification against the problem's own
   examples and against six independently written solutions, and still shows a wrong answer about one time in
   eight on problems it has not seen (see below). A shown answer says how many of the seven provers proved it; it is
   not a guarantee that the question was understood.
-- **The installer is new.** It was tested from an empty home directory on Linux x86_64 (install in under
-  2 minutes, a first answer proved by Dafny in under a minute). The student model is not published yet, so
-  until its release `./install.sh` stops at that step unless given `--student FILE`. It installs only Dafny
+- **The installer is new.** It was tested from an empty home directory on Linux x86_64 against the published
+  release (about 9 minutes, almost all of it downloading 7.5 GB; the first question was answered and proved by
+  Dafny in about a minute). It installs only Dafny
   of the seven provers; an answer is shown with how many of the installed provers proved it. The independent
   Python check runs model-written code only inside a sandbox: `bwrap` on Linux, and on macOS Apple's Seatbelt with
   the policies OpenAI's Codex CLI uses. On macOS the sandbox's
