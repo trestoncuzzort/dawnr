@@ -120,3 +120,10 @@ Serving note, 2026-10-02 11:59Z (speed only): the desktop card fell off the bus 
 share is postponed to the next power cycle. Meanwhile six more one-slot servers run on the lab (ports 8209 to 8214,
 the same binary, weights and flags as the first eight; about 70 of its 120 cores are then this run's, the rest
 free for others), fed by a second runner that shares sets through the same lock. The run was at 1,200 of 3,400.
+
+Serving note, 2026-10-02 13:14Z (speed only): with one generator per answer set and one server per generator, the
+two sets not yet begun would each have taken one server about eight hours while others sat idle. Every server (the
+lab's fourteen, the desktop's three CPU helpers, and the desktop card when it returns) now sits behind one local
+proxy that hands each request to a free server, and each set's generator keeps six requests in flight. Requests,
+seeds and settings are unchanged; a request's answer does not depend on which of the same-build servers computes
+it beyond floating-point rounding, as for the desktop helpers. The run was at about 1,460 of 3,400.
