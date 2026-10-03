@@ -28,10 +28,27 @@ dawnr is research software. Read this before relying on anything it does.
   token a second, so there the models ran on its CPU (`DAWNR_GPU_LAYERS=0`), about 5 minutes for the first
   question; a physical Mac, where llama.cpp uses Metal, has not been tried. If answers come back as "no reply from
   the model", set `DAWNR_GPU_LAYERS=0`.
+- **Tested on a gaming laptop through Windows (2026-10-03).** Windows 11, an RTX 5050 Laptop GPU (8 GB) and 16 GB
+  of memory, with WSL2's default Ubuntu (26.04, which sees 8 GB of it). The installer picked llama.cpp's CUDA build by
+  itself. The README's three lines then failed twice, and both failures are fixed: a fresh Ubuntu lacks the OpenMP
+  runtime llama.cpp's Linux builds link (`libgomp1`, which llama.cpp's own Docker images add), and the ICU library
+  Dafny's .NET runtime stops without, so every answer came back unproved. The installer now asks for what is
+  missing before downloading anything (`sudo apt install libgomp1 unzip bubblewrap` at most), and runs Dafny in
+  .NET's invariant mode where ICU is missing (164 Dafny verdicts were measured identical in both modes first). WSL's
+  Ubuntu 24.04 was then installed bare beside it: it lacked libgomp1, unzip and bubblewrap but had ICU, and after the
+  one line the installer printed, the README's example was shown proved in 25 s, starting the models included. Measured there: the models start in
+  5 to 6 seconds and generate about 50 tokens a second, using 7.6 GB of the card and at most 2.2 GB of memory; the
+  README's example was shown proved by Dafny in 15.9 s, a second question in 10.7 s, a first question that also
+  started the models in 18.6 s; `dawnr cite` quoted its answer in 2.0 s and refused an unanswerable question in
+  0.85 s. A third question (the sum of a list's even numbers) was refused in 27 s there and in 213 s on a desktop
+  CPU, with the same reasons: the model's limit, not the machine's. The models were copied to the laptop over the
+  local network rather than downloaded (its connection ran at 0.8 MB/s); the installer checked each against its
+  published SHA-256 as it checks a download. No AMD or Intel graphics card has been tried; those run on the CPU.
 - **Ubuntu 23.10 and newer need one root step.** They restrict the user namespaces bubblewrap uses, and the
   sandbox fails on every run until an AppArmor profile allows it (`t/apparmor-bwrap.sh`, Ubuntu's documented
   per-program way). `./install.sh` and `dawnr doctor` detect this and print the command; on GitHub's Ubuntu 24.04
-  runner the sandbox's tests fail before it and pass after it.
+  runner the sandbox's tests fail before it and pass after it. WSL2's Ubuntu needs no such step: its kernel
+  has no such restriction, and the sandbox ran there as installed.
 - **It does not yet solve most problems.** On held-out problems the student is proved correct on 15 to 18 of
   200. It refuses the rest rather than guessing, which is the design, but it means most questions get a refusal.
 
