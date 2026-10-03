@@ -149,3 +149,26 @@ Rule: the remaining answers get one last pass with a one-hour limit a request (f
 answer, a 3,072-token answer on a CPU server). An answer that does not arrive within it is recorded as an empty
 reply with `done_reason: "time limit"`, which the grading counts as an answer that fails. Every such record is
 listed with the outcome. Nothing else about the run changes.
+
+## Outcome of part 2, 2026-10-03 20:46Z: the reference under t's grammar, graded
+
+All 3,400 answers (17 a problem: the greedy set and sixteen sampled sets), graded on the lab as the prompted
+reference was. Answers recorded as empty under the 20:09Z rule: 0 [].
+
+| clean 200, complete specifications | at least one kernel | all seven |
+|---|---:|---:|
+| Phi-4-mini under t's grammar, 17 answers a problem | 6 | 5 |
+| Phi-4-mini under the grammar, the greedy answer alone | 3 | 1 |
+| Phi-4-mini prompted, 17 answers a problem (before) | 3 | 2 |
+| the student, seeds 1, 2, 3 (MBPP+'s references where they keep the problem's tests) | 18, 19, 17 | 5, 6, 8 |
+
+The same with MBPP+'s references for Phi: 6 and 5. Under the grammar Phi proves 51, 86, 289, 334 and 814 by all
+seven; the seeds prove 53, 169, 447, 672, 814 (seed 1), 53, 86, 447, 672, 814, 973 (seed 2) and 51, 53, 169, 447,
+672, 675, 814, 973 (seed 3): one to two problems in common.
+
+**Against AMBITION.md section 1's written bar** (beat Phi with three seeds, Phi given every advantage, then
+double it; "6 clean against Phi's 3"): at one kernel every seed proves about three times what Phi does even
+under the grammar (18, 19, 17 against 6). At all seven kernels, the column the bar calls clean, it is **not met**:
+seed 1 ties Phi (5 against 5), seeds 2 and 3 beat it (6 and 8), and no seed doubles it. The grammar is the
+advantage that closes the gap: it more than doubles Phi at all seven (2 to 5). So the student is not yet the
+win section 1 asks for.
