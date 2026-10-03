@@ -21,10 +21,19 @@ healthy() { curl -s -m 2 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '"ok
 # --cache-ram 256: llama-server keeps up to 8 GiB of old prompts in RAM by default, a speed feature for switching
 # between prompts (github.com/ggml-org/llama.cpp/pull/16391); dawnr repeats one prompt, which the slot reuses anyway,
 # and the default pushed the student's server to 10.8 GB (measured 2026-10-02)
+start_both() {  # the student, then the base: on a GPU build the base waits for the student to hold its memory
+  start_one student "$STUDENT_GGUF" "$SP"
+  if [ "${DAWNR_BUILD:-cpu}" != cpu ]; then
+    for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$SP" && break; sleep 1; done
+  fi
+  start_one base "$BASE_GGUF" "$BP"
+}
+
 start_one() {  # name gguf port
   healthy "$3" && return 0
   [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
   # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only)
+  LD_LIBRARY_PATH="$(dirname "$LLAMA_SERVER"):${LD_LIBRARY_PATH:-}" \
   nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$THREADS" --threads-batch "$THREADS" \
     ${DAWNR_GPU_LAYERS:+--n-gpu-layers "$DAWNR_GPU_LAYERS"} \
     --ctx-size 4096 --parallel 1 --reasoning off --cache-ram 256 --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
@@ -67,7 +76,7 @@ case $cmd in
     started=0
     if ! { healthy "$SP" && healthy "$BP"; }; then
       echo "starting the models (half a minute here, a few minutes the first time on a small machine)..." >&2
-      start_one student "$STUDENT_GGUF" "$SP"; start_one base "$BASE_GGUF" "$BP"; started=1
+      start_both; started=1
       trap '[ $started = 1 ] && stop_all' EXIT
       wait_ready
     fi
@@ -95,7 +104,7 @@ case $cmd in
     ;;
   serve)
     case ${1:-status} in
-      start) start_one student "$STUDENT_GGUF" "$SP"; start_one base "$BASE_GGUF" "$BP"; wait_ready && echo "the models are up";;
+      start) start_both; wait_ready && echo "the models are up";;
       stop) stop_all; echo "stopped";;
       status) for p in "$SP" "$BP"; do healthy "$p" && echo "port $p: up" || echo "port $p: down"; done;;
       *) echo "dawnr serve start|stop|status" >&2; exit 2;;
@@ -103,7 +112,7 @@ case $cmd in
   doctor)
     echo "dawnr at $DAWNR_REPO, data in $DAWNR_HOME"
     echo "python: $("$DAWNR_PYTHON" -V 2>&1)"
-    echo "model server: $("$LLAMA_SERVER" --version 2>&1 | grep -m1 -i version || echo MISSING)"
+    echo "model server: $(LD_LIBRARY_PATH="$(dirname "$LLAMA_SERVER"):${LD_LIBRARY_PATH:-}" "$LLAMA_SERVER" --version 2>&1 | grep -m1 -i version || echo MISSING) (${DAWNR_BUILD:-cpu} build)"
     for f in "$STUDENT_GGUF" "$BASE_GGUF"; do
       [ -s "$f" ] && echo "model: $(basename "$f") ($(du -Lh "$f" | cut -f1))" || echo "model: $(basename "$f") MISSING"
     done
