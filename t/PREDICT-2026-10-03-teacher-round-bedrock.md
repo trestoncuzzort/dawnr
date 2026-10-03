@@ -84,3 +84,24 @@ are never prompted (the ids come from `rl_reward.rl_prompt_ids` with the held-ou
 decontamination exclusions), the clean-200 gate stays where it is, and a document is admitted for
 being proved, not for being novel. The 27B round's 74 specification sample files on the lab are a
 different teacher's and are not mixed into this round.
+
+## Pilot outcome, 2026-10-03 23:50Z (the rule applied; the round not yet run)
+
+One sample each on the 40 training ids and 40 specification prompts; spend by the proxy's ledger.
+
+| teacher | training: tests | training: proved | spec: proved | proved of 80 | spend | per proved |
+|---|---|---|---|---|---|---|
+| openai.gpt-oss-120b | 13 | 3 | 6 | 9 | $0.071 | $0.0079 |
+| qwen.qwen3-235b-a22b-2507 | 11 | 2 | 10 | 12 | $0.044 | $0.0037 |
+| qwen.qwen3-coder-next | 9 | 0 | 9 | 9 | $0.092 | $0.0102 |
+| deepseek.v3.2 | 13 | 1 | 14 | 15 | $0.115 | $0.0077 |
+| zai.glm-5 | 14 | 4 | 7 | 11 | $0.188 | $0.0170 |
+
+The best count is 15 (DeepSeek-V3.2); within 80% of it are DeepSeek-V3.2 and Qwen3-235B-A22B-2507, and the
+lower cost per proved item is Qwen3-235B's: **the teacher is `qwen.qwen3-235b-a22b-2507`**. Its measured cost,
+about $0.00055 a sample, projects the round (798 prompts, k = 8) to about $3.50, so k = 8 as registered.
+
+gpt-oss-120b spent its whole budget reasoning on 3 of 80 replies and Bedrock returned no content; the client
+handed on None and the scorers stopped (fixed in 0116e4b0: an absent answer is an empty one), and those three were
+scored as empty answers. Every teacher proves far more given a specification (6 to 14 of 40) than from a problem
+statement alone (0 to 4 of 40), where the specification check and the proof both have to come out right.
