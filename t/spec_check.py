@@ -806,6 +806,8 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--only", choices=["clean", "all"], default="clean")
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--per-task-seed", action="store_true",
+                    help="each task's own generator, seeded from the task's sha256 (verdicts independent of the run)")
     ap.add_argument("--reference-plus", type=Path, default=None,
                     help="MBPP+ rows (JSONL): use EvalPlus's corrected solution where it has the problem")
     ap.add_argument("--out", type=Path, default=HERE / "SPEC-CHECK-2026-09-18.md")
@@ -830,6 +832,10 @@ def main() -> int:
     # optimization of it -- every existing report would have to be regenerated
     # and the change registered before anyone compares old numbers with new.
     rnd = random.Random(a.seed)
+    # --per-task-seed (2026-10-03, the remedy named above): each task draws from its own generator, seeded from the
+    # run's seed and the task's sha256, so its verdict no longer depends on which tasks were checked before it
+    # (between two runs of the same answers six verdicts flipped). A different instrument: its reports are not
+    # compared with the shared-generator ones.
     root = HERE / "out" / "spec-experiment"
     tags = a.tags or sorted(p.name for p in root.glob("*") if (p / "kernels.md").exists())
     rows, tally = [], {"agrees": 0, "disagrees": 0, "other": 0}
@@ -856,7 +862,8 @@ def main() -> int:
             try:
                 tid = problem_id(name, extracted)
                 entry = pool.get(tid)
-                r = (check_task(task, entry, a.n, rnd) if entry is not None
+                trnd = random.Random(f"{a.seed}:{task_sha256(task)}") if a.per_task_seed else rnd
+                r = (check_task(task, entry, a.n, trnd) if entry is not None
                      else {"status": "problem not in pool"})
                 if entry is not None:
                     # Clover's third consistency edge (arXiv 2310.17807): the

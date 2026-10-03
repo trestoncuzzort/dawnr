@@ -187,3 +187,30 @@ The rule, applied to every set alike: (1) the v0 int-only rule covers the return
 `t 1`, `spec_experiment.extract --promote-header`), which the students' sets always had and Phi's did not, so Phi
 gets the same normalisation; (3) every changed task is graded again on the lab. Both numbers are reported, the
 graded ones above and the corrected ones, and the section 1 judgement is made on the corrected numbers.
+
+## The correction's result, and a second correction registered 2026-10-03 21:39Z before it runs: the instrument's noise
+
+Graded with header promotion for every set and the v0 fix (21:37Z), clean 200, complete specifications, at least
+one kernel / all seven, MBPP+'s references where they keep the problem's tests:
+
+| | as graded before | corrected |
+|---|---:|---:|
+| Phi-4-mini under the grammar, 17 answers | 6 / 5 | 9 / 7 |
+| Phi-4-mini prompted, 17 answers | 3 / 2 | 3 / 3 |
+| seed 1 | 18 / 5 | 19 / 7 |
+| seed 2 | 19 / 6 | 18 / 8 |
+| seed 3 | 17 / 8 | 17 / 7 |
+
+Of the students' changes, four are the fix (51 and 334 on seeds 1 and 2, from five kernels to seven: Verus and
+Rocq now read verified / refuted). Six are not: 212, 454 (twice), 472, 629 and 675 changed level with no kernel
+cell changing. They are the specification check's own noise. It draws 100 inputs a task from one generator shared
+across the run, so a task's verdict depends on which tasks were checked before it (`t/spec_check.py` says so, and
+names the remedy). Seed 3's 675 agreed on 100 draws in one run and met a counterexample, [3, 7, 10, 10], in the
+other; 472 the reverse; 629's completeness sat at 0.601 and then 0.584 against the 0.6 threshold. A difference of
+one or two problems between the student and Phi is inside that noise.
+
+Second correction, for every compared set alike, before any result: the specification check runs again with each
+task's own generator, seeded from the task's sha256 (`--per-task-seed`, the remedy `spec_check.py` names), and
+1,000 draws instead of 100, so a verdict no longer depends on the run and a wrong answer is ten times likelier to
+meet its counterexample. Section 1 is judged on those numbers. A counterexample is a proof that the answer is
+wrong, so any answer that met one in any run is also listed.
