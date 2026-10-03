@@ -183,6 +183,9 @@ SEATBELT_OURS = """
 (allow file-read* file-test-existence (subpath (param "JOB")) (subpath (param "PY_PREFIX")))
 (allow file-map-executable (subpath (param "PY_PREFIX")))
 (allow file-read* file-write* file-test-existence (subpath (param "TMP")))
+; no terminal at all, though Codex's defaults allow it (Codex detaches from the terminal before using them; this
+; runner keeps that as a second wall): no keystrokes can be pushed into the user's shell (TIOCSTI)
+(deny file-read* file-write* file-ioctl (literal "/dev/tty") (regex #"^/dev/ttys[0-9]+$") (literal "/dev/ptmx"))
 """
 
 
@@ -258,8 +261,11 @@ def run_tests(code: str, asserts: list[str], per_test: int = 3, memory_mb: int =
         (job / "runner.py").write_text(RUNNER % {"memory": memory_mb, "per_test": per_test, "result": RESULT},
                                        encoding="utf-8")
         try:
-            p = subprocess.run(_command(job), capture_output=True, text=True, errors="replace",
-                               timeout=per_test * (len(asserts) + 1) + 5)
+            # no terminal and a session of its own: a process that holds its controlling terminal can push
+            # keystrokes into the shell after we return (TIOCSTI, CVE-2017-5226). bwrap's --new-session covers
+            # Linux; Codex runs Seatbelt jobs only after setsid() and a null stdin (codex-rs/core/src/spawn.rs)
+            p = subprocess.run(_command(job), capture_output=True, text=True, errors="replace", stdin=subprocess.DEVNULL,
+                               start_new_session=True, timeout=per_test * (len(asserts) + 1) + 5)
         except subprocess.TimeoutExpired:
             return {"status": "timeout"}
     for line in reversed(p.stdout.splitlines()):
@@ -302,7 +308,7 @@ class Session:
     def _start(self) -> None:
         self._buf = b""
         self._p = subprocess.Popen(_command(self._job), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                   stderr=subprocess.DEVNULL)
+                                   stderr=subprocess.DEVNULL, start_new_session=True)    # no controlling terminal
         first = self._read(self.per_call + 5)
         if first is None or "load" in first:
             why = "the sandbox did not start" if first is None else first["load"]

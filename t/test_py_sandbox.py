@@ -158,3 +158,31 @@ def test_runner_reads_its_own_folder(tmp_path):
     """The runner finds solution.py and asserts.json beside itself: /job under bwrap, the job folder elsewhere."""
     assert 'open("/job/' not in py_sandbox.RUNNER and 'open("/job/' not in py_sandbox.SESSION_RUNNER
     assert "os.path.join(JOB" in py_sandbox.RUNNER and "os.path.join(JOB" in py_sandbox.SESSION_RUNNER
+
+
+def test_a_session_runs_in_a_session_of_its_own_so_it_cannot_reach_our_terminal():
+    """TIOCSTI (CVE-2017-5226): a sandboxed process that shares our session can push keystrokes into the shell.
+    bwrap's --new-session and, on macOS, start_new_session put it in its own session."""
+    probe = "import os\ndef f():\n    return os.getsid(0)\n"
+    with py_sandbox.Session(probe, "f") as s:
+        assert s.call([]) != os.getsid(0)
+
+
+def test_run_tests_gives_the_job_no_stdin_and_a_new_session(monkeypatch):
+    seen = {}
+    real = py_sandbox.subprocess.run
+
+    def spy(cmd, **kw):
+        seen.update(kw)
+        return real(cmd, **kw)
+    monkeypatch.setattr(py_sandbox.subprocess, "run", spy)
+    py_sandbox.run_tests("def f(n):\n    return n\n", ["assert f(1) == 1"])
+    assert seen["stdin"] is py_sandbox.subprocess.DEVNULL and seen["start_new_session"] is True
+
+
+def test_the_macos_profile_denies_the_terminal_after_codex_s_rules():
+    """Seatbelt takes the last matching rule, so our deny must come after every terminal rule Codex's files grant."""
+    profile = py_sandbox.seatbelt_profile()
+    ours = profile.index(py_sandbox.SEATBELT_OURS)
+    deny = profile.index('(deny file-read* file-write* file-ioctl (literal "/dev/tty")')
+    assert deny > ours > profile[:ours].rfind("/dev/ttys") > 0
