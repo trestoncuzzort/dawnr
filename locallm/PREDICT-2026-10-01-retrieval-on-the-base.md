@@ -273,3 +273,22 @@ The same 300 questions in both conditions, the same base, servers and settings; 
 
 If 120 and 121 hold, `dawnr cite` moves to the quote-first order. It runs on the lab when the Phi run has
 finished generating, beside the tool test.
+
+## Outcome of the 14:49Z amendment (the quote before the claim), 2026-10-03 19:35Z
+
+The same 300 questions in each condition, the same base and servers (`~/scratch/rag-cite-qf/report.json`):
+
+| | claim first | quote first |
+|---|---:|---:|
+| answer present: answered | 234 | 287 |
+| answer present: right | 185 | 222 |
+| right with the answer in its own quote | 125 (68%) | 160 (72%) |
+| answer absent: refused | 286 | 268 |
+
+120. **Falsified:** 72% of the right answers carry the answer in their own quote, not at least 85%.
+121. **Holds:** 222 right with the answer present, at least 170.
+122. **Falsified:** it refuses 268 of the 300 absent, not at least 280.
+
+Quoting first answers more questions and gets more right, but its quotes hold the answer only a little more often
+and it answers more questions whose answer is not there. The registered switch needed 120 to hold, so `dawnr
+cite` keeps the claim-first order.
