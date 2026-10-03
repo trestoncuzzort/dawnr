@@ -136,3 +136,16 @@ fixed jobs leave free (about 1 GB spare on each after), the same llama.cpp build
 and the same weights file (sha256 3c168af1...), at about 52 tokens a second each. Requests and settings unchanged;
 the proxy now sets aside a server that refuses connections and retries the request elsewhere. The run was at
 about 2,320 of 3,400.
+
+## Amendment, 2026-10-03 20:09Z, before any of the grammar sets is graded: answers that never arrive
+
+3,346 of the 3,400 answers are in. Nine problems (656, 899, 584, 804, 658, 711, 846, 650, 914) are each missing from
+one set and have been asked again for days; several of them ran past the old one-hour limit on 2026-10-02 too. A
+server log shows why: on some outputs llama.cpp's grammar sampler slows to 0.01 to 0.3 tokens a second (server
+8231, `n_gen = 885, tg = 0.31 t/s, tg_3s = 0.01 t/s`), against about 77 on a GPU and 4 on a CPU server for other
+answers, so a 3,072-token answer would take days. This is the decoding engine with this grammar, not the model.
+
+Rule: the remaining answers get one last pass with a one-hour limit a request (five times the slowest ordinary
+answer, a 3,072-token answer on a CPU server). An answer that does not arrive within it is recorded as an empty
+reply with `done_reason: "time limit"`, which the grading counts as an answer that fails. Every such record is
+listed with the outcome. Nothing else about the run changes.
