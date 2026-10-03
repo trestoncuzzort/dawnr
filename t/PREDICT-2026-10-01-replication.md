@@ -214,3 +214,23 @@ task's own generator, seeded from the task's sha256 (`--per-task-seed`, the reme
 1,000 draws instead of 100, so a verdict no longer depends on the run and a wrong answer is ten times likelier to
 meet its counterexample. Section 1 is judged on those numbers. A counterexample is a proof that the answer is
 wrong, so any answer that met one in any run is also listed.
+
+## The second correction's result, 2026-10-03 21:41Z: section 1 judged
+
+241 tasks, each with its own generator and 1,000 draws, MBPP+'s references where they keep the problem's tests
+(MBPP's own give the same numbers except seed 3 at one kernel, 14). Clean 200, complete specifications:
+
+| | at least one kernel | all seven |
+|---|---:|---:|
+| Phi-4-mini under t's grammar, 17 answers a problem | 9 | 7 |
+| Phi-4-mini prompted, 17 answers a problem | 3 | 3 |
+| the student (the 4B on v5), seed 1 | 18 | 7 |
+| seed 2 | 18 | 8 |
+| seed 3 | 15 | 7 |
+
+**Section 1's written bar is not met.** Phi given every advantage (the grammar, and the same header normalisation
+the student's sets had) proves 9 and 7. At one kernel two seeds double it exactly and the third does not; at all
+seven, the column the bar names, two seeds tie it and one beats it by one. Against the prompted reference the
+student is five to six times ahead at one kernel and more than twice ahead at seven, but that is not the
+comparison section 1 set. The v5 recipe is also not the shipped one; the shipped recipe is measured the same way
+next (`t/PREDICT-2026-10-03-shipped-recipe.md`).
