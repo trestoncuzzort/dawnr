@@ -197,3 +197,5 @@ email_founders.py
 
 # the Mac that demos and tests it, which is nobody else business either
 t/mac-workstation.conf
+# t/py_sandbox.py: which Linux sandbox this machine uses (bwrap or landlock); machine-local
+t/sandbox.conf

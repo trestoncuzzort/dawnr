@@ -30,3 +30,15 @@ Seed 2 started on the desktop card and ran at about 115 s a step, twelve times s
 day earlier (9.7 s). The card's link now trains at 2.5 GT/s with ASPM L1 on: a kernel launch takes about 82 us and a
 host-to-device copy runs at 0.31 GB/s. Seed 2 is stopped and moves to the lab: seeds 1, 2 and 3 all run on the lab's
 GPU 1 (seed 1 is v3; seeds 2 and 3 train there side by side), with the lab's PyTorch 2.13. Predictions stand.
+
+## Amendment, 2026-10-03 23:05Z, before any seed is measured: the Python step's sandbox on the lab
+
+Seed 1's `spec_first.py --python 3` stopped at its first model-written solution: the lab's Ubuntu 24.04 restricts
+the user namespaces bubblewrap needs, an AppArmor profile would need root there, and `t/py_sandbox.py` runs no
+model-written code without a sandbox (it raised, nothing was produced, nothing was graded). On the lab the step now
+runs under the Landlock backend (`t/landlock_exec.py`, chosen by `t/sandbox.conf` there): the same interpreter, the
+same read-only system folders and limits, with calls that would reach outside refused rather than hidden. Measured
+before this amendment, on the desktop where both run: the v5 seeds' 322 accepted solutions on their own tests, on a
+neighbouring problem's tests, and cut in half (966 cases) give the same result under both, 0 different. The
+generation is unchanged (`~/.venv-t-train`, the reference PyTorch kernels, as the v5 seeds' `~/.venv-t` had).
+Seed 1's Python step is run again on GPU 1; seeds 2 and 3 take it when their training ends. Predictions stand.
