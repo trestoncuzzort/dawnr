@@ -936,7 +936,9 @@ def chat(host: str, model: str, messages: list[dict], options: dict, timeout: fl
             d = json.loads(resp.read().decode("utf-8"))
         ch = (d.get("choices") or [{}])[0]
         usage = d.get("usage") or {}
-        return {"message": {"content": (ch.get("message") or {}).get("content", "")},
+        # content is null when a reasoning model spends the whole budget thinking (Bedrock's OpenAI-compatible
+        # endpoint returns {"content": null, "reasoning": ...}, 2026-10-03): no answer, recorded as an empty one
+        return {"message": {"content": (ch.get("message") or {}).get("content") or ""},
                 "prompt_eval_count": usage.get("prompt_tokens"),
                 "eval_count": usage.get("completion_tokens"),
                 "done_reason": ch.get("finish_reason")}
