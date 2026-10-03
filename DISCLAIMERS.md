@@ -47,17 +47,16 @@ reference solution and rejects most wrong answers.
 
 | on the clean 200 | proved by at least one prover | proved by all seven |
 |---|---:|---:|
-| the student, training seed 1 | 18 | 5 |
-| the student, training seed 2 | 19 | 6 |
-| the student, training seed 3 | 15 | 8 |
-| Phi-4-mini, prompted, the same 17 answers a problem | 3 | 2 |
-| Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 6 | 5 |
+| the student, training seed 1 | 18 | 7 |
+| the student, training seed 2 | 18 | 8 |
+| the student, training seed 3 | 15 | 7 |
+| Phi-4-mini, prompted, the same 17 answers a problem | 3 | 3 |
+| Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 9 | 7 |
 | every model trained here from scratch | 0 | 0 |
 
-Counted against EvalPlus's corrected MBPP+ solutions wherever they keep the problem's own tests, seed 3 reads 17 and 8
-([t/PREDICT-2026-10-02-reference-plus.md](t/PREDICT-2026-10-02-reference-plus.md)); nothing else moves.
+Every row is counted the same way: each program's specification checked against the problem's reference (EvalPlus's corrected MBPP+ solution where it keeps the problem's tests) on 1,000 drawn inputs, and every set's answers normalised alike ([correction](t/PREDICT-2026-10-01-replication.md)).
 
-This is not yet the win the project set itself. Given every advantage, decoding under t's grammar so it cannot write unparseable output, Phi-4-mini proves 6 at one prover and 5 at all seven; every seed of the student proves about three times as many at one prover, but at all seven one seed ties it and none doubles it, which is the written bar ([outcome](t/PREDICT-2026-10-01-replication.md)).
+This is not the win the project set itself. Given every advantage, decoding under t's grammar so it cannot write unparseable output, Phi-4-mini proves 9 at one prover and 7 at all seven; the student about doubles it at one prover and is level at all seven, where the written bar asks for double ([outcome](t/PREDICT-2026-10-01-replication.md)).
 
 Without a reference solution, the gate can still tell most right answers from
 wrong ones. It checks the specification against a tested Python solution
