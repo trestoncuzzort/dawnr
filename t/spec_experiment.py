@@ -1133,20 +1133,17 @@ def find_block(reply: str) -> str | None:
 def rename_task(task: dict, new: str) -> dict:
     """Rename the task and every self-call in its body and spec."""
     old = task["name"]
-
-    def walk(node):
+    # an explicit stack, not recursion: one answer under the grammar nests deeper than Python's recursion limit
+    # and stopped a whole set's extraction (phi4-mini-ref-v5-g-k10-s4, 2026-10-03)
+    stack = [task["body"], task.get("ensures", []), task.get("requires", []), task.get("spec_funs", [])]
+    while stack:
+        node = stack.pop()
         if isinstance(node, dict):
-            if "call" in node and node["call"].get("fun") == old:
+            if "call" in node and isinstance(node["call"], dict) and node["call"].get("fun") == old:
                 node["call"]["fun"] = new
-            for v in node.values():
-                walk(v)
+            stack.extend(node.values())
         elif isinstance(node, list):
-            for v in node:
-                walk(v)
-    walk(task["body"])
-    walk(task.get("ensures", []))
-    walk(task.get("requires", []))
-    walk(task.get("spec_funs", []))
+            stack.extend(node)
     task["name"] = new
     return task
 
