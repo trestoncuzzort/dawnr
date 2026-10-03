@@ -32,7 +32,7 @@ dawnr is research software. Read this before relying on anything it does.
   sandbox fails on every run until an AppArmor profile allows it (`t/apparmor-bwrap.sh`, Ubuntu's documented
   per-program way). `./install.sh` and `dawnr doctor` detect this and print the command; on GitHub's Ubuntu 24.04
   runner the sandbox's tests fail before it and pass after it.
-- **It does not yet solve most problems.** On held-out problems the student is proved correct on 15 to 19 of
+- **It does not yet solve most problems.** On held-out problems the student is proved correct on 15 to 18 of
   200. It refuses the rest rather than guessing, which is the design, but it means most questions get a refusal.
 
 ## Where it stands (2026-10-02)
