@@ -65,13 +65,23 @@ class Tiers(unittest.TestCase):
         self.assertFalse(rl_reward.needs_proof(s))
         self.assertEqual(rl_reward.tier(s, "verified / refuted"), "tests")
 
+    def test_a_t0_header_over_a_bool_return_is_promoted_when_rl_promotes_headers(self):
+        # rl_student passes promote_header=True: `t 0` over a v1 form (a bool return) is the same program under `t 1`
+        prog = "```t\nt 0\ntask mbpp_1__is_two(x: int) returns (r: bool)\n  ensures r == (x % 2 == 0)\n{\n  r := x % 2 == 0;\n}\n```"
+        entry = {"fn": "is_two", "rec": {"code": "def is_two(x):\n    return x % 2 == 0\n", "text": "even"},
+                 "points": [{"args": [("int", 2)], "expected": ("bool", True)}]}
+        self.assertEqual(rl_reward.tier(rl_reward.local_signals(1, prog, entry)), "parses")
+        s = rl_reward.local_signals(1, prog, entry, promote_header=True)
+        self.assertTrue(s.get("header_promoted")) and self.assertEqual(s["tests"], "pass")
+
     def test_a_wrong_program_the_given_tests_miss_is_caught_by_drawn_inputs(self):
         # the inspection gate's case: `n % 2 == 0`-style answers that three assertions do not separate
         entry = {"fn": "is_two", "rec": {"code": "def is_two(x):\n    return x % 2 == 0\n", "text": "even"},
                  "points": [{"args": [("int", 2)], "expected": ("bool", True)},
                             {"args": [("int", 3)], "expected": ("bool", False)}]}
-        wrong = "```t\nt 0\ntask mbpp_1__is_two(x: int) returns (r: bool)\n  ensures r == (x == 2)\n{\n  r := x == 2;\n}\n```"
-        right = wrong.replace("(x == 2)", "(x % 2 == 0)").replace("x == 2;", "x % 2 == 0;").replace("t 0", "t 1")
+        # `t 1`: a bool return is a v1 form (SPEC.md; check_wf enforces it since 2026-10-03)
+        wrong = "```t\nt 1\ntask mbpp_1__is_two(x: int) returns (r: bool)\n  ensures r == (x == 2)\n{\n  r := x == 2;\n}\n```"
+        right = wrong.replace("(x == 2)", "(x % 2 == 0)").replace("x == 2;", "x % 2 == 0;")
         s = self.sig(wrong, entry)
         self.assertEqual(s["tests"], "pass")
         self.assertEqual(s["drawn"]["status"], "fail")
