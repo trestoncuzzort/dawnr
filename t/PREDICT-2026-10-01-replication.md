@@ -127,3 +127,12 @@ lab's fourteen, the desktop's three CPU helpers, and the desktop card when it re
 proxy that hands each request to a free server, and each set's generator keeps six requests in flight. Requests,
 seeds and settings are unchanged; a request's answer does not depend on which of the same-build servers computes
 it beyond floating-point rounding, as for the desktop helpers. The run was at about 1,460 of 3,400.
+
+Serving note, 2026-10-03 04:58Z (speed only): the desktop card came back at 04:16Z and joined the pool; one eight-slot
+server held it idle (llama-server samples under the grammar on one CPU thread a process), so it ran as three
+one-slot servers at about 77 tokens a second each, until it fell off the bus again at 04:26Z. With the operator's
+leave to use the lab freely, two one-slot servers now run on the lab's GPUs 2 and 3 in the memory the labmate's
+fixed jobs leave free (about 1 GB spare on each after), the same llama.cpp build (b11325, its published CUDA build)
+and the same weights file (sha256 3c168af1...), at about 52 tokens a second each. Requests and settings unchanged;
+the proxy now sets aside a server that refuses connections and retries the request elsewhere. The run was at
+about 2,320 of 3,400.
