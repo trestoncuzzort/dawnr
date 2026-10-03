@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# dawnr's installer, for Linux (x86_64, arm64) and macOS. Nothing needs root; re-running resumes and skips what is
+# dawnr's installer, for Linux (x86_64, arm64; Windows through WSL2) and macOS. The installer needs no root (a fresh
+# Ubuntu needs `sudo apt install libgomp1 unzip` once, which it asks for); re-running resumes and skips what is
 # already there. Into DAWNR_HOME (default ~/.local/share/dawnr) it downloads:
 #   - llama.cpp's prebuilt server, a pinned build (github.com/ggml-org/llama.cpp releases),
 #   - the base model, Qwen3.5-4B at 4 bits (Apache-2.0, huggingface.co/unsloth/Qwen3.5-4B-GGUF), which writes the
@@ -95,6 +96,17 @@ command -v tar >/dev/null || fail "tar is needed"
 PY=$(command -v python3 || true)
 [ -n "$PY" ] || fail "python3 (3.10 or newer) is needed"
 "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' || fail "python3 is $("$PY" -V); 3.10 or newer is needed"
+# what a fresh Ubuntu lacks (WSL's Ubuntu 26.04 image, measured 2026-10-03), asked for before anything downloads:
+# llama.cpp's Linux builds link the GNU OpenMP runtime, which its own Docker images add as libgomp1
+# (github.com/ggml-org/llama.cpp .devops/cpu.Dockerfile), and Dafny comes as a zip
+NEED=""
+if [ "$OS" = Linux ]; then
+  LIBS=$(/sbin/ldconfig -p 2>/dev/null || ldconfig -p 2>/dev/null || true)
+  [ -z "$LIBS" ] || grep -q 'libgomp\.so\.1' <<< "$LIBS" || NEED="$NEED libgomp1"
+fi
+[ "$DAFNY" = 0 ] || command -v unzip >/dev/null || NEED="$NEED unzip"
+[ -z "$NEED" ] || fail "this machine lacks$NEED. On Ubuntu or Debian (WSL included) run:  sudo apt install$NEED
+  (Fedora: sudo dnf install${NEED/libgomp1/libgomp}) and then ./install.sh again"
 # dawnr runs model-written Python only in a sandbox; probed with the flags the jobs use (t/py_sandbox.py)
 if ! WHY=$(cd "$REPO" && "$PY" -c 'import sys; sys.path.insert(0, "t"); import py_sandbox
 ok = py_sandbox.available(); ok or print(py_sandbox.why_unavailable()); sys.exit(0 if ok else 1)'); then
@@ -128,8 +140,11 @@ if [ "$BUILD" = cuda ] && [ ! -e "$DAWNR_HOME/llama.cpp/.cudart" ]; then
   find "$DAWNR_HOME/cudart.tmp" -name "*.so*" -exec cp -P {} "$DAWNR_HOME/llama.cpp/" \;
   rm -rf "$DAWNR_HOME/cudart.tmp"; touch "$DAWNR_HOME/llama.cpp/.cudart"
 fi
-LD_LIBRARY_PATH="$DAWNR_HOME/llama.cpp:${LD_LIBRARY_PATH:-}" "$DAWNR_HOME/llama.cpp/llama-server" --version >/dev/null 2>&1 \
-  || fail "llama-server does not run on this machine"
+if ! LD_LIBRARY_PATH="$DAWNR_HOME/llama.cpp:${LD_LIBRARY_PATH:-}" "$DAWNR_HOME/llama.cpp/llama-server" --version >/dev/null 2>&1; then
+  MISSING=$(command -v ldd >/dev/null && LD_LIBRARY_PATH="$DAWNR_HOME/llama.cpp:${LD_LIBRARY_PATH:-}" \
+    ldd "$DAWNR_HOME/llama.cpp/llama-server" 2>/dev/null | awk '/not found/ {print $1}' | sort -u | tr '\n' ' ' || true)
+  fail "llama-server does not run on this machine${MISSING:+; it cannot find: $MISSING}"
+fi
 echo "  llama-server ready"
 
 say "The models"
