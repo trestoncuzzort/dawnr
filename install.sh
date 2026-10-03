@@ -180,7 +180,22 @@ if [ "$DAFNY" = 1 ]; then
     mkdir -p "$DAWNR_HOME/provers"; rm -rf "$DAWNR_HOME/provers/dafny"
     unzip -q "$DAWNR_HOME/downloads/$DAFNY_ASSET" -d "$DAWNR_HOME/provers"
   fi
-  [ -x "$DAWNR_HOME/provers/dafny/dafny" ] && echo "  $("$DAWNR_HOME/provers/dafny/dafny" --version 2>/dev/null | head -1)"
+  if [ -x "$DAWNR_HOME/provers/dafny/dafny" ]; then
+    # Dafny is a .NET program, and .NET stops at start without the ICU library, which a fresh Ubuntu (WSL's included)
+    # lacks. Its globalization-invariant mode needs no ICU and changes only culture-aware casing, sorting, normalization
+    # and formatting (github.com/dotnet/runtime docs/design/features/globalization-invariant-mode.md); measured
+    # 2026-10-03: the same 164 Dafny verdicts in both modes (82 tasks, real and twin: verified, refuted, unproved,
+    # timeout). So it is turned on only where ICU is missing.
+    INVARIANT=""
+    if [ "$OS" = Linux ]; then
+      LIBS=$(/sbin/ldconfig -p 2>/dev/null || ldconfig -p 2>/dev/null || true)
+      [ -z "$LIBS" ] || grep -q 'libicuuc\.so' <<< "$LIBS" || INVARIANT=1
+    fi
+    V=$(env ${INVARIANT:+DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1} "$DAWNR_HOME/provers/dafny/dafny" --version 2>&1) \
+      || fail "Dafny does not run on this machine: ${V%%$'\n'*}"
+    NOTE=""; [ -z "$INVARIANT" ] || NOTE=" (no ICU library here, so it runs in the .NET invariant mode)"
+    echo "  dafny ${V%%$'\n'*}$NOTE"
+  fi
 fi
 
 say "The dawnr command"
@@ -195,6 +210,7 @@ STUDENT_GGUF=$STUDENT_GGUF
 BASE_GGUF=$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf
 ENV
 [ -x "$DAWNR_HOME/provers/dafny/dafny" ] && echo "T_DAFNY=$DAWNR_HOME/provers/dafny/dafny" >> "$DAWNR_HOME/env"
+[ -n "${INVARIANT:-}" ] && echo "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1" >> "$DAWNR_HOME/env"
 ln -sf "$REPO/bin/dawnr" "$BIN_DIR/dawnr"
 echo "  $BIN_DIR/dawnr"
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) echo "  add $BIN_DIR to your PATH to type 'dawnr' anywhere";; esac
