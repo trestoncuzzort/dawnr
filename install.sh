@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # dawnr's installer, for Linux (x86_64, arm64; Windows through WSL2) and macOS. The installer needs no root (a fresh
-# Ubuntu needs `sudo apt install libgomp1 unzip` once, which it asks for); re-running resumes and skips what is
+# Ubuntu needs `sudo apt install libgomp1 unzip bubblewrap` once, which it asks for); re-running resumes and skips what is
 # already there. Into DAWNR_HOME (default ~/.local/share/dawnr) it downloads:
 #   - llama.cpp's prebuilt server, a pinned build (github.com/ggml-org/llama.cpp releases),
 #   - the base model, Qwen3.5-4B at 4 bits (Apache-2.0, huggingface.co/unsloth/Qwen3.5-4B-GGUF), which writes the
@@ -96,13 +96,14 @@ command -v tar >/dev/null || fail "tar is needed"
 PY=$(command -v python3 || true)
 [ -n "$PY" ] || fail "python3 (3.10 or newer) is needed"
 "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' || fail "python3 is $("$PY" -V); 3.10 or newer is needed"
-# what a fresh Ubuntu lacks (WSL's Ubuntu 26.04 image, measured 2026-10-03), asked for before anything downloads:
+# what a fresh Ubuntu lacks (WSL's Ubuntu 24.04 and 26.04 images, measured 2026-10-03), asked for before anything downloads:
 # llama.cpp's Linux builds link the GNU OpenMP runtime, which its own Docker images add as libgomp1
 # (github.com/ggml-org/llama.cpp .devops/cpu.Dockerfile), and Dafny comes as a zip
 NEED=""
 if [ "$OS" = Linux ]; then
   LIBS=$(/sbin/ldconfig -p 2>/dev/null || ldconfig -p 2>/dev/null || true)
   [ -z "$LIBS" ] || grep -q 'libgomp\.so\.1' <<< "$LIBS" || NEED="$NEED libgomp1"
+  command -v bwrap >/dev/null || NEED="$NEED bubblewrap"     # the sandbox model-written Python runs in (WSL's 24.04 lacks it)
 fi
 [ "$DAFNY" = 0 ] || command -v unzip >/dev/null || NEED="$NEED unzip"
 [ -z "$NEED" ] || fail "this machine lacks$NEED. On Ubuntu or Debian (WSL included) run:  sudo apt install$NEED

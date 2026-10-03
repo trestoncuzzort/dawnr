@@ -208,6 +208,10 @@ its line changes here.
   empty home and a first question answered and proved, on this desktop and on GitHub's Ubuntu 24.04 and Mac runners;
   model-written Python is sandboxed by bubblewrap on Linux (Ubuntu 23.10 and newer need one AppArmor step,
   `t/apparmor-bwrap.sh`) and by Seatbelt on macOS, whose tests pass on GitHub's Mac runner.
+  *State (2026-10-03):* also on a Windows 11 gaming laptop through WSL2, its RTX 5050 (8 GB) picked by the
+  installer: the README's example shown proved by Dafny in 15.9 s (one to two minutes on a CPU). A fresh Ubuntu (24.04 and 26.04
+  measured) needs `sudo apt install libgomp1 unzip bubblewrap` at most, once, which the installer asks for first, and Dafny runs in
+  .NET's invariant mode where the ICU library is missing (DISCLAIMERS.md).
 - **Product, next:** the product installs the right PyTorch for the machine and brings
   its own Python; a sparse autoencoder to see whether the model learned
   concepts or memorised text.
