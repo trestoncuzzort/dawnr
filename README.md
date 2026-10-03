@@ -25,7 +25,8 @@ your computer.
   so a correct proof of the wrong thing does not get through.
 - **It works offline and on ordinary hardware.** The model is a small, openly
   licensed one, fine-tuned here only on answers that passed the provers. It
-  runs on an ordinary CPU; no graphics card is needed.
+  runs on an ordinary CPU, and much faster on a gaming laptop's graphics card
+  when there is one; none is needed.
 - **It is open about itself.** Every claim links to the run that measured it.
   What it cannot do yet is in [DISCLAIMERS.md](DISCLAIMERS.md).
 
@@ -44,9 +45,13 @@ your computer.
 
 ## Get it
 
-You need Linux or macOS, Python 3.10 or newer, about 8 GB of disk and about
-10 GB of free memory (both models stay loaded; 9.2 GB was measured at the peak
-of a question). No graphics card is needed.
+You need Linux, macOS or Windows (through WSL2's Ubuntu: run `wsl --install`
+in PowerShell, then everything below inside Ubuntu), Python 3.10 or newer and
+about 9 GB of disk. No graphics card is needed: on the CPU, both models stay
+loaded in about 10 GB of free memory (9.2 GB was measured at the peak of a
+question). With an NVIDIA card the installer picks the GPU build by itself; on
+a laptop's 8 GB RTX 5050 the models took 7.6 GB of the card and 2.2 GB of
+memory.
 
 ```bash
 git clone https://github.com/trestoncuzzort/dawnr
@@ -54,7 +59,10 @@ cd dawnr
 ./install.sh
 ```
 
-The installer needs no administrator rights. It downloads the model server,
+A fresh Ubuntu (WSL's included) first needs
+`sudo apt install libgomp1 unzip bubblewrap`; the installer checks for them
+before downloading anything and prints the line with what is missing. The installer itself
+needs no administrator rights. It downloads the model server,
 the two models and the first prover into `~/.local/share/dawnr`, checks each
 download against its published checksum, and adds a `dawnr` command. Then:
 
@@ -63,7 +71,9 @@ dawnr ask "Write a function that returns the larger of two numbers." \
   --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9"
 ```
 
-A question takes one to two minutes on an ordinary CPU. `dawnr doctor`
+A question takes one to two minutes on an ordinary CPU, and 11 to 27 seconds
+on that laptop's card (19 for a first question that also starts the models, 27
+for a refusal, which tries every answer). `dawnr doctor`
 shows what is installed. dawnr runs code the models write only inside a sandbox
 (bubblewrap on Linux, Apple's Seatbelt on macOS). On Ubuntu 23.10 and newer,
 which restrict the sandbox by default, run once: `sudo bash t/apparmor-bwrap.sh`.
