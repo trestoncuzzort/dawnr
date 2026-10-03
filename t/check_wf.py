@@ -787,7 +787,9 @@ def check_wf(task: dict, positions: dict | None = None,
                      or "methods" in task or "lemmas" in task):
         _e(errs, task, "v1 field in a v0 task", "v0-frozen")
     penv = {p["name"]: p["type"] for p in task["params"]}
-    if ver == 0 and any(t != "int" for t in penv.values()):
+    # v0 is int only (SPEC.md v0; `bool` and `seq` are v1 types), for the return as for the parameters: a `t 0`
+    # task returning bool passed this check and the Verus and Rocq v0 lowerings emitted it as int (2026-10-03)
+    if ver == 0 and any(t != "int" for t in list(penv.values()) + [r["type"] for r in task["returns"]]):
         _e(errs, task, "v0 has int only", "v0-int-only")
     for p in task["params"]:
         if not _valid_type(p["type"], dtypes):

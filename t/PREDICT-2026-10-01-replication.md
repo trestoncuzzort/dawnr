@@ -172,3 +172,18 @@ under the grammar (18, 19, 17 against 6). At all seven kernels, the column the b
 seed 1 ties Phi (5 against 5), seeds 2 and 3 beat it (6 and 8), and no seed doubles it. The grammar is the
 advantage that closes the gap: it more than doubles Phi at all seven (2 to 5). So the student is not yet the
 win section 1 asks for.
+
+## Correction registered 2026-10-03 21:04Z, before any set is graded again: a v0 task returning bool
+
+Reading why answers proved by one kernel stop short of seven: the student's answers to 51 and 334 (seeds 1 and
+2) are `t 0` tasks returning `bool`, and the Verus and Rocq v0 lowerings emit them as `int` and `Z`, which is
+malformed, while the other five kernels prove them. SPEC.md makes `bool` a v1 type ("New type: `bool`, usable as
+a return or local type"), so these tasks are not well-formed v0; `t/check_wf.py` checked the v0 int-only rule on
+parameters and not on the return. Among the graded answers, 17 of Phi's under the grammar, 12 of Phi's prompted
+and 4 of the students' are `t 0` with a non-int return.
+
+The rule, applied to every set alike: (1) the v0 int-only rule covers the return (one line in `check_wf`);
+(2) every set is extracted with header promotion (a `t 0` task that uses a v1 form is the same program under
+`t 1`, `spec_experiment.extract --promote-header`), which the students' sets always had and Phi's did not, so Phi
+gets the same normalisation; (3) every changed task is graded again on the lab. Both numbers are reported, the
+graded ones above and the corrected ones, and the section 1 judgement is made on the corrected numbers.
