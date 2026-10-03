@@ -19,6 +19,12 @@ runner sets an address-space limit, forbids new processes, and gives each assert
 There is no unsandboxed fallback: where bubblewrap is missing, `available()` is False and
 `run_tests` refuses. Model-written code is never exec'd in this process.
 
+Where bubblewrap cannot create its namespaces and nobody can grant them (Ubuntu 23.10 and later without root, as
+on a shared lab machine), T_SANDBOX=landlock, or the word `landlock` in t/sandbox.conf (not committed), runs the
+same interpreter under Landlock and a seccomp filter instead (t/landlock_exec.py): no root, no namespace, the same
+read-only system folders and limits, and calls that would reach outside refused rather than hidden. It is the
+weaker of the two, so it is never chosen by itself.
+
 `Session` keeps one such interpreter alive and calls the model's function on many inputs (the
 gate's agreement stage, t/spec_gate.py: Clover's doc2code edge, arXiv:2310.17807, compares two
 artifacts by their outputs on a set of inputs). Same namespaces, same limits, one alarm a call.
@@ -175,6 +181,8 @@ class LoadError(Exception):
     """The code did not load, or does not define the function."""
 
 
+LANDLOCK_EXEC = Path(__file__).resolve().parent / "landlock_exec.py"
+SANDBOX_CONF = Path(__file__).resolve().parent / "sandbox.conf"
 SEATBELT = "/usr/bin/sandbox-exec"       # only /usr/bin's copy is trusted (codex-rs/sandboxing/src/seatbelt.rs)
 SEATBELT_POLICIES = Path(__file__).resolve().parent / "third_party" / "codex_seatbelt"
 SEATBELT_OURS = """
@@ -192,6 +200,26 @@ SEATBELT_OURS = """
 _PROBED: dict = {}
 
 
+def backend() -> str:
+    """seatbelt on macOS; on Linux bwrap unless T_SANDBOX or t/sandbox.conf names landlock."""
+    if sys.platform == "darwin":
+        return "seatbelt"
+    choice = os.environ.get("T_SANDBOX", "").strip()
+    if not choice and SANDBOX_CONF.exists():
+        choice = (SANDBOX_CONF.read_text().split() or [""])[0]
+    if choice not in ("", "bwrap", "landlock"):
+        raise RuntimeError(f"py_sandbox: unknown sandbox {choice!r} (T_SANDBOX or {SANDBOX_CONF}: bwrap or landlock)")
+    return choice or "bwrap"
+
+
+def _probe(cmd: list[str]) -> tuple[bool, str]:
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=20)
+        return p.returncode == 0, (p.stderr or p.stdout).strip()[-300:]
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return False, str(e)
+
+
 def available() -> bool:
     """A sandbox that runs here. On Linux, bwrap present is not enough: Ubuntu 23.10 and later restrict the user
     namespaces it needs unless an AppArmor profile grants them (t/apparmor-bwrap.sh), and then every run fails
@@ -199,6 +227,11 @@ def available() -> bool:
     once with the flags the jobs use. Codex warns at startup on the same failure (codex-rs/linux-sandbox/README.md)."""
     if sys.platform == "darwin":
         return Path(SEATBELT).exists()
+    if backend() == "landlock":
+        if "landlock" not in _PROBED:
+            with tempfile.TemporaryDirectory(prefix="py-sandbox-probe-") as tmp:
+                _PROBED["landlock"] = _probe(_command(Path(tmp))[:-3] + ["/usr/bin/true"])
+        return _PROBED["landlock"][0] and Path("/usr/bin/python3").exists()
     if shutil.which("bwrap") is None:
         return False
     if "linux" not in _PROBED:
@@ -214,6 +247,9 @@ def available() -> bool:
 def why_unavailable() -> str:
     if sys.platform == "darwin":
         return f"{SEATBELT} is missing"
+    if backend() == "landlock":
+        available()
+        return f"the Landlock sandbox does not run here: {_PROBED['landlock'][1] or '/usr/bin/python3 is missing'}"
     if shutil.which("bwrap") is None:
         return "bubblewrap is not installed (Debian/Ubuntu: sudo apt install bubblewrap)"
     return ("bubblewrap cannot create its namespaces here; on Ubuntu 23.10 and later run once: "
@@ -241,6 +277,8 @@ def _seatbelt_command(job: Path, python: str | None = None, prefix: str | None =
 def _command(job: Path) -> list[str]:
     if sys.platform == "darwin":
         return _seatbelt_command(job)
+    if backend() == "landlock":
+        return [sys.executable, "-I", "-S", str(LANDLOCK_EXEC), str(job), "/usr/bin/python3", "-I", str(job / "runner.py")]
     cmd = ["bwrap", "--unshare-all", "--die-with-parent", "--new-session",
            "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/home", "--chdir", "/tmp"]
     for d in ("/usr", "/lib", "/lib64", "/bin", "/etc/alternatives"):
