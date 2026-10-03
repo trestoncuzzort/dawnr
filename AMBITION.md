@@ -49,7 +49,7 @@ Beating Phi-4-mini (section 1) is a milestone on the way, not the destination.
 
 ## 1. Beat Phi-4-mini. Not tie it. Beat it.
 
-**The state (2026-10-03):** ahead at one kernel, level at all seven: see the 2026-10-01 entry below. Before: level. 3 clean answers of 232 for locallm, 3 for Phi, on a
+**The state (2026-10-03):** against Phi under the grammar, about double at one kernel and level at all seven; not the win. See the 2026-10-01 entry below. Before: level. 3 clean answers of 232 for locallm, 3 for Phi, on a
 baseline regraded the same day by the same evaluator
 (`locallm/FINDINGS-round8-2026-09-19.md`). On the column that survives the
 specification check it is 3 against 2.
@@ -62,7 +62,7 @@ the same trivial program fitting two shown examples by coincidence
 (`t/PREDICT-2026-09-29-dawnr-chat-heldout.md`). The bar in this section is
 measured on that column from now on.
 
-**2026-10-01, the clean 200 with the specification check and the completeness rule:** the pretrained 4B student, fine-tuned on what the gate admitted, is proved on 18 problems by at least one kernel and 5 by all seven; Phi-4-mini, given the same 17 answers a problem, the same gate and the same day, on 3 and 2 (`t/PREDICT-2026-10-01-several-answers.md`). Three seeds of the same recipe read 18 and 5, 19 and 6, 15 and 8 (mean 17.3 and 6.3; 2026-10-02 02:08Z), so the seeds condition below is met. Phi under `t`'s grammar, graded 2026-10-03, reads 6 at one kernel and 5 at all seven: the seeds triple it at one kernel, but at all seven (the clean column) seed 1 ties it and none doubles it, so **this is not yet the win written below** (`t/PREDICT-2026-10-01-replication.md`, outcome of part 2).
+**2026-10-01, the clean 200 with the specification check and the completeness rule:** the pretrained 4B student, fine-tuned on what the gate admitted, is proved on 18 problems by at least one kernel and 5 by all seven; Phi-4-mini, given the same 17 answers a problem, the same gate and the same day, on 3 and 2 (`t/PREDICT-2026-10-01-several-answers.md`). Three seeds of the same recipe read 18 and 5, 19 and 6, 15 and 8 (mean 17.3 and 6.3; 2026-10-02 02:08Z), so the seeds condition below is met. Graded 2026-10-03 with every set normalised alike and the specification check made independent of the run (1,000 draws): Phi under `t`'s grammar proves 9 at one kernel and 7 at all seven; the seeds 18, 18, 15 and 7, 8, 7. Two seeds double it at one kernel; at all seven two tie it, so **the win written below is not met** (`t/PREDICT-2026-10-01-replication.md`). The shipped recipe is being measured the same way (`t/PREDICT-2026-10-03-shipped-recipe.md`).
 
 **What counts as the win, written down so it cannot be softened later:**
 
