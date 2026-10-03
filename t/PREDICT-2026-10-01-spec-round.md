@@ -92,3 +92,13 @@ was stopped by hand before it could. Decoding now does what accelerate's `find_e
 (github.com/huggingface/accelerate, utils/memory.py): a batch that runs the card out of memory is split in half
 and decoded again, and a single prompt that still does not fit gets an empty reply, counted as no answer
 (`t/student_generate.decode`, tested). The caps and batch 8 of 02:14Z stay. Predictions unchanged.
+
+## Amendment, 2026-10-03 20:55Z, before any specification is written: where and with which kernels
+
+The round started on the desktop card at 20:37Z, on transformers' reference PyTorch path for Qwen3.5's linear
+attention (flash-linear-attention was not on its path), and wrote nothing in its first 18 minutes. It is stopped
+and runs instead on the lab's GPU 3 (free, the operator's word to use free GPUs) with flash-linear-attention
+loaded, as RL's generation already does: the same student (the 4B on v5, its merged weights copied), the same
+2,015 problems, `t/spec_first.py --reference-python --batch 8` with the same arguments. The kernels compute the
+same function; sampling may differ in rounding. Its outputs come back to the desktop, and extraction, tests,
+grading and the specification check run there as registered. Predictions 36 to 38 stand.
