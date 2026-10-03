@@ -51,15 +51,13 @@ reference solution and rejects most wrong answers.
 | the student, training seed 2 | 19 | 6 |
 | the student, training seed 3 | 15 | 8 |
 | Phi-4-mini, prompted, the same 17 answers a problem | 3 | 2 |
+| Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 6 | 5 |
 | every model trained here from scratch | 0 | 0 |
 
 Counted against EvalPlus's corrected MBPP+ solutions wherever they keep the problem's own tests, seed 3 reads 17 and 8
 ([t/PREDICT-2026-10-02-reference-plus.md](t/PREDICT-2026-10-02-reference-plus.md)); nothing else moves.
 
-This is not yet claimed as a win. The bar written in [AMBITION.md](AMBITION.md)
-also asks for Phi-4-mini decoding under `t`'s grammar, so it cannot emit text
-that does not parse; that run is in progress
-([registration and outcomes](t/PREDICT-2026-10-01-replication.md)).
+This is not yet the win the project set itself. Given every advantage, decoding under t's grammar so it cannot write unparseable output, Phi-4-mini proves 6 at one prover and 5 at all seven; every seed of the student proves about three times as many at one prover, but at all seven one seed ties it and none doubles it, which is the written bar ([outcome](t/PREDICT-2026-10-01-replication.md)).
 
 Without a reference solution, the gate can still tell most right answers from
 wrong ones. It checks the specification against a tested Python solution
