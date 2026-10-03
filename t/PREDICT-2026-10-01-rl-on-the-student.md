@@ -61,3 +61,13 @@ was stopped by hand before it could. Decoding now does what accelerate's `find_e
 (github.com/huggingface/accelerate, utils/memory.py): a batch that runs the card out of memory is split in half
 and decoded again, and a single prompt that still does not fit gets an empty reply, counted as no answer
 (`t/student_generate.decode`, tested). The caps and batch 8 of 02:14Z stay. Predictions unchanged.
+
+## Amendment, 2026-10-03 20:41Z, before it runs: where
+
+The desktop card is busy with the specification round, and the lab's GPUs 2 and 3 are free, with the operator's
+word to use free GPUs. RL runs on the lab's GPU 2 (an RTX 6000 Ada): the same starting student (the 4B on v5, its
+merged weights copied), the same rows, `t/rl_student.py band` and `train` with the same arguments, the reward's
+Dafny run on the lab itself (`T_LAB=local`, which `rl_reward.prove` supports) instead of over SSH to it, then the
+merge, the 33 specification-given questions and one greedy dev answer through `transformers serve` exactly as
+before. The answers come back to the desktop and are graded and scored there as registered. The lab's PyTorch is
+2.13 (desktop 2.11); TRL 1.13.0, transformers, peft and bitsandbytes are the same versions. Predictions stand.
