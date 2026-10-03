@@ -23,3 +23,10 @@ generator, 1,000 draws) and MBPP+'s references where they keep the problem's tes
 
 Section 1's judgement is then made on these three seeds against Phi-4-mini under the grammar, with the same
 instrument: the shipped weights either meet the written bar or they do not.
+
+## Amendment, 2026-10-03 21:57Z, before any seed is measured: all three seeds on the lab
+
+Seed 2 started on the desktop card and ran at about 115 s a step, twelve times slower than v2 on the same card a
+day earlier (9.7 s). The card's link now trains at 2.5 GT/s with ASPM L1 on: a kernel launch takes about 82 us and a
+host-to-device copy runs at 0.31 GB/s. Seed 2 is stopped and moves to the lab: seeds 1, 2 and 3 all run on the lab's
+GPU 1 (seed 1 is v3; seeds 2 and 3 train there side by side), with the lab's PyTorch 2.13. Predictions stand.
