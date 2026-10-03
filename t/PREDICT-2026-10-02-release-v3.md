@@ -31,3 +31,11 @@ normalised program text on the built file).
 
 If both hold it is released as `student-v3` and the installer moves to it; otherwise `student-v1` stays.
 It trains on the desktop card when the card is back, before the specification round.
+
+## Amendment, 2026-10-03 18:26Z, before it trains: where
+
+The desktop card fell off the bus an eighth time (2026-10-03 04:26Z) and the lab's GPUs 1 to 3 are free, with the
+operator's leave to use the lab freely. v3 trains on the lab's GPU 1 (an RTX 6000 Ada) with the same command, rows
+(sha256 b2fbb089...) and base weights (the same Hugging Face snapshot, copied), merges and exports there, and is
+measured on the desktop's CPU exactly as v1 and v2 were. The lab's PyTorch is 2.13 (the desktop's 2.11); the other
+libraries are the same versions (transformers 5.17, peft 0.21, bitsandbytes 0.50.2). Predictions 118 and 119 stand.
