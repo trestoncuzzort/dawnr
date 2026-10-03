@@ -8,7 +8,8 @@
 #   - Dafny 4.11.0 (github.com/dafny-lang/dafny releases), the first of the seven provers;
 # and writes a `dawnr` command into ~/.local/bin. The other six provers are optional (see t/README.md).
 #
-#   ./install.sh [--home DIR] [--student FILE_OR_RELEASE_URL] [--build cpu|vulkan|cuda] [--no-dafny]
+#   ./install.sh [--home DIR] [--student FILE_OR_RELEASE_URL] [--build auto|cpu|vulkan|cuda] [--no-dafny]
+# --build auto (the default) takes CUDA when an NVIDIA GPU answers nvidia-smi (WSL2 included), else the CPU build.
 # Every download is checked against the SHA-256 its publisher lists.
 set -euo pipefail
 
@@ -19,7 +20,7 @@ LLAMA_TAG=b11342
 DAFNY_VERSION=4.11.0
 BASE_URL=https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf
 STUDENT_RELEASE=${DAWNR_STUDENT_RELEASE:-https://github.com/trestoncuzzort/dawnr/releases/download/student-v1}
-BUILD=cpu
+BUILD=auto
 STUDENT=""
 DAFNY=1
 
@@ -57,6 +58,7 @@ sum_of() {
     llama-b11342-bin-ubuntu-x64.tar.gz) echo 7c8f7eb14cfb4a8dceb1f6cc6220ea387a1940f0c95cab76ca63ac35d2934fd4;;
     llama-b11342-bin-ubuntu-vulkan-x64.tar.gz) echo e88910ac1a46955f8d088a2b518245c32d620a02c954906e0a05884dca48e5be;;
     llama-b11342-bin-ubuntu-cuda-12.8-x64.tar.gz) echo e8e5b32e1abf829c08e24c7c99aa4f66dc046100682260b1625a272d1f80e8d1;;
+    cudart-llama-b11342-bin-ubuntu-cuda-12.8-x64.tar.gz) echo b3e2535f674f8df5ed28cd66e8dbcb6f64b2f675f2a8bb2bbfce4bd9c8bdaa22;;
     llama-b11342-bin-ubuntu-arm64.tar.gz) echo 6f5f88d9e105230c32b13ad9d8bba9611ab29ee27532717ba6bb5bb4120f3c85;;
     llama-b11342-bin-macos-arm64.tar.gz) echo 1050318ed5fb941a1b4c1c603f6c3c7fd3f065b56af3b8cfab39aee70f3ad076;;
     llama-b11342-bin-macos-x64.tar.gz) echo f5603510bcf2374d02ee1bd5ab1d307b60dec9f9c03fa67dd88a6c049089e49a;;
@@ -70,7 +72,15 @@ sum_of() {
 say "Checking this machine"
 OS=$(uname -s); ARCH=$(uname -m)
 case "$OS-$ARCH" in
-  Linux-x86_64) case $BUILD in cpu) LLAMA_ASSET=llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz;;
+  Linux-x86_64)
+                # auto: an NVIDIA GPU that answers nvidia-smi (on PATH, or WSL2's /usr/lib/wsl/lib) gets the CUDA build
+                if [ "$BUILD" = auto ]; then
+                  BUILD=cpu
+                  for smi in nvidia-smi /usr/lib/wsl/lib/nvidia-smi; do
+                    "$smi" -L >/dev/null 2>&1 && { BUILD=cuda; break; }
+                  done
+                fi
+                case $BUILD in cpu) LLAMA_ASSET=llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz;;
                                 vulkan) LLAMA_ASSET=llama-$LLAMA_TAG-bin-ubuntu-vulkan-x64.tar.gz;;
                                 cuda) LLAMA_ASSET=llama-$LLAMA_TAG-bin-ubuntu-cuda-12.8-x64.tar.gz;;
                                 *) fail "--build is cpu, vulkan or cuda";; esac
@@ -107,7 +117,19 @@ if [ ! -x "$DAWNR_HOME/llama.cpp/llama-server" ]; then
   [ -n "$SERVER" ] || fail "no llama-server in $LLAMA_ASSET"
   rm -rf "$DAWNR_HOME/llama.cpp"; mv "$(dirname "$SERVER")" "$DAWNR_HOME/llama.cpp"; rm -rf "$DAWNR_HOME/llama.cpp.tmp"
 fi
-"$DAWNR_HOME/llama.cpp/llama-server" --version >/dev/null 2>&1 || fail "llama-server does not run on this machine"
+if [ "$BUILD" = cuda ] && [ ! -e "$DAWNR_HOME/llama.cpp/.cudart" ]; then
+  # the CUDA build needs the CUDA runtime and cuBLAS, which llama.cpp publishes beside it; a machine with only the
+  # NVIDIA driver (a Windows laptop's WSL2, most desktops) has neither
+  CUDART=cudart-$LLAMA_ASSET
+  fetch "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/$CUDART" "$DAWNR_HOME/downloads/$CUDART" "$(sum_of "$CUDART")" \
+    || fail "could not download llama.cpp's $CUDART"
+  rm -rf "$DAWNR_HOME/cudart.tmp"; mkdir -p "$DAWNR_HOME/cudart.tmp"
+  tar -xzf "$DAWNR_HOME/downloads/$CUDART" -C "$DAWNR_HOME/cudart.tmp"
+  find "$DAWNR_HOME/cudart.tmp" -name "*.so*" -exec cp -P {} "$DAWNR_HOME/llama.cpp/" \;
+  rm -rf "$DAWNR_HOME/cudart.tmp"; touch "$DAWNR_HOME/llama.cpp/.cudart"
+fi
+LD_LIBRARY_PATH="$DAWNR_HOME/llama.cpp:${LD_LIBRARY_PATH:-}" "$DAWNR_HOME/llama.cpp/llama-server" --version >/dev/null 2>&1 \
+  || fail "llama-server does not run on this machine"
 echo "  llama-server ready"
 
 say "The models"
@@ -153,6 +175,7 @@ DAWNR_REPO=$REPO
 DAWNR_HOME=$DAWNR_HOME
 DAWNR_PYTHON=$PY
 LLAMA_SERVER=$DAWNR_HOME/llama.cpp/llama-server
+DAWNR_BUILD=$BUILD
 STUDENT_GGUF=$STUDENT_GGUF
 BASE_GGUF=$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf
 ENV
