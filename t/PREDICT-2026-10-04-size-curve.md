@@ -60,7 +60,7 @@ and 1 by all seven; v3's rows plus every admitted document (teacher2's seeds 1 a
 and 5. The student's own route (the Python first, then a specification, then the proof, `t/spec_first.py`) also
 spends 17 calls a problem, so the comparison is at a matched number of answers, not a matched route.
 
-## Amendment, 2026-10-04 12:55Z, before it trains: the fine-tuned side at a second size
+## Amendment, 2026-10-04 12:48Z, before it trains: the fine-tuned side at a second size
 
 The curve's other half is fine-tuned models at more than one size. While the lab's GPU 1 would otherwise wait for the
 next student round's rows, a **Qwen3.5-2B student** is trained there with the shipped recipe exactly
