@@ -41,3 +41,22 @@ DeepSeek-V3.2, k = 8, 6,384 requests on the flex tier, $9.18 by the ledger.
 
 The decision rule (a student round on the union if the admitted documents grow by at least 50) waits for round 2's
 seven-kernel assembly.
+
+## The decision, 2026-10-04 06:25Z (`~/scratch/bedrock/round2/union.json`, `assemble-report.json`)
+
+Round 2's seven-kernel assembly (three cells in flight): training, 70 top-tier answers graded, 19 clean in all
+seven and 9 in six, 28 admitted; specifications, 113 admitted.
+
+| admitted (six or seven kernels) | round 1 | round 2 | the two, by problem or prompt | new from round 2 |
+|---|---:|---:|---:|---:|
+| specification documents | 102 | 113 | 119 | 17 |
+| training documents | 21 | 28 | 35 | 14 |
+| all | 123 | 141 | 154 | 31 |
+
+Counted by problem or prompt, as U2 and U3 count the union, the two rounds together admit 31 more than round 1, not
+the 50 the rule asks: **no student round on the union is registered by this rule**, and round 1's documents stand
+alone in `t/PREDICT-2026-10-04-teacher1-student.md`. Counted as distinct programs instead (two teachers' different
+proofs of one prompt are two documents), the two rounds hold about 225 (180 specification documents), which would
+have passed; the rule was written beside unions by problem, so that reading is taken, and the larger count is
+recorded rather than used. Whether more documents of this kind are worth a round is left to the student round's
+result.
