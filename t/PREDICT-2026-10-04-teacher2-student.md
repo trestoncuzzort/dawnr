@@ -71,3 +71,10 @@ Seed 1 finished and left the lab's GPU 3 idle while seed 2 shared GPU 1 with the
 Seed 2 (step 538 of 1,440) was stopped and started again from step 0 alone on GPU 3 at 11:21:44Z (7.9 s a step), the
 same model of card, with the same command, rows and seed; the stopped run's output is kept aside, not used. The
 candidate continues alone on GPU 1. Predictions stand.
+
+## Seed 3, 2026-10-04 11:47Z (`~/scratch/teacher2/levels-teacher2-seed3.md`)
+
+Trained 1,440 steps (final loss 0.0258). 111 problems with tested Python, 57 with a kept specification, 48 answered,
+all 48 pass their tests; **27 proved by at least one prover, 23 by three, 16 by five, 15 by six, 13 by all seven**.
+The same seed on v3's rows alone: 17 and 8; with round 1's documents only: 21 and 12. Q1 holds for seed 3 (27 and
+13). Q2 holds if seed 2 proves at least 7 by all seven, Q3 if it proves at least 1.

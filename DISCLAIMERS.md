@@ -74,7 +74,8 @@ reference solution and rejects most wrong answers.
 | the same, training seed 1 | 19 | 8 |
 | the same, training seed 2 | 13 | 7 |
 | v3's rows plus 598 rows from every document admitted since (teachers and the specification round), seed 1 | 23 | 13 |
-| the same, seeds 2 and 3 | being measured | |
+| the same, seed 3 | 27 | 13 |
+| the same, seed 2 | being measured | |
 | Phi-4-mini, prompted, the same 17 answers a problem | 3 | 3 |
 | Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 9 | 7 |
 | every model trained here from scratch | 0 | 0 |
