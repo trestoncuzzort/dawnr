@@ -119,6 +119,57 @@ def clean_heldout(train: list[dict], held: list[dict], train_problem_ids: set[in
     return keep, removed
 
 
+def _spec_without_gate(task: dict) -> str:
+    """The specification printed under one name with the header's gate line and the version left out: a gate says
+    which features the program uses, not what it promises."""
+    import copy
+    t = copy.deepcopy(dict(task, body=[]))
+    for key in ("gate", "gates"):
+        t.pop(key, None)
+    t["t"] = 1
+    return surface.print_task(spec_experiment.rename_task(t, "f"))
+
+
+_VERICODING_STEM = re.compile(r"vericoding_([a-z]{2}\d{4})")
+
+
+def leaks_heldout(rows: list[dict], held: list[dict]) -> list[tuple[int, str]]:
+    """(index, reason) for every training row that answers one of the held-out specification-given questions:
+    `stem`, the same vericoding source problem (its DA/DD/... number); `text`, the program or the specification equal
+    once names are normalised (clean_heldout's test); `spec-without-gate`, the specification equal once the header's
+    gate line and version are left out too. The textual test alone let vericoding_DD0680 through, whose held-out copy
+    (vericoding_dd0680__replaceBlanksWithChar) carries `gate loops` (2026-10-04). Rows without a t block are skipped."""
+    def task_of(text):
+        return surface.parse(spectext(text))
+
+    def spectext(text):
+        block = spec_experiment.find_block(text)
+        if block is None:
+            raise ValueError("no t block")
+        return block
+
+    held_tasks = [task_of(h["chosen"]) for h in held]
+    programs = {_normalised(t, body=True) for t in held_tasks}
+    specs = {_normalised(t, body=False) for t in held_tasks}
+    gateless = {_spec_without_gate(t) for t in held_tasks}
+    stems = {m.group(1) for h in held for m in [_VERICODING_STEM.match(str(h.get("name", "")).lower())] if m}
+    out = []
+    for i, row in enumerate(rows):
+        m = _VERICODING_STEM.match(str(row.get("name", "")).lower())
+        if m and m.group(1) in stems:
+            out.append((i, "stem"))
+            continue
+        try:
+            t = task_of(row.get("chosen", ""))
+        except (ValueError, surface.SurfaceError):
+            continue
+        if _normalised(t, body=True) in programs or _normalised(t, body=False) in specs:
+            out.append((i, "text"))
+        elif _spec_without_gate(t) in gateless:
+            out.append((i, "spec-without-gate"))
+    return out
+
+
 def build(corpus_path: Path, split_path: Path, split_seed: int, train_rows: list[Path],
           val_frac: float = 0.1) -> tuple[list[dict], list[dict], dict]:
     """(training rows from the train side, held-out question rows, a report)."""
