@@ -136,3 +136,9 @@ points mix output kinds (146c38ff). The first seven-kernel assembly ran eight ce
 cache kept the finished cells, including any timeout recorded while the machine was overloaded. A timeout never
 admits a document, so the error can only have kept out documents, not let any in; the documents near the line
 are re-graded without the cache after the student's rows are built, and any that change are reported.
+
+**The near-line re-grade, 2026-10-04 04:15Z.** The 16 documents that four or five kernels proved and whose timeouts
+could have lifted them to six (6 training, 10 specification) were graded again in all seven kernels on the lab,
+without the verdict cache, four cells at a time on a lightly loaded machine (`~/scratch/bedrock/timeout-recheck/`):
+every one kept its clean count; two Rocq timeouts (DA0018, DJ0072) became plain unproved. No document's admission
+changes, so the overloaded first assembly kept none out.
