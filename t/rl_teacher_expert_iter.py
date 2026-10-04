@@ -488,6 +488,10 @@ def cmd_assemble(a) -> int:
         doc_lines.append(text)
         manifest.append({"name": name, **prov, "clean_kernels": spec_admitted[name]["clean"],
                          "gap": spec_admitted[name]["gap"]})
+    # full_kernel_grade returns early for an empty shortlist and creates nothing, so a round with no
+    # specification prompts (Bedrock round 3, 2026-10-04) reached this write with no directory and
+    # lost its report after grading every training answer.
+    spec_dest.mkdir(parents=True, exist_ok=True)
     (spec_dest / "documents.txt").write_text("\n\n".join(doc_lines) + ("\n" if doc_lines else ""),
                                              encoding="utf-8")
     (spec_dest / "manifest.jsonl").write_text("".join(json.dumps(m) + "\n" for m in manifest), encoding="utf-8")
