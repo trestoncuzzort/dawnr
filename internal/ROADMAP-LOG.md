@@ -2760,3 +2760,26 @@ for 187 and a proof for 34, and 31 joined the pool (`t/PREDICT-2026-10-01-proof-
 problem's Python solution in front of the specification (`t/PREDICT-2026-10-01-spec-first.md`)
 and proof-repair rows that quote Dafny's own diagnostics. The held-out 200 is run once, by the
 route a rule fixed beforehand picks, against Phi-4-mini given the same number of answers.
+
+## Teachers, a curve and the grader, 2026-10-02 to 10-04
+
+- **Released and kept:** `student-v1` (Qwen3.5-4B fine-tuned on proved rows, Apache-2.0) is what `install.sh` fetches.
+  v2, v3 and v4 candidates each missed the registered gate on the 33 given specifications (v4: 22 against 26,
+  `t/PREDICT-2026-10-04-release-v4.md`); the installer was fixed on a bare consumer laptop (RTX 5050, WSL2).
+- **Section 1:** the shipped recipe's three seeds beat Phi-4-mini under `t`'s grammar at both levels
+  (`t/PREDICT-2026-10-03-shipped-recipe.md`); with every admitted document (teacher2, 598 more rows) the seeds read 23,
+  24, 27 and 13, 15, 13: beaten with every seed, not doubled, two seeds one short by all seven
+  (`t/PREDICT-2026-10-04-teacher2-student.md`). RL on the student moved no unseen measurement and was not adopted.
+- **Teachers:** three Bedrock rounds (Qwen3-235B and DeepSeek-V3.2, openly licensed; $42 of a $60 cap) admitted 123, 31
+  more and 129 documents; the student round with round 3's added (teacher3) is being measured. Round 4 asks the
+  prompted Qwen3.5-27B on our own cards (`t/PREDICT-2026-10-04-teacher-round4-27b.md`).
+- **Section 3's first curve** (`t/PREDICT-2026-10-04-size-curve.md`): prompted Qwen3.5 reads 1, 4, 15, 18, 43 at one
+  kernel (0.8B to 27B) with 17 answers a problem; the fine-tuned 4B sits between the prompted 9B and 27B. The prompted
+  4B already beats Phi under the grammar, so most of section 1's margin is the base chosen by measurement; the
+  trained rows add 8 to 12 and 5 to 7.
+- **The grader:** `run_par.py` grades a loop inside a branch through the conditional rule in lean, rocq and fstar (the
+  case split, `t/PREDICT-2026-10-04-case-split.md`); the interpreter's `join` and `replace` now stop at `MAX_SEQ` and
+  scoring has a clock per evaluation, after a specification that doubled a sequence killed a scoring process twice.
+- **Next:** teacher3's judgement; round 4's documents into the next student round; a release candidate that keeps the
+  given-specification proofs while the teacher documents grow; the Bedrock half of the curve (needs the operator's
+  AWS sign-in); lean's two diagnosed tactic gaps and rocq's loop-half timeouts, each its own registration.
