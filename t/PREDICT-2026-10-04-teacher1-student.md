@@ -44,3 +44,17 @@ least 18 at one kernel and 14 by all seven. Either is reported as it falls.
 The teacher has read the public MBPP and HumanEval and its training documents answer training problems, never the
 clean 200 (their ids are excluded at the source, and the rows are checked again). A gain here says documents of
 this kind help; it does not say which of the two kinds (training documents or specification documents) did it.
+
+## The rows as built, 2026-10-04 03:25Z (before any seed trains)
+
+`sft-student-teacher1.jsonl`, 4,209 rows, sha256 754f607c04ef796e...: v3's 4,027 byte for byte (sha256 b2fbb089...),
+then 182 rows from the teacher round's 123 admitted documents. 21 graded rows (the lab's seven kernels: 10 at
+seven, 11 at six, agreeing with the assembly; no gate rejected any), their 63 spec-first rows (21 each of Python,
+specification and proof-from-Python), and 98 specification-given rows: 102 admitted specification documents less
+4 whose program or specification is one of the 33 held-out questions (vericoding DA0455, DD0077, DD0684,
+DD0752), which the leak check dropped.
+
+A first build at 03:18Z admitted no graded rows: the assembly's own seven-kernel table, left in the set's folder,
+names each task with the reward scorer's suffix (`__rl<hash>`), so the lab's grading skipped the set as already
+graded and the pool found no kernel row for any task. The table was moved aside and the set graded on the lab
+under its own names; that is the build above. Nothing trained on the first build. Predictions stand.
