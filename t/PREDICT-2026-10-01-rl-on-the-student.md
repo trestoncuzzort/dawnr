@@ -71,3 +71,25 @@ Dafny run on the lab itself (`T_LAB=local`, which `rl_reward.prove` supports) in
 merge, the 33 specification-given questions and one greedy dev answer through `transformers serve` exactly as
 before. The answers come back to the desktop and are graded and scored there as registered. The lab's PyTorch is
 2.13 (desktop 2.11); TRL 1.13.0, transformers, peft and bitsandbytes are the same versions. Predictions stand.
+
+## Outcome, 2026-10-04 00:55Z (`~/scratch/rl/log`, `~/scratch/rl/4b-v5/`)
+
+The band: 60 problems at one or two of four passing; two passes, 960 answers. Measured the way the start was
+(`t/PREDICT-2026-10-01-v6.md`, the v5 column):
+
+| | the 4B on v5 (start) | after RL |
+|---|---:|---:|
+| one greedy dev answer: tests pass (100) | 13 | 13 |
+| one greedy dev answer: proved on complete specifications, at least one kernel / all seven | 4 / 1 | 4 / 1 |
+| the 33 given specifications: at least one / all seven / refuted | 29 / 28 / 3 | 29 / 28 / 3 |
+| mean reward over the band, first pass / second pass | | 0.240 / 0.255 |
+
+91. **Falsified:** 13 against 13, not at least 16.
+92. **Falsified:** 4 against 4, not at least 5.
+93. **Holds:** 28 against 28.
+94. **Holds:** 0.255 against 0.240.
+
+The reward rose a little on the 60 training problems and nothing moved on problems the run never saw. With a
+band this small (60 of 800 drawn problems had one or two of four passing) RL has little to climb; the
+measurement says data that reaches the top tier, not more optimisation on what the student already writes, is
+what the student lacks. RL is not adopted.
