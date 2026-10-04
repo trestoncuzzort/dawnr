@@ -300,6 +300,11 @@ def _str_split_sep(s: tuple, c: int) -> tuple:
 def _str_join(rows: tuple, sep: tuple) -> tuple:
     if not rows:
         return ()
+    # MAX_SEQ, as `fill` and seq `+` already refuse past it (2026-10-04): join and replace were the two
+    # operations whose result can outgrow their arguments, so a spec function joining a sequence with
+    # itself doubled it at every step and ran a scoring process out of memory inside the step budget.
+    if sum(len(r) for r in rows) + len(sep) * (len(rows) - 1) > MAX_SEQ:
+        raise Budget("seq length cap")
     out = list(rows[0])
     for r in rows[1:]:
         out += list(sep) + list(r)
@@ -348,6 +353,8 @@ def _str_replace(s: tuple, t: tuple, u: tuple) -> tuple:
     if not t:
         # SPEC.md: "t == [] inserts u before every code point and at the
         # end, as Python does."
+        if len(s) + (len(s) + 1) * len(u) > MAX_SEQ:
+            raise Budget("seq length cap")                  # see _str_join
         out = []
         for c in s:
             out += list(u) + [c]
@@ -357,10 +364,14 @@ def _str_replace(s: tuple, t: tuple, u: tuple) -> tuple:
         if s[i:i + lt] == t:
             out += list(u)
             i += lt
+            if len(out) > MAX_SEQ:
+                raise Budget("seq length cap")              # see _str_join
         else:
             out.append(s[i])
             i += 1
     out += list(s[i:])
+    if len(out) > MAX_SEQ:
+        raise Budget("seq length cap")
     return tuple(out)
 
 
