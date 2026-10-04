@@ -117,3 +117,18 @@ closer has witness heuristics only for establishment (the range's lower end) and
 an update (the file's header notes both); on 345 `repeat split` also splits the `if` inside the ensures, so the
 recursive lemma's conclusion no longer unifies in a branch the requires already rules out. Rocq's four are timeouts
 on both sides of the loop half.
+
+## Merged, and the last two sets regraded, 2026-10-04 (recorded 17:01Z)
+
+Merged as 91f6e629 once teacher2's seed 2 and release v4's lab gradings were done. The same targeted regrade on the
+sets graded just before the merge: teacher2's seed 2 (6 eligible tasks) and the release-v4 candidate (3), lean, rocq
+and fstar on the lab. Rocq timed out or read unproved on every one, so neither gains a problem by all seven:
+
+| set | before | after |
+|---|---|---|
+| teacher2 seed 2 | 24 / 21 / 17 / 16 / 15 | 24 / 21 / 19 / 17 / 15 |
+| the release-v4 candidate | 23 / 18 / 15 / 14 / 13 | 23 / 18 / 17 / 15 / 13 |
+
+The real program of 482 (seed 2) now reads refuted in rocq and fstar, as dafny, verus and framac already read it (a
+real witness: undefined at `s=[65]`). Teacher2's three seeds therefore read 23, 24, 27 and 13, 15, 13 under either
+instrument, which is the comparison `t/PREDICT-2026-10-04-teacher3-student.md` registered.
