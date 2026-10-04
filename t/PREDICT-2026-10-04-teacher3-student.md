@@ -55,3 +55,9 @@ Trained alone on GPU 2 (1,585 steps, final loss 0.0265): 111 problems with teste
 their tests; **27 proved by at least one prover, 25 by three, 20 by five, 18 by six, 15 by all seven**. Graded with the
 case split, which decided three cells, all on 605 (lean unproved, fstar verified, rocq a timeout); no count at one
 kernel or by all seven depends on them. The same seed on teacher2's rows: 24 and 15. T1 holds for seed 2.
+
+## Seed 3, 2026-10-04 20:51Z (`~/scratch/teacher3/levels-teacher3-seed3.md`; recorded 20:52Z)
+
+Trained alone on GPU 3 (1,585 steps, final loss 0.0265): 104 problems with tested Python, 41 answered, all 41 pass
+their tests; **23 proved by at least one prover, 21 by three, 18 by five, 15 by six, 13 by all seven**. The same seed on
+teacher2's rows: 27 and 13. T1 holds for seed 3.
