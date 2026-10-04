@@ -27,3 +27,13 @@ The 60 asked are a small sample (5 of 60 is 3% to 18% at 95%), so the bars sit n
 
 If A2 holds, the admitted documents join the pool for the next registered student round, beside rounds 1 and 2's and
 the specification round's.
+
+## A1 and A3, 2026-10-04 10:56Z (`~/scratch/bedrock/round3/report-training.json`, the ledger)
+
+17,324 requests (8 seeds of 2,165, every one answered on the flex tier), $29.10 by the ledger. Problems with a sample
+at each tier or better: parses 1,491, typed 1,161, tests 783, proved-weak 252, **top tier 245**.
+
+- **A1 holds:** 245 of the 2,165 at the top tier, against 90 (11.3%; the 60-problem sample read 8%).
+- **A3 holds:** $29.10 against $30.
+
+A2 waits for the seven-kernel assembly of the 245.
