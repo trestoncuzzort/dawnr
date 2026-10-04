@@ -89,3 +89,7 @@ held-out specification-given questions would be contaminated for that one questi
 
 105 problems with tested Python, 43 answered, all 43 pass their tests; **19 proved by at least one prover, 17 by three,
 13 by five, 11 by six, 8 by all seven**. The same seed on v3's rows alone: 17 and 10. S1 holds for seed 1 (19 and 8).
+
+**Provenance note, 2026-10-04 07:52Z.** 27 of this round's appended specification-given rows are built from dafny-synthesis programs
+(GPL-3.0 at the source, reached through DafnyBench), which every release leaves out; these seeds are measurements, not
+release candidates (`t/PREDICT-2026-10-04-release-v4.md`, amendment).

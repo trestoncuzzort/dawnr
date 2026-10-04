@@ -54,3 +54,7 @@ DD0680, DD0684, DD0752). Predictions stand.
 Seed 3 started on the lab's GPU 2 as soon as teacher1's seed 1 freed it (the first orchestrator would have waited for
 teacher1's seed 2 too); seed 2 starts on GPU 1 when teacher1's seed 2 has answered there. Each seed is graded as soon
 as it has answered. Same command, rows and seeds; predictions stand.
+
+**Provenance note, 2026-10-04 07:52Z.** 46 of this round's appended specification-given rows are built from dafny-synthesis programs
+(GPL-3.0 at the source, reached through DafnyBench), which every release leaves out; these seeds are measurements, not
+release candidates (`t/PREDICT-2026-10-04-release-v4.md`, amendment).
