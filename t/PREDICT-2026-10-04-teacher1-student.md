@@ -93,3 +93,25 @@ held-out specification-given questions would be contaminated for that one questi
 **Provenance note, 2026-10-04 07:52Z.** 27 of this round's appended specification-given rows are built from dafny-synthesis programs
 (GPL-3.0 at the source, reached through DafnyBench), which every release leaves out; these seeds are measurements, not
 release candidates (`t/PREDICT-2026-10-04-release-v4.md`, amendment).
+
+## Seed 2 and the outcome, 2026-10-04 09:08Z (`~/scratch/teacher1/levels-teacher1-seed2.md`)
+
+Seed 2 (trained alone on GPU 1 from step 0, final loss 0.0242): 104 problems with tested Python, 31 answered, all 31
+pass their tests; **13 proved by at least one prover, 12 by three, 10 by five, 9 by six, 7 by all seven**.
+
+| seed | v3's rows alone | plus the teacher's documents |
+|---|---:|---:|
+| 1 | 17 and 10 | 19 and 8 |
+| 2 | 16 and 8 | 13 and 7 |
+| 3 | 17 and 8 | 21 and 12 |
+| mean | 16.7 and 8.7 | 17.7 and 9.0 |
+
+- **S1 falsified:** seed 2 proves 13 at one kernel and 7 by all seven, under 15 and 8.
+- **S2 falsified:** the mean by all seven is 9.0, not at least 9.7.
+- **Section 1:** every seed is above Phi under the grammar at one kernel (9), but seed 2 only ties it by all seven
+  (7), so this round does not meet "beat"; it is not doubled.
+
+**Reading.** The same recipe with the same rows moves from 13 to 21 at one kernel and from 7 to 12 by all seven
+across seeds; a change of about one problem, which is what 182 rows bought on average, cannot be told from that
+spread with three seeds. Seed 3's jump was mostly the seed. Whether a larger addition moves the mean past the spread
+is the teacher2 round's question (598 rows).
