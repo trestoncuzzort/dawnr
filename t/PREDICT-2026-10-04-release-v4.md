@@ -53,3 +53,9 @@ bytes, sha256 c937a44c0b1c81b7..., three shards) and measured on this desktop's 
 statement (the clean 200 from 17 to 23 at one kernel and from 10 to 13 by all seven for seed 1, dev from 4 to 7) cost
 it proofs when the specification is given (26 to 22 by all seven). A release candidate has to hold both; the next one
 needs rows that keep the given-specification skill while the teacher documents grow.
+
+**Which questions (v3's seed 1 against the candidate, both at Q8_0 by this pipeline):** of v3's 25 proved by all seven
+the candidate loses 4 and gains 1. Two of the four are wrong programs, refuted on both sides by every kernel
+(`vericoding_da0075`, `vericoding_dd0077`); two are a kernel's reach (framac abstains on `da0580`, rocq leaves
+`dv0138`'s real side unproved). One seed of each, so whether the rows cost given-specification proofs at all is not yet
+told from the seeds' own spread on this set, which has not been measured.
