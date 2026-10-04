@@ -23,3 +23,21 @@ assembled exactly as the first round, after it, on this machine.
 
 If the two teachers' admitted documents together exceed the first round's by at least 50, a student round on the
 union is registered separately; otherwise the first round's documents stand alone.
+
+## U1 to U4, 2026-10-04 04:08Z (`~/scratch/bedrock/round2/`, the score caches of both rounds)
+
+DeepSeek-V3.2, k = 8, 6,384 requests on the flex tier, $9.18 by the ledger.
+
+| | Qwen3-235B (round 1) | DeepSeek-V3.2 (round 2) | the two together | new from DeepSeek |
+|---|---:|---:|---:|---:|
+| specification prompts proved (441) | 174 | 206 | 215 | 41 |
+| training problems at the top tier (356) | 40 | 70 | 79 | 39 |
+| training problems passing their tests (356) | 151 | 173 | | |
+
+- **U1 holds:** 206 against 150.
+- **U2 holds:** 215 against 210; the two teachers prove mostly the same specifications (165 in common).
+- **U3 holds:** 79 against 55; from a problem statement DeepSeek reaches the top tier on nearly twice as many as Qwen.
+- **U4 holds:** $9.18 against $12.
+
+The decision rule (a student round on the union if the admitted documents grow by at least 50) waits for round 2's
+seven-kernel assembly.
