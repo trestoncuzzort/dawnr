@@ -84,6 +84,7 @@ import argparse
 import hashlib
 import importlib
 import os
+import re
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -442,6 +443,207 @@ def probe_backends():
     return cols, present
 
 
+# ------------------------------------------------------- the case split --
+# THE CASE SPLIT (2026-10-04). lean, rocq and fstar turn a loop into a
+# recursive function spliced into one merged term, so a loop inside a branch
+# abstains there (lower_lean.py `sym`, lower_fstar.py `_check_nestable`,
+# lower_rocq.py): the loop's entry obligation would be asked on the arm that
+# never runs it. The student's answers write exactly that shape -- a guard for
+# the edge case, the loop in the `else` -- and it held 3 of teacher2 seed 1's
+# 23 proved problems at four kernels. Dijkstra's rule for the conditional,
+#     wp(if E then S1 else S2, R) = (E => wp(S1, R)) and (not E => wp(S2, R))
+# (fetched: en.wikipedia.org/wiki/Predicate_transformer_semantics, receipt
+# bf9e04160124), for a pure, defined E, says {P} pre; if E {S1} else {S2}; post
+# {R} holds exactly when {P and E} pre; S1; post {R} and {P and not E} pre; S2;
+# post {R} do, provided E reads the same value wherever it is evaluated --
+# which a condition over parameters only does, because a parameter is never
+# assigned (check_wf Gate 2, `assign-target`). Each half has its loop at top
+# level, which those three kernels lower. The split is asked only after the
+# kernel's own lowering of the whole body abstained for this one reason, so
+# every cell that lowered before lowers byte-identically now, and the four
+# kernels that read the whole program keep reading it.
+SPLIT_REASON = re.compile(r"loop (inside|under) a (branch|conditional)")
+CASE_UNITS = ("__case1", "__case2")
+# total over the integers, booleans and sequences: never undefined, never a
+# call. `div`/`mod` (by zero), `at`/`slice`/`update` (out of range), calls,
+# quantifiers and the string library stay out, and so does anything else.
+_TOTAL_OPS = frozenset({"and", "or", "implies", "not", "neg", "len",
+                        "+", "-", "*", "==", "!=", "<", "<=", ">", ">="})
+# combined outcome of two halves: the first of these either half reads.
+# REFUTED first: a half refutes only inside its own region (its `requires`
+# carries the guard, and a twin's witness is routed to the half whose guard
+# holds at it), where the original runs exactly that half's statements, so
+# the counterexample is the original's. VERIFIED last: only both halves.
+_SPLIT_ORDER = (Outcome.REFUTED, Outcome.TOOL_ERROR, Outcome.MALFORMED,
+                Outcome.VACUOUS, Outcome.TIMEOUT, Outcome.UNPROVED,
+                Outcome.VERIFIED)
+
+
+def _total_over(e: dict, params: set) -> bool:
+    """True when `e` reads only `params` and cannot be undefined."""
+    if "int" in e or "bool" in e:
+        return True
+    if "var" in e:
+        return e["var"] in params
+    if e.get("op") in _TOTAL_OPS and set(e) <= {"op", "args"}:
+        return all(_total_over(a, params) for a in e.get("args", []))
+    return False
+
+
+def _has_while(stmts: list) -> bool:
+    for s in stmts:
+        if "while" in s:
+            return True
+        if "if" in s and (_has_while(s["if"]["then"]) or _has_while(s["if"]["else"])):
+            return True
+    return False
+
+
+def _always_returns(stmts: list) -> bool:
+    """Every path through `stmts` ends in `return` (SPEC.md "Early exit": a
+    `return` is the last statement of its block), so nothing after them runs
+    and nothing may follow them in one block."""
+    if not stmts:
+        return False
+    s = stmts[-1]
+    if "return" in s:
+        return True
+    if "if" in s:
+        return _always_returns(s["if"]["then"]) and _always_returns(s["if"]["else"])
+    return False
+
+
+def case_split(task: dict, body: list):
+    """(E, [(task_then, body_then), (task_else, body_else)]) for the first
+    top-level `if` of `body` with a loop in an arm, or None when there is no
+    such `if`, its condition reads anything but parameters or could be
+    undefined, or the body calls the task itself (a renamed or re-guarded
+    copy would change what the call means)."""
+    import interp
+    params = {p["name"] for p in task["params"]}
+    if interp.self_calls(body, task["name"]):
+        return None
+    for i, s in enumerate(body):
+        if "if" not in s:
+            continue
+        c = s["if"]
+        if not (_has_while(c["then"]) or _has_while(c["else"])):
+            continue
+        if not _total_over(c["cond"], params):
+            return None
+        pre, post = body[:i], body[i + 1:]
+        halves = []
+        for arm, guard in ((c["then"], c["cond"]),
+                           (c["else"], {"op": "not", "args": [c["cond"]]})):
+            hb = pre + arm + ([] if _always_returns(arm) else post)
+            halves.append((dict(task, requires=list(task.get("requires", [])) + [guard],
+                                body=hb), hb))
+        return c["cond"], halves
+    return None
+
+
+def _guard_at(cond: dict, w: dict, task: dict):
+    """The guard's value at a witness's parameter values (a value witness's
+    input, or the parameters an exit / preservation state carries), or None
+    when the witness does not name every parameter or the value cannot be
+    read."""
+    import interp
+
+    def val(v):
+        return tuple(val(x) for x in v) if isinstance(v, (list, tuple)) else v
+    names = [p["name"] for p in task["params"]]
+    if not all(n in w for n in names):
+        return None
+    try:
+        return bool(interp.ev(cond, {n: val(w[n]) for n in names}, {}, interp.St()))
+    except Exception:                                   # noqa: BLE001
+        return None
+
+
+def _lower_side(task: dict, body: list, wit, lower) -> tuple[list, dict | None]:
+    """([source], None) as before, or ([source_then, source_else], E) when the
+    kernel abstained for a loop inside a branch and the case split applies.
+    Any other abstention, or a half that still abstains, raises as before."""
+    try:
+        return [lower(task, body, witness=wit)], None
+    except NotImplementedError as e:
+        if not SPLIT_REASON.search(str(e)):
+            raise
+        split = case_split(task, body)
+        if split is None:
+            raise
+        cond, halves = split
+        holds = None if wit is None else _guard_at(cond, wit, task)
+        if wit is not None and holds is None:
+            raise                                       # cannot route the witness: abstain
+        srcs = []
+        for k, (ht, hb) in enumerate(halves):
+            here = wit is not None and holds == (k == 0)
+            srcs.append(lower(ht, hb, witness=wit if here else None))
+        return srcs, cond
+
+
+def _lower_units(task: dict, lower, twin_body: list, w, rw):
+    """The (unit name, real source, twin source) pairs one cell runs: one,
+    named after the task, exactly as before; or two, `<task>__case1` and
+    `<task>__case2`, when either side needed the case split (an unsplit side
+    is run in both units and must read the same in both)."""
+    name = task["name"]
+    real, rsplit = _lower_side(task, task["body"], rw, lower)
+    twin, tsplit = _lower_side(task, twin_body, w, lower)
+    if rsplit is None and tsplit is None:
+        return [(name, real[0], twin[0])], None
+    real, twin = real * (3 - len(real)), twin * (3 - len(twin))
+    return ([(name + CASE_UNITS[k], real[k], twin[k]) for k in (0, 1)],
+            {"real": rsplit is not None, "twin": tsplit is not None,
+             "cond": rsplit if rsplit is not None else tsplit})
+
+
+def combine_units(c1: tuple, c2: tuple, split: dict) -> tuple:
+    """One cell from the two units' cells. A split side combines by
+    _SPLIT_ORDER; an unsplit side ran the same source twice and must agree
+    with itself, or the cell is not agreed."""
+    def side(k, was_split):
+        a, b = c1[k], c2[k]
+        if not was_split:
+            return a, a == b
+        for o in _SPLIT_ORDER:
+            if o in (a, b):
+                return o, True
+        return a, a == b
+    r, ra = side(0, split["real"])
+    t, ta = side(1, split["twin"])
+    return (r, t, bool(c1[2] and c2[2] and ra and ta))
+
+
+def surface_cond(e: dict) -> str:
+    """The guard as `t` source, for the log line."""
+    try:
+        import surface
+        return surface.pexpr(e)
+    except Exception:                                   # noqa: BLE001
+        return str(e)
+
+
+def _unit_done(splits: dict, rows: dict, bname: str, name: str, k: int,
+               cell: tuple, wits: dict) -> bool:
+    """Record one unit's cell; when both are in, write the task's combined
+    cell and print it. Returns False only for a completed cell that is not
+    the flip rule's (real VERIFIED, twin REFUTED, agreed)."""
+    st = splits[(bname, name)]
+    st["units"][k] = cell
+    if None in st["units"]:
+        return True
+    combined = combine_units(st["units"][0], st["units"][1], st)
+    rows[name][bname] = combined
+    good = combined == (Outcome.VERIFIED, Outcome.REFUTED, True)
+    print(f"  {name} x {bname} [{st['op']}]: real={combined[0]} twin={combined[1]}"
+          + ("" if good else "  <-- FINDING")
+          + f"   (case split on {surface_cond(st['cond'])}; twin witness: {harness.witness(wits.get(name))})",
+          flush=True)
+    return good
+
+
 def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3,
                        versions: dict | None = None, cache_dir=None,
                        stats: dict | None = None):
@@ -486,6 +688,7 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3,
     # Lowering + writes: sequential, entirely before any dispatch below, so
     # out/*.{suffix} has a single writer for the whole time it is produced.
     pending, wits = [], {}
+    splits, unit_of = {}, {}      # the case split: (kernel, task) -> state; (kernel, unit) -> (task, k)
     for bname, lower, suffix in present:
         for tpath in tasks:
             task = harness.load(tpath)
@@ -511,8 +714,7 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3,
             # committed task lowers byte-identically to before.
             rw = harness.real_witness(task)
             try:
-                real_src = lower(task, task["body"], witness=rw)
-                twin_src = lower(task, twin_body, witness=w)
+                units, split = _lower_units(task, lower, twin_body, w, rw)
             except NotImplementedError as e:
                 rows[name][bname] = ("abstain", "abstain", True)
                 all_ok = False
@@ -533,44 +735,58 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3,
             # chaining 26 string `replace` calls lowered to Rocq as a 27.7 GB source, twice, which filled 52 GB
             # of a shared disk and wedged the run. A source past the cap is recorded and skipped, never run.
             cap = int(os.environ.get("T_MAX_SOURCE_MB", "64")) * 1024 * 1024
-            if max(len(real_src), len(twin_src)) > cap:
-                mb = max(len(real_src), len(twin_src)) / 1024 / 1024
+            biggest = max(len(src) for _u, r, t in units for src in (r, t))
+            if biggest > cap:
+                mb = biggest / 1024 / 1024
                 rows[name][bname] = ("lower-too-big", "lower-too-big", True)
                 all_ok = False
                 print(f"  {name} x {bname}: LOWER-TOO-BIG {mb:.0f} MB, over the "
                       f"{cap / 1024 / 1024:.0f} MB cap (T_MAX_SOURCE_MB); not run", flush=True)
                 continue
-            (harness.OUT / f"{name}.{suffix}").write_text(real_src, encoding="utf-8", newline="\n")
-            (harness.OUT / f"{name}_twin.{suffix}").write_text(twin_src, encoding="utf-8", newline="\n")
             wits[name] = w
-            # The cache lookup sits HERE, after the lowering and before the
-            # dispatch, because the lowered bytes just written are the key:
-            # the cache answers for a source, never for a task name. The
-            # lowering itself still runs on every pass -- it is Python over
-            # an interpreted witness search, not a kernel -- so a fully
-            # cached run still writes out/*.dfy and the table's verdict-basis
-            # hashes still name files this run produced.
-            keys = hit_real = hit_twin = None
-            if cache_dir is not None and bname in versions:
-                keys = (cache_key(real_src, bname, versions[bname], flake_n),
-                        cache_key(twin_src, bname, versions[bname], flake_n))
-                hit_real, hit_twin = (_cached_outcome(bname, k, cache_dir)
-                                      for k in keys)
-            if hit_real is not None and hit_twin is not None:
-                # No kernel, no worker, no dispatch: both sides of this cell
-                # were agreed by a previous run on these exact bytes.
-                cell = (hit_real, hit_twin, True)
-                rows[name][bname] = cell
-                good = cell == (Outcome.VERIFIED, Outcome.REFUTED, True)
-                all_ok &= good
-                counts["cells"] += 1
-                counts["cached_cells"] += 1
-                counts["cached_sides"] += 2
-                print(f"  {name} x {bname} [{op}]: real={cell[0]} twin={cell[1]}"
-                      + ("" if good else "  <-- FINDING")
-                      + f"   (cached; twin witness: {harness.witness(w)})", flush=True)
-                continue
-            pending.append((bname, name, suffix, op, (hit_real, hit_twin), keys))
+            if split is not None:
+                # the case split: both units' cells are combined into this
+                # task's one cell after the dispatch (combine_units).
+                splits[(bname, name)] = {**split, "units": [None, None], "op": op}
+                print(f"  {name} x {bname}: CASE SPLIT on {surface_cond(split['cond'])} "
+                      f"({'real' if split['real'] else ''}{' and ' if split['real'] and split['twin'] else ''}"
+                      f"{'twin' if split['twin'] else ''}; the kernel abstained on a loop inside a branch)", flush=True)
+            for k, (uname, real_src, twin_src) in enumerate(units):
+                (harness.OUT / f"{uname}.{suffix}").write_text(real_src, encoding="utf-8", newline="\n")
+                (harness.OUT / f"{uname}_twin.{suffix}").write_text(twin_src, encoding="utf-8", newline="\n")
+                # The cache lookup sits HERE, after the lowering and before the
+                # dispatch, because the lowered bytes just written are the key:
+                # the cache answers for a source, never for a task name. The
+                # lowering itself still runs on every pass -- it is Python over
+                # an interpreted witness search, not a kernel -- so a fully
+                # cached run still writes out/*.dfy and the table's verdict-basis
+                # hashes still name files this run produced.
+                keys = hit_real = hit_twin = None
+                if cache_dir is not None and bname in versions:
+                    keys = (cache_key(real_src, bname, versions[bname], flake_n),
+                            cache_key(twin_src, bname, versions[bname], flake_n))
+                    hit_real, hit_twin = (_cached_outcome(bname, k2, cache_dir)
+                                          for k2 in keys)
+                if hit_real is not None and hit_twin is not None:
+                    # No kernel, no worker, no dispatch: both sides of this cell
+                    # were agreed by a previous run on these exact bytes.
+                    cell = (hit_real, hit_twin, True)
+                    counts["cells"] += 1
+                    counts["cached_cells"] += 1
+                    counts["cached_sides"] += 2
+                    if split is not None:
+                        all_ok &= _unit_done(splits, rows, bname, name, k, cell, wits)
+                        continue
+                    rows[name][bname] = cell
+                    good = cell == (Outcome.VERIFIED, Outcome.REFUTED, True)
+                    all_ok &= good
+                    print(f"  {name} x {bname} [{op}]: real={cell[0]} twin={cell[1]}"
+                          + ("" if good else "  <-- FINDING")
+                          + f"   (cached; twin witness: {harness.witness(w)})", flush=True)
+                    continue
+                pending.append((bname, uname, suffix, op, (hit_real, hit_twin), keys))
+                if split is not None:
+                    unit_of[(bname, uname)] = (name, k)
     n_cells = len(tasks) * len(BACKENDS)          # matrix size, independent of what lowered
     jobs = jobs_arg or max(1, min(n_cells, os.cpu_count() or 1))
     # Platform-selected: fork where it exists, spawn on Windows. The spawn
@@ -592,13 +808,18 @@ def lower_and_dispatch(tasks: list[Path], present, jobs_arg, flake_n: int = 3,
                 for b, n, s, o, c, _k in pending}
         for fut in as_completed(futs):
             name, bname, op, cell, sides, launched = fut.result()
-            rows[name][bname] = cell
-            good = cell == (Outcome.VERIFIED, Outcome.REFUTED, True)
-            all_ok &= good
             counts["cells"] += 1
             counts["measured_runs"] += launched
             n_hit = _record_sides(bname, name, sides, keymap.get((bname, name)),
                                   versions, cache_dir, flake_n, counts)
+            if (bname, name) in unit_of:
+                parent, k = unit_of[(bname, name)]
+                print(f"  {name} x {bname} [{op}]: real={cell[0]} twin={cell[1]}   (one half of {parent})", flush=True)
+                all_ok &= _unit_done(splits, rows, bname, parent, k, cell, wits)
+                continue
+            rows[name][bname] = cell
+            good = cell == (Outcome.VERIFIED, Outcome.REFUTED, True)
+            all_ok &= good
             print(f"  {name} x {bname} [{op}]: real={cell[0]} twin={cell[1]}"
                   + ("" if good else "  <-- FINDING")
                   + ("" if not n_hit else f"   ({n_hit} side cached)")
