@@ -75,7 +75,7 @@ reference solution and rejects most wrong answers.
 | the same, training seed 2 | 13 | 7 |
 | v3's rows plus 598 rows from every document admitted since (teachers and the specification round), seed 1 | 23 | 13 |
 | the same, seed 3 | 27 | 13 |
-| the same, seed 2 | being measured | |
+| the same, seed 2 | 24 | 15 |
 | Qwen3.5-4B, the student's own starting weights, prompted, the same 17 answers a problem | 15 | 8 |
 | Qwen3.5-9B, prompted, the same 17 answers a problem | 18 | 7 |
 | Qwen3.5-2B, prompted, the same 17 answers a problem | 4 | 3 |
