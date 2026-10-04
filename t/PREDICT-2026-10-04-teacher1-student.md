@@ -65,3 +65,11 @@ The shipped recipe's seeds finished and left the lab's GPU 1 idle while seeds 1 
 step. Seed 2 (step 371 of 1,310) was stopped and started again from step 0 alone on GPU 1, the same model of card,
 with the same command, rows and seed; the stopped run's output is kept aside, not used. Seed 1 continues on GPU 2,
 now alone. Predictions stand.
+
+## Seed 3, 2026-10-04 07:14Z (`~/scratch/teacher1/levels-teacher1-seed3.md`; graded before seeds 1 and 2, which are
+still training or answering, by the same script)
+
+Trained 1,310 steps (final loss 0.0240). The clean 200: 112 problems with tested Python, 47 with a kept
+specification, 42 answered, all 42 pass their tests; **21 proved by at least one prover, 19 by three, 17 by five, 15 by
+six, 12 by all seven**. The shipped recipe's seed 3, the same seed on v3's rows alone: 17 and 8. S1 holds for seed 3;
+S2 and Section 1 wait for seeds 1 and 2.
