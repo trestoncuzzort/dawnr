@@ -132,3 +132,8 @@ and fstar on the lab. Rocq timed out or read unproved on every one, so neither g
 The real program of 482 (seed 2) now reads refuted in rocq and fstar, as dafny, verus and framac already read it (a
 real witness: undefined at `s=[65]`). Teacher2's three seeds therefore read 23, 24, 27 and 13, 15, 13 under either
 instrument, which is the comparison `t/PREDICT-2026-10-04-teacher3-student.md` registered.
+
+**Rocq's timeouts are not the budget (2026-10-04, recorded 23:14Z).** `coqc` alone on the trial's loop half of 741 (the
+half rocq times out on for teacher2's seed 1 and teacher3's seed 3) had not finished after 900 s, five times the
+verifier's 180 s backstop: the generated proof does not close, so a longer limit would not move these cells; the
+rocq lowering's script for this loop shape is the work, as lean's two gaps above are.
