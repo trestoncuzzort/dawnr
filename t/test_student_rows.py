@@ -76,3 +76,29 @@ class HeldOut(unittest.TestCase):
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
+
+
+class HeldoutLeaks(unittest.TestCase):
+    """leaks_heldout (2026-10-04): the textual check let a training row through whose specification equals a held-out
+    question's once the held-out copy's `gate loops` line is ignored (vericoding_DD0680)."""
+    HELD = {"name": "vericoding_dd0680__replace", "chosen": "```t\nt 1\ngate loops\ntask vericoding_dd0680__replace(s: seq, ch: int) returns (v: seq)\n"
+            "  ensures len(v) == len(s)\n{\n  v := s;\n}\n```"}
+
+    def row(self, name, text):
+        return {"name": name, "chosen": "```t\n" + text + "```"}
+
+    def test_the_same_specification_without_the_gate_line_is_a_leak(self):
+        r = self.row("teacher_doc", "t 1\ntask other_name(s: seq, ch: int) returns (v: seq)\n  ensures len(v) == len(s)\n{\n  v := [];\n  v := s;\n}\n")
+        self.assertEqual(student_rows.leaks_heldout([r], [self.HELD]), [(0, "spec-without-gate")])
+
+    def test_the_same_vericoding_problem_is_a_leak_whatever_its_text(self):
+        r = self.row("vericoding_DD0680", "t 1\ntask vericoding_DD0680(a: int) returns (r: int)\n  ensures r == a\n{\n  r := a;\n}\n")
+        self.assertEqual(student_rows.leaks_heldout([r], [self.HELD]), [(0, "stem")])
+
+    def test_the_textual_match_is_still_caught_and_an_unrelated_row_is_not(self):
+        same = self.row("x", "t 1\ngate loops\ntask y(s: seq, ch: int) returns (v: seq)\n  ensures len(v) == len(s)\n{\n  v := s;\n}\n")
+        other = self.row("z", "t 0\ntask g(a: int) returns (r: int)\n  ensures r == a + 1\n{\n  r := a + 1;\n}\n")
+        self.assertEqual(student_rows.leaks_heldout([same, other], [self.HELD]), [(0, "text")])
+
+    def test_a_row_without_a_t_block_is_skipped(self):
+        self.assertEqual(student_rows.leaks_heldout([{"name": "p", "chosen": "def f(x):\n    return x\n"}], [self.HELD]), [])
