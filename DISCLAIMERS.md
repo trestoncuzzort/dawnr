@@ -67,13 +67,13 @@ reference solution and rejects most wrong answers.
 | the student on v5's rows, training seed 1 | 18 | 7 |
 | the student on v5's rows, training seed 2 | 18 | 8 |
 | the student on v5's rows, training seed 3 | 15 | 7 |
-| the shipped recipe (v3's rows, no GPL rows), training seed 1 | 17 | 10 |
-| the shipped recipe, training seeds 2 and 3 | training | training |
+| v3's rows (no GPL rows), training seed 1 | 17 | 10 |
+| v3's rows, training seeds 2 and 3 | training | training |
 | Phi-4-mini, prompted, the same 17 answers a problem | 3 | 3 |
 | Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 9 | 7 |
 | every model trained here from scratch | 0 | 0 |
 
-Every row is counted the same way: each program's specification checked against the problem's reference (EvalPlus's corrected MBPP+ solution where it keeps the problem's tests) on 1,000 drawn inputs, and every set's answers normalised alike ([correction](t/PREDICT-2026-10-01-replication.md)).
+v3's rows were not released: their first seed missed the release gate on the 33 given specifications by two (25 of 33 by all seven, against 27; [v3](t/PREDICT-2026-10-02-release-v3.md)), so the published model is still `student-v1`. Every row is counted the same way: each program's specification checked against the problem's reference (EvalPlus's corrected MBPP+ solution where it keeps the problem's tests) on 1,000 drawn inputs, and every set's answers normalised alike ([correction](t/PREDICT-2026-10-01-replication.md)).
 
 This is not the win the project set itself. Given every advantage, decoding under t's grammar so it cannot write unparseable output, Phi-4-mini proves 9 at one prover and 7 at all seven; the student about doubles it at one prover and is level at all seven, where the written bar asks for double ([outcome](t/PREDICT-2026-10-01-replication.md)).
 
