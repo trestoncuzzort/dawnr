@@ -71,3 +71,11 @@ route and script (`spec_first --python 3`, the corrected instrument), beside the
 
 - **Z4.** The fine-tuned 2B proves more than the prompted 2B at one kernel and by all seven.
 - **Z5.** The fine-tuned 2B proves at least 12 at one kernel and 6 by all seven.
+
+## The prompted Qwen3.5-9B, 2026-10-04 13:25Z (`~/scratch/size-curve/levels-qwen35-9b.md`; recorded 13:25Z)
+
+17 answers a problem: 125 problems reach a task, 73 pass their tests, **18 proved by at least one kernel, 13 by three,
+13 by five, 12 by six, 7 by all seven**: three more than the prompted 4B at one kernel, one fewer by all seven.
+
+- **Z2 falsified** (the 2B, 0.8B and 27B still to come): a prompted Qwen3.5, the 9B, proves 18 at one kernel, more
+  than the lowest shipped-recipe seed (16).
