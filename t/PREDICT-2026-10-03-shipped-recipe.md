@@ -42,3 +42,10 @@ before this amendment, on the desktop where both run: the v5 seeds' 322 accepted
 neighbouring problem's tests, and cut in half (966 cases) give the same result under both, 0 different. The
 generation is unchanged (`~/.venv-t-train`, the reference PyTorch kernels, as the v5 seeds' `~/.venv-t` had).
 Seed 1's Python step is run again on GPU 1; seeds 2 and 3 take it when their training ends. Predictions stand.
+
+## Seed 1, 2026-10-03 23:59Z (`~/scratch/shipped/levels-seed1.md`)
+
+Seed 1 (v3's weights), the clean 200, complete specifications, the corrected instrument: 37 reach a task, 37
+pass their tests, 17 proved by at least one prover, 16 by three, 13 by five, 11 by six, **10 by all seven**. For
+seed 1, prediction 123 holds (17 and 10 against 15 and 6). 124 waits for all three seeds; at all seven seed 1 is
+2.7 above the v5 recipe's mean (7.3), more than the 1 the prediction allows, in the direction of the shipped rows.

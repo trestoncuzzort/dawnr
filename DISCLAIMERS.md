@@ -64,9 +64,11 @@ reference solution and rejects most wrong answers.
 
 | on the clean 200 | proved by at least one prover | proved by all seven |
 |---|---:|---:|
-| the student, training seed 1 | 18 | 7 |
-| the student, training seed 2 | 18 | 8 |
-| the student, training seed 3 | 15 | 7 |
+| the student on v5's rows, training seed 1 | 18 | 7 |
+| the student on v5's rows, training seed 2 | 18 | 8 |
+| the student on v5's rows, training seed 3 | 15 | 7 |
+| the shipped recipe (v3's rows, no GPL rows), training seed 1 | 17 | 10 |
+| the shipped recipe, training seeds 2 and 3 | training | training |
 | Phi-4-mini, prompted, the same 17 answers a problem | 3 | 3 |
 | Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 9 | 7 |
 | every model trained here from scratch | 0 | 0 |
