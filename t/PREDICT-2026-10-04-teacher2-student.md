@@ -48,3 +48,9 @@ leaks by a stricter check than build_v5's, which a first build showed misses one
 the leak note): any row whose vericoding stem is a held-out question's, or whose specification matches one with the
 header's gate line left out, besides build_v5's own check; 10 rows over six specifications (DA0455, DD0061, DD0077,
 DD0680, DD0684, DD0752). Predictions stand.
+
+## Amendment, 2026-10-04 07:50Z, before any seed is measured: where seeds 2 and 3 run
+
+Seed 3 started on the lab's GPU 2 as soon as teacher1's seed 1 freed it (the first orchestrator would have waited for
+teacher1's seed 2 too); seed 2 starts on GPU 1 when teacher1's seed 2 has answered there. Each seed is graded as soon
+as it has answered. Same command, rows and seeds; predictions stand.
