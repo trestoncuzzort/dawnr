@@ -1,0 +1,43 @@
+# The student on every admitted document, round 3's 129 APPS documents included, three seeds: registered before any of it trains
+
+Registered 2026-10-04 13:36Z. The teacher2 round (v3's rows plus 598 rows from every document admitted through Bedrock
+round 2 and the specification round) reads 23 and 13, then 27 and 13, at one kernel and by all seven for its seeds 1
+and 3 (seed 2 is training). The prompted starting weights read 15 and 8 with 17 answers a problem
+(`t/PREDICT-2026-10-04-size-curve.md`), so what the documents add is the part of the student this project made.
+Bedrock round 3 (DeepSeek-V3.2 on the 2,165 remaining APPS training problems) admitted **129 documents** in six or
+seven kernels (A2, `t/PREDICT-2026-10-04-teacher-round3-apps.md`), which by its rule join the pool for the next
+registered student round. This is that round; nothing else changes.
+
+## The rows (a rule fixed now; the counts are recorded when built, before training)
+
+`~/scratch/teacher3/pool.sh`: the GPL-free teacher2 rows (the release-v4 candidate's, 4,579, sha256
+1adba7e4a9df95d3...) byte for byte, then round 3's 129 admitted training documents through the pool's own route:
+`extract --promote-header`, the problems' tests, the seven kernels on the lab under the tasks' own names, the
+corrected specification check (1,000 draws, each task's own generator, MBPP+'s references), `t/graded_pool.py`'s
+gates at one kernel and prompt s2, then `t/spec_first_rows.py` on those rows. Dropped: every row
+`t/student_rows.py`'s `leaks_heldout` flags (a held-out question's vericoding stem, its program or specification,
+or its specification without the `gate` line) and any row outside the training side.
+
+## Training and measurement
+
+The shipped recipe exactly (`t/student_sft.py`, Qwen3.5-4B at the snapshot v3 used, rank 64, five epochs, rows up to
+2,845 tokens), seeds 1, 2 and 3, each alone on one of the lab's cards as it comes free (GPU 1 after the size curve's
+fine-tuned 2B, GPU 2 after its 27B point, GPU 3 after teacher2's seed 2), each measured on the clean 200 by the shipped
+seeds' route and script as soon as it has answered. A seed is graded with the instrument in force when it is graded:
+if the case split (`t/PREDICT-2026-10-04-case-split.md`) is merged by then, the comparison sets are teacher2's seeds
+regraded with it, and the cells the split decided are listed.
+
+## Predictions
+
+- **T1.** Each seed proves at least 18 of the clean 200 at one kernel and at least 11 by all seven.
+- **T2.** The three seeds' mean by all seven is at least teacher2's three-seed mean.
+
+Section 1 is judged on these seeds by its own rule: doubled when every seed proves at least 18 at one kernel and 14 by
+all seven (twice Phi-4-mini under `t`'s grammar, 9 and 7).
+
+## What it cannot show
+
+Round 3's documents answer APPS problems, whose statements are stories and input formats rather than MBPP's one-line
+requests; a gain, or none, says how far they transfer to MBPP and HumanEval. The base rows differ from teacher2's by
+the 46 GPL-derived specification-given rows left out; the release-v4 candidate (seed 1 on exactly those base rows)
+measures that difference for one seed.
