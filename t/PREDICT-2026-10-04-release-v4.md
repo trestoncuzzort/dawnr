@@ -31,3 +31,25 @@ hold 46 specification-given rows built from them, so its seeds are measurements,
 is instead one model trained with the teacher2 recipe and seed 1 on those rows without the 46**
 (`sft-student-teacher2-nogpl.jsonl`, 4,579 rows, sha256 1adba7e4a9df95d3...), on the lab's GPU 1. R3 is read on this
 candidate's own clean-200 measurement, taken by the shipped seeds' route. R1 and R2 are unchanged.
+
+## Outcome, 2026-10-04 14:43Z (`~/scratch/release-v4/log`, `q33-levels.json`, `levels-v4cand-seed1.md`; recorded 14:43Z)
+
+The candidate (seed 1 on the GPL-free teacher2 rows, 1,425 steps, final loss 0.0253), exported to Q8_0 (4,482,402,752
+bytes, sha256 c937a44c0b1c81b7..., three shards) and measured on this desktop's CPU through llama-server:
+
+| | the candidate | v1 | v3 |
+|---|---:|---:|---:|
+| the 33 given specifications, proved by all seven | **22** | 26 | 25 |
+| the same, by at least one (a kernel refutes 8) | 25 | | |
+| one greedy dev answer, complete specifications, at least one / all seven | **7** / 3 | 4 | 4 |
+| the clean 200 (its own route), at least one / all seven | **23** / **13** | | |
+
+- **R1 falsified:** 22 of 33 by all seven, not at least 26.
+- **R2 holds:** 7 dev problems on complete specifications, against 3.
+- **R3 holds:** 23 and 13, against 17 and 9 (the same as teacher2's seed 1 with the 46 GPL-derived rows: leaving
+  them out cost nothing there).
+
+**Not published; `student-v1` stays what `install.sh` downloads.** The rows that lift the student from a problem
+statement (the clean 200 from 17 to 23 at one kernel and from 10 to 13 by all seven for seed 1, dev from 4 to 7) cost
+it proofs when the specification is given (26 to 22 by all seven). A release candidate has to hold both; the next one
+needs rows that keep the given-specification skill while the teacher documents grow.
