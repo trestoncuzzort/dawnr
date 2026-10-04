@@ -53,7 +53,7 @@ Section 1 is then judged again on the regraded numbers by its own rule (doubled 
 Phi's regraded counts at both levels), beside the judgement made on the registered instrument, which stands as made.
 The teacher2 round's Q1 to Q3 are judged on the instrument they were registered with.
 
-## Outcome, 2026-10-04 12:10Z (`~/scratch/cs-regrade/`: the lab's tables, `build.py`, the `-cs` copies, `verdicts-cs.json`)
+## Outcome, 2026-10-04 12:01Z (`~/scratch/cs-regrade/`: the lab's tables, `build.py`, the `-cs` copies, `verdicts-cs.json`)
 
 The 57 cells graded on the lab from a checkout of 00716c53 in four minutes (11:55Z to 11:59Z). Lean, rocq, fstar on
 each regraded task (real / twin):
