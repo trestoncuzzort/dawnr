@@ -48,3 +48,10 @@ measures that difference for one seed.
 byte, then 516: 129 graded rows (every admitted document; graded again on the lab under their own names, by level
 5 to 7: 6, 37, 86) and their 387 spec-first rows (129 each of Python, specification and proof-from-Python). No row
 dropped by the held-out check; none outside the training side. Predictions stand.
+
+## Seed 2, 2026-10-04 19:54Z (`~/scratch/teacher3/levels-teacher3-seed2.md`; recorded 19:55Z)
+
+Trained alone on GPU 2 (1,585 steps, final loss 0.0265): 111 problems with tested Python, 49 answered, all 49 pass
+their tests; **27 proved by at least one prover, 25 by three, 20 by five, 18 by six, 15 by all seven**. Graded with the
+case split, which decided three cells, all on 605 (lean unproved, fstar verified, rocq a timeout); no count at one
+kernel or by all seven depends on them. The same seed on teacher2's rows: 24 and 15. T1 holds for seed 2.
