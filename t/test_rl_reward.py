@@ -96,6 +96,18 @@ class Tiers(unittest.TestCase):
         self.assertEqual(s["drawn"]["status"], "reference does not reproduce its tests")
         self.assertTrue(rl_reward.tests_ok(s))
 
+    def test_tests_that_disagree_about_their_output_kind_leave_the_drawn_check_unused(self):
+        # HumanEval's split_words answers with words or with a count, so the problem's own points mix kinds; the
+        # drawn check raised on the second point and stopped a whole scoring run (Bedrock teacher round, 2026-10-04)
+        import random
+        import surface
+        entry = {"fn": "f", "rec": {"code": "def f(x):\n    return [[x]] if x > 0 else x\n", "text": "mixed"},
+                 "points": [{"args": [("int", 2)], "expected": ("seq-of-seq", [[2]])},
+                            {"args": [("int", 0)], "expected": ("int", 0)}]}
+        out = rl_reward.drawn_tests(surface.parse(se.find_block(ADD_ONE)), entry, 5, random.Random(1))
+        self.assertEqual(out["status"], "the problem's tests disagree about their output's kind")
+        self.assertTrue(rl_reward.tests_ok({"tests": "pass", "drawn": out}))
+
     def test_a_proof_of_a_weak_spec_scores_below_a_full_one(self):
         s = self.sig(ADD_ONE)
         self.assertFalse(s["spec"].get("weak"))
