@@ -79,3 +79,18 @@ route and script (`spec_first --python 3`, the corrected instrument), beside the
 
 - **Z2 falsified** (the 2B, 0.8B and 27B still to come): a prompted Qwen3.5, the 9B, proves 18 at one kernel, more
   than the lowest shipped-recipe seed (16).
+
+## The prompted Qwen3.5-2B and 0.8B, 2026-10-04 13:32Z and 13:33Z (recorded 13:35Z)
+
+17 answers a problem each. The 2B: 109 reach a task, 20 pass their tests, **4 proved by at least one kernel, 3 by all
+seven**. The 0.8B: 146 reach a task, 6 pass their tests, **1 and 1**. The 27B's first start failed in vLLM (256
+sequences at once exceed the 184 state blocks one card leaves this hybrid model) and runs again alone with
+`--max-num-seqs 128`, which changes how many requests wait, not what is asked.
+
+| prompted, 17 answers a problem | at least one kernel | all seven |
+|---|---:|---:|
+| Qwen3.5-0.8B | 1 | 1 |
+| Qwen3.5-2B | 4 | 3 |
+| Phi-4-mini (3.8B) | 3 | 3 |
+| Qwen3.5-4B | 15 | 8 |
+| Qwen3.5-9B | 18 | 7 |

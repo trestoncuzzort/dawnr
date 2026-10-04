@@ -78,6 +78,8 @@ reference solution and rejects most wrong answers.
 | the same, seed 2 | being measured | |
 | Qwen3.5-4B, the student's own starting weights, prompted, the same 17 answers a problem | 15 | 8 |
 | Qwen3.5-9B, prompted, the same 17 answers a problem | 18 | 7 |
+| Qwen3.5-2B, prompted, the same 17 answers a problem | 4 | 3 |
+| Qwen3.5-0.8B, prompted, the same 17 answers a problem | 1 | 1 |
 | Phi-4-mini, prompted, the same 17 answers a problem | 3 | 3 |
 | Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 9 | 7 |
 | every model trained here from scratch | 0 | 0 |

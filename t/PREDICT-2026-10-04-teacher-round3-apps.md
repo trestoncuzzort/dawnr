@@ -37,3 +37,15 @@ at each tier or better: parses 1,491, typed 1,161, tests 783, proved-weak 252, *
 - **A3 holds:** $29.10 against $30.
 
 A2 waits for the seven-kernel assembly of the 245.
+
+## A2, 2026-10-04 13:33Z (`~/scratch/bedrock/round3/assemble-report.json`; recorded 13:35Z)
+
+The seven-kernel assembly of the 245 top-tier answers (three cells at a time on this machine, 10:58Z to 13:33Z):
+**86 clean in all seven, 43 in six: 129 admitted**; the rest by clean count 1 to 5: 13, 15, 21, 38, 29.
+
+- **A2 holds:** 129 admitted, against 35 (53% of the top-tier answers; round 2's DeepSeek answers: 28 of 70, 40%).
+
+The assembly graded every answer and wrote its table and the admitted records, then raised writing the empty
+specification pool's `documents.txt` (this round has no specification prompts, and the folder is created only for a
+non-empty shortlist); the report was written from the table it left, and the code fixed (de6550a2). By the rule
+above, the 129 documents join the pool for the next registered student round.
