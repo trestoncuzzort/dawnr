@@ -39,3 +39,17 @@ operator's leave to use the lab freely. v3 trains on the lab's GPU 1 (an RTX 600
 (sha256 b2fbb089...) and base weights (the same Hugging Face snapshot, copied), merges and exports there, and is
 measured on the desktop's CPU exactly as v1 and v2 were. The lab's PyTorch is 2.13 (the desktop's 2.11); the other
 libraries are the same versions (transformers 5.17, peft 0.21, bitsandbytes 0.50.2). Predictions 118 and 119 stand.
+
+## Outcome, 2026-10-04 00:11Z (`~/scratch/release-v3/log`)
+
+At Q8_0 through llama-server on the desktop's CPU, the way `dawnr` runs it:
+
+118. **Falsified:** 25 of the 33 given specifications proved by all seven (27 by at least one), not 27. v1 26,
+     v2 24.
+119. **Holds:** one greedy dev answer proves 4 dev problems on complete specifications (2 of them by all seven).
+
+118 failed, so v3 is not released and `student-v1` stays what `install.sh` downloads. The 33-question gate and
+the clean 200 disagree about v3's rows: on the gate it is one behind v1, on the clean 200 its first training seed
+is proved by all seven on 10 problems, more than any v5 seed (7, 8, 7;
+`t/PREDICT-2026-10-03-shipped-recipe.md`). One seed on 33 questions moves by a problem or two, so neither
+reading is taken as the rows' effect until the shipped recipe's three seeds are in.
