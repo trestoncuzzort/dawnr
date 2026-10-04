@@ -105,3 +105,34 @@ gpt-oss-120b spent its whole budget reasoning on 3 of 80 replies and Bedrock ret
 handed on None and the scorers stopped (fixed in 0116e4b0: an absent answer is an empty one), and those three were
 scored as empty answers. Every teacher proves far more given a specification (6 to 14 of 40) than from a problem
 statement alone (0 to 4 of 40), where the specification check and the proof both have to come out right.
+
+## Outcome, 2026-10-04 03:18Z (`~/scratch/bedrock/round/assemble-report.json`, `~/scratch/bedrock/log`)
+
+Qwen3-235B-A22B-2507, k = 8, 6,384 requests through the proxy, every one answered on the flex tier: $3.47 by the
+ledger (22.4M tokens in, 2.3M out). The staged specification file holds 442 lines but 441 distinct prompts (DH0141
+twice), so the specification pool is 441.
+
+| | asked | tests pass | top tier | graded in seven kernels | clean in all seven | clean in six | admitted |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| training problems | 356 | 151 | 40 | 40 | 10 | 11 | 21 |
+| specification prompts | 441 | | 174 | 174 | 79 | 23 | 102 |
+
+- **T1 holds:** 151 of 356, at the line (150).
+- **T2 falsified:** 40 of 356, not at least 80.
+- **T3 holds:** 174 of 441, almost three times the 60.
+- **T4 holds:** 89 documents clean in all seven (10 and 79), against 80.
+- **T5:** the ledger reads $3.47, inside $55; the credit AWS reports is read again once its billing catches up
+  (it still reads $200.00 at 03:18Z), and the second half is judged on that figure.
+
+**Reading.** Given a specification the teacher proves 39% of prompts and most of those proofs hold in every
+kernel (79 of 174); from a problem statement it reaches the top tier on 11%, and four of five of those fail some
+other kernel. Writing the specification, not the proof, is where answers from a statement die, as it is for the
+student. 123 documents were admitted (six or seven kernels) and go to the registered student round
+(`t/PREDICT-2026-10-04-teacher1-student.md`).
+
+**Two things that went wrong on the way, both fixed.** The reward scorer stopped on 7 problems whose own test
+points mix output kinds (146c38ff). The first seven-kernel assembly ran eight cells at once (about 48 provers on a
+15 GB machine), was killed whole under memory pressure with nothing logged, and ran again with three; the prover
+cache kept the finished cells, including any timeout recorded while the machine was overloaded. A timeout never
+admits a document, so the error can only have kept out documents, not let any in; the documents near the line
+are re-graded without the cache after the student's rows are built, and any that change are reported.
