@@ -1,6 +1,6 @@
 # The teacher round on Amazon Bedrock: registered before any sample is drawn
 
-Registered 2026-10-03 23:30Z. `t/PREDICT-2026-10-01-dawnr-teacher-round.md` staged this round for a
+Registered 2026-10-03 23:25Z (commit dce1e288; the pilot's first sample 23:26:05Z). `t/PREDICT-2026-10-01-dawnr-teacher-round.md` staged this round for a
 27B teacher on a rented GPU and was stopped before it measured anything; its stop note says a round
 elsewhere is a new registration with its own predictions. This is that registration. The reason is
 unchanged and sharper: the student is proved correct on 15 to 18 of the clean 200, Section 1 of
@@ -85,7 +85,7 @@ decontamination exclusions), the clean-200 gate stays where it is, and a documen
 being proved, not for being novel. The 27B round's 74 specification sample files on the lab are a
 different teacher's and are not mixed into this round.
 
-## Pilot outcome, 2026-10-03 23:50Z (the rule applied; the round not yet run)
+## Pilot outcome, 2026-10-03 23:38Z (commit 0f1b1d89; the rule applied, the round not yet run)
 
 One sample each on the 40 training ids and 40 specification prompts; spend by the proxy's ledger.
 
