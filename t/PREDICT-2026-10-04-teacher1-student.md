@@ -58,3 +58,10 @@ A first build at 03:18Z admitted no graded rows: the assembly's own seven-kernel
 names each task with the reward scorer's suffix (`__rl<hash>`), so the lab's grading skipped the set as already
 graded and the pool found no kernel row for any task. The table was moved aside and the set graded on the lab
 under its own names; that is the build above. Nothing trained on the first build. Predictions stand.
+
+## Amendment, 2026-10-04 05:07Z, before any seed is measured: seed 2 on its own card
+
+The shipped recipe's seeds finished and left the lab's GPU 1 idle while seeds 1 and 2 shared GPU 2 at 16 to 19 s a
+step. Seed 2 (step 371 of 1,310) was stopped and started again from step 0 alone on GPU 1, the same model of card,
+with the same command, rows and seed; the stopped run's output is kept aside, not used. Seed 1 continues on GPU 2,
+now alone. Predictions stand.
