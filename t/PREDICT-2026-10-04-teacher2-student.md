@@ -78,3 +78,29 @@ Trained 1,440 steps (final loss 0.0258). 111 problems with tested Python, 57 wit
 all 48 pass their tests; **27 proved by at least one prover, 23 by three, 16 by five, 15 by six, 13 by all seven**.
 The same seed on v3's rows alone: 17 and 8; with round 1's documents only: 21 and 12. Q1 holds for seed 3 (27 and
 13). Q2 holds if seed 2 proves at least 7 by all seven, Q3 if it proves at least 1.
+
+## Seed 2 and the outcome, 2026-10-04 16:49Z (`~/scratch/teacher2/levels-teacher2-seed2.md`; recorded 16:56Z)
+
+Seed 2 (restarted alone on GPU 3, 1,440 steps, final loss 0.0256): 104 problems with tested Python, 52 with a kept
+specification, 48 answered, all 48 pass their tests; **24 proved by at least one prover, 21 by three, 17 by five,
+16 by six, 15 by all seven**.
+
+| seed | v3's rows alone | plus round 1's documents (teacher1) | plus every admitted document (teacher2) |
+|---|---:|---:|---:|
+| 1 | 17 and 10 | 19 and 8 | 23 and 13 |
+| 2 | 16 and 8 | 13 and 7 | 24 and 15 |
+| 3 | 17 and 8 | 21 and 12 | 27 and 13 |
+| mean | 16.7 and 8.7 | 17.7 and 9.0 | **24.7 and 13.7** |
+
+- **Q1 holds:** every seed proves at least 17 at one kernel and 9 by all seven (23, 24, 27; 13, 15, 13).
+- **Q2 holds:** the mean by all seven is 13.7, against at least 10.7.
+- **Q3 holds:** 13.7 against teacher1's 9.0.
+- **Section 1:** every seed is above Phi-4-mini under `t`'s grammar (9 and 7) at both levels, so it is beaten
+  with every seed, by more than v3's rows did. Doubled needs every seed at 18 and 14: all three pass 18 at one kernel,
+  seed 2 reaches 15 by all seven, and seeds 1 and 3 stop at 13. **Not doubled**, by one problem on two seeds.
+
+**Reading.** 598 rows of admitted documents moved every seed past the spread three seeds of the same recipe had shown
+(v3's rows: 16 to 17 and 8 to 10; these: 23 to 27 and 13 to 15), where teacher1's 182 rows had not. Against the
+student's own starting weights prompted the same way (15 and 8, `t/PREDICT-2026-10-04-size-curve.md`), the rows add
+8 to 12 at one kernel and 5 to 7 by all seven. The case split, regraded on seeds 1 and 3, left both at 13
+(`t/PREDICT-2026-10-04-case-split.md`); seed 2's regrade follows the merge.
