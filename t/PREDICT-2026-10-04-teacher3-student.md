@@ -41,3 +41,10 @@ Round 3's documents answer APPS problems, whose statements are stories and input
 requests; a gain, or none, says how far they transfer to MBPP and HumanEval. The base rows differ from teacher2's by
 the 46 GPL-derived specification-given rows left out; the release-v4 candidate (seed 1 on exactly those base rows)
 measures that difference for one seed.
+
+## The rows as built, 2026-10-04 13:52Z (recorded 13:52:20Z, before any seed trains)
+
+`sft-student-teacher3.jsonl`, **5,095 rows**, sha256 848fca29d9399ef9...: the release-v4 candidate's 4,579 byte for
+byte, then 516: 129 graded rows (every admitted document; graded again on the lab under their own names, by level
+5 to 7: 6, 37, 86) and their 387 spec-first rows (129 each of Python, specification and proof-from-Python). No row
+dropped by the held-out check; none outside the training side. Predictions stand.
