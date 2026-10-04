@@ -73,3 +73,14 @@ Trained 1,310 steps (final loss 0.0240). The clean 200: 112 problems with tested
 specification, 42 answered, all 42 pass their tests; **21 proved by at least one prover, 19 by three, 17 by five, 15 by
 six, 12 by all seven**. The shipped recipe's seed 3, the same seed on v3's rows alone: 17 and 8. S1 holds for seed 3;
 S2 and Section 1 wait for seeds 1 and 2.
+
+## A held-out leak in these rows, found 2026-10-04 07:35Z (after training, before any seed's result is reported here)
+
+The leak check (build_v5's: the program or the specification, name normalised, against the 33 held-out
+specification-given questions) compares the printed task including its header's `gate` line. One appended
+specification-given row, `vericoding_DD0680`, has the same specification as held-out question
+`vericoding_dd0680__replaceBlanksWithChar`, whose copy carries `gate loops`; the check missed it. A stricter check
+(the vericoding stem, or the specification without the gate line) finds only this one row among the 182 appended and
+none among v3's 4,027. **The measurement registered here, the clean 200, is unaffected**: its problems are MBPP's and
+HumanEval's, and no clean-200 problem is a vericoding specification. Any measurement of these weights on the 33
+held-out specification-given questions would be contaminated for that one question and must leave it out.
