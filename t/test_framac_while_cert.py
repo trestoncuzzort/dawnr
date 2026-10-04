@@ -156,7 +156,7 @@ def committed_tasks_unchanged_without_a_witness():
     taskdir = HERE / "tasks"
     names = sorted(p.stem for p in taskdir.glob("*.t"))
     assert names, "no committed tasks found"
-    checked = 0
+    checked, abstained = 0, set()
     for name in names:
         task = tasks_io.load_task(taskdir / f"{name}.t")
         try:
@@ -167,15 +167,19 @@ def committed_tasks_unchanged_without_a_witness():
         try:
             without = lower_framac.lower(task, task["body"])
         except NotImplementedError:
-            continue              # this file's own named abstains (unrelated)
+            abstained.add(name)
+            continue
         with_w = lower_framac.lower(task, task["body"], witness=w)
         assert without == with_w, name
         checked += 1
-    # count_vowels/split_join/swap_rows are this file's own named
-    # abstains (T_STRFIND_ACSL not wired to spec position; no CAPACITY
-    # bound; nested-seq RETURN unsupported), unrelated to this wave's
-    # fix -- skipped above via `continue`, not asserted on here.
-    assert checked >= len(names) - 3, (checked, len(names))
+    # framac's named abstains on the committed corpus, each a feature this lowering does not encode, unrelated to
+    # this file's fix: count_vowels (the string library's `count` in ACSL term position), split_join (no CAPACITY
+    # bound for its output), swap_rows (a nested-seq return); and, committed after this test was written,
+    # color_code (datatypes) and set_collect / set_toggle (finite sets). Named rather than counted (2026-10-04: the
+    # count allowed 3 and the corpus had grown to 6), so a new abstention fails here instead of hiding in a margin.
+    expected = {"count_vowels", "split_join", "swap_rows", "color_code", "set_collect", "set_toggle"}
+    assert abstained == expected, (sorted(abstained - expected), sorted(expected - abstained))
+    assert checked == len(names) - len(expected), (checked, len(names))
 
 
 def main() -> int:
