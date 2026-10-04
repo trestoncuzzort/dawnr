@@ -59,3 +59,15 @@ clean 200 and instrument: v3's rows (the shipped recipe's three seeds, 16.7 and 
 and 1 by all seven; v3's rows plus every admitted document (teacher2's seeds 1 and 3, 23 and 27, 13 and 13) 8 to 12
 and 5. The student's own route (the Python first, then a specification, then the proof, `t/spec_first.py`) also
 spends 17 calls a problem, so the comparison is at a matched number of answers, not a matched route.
+
+## Amendment, 2026-10-04 12:55Z, before it trains: the fine-tuned side at a second size
+
+The curve's other half is fine-tuned models at more than one size. While the lab's GPU 1 would otherwise wait for the
+next student round's rows, a **Qwen3.5-2B student** is trained there with the shipped recipe exactly
+(`t/student_sft.py`, rank 64, five epochs, rows up to 2,845 tokens), seed 1, on the release-v4 candidate's rows (the
+GPL-free teacher2 rows, 4,579, sha256 1adba7e4a9df95d3...), merged, and measured on the clean 200 by the student's
+route and script (`spec_first --python 3`, the corrected instrument), beside the 4B candidate on the same rows and seed
+(`t/PREDICT-2026-10-04-release-v4.md`, R3) and the prompted Qwen3.5-2B above.
+
+- **Z4.** The fine-tuned 2B proves more than the prompted 2B at one kernel and by all seven.
+- **Z5.** The fine-tuned 2B proves at least 12 at one kernel and 6 by all seven.
