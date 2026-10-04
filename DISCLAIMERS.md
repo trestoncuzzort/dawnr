@@ -68,7 +68,8 @@ reference solution and rejects most wrong answers.
 | the student on v5's rows, training seed 2 | 18 | 8 |
 | the student on v5's rows, training seed 3 | 15 | 7 |
 | v3's rows (no GPL rows), training seed 1 | 17 | 10 |
-| v3's rows, training seeds 2 and 3 | training | training |
+| v3's rows, training seed 2 | 16 | 8 |
+| v3's rows, training seed 3 | being measured | |
 | Phi-4-mini, prompted, the same 17 answers a problem | 3 | 3 |
 | Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 9 | 7 |
 | every model trained here from scratch | 0 | 0 |

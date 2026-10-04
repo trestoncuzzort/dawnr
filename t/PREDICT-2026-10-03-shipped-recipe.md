@@ -49,3 +49,8 @@ Seed 1 (v3's weights), the clean 200, complete specifications, the corrected ins
 pass their tests, 17 proved by at least one prover, 16 by three, 13 by five, 11 by six, **10 by all seven**. For
 seed 1, prediction 123 holds (17 and 10 against 15 and 6). 124 waits for all three seeds; at all seven seed 1 is
 2.7 above the v5 recipe's mean (7.3), more than the 1 the prediction allows, in the direction of the shipped rows.
+
+## Seed 2, 2026-10-04 04:59Z (`~/scratch/shipped/levels-seed2.md`)
+
+45 reach a task and pass their tests; 16 proved by at least one prover, 14 by three, 12 by five, 10 by six, **8 by all
+seven**. Prediction 123 holds for seed 2 (16 and 8 against 15 and 6).
