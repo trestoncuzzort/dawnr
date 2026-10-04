@@ -24,8 +24,11 @@ disagree (96%).
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import signal
 import sys
+import threading
 from collections import Counter
 from pathlib import Path
 
@@ -38,7 +41,35 @@ import spec_check                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 
 MIN_CORRECTNESS, MIN_COMPLETENESS = 0.8, 0.6                    # SAFE's thresholds
-_SKIP = (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError)
+# One evaluation's wall clock (2026-10-04). The interpreter bounds steps (MAX_STEPS) and sizes (MAX_BITS, MAX_SEQ),
+# not time, and teacher3 seed 1's specification stage ran 77 minutes on one problem before the kernel killed it.
+# A Python signal handler runs at the next bytecode of the main thread (docs.python.org/3/library/signal.html),
+# so with every sequence operation capped the timer can interrupt between steps. Off the main thread, no limit.
+EVAL_SECONDS = 60
+
+
+class Overtime(Exception):
+    """An evaluation that ran past EVAL_SECONDS: decides nothing, like interp.Budget."""
+
+
+@contextlib.contextmanager
+def time_limit(seconds: float):
+    if threading.current_thread() is not threading.main_thread() or not hasattr(signal, "setitimer"):
+        yield
+        return
+
+    def _raise(signum, frame):
+        raise Overtime(f"over {seconds} s")
+    old = signal.signal(signal.SIGALRM, _raise)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old)
+
+
+_SKIP = (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError, Overtime)
 
 
 def scores(task: dict, entry: dict) -> dict:
@@ -57,9 +88,10 @@ def scores(task: dict, entry: dict) -> dict:
         env[ret] = se._as_interp_value(kind, value)
         st = interp.St()
         try:
-            if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
-                continue                                        # outside the precondition: says nothing
-            ok = all(interp.ev(e, env, funs, st) is True for e in task.get("ensures", []))
+            with time_limit(EVAL_SECONDS):
+                if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
+                    continue                                    # outside the precondition: says nothing
+                ok = all(interp.ev(e, env, funs, st) is True for e in task.get("ensures", []))
         except _SKIP:
             ok = False                                          # undefined on the right answer is not holding
         except Exception as e:                                  # noqa: BLE001
@@ -71,7 +103,8 @@ def scores(task: dict, entry: dict) -> dict:
             probe[ret] = wrong
             st2 = interp.St()
             try:
-                accepts = all(interp.ev(e, probe, funs, st2) is True for e in task.get("ensures", []))
+                with time_limit(EVAL_SECONDS):
+                    accepts = all(interp.ev(e, probe, funs, st2) is True for e in task.get("ensures", []))
             except Exception:                                   # noqa: BLE001  (undefined on a wrong answer rejects it)
                 accepts = False
             mutants += 1
