@@ -43,3 +43,19 @@ Phi's two readings and the student's seeds beside it, and is reported whichever 
 MBPP and HumanEval are public, so every prompted model may have read their Python solutions; none has read `t`, and
 the proofs and specifications are what the gate counts. The clean 200 answers drawn here are measurements only: no
 training row may come from them (the pool builds refuse every clean-200 id, `t/student_rows.py`).
+
+## The first point: the prompted Qwen3.5-4B, 2026-10-04 12:40Z (`~/scratch/size-curve/levels-qwen35-4b.md`)
+
+The weights the student is fine-tuned from, asked as Phi-4-mini prompted was, 17 answers a problem: 136 problems
+reach a task, 62 pass their tests, **15 proved by at least one kernel, 13 by three, 9 by five, 8 by six, 8 by all
+seven** (its greedy set alone: 6 and 5; one sampled set: 1 to 8).
+
+- **Z1 falsified:** 15 at one kernel, not at most 8.
+
+**Reading.** The prompted starting weights already beat Phi-4-mini under `t`'s grammar (9 and 7) at both levels, and
+prompted Phi (3 and 3) five times over at one kernel: most of the margin section 1 records is the base model chosen
+by measurement on 2026-10-01, not the fine-tuning. What the fine-tuning adds over its own starting weights, on the same
+clean 200 and instrument: v3's rows (the shipped recipe's three seeds, 16.7 and 8.7 on average) about 2 at one kernel
+and 1 by all seven; v3's rows plus every admitted document (teacher2's seeds 1 and 3, 23 and 27, 13 and 13) 8 to 12
+and 5. The student's own route (the Python first, then a specification, then the proof, `t/spec_first.py`) also
+spends 17 calls a problem, so the comparison is at a matched number of answers, not a matched route.
