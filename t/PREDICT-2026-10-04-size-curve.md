@@ -94,3 +94,28 @@ sequences at once exceed the 184 state blocks one card leaves this hybrid model)
 | Phi-4-mini (3.8B) | 3 | 3 |
 | Qwen3.5-4B | 15 | 8 |
 | Qwen3.5-9B | 18 | 7 |
+
+## The prompted Qwen3.5-27B, 2026-10-04 16:49Z (`~/scratch/size-curve/levels-qwen35-27b.md`; recorded 16:49Z)
+
+fp8 weights on one card, 17 answers a problem: 153 problems reach a task, 125 pass their tests, **43 proved by at
+least one kernel, 40 by three, 35 by five, 34 by six, 29 by all seven**. It was graded while three trainings shared
+the lab (load near 150 on 120 threads): 12.1% of its cells timed out on the real side, against 4.0% for the 4B and
+9.0% for the 9B, so its counts are if anything low; its timed-out cells are rechecked when the lab is quiet.
+
+| prompted, 17 answers a problem | parameters | at least one kernel | all seven |
+|---|---:|---:|---:|
+| Qwen3.5-0.8B | 0.87B | 1 | 1 |
+| Qwen3.5-2B | 2.27B | 4 | 3 |
+| Phi-4-mini | 3.8B | 3 | 3 |
+| Phi-4-mini under `t`'s grammar | 3.8B | 9 | 7 |
+| Qwen3.5-4B | 4.66B | 15 | 8 |
+| Qwen3.5-9B | 9.65B | 18 | 7 |
+| Qwen3.5-27B (fp8) | 27.8B | **43** | **29** |
+| *the fine-tuned 4B, the shipped recipe's three seeds* | 4.66B | 17, 16, 17 | 10, 8, 8 |
+| *the fine-tuned 4B on every admitted document (teacher2, seeds 1 and 3)* | 4.66B | 23, 27 | 13, 13 |
+
+**Reading.** The fine-tuned 4B sits between the prompted 9B and the prompted 27B: on every admitted document it
+beats the prompted 9B (two times its size) at both levels, and the prompted 27B (six times its size) beats it by
+about 1.7 times at one kernel and 2.2 times by all seven. Verified data has bought the 4B somewhat more than double
+its size, not the order of magnitude section 3 hoped to state. The same 27B, Apache-2.0 and running on one of our own
+cards at about 60 answers a minute, is also the strongest openly licensed teacher measured on our hardware.
