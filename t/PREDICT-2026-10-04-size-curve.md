@@ -119,3 +119,21 @@ beats the prompted 9B (two times its size) at both levels, and the prompted 27B 
 about 1.7 times at one kernel and 2.2 times by all seven. Verified data has bought the 4B somewhat more than double
 its size, not the order of magnitude section 3 hoped to state. The same 27B, Apache-2.0 and running on one of our own
 cards at about 60 answers a minute, is also the strongest openly licensed teacher measured on our hardware.
+
+## The fine-tuned 2B, 2026-10-04 17:15Z (`~/scratch/size-curve/levels-ft2b-seed1.md`; recorded 17:16Z)
+
+Seed 1 of the shipped recipe on the release-v4 candidate's rows, 1,425 steps (final loss 0.0380, against the 4B's
+0.0253), measured by the student's route: 70 problems with tested Python, 24 with a kept specification, 20 answered,
+all 20 pass their tests; **8 proved by at least one kernel, 7 by three, five and six, 6 by all seven**. Graded after
+the case split was merged; it decided none of these cells.
+
+- **Z4 holds:** 8 and 6 against the prompted 2B's 4 and 3.
+- **Z5 falsified:** 8 at one kernel, not at least 12 (6 by all seven meets its half).
+
+| the same rows and seed | parameters | prompted (17 answers) | fine-tuned (its route) |
+|---|---:|---:|---:|
+| Qwen3.5-2B | 2.27B | 4 and 3 | 8 and 6 |
+| Qwen3.5-4B | 4.66B | 15 and 8 | 23 and 13 |
+
+Fine-tuning on the same verified rows doubles the 2B at both levels and adds about half again to the 4B; the
+fine-tuned 2B stays below the prompted 4B. At this size the base still sets most of the result.
