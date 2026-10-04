@@ -1,6 +1,6 @@
 # The student on v3's rows plus the Bedrock teacher's documents, three seeds: registered before any of it trains
 
-Registered 2026-10-04 01:30Z, while the teacher round's documents are still being graded
+Registered 2026-10-04 01:26Z (commit 3da752b6), while the teacher round's documents are still being graded
 (`t/PREDICT-2026-10-03-teacher-round-bedrock.md`). RL left every unseen measurement where it was
 (`t/PREDICT-2026-10-01-rl-on-the-student.md`, outcome), and every measurement since 2026-09-30 says the student
 lacks documents that reach the top tier. This round adds the teacher's and changes nothing else.

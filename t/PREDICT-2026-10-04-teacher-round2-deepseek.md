@@ -1,6 +1,6 @@
 # A second teacher on the same prompts (DeepSeek-V3.2 on Bedrock): registered before any sample
 
-Registered 2026-10-04 01:35Z. The first Bedrock round (`t/PREDICT-2026-10-03-teacher-round-bedrock.md`) asked
+Registered 2026-10-04 01:27Z (commit 64a5fe9e; its first sample 01:27:22Z). The first Bedrock round (`t/PREDICT-2026-10-03-teacher-round-bedrock.md`) asked
 Qwen3-235B-A22B-2507, the pilot rule's choice on cost per proved item; DeepSeek-V3.2 proved the most pilot items
 (15 of 80 against 12). Given a specification, the first round proved 174 of the 441 distinct prompts; from a problem
 statement alone, 40 of 356. Every specification the lifter can express today has now been asked, and the APPS
