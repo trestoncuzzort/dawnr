@@ -84,3 +84,8 @@ specification-given row, `vericoding_DD0680`, has the same specification as held
 none among v3's 4,027. **The measurement registered here, the clean 200, is unaffected**: its problems are MBPP's and
 HumanEval's, and no clean-200 problem is a vericoding specification. Any measurement of these weights on the 33
 held-out specification-given questions would be contaminated for that one question and must leave it out.
+
+## Seed 1, 2026-10-04 07:48Z (`~/scratch/teacher1/levels-teacher1-seed1.md`)
+
+105 problems with tested Python, 43 answered, all 43 pass their tests; **19 proved by at least one prover, 17 by three,
+13 by five, 11 by six, 8 by all seven**. The same seed on v3's rows alone: 17 and 10. S1 holds for seed 1 (19 and 8).
