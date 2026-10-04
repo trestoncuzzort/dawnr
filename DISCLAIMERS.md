@@ -72,7 +72,7 @@ reference solution and rejects most wrong answers.
 | v3's rows, training seed 3 | 17 | 8 |
 | v3's rows plus 182 rows from a teacher's proved documents, training seed 3 | 21 | 12 |
 | the same, training seed 1 | 19 | 8 |
-| the same, training seed 2 | being measured | |
+| the same, training seed 2 | 13 | 7 |
 | Phi-4-mini, prompted, the same 17 answers a problem | 3 | 3 |
 | Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 9 | 7 |
 | every model trained here from scratch | 0 | 0 |
