@@ -102,3 +102,18 @@ loaded, as RL's generation already does: the same student (the 4B on v5, its mer
 2,015 problems, `t/spec_first.py --reference-python --batch 8` with the same arguments. The kernels compute the
 same function; sampling may differ in rounding. Its outputs come back to the desktop, and extraction, tests,
 grading and the specification check run there as registered. Predictions 36 to 38 stand.
+
+## Outcome, 2026-10-04 02:38Z (`~/scratch/proof-round/log`; pool admission measured 03:30Z)
+
+On the lab's GPU 3, the 4B on v5 with the problems' reference solutions (`--reference-python`): the reference check
+dropped 453 specifications the tests had kept, 154 of the 2,015 problems kept a specification (246 in all), 95
+got a taken answer, all 95 were graded in seven kernels, and the specification check (100 draws) found 93 agree and
+2 disagree. `t/graded_pool.py`'s gates at one kernel admit 63 answers, one per problem: by level 1 to 7, 5, 5, 5,
+8, 5, 7 and 28 (rejected: 17 proved by no kernel, 14 refuted by a kernel, 1 specification too weak).
+
+36. **Falsified:** 154 problems kept a specification, not at least 200.
+37. **Holds:** 95 taken answers, against 60.
+38. **Holds:** 63 admitted to the pool, against 15 (28 of them in all seven kernels).
+
+The 63 are training problems the student had no proved answer for; they join the pool's next rebuild (the set
+and its verdicts are on the lab, `round2-specs-4b-v5`, `verdicts-recheck-specround.json`).
