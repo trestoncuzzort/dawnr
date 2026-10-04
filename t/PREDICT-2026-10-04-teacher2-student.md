@@ -64,3 +64,10 @@ release candidates (`t/PREDICT-2026-10-04-release-v4.md`, amendment).
 102 problems with tested Python, 42 answered, all 42 pass their tests; **23 proved by at least one prover, 20 by three,
 14 by five, 13 by six, 13 by all seven**. Seed 1 on v3's rows alone: 17 and 10; with round 1's documents only: 19 and
 8. Q1 holds for seed 1 (23 and 13).
+
+## Amendment, 2026-10-04 11:26Z, before seeds 2 and 3 are measured: seed 2 on its own card
+
+Seed 1 finished and left the lab's GPU 3 idle while seed 2 shared GPU 1 with the release-v4 candidate at 15 s a step.
+Seed 2 (step 538 of 1,440) was stopped and started again from step 0 alone on GPU 3 at 11:21:44Z (7.9 s a step), the
+same model of card, with the same command, rows and seed; the stopped run's output is kept aside, not used. The
+candidate continues alone on GPU 1. Predictions stand.
