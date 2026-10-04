@@ -38,7 +38,7 @@ above both, doubled when every seed proves at least 18 at one kernel and 14 by a
 It adds three kinds of document at once (more teacher training documents, the student's own specification-round
 answers, more teacher specification documents), so a gain says the set helps, not which part.
 
-## The rows as built, 2026-10-04 07:36Z (before any seed trains)
+## The rows as built, 2026-10-04 07:25Z (commit 52523806; before any seed trains, seed 1 started 07:26:54Z)
 
 `sft-student-teacher2.jsonl`, 4,625 rows, sha256 ba80902ae004179e...: v3's 4,027 byte for byte, then 598: 111 graded
 rows (21 from Bedrock round 1's training documents, 27 from round 2's, 63 from the specification round; by level 1 to
