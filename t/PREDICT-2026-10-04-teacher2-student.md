@@ -58,3 +58,9 @@ as it has answered. Same command, rows and seeds; predictions stand.
 **Provenance note, 2026-10-04 07:52Z.** 46 of this round's appended specification-given rows are built from dafny-synthesis programs
 (GPL-3.0 at the source, reached through DafnyBench), which every release leaves out; these seeds are measurements, not
 release candidates (`t/PREDICT-2026-10-04-release-v4.md`, amendment).
+
+## Seed 1, 2026-10-04 11:20Z (`~/scratch/teacher2/levels-teacher2-seed1.md`)
+
+102 problems with tested Python, 42 answered, all 42 pass their tests; **23 proved by at least one prover, 20 by three,
+14 by five, 13 by six, 13 by all seven**. Seed 1 on v3's rows alone: 17 and 10; with round 1's documents only: 19 and
+8. Q1 holds for seed 1 (23 and 13).
