@@ -52,3 +52,60 @@ are reported for every set.
 Section 1 is then judged again on the regraded numbers by its own rule (doubled when every seed proves at least twice
 Phi's regraded counts at both levels), beside the judgement made on the registered instrument, which stands as made.
 The teacher2 round's Q1 to Q3 are judged on the instrument they were registered with.
+
+## Outcome, 2026-10-04 12:10Z (`~/scratch/cs-regrade/`: the lab's tables, `build.py`, the `-cs` copies, `verdicts-cs.json`)
+
+The 57 cells graded on the lab from a checkout of 00716c53 in four minutes (11:55Z to 11:59Z). Lean, rocq, fstar on
+each regraded task (real / twin):
+
+| set | task | lean | rocq | fstar |
+|---|---|---|---|---|
+| v5 seed 1 | 201 | unproved / refuted | timeout / refuted | verified / refuted |
+| v5 seed 2 | 47 | refuted / refuted | refuted / refuted | refuted / refuted |
+| v5 seed 3 | 472 | verified / refuted | timeout / timeout | verified / refuted |
+| v5 seed 3 | 605 | unproved / refuted | unproved / unproved | verified / refuted |
+| v5 seed 3 | 741 | verified / refuted | verified / refuted | verified / refuted |
+| shipped seed 1 | 552 | unproved / refuted | refuted / refuted | refuted / refuted |
+| shipped seed 1 | 68 | verified / refuted | timeout / timeout | verified / refuted |
+| shipped seed 2 | 552 | refuted / unproved | refuted / unproved | malformed / refuted |
+| shipped seed 3 | 201 | verified / refuted | timeout / timeout | verified / refuted |
+| shipped seed 3 | 605 | unproved / refuted | unproved / unproved | verified / refuted |
+| teacher1 seed 1 | 3 | unproved / refuted | unproved / unproved | verified / refuted |
+| teacher1 seed 1 | 741 | verified / refuted | verified / unproved | verified / refuted |
+| teacher1 seed 3 | 605 | unproved / refuted | unproved / unproved | verified / refuted |
+| teacher1 seed 3 | 741 | verified / refuted | verified / refuted | verified / refuted |
+| teacher2 seed 1 | 345 | unproved / refuted | verified / refuted | verified / refuted |
+| teacher2 seed 1 | 605 | unproved / refuted | unproved / unproved | verified / refuted |
+| teacher2 seed 1 | 741 | verified / refuted | timeout / timeout | verified / refuted |
+| teacher2 seed 3 | 605 | unproved / refuted | unproved / unproved | verified / refuted |
+| Phi under the grammar s5 | 167 | refuted / refuted | refuted / refuted | refuted / refuted |
+
+Every real read **refuted** here (47, 552 twice, 167) is a program the other four kernels already refute on both
+sides, with a real witness the bounded scan found (an input where the program breaks its own `ensures`, or is
+undefined): routed to its half, the witness gave the same refutation in the three kernels that could not read the
+program before. No kernel contradicts another.
+
+The clean 200, complete specifications, at least one kernel / three / five / six / all seven, before and after:
+
+| set | before | after |
+|---|---|---|
+| Phi under t's grammar, 17 answers | 9 / 8 / 8 / 7 / 7 | 9 / 8 / 8 / 7 / 7 |
+| v5 seed 3 | 15 / 13 / 9 / 9 / 7 | 15 / 13 / 11 / 10 / **8** |
+| shipped seed 1 | 17 / 16 / 13 / 11 / 10 | 17 / 16 / 14 / 12 / 10 |
+| shipped seed 3 | 17 / 15 / 12 / 11 / 8 | 17 / 15 / 13 / 11 / 8 |
+| teacher1 seed 3 | 21 / 19 / 17 / 15 / 12 | 21 / 19 / 19 / 16 / **13** |
+| teacher2 seed 1 | 23 / 20 / 14 / 13 / 13 | 23 / 20 / 17 / 15 / 13 |
+| teacher2 seed 3 | 27 / 23 / 16 / 15 / 13 | 27 / 23 / 17 / 15 / 13 |
+
+v5 seeds 1 and 2, the shipped seed 2 and teacher1's seed 1 change at no level; Phi prompted had no eligible cell.
+
+- **K1 holds:** Phi under the grammar 9 and 7, prompted 3 and 3.
+- **K2 holds:** no set loses a problem at any level.
+- **K3 holds, exactly:** 2 of the 15 pairs outside the trial reach all seven (741 in v5 seed 3 and in teacher1 seed 3).
+- **K4 holds:** all 57 cells read a verdict; none abstains.
+
+**Section 1 on the regraded numbers:** unchanged. Phi stays at 9 and 7, so doubling still needs 18 and 14 for every
+seed, and teacher2's seeds 1 and 3 stay at 13 by all seven. The split closes the gap it was built for, and the
+kernels then show what is left: rocq times out on both sides of the loop half on four tasks (68, 201, 472, and 741
+in teacher2 seed 1), and lean cannot prove the loop half of 605, 345, 201 and 3, where fstar proves it. Those are
+the cells between teacher2's seeds and 14.
