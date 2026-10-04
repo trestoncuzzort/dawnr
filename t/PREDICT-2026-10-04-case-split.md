@@ -109,3 +109,11 @@ seed, and teacher2's seeds 1 and 3 stay at 13 by all seven. The split closes the
 kernels then show what is left: rocq times out on both sides of the loop half on four tasks (68, 201, 472, and 741
 in teacher2 seed 1), and lean cannot prove the loop half of 605, 345, 201 and 3, where fstar proves it. Those are
 the cells between teacher2's seeds and 14.
+
+**What remains, diagnosed on the trial's lean files (not changed here; each would be its own registration).** Lean's
+two failures on the loop halves are tactic gaps, not shapes: on 605 the preservation goal `found = true -> exists k
+in [2, n). n % k == 0`, at the step where `found` becomes true because `n % d == 0`, needs the witness `d`, and the
+closer has witness heuristics only for establishment (the range's lower end) and for carrying an old witness through
+an update (the file's header notes both); on 345 `repeat split` also splits the `if` inside the ensures, so the
+recursive lemma's conclusion no longer unifies in a branch the requires already rules out. Rocq's four are timeouts
+on both sides of the loop half.
