@@ -54,3 +54,26 @@ seed 1, prediction 123 holds (17 and 10 against 15 and 6). 124 waits for all thr
 
 45 reach a task and pass their tests; 16 proved by at least one prover, 14 by three, 12 by five, 10 by six, **8 by all
 seven**. Prediction 123 holds for seed 2 (16 and 8 against 15 and 6).
+
+## Seed 3 and the judgement, 2026-10-04 05:04Z (`~/scratch/shipped/levels-seed3.md`)
+
+Seed 3: 36 reach a task and pass their tests; 17 proved by at least one prover, 15 by three, 12 by five, 11 by six,
+**8 by all seven**.
+
+| seed | at least one | all seven |
+|---|---:|---:|
+| 1 | 17 | 10 |
+| 2 | 16 | 8 |
+| 3 | 17 | 8 |
+| mean | 16.7 | 8.7 |
+| v5's rows, mean (same instrument) | 17.0 | 7.3 |
+| Phi-4-mini under t's grammar | 9 | 7 |
+
+123. **Holds** for every seed (each at least 15 and 6).
+124. **Falsified, in the rows' favour:** the mean at all seven is 1.3 above v5's, not within 1.
+
+**Section 1.** Every seed is above Phi-4-mini under the grammar at both levels: the written "beat" is met by v3's rows
+on three seeds. Doubling (at least 18 at one kernel and 14 at all seven, every seed) is not met: one kernel is one or
+two short, all seven four to six short. These rows are not the published model: v3 missed its registered release
+gate (`t/PREDICT-2026-10-02-release-v3.md`), so `student-v1` stays what installs. The next measurement on the same
+instrument is the student with the teacher's documents (`t/PREDICT-2026-10-04-teacher1-student.md`).
