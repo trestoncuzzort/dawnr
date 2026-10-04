@@ -245,7 +245,15 @@ def drawn_tests(task: dict, entry: dict, n: int, rnd: random.Random) -> dict:
             got = as_expected(call([v for _k, v in p["args"]]))
         except BaseException:                                   # noqa: BLE001  (Timeout included)
             return {"status": "reference does not run"}
-        if got is None or got != se._as_interp_value(ekind, p["expected"][1]):
+        try:
+            expected = se._as_interp_value(ekind, p["expected"][1])
+        except (TypeError, ValueError):
+            # the problem's own points disagree about their output's kind (the first is read as seq<seq>, a later
+            # one as a flat seq or an int: HumanEval's split_words answers with words or with a count; 7 of the
+            # teacher round's 356 training problems, 2026-10-04). as_expected's rule: no comparison, so the drawn
+            # check is unavailable here, as when the reference does not reproduce its tests
+            return {"status": "the problem's tests disagree about their output's kind"}
+        if got is None or got != expected:
             return {"status": "reference does not reproduce its tests"}
     passed = failed = other = 0
     witness = None
