@@ -61,3 +61,14 @@ kernel or by all seven depends on them. The same seed on teacher2's rows: 24 and
 Trained alone on GPU 3 (1,585 steps, final loss 0.0265): 104 problems with tested Python, 41 answered, all 41 pass
 their tests; **23 proved by at least one prover, 21 by three, 18 by five, 15 by six, 13 by all seven**. The same seed on
 teacher2's rows: 27 and 13. T1 holds for seed 3.
+
+## Amendment, 2026-10-04 22:52Z, before seed 1 is measured: its route, again, with two bounds the interpreter lacked
+
+Seed 1 trained (1,585 steps, final loss 0.0267) and its clean-200 route was SIGKILLed twice, at 22:07Z and 22:44Z,
+each time in the specification stage, the second time near 122 GB: a written specification joined a sequence with
+itself inside a specification function, doubling it at every step, and `join` and `replace` were the two sequence
+operations the interpreter let outgrow `MAX_SEQ` (the fault handler's traceback, `~/scratch/teacher3/pyfirst-1b.log`).
+Both now raise `Budget` past `MAX_SEQ`, as `fill` and seq `+` already did, and `t/spec_quality.py` gives one
+evaluation 60 s of wall clock (bfde8ba6). Seeds 2 and 3 finished the whole route in about 14 minutes, so neither bound
+could have changed what they kept. Seed 1's route runs again with them, on the first of the lab's cards the teacher
+round 4 frees; same model, command and ids. Predictions stand.
