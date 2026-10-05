@@ -58,7 +58,7 @@ that mixes kinds or nests three deep, 34 at a dictionary, 7 at None. Those are t
 and a decision about reals that seven provers can share. Each is a change to the language and to every lowering, with
 its own registration; the reader was the part that cost no kernel anything.
 
-## Amendment, 2026-10-05 05:52Z, before any answer on the panel had been read: the panel is 111
+## Amendment, 2026-10-05 05:51Z, before any answer on the panel had been read: the panel is 111
 
 A check the first audit lacked: is the reader's reading faithful to the problem? Each problem's own reference was
 called with the reader's reading of its tests and compared with the reader's reading of the expected values. All 182

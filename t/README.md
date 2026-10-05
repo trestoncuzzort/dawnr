@@ -115,6 +115,8 @@ here; `editors/WALKTHROUGH.md` measures everything reachable without one.
 | `twins/` | 426 verified/near-miss pairs over 90 problems, with separating inputs |
 | `run_par.py`, `cli.py` | the grading driver and the single-task entry point |
 | `spec_check.py`, `preflight.py` | the checks that decide what counts |
+| `answer.py`, `prove.py`, `to_python.py` | the gate behind `dawnr ask`, `dawnr prove` and `dawnr spec`, and the proved answer handed back as checked Python |
+| `heldout_audit.py`, `spec_panel.py` | the gates a training-row build ends at: no row may name or behave as a held-out problem or question, or descend from GPL-licensed programs |
 | `out/` | lowered sources and verdicts, regenerated; witnesses are committed |
 
 Results and caveats for the whole project are in
