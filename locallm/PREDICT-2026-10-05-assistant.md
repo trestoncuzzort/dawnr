@@ -169,3 +169,22 @@ What it changed: `--yes` no longer answers for a plan that removes a file whose 
 file (a rename or a move keeps them; this did not). Such a plan is asked for with that sentence, and a session
 with no terminal does not run it. The measurement keeps its person who agrees to everything.
 
+## Three machines (dev halves of both sets, 35 tasks; not predictions)
+
+The same base model file with its prediction layer, the assistant and its sandbox on the machine named (for the
+48 GB card the model ran there and the assistant on the desktop, over a tunnel):
+
+| machine | drafting | done | tokens a second | seconds for the 35 |
+|---|---|---:|---:|---:|
+| 12-core desktop CPU, 16 GB of DDR5-4800, no card | with | 35 | 29.1 | 217 |
+| laptop, RTX 5050 8 GB, under WSL2 (first set's 20 only) | without | 20 of 20 | 55 | 42 for the 20 |
+| the same | with | 20 of 20 | 72 | 36 for the 20 |
+| workstation, RTX 6000 Ada 48 GB | without | 34 | 185 | 37 |
+| the same | with | 35 | 273 | 32 |
+
+The one task missed on the workstation card was answered "I cannot determine the door code from the files"
+without a file having been opened, where the other two machines searched and found it: the same weights, another
+card's arithmetic. A first-turn "I cannot" said before anything was looked at is now sent back once; the rows
+marked 35 are after that change. Raw speed of the card alone (llama-bench, 4B at 4 bits): 213 tokens a second
+written and 11,384 read on the 48 GB card; 57 and 2,217 on the 8 GB laptop card; 17 and 234 on the CPU.
+

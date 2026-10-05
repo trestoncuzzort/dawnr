@@ -222,6 +222,23 @@ def test_a_word_file_and_a_saved_page_are_read_as_their_text_and_what_cannot_be_
     assert sent["role"] == "tool" and "The rent is 900 a month" in sent["content"]
 
 
+def test_an_i_cannot_said_before_looking_is_sent_back_once(tmp_path):
+    model = Model(turn(text="I cannot determine the door code from the files. Please provide the file name."),
+                  turn(("fs_search", {"query": "door code"})), turn(text="The door code is 4417."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "c.txt").write_text("The door code is 4417.\n")
+    with harness:
+        assert cli.run_task(agent, planner, meter, "What is the door code?", [], said.append) == "The door code is 4417."
+    assert model.bodies[1]["messages"][-1] == {"role": "user", "content": cli.LOOK_FIRST} and len(model.bodies) == 3
+    # said twice, it stands; and an ordinary first answer is not questioned
+    model = Model(turn(text="I cannot do that."), turn(text="I still cannot."), turn(text="Hello."))
+    (tmp_path / "b").mkdir()
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "b", model)
+    with harness:
+        assert cli.run_task(agent, planner, meter, "Fly.", [], said.append) == "I still cannot."
+        assert cli.run_task(agent, planner, meter, "Say hello.", [], said.append) == "Hello." and len(model.bodies) == 3
+
+
 def test_a_listing_reaches_the_model_as_whole_paths_it_can_hand_back(tmp_path):
     assert cli.listing("here: 3 entries\nd archive/\nf notes.md (41 bytes)\ns .env: secret, never read\nl x: symbolic link, not followed", "here") == (
         "here: 3 entries\nhere/archive/  (a folder)\nhere/notes.md  (41 bytes)\nhere/.env  (secret, never read)\nhere/x  (a link, not followed)")

@@ -43,6 +43,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -70,6 +71,10 @@ SYSTEM = ("You are dawnr, an assistant working on this person's computer, offlin
 # added when `pc` is offered, with one sentence about the machine (dawnr_agent/system.py, facts)
 ON_THE_COMPUTER = ("To open a program, a file or a web page, or to change a setting or a service on the computer itself, "
                    "call `pc` with one command; the person is asked each time. It is not for files and never uses sudo.")
+# An answer of "I cannot" given in the first turn, before anything was looked at (seen on one machine of three for
+# the same question): it is sent back once with this
+UNLOOKED = re.compile(r"\b(cannot|can't|can not|unable|do not have|don't have|no access|please provide|not able)\b", re.I)
+LOOK_FIRST = "You have not looked yet. List the folder or search it, then answer from what you find."
 UNFINISHED = "Stopped: it ran out of rounds before it finished. What was changed is what the line below says."
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
@@ -228,6 +233,12 @@ class Planner(NativePlanner):
             body["tools"] = self.tools
         msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
         calls = msg.get("tool_calls") or []
+        if not calls and not state.rounds and UNLOOKED.search(msg.get("content") or ""):
+            # "I cannot determine that from the files", said before any file was opened: sent back once
+            body["messages"] = body["messages"] + [{"role": "assistant", "content": msg.get("content") or ""},
+                                                   {"role": "user", "content": LOOK_FIRST}]
+            msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+            calls = msg.get("tool_calls") or []
         if not calls:
             text = (msg.get("content") or "").strip()
             # asked to answer with nothing left to call, the model sometimes writes the call it wanted as text
