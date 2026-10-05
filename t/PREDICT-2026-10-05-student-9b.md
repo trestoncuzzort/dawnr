@@ -42,3 +42,11 @@ between 14 and 18. The 9B has only been prompted.
 - N1 or N3 fails: a 9B costs about twice the 4B's time a token and has not earned it on these rows; the size lever
   is then the prompted 27B for 24 GB cards (`PREDICT-2026-10-05-wider-reader.md`, W5) and the data.
 - Whatever it reads, it is not released from this registration.
+
+## A note on the tree (2026-10-05 10:55Z, before any result)
+
+This registration names tree `bf23d4ee`. The lab's checkout is fast-forwarded by the grading scripts, and it was at
+`8836cdec` when this run started (its own log says so). Between the two commits the files the recipe runs
+(`t/student_sft.py`, `t/spec_first.py`, `t/score_spec_given.py` and what they import) differ by two
+well-formedness rules for set literals (`979e62f3`) and one added function nothing in the recipe calls. The same
+holds for the later stages of the three round-4 seeds, which were generated after the checkout had moved.
