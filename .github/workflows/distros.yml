@@ -1,0 +1,53 @@
+# The assistant's sandbox and file tools on other distributions than the one they were written on: the same tests,
+# inside each distribution's own container. No model is involved: what is tested is that a command run over an overlay
+# cannot reach outside the folder, the network, a secret or a socket, and that what it changed is applied and undone,
+# with that distribution's bubblewrap, kernel interfaces and Python.
+name: distros
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "locallm/dawnr_agent/**"
+      - "locallm/dawnr_cli.py"
+      - "locallm/test_dawnr_shell.py"
+      - ".github/workflows/distros.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox:
+    name: sandbox and file tools (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: "debian:stable"
+            setup: "apt-get update -qq && apt-get install -y -qq python3 python3-pytest bubblewrap git > /dev/null"
+          - image: "ubuntu:24.04"
+            setup: "apt-get update -qq && apt-get install -y -qq python3 python3-pytest bubblewrap git > /dev/null"
+          - image: "fedora:latest"
+            setup: "dnf install -y -q python3 python3-pytest bubblewrap git"
+          - image: "archlinux:latest"
+            setup: "pacman -Sy --noconfirm --quiet python python-pytest bubblewrap git > /dev/null"
+          - image: "opensuse/tumbleweed:latest"
+            setup: "zypper -q -n install python3 python3-pytest bubblewrap git > /dev/null"
+    container:
+      image: ${{ matrix.image }}
+      # bubblewrap makes user namespaces and mounts an overlay; the container has to let it
+      options: --privileged
+    steps:
+      - name: what this distribution brings
+        run: |
+          ${{ matrix.setup }}
+          . /etc/os-release && echo "$PRETTY_NAME"; uname -r; python3 --version; bwrap --version
+      - uses: actions/checkout@v4
+      - name: a user who is not root (the sandbox is for people, and root can write anywhere)
+        run: |
+          useradd -m tester && chown -R tester .
+      - name: the sandbox, the file tools and the front door
+        run: |
+          su tester -c "cd $PWD && python3 -m pytest locallm/test_dawnr_shell.py locallm/test_dawnr_cli.py locallm/test_dawnr_agent.py locallm/test_dawnr_tasks.py -q -rs"
