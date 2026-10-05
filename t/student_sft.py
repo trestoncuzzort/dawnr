@@ -50,7 +50,18 @@ def render_prompt(tokenizer, messages: list[dict]) -> str:
 
 
 def encode_row(tokenizer, row: dict, max_len: int) -> dict | None:
-    """input_ids and labels for one row, the loss on the response only; None when it does not fit."""
+    """input_ids and labels for one row, the loss on the response only; None when it does not fit.
+
+    A row of "pieces" (locallm/assistant_rows.py: a whole conversation with tools, already in the model's chat
+    template, cut into [text, trained?] pieces) is tokenised piece by piece, so that a trained piece starts on a
+    token of its own exactly as generation does after the prompt, and the loss falls on the trained pieces."""
+    if "pieces" in row:
+        ids, labels = [], []
+        for text, trained in row["pieces"]:
+            piece = tokenizer(text, add_special_tokens=False)["input_ids"]
+            ids += piece
+            labels += piece if trained else [-100] * len(piece)
+        return None if len(ids) > max_len else {"input_ids": ids, "labels": labels}
     prompt_ids = tokenizer(render_prompt(tokenizer, row["prompt"]), add_special_tokens=False)["input_ids"]
     answer = row["chosen"] + (tokenizer.eos_token or "")
     answer_ids = tokenizer(answer, add_special_tokens=False)["input_ids"]
@@ -97,6 +108,8 @@ def response_loss(base, batch: dict, num_items_in_batch=None):
 def load_rows(path: Path) -> list[dict]:
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     for n, r in enumerate(rows):
+        if isinstance(r.get("pieces"), list) and any(trained for _text, trained in r["pieces"]):
+            continue
         if not isinstance(r.get("prompt"), list) or not isinstance(r.get("chosen"), str) or not r["chosen"].strip():
             raise SystemExit(f"{path}: row {n} has no prompt messages or no answer")
     return rows

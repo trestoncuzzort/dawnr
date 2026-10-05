@@ -43,6 +43,14 @@ class Encoding(unittest.TestCase):
         self.assertEqual("".join(chr(i) for i in e["labels"][len(prompt):]), "ans#")
         self.assertEqual(tok.calls, [{"enable_thinking": False}])        # thinking off, asked of the template
 
+    def test_a_conversation_cut_into_pieces_is_trained_on_its_trained_pieces_only(self):
+        row = {"pieces": [["<s>tools<u>do it<a>", False], ["call one#", True], ["<t>result<a>", False], ["Done.#", True]]}
+        e = student_sft.encode_row(Tok(), row, 100)
+        self.assertEqual("".join(chr(i) for i in e["input_ids"]), "<s>tools<u>do it<a>call one#<t>result<a>Done.#")
+        self.assertEqual("".join(chr(i) for i in e["labels"] if i != -100), "call one#Done.#")
+        self.assertEqual([i for i, label in enumerate(e["labels"]) if label != -100][0], len("<s>tools<u>do it<a>"))
+        self.assertIsNone(student_sft.encode_row(Tok(), row, 20))
+
     def test_a_row_that_does_not_fit_is_dropped_not_truncated(self):
         self.assertIsNone(student_sft.encode_row(Tok(), ROW, 14))        # prompt 11 + answer 4 = 15
         self.assertIsNotNone(student_sft.encode_row(Tok(), ROW, 15))

@@ -10,7 +10,12 @@ on:
     paths:
       - "locallm/dawnr_agent/**"
       - "locallm/dawnr_cli.py"
-      - "locallm/test_dawnr_shell.py"
+      - "locallm/dawnr_tasks.py"
+      - "locallm/dawnr_factory.py"
+      - "locallm/dawnr_families/**"
+      - "locallm/assistant_rows.py"
+      - "locallm/test_dawnr_*.py"
+      - "locallm/test_assistant_rows.py"
       - ".github/workflows/distros.yml"
 
 permissions:
@@ -54,7 +59,7 @@ jobs:
           if [ -w /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then echo 0 > /proc/sys/kernel/apparmor_restrict_unprivileged_userns; fi
       - name: the sandbox, the file tools and the front door
         run: |
-          su tester -c "cd $PWD && python3 -m pytest locallm/test_dawnr_shell.py locallm/test_dawnr_cli.py locallm/test_dawnr_agent.py locallm/test_dawnr_tasks.py -q -rs" | tee tests.txt
+          su tester -c "cd $PWD && python3 -m pytest locallm/test_dawnr_shell.py locallm/test_dawnr_cli.py locallm/test_dawnr_agent.py locallm/test_dawnr_tasks.py locallm/test_dawnr_factory.py locallm/test_assistant_rows.py -q -rs" | tee tests.txt
           grep -E "SKIPPED|passed" tests.txt | cut -c1-200
           # A run in which the sandbox was skipped proves nothing about it: the copy mode at least must have run.
           # (Inside a container the root file system is itself an overlay, on which a second one cannot be mounted,
