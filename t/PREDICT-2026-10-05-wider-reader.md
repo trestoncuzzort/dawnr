@@ -132,3 +132,36 @@ An exploratory run on the dev panel the same day (`~/scratch/measure/diag_parse.
 published model's decoding to `t`'s grammar: unparseable answers fell from 31 to 12 of 120 and the problems with a
 test-passing answer stayed at 7 of 40, so for the trained model parsing is a symptom and not the lever.
 
+## W6, registered 2026-10-05 12:28Z, before any of its answers is drawn: what more answers buy through the product's gate
+
+`dawnr ask` draws five answers. With a checker that picks the winner, problems solved keep rising with the answers
+drawn (arXiv:2407.21787), and the scoreboard's own graded sets show it for the prompted models: the 27B gains
+about 5 problems of 182 with each doubling from 1 to 16 answers, and the 4B and 9B gain more with each doubling
+(`t/coverage_curve.py`). The published model's rows grade one chosen answer a problem, so its own curve has never
+been read, and W4's funnel says where it would have to help: 77 of the 99 questions it refused never had a
+program that passed its tests among five.
+
+**The run.** The wider 111, the published model at Q8_0 and the base at 4 bits on a lab card, Dafny alone, the
+gate as it stands. For each question forty answers are drawn once (the first greedy, the rest sampled with the
+gate's own seeds 1 to 39), and `t/answer.py`'s gate is run on the first 5, 10, 20 and 40 of them, with the same
+independent Python and the same consistency samples each time (the model's replies are kept, so the four runs
+differ only in how many answers they are given). Scored as W4 was.
+
+- **W6a, more answers, more shown.** With 40 answers the gate shows an answer for at least one and a half times
+  as many questions as with 5, and for at least 3 more.
+- **W6b, it has not flattened.** Each doubling (5 to 10, 10 to 20, 20 to 40) adds at least one shown answer.
+- **W6c, the gate still picks right.** At every budget at least 70% of the answers shown agree with the reference
+  on drawn inputs with a complete specification: more candidates are more chances for a wrong one to get through,
+  and this is the check that it does not.
+
+Reported beside them: how many of the shown answers at each budget are an algorithm and how many a restatement
+(`t/proof_kind.py`), and the tokens drawn, from which the time on a CPU follows.
+
+What each outcome changes:
+
+- W6a and W6c hold: `dawnr ask --answers N` is documented with this curve as the way to trade minutes for
+  answers, and the page gets the same choice.
+- W6a fails: more of the same model's answers do not help through this gate; the README says so, and the levers
+  left are the data and the model.
+- W6c fails at some budget: that budget is not offered, and the answers that got through are read by hand.
+
