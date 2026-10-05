@@ -213,6 +213,16 @@ Tests may use whole numbers, strings, lists, tuples and lists of lists; when a
 test uses something `t` has no value for yet (a decimal number, a dictionary),
 dawnr says so before asking anything.
 
+Give tests when you can. Without `--test`, in a terminal, `dawnr ask` runs a
+few drafts on small inputs and puts their results to you as examples to accept
+or correct, and what you accept becomes the tests. Measured with a benchmark's
+reference solution standing in for the person, on 80 questions: two or more
+examples were made for 64, and an answer was shown for 9 where the benchmark's
+own tests gave 6. But 3 of the 9 were proved answers to a slightly different
+question, one the accepted examples did not rule out, where all of the answers
+shown with real tests were right
+([the record](t/PREDICT-2026-10-05-examples.md)).
+
 Nobody has to take the answer on trust, including from you. Add
 `--certificate larger.cert.json` to `ask` or `prove` and dawnr writes the
 answer's record: the program, its specification, the tests, the Python, and

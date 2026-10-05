@@ -105,3 +105,30 @@ dialogue stays, and the README leads with `--test`.
 As registered for a failing E1, the first 31 were read by hand before anything was changed, and the changed flow
 is E4 to E6 above, running on the 80 questions that had not been read.
 
+## Outcome of E4 to E6, 2026-10-05 (the 80 unread questions, a lab card, Dafny alone)
+
+The run was made from commit 36c676fc, not the registration's 92560972: the lab checked out the head of main
+when its card came free, an hour later. The examples flow differs between the two by one thing, a draft's
+annotations no longer being evaluated when it is loaded (before Python 3.14 a draft that wrote `List[int]`
+without importing it answered nothing).
+
+- **E4 holds.** 64 of the 80 questions ended with two or more approved examples (80%; the bar was 75%), 61 with
+  three or more, 10 with none. The first form had managed 20% of the 111.
+- **E5 holds.** `ask` with the approved examples showed an answer for 9 questions; with the benchmark's own tests
+  it had shown 6 of the same 80. Four are in both.
+- **E6 fails.** 6 of the 9 answers agree with the reference on drawn inputs with a complete specification (67%;
+  the bar was 70%), where all 7 of the answers shown with the benchmark's tests did. The three that do not (405,
+  538, 889) are proved programs for a meaning the approved examples allowed and the reference does not have. One
+  is the problem met before whose words say "reverse each list" and whose reference sorts each in descending
+  order: on the lists that were put, the two are the same.
+
+What it changes, as registered for a failing E6: the dialogue stays, the README leads with `--test`, and it says
+why. Examples made from a handful of small inputs let more through than a benchmark's tests do, because an
+approved example only rules out the readings it separates. Nine shown for six is not a gain to claim while a
+third of the nine are answers to another question. Four more questions stopped at the gate's own reader, which
+does not take every value a reference returns (a set, for one) as an example.
+
+What would address it, not done here: after the examples, put to the person the inputs on which the proved
+program and the drafts still differ, which is the question TiCoder asks of tests and this dialogue only asks of
+drafts.
+
