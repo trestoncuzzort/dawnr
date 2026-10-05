@@ -203,3 +203,20 @@ def test_a_saved_specification_is_one_prove_reads(tmp_path, monkeypatch):
     saved = prove.read_spec(out.read_text())
     assert saved["name"] == "double" and saved["body"] == [] and len(saved["ensures"]) == 1
     assert prove.main(argv + ["--pick", "3"]) == 0 and "ensures r == 2 * n" in out.read_text()   # no third: file untouched
+
+
+def test_when_nothing_is_proved_dafnys_own_report_names_the_clause(monkeypatch):
+    # a spec fun that indexes past the end is the person's to fix; "no prover proved it" would not have told them
+    monkeypatch.setattr(prove.dafny_feedback, "diagnostics", lambda task: ["- index out of range: `s[(n - 1)]`"])
+    r = prove.prove(spec(), student(RIGHT), answers=1, prover=prover(lambda t: {k: "unproved / refuted" for k in spec_check.KERNELS}))
+    assert r["shown"] is None and r["dafny says"] == {"answer": 1, "lines": ["- index out of range: `s[(n - 1)]`"]}
+    text = prove.render_proof(r)
+    assert "What Dafny reports about answer 1" in text and "index out of range" in text
+
+
+def test_dafnys_report_is_advice_and_its_absence_changes_nothing(monkeypatch):
+    def gone(task):
+        raise FileNotFoundError("dafny")
+    monkeypatch.setattr(prove.dafny_feedback, "diagnostics", gone)
+    r = prove.prove(spec(), student(RIGHT), answers=1, prover=prover(lambda t: {k: "unproved / refuted" for k in spec_check.KERNELS}))
+    assert r["shown"] is None and "dafny says" not in r and "What Dafny reports" not in prove.render_proof(r)
