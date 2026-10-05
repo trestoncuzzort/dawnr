@@ -255,40 +255,59 @@ class Jobs:
                 if job is None or job["state"] != "queued":
                     continue
                 job.update(state="running", started=time.time())
-            env = dict(os.environ, T_MIN_KERNELS=os.environ.get("T_MIN_KERNELS", "1"), PYTHONUNBUFFERED="1")
-            try:
-                with open(job["dir"] / "stdout.txt", "w", encoding="utf-8") as out:
-                    p = subprocess.Popen(job["argv"], cwd=REPO, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                         env=env, start_new_session=True)
-                    self.process[jid] = p
-                    try:
-                        code = p.wait(timeout=self.seconds)
-                    except subprocess.TimeoutExpired:
-                        self._kill(p)
-                        code = None
-            except OSError as error:
-                code = None
-                (job["dir"] / "stdout.txt").write_text(f"the command could not be started: {error}\n", encoding="utf-8")
-            finally:
-                self.process.pop(jid, None)
+            code = self._run(jid, job)
             with self.lock:
-                if job["state"] == "cancelled":
-                    continue
-                if code is None:
+                cancelled = job["state"] == "cancelled"
+                if cancelled:
+                    pass
+                elif code is None:
                     job.update(state="failed", why=f"it did not finish in {self.seconds:.0f} s, or could not be started")
                 elif code in _OUTCOME[job["kind"]]:
                     job.update(state="done", exit=code, outcome=_OUTCOME[job["kind"]][code])
                 else:
                     job.update(state="failed", exit=code, why="the command stopped with an error; its output says why")
-                job["finished"] = time.time()
-            self._trim()
+                if not cancelled:
+                    job["finished"] = time.time()
+            if cancelled:
+                shutil.rmtree(job["dir"], ignore_errors=True)   # what the command wrote after the cancel erased the rest
+            else:
+                self._trim()
+
+    def _run(self, jid: str, job: dict) -> int | None:
+        """The command's exit code; None when it could not be started, ran out of time or was cancelled. Cancelling
+        and starting are one decision under the lock, as concurrent.futures makes them (CPython,
+        Lib/concurrent/futures/_base.py): a cancel that comes while the command is being started finds no process
+        to end, so the worker publishes the process and reads the state in one step and ends the command itself."""
+        env = dict(os.environ, T_MIN_KERNELS=os.environ.get("T_MIN_KERNELS", "1"), PYTHONUNBUFFERED="1")
+        try:
+            with open(job["dir"] / "stdout.txt", "w", encoding="utf-8") as out:
+                p = subprocess.Popen(job["argv"], cwd=REPO, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                     env=env, start_new_session=True)
+                with self.lock:
+                    self.process[jid] = p
+                    wanted = job["state"] == "running"
+                try:
+                    return p.wait(timeout=self.seconds if wanted else 0)
+                except subprocess.TimeoutExpired:
+                    self._kill(p)
+                    return None
+        except OSError as error:
+            try:
+                (job["dir"] / "stdout.txt").write_text(f"the command could not be started: {error}\n", encoding="utf-8")
+            except OSError:
+                pass                                            # cancelled meanwhile, and its directory is gone
+            return None
+        finally:
+            with self.lock:
+                self.process.pop(jid, None)
 
     @staticmethod
     def _kill(p: subprocess.Popen) -> None:
-        try:
-            os.killpg(p.pid, signal.SIGKILL)                    # the command and the provers it started
-        except (ProcessLookupError, PermissionError):
-            pass
+        if p.poll() is None:                                    # never signal a pid that has been reaped (bpo-38630)
+            try:
+                os.killpg(p.pid, signal.SIGKILL)                # the command and the provers it started
+            except (ProcessLookupError, PermissionError):
+                pass
         p.wait()
 
     def cancel(self, jid: str) -> dict | None:
