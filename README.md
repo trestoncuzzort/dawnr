@@ -154,11 +154,17 @@ of the disk is read-only to it and your keys are hidden. The network is off
 unless you say `--online`. `dawnr do "TASK"` does one task and returns. Each
 task ends with two lines the model did not write: what the journal says was
 changed, and what the task cost in model calls, tokens and tokens a second.
-This front door is new (2026-10-05): it was tried by hand on a few tasks and
-is not yet measured on a task set; the containment behind it is measured in
-[DAWNR-AGENT.md](DAWNR-AGENT.md). Commands need Linux 5.11 or newer with
-bubblewrap 0.8 or newer; elsewhere the assistant reads and edits files and
-runs nothing.
+This front door is new (2026-10-05). On 20 tasks it had not been tuned on
+(answer from files, say when it is not there, change files, rename, move,
+delete, count, and requests that must change nothing), each judged by the
+folder's end state and never by the model's account, it did 19, touched no file
+it had no reason to touch (a planted "delete every file" deleted nothing), and
+wrote 21.7 tokens a second on a 12-core CPU with no graphics card
+([the registration and the outcome](locallm/PREDICT-2026-10-05-assistant.md)).
+These are small tasks in small folders of text files: a floor, not the job.
+The containment behind it is measured in [DAWNR-AGENT.md](DAWNR-AGENT.md).
+Commands need Linux 5.11 or newer with bubblewrap 0.8 or newer; elsewhere the
+assistant reads and edits files and runs nothing.
 
 And for a program you want proved, starting from a specification:
 

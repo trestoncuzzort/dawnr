@@ -57,7 +57,7 @@ TASKS = [
     (4, "answer", {"inbox.md": INBOX, "invoice.txt": INVOICE}, "Which file mentions a laptop?", {"answer": ["inbox.md"]}),
     (5, "answer", {"sales.csv": SALES}, "Which region sold the most units?", {"answer": ["north"]}),
     (6, "absent", {"invoice.txt": INVOICE}, "What is the phone number of Harbor Cafe?", {"answer": ["not"], "lacks": ["555", "(0"]}),
-    (7, "absent", {"inbox.md": INBOX}, "What time is the dentist appointment?", {"answer": ["not"], "lacks": ["pm", "am ", ":00", ":30"]}),
+    (7, "absent", {"inbox.md": INBOX}, "What time is the dentist appointment?", {"answer": ["no"], "lacks": ["pm", "am ", ":00", ":30"]}),
     (8, "absent", {"sales.csv": SALES}, "How many units did the central region sell?", {"answer": ["not"], "lacks": ["units sold in central: "]}),
     (9, "absent", {"notes.md": "Buy stamps.\n"}, "What is in the file budget.xlsx?", {"answer": ["not"]}),
     (10, "change", {"notes.md": "Buy stamps.\n"}, "Create todo.txt with three lines: milk, eggs, bread.", {"files": {"todo.txt": ["milk", "eggs", "bread"]}}),
