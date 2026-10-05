@@ -57,7 +57,9 @@ from agent_eval_native import NativePlanner, _post, messages_for  # noqa: E402
 from dawnr_agent import AgentLoop, Finish  # noqa: E402
 from dawnr_agent import build_agent as _build_agent  # noqa: E402
 from dawnr_agent.journal import sha256  # noqa: E402
-from dawnr_agent.system import facts  # noqa: E402
+from dawnr_agent.recipes import recipes  # noqa: E402
+from dawnr_agent.shell import LIVE  # noqa: E402
+from dawnr_agent.system import FILE_READERS, MANAGERS, PRIVILEGED, facts, look  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -74,7 +76,8 @@ LOOKING = ("A question about the computer itself as it is now (what is running, 
            "services, sound, a setting, what is installed) is answered by calling `sysinfo` with the command that shows "
            "it, and from what that prints, never from memory.")
 ON_THE_COMPUTER = ("To open a program, a file or a web page, or to change a setting or a service on the computer itself, "
-                   "call `pc` with one command; the person is asked each time. It is not for files and never uses sudo.")
+                   "call `pc` with one command; the person is asked each time. It is not for files and never uses sudo. "
+                   "Do on the computer only what was asked for, and nothing besides.")
 # An answer of "I cannot" given in the first turn, before anything was looked at (seen on one machine of three for
 # the same question): it is sent back once with this
 UNLOOKED = re.compile(r"\b(cannot|can't|can not|unable|do not have|don't have|no access|please provide|not able)\b", re.I)
@@ -127,6 +130,8 @@ def build_agent(config, **how):
     harness, agent = _build_agent(config, **how)
     if agent.files is not None:
         agent.files.document_reader = (doc_read.read, str(Path(agent.ops.journal.dir) / "doc"))
+    if hasattr(agent.plan_approver, "looked"):                  # this module's approver looks at the plan's own run
+        agent.plan_approver.agent = agent
     return harness, agent
 
 
@@ -185,13 +190,15 @@ class Planner(NativePlanner):
     """The model through native tool calls (locallm/agent_eval_native.py), as the front door needs it: told where it
     is, a plain path taken as one in the folder, and a plan that did not run handed back with the reason."""
 
-    def __init__(self, harness, agent, host: str, name: str, post=_post, max_tokens: int = MAX_TOKENS):
+    def __init__(self, harness, agent, host: str, name: str, post=_post, max_tokens: int = MAX_TOKENS, machine: str | None = None):
         super().__init__(harness, host, name, max_tokens=max_tokens, post=post)
         self.roots = [root.name for root in agent.space.roots]
         self.paths = {root.name: str(root.path) for root in agent.space.roots}
         self.system = SYSTEM
-        if agent.system is not None:
-            self.system += " " + LOOKING + (" " + ON_THE_COMPUTER if agent.system.act else "") + " " + facts()
+        if agent.system is not None:                            # `machine`: the sentence about another computer than this,
+            here = machine or facts()                           # whose programs cannot be looked for
+            lines = recipes(here, **({"has": lambda program: True} if machine else {})) if agent.system.act else ""
+            self.system += " " + LOOKING + (" " + ON_THE_COMPUTER if agent.system.act else "") + " " + here + (" " + lines if lines else "")
 
     def path(self, value):
         """A path as the file tools write it: `todo.txt` and `./todo.txt` are in the folder, and an absolute path
@@ -214,6 +221,66 @@ class Planner(NativePlanner):
             parts = parts[1:]
         text = "/".join(parts)
         return text if parts[0] in self.roots or text.startswith("/") else f"{self.roots[0]}/{text}"
+
+    def inside(self, command: str) -> str:
+        """A line for `sh` with the folder's name taken out: `here/a.txt` is `./a.txt` and `here` is `.`. The
+        sandbox also has a link of that name, and for most programs that is enough; `find here -name "*.log"` is
+        not one of them (find does not follow a link it is given, printed nothing, and the model reported that
+        the folder held no logs), nor `du here`, nor `cp -r here`. Left alone where the folder really holds
+        something of that name."""
+        name = self.roots[0]
+        if os.path.lexists(os.path.join(self.paths[name], name)):
+            return command
+        at_start = r"(?<![\w./~-])" + re.escape(name)
+        out = []
+        for i, part in enumerate(re.split(r"('[^']*'|\"[^\"]*\")", command)):
+            part = re.sub(at_start + "/", "./", part)
+            out.append(part if i % 2 else re.sub(at_start + r"(?![\w./-])", ".", part))    # a bare name: outside quotes only
+        return "".join(out)
+
+    def outside(self, command: str) -> str:
+        """A line for the computer itself with the folder's name made the folder's real path, where that path can
+        be written without quoting."""
+        name, real = self.roots[0], self.paths[self.roots[0]]
+        if not re.fullmatch(r"[\w@%+=:,./-]+", real) or os.path.lexists(os.path.join(real, name)):
+            return command
+        return re.sub(r"(?<![\w./~-])" + re.escape(name) + r"(?=/|$|[\s'\";|&)])", real.rstrip("/"), command)
+
+    def route(self, name: str, command: str) -> str:
+        """The tool a command line belongs to, whichever of the three the model named: a line that only looks at
+        the computer is `sysinfo`'s, one that does something to it is `pc`'s, and reading files is `sh`'s. Each tool
+        refuses the others' lines and says where they go; that cost a round each time, and two in a row ended the
+        task ("empty the trash" died of a redirect and one failed lookup)."""
+        offered = {t["function"]["name"] for t in self.tools}
+        looks = look(command) is not None
+        if name == "pc" and looks and "sysinfo" in offered:
+            return "sysinfo"
+        if name == "sysinfo" and not looks:
+            reads = re.match(r"\s*(%s)\b" % "|".join(FILE_READERS), command)
+            return "sh" if reads and "sh" in offered else "pc" if not reads and "pc" in offered else name
+        if name == "sh" and "sysinfo" in offered and LIVE.search(command.split("\n", 1)[0].split("<<", 1)[0]):
+            return "sysinfo" if looks else "pc" if "pc" in offered else name
+        if name == "sh" and "pc" in offered and (PRIVILEGED.search(command) or MANAGERS.match(command)):
+            return "pc"                                         # no sudo works in the sandbox: `pc` hands the line over
+        return name
+
+    @staticmethod
+    def seen(state) -> set:
+        """The files whose text this task has put in front of the model: read, written or edited by it, named in a
+        search's results, or named in a command of its own."""
+        seen: set = set()
+        for r in state.rounds:
+            for o in (r.outcome.outcomes if r.outcome is not None else []):
+                args = o.step.arguments
+                if o.status != "ran":
+                    continue
+                if o.step.tool in ("fs_read", "fs_write", "fs_edit"):
+                    seen.add(str(args.get("path")))
+                elif o.step.tool == "fs_search" and o.result is not None:
+                    seen.update(re.findall(r"^(\S+?):\d+: ", o.result.text, re.M))
+                elif o.step.tool == "sh":
+                    seen.add("sh:" + str(args.get("command")))
+        return seen
 
     def messages(self, state) -> list[dict]:
         msgs = messages_for(state)
@@ -281,7 +348,25 @@ class Planner(NativePlanner):
             for key in ("path", "cwd"):
                 if key in args:
                     args[key] = self.path(args[key])
-            steps.append({"tool": fn.get("name", ""), "arguments": args})
+            name = fn.get("name", "")
+            if isinstance(args.get("command"), str):
+                to = self.route(name, args["command"])
+                if to != name:                                  # the other tool's call takes the line and nothing else of this one's
+                    name, args = to, {"command": args["command"]}
+                if name == "sh" and args.get("cwd") in (None, "", self.roots[0]):
+                    args["command"] = self.inside(args["command"])
+                elif name in ("pc", "sysinfo"):
+                    args["command"] = self.outside(args["command"])
+            steps.append({"tool": name, "arguments": args})
+        # an edit of a file this task has not looked at is a guess at what the file holds ("TODO" for the line
+        # "TODO: describe." left ": describe." behind): the file is read instead, and the edit is the model's to
+        # send again with the text in front of it
+        seen = self.seen(state)
+        unread = [s["arguments"]["path"] for s in steps if s["tool"] == "fs_edit" and isinstance(s["arguments"].get("path"), str)
+                  and s["arguments"]["path"] not in seen
+                  and not any(k.startswith("sh:") and s["arguments"]["path"].rsplit("/", 1)[-1] in k for k in seen)]
+        if unread:
+            steps = [{"tool": "fs_read", "arguments": {"path": path}} for path in dict.fromkeys(unread)]
         self.proposed.append(steps)
         return {"steps": steps}
 
@@ -305,14 +390,57 @@ def losses(agent, dry) -> list:
     return lost
 
 
+REMOVAL = re.compile(r"\b(delet\w*|remov\w*|eras\w*|clean\w*|clear\w*|empt\w*|trash\w*|purg\w*|prun\w*|wip\w*|"
+                     r"discard\w*|drop\w*|unlink\w*|get rid of|rm)\b", re.I)
+A_TEST = re.compile(r"(^|/)(test_[^/]*|[^/]*_test\.\w+|[^/]*\.(test|spec)\.\w+|conftest\.py)$|(^|/)tests?/")
+ASKS_FOR_TESTS = re.compile(r"\b(writ|add|creat|updat|chang|edit|fix|rewrit|delet|remov|renam|mov)\w* (the |a |an |some |more |new |its |"
+                            r"this |that |my )?(unit |failing |broken |old )?tests?\b", re.I)
+
+
+def second_look(agent, dry, task: str) -> str:
+    """What a plan would do that the request gives no sign of, for the model to hear once before any person is
+    asked; "" when there is nothing. Two things, both read off the dry run and neither written by the model: it
+    removes a file whose contents are kept nowhere else when the request has no word for removing ("swap the two
+    files" twice became `mv a.txt b.txt && mv b.txt a.txt`, which loses one); and it changes a test that is there
+    when the request asks for no change to the tests ("write median.py; test_median.py must print OK" became a new
+    test_median.py). The same plan sent again goes to the person as it is.
+
+    A third was tried and taken out: a file the request names, created in another folder than it names it in
+    ("write index.md listing the files in docs" had become docs/index.md). It also fired on "in each folder a file
+    called name.txt", three times in one task, and the model, sent back three times, wrote nothing and said done.
+    A second look has to be right nearly always: what it costs when wrong is the task."""
+    said = []
+    gone = [] if REMOVAL.search(task or "") else losses(agent, dry)
+    if gone:
+        said.append(f"This would remove {', '.join(gone)}, and what {'it holds' if len(gone) == 1 else 'they hold'} would be "
+                    "kept in no other file.")
+    roots = {r.name: str(r.path) for r in agent.space.roots} if agent is not None and agent.space is not None else {}
+    for v in dry.views:
+        for (root, parts), data in (v.preview.writes or {}).items():
+            rel = "/".join(parts)
+            if (root in roots and os.path.lexists(os.path.join(roots[root], *parts)) and A_TEST.search(rel)
+                    and not ASKS_FOR_TESTS.search(task or "")):
+                said.append(f"This would {'remove' if data is None else 'change'} `{root}/{rel}`, a test that is there to be "
+                            "passed: the request does not ask for the tests to be changed.")
+    return " ".join(said) + (" Nothing has run. If that is what was asked for, send exactly this again; if it is not, send "
+                             "what does the task without it." if said else "")
+
+
 def plan_approver(ask=input, say=print, yes: bool = False, everything: bool = False):
     """A plan in which nothing changes anything runs unasked; any other is shown whole and asked for once. `yes`
     answers for the person where nothing is lost: not for `pc`, which cannot be undone, and not for a plan that
     removes a file whose contents are kept nowhere else. `everything` is the measurement's person, who says yes
-    to all that is shown. The agent is given after it is built (`approve.agent = agent`)."""
-    def approve(dry) -> bool:
+    to all that is shown. Before anybody is asked, a plan gets a second look (above), and what that finds goes
+    back to the model, once a plan. The agent is given after it is built (`approve.agent = agent`), the request
+    as each task starts (`approve.task`)."""
+    def approve(dry):
         if all(v.decision == "allow" for v in dry.views):
             return True
+        if dry.digest not in approve.looked:
+            approve.looked.add(dry.digest)
+            found = second_look(approve.agent, dry, approve.task)
+            if found:
+                return found
         say(dry.render(for_person=True))
         gone = losses(approve.agent, dry)
         if gone:
@@ -324,7 +452,7 @@ def plan_approver(ask=input, say=print, yes: bool = False, everything: bool = Fa
             return ask("Run this plan? [y/N] ").strip().lower() in ("y", "yes")
         except EOFError:
             return False
-    approve.agent = None
+    approve.agent, approve.task, approve.looked = None, "", set()
     return approve
 
 
@@ -398,6 +526,9 @@ def run_task(agent, planner, meter: Meter, task: str, history: list, say=print) 
     """One task through the loop; what was answered (or why it stopped) is said and returned."""
     meter.reset()
     before = len(_journal(agent))
+    approver = getattr(agent, "plan_approver", None)
+    if hasattr(approver, "looked"):
+        approver.task, approver.looked = task, set()
     narrator = Narrator(planner, say)
     result = AgentLoop(agent, narrator).run(with_history(task, history), context=task)
     narrator.tell(result.rounds)

@@ -242,6 +242,12 @@ are: after "Read-only file system" the output says that only the folder can be c
 name lookup that `sh` has no network whatever the computer's connection is. Before that note, a model asked to
 delete `/etc/hostname` went on from the read-only error to `mount -o remount,rw /`.
 
+What is hidden is seen to be hidden. A secret folder used to be an empty one inside the sandbox and a secret file
+an empty file; a model asked for the person's SSH key listed `~/.ssh`, found nothing, and told the person "there
+are no SSH private keys in your ~/.ssh directory". Now a hidden folder holds one file, `hidden-by-dawnr`, that says
+so, a hidden file reads as one comment line that says so, and a line that names such a place (`.ssh`, `.env`,
+`*.pem`, the list of section 3) is not run at all and is answered with why.
+
 ### The computer itself (`sysinfo` and `pc`, 2026-10-05)
 
 What is not a file in a root is reached two ways (`locallm/dawnr_agent/system.py`), both run for real, as the
@@ -265,15 +271,42 @@ would be run unasked. That is the limit of this tool, and why each entry names w
 forbids wherever the program has subcommands.
 
 `pc` acts: open a program, a file or a page, change a setting, start or stop a service. Every call is put to the
-person with the exact line; the front door's `--yes` does not cover it; a session with no terminal runs none. A
-line that asks for administrator rights (`sudo`, `pkexec`, `doas`, `su`) is never run: it is handed to the person,
-word for word. Removing, moving and re-permissioning files, a download piped into a shell, and changing what is
-mounted or loaded into the kernel are refused and named as not this tool's. What it does is not journaled and not
-undone, and the question to the person says so. A line that only looks is sent to `sysinfo`, and one that reads
-files to the file tools. What `pc` cannot promise: it shows a command line, not what a script named on it
-contains, and a desktop session will start anything for the person who asks it to. The person's yes is the check
-here, not a sandbox. `locallm/dawnr_tasks.py`, which says yes to everything, therefore never runs a `pc` line: it
-records it and counts it as harm unless the task asked for it.
+person with the exact line; the front door's `--yes` does not cover it; a session with no terminal runs none. It
+starts in the folder the session works in, as a terminal opened there would. Refused without asking, each with
+what to do instead:
+
+- a line that asks for administrator rights (`sudo`, `pkexec`, `doas`, `su`): handed to the person, word for word;
+- a package manager told to change what is installed (`apt install`, `dnf upgrade`, `pacman -Syu`, `apk add`),
+  with or without the word sudo: handed to the person with sudo in front. Before this rule a model on a described
+  Fedora sent `dnf install htop -y` bare, three machines in a row;
+- removing, moving and re-permissioning files (that is `sh`'s, where it is shown first and can be undone), a
+  download piped into a shell, changing what is mounted or loaded into the kernel, and starting dawnr itself;
+- a line that names a place where secrets are kept, whatever program it names it to (`base64 ~/.ssh/id_ed25519`);
+- offline, anything that reaches the network, and any line with an address in it: a page opened for the person
+  is also a way to send something out.
+
+What it does is not journaled and not undone, and the question to the person says so. What `pc` cannot promise:
+it shows a command line, not what a script named on it contains, and a desktop session will start anything for
+the person who asks it to. The person's yes is the check here, not a sandbox. `locallm/dawnr_tasks.py`, which says
+yes to everything, therefore never runs a `pc` line: it records it and counts it as harm unless the task asked for
+it (and answers "command not found" for a program this machine does not have, as the shell would).
+
+Three things the front door (`locallm/dawnr_cli.py`) adds around these tools, each from a reading of what a 4B did
+with them:
+
+- **Routing.** Whichever of `sh`, `sysinfo` and `pc` the model named, a line goes to the one it belongs to: a line
+  that only looks to `sysinfo`, one that acts on the computer to `pc`, a file read to `sh`, and a sudo line or a
+  package manager's sent to `sh` to `pc`, which hands it over. Each tool still refuses the others' lines for any
+  other front end; through this one a wrong name no longer costs a round ("empty the trash" had ended on one
+  redirect and one failed lookup, which is two failures in a row).
+- **The lines for common jobs.** `locallm/dawnr_agent/recipes.py` holds, for some twenty jobs (dark mode, volume,
+  mute, the trash, Wi-Fi, a user service, shutting down later), the line that does each on a given desktop. The
+  model is told the ones whose program this machine has and whose desktop this is, in one sentence. Without it a
+  4B turned a KDE desktop dark with `qdbus ... setDarkMode true`, a call that does not exist, and emptied the
+  trash by looking up a MIME type; `apropos trash` on the machine this was written on says "nothing appropriate".
+  Every line in the table was read from the program's own help on a machine that has it, or from its source.
+- **What a result says.** A command that printed nothing answers "exit 0: it ran and printed nothing"; "exit 0"
+  alone was taken for nothing having happened, and the same line was sent again until the loop stopped.
 
 ## 5. Plans, the dry run and approval
 
@@ -303,6 +336,24 @@ A re-plan made after untrusted text entered the conversation is new control
 flow, so its consequential steps ask again. This is the property the injection
 measurement tests: a planner fooled by a file proposes the injected action, and
 it is refused (nobody present) or put to the person, who sees it for what it is.
+
+### A second look, before anybody is asked (2026-10-05)
+
+The plan approver may answer with a sentence instead of yes or no. The plan is then not run and goes back to the
+planner with the sentence; the same plan proposed again is put to the person like any other. The front door uses
+it for two things it can read off the dry run, neither written by the model: a plan that removes a file whose
+contents are kept in no other file when the request has no word for removing ("swap the two files" twice became
+`mv a.txt b.txt && mv b.txt a.txt`, which loses one of them; told what it would lose, the model sent a swap through
+a third name), and a plan that changes a test that is already there when the request asks for no change to the
+tests. A third was tried and removed the same day: a file the request names, created in another folder than the
+request names it in. It was right about `docs/index.md` and wrong about "in each folder a file called name.txt",
+and a model sent back three times in one task wrote nothing and said it was done. What a second look costs when
+it is wrong is the task, so only the two that have not been wrong are kept.
+
+One more rule is the front door's alone: an `fs_edit` of a file the task has not yet looked at (read, written,
+found by a search, or named in a command of its own) is replaced by a read of that file. The edit was a guess at
+what the file holds: `old: "TODO"` for the line `TODO: describe.` left `: describe.` behind, and the model, shown
+the result, said done.
 
 ## 6. The loop
 

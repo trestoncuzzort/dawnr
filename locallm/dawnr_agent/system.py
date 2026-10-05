@@ -39,7 +39,8 @@ import shlex
 import shutil
 import subprocess
 
-from .commands import run_argv
+from .commands import HIDE_UNDER_HOME, run_argv
+from .paths import DEFAULT_SECRETS
 from dawnr_harness.tools import CallContext, Tool, ToolResult
 
 MAX_COMMAND = 1000
@@ -54,7 +55,12 @@ FORBIDDEN = [
     (re.compile(r":\(\)\s*\{"), "that is a fork bomb"),
     (re.compile(r">\s*/(dev|etc|boot|usr|bin|sbin|lib|proc|sys)\b"), "writing into a system directory is not done from here"),
 ]
-NETWORK = re.compile(r"(^|[;&|(`]\s*)(curl|wget|nc|ncat|netcat|ssh|scp|sftp|rsync|ftp|telnet)\b")
+NETWORK = re.compile(r"(^|[;&|(`]\s*)(curl|wget|nc|ncat|netcat|ssh|scp|sftp|rsync|ftp|telnet)\b|\b(https?|ftp)://")
+# the names the file tools never read (paths.py) and the folders the sandbox hides (commands.py): a line that names
+# one is not run, whatever program it names it to
+SECRET = re.compile(r"(?:^|[\s/'\"=:])(" + "|".join(
+    sorted({re.escape(n).replace(r"\*", r"[^\s/'\"]*") for n in DEFAULT_SECRETS + HIDE_UNDER_HOME}, key=len, reverse=True))
+    + r")(?=$|[\s/'\";|&)])")
 PACKAGE_MANAGERS = (("apt-get", "apt"), ("dnf", "dnf"), ("pacman", "pacman"), ("zypper", "zypper"), ("apk", "apk"), ("brew", "brew"))
 # what the person's programs need to find their session: nothing else of the environment is passed on
 SESSION = ("HOME", "PATH", "LANG", "LC_ALL", "USER", "LOGNAME", "SHELL", "DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
@@ -281,6 +287,9 @@ LOOK = {
     "snap": _sub("list", "version", "services", "connections", "changes", bare=False),
     "pip": _sub("list", "show", "freeze", "check", bare=False, bad=("-o", "--outdated", "-u", "--uptodate", "--index-url", "-i")),
     "brew": _sub("list", "leaves", bare=False),
+    # the manual: what a program is for and how it is called, read and not recalled
+    "man": lambda a: 1 <= len(a) <= 2 and all(re.fullmatch(r"[\w.+-]+", x) and not x.startswith("-") for x in a),
+    "apropos": lambda a: bool(a) and all(not x.startswith("-") for x in a), "whatis": lambda a: bool(a) and all(not x.startswith("-") for x in a),
     # where a program is, and saying something between two commands
     "which": _no(), "whereis": _no(), "type": _no(), "command": lambda a: len(a) == 2 and a[0] in ("-v", "-V"),
     "printenv": _no(), "echo": _no(), "true": _no(), "false": _no(),
@@ -327,13 +336,29 @@ def look(command: str) -> str | None:
     return " ".join(out[:-1])
 
 
+# the system's package managers, told to change what is installed: that takes an administrator whether or not the
+# line says sudo, so it is handed over like a line that does
+MANAGERS = re.compile(r"^\s*(apt|apt-get|dnf|yum|zypper|pacman|apk|dpkg|rpm|snap)\s+(\S+\s+)*?(install|remove|erase|purge|"
+                      r"autoremove|upgrade|update|dist-upgrade|full-upgrade|dup|up|in|rm|add|del|downgrade|reinstall|refresh|"
+                      r"-S[a-z]*|-R[a-z]*|-U[a-z]*|-i|--install|-e|--erase|-r|--remove|-P|--purge)(\s|$)")
+
+
 def refusal(command: str, offline: bool = False) -> str | None:
     """Why a line is not run from here and what to do instead, or None."""
     if offline and NETWORK.search(command):
-        return "the network is off in this session (dawnr --online turns it on)"
+        return ("the network is off in this session, and nothing here can turn it on: only the person can, by starting "
+                "dawnr again with --online. Tell them that")
     if PRIVILEGED.search(command):
         return ("it asks for administrator rights, which dawnr never takes. The person can run it themselves, exactly "
                 f"as written: {command}")
+    if MANAGERS.match(command):
+        return ("it changes what is installed, which takes administrator rights, and dawnr never takes them. The person "
+                f"can run it themselves: sudo {command.strip()}")
+    if re.match(r"\s*dawnr\b", command):
+        return "dawnr does not start itself: how it is started is the person's to decide"
+    secret = SECRET.search(command)
+    if secret:
+        return f"it names a place where secrets are kept (`{secret.group(1)}`), and dawnr does not read or pass on what is there"
     for pattern, instead in FORBIDDEN:
         if pattern.search(command):
             return instead
@@ -346,19 +371,22 @@ def refusal(command: str, offline: bool = False) -> str | None:
 
 class SystemTools:
     def __init__(self, *, timeout: float = 60.0, max_output: int = 4000, runner=run_argv, starter=subprocess.Popen,
-                 reader=run_argv, offline=lambda: True, act: bool = True):
+                 reader=run_argv, offline=lambda: True, act: bool = True, cwd: str | None = None):
         self.timeout, self.max_output, self.runner, self.starter, self.offline = timeout, max_output, runner, starter, offline
         self.reader, self.act = reader, act                     # `sysinfo` runs through `reader`; without `act` there is no `pc`
         self.env = {k: v for k, v in os.environ.items() if k in SESSION}
+        # where a command starts: the folder the session works in, as a terminal opened there would
+        self.cwd = cwd or self.env.get("HOME") or os.path.expanduser("~")
 
     def _run(self, runner, line: str) -> ToolResult:
         shell = shutil.which("bash") or "/bin/sh"
-        home = self.env.get("HOME") or os.path.expanduser("~")
-        got = runner([shell, "-c", line], cwd=home, env=self.env, timeout=self.timeout, max_output=self.max_output * 4)
+        got = runner([shell, "-c", line], cwd=self.cwd, env=self.env, timeout=self.timeout, max_output=self.max_output * 4)
         text = got["stdout"].rstrip("\n") + (("\n[stderr]\n" + got["stderr"].rstrip("\n")) if got["stderr"].strip() else "")
         if len(text) > self.max_output:
             text = text[:self.max_output * 3 // 5] + "\n[...]\n" + text[-(self.max_output * 2 // 5):]
         head = f"timed out after {got['seconds']:.0f} s" if got["timed_out"] else f"exit {got['exit']}"
+        if not text and not got["timed_out"]:                   # "exit 0" alone was taken for nothing having happened,
+            head += ": it ran and printed nothing" if got["exit"] == 0 else ": it failed and printed nothing"   # and sent again
         return ToolResult(head + ("\n" + text if text else ""), is_error=bool(got["timed_out"] or got["exit"]), trust="untrusted")
 
     def decide_sysinfo(self, args: dict) -> tuple[str, str]:
@@ -400,8 +428,8 @@ class SystemTools:
         if args.get("detach"):                                  # a program to leave running: a window, a player
             try:
                 self.starter([shutil.which("bash") or "/bin/sh", "-c", command], stdin=subprocess.DEVNULL,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                             cwd=self.env.get("HOME") or os.path.expanduser("~"), env=self.env, start_new_session=True)
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=self.cwd, env=self.env,
+                             start_new_session=True)
             except OSError as e:
                 return ToolResult(f"it did not start: {e}", is_error=True)
             return ToolResult("started; it was left running and its output is not read")
@@ -412,7 +440,8 @@ class SystemTools:
         looks = Tool("sysinfo", "The live state of this computer, not its files: what is running, memory and disk space, "
                                 "the network, services, sound, settings, what is installed. One read-only command, or "
                                 "several joined by | (df -h; ps aux --sort=-%mem | head; systemctl status cups; nmcli "
-                                "device status). It runs at once.",
+                                "device status). It runs at once. `apropos WORD` finds the program for a job and "
+                                "`man NAME | head -40` says how it is called.",
                      {"type": "object", "properties": {"command": line}, "required": ["command"], "additionalProperties": False},
                      self.sysinfo, permission="allow", trust="untrusted", network=False, consequential=False,
                      origin="agent", decide_call=self.decide_sysinfo)

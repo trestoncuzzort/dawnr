@@ -373,10 +373,13 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
     if shell is not None:
         tools += shell.tools()
         harness.clients.append(shell)      # closed with the harness: runs left unanswered are dropped
+        if files is not None:
+            files.count_hint = "with sh: grep -c, or sort | uniq -c"
     act, looks = _type(spec.get("system", False), bool, "system"), _type(spec.get("sysinfo", False), bool, "sysinfo")
     if act or looks:
         from .system import SystemTools
-        agent.system = SystemTools(offline=lambda: harness.policy.offline, act=act)
+        agent.system = SystemTools(offline=lambda: harness.policy.offline, act=act,
+                                   cwd=space.roots[0].path if space.roots else None)
         tools += agent.system.tools()
         if shell is not None:
             shell.elsewhere = "To look at the computer call `sysinfo` with this line" + ("; to change something on it, `pc`." if act else ".")

@@ -48,6 +48,7 @@ from pathlib import Path
 
 from . import paths
 from .commands import HIDE_UNDER_HOME, base_env, run_argv
+from .system import SECRET
 from .files import FileOps, Preview
 from .journal import sha256
 from .paths import PathRefused, Space, Target
@@ -68,7 +69,11 @@ CACHES = ("__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache")
 # network, no session) and the answer would be wrong, not missing: so, where `sysinfo` can look, they are sent there
 LIVE = re.compile(r"(?:^|[;&|]\s*)(ps|pgrep|pidof|top|htop|ip|ss|nmcli|iwgetid|systemctl|journalctl|loginctl|timedatectl|"
                   r"hostnamectl|pactl|wpctl|amixer|playerctl|brightnessctl|bluetoothctl|rfkill|upower|xrandr|nvidia-smi|"
-                  r"gsettings|dconf|xdg-open|notify-send)\b")
+                  r"gsettings|dconf|xdg-open|notify-send|gio|shutdown|reboot|poweroff|plasma-apply-colorscheme|ktrash[56]?)\b")
+# what a command sees in the place of a folder or a file that is hidden from it: not an empty one. An empty `~/.ssh`
+# was reported to the person as "there are no SSH private keys in your ~/.ssh directory"
+HIDDEN_FOLDER = "This folder is hidden from every command dawnr runs. It is not empty on the computer: what is in it is not shown.\n"
+HIDDEN_FILE = "# hidden by dawnr: this file is on the computer, and its contents are not shown to any command\n"
 # said after the output of a command that ran into the sandbox's walls, so that they are not taken for the computer's
 NOTES = [(re.compile(r"Read-only file system"),
           "[Only the folder can be changed from here: everything outside it is read-only in this sandbox, and stays so. "
@@ -202,6 +207,7 @@ class ShellTools:
         self.env = {**base_env(exec_path), "TMPDIR": "/tmp", **(env or {})}
         self.timeout, self.max_output = timeout, max_output
         self.elsewhere = ""                                     # where a look at the running computer is sent, if anywhere
+        self.markers = Path(state) / "sh-hidden"                # what stands in a hidden folder's and a hidden file's place
         home = os.path.expanduser("~")
         self.hide = [p for p in (hide if hide is not None else [os.path.join(home, h) for h in HIDE_UNDER_HOME])
                      if os.path.lexists(p)]
@@ -231,14 +237,23 @@ class ShellTools:
                     break
         return files, dirs
 
+    def _markers(self) -> tuple[str, str]:
+        folder, file = self.markers / "folder", self.markers / "file"
+        if not file.is_file():
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / "hidden-by-dawnr").write_text(HIDDEN_FOLDER)
+            file.write_text(HIDDEN_FILE)
+        return str(folder), str(file)
+
     def _argv(self, command: list, cwd: str, layers: dict) -> list:
         a = [self.program, "--die-with-parent", "--new-session", "--unshare-all",
              "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--tmpfs", "/tmp", "--tmpfs", "/run"]
+        no_folder, no_file = self._markers()
         for h in self.hide:
             if os.path.isdir(h) and not os.path.islink(h):
-                a += ["--tmpfs", h]
+                a += ["--ro-bind", no_folder, h]
             elif os.path.isfile(h) and not os.path.islink(h):
-                a += ["--ro-bind", "/dev/null", h]
+                a += ["--ro-bind", no_file, h]
         for sock in self.sockets:                               # nothing listens behind these inside the sandbox
             if os.path.lexists(sock):
                 a += ["--ro-bind", "/dev/null", sock]
@@ -248,7 +263,7 @@ class ShellTools:
         copied = [root for root, (_u, work) in layers.items() if not work]
         for path in files + dirs:                               # a copy was made without them; elsewhere they are masked
             if not any(path.startswith(root.rstrip("/") + "/") for root in copied):
-                a += ["--tmpfs", path] if path in dirs else ["--ro-bind", "/dev/null", path]
+                a += ["--ro-bind", no_folder if path in dirs else no_file, path]
         for r in self.roots:                                    # the file tools call the folder by its name: so may a command
             if r.path in layers and not os.path.lexists(os.path.join(r.path, r.name)):
                 a += ["--symlink", ".", os.path.join(r.path, r.name)]
@@ -503,6 +518,11 @@ class ShellTools:
             raise PathRefused(f"sh: the command is over {MAX_COMMAND} characters")
         if self.problem:
             raise PathRefused(f"sh: no command runs here: {self.problem}")
+        secret = SECRET.search(command)
+        if secret:
+            raise PathRefused(f"sh: this line names `{secret.group(1)}`, a place where secrets are kept. No command here sees "
+                              "such a place (it looks hidden or missing, and is neither), and dawnr does not read or pass on "
+                              "what is in it. Say so")
         live = LIVE.search(command.split("\n", 1)[0].split("<<", 1)[0]) if self.elsewhere else None
         if live:
             raise PathRefused(f"sh: `{live.group(1)}` reports on the running computer, and `sh` runs in a sandbox that does not "

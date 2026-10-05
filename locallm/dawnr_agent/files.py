@@ -68,6 +68,10 @@ class Preview:
                                                    # untrusted text, and the conversation is tainted by it (plan.py)
 
 
+COUNT_BY_EYE = 12              # matches past which a search says to count with a command (the 4B counted 50 lines
+                               # of a log by eye into 20, 15 and 5 where they were 25, 17 and 8)
+
+
 class EditMiss(PathRefused):
     """An edit whose text is not in the file. `quoted` is the file's closest lines: untrusted text."""
 
@@ -574,6 +578,7 @@ class FileTools:
         # (reader, scratch directory) from a front end: reader(path) -> ([(page number or None, text)], how it was
         # read), raising with a sentence when it cannot. None: fs_read returns text files only.
         self.document_reader = None
+        self.count_hint = ""                # the commands that count, named in a long search result where one can run
 
     # ------------------------------------------------------------ decisions --
 
@@ -813,6 +818,9 @@ class FileTools:
         out = [head] + hits
         if more:
             out.append(f"[{more} more matches not shown]")
+        if self.count_hint and len(hits) + more > COUNT_BY_EYE:
+            out.append(f"[{len(hits) + more} matches. To count or group them run a command ({self.count_hint}): a count made "
+                       "by eye over this many lines goes wrong.]")
         skips = ", ".join(f"{v} {k}" for k, v in skipped.items() if v)
         if skips:
             out.append(f"[skipped: {skips}]")
