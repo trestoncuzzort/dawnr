@@ -43,6 +43,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import answer as gate                                           # noqa: E402
+import dafny_feedback                                           # noqa: E402
 import interp                                                   # noqa: E402
 import python_beside                                            # noqa: E402
 import score_levels                                             # noqa: E402
@@ -175,6 +176,12 @@ def prove(spec: dict, student=None, answers: int = 5, max_new: int = 1024, prove
                     "provers": sorted(k for k, cell in row.items() if cell == score_levels.VERIFIED),
                     "undecided": sorted(k for k, cell in row.items() if cell != score_levels.VERIFIED)}
     if best is None:
+        # the specification is the person's to fix, and "not proved" names nothing they could act on; Dafny's own
+        # diagnostics name the clause (t/dafny_feedback.py, after SAFE's verifier-error triplets, arXiv:2410.15756 3.3)
+        try:
+            out["dafny says"] = {"answer": kept[0]["n"], "lines": dafny_feedback.diagnostics(kept[0]["task"])}
+        except Exception:                                       # noqa: BLE001 -- advice only: no Dafny here, or it did not run
+            pass
         return dict(out, why="no prover proved a body for this specification" if out["wrote the body"] == "the model"
                     else "no prover proved the program as written")
     try:
@@ -226,6 +233,11 @@ def render_proof(r: dict) -> str:
     if r["refused"]:
         lines += ["", f"Of {r['answers asked']} answers asked for, not shown:" if r["answers asked"] else "Not shown:"]
         lines += ["  " + x for x in r["refused"]]
+    said = (r.get("dafny says") or {}).get("lines")
+    if s is None and said:
+        about = f"answer {r['dafny says']['answer']}" if r["answers asked"] else "the program"
+        lines += ["", f"What Dafny reports about {about} (a clause of your specification named here is yours to change):"]
+        lines += ["  " + x for x in said]
     return "\n".join(lines)
 
 
