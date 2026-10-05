@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # dawnr: one question through the whole gate, offline, on this machine.
 #
-#   dawnr prove SPEC.t    a specification you wrote: the model writes the body, the provers decide [--save-python FILE]
+#   dawnr prove SPEC.t    a specification you wrote: the model writes the body, the provers decide [--test ...] [--save-python FILE]
 #   dawnr spec "QUESTION" --test "assert f(x) == y" [--save SPEC.t]    specifications to read and pick from
 #   dawnr ask "Write a function that doubles a number." --test "assert double(3) == 6" [--test ...] [--save-python FILE]
 #   dawnr doctor          what is installed and what each part found
@@ -97,7 +97,7 @@ both_up() {  # start the two models if they are not running, and stop them again
 cmd=${1:-help}; shift || true
 case $cmd in
   prove)
-    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr prove SPEC.t [--answers N] [--save-python FILE] [--save-t FILE]' >&2; exit 2; }
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr prove SPEC.t [--test "assert f(x) == y" ...] [--answers N] [--save-python FILE] [--save-t FILE]' >&2; exit 2; }
     [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
     SPEC=$(abspath "$1"); shift
     own_paths "$@"

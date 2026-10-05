@@ -129,7 +129,9 @@ tests and at an independently written solution's answers, each with the share
 of wrong results it rejects. You read them, and the one you keep is what gets
 proved. `dawnr prove` asks the model for a body that keeps your specification
 unchanged, lets the provers decide, tells you what else your specification
-would accept if it is loose, and writes the function in Python. You can also
+would accept if it is loose, and writes the function in Python. Give it your
+own examples with `--test` and it will say so when a proved program still
+fails one of them, which means the specification is not yet what you meant. You can also
 write `largest.t` yourself ([the notation](t/SYNTAX.md)). Or ask in one step
 and let dawnr choose the specification:
 

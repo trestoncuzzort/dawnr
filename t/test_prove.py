@@ -220,3 +220,53 @@ def test_dafnys_report_is_advice_and_its_absence_changes_nothing(monkeypatch):
     monkeypatch.setattr(prove.dafny_feedback, "diagnostics", gone)
     r = prove.prove(spec(), student(RIGHT), answers=1, prover=prover(lambda t: {k: "unproved / refuted" for k in spec_check.KERNELS}))
     assert r["shown"] is None and "dafny says" not in r and "What Dafny reports" not in prove.render_proof(r)
+
+
+# ---- the person's own tests beside the specification ----
+
+ZERO = "```t\nt 0\ntask clamp(x: int) returns (r: int)\n  ensures r >= 0\n{\n  r := 0;\n}\n```"
+
+
+def tests_for(spec_text, *lines):
+    return prove.read_tests(list(lines), spec(spec_text))
+
+
+def test_an_answer_that_fails_the_persons_test_is_not_proved_while_another_passes():
+    sent = []
+    entry = tests_for(WEAK_SPEC, "assert clamp(5) == 5", "assert clamp(-3) == 0")
+    r = prove.prove(spec(WEAK_SPEC), student(ZERO, WEAK_BODY), answers=2, tests=entry,
+                    prover=lambda tasks, jobs: sent.append([t["name"] for t in tasks]) or {t["name"]: dict(ALL) for t in tasks})
+    assert sent == [["answer_2__clamp"]]                                       # the constant 0 never reached a prover
+    assert r["shown"]["answer"] == 2 and r["refused"] == ["answer 1: fails your test `assert clamp(5) == 5` (it returns 0)"]
+    assert "It passes your 2 tests." in prove.render_proof(r)
+
+
+def test_a_proved_body_that_fails_the_persons_test_is_said_first_and_is_not_a_success():
+    entry = tests_for(WEAK_SPEC, "assert clamp(5) == 5")
+    r = prove.prove(spec(WEAK_SPEC), student(ZERO), answers=1, tests=entry, prover=prover(lambda t: dict(ALL)))
+    assert r["shown"] is None and r["contradiction"]["proved by"] == 7
+    assert r["contradiction"]["fails"][0] == {"test": "assert clamp(5) == 5", "verdict": "fail", "got": 0}
+    text = prove.render_proof(r)
+    assert text.startswith("NOT WHAT YOU ASKED FOR: a body was proved against your specification by 7 of 7 provers")
+    assert "the program returns 0" in text and "your specification allows that answer" in text
+    assert "The same function in Python" not in text                           # nothing is handed back as an answer
+
+
+def test_tests_for_another_function_or_in_no_readable_form_are_refused_before_anything_is_asked():
+    with pytest.raises(prove.Refused, match="the tests call `double`"):
+        tests_for(WEAK_SPEC, "assert double(2) == 4")
+    with pytest.raises(prove.Refused, match="a number that is not whole"):
+        tests_for(WEAK_SPEC, "assert clamp(2) == 2.5")
+    assert prove.read_tests([], spec(WEAK_SPEC)) is None
+
+
+@needs_sandbox
+def test_the_persons_tests_decide_how_the_python_is_written_at_the_boundary():
+    upper = ("t 1\ngate loops\ntask shout(s: seq) returns (r: seq)\n  ensures len(r) == len(s)\n{\n}\n")
+    body = "```t\n" + upper.replace("{\n}\n", "{\n  r := s.upper();\n}\n") + "```"
+    entry = tests_for(upper, 'assert shout("ab") == "AB"')
+    r = prove.prove(spec(upper), student(body), answers=1, tests=entry, prover=prover(lambda t: dict(ALL)))
+    py = r["shown"]["python"]
+    scope = {}
+    exec(py["source"], scope)                                   # noqa: S102 -- the translator's own output
+    assert scope["shout"]("hey") == "HEY"                       # a str in and a str out, as the test writes them

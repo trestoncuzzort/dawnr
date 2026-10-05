@@ -21,6 +21,11 @@ read, with a measure of how much it says: its power to reject wrong results, whi
           may add an `ensures`, never drop or alter one), is well formed, and is proved with no prover refuting it;
           the one proved by the most provers is shown, with the same function in Python (t/to_python.py). A file
           that already has a body is sent to the provers as written and no model is asked.
+          `--test "assert f(1) == 2"` gives the person's own examples. An answer that fails one is not sent to the
+          provers while another passes them all; and when a body is PROVED and still fails a test, that is said
+          first and loudest, because it means the specification allows an answer the person's own example rules
+          out: the proof is real and the specification is not yet what was meant (Lahiri's test-based check of a
+          specification, arXiv:2406.09757, with the person's tests as the tests).
           The proof says the program meets the specification; it cannot say the specification is what was meant.
           So the specification is also measured, with the proved program as the oracle: on inputs of the program's
           own domain, the share of wrong results (t/spec_check.mutations of the right one) the `ensures` rejects,
@@ -111,17 +116,45 @@ def pins_down(task: dict, n: int = PIN_INPUTS) -> dict:
             "completeness": (rejected / mutants) if mutants else None, "witness": witness}
 
 
-def python_of(task: dict, name: str) -> dict:
-    """The proved program as Python under the specification's own name, shown only when it answers every input
-    tried as the program does (t/to_python.py)."""
+def read_tests(tests: list[str], spec: dict) -> dict | None:
+    """The person's own examples, read as a question's tests are (t/answer.py entry_of); None when there are none."""
+    if not tests:
+        return None
     try:
-        source, fn = to_python.translate(task, [], name)
+        entry = gate.entry_of("", list(tests))
+    except ValueError as error:
+        raise Refused(str(error)) from None
+    if entry["fn"] != spec["name"]:
+        raise Refused(f"the tests call `{entry['fn']}`, and the specification's task is `{spec['name']}`")
+    return entry
+
+
+def failing(task: dict, entry: dict | None) -> list[dict]:
+    """The person's tests this program does not pass: [{"test", "verdict", "got"}]."""
+    out = []
+    for source, point in zip(entry["rec"]["test_list"], entry["points"]) if entry else ():
+        try:
+            verdict = se.run_point(task, point)
+        except Exception as error:                              # noqa: BLE001 -- a crash on a test is that test failing
+            verdict = {"verdict": f"raised {type(error).__name__}"}
+        if verdict["verdict"] != "pass":
+            out.append({"test": source.strip(), "verdict": verdict["verdict"], "got": verdict.get("got")})
+    return out
+
+
+def python_of(task: dict, name: str, tests: list[str] | None = None) -> dict:
+    """The proved program as Python under the specification's own name, shown only when it answers every input
+    tried as the program does (t/to_python.py); the person's tests, when given, are among the inputs and decide how
+    a sequence is written at the boundary (a str, a list, a tuple)."""
+    tests = list(tests or [])
+    try:
+        source, fn = to_python.translate(task, tests, name)
     except to_python.Unsupported as unsupported:
         return {"source": None, "why": f"it uses {unsupported}, which the translation does not write yet"}
     except Exception as error:                                  # noqa: BLE001
         return {"source": None, "why": f"the translation failed ({type(error).__name__})"}
     try:
-        report = to_python.check(task, source, fn, [])
+        report = to_python.check(task, source, fn, tests)
     except Exception as error:                                  # noqa: BLE001
         return {"source": None, "why": f"the translation could not be run beside the proved program ({type(error).__name__})"}
     if not report.get("agrees"):
@@ -130,11 +163,13 @@ def python_of(task: dict, name: str) -> dict:
     return {"source": source, "inputs": report["inputs"]}
 
 
-def prove(spec: dict, student=None, answers: int = 5, max_new: int = 1024, prover=gate.prove, jobs: int = 2) -> dict:
+def prove(spec: dict, student=None, answers: int = 5, max_new: int = 1024, prover=gate.prove, jobs: int = 2,
+          tests: dict | None = None) -> dict:
     """The whole of `prove` for one specification. `student` is a `decode` (python_beside.api_decode's shape); it is
-    not asked when the specification already carries a body."""
+    not asked when the specification already carries a body. `tests` is read_tests' entry, or None."""
     name = spec["name"]
-    out = {"name": name, "answers asked": 0, "refused": [], "shown": None, "wrote the body": "the model"}
+    out = {"name": name, "answers asked": 0, "refused": [], "shown": None, "wrote the body": "the model",
+           "tests": len(tests["points"]) if tests else 0}
     kept: list[dict] = []
     if spec.get("body"):
         out["wrote the body"] = "the file"
@@ -160,6 +195,16 @@ def prove(spec: dict, student=None, answers: int = 5, max_new: int = 1024, prove
                 kept.append({"n": n + 1, "task": task, "text": text})
         if not kept:
             return dict(out, why="no answer kept the specification and was well formed")
+    for c in kept:
+        c["fails"] = failing(c["task"], tests)
+    passing = [c for c in kept if not c["fails"]]
+    if tests and passing:                                       # the cheap check first: only what passes the person's tests is proved
+        for c in kept:
+            if c["fails"]:
+                f = c["fails"][0]
+                out["refused"].append(f"answer {c['n']}: fails your test `{f['test']}`"
+                                      + (f" (it returns {_value(f['got'])})" if f.get("got") is not None else f" ({f['verdict']})"))
+        kept = passing
     named = {c["n"]: se.rename_task(copy.deepcopy(c["task"]), f"answer_{c['n']}__{name}") for c in kept}
     cells = prover(list(named.values()), jobs)
     best = best_c = None
@@ -188,7 +233,11 @@ def prove(spec: dict, student=None, answers: int = 5, max_new: int = 1024, prove
         best["specification"] = pins_down(best_c["task"])
     except Exception as error:                                  # noqa: BLE001 -- the measurement is advice, not a gate
         best["specification"] = {"completeness": None, "why": f"{type(error).__name__}: {error}"[:120]}
-    best["python"] = python_of(best_c["task"], name)
+    if best_c["fails"]:
+        # proved, and it fails the person's own example: the specification admits an answer the example rules out
+        out["contradiction"] = dict(best, fails=best_c["fails"])
+        return dict(out, why="a body was proved against your specification and it fails your own test")
+    best["python"] = python_of(best_c["task"], name, tests["rec"]["test_list"] if tests else None)
     out["shown"] = best
     return out
 
@@ -200,12 +249,22 @@ def _value(v) -> str:
 def render_proof(r: dict) -> str:
     lines = []
     s = r["shown"]
-    if s is None:
+    c = r.get("contradiction")
+    if c:
+        f = c["fails"][0]
+        lines += [f"NOT WHAT YOU ASKED FOR: a body was proved against your specification by {c['proved by']} of 7 provers "
+                  f"({', '.join(c['provers'])}), and it fails your own test.",
+                  f"`{f['test']}`: " + (f"the program returns {_value(f['got'])}." if f.get("got") is not None
+                                        else f"the program gives no answer there ({f['verdict']})."),
+                  "The proof is real, so your specification allows that answer. Tighten an `ensures` until it rules it out, "
+                  "or correct the test.", "", c["program"].rstrip()]
+    elif s is None:
         lines.append("NOT PROVED: " + r["why"] + ".")
     else:
         lines.append(f"PROVED: by {s['proved by']} of 7 provers ({', '.join(s['provers'])}); none refutes it."
                      + (f" Undecided: {', '.join(s['undecided'])}." if s["undecided"] else "")
-                     + f" The body was written by {r['wrote the body']}; the specification is yours, unchanged.")
+                     + f" The body was written by {r['wrote the body']}; the specification is yours, unchanged."
+                     + (f" It passes your {r['tests']} test{'s' if r['tests'] != 1 else ''}." if r.get("tests") else ""))
         q = s["specification"]
         if q.get("completeness") is None:
             lines.append("How much your specification pins down could not be measured here"
@@ -234,7 +293,7 @@ def render_proof(r: dict) -> str:
         lines += ["", f"Of {r['answers asked']} answers asked for, not shown:" if r["answers asked"] else "Not shown:"]
         lines += ["  " + x for x in r["refused"]]
     said = (r.get("dafny says") or {}).get("lines")
-    if s is None and said:
+    if s is None and not c and said:
         about = f"answer {r['dafny says']['answer']}" if r["answers asked"] else "the program"
         lines += ["", f"What Dafny reports about {about} (a clause of your specification named here is yours to change):"]
         lines += ["  " + x for x in said]
@@ -305,6 +364,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--student-name", default="student")
     p.add_argument("--spec", type=Path, required=True, help="a file with one t task: the specification, body empty")
     p.add_argument("--answers", type=int, default=5)
+    p.add_argument("--test", action="append", default=[], help="your own example, an `assert f(arguments) == value` line; repeat")
     p.add_argument("--jobs", type=int, default=2, help="provers at once")
     p.add_argument("--save-python", type=Path, metavar="FILE")
     p.add_argument("--save-t", type=Path, metavar="FILE", help="write the proved t program here")
@@ -325,12 +385,13 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "prove":
         try:
             spec = read_spec(a.spec.read_text(encoding="utf-8"))
+            tests = read_tests(a.test, spec)
         except OSError as error:
             raise SystemExit(f"prove: cannot read {a.spec}: {error.strerror}")
         except Refused as refused:
             raise SystemExit(f"prove: {refused}")
         student = None if spec.get("body") else python_beside.api_decode("openai", [a.student], a.student_name)
-        r = prove(spec, student, a.answers, jobs=a.jobs)
+        r = prove(spec, student, a.answers, jobs=a.jobs, tests=tests)
         print(render_proof(r))
         if a.json:
             a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")
