@@ -203,7 +203,11 @@ def test_whole_answers_are_tried_first_and_the_function_is_the_oracle_without_be
     # the question is `ask`'s: the docstring and the examples; the function's code is not in it
     assert all("Twice the number." in c[-1]["content"] and "return 2 * n" not in c[-1]["content"] for c in model.asked)
     assert any(x.startswith("answer 1: fails") for x in r["refused"]) and any(x.startswith("answer 2: `r >= n or r < n`") for x in r["refused"])
-    assert verify_py.render(r).startswith("VERIFIED: a proved twin of `double`")
+    text = verify_py.render(r)
+    assert text.startswith("VERIFIED: a proved twin of `double`")
+    # a one-line function is its specification written again, and the person is told what the answer then rests on
+    assert "What the proof is of: the program has no loop and the specification gives its result as a formula or by cases." in text
+    assert "what this answer rests on is the specification, which was held to your own function's answers" in text
 
 
 @needs_sandbox

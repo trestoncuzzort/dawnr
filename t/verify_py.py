@@ -55,6 +55,7 @@ sys.path.insert(0, str(HERE))
 
 import answer as gate                                           # noqa: E402
 import interp                                                   # noqa: E402
+import proof_kind                                               # noqa: E402
 import py_sandbox                                               # noqa: E402
 import python_beside                                            # noqa: E402
 import score_levels                                             # noqa: E402
@@ -390,8 +391,9 @@ def render(r: dict, drawn: bool = False) -> str:
                   f"the sandbox), the {b['tests passed']} example(s) among them.",
                   f"Its specification holds at your function's answers on {b['agrees with the Python on']} drawn inputs and "
                   f"rejects {rejected} of the wrong outputs tried."
-                  + (f" Its `requires` leaves out {outside} of the inputs drawn that your function answers." if outside else ""),
-                  "", s["program"].rstrip(), "",
+                  + (f" Its `requires` leaves out {outside} of the inputs drawn that your function answers." if outside else "")]
+        lines += [x for x in [proof_kind.said(s["program"], "verify")] if x]
+        lines += ["", s["program"].rstrip(), "",
                   "Read the specification: it is what was proved, and it says what your function does, which may not be",
                   "what you meant. The proof is of the t program above; that it is the same function as your Python is",
                   "tested on the inputs counted here, not proved."]

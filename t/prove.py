@@ -50,6 +50,7 @@ sys.path.insert(0, str(HERE))
 import answer as gate                                           # noqa: E402
 import dafny_feedback                                           # noqa: E402
 import interp                                                   # noqa: E402
+import proof_kind                                               # noqa: E402
 import python_beside                                            # noqa: E402
 import score_levels                                             # noqa: E402
 import score_spec_given                                         # noqa: E402
@@ -281,6 +282,7 @@ def render_proof(r: dict) -> str:
                 args = ", ".join(f"{k} = {_value(v)}" for k, v in w["args"].items())
                 lines.append(f"For {args} the program returns {_value(w['right'])}, and your specification would also accept "
                              f"{_value(w['also_accepted'])}. If that is not what you mean, add an `ensures` that rules it out.")
+        lines += [x for x in [proof_kind.said(s["program"], "prove")] if x]
         lines += ["", s["program"].rstrip()]
         py = s.get("python") or {}
         if py.get("source"):

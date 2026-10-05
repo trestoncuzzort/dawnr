@@ -45,6 +45,7 @@ sys.path.insert(0, str(HERE))
 
 import mbpp_dfy                                                 # noqa: E402
 import proof_repair                                             # noqa: E402
+import proof_kind                                               # noqa: E402
 import python_beside                                            # noqa: E402
 import score_levels                                             # noqa: E402
 import spec_check                                               # noqa: E402
@@ -254,7 +255,8 @@ def render(r: dict) -> str:
                   f"Its specification passes the question's {b['tests passed']} test(s), holds at an independently written "
                   f"Python solution's answer on {b['agrees with the Python on']} drawn inputs, and rejects "
                   + (f"{100 * b['mutated outputs rejected']:.0f}%" if isinstance(b["mutated outputs rejected"], (int, float)) else "every judged one")
-                  + " of the wrong outputs tried.", "", s["program"].rstrip()]
+                  + " of the wrong outputs tried."]
+        lines += [x for x in [proof_kind.said(s["program"], "ask")] if x] + ["", s["program"].rstrip()]
         py = s.get("python") or {}
         if py.get("source"):
             lines += ["", f"The same function in Python. It is translated from the proved program and gave the same answer on "
