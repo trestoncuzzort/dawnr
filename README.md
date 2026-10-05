@@ -256,7 +256,11 @@ function you have, prove a specification, answer from your files, numbers,
 replay a certificate), and the same address is an HTTP API for programs:
 `POST /v1/jobs` with `{"kind": "ask", "question": ..., "tests": [...]}`
 returns a job to poll, cancel, and fetch a certificate from. It listens on
-your machine only, and every request needs the token in that link.
+your machine only, and every request needs the token in that link. A chat
+program that takes an OpenAI-compatible address and key can use it as well:
+give it `http://127.0.0.1:8713/v1` and the token, and its model picker lists
+`dawnr-ask`, `dawnr-verify`, `dawnr-calc` and the rest; what you type is read
+as that kind of question and the reply is the gate's own.
 
 A question takes one to two minutes on an ordinary CPU (the two commands above
 took 130 and 92 seconds on a desktop's), and 11 to 27 seconds

@@ -178,6 +178,63 @@ def test_each_kind_becomes_the_terminals_own_command_with_its_inputs_inside_the_
     assert argv[1:3] == ["t/certificate.py", "check"] and argv[-2:] == ["--kernels", "dafny"] and json.loads((d / "given.cert.json").read_text()) == {"_type": "x"}
 
 
+def test_a_chat_program_picks_the_kind_of_job_as_its_model_and_gets_the_gates_text_back(api):
+    status, models = api("GET", "/v1/models")
+    assert status == 200 and [m["id"] for m in models["data"]] == [f"dawnr-{k}" for k in serve_api.KINDS]
+    status, reply = api("POST", "/v1/chat/completions", {"model": "dawnr-ask", "messages": [
+        {"role": "user", "content": "Double a number.\nassert double(3) == 6"}]})
+    assert status == 200 and reply["object"] == "chat.completion" and reply["choices"][0]["finish_reason"] == "stop"
+    assert reply["choices"][0]["message"]["content"].startswith("SHOWN: a stand-in") and "/certificate)" in reply["choices"][0]["message"]["content"]
+    assert api("POST", "/v1/chat/completions", {"model": "gpt-4", "messages": []})[0] == 404
+    assert api("POST", "/v1/chat/completions", {"model": "dawnr-ask", "messages": []}, token=None)[0] == 401
+
+
+def test_a_chat_reply_can_be_streamed_and_starts_before_the_job_ends(api):
+    import http.client
+    c = http.client.HTTPConnection("127.0.0.1", api.port, timeout=20)
+    c.request("POST", "/v1/chat/completions", body=json.dumps({"model": "dawnr-calc", "stream": True, "messages": [{"role": "user", "content": "2 + 2?"}]}),
+              headers={"Host": f"127.0.0.1:{api.port}", "Authorization": "Bearer t0ken", "Content-Type": "application/json"})
+    r = c.getresponse()
+    raw = r.read().decode()
+    c.close()
+    assert r.status == 200 and r.getheader("Content-Type").startswith("text/event-stream")
+    events = [json.loads(l[6:]) for l in raw.splitlines() if l.startswith("data: {")]
+    assert events[0]["choices"][0]["delta"] == {"role": "assistant", "content": ""}
+    assert events[1]["choices"][0]["delta"]["content"].startswith("SHOWN: a stand-in") and events[-1]["choices"][0]["finish_reason"] == "stop"
+    assert raw.rstrip().endswith("data: [DONE]")
+
+
+def test_each_kind_reads_the_last_message_by_its_own_convention():
+    def job(kind, *contents):
+        return serve_api.from_chat(kind, [{"role": "user", "content": c} for c in contents])
+    assert job("ask", "Double a number.\nassert double(3) == 6\nassert double(0) == 0") == {
+        "kind": "ask", "question": "Double a number.", "tests": ["assert double(3) == 6", "assert double(0) == 0"]}
+    v = job("verify", "Check this:\n```python\ndef f(n: int):\n    return n\n```\nassert f(1) == 1")
+    assert v["python"] == "def f(n: int):\n    return n\n" and v["tests"] == ["assert f(1) == 1"]
+    assert job("verify", "def f(n: int):\n    return n")["python"].startswith("def f")
+    assert job("prove", "```t\nt 1\ntask f(n: int) returns (r: int)\n  ensures r == n\n{\n}\n```")["specification"].startswith("t 1\ntask f")
+    assert job("calc", "What is 2 + 2?") == {"kind": "calc", "question": "What is 2 + 2?"}
+    assert job("cite", "When is it due?\n---\nPayable by March 3.") == {"kind": "cite", "question": "When is it due?", "files": [{"name": "message.txt", "text": "Payable by March 3."}]}
+    earlier = job("cite", "Payable by March 3.", "When is it due?")
+    assert earlier["question"] == "When is it due?" and earlier["files"] == [{"name": "message-1.txt", "text": "Payable by March 3."}]
+    e = job("extract", "total(number): the amount due\ndue(date): when\n---\nThe total due is $5 by March 3, 2026.")
+    assert e["fields"] == ["total(number): the amount due", "due(date): when"] and e["files"][0]["text"].startswith("The total due")
+    assert job("check", '{"_type": "x"}') == {"kind": "check", "certificate": {"_type": "x"}}
+    parts = serve_api.from_chat("calc", [{"role": "user", "content": [{"type": "text", "text": "2 + 2?"}, {"type": "image_url", "image_url": {}}]}])
+    assert parts["question"] == "2 + 2?"
+    with pytest.raises(serve_api.Bad, match="not a certificate"):
+        job("check", "hello")
+    with pytest.raises(serve_api.Bad, match="no message to read"):
+        serve_api.from_chat("ask", [{"role": "assistant", "content": "hi"}])
+
+
+def test_a_message_the_kind_cannot_read_comes_back_as_a_reply_that_says_how(api):
+    api.server.jobs.build = serve_api.command                   # the real reading of the request
+    status, reply = api("POST", "/v1/chat/completions", {"model": "dawnr-ask", "messages": [{"role": "user", "content": "Double a number."}]})
+    text = reply["choices"][0]["message"]["content"]
+    assert status == 200 and text.startswith("dawnr could not read that: `tests` must hold at least one") and "one `assert f(arguments) == value` to a line" in text
+
+
 def test_with_another_writer_the_jobs_that_write_t_ask_it_with_the_reference_and_the_rest_are_unchanged(tmp_path):
     def build(kind, body):
         d = tmp_path / f"{kind}-w"
