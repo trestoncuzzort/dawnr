@@ -144,14 +144,21 @@ nothing to configure. It reads the files there (and in any folder you name with
 `--root`), and the folder you start it in is the only place it may change. A
 write or an edit is shown first, as a plan with the exact difference, and asked
 for once; every change is journaled with what it replaced, so `/undo` puts it
-back. The few commands it may run (`git status`, `python3 FILE`, `pytest`) run
-in a sandbox with no network and nothing writable but that folder, and the
-network is off unless you say `--online`. `dawnr do "TASK"` does one task and
-returns. Each task ends with two lines the model did not write: what the
-journal says was changed, and what the task cost in model calls, tokens and
-tokens a second. This front door is new (2026-10-05): it was tried by hand on
-five tasks and is not yet measured on a task set; the containment and the
-sandbox behind it are measured in [DAWNR-AGENT.md](DAWNR-AGENT.md).
+back. It can run any shell command, and this is how that is safe: the command
+runs for real in a sandbox with no network, over a copy-on-write layer of the
+folder, so the folder itself is not touched. A command that changed nothing
+was a read, and you get its output. One that changed something is put to you
+with exactly what it changed (which files it would create, change or remove),
+and only your yes makes those changes real, through the same journal. The rest
+of the disk is read-only to it and your keys are hidden. The network is off
+unless you say `--online`. `dawnr do "TASK"` does one task and returns. Each
+task ends with two lines the model did not write: what the journal says was
+changed, and what the task cost in model calls, tokens and tokens a second.
+This front door is new (2026-10-05): it was tried by hand on a few tasks and
+is not yet measured on a task set; the containment behind it is measured in
+[DAWNR-AGENT.md](DAWNR-AGENT.md). Commands need Linux 5.11 or newer with
+bubblewrap 0.8 or newer; elsewhere the assistant reads and edits files and
+runs nothing.
 
 And for a program you want proved, starting from a specification:
 

@@ -197,6 +197,33 @@ was written on, unprivileged `unshare -rn` is refused (AppArmor restricts
 unprivileged user namespaces there) and bubblewrap, which has its own profile,
 works.
 
+### Any command, over an overlay (`sh`, 2026-10-05)
+
+The allowlist above is safe because it is short, and for the same reason it cannot rename a file. With
+`"shell": true` the agent also offers `sh`, which runs any shell line and is safe for where it runs
+(`locallm/dawnr_agent/shell.py`): inside the same bubblewrap sandbox, with each writable root mounted as an
+overlay over itself, so that the command changes the folder freely and every change lands in a directory of the
+agent's own. The folder is not touched. Afterwards the changes are read back by the kernel's rules for an
+overlay's upper directory (a file written, a whiteout for a name removed, an opaque directory for one replaced
+whole):
+
+- a command that changed nothing was a read: its output is returned, marked untrusted, and nothing is asked;
+- one that changed something is asked for, and the reason shown is what it changed, so the person approves
+  effects and not a command line; in a plan, the dry run is that run;
+- approved, the changes are applied through the journaled file operations, each file's old bytes kept, and one
+  `undo` of the person's puts a whole command's changes back, the last first;
+- refused: a file that moved since the command ran (nothing more is applied), a change set of more than 400
+  files, a file over the journal's size limit, a link or a device (listed, never applied).
+
+The idea is `try`'s (github.com/binpash/try, MIT, OSDI'26). `try` overlays the whole system with the network
+open and calls itself a "semisolate"; here only the roots are overlaid, inside the sandbox. What a command does
+that is not a file in a root does not exist afterwards: it cannot install a package, change a setting or leave a
+program running. Tried on the desktop this was written on (bubblewrap 0.11.1, Linux 7.0): a line that renamed a
+file, appended to another, made two folders and an executable script was asked for as six changes and applied
+as six journal rows; `locallm/test_dawnr_shell.py` holds that, the refusals, and that the network, the rest of the
+disk and the secret folders are out of reach. It needs Linux 5.11 and bubblewrap 0.8; where the overlay cannot be
+mounted the tool is not offered. Not yet measured: a model driving it on a set of tasks.
+
 ## 5. Plans, the dry run and approval
 
 A plan is `{"goal": "...", "steps": [{"tool": ..., "arguments": {...}, "why": ...}]}`,
