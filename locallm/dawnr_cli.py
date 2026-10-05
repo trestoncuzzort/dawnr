@@ -22,6 +22,10 @@ what the assistant can do at all, and when it must ask.
                (locallm/dawnr_agent/shell.py): one that changed nothing was a read; one that changed something is
                asked for with what it changed, and applied through the journal. Where that sandbox does not work,
                no command runs
+  the computer what is not a file in the folder (opening a program or a page, a setting, a service) is `pc`
+               (locallm/dawnr_agent/system.py): one command, run for real, so it is asked for every time with the
+               exact line, --yes or not; never with administrator rights (such a line is handed to the person to
+               run), and never on files
   the network  off, unless --online
   the model    proposes; it never approves. What it read from a file or a page is data: after it, anything that
                changes something is asked for whatever the plan said before
@@ -48,6 +52,7 @@ import doc_read  # noqa: E402
 from agent_eval_native import NativePlanner, _post, messages_for  # noqa: E402
 from dawnr_agent import AgentLoop, Finish  # noqa: E402
 from dawnr_agent import build_agent as _build_agent  # noqa: E402
+from dawnr_agent.system import facts  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -58,6 +63,9 @@ SYSTEM = ("You are dawnr, an assistant working on this person's computer, offlin
           "folders, to count, sort or compare, or to run a program, call `sh` with the shell command. To change text "
           "inside a file call fs_edit, and to create a file with text call fs_write; neither can rename or delete. "
           "Never say a thing was done unless a tool result says it ran.")
+# added when `pc` is offered, with one sentence about the machine (dawnr_agent/system.py, facts)
+ON_THE_COMPUTER = ("To open a program, a file or a web page, or to change a setting or a service on the computer itself, "
+                   "call `pc` with one command; the person is asked each time. It is not for files and never uses sudo.")
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
 
@@ -86,6 +94,8 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
         permissions.update(fs_write="ask", fs_edit="ask")
     else:
         permissions.update(fs_write="deny", fs_edit="deny")
+    if not read_only:
+        agent["system"] = True                                  # `pc`: the computer itself, asked every time
     return {"offline": not online, "permissions": permissions, "agent": agent}
 
 
@@ -137,6 +147,7 @@ class Planner(NativePlanner):
         super().__init__(harness, host, name, max_tokens=max_tokens, post=post)
         self.roots = [root.name for root in agent.space.roots]
         self.paths = {root.name: str(root.path) for root in agent.space.roots}
+        self.system = SYSTEM + (" " + ON_THE_COMPUTER + " " + facts() if agent.system is not None else "")
 
     def path(self, value):
         """A path as the file tools write it: `todo.txt` and `./todo.txt` are in the folder, and an absolute path
@@ -168,7 +179,7 @@ class Planner(NativePlanner):
             at = last + 1
         if self.last_round(state):
             msgs.append({"role": "user", "content": LAST_ROUND})
-        return [{"role": "system", "content": SYSTEM}] + msgs
+        return [{"role": "system", "content": self.system}] + msgs
 
     @staticmethod
     def last_round(state) -> bool:
@@ -206,7 +217,7 @@ def plan_approver(ask=input, say=print, yes: bool = False):
         if all(v.decision == "allow" for v in dry.views):
             return True
         say(dry.render(for_person=True))
-        if yes:
+        if yes and not any(v.step.tool == "pc" for v in dry.views):     # what cannot be undone is asked, always
             return True
         try:
             return ask("Run this plan? [y/N] ").strip().lower() in ("y", "yes")
@@ -234,6 +245,8 @@ class Narrator:
                 outcomes = list(r.outcome.outcomes) if r.outcome is not None else []
                 for i, step in enumerate(r.plan.steps):
                     self.say(_step_line(step, outcomes[i] if i < len(outcomes) else None))
+                for v in (r.dry.refused if r.dry is not None else []):      # why, to the person: it may be theirs to run
+                    self.say(f"  refused: {v.preview.error or v.why}")
             if r.note:
                 self.say(f"  ({r.note})")
         self.said = len(rounds)

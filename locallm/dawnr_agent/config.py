@@ -44,7 +44,7 @@ from .loop import Budget
 from .paths import DEFAULT_PROTECT, DEFAULT_SECRETS, Space
 
 AGENT_KEYS = {"roots", "protect", "secrets", "commands", "command_path", "env", "sandbox", "processes",
-              "check_writes", "state", "limits", "budget", "dry_run", "shell"}
+              "check_writes", "state", "limits", "budget", "dry_run", "shell", "system"}
 RULE_KEYS = {"argv", "permission", "network", "writes", "timeout", "max_output", "env", "cwd"}
 HERE = Path(__file__).resolve().parent
 LOCALLM = HERE.parent
@@ -85,6 +85,7 @@ class Agent:
         self.files = files
         self.commands = commands
         self.shell = shell                 # shell.ShellTools: any command, over an overlay ("shell": true)
+        self.system = None                 # system.SystemTools: the computer itself, asked every time ("system": true)
         self.budget = budget
         self.dry_run = dry_run
         self.plan_approver = None          # set by a front end: callable(DryRun) -> bool; never by the model
@@ -100,6 +101,11 @@ class Agent:
             return self.commands.preview(args)
         if self.shell is not None and name == "sh":
             return self.shell.preview(args, overlay)
+        if self.system is not None and name == "pc":
+            decision, why = self.system.decide(args)
+            return Preview(error=why) if decision == "deny" else Preview(
+                summary="runs on the computer itself, outside the sandbox; not simulated, not undone",
+                detail=[f"$ {args.get('command')}"] + ([f"why: {args['why']}"] if args.get("why") else []))
         if name == "ps_list":
             return Preview(summary="lists the processes on this machine; the listing enters as untrusted data")
         tool = self.harness.registry.get(name)
@@ -361,6 +367,10 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
     if shell is not None:
         tools += shell.tools()
         harness.clients.append(shell)      # closed with the harness: runs left unanswered are dropped
+    if _type(spec.get("system", False), bool, "system"):
+        from .system import SystemTools
+        agent.system = SystemTools(offline=lambda: harness.policy.offline)
+        tools += agent.system.tools()
     if spec.get("processes", True):
         tools.append(ps_tool())
     from .plan import plan_tool

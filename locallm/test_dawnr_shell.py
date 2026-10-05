@@ -89,6 +89,14 @@ def test_the_command_cannot_reach_the_network_write_outside_the_folder_or_read_a
         shutil.rmtree(base, ignore_errors=True)
 
 
+def test_long_output_comes_back_as_its_start_and_its_end_with_what_was_left_out_counted(tmp_path):
+    work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
+    with harness:
+        r = harness.call("sh", {"command": "seq 1 5000; echo THE-ERROR-AT-THE-END"})
+    assert len(r.text) < 4300 and r.text.startswith("exit 0\n1\n2\n") and r.text.rstrip().endswith("THE-ERROR-AT-THE-END")
+    assert " lines (" in r.text and "characters) not shown]" in r.text
+
+
 def test_inside_a_command_the_folder_also_answers_to_the_name_the_file_tools_give_it(tmp_path):
     work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
     with harness:
