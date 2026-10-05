@@ -378,3 +378,24 @@ def test_a_certificate_is_replayed_through_the_api_by_the_real_command(api):
     job = api.wait(api("POST", "/v1/jobs", {"kind": "check", "certificate": certificate.from_proof(r), "provers": ["dafny"]})[1]["id"], seconds=120)
     assert job["state"] == "done" and job["outcome"] == "reproduced", job
     assert job["text"].startswith("REPRODUCED: proved here by 1 prover (dafny)") and job["result"]["verdict"] == "reproduced"
+
+
+def test_the_page_is_opened_through_a_file_only_its_owner_can_read_so_the_token_is_on_no_command_line(tmp_path, monkeypatch):
+    import platform
+    monkeypatch.setattr(platform, "release", lambda: "6.8.0-generic")
+    handed = []
+    path = serve_api.open_page(tmp_path, 8713, "s3cret&\"", lambda address: handed.append(address) or True)
+    assert path == tmp_path / "run" / "open.html" and handed == [path.as_uri()] and "s3cret" not in handed[0]
+    assert (path.stat().st_mode & 0o777) == 0o600
+    text = path.read_text()
+    assert 'content="0; url=http://127.0.0.1:8713/#token=s3cret&amp;&quot;"' in text                   # the token, escaped, only inside the file
+    # no browser here, or one that fails to start: nothing is left behind and the caller prints the address
+    assert serve_api.open_page(tmp_path, 8713, "t", lambda address: False) is None and not path.exists()
+
+    def broken(address):
+        raise OSError("no display")
+    assert serve_api.open_page(tmp_path, 8713, "t", broken) is None and not path.exists()
+    # under WSL the Windows browser cannot read a Linux file: nothing is tried
+    monkeypatch.setattr(platform, "release", lambda: "5.15.167.4-microsoft-standard-WSL2")
+    assert serve_api.open_page(tmp_path, 8713, "t", lambda address: handed.append("tried") or True) is None and "tried" not in handed
+
