@@ -195,3 +195,38 @@ What each outcome changes:
 - X12 fails on absent fields: the README says how many absent fields were filled in, and that the printed
   sentence is what the reader checks.
 
+## Outcome, 2026-10-05 11:55Z (X10 to X13)
+
+Run on the lab from commit 5be41839, its own llama-server (build b11325, the base model at 4 bits), 600 questions
+none of which was in the first 1,200. `locallm/extract_eval.py report`:
+
+| arm | shown, of 300 answerable | exact, of 300 answerable | left empty, of 300 unanswerable | shown in all | exact of shown | not in a sentence as shown |
+|---|---|---|---|---|---|---|
+| schema | 293 | 244 | 215 | 378 | 64.5% | 9 |
+| located | 290 | 242 | 216 | 374 | 64.7% | 5 |
+| span | 289 | 157 | 189 | 400 | 39.2% | 0 |
+| twice | 272 | 159 | 218 | 354 | 44.9% | 0 |
+| value | 287 | 237 | 217 | 370 | 64.0% | 0 |
+| both | 270 | 224 | 230 | 340 | 65.9% | 0 |
+
+- **X10: holds.** `value` and `both` show nothing that is not in a sentence as shown.
+- **X11: holds.** `both` is 1.4 points above `schema` (the bar was not below) and 26.7 above `span` (the bar was 15).
+- **X12: holds.** `both` is exact on 224 of the 300 answerable (74.7%; the bar was 65%), 6.6 points from `schema`
+  (the bar was within 10), and leaves empty 230 of the 300 unanswerable (76.7%; the bar was 75%), 15 more than
+  `schema` does.
+- **X13: holds.** On 597 of the 600 questions (99.5%; the bar was 97%) `both` shows exactly what the rule gives
+  when applied afterwards to this sample's `schema` and `span` answers, computed with the registering commit's code.
+
+**What `dawnr extract` is measured to do for a text field, then.** Against the same model filling a JSON schema,
+on questions neither had seen: about as often exactly right when it shows a value (65.9% against 64.5%), silent on
+77% of the fields the document does not hold where the schema is silent on 72%, at the cost of 20 exact answers in
+300 that it withholds, and with nothing shown that is not in the document as words where the schema showed 9
+such values. The same rule over the same two prompts read 66.2% and 66.0% on the first two samples, after the
+fact. The second reading withholds 30 values the first would have shown, 17 not exact and 13 exact.
+
+**What three rounds in one day were for.** Each of the two builds that failed had been tried by hand on an
+invoice and looked right. Held to a run of the sentence's words the model quotes too much (X2); given a prompt I
+rearranged for speed it filled in fields that were not there (X7, X8). The form that held is the one whose two
+halves had each already been measured, and it is now pinned to them by a test. Typed fields (numbers, dates) are
+still not measured by any of this.
+

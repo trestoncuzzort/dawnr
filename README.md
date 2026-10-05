@@ -203,11 +203,15 @@ Unicode's rules, so a Chinese, Arabic or Hindi document is read sentence by
 sentence, and an amount written `1.250,00` is read as a person there would
 read it. Only English has been measured. `cite` answers in claims that each quote
 one of your sentences word for word, or says the files do not hold the answer. `extract` fills each field
-with a run of words copied from one of your sentences and prints that
-sentence beside it; a number or date field is offered only words that read
-as one; a field nothing states is left empty. Neither can write a value that
-is not in your files. Whether the words picked are the right ones for the
-field is what the printed sentence is for.
+with words that are in one of your sentences and prints that sentence
+beside it; a number or date field is offered only words that read as one; a
+field nothing states is left empty. Neither can write a value that is not in
+your files. Whether the words picked are the right ones for the field is
+what the printed sentence is for: measured on 600 questions (SQuAD 2.0, half
+of them about something the paragraph does not say), two values in three
+that `extract` showed were exactly right, the same as the model filling a
+JSON schema, and it stayed silent on 77% of the absent ones where the schema
+did on 72% ([DISCLAIMERS.md](DISCLAIMERS.md)).
 
 And for a question with numbers in it:
 
