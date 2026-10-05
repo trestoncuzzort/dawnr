@@ -200,3 +200,21 @@ if __name__ == "__main__":
     except AssertionError as e:
         print(f"FAIL: {e}")
         sys.exit(1)
+
+
+def test_every_rule_the_checker_cites_is_defined():
+    """2026-10-05: `set-types` and `set-lit-types` were cited and never defined, so a set type error crashed the
+    checker with KeyError instead of saying what was wrong."""
+    import re
+    with open(check_wf.__file__, encoding="utf-8") as handle:
+        source = handle.read()
+    cited = set(re.findall(r'_e\(errs,[^)]*?"([a-z0-9-]+)"\)', source, flags=re.S))
+    assert len(cited) > 40
+    assert sorted(c for c in cited if c not in check_wf.RULES) == []
+
+
+def test_membership_in_a_seq_is_refused_in_words_not_with_a_crash():
+    import surface
+    task = surface.parse("t 1\ngate quantifiers\ntask has(s: seq, x: int) returns (r: bool)\n  ensures r == (x in s)\n{\n  r := x in s;\n}\n")
+    errs = check_wf.check_wf(task)
+    assert errs and all("in wants (int, set)" in e and "Finite sets" in e for e in errs)

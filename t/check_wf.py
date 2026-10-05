@@ -154,6 +154,12 @@ RULES: dict[str, str] = {
     "return-v0": "return is a v1 construct (Early exit)",
     "seq-lit-mixed": "a seq literal's elements must be all int or all seq, "
                      "no mixing, no pair or nested-seq rows (Nested sequences)",
+    # 2026-10-05: both names were used by _ty since sets landed (2026-09-27) and never defined, so the first set
+    # type error raised KeyError inside the checker and the answer's reason read "check_wf raised KeyError:
+    # 'set-types'" (3 of the published model's 100 greedy dev answers, each `x in s` with s a seq)
+    "set-lit-types": "a set display's elements must be int (Finite sets)",
+    "set-types": "in wants (int, set), card wants a set, union/inter/setminus want (set, set); "
+                 "membership in a seq is written with a quantifier (Finite sets)",
     "slice-types": "slice wants (seq or seq<seq>, int, int) (Sequences: "
                    "literals, concatenation, slices)",
     "len-nonseq": "len is defined on a seq (Gate 1)",
