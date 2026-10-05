@@ -52,6 +52,16 @@ round before on 516 fewer rows, read 22 on the same 33. With one seed of each, h
 seed and how much the rows is not measured; the candidate was fixed by a rule before this set was measured, so the
 gate did not choose it.
 
+## Installed from the release, 2026-10-05 04:28Z (`~/scratch/release-v5/install-from-release-2.log`, `ask-from-release.out`)
+
+`install.sh` run with an empty home and a bare PATH downloaded the three shards from the `student-v5` release, checked
+them against the published checksums and set up Dafny (done 04:25Z). The first question through `dawnr ask` from that
+install (the larger of two numbers, three tests) was **shown**: proved by Dafny, the only prover a fresh install has,
+none refuting; its specification passed the 3 tests, held at an independently written Python solution's answer on 100
+drawn inputs and rejected every wrong output tried. The gate's first install run had failed at 04:23Z on a syntax
+error that was this session's own doing (the working tree's `install.sh` was being edited while that run executed
+it); nothing published was wrong, and the second run is the record.
+
 ## Correction, 2026-10-05 05:05Z: the panels this gate read
 
 Forty minutes after the release, an audit of the training rows took 18 problems out of the clean 200 and 5 out of

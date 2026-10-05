@@ -1,6 +1,6 @@
 # A wider reader for the tests: tuples and rows of ints, and the 114 problems it opens; registered before any model is asked
 
-Registered 2026-10-05 05:38Z. "Grow t toward the code people actually write" was taken as a question to measure
+Registered 2026-10-05 05:37Z. "Grow t toward the code people actually write" was taken as a question to measure
 before anything was built: which problems can a person not even ask?
 
 ## What was measured first (no model involved)
@@ -41,6 +41,12 @@ no pool held, none of them in the split, so no model here has been trained on or
 - **W2.** The mean by all seven is at least 2, and lower as a share than on the clean 182: nested sequences are
   where Frama-C and the proof assistants abstain most.
 - **W3.** At least one problem whose tests pass a tuple of ints is proved by some seed.
+
+- **W4, what a person gets today.** The published model, as installed (Q8_0, llama-server on a CPU), through the
+  gate `dawnr ask` runs (`t/answer.py`: five answers, an independent Python solution, five more for consistency, the
+  provers), asked each of the 114 with the problem's own words and tests and nothing else: it shows an answer for at
+  least 5 of them, and at least 70% of the answers it shows agree with the problem's reference on drawn inputs with a
+  complete specification (`~/scratch/wider/ask_batch.py`; the reference is read only afterwards, to score).
 
 No seed's result on this panel gates anything. The comparison that would say what fine-tuning adds here (the
 untrained 4B and Phi-4-mini with 17 answers on the same 114) is its own registration when a card is free.
