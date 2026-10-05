@@ -170,6 +170,12 @@ def main(argv: list[str] | None = None) -> int:
                          "QLoRA's constant rate from the first step)")
     ap.add_argument("--max-steps", type=int, default=0, help="stop after N optimizer steps (a stability probe)")
     ap.add_argument("--log-every", type=int, default=5, help="log the loss every N optimizer steps")
+    ap.add_argument("--small-card", action="store_true",
+                    help="for an 8 GB card: keep the embedding and the norms in their own 16-bit type instead of casting them "
+                         "to 32-bit, and plain AdamW instead of the paged one")
+    ap.add_argument("--save-steps", type=int, default=0,
+                    help="save the adapter and the trainer's state every N optimizer steps, and continue from the last "
+                         "one when --out already holds any (a run of many hours on a laptop)")
     a = ap.parse_args(argv)
     if a.merge:
         return merge(a.merge, a.out)
@@ -205,7 +211,20 @@ def main(argv: list[str] | None = None) -> int:
     quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_use_double_quant=True,
                                bnb_4bit_compute_dtype=torch.bfloat16)
     model = AutoModelForCausalLM.from_pretrained(a.model, quantization_config=quant, device_map={"": 0})
-    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    if a.small_card:
+        # prepare_model_for_kbit_training casts every parameter that is not quantised to 32-bit, the 248,320-word
+        # embedding among them: 1.18 GiB more. Measured on an 8 GB laptop card under WSL2 (2026-10-05, rank 16):
+        # with the cast one step peaks at 6.33 GiB for a 2,184-token row and the next row (2,638 tokens) ends
+        # the run ("CUDA driver error: device not ready", which is how that driver says out of memory); without
+        # it 4.59, 5.15 and 5.70 GiB for rows of 2,184, 2,638 and 3,439 tokens, 8 to 14 s a row. The rest of what
+        # that function does is done here: the base frozen, gradient checkpointing on, the first layer's input
+        # asking for a gradient so that the checkpointed layers have one to pass back.
+        for p in model.parameters():
+            p.requires_grad = False
+        model.gradient_checkpointing_enable()
+        model.enable_input_require_grads()
+    else:
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
     model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=a.alpha, lora_dropout=a.dropout, bias="none",
                                              target_modules="all-linear", task_type="CAUSAL_LM"))
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -218,7 +237,8 @@ def main(argv: list[str] | None = None) -> int:
         lr_scheduler_type="constant_with_warmup" if a.warmup_steps else "constant",
         warmup_steps=a.warmup_steps, max_steps=a.max_steps or -1,
         adam_beta2=0.999, max_grad_norm=0.3, bf16=True,
-        optim="paged_adamw_32bit", logging_steps=a.log_every, save_strategy="no",
+        optim="adamw_torch" if a.small_card else "paged_adamw_32bit", logging_steps=a.log_every,
+        save_strategy="steps" if a.save_steps else "no", save_steps=a.save_steps or 500, save_total_limit=2,
         report_to=[], seed=a.seed, data_seed=a.seed, remove_unused_columns=False)
 
     class Rows(torch.utils.data.Dataset):
@@ -247,7 +267,10 @@ def main(argv: list[str] | None = None) -> int:
     trainer = ResponseOnly(model=model, args=args, train_dataset=Rows(), callbacks=[PrintLoss()],
                            data_collator=lambda fs: pad_batch(fs, tokenizer.pad_token_id))
     started = time.time()
-    result = trainer.train()
+    saved = a.save_steps and any((a.out / "trainer").glob("checkpoint-*"))
+    if saved:
+        print("continuing from the last saved step", flush=True)
+    result = trainer.train(resume_from_checkpoint=True) if saved else trainer.train()
     seconds = round(time.time() - started, 1)
     model.save_pretrained(str(a.out))
     tokenizer.save_pretrained(str(a.out))
@@ -260,6 +283,7 @@ def main(argv: list[str] | None = None) -> int:
                          "warmup_steps": a.warmup_steps, "max_steps": a.max_steps or None,
                          "batch": a.batch, "grad_accum": a.grad_accum, "epochs": a.epochs,
                          "max_len": a.max_len, "seed": a.seed, "loss": "response only",
+                         "small_card": bool(a.small_card),
                          "sources": ["arXiv:2305.14314 B.2, table 9", "arXiv:2410.15756 C.3"]},
               "trainable_parameters": trainable, "train_loss": result.training_loss,
               "steps": result.global_step, "seconds": seconds,
