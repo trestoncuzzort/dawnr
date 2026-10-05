@@ -28,3 +28,20 @@ The 27B proved 21.5% of the clean 200 at one kernel with 17 answers; DeepSeek-V3
 
 If B2 holds, the admitted documents join the pool for the next registered student round, beside every earlier
 round's.
+
+## Outcome, 2026-10-05 04:04Z (the lab's `~/scratch/round4/`: `report-training.json`, `scorespec.log`, `assemble-report.json`; recorded 04:27Z)
+
+Generated 19:47Z to 01:36Z on the lab's GPUs 1 to 3 as the teacher3 seeds freed them (20,168 training requests, 2,515
+of the 2,521 problems answered: six APPS statements are longer than the server's 12,288-token context leaves room
+for beside a 6,144-token answer; 3,528 specification samples); scored and assembled on the lab.
+
+- **B1 holds:** **220** of the 2,521 training problems reach the top tier (tests, the specification check, a Dafny
+  proof), against 150; problems with a sample at each tier or better: parses 1,706, typed 1,280, tests 833.
+- **B2 holds:** **114** training documents admitted in six or seven kernels (79 clean in all seven, 35 in six),
+  against 70.
+- **B3 holds:** **237** of the 441 specification prompts proved, against 120 (Qwen3-235B 174, DeepSeek-V3.2 206);
+  124 specification documents admitted (96 in all seven, 28 in six).
+
+Served by vLLM: `--max-num-seqs 64`, not the curve's 128 the registration names; with a 12,288-token context one
+card's cache held about 32 requests at once, so neither number bound. By the rule above, these documents join the
+pool for the next registered student round.
