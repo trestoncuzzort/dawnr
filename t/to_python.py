@@ -225,6 +225,17 @@ def _literal_kind(node) -> str:
     return "value"
 
 
+def _containers(node) -> tuple[str, ...]:
+    """How a test writes a sequence at each depth, "list" or "tuple", down its first elements: `[(1, 2), (3, 4)]`
+    is ("list", "tuple"). () for anything that is not a list or a tuple."""
+    import ast
+    out = []
+    while isinstance(node, (ast.List, ast.Tuple)):
+        out.append("tuple" if isinstance(node, ast.Tuple) else "list")
+        node = node.elts[0] if node.elts else None
+    return tuple(out)
+
+
 def _merge(a: str, b: str) -> str:
     rank = {"value": 0, "list": 1, "char": 2, "str": 3, "strs": 4}
     return a if rank[a] >= rank[b] else b
@@ -238,6 +249,7 @@ def _boundary_kinds(task: dict, tests: list[str]) -> tuple[list[str], str]:
     import ast
     seen_in = ["value"] * len(task["params"])
     seen_out = "value"
+    out_containers: tuple[str, ...] = ()
     for line in tests or []:
         try:
             node = ast.parse(line.strip()).body[0]
@@ -249,6 +261,8 @@ def _boundary_kinds(task: dict, tests: list[str]) -> tuple[list[str], str]:
         for i, arg in enumerate(node.test.left.args[:len(seen_in)]):
             seen_in[i] = _merge(seen_in[i], _literal_kind(arg))
         seen_out = _merge(seen_out, _literal_kind(node.test.comparators[0]))
+        if len(_containers(node.test.comparators[0])) > len(out_containers):
+            out_containers = _containers(node.test.comparators[0])   # the deepest writing seen (an empty one says less)
 
     def form(ttype, seen: str) -> str:
         if ttype == "seq":
@@ -261,7 +275,15 @@ def _boundary_kinds(task: dict, tests: list[str]) -> tuple[list[str], str]:
             return "char"
         return "value"
     ins = [form(p["type"], k) for p, k in zip(task["params"], seen_in)]
-    return ins, form(task["returns"][0]["type"], seen_out)
+    out = form(task["returns"][0]["type"], seen_out)
+    # 2026-10-05, the wider reader: a result the tests write with a tuple somewhere (`(0, 4, 5, 1)`, `[(1, 2), (3, 4)]`)
+    # leaves in that writing, or Python's == finds the list unequal to the tuple and the question's own test fails
+    if "tuple" in out_containers:
+        if out == "list":
+            out = "shape:" + ",".join(out_containers)
+        elif out == "strs" and out_containers[0] == "tuple":
+            out = "strs-tuple"
+    return ins, out
 
 
 _IN = {"str": "tuple(ord(c) for c in {v})", "strs": "tuple(tuple(ord(c) for c in x) for x in {v})",
@@ -288,7 +310,12 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
     for p, kind in zip(params, ins):
         if kind in _IN:
             conv_in.append(f"{INDENT}{p} = " + _IN[kind].format(v=p))
-    result = _OUT[out].format(v="_t_result")
+    if out.startswith("shape:"):
+        result = f"_t_shape(_t_result, {tuple(out[6:].split(','))!r})"
+    elif out == "strs-tuple":
+        result = "tuple(''.join(chr(c) for c in x) for x in _t_result)"
+    else:
+        result = _OUT[out].format(v="_t_result")
     spec = [surface.pexpr(c) for c in task.get("requires", [])], [surface.pexpr(c) for c in task.get("ensures", [])]
     doc = [f'{INDENT}"""The program dawnr proved in `t`, written in Python (checked against `t`, not itself proved).',
            ""]
@@ -304,6 +331,10 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
         support += ["def _t_tuple(v):", f"{INDENT}return tuple(_t_tuple(x) for x in v) if isinstance(v, (list, tuple)) else v", ""]
     if any("_t_list(" in l for l in lines):
         support += ["def _t_list(v):", f"{INDENT}return [_t_list(x) for x in v] if isinstance(v, tuple) else v", ""]
+    if any("_t_shape(" in l for l in lines):
+        support += ["def _t_shape(v, kinds):", f"{INDENT}if not isinstance(v, tuple):", f"{INDENT}{INDENT}return v",
+                    f"{INDENT}inner = [_t_shape(x, kinds[1:] or kinds[-1:]) for x in v]",
+                    f"{INDENT}return tuple(inner) if kinds[0] == \"tuple\" else inner", ""]
     if w.need_divmod:
         support += ["def _t_mod(x, y):", f"{INDENT}return x % abs(y)          # Euclidean, as t defines it (SPEC.md)", "",
                     "def _t_div(x, y):", f"{INDENT}return (x - x % abs(y)) // y", ""]
@@ -325,6 +356,16 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
 
 # --------------------------------------------------------------------- the check --
 
+def _shape(v, kinds: tuple[str, ...]):
+    """A t sequence as the tests write it: a list or a tuple at each depth (the function the translation carries)."""
+    if isinstance(v, interp.Pair):
+        return (_shape(v.a, ()), _shape(v.b, ()))
+    if not isinstance(v, tuple):
+        return v
+    inner = [_shape(x, kinds[1:] or kinds[-1:]) for x in v]
+    return tuple(inner) if kinds and kinds[0] == "tuple" else inner
+
+
 def _t_value_to_py(v, kind: str):
     """An interpreter value as the question's own Python writes it (the boundary's form)."""
     if kind == "str":
@@ -335,6 +376,10 @@ def _t_value_to_py(v, kind: str):
         return chr(v)
     if kind == "set":
         return set(v)
+    if kind == "strs-tuple":
+        return tuple("".join(chr(c) for c in x) for x in v)
+    if kind.startswith("shape:"):
+        return _shape(v, tuple(kind[6:].split(",")))
     if isinstance(v, interp.Pair):
         return (_t_value_to_py(v.a, "value"), _t_value_to_py(v.b, "value"))
     if isinstance(v, tuple):

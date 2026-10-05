@@ -56,12 +56,27 @@ import to_python                                                # noqa: E402
 TEMPERATURE = 0.7
 
 
+_UNREAD = {"float": "a number that is not whole (t has integers only)", "dict": "a dictionary (t has no map yet)",
+           "NoneType": "None (t has no optional value)", "set": "a set literal",
+           "seq-of-seq": "a list or tuple that mixes kinds of element (t's sequences hold one kind)",
+           "tuple": "a tuple"}
+
+
+def _why_unread(why) -> str:
+    """The reader's reason in words a person asking a question can act on."""
+    where, _, what = str(why or "").partition(":")
+    side = {"arg": "an argument is ", "expected": "the expected value is "}.get(where)
+    return (side + _UNREAD[what]) if side and what in _UNREAD else str(why)
+
+
 def entry_of(text: str, tests: list[str]) -> dict:
     """The question as the pool holds a problem: its words, its tests read into points, the
     function's name. ValueError when a test is not an `assert f(...) == value` line the pool's
     reader takes, or the tests name different functions."""
-    points = [mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True) for a in tests]
-    bad = [f"{a!r}: {p.get('why')}" for a, p in zip(tests, points) if not p.get("ok")]
+    # the wider reader (2026-10-05): a tuple is read as the list of the same elements and a list of int lists as
+    # t's seq<seq>; a question a person asks is not held to the pools' narrower reading
+    points = [mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True, tuples=True, nested_ints=True) for a in tests]
+    bad = [f"{a!r}: {_why_unread(p.get('why'))}" for a, p in zip(tests, points) if not p.get("ok")]
     if not points or bad:
         raise ValueError("the tests must be `assert f(arguments) == value` lines: " + "; ".join(bad or ["none given"]))
     names = {p["fn"] for p in points}

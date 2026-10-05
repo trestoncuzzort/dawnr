@@ -98,9 +98,21 @@ def dfy_task_ids(corpus_dir: Path) -> dict[int, Path]:
 # Turning one Python assertion into a t-typed point.
 # ---------------------------------------------------------------------------
 
-def _literal(node: ast.AST, strings: bool = False, nested_strings: bool = False):
+def _literal(node: ast.AST, strings: bool = False, nested_strings: bool = False,
+             tuples: bool = False, nested_ints: bool = False):
     """A Python AST node as an int, bool, list-of-int, or (nested_strings)
     list-of-strings; else raise.
+
+    `tuples` and `nested_ints` (default False, every pool to v5 unchanged;
+    the wider reader of 2026-10-05, t/PREDICT-2026-10-05-wider-reader.md):
+    with `tuples` a Python tuple is read as the list of the same elements,
+    at any depth, because t has one sequence type and the tuple's
+    immutability says nothing a specification uses; with `nested_ints` a
+    list every element of which is itself a list of ints is read as
+    `("seq-of-seq", rows)`, t's `seq<seq>`, the representation nested
+    strings already have. Neither adds a value t lacked: a tuple of a
+    string and two ints is still refused (`seq-of-seq` when it mixes rows
+    and ints, as a list would be), and so is a float, a dict or None.
 
     Deliberately narrow. `ast.literal_eval` would happily return a string, a
     dict or a float, and the caller's job is to REFUSE those by name rather
@@ -149,12 +161,12 @@ def _literal(node: ast.AST, strings: bool = False, nested_strings: bool = False)
             raise _Unsupported("negated-" + kind)
         return ("int", -v)
     if isinstance(node, (ast.List, ast.Tuple)):
-        if isinstance(node, ast.Tuple):
+        if isinstance(node, ast.Tuple) and not tuples:
             raise _Unsupported("tuple")
         try:
             items = []
             for el in node.elts:
-                kind, v = _literal(el, strings)
+                kind, v = _literal(el, strings, tuples=tuples)
                 if kind != "int":
                     raise _Unsupported("seq-of-" + kind)
                 items.append(v)
@@ -164,6 +176,15 @@ def _literal(node: ast.AST, strings: bool = False, nested_strings: bool = False)
                     isinstance(el, ast.Constant) and isinstance(el.value, str)
                     for el in node.elts):
                 return ("seq-of-seq", [[ord(c) for c in el.value] for el in node.elts])
+            rows_of = (ast.List, ast.Tuple) if tuples else (ast.List,)
+            if nested_ints and node.elts and all(isinstance(el, rows_of) for el in node.elts):
+                rows = []
+                for el in node.elts:
+                    kind, v = _literal(el, strings, tuples=tuples)   # a row is a flat seq of ints, or it is refused
+                    if kind != "seq":
+                        raise _Unsupported("seq-of-" + kind)
+                    rows.append(v)
+                return ("seq-of-seq", rows)
             raise
     if isinstance(node, ast.Call):
         fn = getattr(node.func, "id", None) or getattr(node.func, "attr", "call")
@@ -179,7 +200,8 @@ class _Unsupported(Exception):
     """An argument outside t's int/bool/seq<int> fragment, named."""
 
 
-def parse_assertion(src: str, strings: bool = False, nested_strings: bool = False) -> dict:
+def parse_assertion(src: str, strings: bool = False, nested_strings: bool = False,
+                    tuples: bool = False, nested_ints: bool = False) -> dict:
     """One MBPP `assert` line as {ok, fn, args, expected} or {ok: False, why}.
 
     Only the shape `assert f(a, b, ...) == expected` is accepted, plus the
@@ -198,6 +220,11 @@ def parse_assertion(src: str, strings: bool = False, nested_strings: bool = Fals
     elements are string constants, at least one longer than one character,
     parses as `("seq-of-seq", rows)` instead of being refused as
     `arg:seq-of-seq` / `expected:seq-of-seq`.
+
+    `tuples`, `nested_ints` (default False): passed straight to `_literal`;
+    the wider reader of 2026-10-05. A question a person asks is read with
+    both (t/answer.py entry_of); the pools to v5 are read without them, so
+    no pool, split or panel moves.
     """
     try:
         tree = ast.parse(src.strip(), mode="exec")
@@ -232,7 +259,7 @@ def parse_assertion(src: str, strings: bool = False, nested_strings: bool = Fals
     args = []
     for a in call.args:
         try:
-            args.append(_literal(a, strings, nested_strings))
+            args.append(_literal(a, strings, nested_strings, tuples, nested_ints))
         except _Unsupported as u:
             return {"ok": False, "why": "arg:%s" % u}
 
@@ -240,7 +267,7 @@ def parse_assertion(src: str, strings: bool = False, nested_strings: bool = Fals
         expected = ("bool", not negate)
     else:
         try:
-            expected = _literal(rhs, strings, nested_strings)
+            expected = _literal(rhs, strings, nested_strings, tuples, nested_ints)
         except _Unsupported as u:
             return {"ok": False, "why": "expected:%s" % u}
         if negate:

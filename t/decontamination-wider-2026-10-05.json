@@ -1,0 +1,377 @@
+{
+ "schema": 1,
+ "about": "The MBPP problems only the wider reader reads (t/spec_experiment.py wider_pool) that the training rows of 2026-10-05 already matched, by t/heldout_audit.py's lineage and twin readings. They never enter the wider panel; the rest are held out from their first day. t/PREDICT-2026-10-05-wider-reader.md",
+ "rule": "a training row is flagged for a gated problem (held-out or dev) when it names that problem's own formalisation (lineage), or holds a t program, in its answer or its prompt, that passes at least one of the problem's test points, fails none, and on 100 drawn inputs answers fewer than 10% of the inputs both answer differently from the problem's reference (twin; t/twin_draws.py), the problem's length argument left out where it has one",
+ "audited": [
+  {
+   "file": "sft-student-teacher3.jsonl",
+   "sha256": "848fca29d9399ef91fcb867006e4ff42f60b53e9e2e084e4f1e93dae37811110",
+   "rows": 5095
+  }
+ ],
+ "problems": 145,
+ "flagged_ids": [
+  95,
+  132,
+  143,
+  145,
+  197,
+  205,
+  216,
+  250,
+  261,
+  262,
+  273,
+  304,
+  310,
+  394,
+  418,
+  457,
+  460,
+  514,
+  562,
+  587,
+  612,
+  651,
+  726,
+  750,
+  792,
+  809,
+  811,
+  816,
+  857,
+  929,
+  972
+ ],
+ "evidence": {
+  "95": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 1,
+   "names": [
+    "vericoding_dd0663__smallestListLength"
+   ]
+  },
+  "132": {
+   "why": [
+    "twin"
+   ],
+   "rows": 178,
+   "names": [
+    "apps_2441__makeGood",
+    "apps_2494__defangIPaddr",
+    "apps_2817__DNA_strand",
+    "apps_3358__correct"
+   ]
+  },
+  "143": {
+   "why": [
+    "lineage"
+   ],
+   "rows": 1,
+   "names": [
+    "vericoding_vd0674__count_arrays"
+   ]
+  },
+  "145": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 3,
+   "names": [
+    "apps_4074__between_extremes",
+    "vericoding_dd0675__maxDifference"
+   ]
+  },
+  "197": {
+   "why": [
+    "twin"
+   ],
+   "rows": 2,
+   "names": [
+    "mbpp_539__basesnum_coresspondingnum"
+   ]
+  },
+  "205": {
+   "why": [
+    "twin"
+   ],
+   "rows": 2,
+   "names": [
+    "vericoding_DT0257"
+   ]
+  },
+  "216": {
+   "why": [
+    "twin"
+   ],
+   "rows": 20,
+   "names": [
+    "apps_3468__scramble",
+    "apps_4132__correct_tail",
+    "mbpp_69__is_sublist"
+   ]
+  },
+  "250": {
+   "why": [
+    "twin"
+   ],
+   "rows": 21,
+   "names": [
+    "count_matches",
+    "mbpp_204__count",
+    "mbpp_666__count_char"
+   ]
+  },
+  "261": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 3,
+   "names": [
+    "vericoding_dd0689__elementWiseDivision",
+    "vericoding_dd0767__elementWiseDivide",
+    "vericoding_dj0076__elementWiseDivision"
+   ]
+  },
+  "262": {
+   "why": [
+    "lineage"
+   ],
+   "rows": 1,
+   "names": [
+    "vericoding_dd0690__splitArray"
+   ]
+  },
+  "273": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 14,
+   "names": [
+    "mbpp_282__sub_list",
+    "vericoding_dd0696__subtractSequences",
+    "vericoding_dj0078__elementWiseSubtract",
+    "vericoding_dj0079__elementWiseSubtract"
+   ]
+  },
+  "304": {
+   "why": [
+    "lineage"
+   ],
+   "rows": 1,
+   "names": [
+    "vericoding_dd0703__elementAtIndexAfterRotation"
+   ]
+  },
+  "310": {
+   "why": [
+    "twin"
+   ],
+   "rows": 18,
+   "names": [
+    "apps_4342__no_space",
+    "apps_4343__max_match",
+    "mbpp_678__remove_spaces"
+   ]
+  },
+  "394": {
+   "why": [
+    "twin"
+   ],
+   "rows": 11,
+   "names": [
+    "mbpp_281__all_unique"
+   ]
+  },
+  "418": {
+   "why": [
+    "twin"
+   ],
+   "rows": 29,
+   "names": [
+    "apps_3352__find_longest",
+    "dafny_exercise_tmp_tmpouftptir_maxarray__maxArray",
+    "he_35__max_element",
+    "humaneval_dafny_035_max_element__max_element"
+   ]
+  },
+  "457": {
+   "why": [
+    "twin"
+   ],
+   "rows": 8,
+   "names": [
+    "apps_296__findMin"
+   ]
+  },
+  "460": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 5,
+   "names": [
+    "apps_3685__read_out",
+    "vericoding_dd0732__getFirstElements"
+   ]
+  },
+  "514": {
+   "why": [
+    "twin"
+   ],
+   "rows": 3,
+   "names": [
+    "vericoding_dv0073__solution"
+   ]
+  },
+  "562": {
+   "why": [
+    "twin"
+   ],
+   "rows": 1,
+   "names": [
+    "row_max_len"
+   ]
+  },
+  "587": {
+   "why": [
+    "twin"
+   ],
+   "rows": 271,
+   "names": [
+    "apps_2441__makeGood",
+    "apps_2494__defangIPaddr",
+    "apps_2642__swap_case",
+    "apps_2716__encode"
+   ]
+  },
+  "612": {
+   "why": [
+    "twin"
+   ],
+   "rows": 2,
+   "names": [
+    "apps_4594__transpose"
+   ]
+  },
+  "651": {
+   "why": [
+    "twin"
+   ],
+   "rows": 4,
+   "names": [
+    "apps_3468__scramble"
+   ]
+  },
+  "726": {
+   "why": [
+    "twin"
+   ],
+   "rows": 26,
+   "names": [
+    "mbpp_690__mul_consecutive_nums"
+   ]
+  },
+  "750": {
+   "why": [
+    "twin"
+   ],
+   "rows": 11,
+   "names": [
+    "apps_4092__main",
+    "vericoding_DJ0137",
+    "vericoding_dd0580__appendArray",
+    "vericoding_dj0137__arrayConcat"
+   ]
+  },
+  "792": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 13,
+   "names": [
+    "dafny_exercises_tmp_tmpjm75muf__session4exercises_exercisefirstzero__mfirstCero",
+    "mbpp_9__find_Rotations",
+    "vericoding_dd0800__countLists",
+    "vericoding_vd0674__count_arrays"
+   ]
+  },
+  "809": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 3,
+   "names": [
+    "vericoding_DJ0132",
+    "vericoding_dd0809__isSmaller"
+   ]
+  },
+  "811": {
+   "why": [
+    "twin"
+   ],
+   "rows": 25,
+   "names": [
+    "apps_157__isMatch",
+    "apps_372__isMatch",
+    "apps_4464__feast",
+    "mbpp_532__check_permutation"
+   ]
+  },
+  "816": {
+   "why": [
+    "twin"
+   ],
+   "rows": 53,
+   "names": [
+    "apps_3518__linux_type",
+    "apps_3559__chromosome_check",
+    "apps_4380__remove_chars",
+    "mbpp_173__remove_splchar"
+   ]
+  },
+  "857": {
+   "why": [
+    "twin"
+   ],
+   "rows": 191,
+   "names": [
+    "apps_2494__defangIPaddr",
+    "apps_2716__encode",
+    "apps_2817__DNA_strand",
+    "apps_2869__distinct"
+   ]
+  },
+  "929": {
+   "why": [
+    "twin"
+   ],
+   "rows": 21,
+   "names": [
+    "count_matches",
+    "mbpp_204__count",
+    "mbpp_666__count_char"
+   ]
+  },
+  "972": {
+   "why": [
+    "twin"
+   ],
+   "rows": 11,
+   "names": [
+    "apps_4092__main",
+    "vericoding_DJ0137",
+    "vericoding_dd0580__appendArray",
+    "vericoding_dj0137__arrayConcat"
+   ]
+  }
+ }
+}

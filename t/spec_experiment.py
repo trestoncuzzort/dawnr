@@ -121,7 +121,7 @@ def outdir(model: str) -> Path:
 
 # ------------------------------------------------------------------ pool --
 
-POOL_VERSIONS = ("v1", "v2", "v3", "v4", "v5", "v6")
+POOL_VERSIONS = ("v1", "v2", "v3", "v4", "v5", "v6", "v7")
 APPS_BASE = 200000      # pool v5: an APPS record is task id 200000 + its own id, clear of MBPP and HumanEval
 HUMANEVAL_BASE = 100000     # pool v4: HumanEval/<n> is task id 100000 + n, clear of every MBPP id
 
@@ -186,7 +186,7 @@ def _pool_settings(version: str) -> tuple[bool, tuple[str, ...]]:
     solution, which this tuple alone cannot express, so `pool()`/
     `pool_report()` read `version == "v3"` directly for that half rather
     than folding it in here."""
-    if version in ("v3", "v4", "v5", "v6"):
+    if version in ("v3", "v4", "v5", "v6", "v7"):
         return True, ("int", "bool", "seq", "seq-of-seq")
     if version == "v2":
         return True, ("int", "bool", "seq")
@@ -212,6 +212,11 @@ def pool(version: str = "v1") -> dict[int, dict]:
     refused assertion is out, and the refusal reasons are counted in
     `pool_report`."""
     strings, allowed = _pool_settings(version)
+    if version == "v7":
+        # Pool v7 (2026-10-05, t/PREDICT-2026-10-05-wider-reader.md): v5 plus the MBPP problems only the wider
+        # reader reads (a tuple as the list of its elements, a list of int lists as seq<seq>). v5's entries are
+        # unchanged and keep their ids; the additions are in no split, so nothing ever trained on or measured moves.
+        return {**pool("v5"), **wider_pool()}
     if version == "v6":
         # Pool v6 (2026-09-20): v5 plus the stdin-shaped problems t/nl_stdin.py
         # admitted and nothing ever asked for. v5's entries are unchanged and
@@ -241,6 +246,32 @@ def pool(version: str = "v1") -> dict[int, dict]:
         fn = fns.pop()
         if nested and any(p["expected"][0] == "seq-of-seq" or
                            any(a[0] == "seq-of-seq" for a in p["args"]) for p in pts):
+            if not mbpp_dfy.string_lib_v1_only(r.get("code", ""), fn):
+                continue
+        out[tid] = mark_characters({"rec": r, "points": pts, "fn": fn})
+    return out
+
+
+def wider_pool() -> dict[int, dict]:
+    """Pool v7's addition: the MBPP problems whose every assertion the wider reader reads
+    (mbpp_dfy.parse_assertion(tuples=True, nested_ints=True)) and at least one of which pool v3's reader
+    refuses, under v3's other gates unchanged (one function name, an expected kind t returns, and for a nested
+    value the reference's string-library use within v1's members). MBPP's ids; none is in pool v5."""
+    allowed = _pool_settings("v7")[1]
+    out = {}
+    for tid, r in sorted(mbpp_dfy.mbpp_records().items()):
+        narrow = [mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True) for a in r["test_list"]]
+        if narrow and all(p["ok"] for p in narrow):
+            continue                                            # pool v3 read it already; v3's gates decided it
+        pts = [mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True, tuples=True, nested_ints=True)
+               for a in r["test_list"]]
+        if not pts or not all(p["ok"] for p in pts) or not all(p["expected"][0] in allowed for p in pts):
+            continue
+        fns = {p["fn"] for p in pts}
+        if len(fns) != 1:
+            continue
+        fn = fns.pop()
+        if any(p["expected"][0] == "seq-of-seq" or any(a[0] == "seq-of-seq" for a in p["args"]) for p in pts):
             if not mbpp_dfy.string_lib_v1_only(r.get("code", ""), fn):
                 continue
         out[tid] = mark_characters({"rec": r, "points": pts, "fn": fn})
