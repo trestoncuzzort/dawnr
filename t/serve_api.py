@@ -16,7 +16,13 @@ states that end (done, failed, cancelled).
     GET    /v1/jobs/ID/certificate     the certificate, for `dawnr check` or POST /v1/jobs {"kind": "check", ...}
     DELETE /v1/jobs/ID                 cancel it if it has not ended, and erase what it left on disk
     GET    /v1/health                  what is installed and how long the queue is
+    GET    /v1/models                  the kinds of job as "models" (dawnr-ask, dawnr-verify, ...), for a chat program
+    POST   /v1/chat/completions        OpenAI's chat shape: the model named is the kind of job, the last message is its input
     GET    /                           the page (t/ui.html)
+
+The chat endpoint is there so that a chat program a person already has (anything that takes an OpenAI-compatible
+address and key) can be dawnr's front end: its model picker picks the kind of job, the token is the key, and the
+reply is the gate's own text. How a message is read for each kind is `from_chat` below.
 
 Who may call it. This server runs model-written and person-given code (in the sandbox) and reads back the person's
 files, so access to it is access to those. Jupyter Server's answer to the same position is a token generated at
@@ -147,6 +153,55 @@ def command(kind: str, body: dict, job: Path, student: str, base: str, writer: s
     raise Bad(f"`kind` must be one of {', '.join(KINDS)}")
 
 
+CHAT_MODELS = {f"dawnr-{k}": k for k in KINDS}
+_FENCE = re.compile(r"```[A-Za-z0-9_+-]*\n(.*?)```", re.S)
+HOW = {"ask": "Describe the function, then give examples, one `assert f(arguments) == value` to a line.",
+       "verify": "Paste the Python function (annotate its parameters, or add `assert f(arguments) == value` lines).",
+       "prove": "Paste the specification: a t task with an empty body. Lines of `assert f(arguments) == value` are your examples.",
+       "extract": "Write the fields, one to a line (`total(number): the amount due`), then a line of `---`, then the document.",
+       "cite": "Write the question, then a line of `---`, then the document (or send the document in an earlier message).",
+       "calc": "Ask the question with its numbers.",
+       "check": "Paste the certificate's JSON."}
+
+
+def _said(message: dict) -> str:
+    content = message.get("content")
+    if isinstance(content, list):                               # OpenAI's content parts: the text ones
+        content = "\n".join(p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text")
+    return content if isinstance(content, str) else ""
+
+
+def from_chat(kind: str, messages: list) -> dict:
+    """The job a conversation asks for: the last user message is the input, read by the kind's own convention (HOW);
+    for cite and extract, earlier messages are documents when the last one carries none."""
+    users = [_said(m) for m in messages if isinstance(m, dict) and m.get("role") in ("user", "system")]
+    if not users or not users[-1].strip():
+        raise Bad("there is no message to read")
+    last = users[-1]
+    asserts = [l.strip() for l in last.splitlines() if l.strip().startswith("assert ")]
+    prose = "\n".join(l for l in last.splitlines() if not l.strip().startswith("assert ")).strip()
+    fenced = _FENCE.search(last)
+    if kind == "ask":
+        return {"kind": kind, "question": prose, "tests": asserts}
+    if kind == "verify":
+        return {"kind": kind, "python": fenced.group(1) if fenced else prose, "tests": asserts if fenced else []}
+    if kind == "prove":
+        return {"kind": kind, "specification": fenced.group(1) if fenced else prose, "tests": asserts}
+    if kind == "calc":
+        return {"kind": kind, "question": last.strip()}
+    if kind == "check":
+        try:
+            return {"kind": kind, "certificate": json.loads(fenced.group(1) if fenced else last)}
+        except ValueError:
+            raise Bad("that is not a certificate's JSON") from None
+    head, cut, document = last.partition("\n---\n")
+    files = ([{"name": "message.txt", "text": document}] if cut and document.strip()
+             else [{"name": f"message-{n + 1}.txt", "text": t} for n, t in enumerate(users[:-1]) if t.strip()])
+    if kind == "cite":
+        return {"kind": kind, "question": head.strip(), "files": files}
+    return {"kind": kind, "fields": [l.strip() for l in head.splitlines() if l.strip()], "files": files}
+
+
 # what a command's exit status means, in a word a caller can branch on
 _OUTCOME = {"check": {0: "reproduced", 1: "failed", 2: "undecided here"}, "ask": {0: "shown", 1: "refused"},
             "prove": {0: "proved", 1: "not proved"}, "verify": {0: "verified", 1: "not verified"},
@@ -275,6 +330,19 @@ class Jobs:
             out["ahead"] = sum(1 for j in self.jobs.values() if j["state"] in ("queued", "running") and j["submitted"] < job["submitted"])
         return out
 
+    def wait(self, jid: str, beat=None, every: float = 10.0) -> dict | None:
+        """The job once it has ended; `beat()` is called every few seconds while it has not (a chat stream's
+        keep-alive). None when the job is erased meanwhile."""
+        last = time.time()
+        while True:
+            job = self.get(jid)
+            if job is None or job["state"] in ENDED:
+                return job
+            if beat and time.time() - last >= every:
+                beat()
+                last = time.time()
+            time.sleep(0.2)
+
     def get(self, jid: str) -> dict | None:
         with self.lock:
             job = self.jobs.get(jid)
@@ -361,6 +429,9 @@ def make_handler(jobs: Jobs, token: str, port: int, page: bytes):
                 return None
             if path == "/v1/health":
                 return self._send(200, health(jobs))
+            if path == "/v1/models":
+                return self._send(200, {"object": "list", "data": [{"id": m, "object": "model", "owned_by": "dawnr", "description": HOW[k]}
+                                                                    for m, k in CHAT_MODELS.items()]})
             m = re.fullmatch(r"/v1/jobs/([a-f0-9]{16})(/certificate)?", path)
             if not m:
                 return self._send(404, {"error": "no such path"})
@@ -370,10 +441,46 @@ def make_handler(jobs: Jobs, token: str, port: int, page: bytes):
             job = jobs.get(m.group(1))
             return self._send(200, job) if job else self._send(404, {"error": "no such job"})
 
+        def _chat(self, body: dict):
+            """OpenAI's chat completions over the gate: the model named is the kind of job; the reply is its text."""
+            model = body.get("model")
+            if model not in CHAT_MODELS:
+                return self._send(404, {"error": {"message": f"no model {model!r}; the kinds of job are {', '.join(CHAT_MODELS)}", "type": "invalid_request_error"}})
+            kind, stream = CHAT_MODELS[model], bool(body.get("stream"))
+            rid, made = "chatcmpl-" + secrets.token_hex(8), int(time.time())
+
+            def chunk(delta: dict, finish=None) -> bytes:
+                return ("data: " + json.dumps({"id": rid, "object": "chat.completion.chunk", "created": made, "model": model,
+                                               "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}) + "\n\n").encode("utf-8")
+            if stream:                                          # the headers go now: a proof can outlast a client's patience
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                self.wfile.write(chunk({"role": "assistant", "content": ""}))
+                self.wfile.flush()
+            try:
+                job, _new = jobs.submit(from_chat(kind, body.get("messages") or []), self.headers.get("Idempotency-Key"))
+                job = jobs.wait(job["id"], (lambda: (self.wfile.write(b": working\n\n"), self.wfile.flush())) if stream else None)
+                text = ((job or {}).get("text") or "").strip() or f"dawnr did not finish: {(job or {}).get('why') or 'the job was cancelled'}."
+                if job and job.get("certificate"):
+                    text += f"\n\n(Its certificate: GET /v1/jobs/{job['id']}/certificate)"
+            except Bad as bad:
+                text = f"dawnr could not read that: {bad}.\n\n{HOW[kind]}"
+            except OverflowError:
+                text = f"{MAX_QUEUE} jobs are already waiting; try again when one has ended."
+            if stream:
+                self.wfile.write(chunk({"content": text}) + chunk({}, "stop") + b"data: [DONE]\n\n")
+                return self.wfile.flush()
+            return self._send(200, {"id": rid, "object": "chat.completion", "created": made, "model": model,
+                                    "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
+                                    "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}})
+
         def do_POST(self):                                      # noqa: N802
             if not self._gate():
                 return None
-            if self.path.split("?", 1)[0] != "/v1/jobs":
+            if self.path.split("?", 1)[0] not in ("/v1/jobs", "/v1/chat/completions"):
                 return self._send(404, {"error": "no such path"})
             if (self.headers.get("Content-Type") or "").split(";")[0].strip().lower() != "application/json":
                 return self._send(415, {"error": "send the job as application/json"})
@@ -389,6 +496,8 @@ def make_handler(jobs: Jobs, token: str, port: int, page: bytes):
                     raise ValueError
             except ValueError:
                 return self._send(400, {"error": "the request is not a JSON object"})
+            if self.path.split("?", 1)[0] == "/v1/chat/completions":
+                return self._chat(body)
             try:
                 job, new = jobs.submit(body, self.headers.get("Idempotency-Key"))
             except Bad as bad:
