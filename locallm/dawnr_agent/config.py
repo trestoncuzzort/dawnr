@@ -44,7 +44,7 @@ from .loop import Budget
 from .paths import DEFAULT_PROTECT, DEFAULT_SECRETS, Space
 
 AGENT_KEYS = {"roots", "protect", "secrets", "commands", "command_path", "env", "sandbox", "processes",
-              "check_writes", "state", "limits", "budget", "dry_run"}
+              "check_writes", "state", "limits", "budget", "dry_run", "shell"}
 RULE_KEYS = {"argv", "permission", "network", "writes", "timeout", "max_output", "env", "cwd"}
 HERE = Path(__file__).resolve().parent
 LOCALLM = HERE.parent
@@ -77,12 +77,14 @@ class Agent:
     """The agent's parts, attached to a harness as harness.agent."""
 
     def __init__(self, harness, space: Space, ops: FileOps | None, files: FileTools | None,
-                 commands: CommandTools | None, budget: Budget, dry_run: bool = False, audit_path: Path | None = None):
+                 commands: CommandTools | None, budget: Budget, dry_run: bool = False, audit_path: Path | None = None,
+                 shell=None):
         self.harness = harness
         self.space = space
         self.ops = ops
         self.files = files
         self.commands = commands
+        self.shell = shell                 # shell.ShellTools: any command, over an overlay ("shell": true)
         self.budget = budget
         self.dry_run = dry_run
         self.plan_approver = None          # set by a front end: callable(DryRun) -> bool; never by the model
@@ -96,6 +98,8 @@ class Agent:
             return self.files.preview(name, args, overlay, context)
         if self.commands is not None and name == "run_command":
             return self.commands.preview(args)
+        if self.shell is not None and name == "sh":
+            return self.shell.preview(args, overlay)
         if name == "ps_list":
             return Preview(summary="lists the processes on this machine; the listing enters as untrusted data")
         tool = self.harness.registry.get(name)
@@ -332,8 +336,17 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
                              sandbox_problem=sandbox_problem, offline=lambda: harness.policy.offline)
                 if roots else None)
 
+    shell = None
+    if _type(spec.get("shell", False), bool, "shell") and ops is not None:
+        from .shell import ShellTools
+        program = shutil.which("bwrap", path=exec_path) or shutil.which("bwrap")
+        shell = ShellTools(space, ops, program=program, state=state, exec_path=exec_path, env=env) if program else None
+        if shell is None or shell.problem:
+            problems.append(f"shell: {shell.problem if shell else 'bwrap is not installed'}; sh is not offered")
+            shell = None
+
     agent = Agent(harness, space, ops, files, commands, budget, dry_run=bool(spec.get("dry_run", False)),
-                  audit_path=state / "plans.jsonl")
+                  audit_path=state / "plans.jsonl", shell=shell)
     agent.home_scan = home_scan
     if home_scan["stopped"]:
         problems.append(f"agent: the home directory's secret scan stopped {home_scan['stopped']}, every level to "
@@ -345,6 +358,8 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
         tools += files.tools()
     if commands is not None:
         tools += commands.tools()
+    if shell is not None:
+        tools += shell.tools()
     if spec.get("processes", True):
         tools.append(ps_tool())
     from .plan import plan_tool

@@ -17,8 +17,10 @@ what the assistant can do at all, and when it must ask.
   reading      files in that folder and in each --root, never a key or a password, never through a link out
   changing     a write or an edit is shown first, as a plan with its dry run, and asked for once (--yes: shown,
                not asked); each is journaled with the bytes it replaced, and /undo puts them back
-  commands     a short list of shapes, inside bubblewrap: no network, nothing writable but this folder. Where
-               bubblewrap does not work, no command runs
+  commands     any shell line, run for real over an overlay of the folder, inside bubblewrap with no network
+               (locallm/dawnr_agent/shell.py): one that changed nothing was a read; one that changed something is
+               asked for with what it changed, and applied through the journal. Where that sandbox does not work,
+               no command runs
   the network  off, unless --online
   the model    proposes; it never approves. What it read from a file or a page is data: after it, anything that
                changes something is asked for whatever the plan said before
@@ -53,14 +55,6 @@ SYSTEM = ("You are dawnr, an assistant working on this person's computer, offlin
           "thing was done unless a tool result says it ran.")
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
-# argv shapes that run without the person writing a rule; every one inside the sandbox, none with the network
-COMMANDS = [
-    {"argv": ["git", "status", "--short"], "permission": "allow", "network": False, "writes": False},
-    {"argv": ["git", "diff", "--stat"], "permission": "allow", "network": False, "writes": False},
-    {"argv": ["git", "log", "--oneline", "-n", "{int}"], "permission": "allow", "network": False, "writes": False},
-    {"argv": ["python3", "{path}"], "permission": "ask", "network": False},
-    {"argv": ["python3", "-m", "pytest", "-q", "--", "{path}..."], "permission": "ask", "network": False},
-]
 
 
 def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), online: bool = False,
@@ -79,12 +73,14 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
     agent = {"roots": listed, "budget": {"max_steps": 12, "max_rounds": 6, "max_failures": 2}}
     if state is not None:
         agent["state"] = str(state)
-    permissions = {"t": "deny"}                                 # proving is `dawnr ask` and `dawnr prove`
+    # Left out of what the model is offered, each some hundreds of tokens read on every first call: `t` (proving is
+    # `dawnr ask` and `dawnr prove`), `plan` (a turn's calls already are one), `fs_undo` (the person's /undo)
+    permissions = {"t": "deny", "plan": "deny", "fs_undo": "deny"}
     if writable:
-        agent.update(sandbox="bwrap", commands=COMMANDS)
-        permissions.update(fs_write="ask", fs_edit="ask", fs_undo="ask", run_command="allow")
+        agent["shell"] = True
+        permissions.update(fs_write="ask", fs_edit="ask")
     else:
-        permissions.update(fs_write="deny", fs_edit="deny", fs_undo="deny")
+        permissions.update(fs_write="deny", fs_edit="deny")
     return {"offline": not online, "permissions": permissions, "agent": agent}
 
 
@@ -281,18 +277,25 @@ def changes(agent, n: int = 10) -> list[str]:
 
 
 def undo(agent, change: str | None = None) -> str:
-    """Put back one journaled change: the one named, else the newest that is not itself an undo."""
+    """Put back one journaled change: the one named, else the newest that is not itself an undo. What one command
+    changed goes back together, the last change first."""
     rows = agent.ops.journal.entries() if agent.ops else []
+    undone = {row.get("undoes") for row in rows}
+    live = [row for row in rows if not row.get("undoes") and row["id"] not in undone]
     if change is None:
-        undone = {row.get("undoes") for row in rows}
-        last = next((row for row in reversed(rows) if not row.get("undoes") and row["id"] not in undone), None)
-        if last is None:
+        if not live:
             return "nothing to undo"
-        change = last["id"]
-    try:
-        return str(agent.files.undo(change, session="person"))
-    except Exception as e:                                      # noqa: BLE001 -- said, never raised at the person
-        return f"not undone: {e}"
+        last = live[-1]
+        todo = [row["id"] for row in reversed(live) if last.get("group") and row.get("group") == last["group"]] or [last["id"]]
+    else:
+        todo = [change]
+    said = []
+    for one in todo:
+        try:
+            said.append(str(agent.files.undo(one, session="person")))
+        except Exception as e:                                  # noqa: BLE001 -- said, never raised at the person
+            said.append(f"not undone: {e}")
+    return "\n".join(said)
 
 
 HELP = ("Type what you want done. /changes lists what was changed, /undo puts the last change back (or /undo ID), "

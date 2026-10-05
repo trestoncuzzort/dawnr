@@ -38,9 +38,7 @@ def session(tmp_path, model, *, answers=(), yes=False, **config):
             raise EOFError
         return queue.pop(0)
     cfg = cli.default_config(work, state=tmp_path / "state", **config)
-    cfg["agent"].pop("sandbox", None)                           # the sandbox has its own tests; no command is run here
-    cfg["agent"].pop("commands", None)
-    cfg["permissions"].pop("run_command", None)
+    cfg["agent"].pop("shell", None)                             # the sandbox has its own tests; no command is run here
     harness, agent = cli.build_agent(cfg, plan_approver=cli.plan_approver(ask, said.append, yes))
     meter = cli.Meter(model)
     planner = cli.Planner(harness, agent, "nowhere:1", "base", post=meter)
@@ -53,10 +51,10 @@ def test_the_folder_it_starts_in_is_the_one_it_may_change_and_the_home_folder_is
     here = cli.default_config(tmp_path / "home" / "project", roots=("~/project", str(tmp_path)))
     assert here["agent"]["roots"][0] == {"name": "here", "path": str(tmp_path / "home" / "project"), "mode": "write"}
     assert [r["name"] for r in here["agent"]["roots"][1:]] == ["project", tmp_path.name] and all("mode" not in r for r in here["agent"]["roots"][1:])
-    assert here["offline"] is True and here["permissions"]["fs_write"] == "ask" and here["agent"]["sandbox"] == "bwrap"
-    assert all(rule["network"] is False for rule in here["agent"]["commands"])
+    assert here["offline"] is True and here["permissions"]["fs_write"] == "ask" and here["agent"]["shell"] is True
+    assert here["permissions"]["plan"] == "deny" and "commands" not in here["agent"]
     home = cli.default_config(tmp_path / "home")
-    assert "mode" not in home["agent"]["roots"][0] and home["permissions"]["fs_write"] == "deny" and "commands" not in home["agent"]
+    assert "mode" not in home["agent"]["roots"][0] and home["permissions"]["fs_write"] == "deny" and "shell" not in home["agent"]
     asked_not_to = cli.default_config(tmp_path / "home" / "project", read_only=True, online=True)
     assert asked_not_to["permissions"]["fs_edit"] == "deny" and asked_not_to["offline"] is False
 

@@ -349,6 +349,86 @@ class FileOps:
         finally:
             paths.close(parent)
 
+    # What a command run over an overlay did (shell.py) is applied with these: a file removed, a folder made or
+    # removed, a mode set. Each is journaled like a write, so `undo` puts it back.
+
+    def delete(self, target: Target, *, action: str = "delete", session: str = "", extra: dict | None = None) -> dict:
+        """Remove one file, its bytes kept so that the change can be undone."""
+        self.space.check_names(target, write=True)
+        now = self.current(target)
+        if now is None:
+            raise PathRefused(f"{target.display} does not exist; not removed")
+        digest, backup = sha256(now), self.journal.keep(now)
+        self.remove_created(target, digest, [])
+        entry = {"root": target.root.name, "path": target.display, "action": action, "before": digest, "after": None,
+                 "bytes_before": len(now), "bytes_after": None, "backup": backup, "dirs_created": [], "session": session,
+                 **(extra or {})}
+        entry["id"] = self.journal.record(**entry)
+        return entry
+
+    def make_dir(self, target: Target, *, session: str = "", extra: dict | None = None) -> dict | None:
+        """Create a folder and the missing ones above it; None when it was already there."""
+        self.space.check_names(target, write=True)
+        handle, created = self._walk_create(Target(target.root, tuple(target.parts) + ("_",)), True)
+        paths.close(handle)
+        if not created:
+            return None
+        entry = {"root": target.root.name, "path": target.display, "action": "mkdir", "before": None, "after": None,
+                 "bytes_before": None, "bytes_after": None, "backup": None, "dirs_created": created, "session": session,
+                 **(extra or {})}
+        entry["id"] = self.journal.record(**entry)
+        return entry
+
+    def remove_dirs(self, root, rels: list) -> int:
+        """Remove folders (paths inside the root) that are empty, the deepest first; how many went."""
+        gone = 0
+        for rel in sorted(rels or [], key=lambda r: -r.count("/")):
+            sub = Target(root, tuple(rel.split("/")))
+            try:
+                handle = self.space.walk(sub, len(sub.parts) - 1, write=True)
+            except PathRefused:
+                continue
+            try:
+                if isinstance(handle, int):
+                    os.rmdir(sub.name, dir_fd=handle)
+                else:
+                    os.rmdir(os.path.join(handle, sub.name))
+                gone += 1
+            except OSError:
+                pass                                            # not empty any more: left as it is
+            finally:
+                paths.close(handle)
+        return gone
+
+    def remove_dir(self, target: Target, *, session: str = "", extra: dict | None = None) -> dict:
+        """Remove one empty folder."""
+        self.space.check_names(target, write=True)
+        if not target.parts:
+            raise PathRefused(f"{target.display} is a root directory; not removed")
+        if self.remove_dirs(target.root, ["/".join(target.parts)]) != 1:
+            raise PathRefused(f"{target.display} is not an empty folder; not removed")
+        entry = {"root": target.root.name, "path": target.display, "action": "rmdir", "before": None, "after": None,
+                 "bytes_before": None, "bytes_after": None, "backup": None, "dirs_created": [], "session": session,
+                 **(extra or {})}
+        entry["id"] = self.journal.record(**entry)
+        return entry
+
+    def set_mode(self, target: Target, mode: int) -> None:
+        """The permission bits of a file just written (a script a command made executable)."""
+        parent = self.space.walk(target, len(target.parts) - 1, write=True)
+        try:
+            st = paths.lstat_child(parent, target.name)
+            if not paths.is_regular(st):
+                return
+            if isinstance(parent, int):
+                os.chmod(target.name, mode & 0o777, dir_fd=parent)
+            else:
+                os.chmod(os.path.join(parent, target.name), mode & 0o777)
+        except (OSError, NotImplementedError):
+            pass
+        finally:
+            paths.close(parent)
+
     def remove_created(self, target: Target, expect: str, created_dirs: list) -> None:
         """Remove a file a change created (undo), only if it is still exactly what the change wrote."""
         parent = self.space.walk(target, len(target.parts) - 1, write=True)
@@ -750,6 +830,16 @@ class FileTools:
         _refuse_unread(row, change)
         target = self.space.resolve(row["path"])
         self.space.check_names(target, write=True)
+        if row.get("action") in ("mkdir", "rmdir"):             # a folder a command made or removed (shell.py)
+            if row["action"] == "rmdir":
+                entry = self.ops.make_dir(target, session=session, extra={"undoes": change})
+                return f"undid {change}: the folder {target.display} is back" + (f"; change {entry['id']}" if entry else "")
+            gone = self.ops.remove_dirs(target.root, row.get("dirs_created") or [])
+            new_id = self.ops.journal.record(root=target.root.name, path=target.display, action="undo", before=None,
+                                             after=None, bytes_before=None, bytes_after=None, backup=None,
+                                             dirs_created=[], session=session, undoes=change)
+            return (f"undid {change}: {gone} folder{'s' if gone != 1 else ''} removed under {target.display} (those "
+                    f"still empty); change {new_id}")
         now = self.ops.current(target)
         if row.get("after") is None:
             if now is not None:
