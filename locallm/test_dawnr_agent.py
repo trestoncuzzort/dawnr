@@ -37,6 +37,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "t"))
 
 import chat  # noqa: E402
+from dawnr_agent.loop import REPEATED  # noqa: E402
 from dawnr_agent import (AgentLoop, Budget, Finish, ModelPlanner, Plan, PlanError, ScriptedPlanner,  # noqa: E402
                          build_agent, execute, preview_plan)
 from dawnr_agent import commands as commands_mod  # noqa: E402
@@ -693,6 +694,42 @@ class FileTools(Env):
         self.assertIn("secret", r.text)
         self.assertIn("binary", r.text)
 
+    def test_an_edit_says_what_it_left_and_one_that_misses_is_matched_by_indentation_or_shown_the_closest_lines(self):
+        """The edit window is SWE-agent's (arXiv:2405.15793); the ladder and the closest lines are aider's
+        (aider/coders/editblock_coder.py; receipt ac8eee06f37d)."""
+        code = "class A:\n    def f(self):\n        if x:\n            return 1\n        return 2\n\n    def g(self):\n        return 3\n"
+        (self.proj / "a.py").write_text(code)
+        h, a = self.build(permissions={"fs_edit": "allow"})
+        s = h.session()
+        r = h.call("fs_edit", {"path": "project/a.py", "old": "return 3", "new": "return 4"}, session=s)
+        self.assertFalse(r.is_error, r.text)
+        self.assertEqual(r.untrusted_notes[-1], "lines 5-8 of 8 are now:\n        return 2\n\n    def g(self):\n        return 4")
+        self.assertTrue(s.tainted)                                 # the file's own lines came back with it
+        # the words right and the indentation left out, the same way on every line: matched, and put back
+        r = h.call("fs_edit", {"path": "project/a.py", "old": "def f(self):\n    if x:\n        return 1",
+                               "new": "def f(self):\n    if x:\n        return 10"})
+        self.assertFalse(r.is_error, r.text)
+        self.assertIn("    def f(self):\n        if x:\n            return 10\n        return 2\n", (self.proj / "a.py").read_text())
+        # nothing like it in two places is guessed at
+        (self.proj / "b.py").write_text("def a():\n    x = 1\n\ndef b():\n        x = 1\n")
+        r = h.call("fs_edit", {"path": "project/b.py", "old": "  x = 1", "new": "  x = 2"})
+        self.assertTrue(r.is_error)
+        # a miss comes back with the closest lines, as untrusted text, and with the news that the edit was made already
+        fresh = h.session()
+        r = h.call("fs_edit", {"path": "project/a.py", "old": "    def g(self):\n        return 3", "new": "    def g(self):\n        return 4"}, session=fresh)
+        self.assertTrue(r.is_error and fresh.tainted)
+        self.assertIn("was not found; not edited. The new text is already in the file", r.text)
+        self.assertEqual(r.untrusted_notes[-1], "lines 5-8 of 8:\n        return 2\n\n    def g(self):\n        return 4")
+        self.assertNotIn("def g", r.text)
+        r = h.call("fs_edit", {"path": "project/a.py", "old": "nothing like this anywhere", "new": "x"})
+        self.assertTrue(r.is_error and not r.untrusted_notes and r.text.endswith("was not found; not edited."))
+        # in a plan's dry run the same lines are shown to the planner only when asked for, and taint the conversation
+        planned = h.session()
+        dry = preview_plan(a, h, Plan.from_json({"steps": [{"tool": "fs_edit", "arguments": {"path": "project/a.py", "old": "def g(self):\n    return 33", "new": "y"}}]}), planned)
+        self.assertTrue(dry.refused and planned.tainted)
+        self.assertNotIn("def g(self):\n", dry.render(for_person=False))
+        self.assertIn("           def g(self):\n               return 4", dry.render(for_person=False, quoted=True))
+
     def test_write_creates_refuses_to_clobber_and_undo_reverts(self):
         h, a = self.build(permissions={"fs_write": "allow", "fs_edit": "allow", "fs_undo": "allow"})
         r = h.call("fs_write", {"path": "project/new.txt", "content": "one\n"})
@@ -1325,6 +1362,24 @@ class Loop(Env):
                    stopped_at_budget=int(res.stop == "budget"))
             runs += 1
         self.assertEqual(runs, 60)
+
+    def test_a_plan_proposed_again_after_a_change_is_not_a_repeat_and_with_nothing_changed_it_is(self):
+        """Fix the file, run the test again: the second run is not the loop going round (receipt c52f7789a75e)."""
+        h, a = self.build(permissions={"fs_write": "allow"}, approver=lambda name, arguments, why: True)
+        read = {"steps": [{"tool": "fs_read", "arguments": {"path": "project/readme.txt"}}]}
+        write = lambda text: {"steps": [{"tool": "fs_write", "arguments": {"path": "project/readme.txt", "content": text,
+                                                                         "overwrite": True}}]}
+        res = AgentLoop(a, ScriptedPlanner([read, write("one\n"), read, write("two\n"), read, read, read]), budget=Budget(max_rounds=10)).run("x")
+        self.assertEqual((res.stop, len(res.rounds), res.steps_run), ("no progress", 7, 5))   # the last two reads saw nothing new:
+        self.assertEqual((res.rounds[5].outcome, res.rounds[5].note), (None, REPEATED))       # one is sent back, the next ends it
+        self.assertEqual((self.proj / "readme.txt").read_text(), "two\n")
+        s = h.session()
+        call = lambda plan: h.call_text("plan " + json.dumps(plan), session=s).text
+        self.assertIn("1 of 1 steps ran", call(read))
+        self.assertIn("already proposed", call(read))
+        self.assertIn("1 of 1 steps ran", call(write("four\n")))
+        self.assertIn("1 of 1 steps ran", call(read))
+        self.assertIn("already proposed", call(read))
 
     def test_no_progress_rounds_and_failures_stop_the_loop(self):
         h, a = self.build()

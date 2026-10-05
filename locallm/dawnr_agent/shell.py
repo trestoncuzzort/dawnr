@@ -19,6 +19,8 @@ The command allowlist (commands.py) is safe because it is short, and for the sam
                 for a folder of at most 256 MB and 20,000 files
   the decision  a command that changed nothing was a read, and its output is returned. One that changed something is
                 asked for, with the changes it made as the reason: the person approves effects, not a command line
+  not caches    what a tool writes into its own cache folder as it runs (__pycache__, .pytest_cache, .mypy_cache,
+                .ruff_cache) is neither shown nor kept: running the tests changes nothing
   applying      through the journaled file operations (files.py), so every file changed or removed can be put back;
                 refused if a file moved since the command ran
 
@@ -36,6 +38,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import stat
 import threading
@@ -57,6 +60,25 @@ COPY_FILES = 20_000
 KEPT = 4                       # runs kept waiting for an answer; older ones are dropped
 KEPT_OUTPUT = 200_000          # bytes of a command's output read at all; the model is shown the start and the end of it
 ORDER = {"mkdir": 0, "write": 1, "delete": 2, "rmdir": 3, "skip": 4}
+# what a tool writes for itself when it runs: never shown and never kept, so running a test is not a change (try
+# leaves the same to the person, `-E PATTERN`: "exclude paths that match PATTERN on summary and commit"; receipt
+# 3b9ab2c6cefa). Removing one of these is still a change like any other
+CACHES = ("__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache")
+# programs that report on the running machine. In here they would report on the sandbox (its own processes, no
+# network, no session) and the answer would be wrong, not missing: so, where `sysinfo` can look, they are sent there
+LIVE = re.compile(r"(?:^|[;&|]\s*)(ps|pgrep|pidof|top|htop|ip|ss|nmcli|iwgetid|systemctl|journalctl|loginctl|timedatectl|"
+                  r"hostnamectl|pactl|wpctl|amixer|playerctl|brightnessctl|bluetoothctl|rfkill|upower|xrandr|nvidia-smi|"
+                  r"gsettings|dconf|xdg-open|notify-send)\b")
+# said after the output of a command that ran into the sandbox's walls, so that they are not taken for the computer's
+NOTES = [(re.compile(r"Read-only file system"),
+          "[Only the folder can be changed from here: everything outside it is read-only in this sandbox, and stays so. "
+          "If what was asked for is outside the folder, it was not done: say so.]"),
+         (re.compile(r"Could not resolve host|Temporary failure in name resolution|Network is unreachable|Name or service not known"),
+          "[`sh` has no network, whatever the computer's own connection is.]")]
+
+
+def _kept(changes: list) -> list:
+    return [c for c in changes if c.kind in ("delete", "rmdir") or not any(part in CACHES for part in c.path.split("/"))]
 
 
 @dataclass
@@ -179,6 +201,7 @@ class ShellTools:
         self.scratch = Path(state) / "sh"
         self.env = {**base_env(exec_path), "TMPDIR": "/tmp", **(env or {})}
         self.timeout, self.max_output = timeout, max_output
+        self.elsewhere = ""                                     # where a look at the running computer is sent, if anywhere
         home = os.path.expanduser("~")
         self.hide = [p for p in (hide if hide is not None else [os.path.join(home, h) for h in HIDE_UNDER_HOME])
                      if os.path.lexists(p)]
@@ -396,7 +419,7 @@ class ShellTools:
                     out.append(change)
                 else:
                     out.append(Change("skip", display, why="it is not a regular file"))
-        return sorted(out, key=lambda c: (ORDER[c.kind], -c.path.count("/") if c.kind == "rmdir" else c.path.count("/"), c.path))
+        return sorted(_kept(out), key=lambda c: (ORDER[c.kind], -c.path.count("/") if c.kind == "rmdir" else c.path.count("/"), c.path))
 
     def _read_copy(self, root, copy: str) -> list:
         """What a command changed, where it ran over a copy: the differences between the copy and the folder."""
@@ -455,7 +478,7 @@ class ShellTools:
                     self._removed(root, rel, out)
                     if name in dnames:
                         dnames.remove(name)
-        return sorted(out, key=lambda c: (ORDER[c.kind], -c.path.count("/") if c.kind == "rmdir" else c.path.count("/"), c.path))
+        return sorted(_kept(out), key=lambda c: (ORDER[c.kind], -c.path.count("/") if c.kind == "rmdir" else c.path.count("/"), c.path))
 
     # ---------------------------------------------------------------- running --
 
@@ -480,6 +503,10 @@ class ShellTools:
             raise PathRefused(f"sh: the command is over {MAX_COMMAND} characters")
         if self.problem:
             raise PathRefused(f"sh: no command runs here: {self.problem}")
+        live = LIVE.search(command.split("\n", 1)[0].split("<<", 1)[0]) if self.elsewhere else None
+        if live:
+            raise PathRefused(f"sh: `{live.group(1)}` reports on the running computer, and `sh` runs in a sandbox that does not "
+                              f"see it (its own processes, no network, no desktop session). {self.elsewhere}")
         key = self._key(args)
         with self._lock:
             kept = self.runs.get(key)
@@ -565,6 +592,7 @@ class ShellTools:
         try:
             run = self.run(args)
             text = run.output(self.max_output)
+            text += "".join("\n" + note for pattern, note in NOTES if pattern.search(text))
             if run.changes and not run.shown:                   # nobody was shown these: they stay where they are
                 return ToolResult(text + "\nNothing was applied: " + run.summary() + ". Send the same call again to have "
                                   "the changes shown and asked for.")

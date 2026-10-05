@@ -126,7 +126,8 @@ class DryRun:
                      else f"<{len(v)} characters: {v[:80]}...>") for k, v in args.items()}
         return json.dumps(shown, ensure_ascii=False)
 
-    def render(self, *, for_person: bool) -> str:
+    def render(self, *, for_person: bool, quoted: bool = False) -> str:
+        """`quoted` adds the lines of a file that came with a refusal: untrusted text, for a reader who is told so."""
         head = f"plan {self.digest}: {len(self.views)} step{'s' if len(self.views) != 1 else ''}"
         if self.plan.goal:
             head += f" ({self.plan.goal})"
@@ -136,6 +137,8 @@ class DryRun:
             lines.append(f"     {v.decision}: {v.why}")
             if v.preview.error:
                 lines.append(f"     {'may be refused' if v.uncertain else 'refused'}: {v.preview.error}")
+                if quoted and v.preview.quoted:
+                    lines += ["       " + line for line in v.preview.quoted.splitlines()]
             elif v.preview.summary:
                 lines.append(f"     {v.preview.summary}")
             if for_person:
@@ -182,6 +185,10 @@ def preview_plan(agent, harness, plan: Plan, session: Session | None = None, con
                     overlay.update(prev.writes)
                 if tool.trust == "untrusted":
                     sim.tainted = True
+                if prev.quoted:                                    # a file's lines came back with the refusal
+                    sim.tainted = True
+                    if session is not None:
+                        session.tainted = True
                 if step.tool == "run_command":
                     after_command = True
         views.append(view)
@@ -314,13 +321,37 @@ def outcome_result(outcome: RunOutcome, *, dry_run_only: bool = False) -> ToolRe
     return ToolResult(outcome.summary(), is_error=outcome.failed, notes=notes, untrusted_notes=untrusted)
 
 
+def journal_mark(agent) -> int:
+    """How much the journal holds: it grows with every change made through the agent."""
+    try:
+        return agent.ops.journal.path.stat().st_size
+    except (AttributeError, OSError):
+        return 0
+
+
+def moved(agent, harness, outcome: RunOutcome, mark: int) -> bool:
+    """Whether a run changed something an earlier plan would now see differently: a change in the journal since
+    `mark`, or a consequential tool that ran. A plan proposed again after that is not a repeat. (OpenHands calls
+    an agent stuck on the same action with the same observation, openhands/controller/stuck.py at 0.39.0; here a
+    repeat is stopped before it runs, so what is compared is whether anything it could observe has changed.
+    Receipt c52f7789a75e.)"""
+    if journal_mark(agent) != mark:
+        return True
+    for o in outcome.outcomes:
+        tool = harness.registry.get(o.step.tool) if o.status == "ran" else None
+        if tool is not None and tool.consequential:
+            return True
+    return False
+
+
 # ------------------------------------------------------------------ the tool --
 
 @dataclass
 class _SessionState:
     steps: int = 0
     rounds: int = 0
-    digests: set = field(default_factory=set)
+    digests: set = field(default_factory=set)               # the plans proposed since anything last changed
+    just: str = ""                                          # the plan that made that change, for one round
 
 
 def plan_tool(agent) -> Tool:
@@ -341,7 +372,7 @@ def plan_tool(agent) -> Tool:
             return ToolResult(f"not run: {agent.budget.max_rounds} plans already this conversation (the budget); "
                               "answer with what you have", is_error=True)
         dry = preview_plan(agent, harness, plan, session, ctx.context if ctx else "")
-        if dry.digest in state.digests:
+        if dry.digest in state.digests or dry.digest == state.just:
             return ToolResult(f"not run: plan {dry.digest} was already proposed in this conversation", is_error=True)
         state.rounds += 1
         state.digests.add(dry.digest)
@@ -355,10 +386,12 @@ def plan_tool(agent) -> Tool:
                 approved = bool(agent.plan_approver(dry))
             except Exception:                                      # noqa: BLE001  (a broken prompt is a no)
                 approved = False
+        mark = journal_mark(agent)
         outcome = execute(harness, dry, approved=approved, session=session, context=ctx.context if ctx else "",
                           steps_left=max(0, agent.budget.max_steps - state.steps))
         state.steps += outcome.steps_run
         agent.record_plan(dry, outcome, session)
+        state.digests, state.just = (set(), dry.digest) if moved(agent, harness, outcome, mark) else (state.digests, "")
         return outcome_result(outcome)
 
     return Tool("plan", "Propose steps: tool calls with exact arguments. They are shown to the person before any runs, "

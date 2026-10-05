@@ -161,7 +161,7 @@ class Harness:
             (untrusted_notes if result.trust == "untrusted" else notes).extend(post.contexts)
         result.notes = notes + result.notes
         result.untrusted_notes = untrusted_notes + result.untrusted_notes
-        if result.trust == "untrusted":
+        if result.trust == "untrusted" or result.untrusted_notes:  # any untrusted span: a file's lines after an edit, say
             session.tainted = True
         self._log(session, name, arguments, outcome, why, result=result, seconds=time.monotonic() - started,
                  permission=decision)
