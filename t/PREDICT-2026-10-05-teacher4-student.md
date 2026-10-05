@@ -50,7 +50,8 @@ The shipped recipe exactly (`t/student_sft.py`, Qwen3.5-4B, rank 64, five epochs
   specifications only);
 - **the 73 specification questions** (the old 33 and the new 40), one greedy answer each at full precision, the
   strict gates of `t/score_spec_given.py`, all seven kernels;
-- **the wider 114** (`PREDICT-2026-10-05-wider-reader.md`), same route, pool v7.
+- **the wider panel** (`PREDICT-2026-10-05-wider-reader.md`: 114 problems when this was registered, 111 since that
+  file's amendment of 05:52Z, made before any answer was read), same route, pool v7.
 
 ## Predictions
 

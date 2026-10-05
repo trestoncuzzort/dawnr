@@ -57,3 +57,14 @@ It adds no type. Of the 178 problems still unread, 61 stop at a number that is n
 that mixes kinds or nests three deep, 34 at a dictionary, 7 at None. Those are the next three: a record or mixed pair at the boundary, a finite map,
 and a decision about reals that seven provers can share. Each is a change to the language and to every lowering, with
 its own registration; the reader was the part that cost no kernel anything.
+
+## Amendment, 2026-10-05 05:52Z, before any answer on the panel had been read: the panel is 111
+
+A check the first audit lacked: is the reader's reading faithful to the problem? Each problem's own reference was
+called with the reader's reading of its tests and compared with the reader's reading of the expected values. All 182
+of the clean 182 reproduce. Of the wider 145, four do not: 143 (already matched by a row), 222 and 398 (a one-letter
+string among numbers is read as a character, as `t` reads every one-letter string, and that changes what the tuple
+holds), and 712 (its tests have two shapes). The instrument cannot ask those questions, so they are in no panel:
+**the wider panel is 111** (`unfaithful_ids` in `t/decontamination-wider-2026-10-05.json`), and W1 to W4 are read
+on the 111. The W4 batch had started on the 114 at 05:46Z and none of its answers had been opened; the three are
+generated and left out of every count.

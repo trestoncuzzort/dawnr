@@ -189,7 +189,8 @@ class PolicyTests(unittest.TestCase):
     def test_the_wider_panel_is_the_new_problems_the_rows_never_matched(self):
         wider = set(se.wider_pool())
         clean = ha.wider_clean()
-        self.assertEqual((len(wider), len(clean)), (145, 114))
+        self.assertEqual((len(wider), len(clean)), (145, 111))
+        self.assertFalse(clean & {222, 398, 712})                  # their references do not survive the reader's reading
         self.assertTrue(clean <= wider and not clean & {int(i) for i in json.loads(ha.SPLIT.read_text())["eval_ids"]})
         self.assertIn(95, wider - clean)                           # MBPP-DFY's smallestListLength is in the rows
         self.assertIn(616, clean)                                  # its elementWiseModulo left the corpus on 2026-09-21

@@ -53,8 +53,8 @@ by either route: a redistribution or a translation does not change the licence o
 
 A third panel since the same day: the problems only the wider reader reads (pool v7's additions,
 t/spec_experiment.py wider_pool), which no split names and no model was trained on. They are gated as "wider";
-the ones the published model's rows already match are recorded in t/decontamination-wider-2026-10-05.json and
-the rest are a held-out panel from their first day (`wider_clean()`).
+the ones the published model's rows already match, and three the reader cannot ask faithfully, are recorded in
+t/decontamination-wider-2026-10-05.json; the rest are a held-out panel from their first day (`wider_clean()`).
 
 What it cannot see: the same task under a signature that differs by more than a length argument (arguments in
 another order, a pair where the problem takes two values) when the benchmark records no lineage; a problem
@@ -290,12 +290,14 @@ def policy(path: Path = POLICY) -> dict:
 
 
 def wider_flagged(path: Path = WIDER_POLICY) -> set[int]:
-    """The wider reader's problems the published model's rows already matched (never in the wider panel)."""
+    """The wider reader's problems that never enter its panel: the ones the published model's rows already
+    matched, and the ones whose own reference does not reproduce its own tests once they are read the reader's
+    way (MBPP 222's `(1, 2, "4")` is a tuple of mixed types, and the reader's "4" is the character 52)."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    flagged = data.get("flagged_ids")
-    if data.get("schema") != 1 or not isinstance(flagged, list):
+    flagged, unfaithful = data.get("flagged_ids"), data.get("unfaithful_ids", [])
+    if data.get("schema") != 1 or not isinstance(flagged, list) or not isinstance(unfaithful, list):
         raise ValueError(f"{path}: not a wider-panel record")
-    return {int(i) for i in flagged}
+    return {int(i) for i in flagged} | {int(i) for i in unfaithful}
 
 
 def wider_clean(path: Path = WIDER_POLICY) -> set[int]:
