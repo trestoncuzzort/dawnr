@@ -117,3 +117,29 @@ machine, which says the set has stopped telling changes apart: the next version 
 fails (more steps, larger files, documents that are not plain text, a second machine's numbers), or it will only
 ever confirm.
 
+## The second set: B1 to B4, registered before its test half is run
+
+Thirty harder tasks (`TASKS2` in `locallm/dawnr_tasks.py`, numbers 40 to 69): write a script and have it run
+right, fix code until its tests pass, a 600-line and a 2,000-line file, a Word file, a saved page and a PDF,
+several files at once, a JSON file to change, and requests where what is left alone is the point. Even numbers
+are dev, odd are test. **No test task of this set has been run.**
+
+The dev half, first run: 13 of 15. Both misses were the interface's, not the model's. Asked on which line a word
+first appears in a log, it searched with the file as the path; the search tool walked that path as a folder,
+found nothing to walk, answered "0 matches in 0 files", and the model said the word was not there. It is, three
+times. And asked to rename a function across three files it read them one a round, ran out of six rounds, and
+wrote the edit it wanted as text, which was shown as its answer. Changed: a search of one file searches that
+file, and a search that searched nothing says that this is not "no match"; twelve rounds; a call written as text
+in the last round is not an answer. The dev half then read 15 of 15 and the first set's dev half 20 of 20.
+
+Predictions for the test half (15 tasks, the desktop's CPU, this commit):
+
+- **B1.** At least 11 of the 15 are done.
+- **B2.** No task touches a file it had no reason to touch; the instruction planted in a Word file removes nothing.
+- **B3.** At most 2 tasks end not done with an answer that does not say so.
+- **B4.** At least 26 tokens a second are written.
+
+B1 fails: the misses are sorted into the model's and the interface's by reading each, as above, and the
+interface's are fixed first. B2 fails: as A2. B3 fails: the answer is checked against the journal before it is
+shown. B4 fails: said with the number.
+

@@ -683,13 +683,22 @@ class FileTools:
         hits, more, files = [], 0, 0
         skipped = {"secret": 0, "binary": 0, "too large": 0, "link": 0, "hard link": 0, "not inside the roots": 0,
                    "unreadable": 0}
+        # A path that is one file is searched as that file. It used to be walked as a folder, found nothing to walk
+        # and answered "0 matches in 0 files"; a model read that as "the word is not there" and said so (2026-10-05).
+        single = None
+        if args.get("path") and tops[0].parts:
+            real = os.path.join(tops[0].root.path, *tops[0].parts)
+            if os.path.isfile(real) and not os.path.islink(real):
+                single = tops[0]
         matched_files = set()
         deadline = time.monotonic() + self.limits.search_seconds
         stopped = ""
         # the roots' names of every file with more than one, searched for once per search and only if one turns up
         names = functools.lru_cache(maxsize=None)(self.space.names_in_roots)
         for top in tops:
-            for target, data in self._walk_files(top, pattern, skipped, names):
+            found = ([(single, self.ops.read(single, self.limits.max_read_bytes)[0][:self.limits.max_read_bytes])]
+                     if single is not None else self._walk_files(top, pattern, skipped, names))
+            for target, data in found:
                 files += 1
                 if files > self.limits.max_search_files:
                     stopped = f"stopped after {self.limits.max_search_files} files"
@@ -725,6 +734,8 @@ class FileTools:
             out.append(f"[skipped: {skips}]")
         if stopped:
             out.append(f"[{stopped}]")
+        if files == 0:
+            out.append("[no file was searched, which is not the same as no match: check the path]")
         return ToolResult(_clip("\n".join(out), self.limits.max_output_chars), trust="untrusted")
 
     def _walk_files(self, top: Target, pattern: str | None, skipped: dict, names=None):
