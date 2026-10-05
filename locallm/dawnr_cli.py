@@ -331,6 +331,8 @@ def run_task(agent, planner, meter: Meter, task: str, history: list, say=print) 
     result = AgentLoop(agent, narrator).run(with_history(task, history), context=task)
     narrator.tell(result.rounds)
     answer = result.answer if result.stop == "done" and result.answer else f"Stopped: {STOPPED.get(result.stop, result.stop)}."
+    if result.stop == "planner" and result.rounds and "Error" in (result.rounds[-1].note or ""):
+        answer = f"Stopped: the model server did not answer ({result.rounds[-1].note.split(': ', 1)[-1][:120]})."
     say(answer)
     say(f"[{done(agent, before, result.rounds)}]")
     say(f"[{meter.line()}]")
