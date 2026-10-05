@@ -295,13 +295,28 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--certificate", type=Path, metavar="FILE",
                     help="write the shown answer's certificate here, for `dawnr check` to replay without the model")
     a = ap.parse_args(argv)
+    python = python_beside.api_decode("openai", [a.python], a.python_name)
+    if not a.test:
+        # no example was given: propose some for the person to approve (t/examples.py, TiCoder's loop). Only in a
+        # terminal, because an example nobody looked at is not the person's statement of what they mean.
+        if not sys.stdin.isatty():
+            raise SystemExit('answer: give at least one example with --test "assert f(...) == ...", or ask in a terminal to be '
+                             "shown examples to approve")
+        import examples
+        try:
+            dialogue, _made = examples.propose(python, a.text)
+        except examples.Refused as refused:
+            raise SystemExit(f"answer: {refused}")
+        a.test = examples.interactive(dialogue)
+        if not a.test:
+            raise SystemExit("answer: no example was approved, so there is nothing to hold an answer to")
+        print("\nYour examples are now the tests:\n" + "\n".join(f"  {t}" for t in a.test) + "\n", flush=True)
     try:
         entry = entry_of(a.text, a.test)
     except ValueError as e:
         raise SystemExit(f"answer: {e}")
-    r = answer(entry, python_beside.api_decode("openai", [a.student], a.student_name),
-               python_beside.api_decode("openai", [a.python], a.python_name), "v5" if a.reference else a.prompt, a.answers,
-               max_new=a.max_new, jobs=a.jobs, consistency=a.consistency)
+    r = answer(entry, python_beside.api_decode("openai", [a.student], a.student_name), python,
+               "v5" if a.reference else a.prompt, a.answers, max_new=a.max_new, jobs=a.jobs, consistency=a.consistency)
     print(render(r))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")

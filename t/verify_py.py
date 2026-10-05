@@ -126,6 +126,21 @@ def read_function(source: str, fn: str | None = None) -> dict:
             "doc": ast.get_docstring(node) or "", "shown": shown, "code": source}
 
 
+def drawn_inputs(kinds: list[str], want: int = EXAMPLES, seed: int = 0) -> list[tuple]:
+    """Small inputs for parameters of these kinds, each once: first the pools walked in step (the plainest values
+    come first), then 4 * `want` drawn at random."""
+    pools = [_DRAWS[k] for k in kinds]
+    rng = random.Random(seed)
+    tried = [tuple(pool[i % len(pool)] for pool in pools) for i in range(max(len(pool) for pool in pools))]
+    tried += [tuple(rng.choice(pool) for pool in pools) for _ in range(4 * want)]
+    out, seen = [], set()
+    for args in tried:
+        if repr(args) not in seen:
+            seen.add(repr(args))
+            out.append(args)
+    return out
+
+
 def drawn_tests(function: dict, want: int = EXAMPLES, seed: int = 0) -> list[str]:
     """`assert f(arguments) == value` lines taken from the function itself in the sandbox, on small inputs of its
     annotated types; an input it raises on is passed over. Refused when a parameter has no annotation this reads."""
@@ -133,16 +148,9 @@ def drawn_tests(function: dict, want: int = EXAMPLES, seed: int = 0) -> list[str
     if missing:
         raise Refused(f"no --test was given and `{missing[0]}` has no annotation this reads; annotate each parameter "
                       f"({', '.join(_DRAWS)}) or give an example with --test \"assert {function['fn']}(...) == ...\"")
-    pools = [_DRAWS[k] for k in function["kinds"]]
-    rng = random.Random(seed)
-    tried = [tuple(pool[i % len(pool)] for pool in pools) for i in range(max(len(pool) for pool in pools))]
-    tried += [tuple(rng.choice(pool) for pool in pools) for _ in range(4 * want)]
-    out, seen = [], set()
+    out = []
     with py_sandbox.Session(function["code"] + _REPR.format(fn=function["fn"]), "_t_repr_call") as session:
-        for args in tried:
-            if repr(args) in seen:
-                continue
-            seen.add(repr(args))
+        for args in drawn_inputs(function["kinds"], want, seed):
             try:
                 value = session.call([list(args)])
             except (py_sandbox.CallError, py_sandbox.CallTimeout, py_sandbox.Unrepresentable):
