@@ -304,10 +304,17 @@ def main() -> int:
     ap.add_argument("--allow-partial", action="store_true",
                     help="score a set that answers fewer held-out problems than the split names; "
                          "without this such a set is refused by name")
+    ap.add_argument("--clean-panel", choices=("182", "200"), default="182",
+                    help="182 (default): without the 18 problems the training rows held under another name "
+                         "(t/heldout_audit.py, 2026-10-05); 200: the panel scores were published on before it")
     ap.add_argument("tags", nargs="+")
     a = ap.parse_args()
     eval_ids = {int(i) for i in json.loads(a.split.read_text(encoding="utf-8"))["eval_ids"]}
-    clean_ids = clean_eval_ids(eval_ids)
+    if a.clean_panel == "182":
+        import heldout_audit
+        clean_ids = heldout_audit.clean_182(eval_ids)
+    else:
+        clean_ids = clean_eval_ids(eval_ids)
     if a.outcomes is not None and len(set(a.tags)) != len(a.tags):
         ap.error("--outcomes needs distinct tags")
     panel_specs = (

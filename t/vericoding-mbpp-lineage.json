@@ -1,0 +1,3070 @@
+{
+"about": "vericoding benchmark ids whose source-id names an MBPP task: DafnyBench's copies of MBPP-DFY (dafny-synthesis_task_id_N_Name) and Verus-Bench's translations of MBPP-DFY-153 (proofsynthesis_task_id_N). N is the MBPP task id; both descend from github.com/Mondego/dafny-synthesis, GPL-3.0. Read from vericoding_benchmark_v1.csv (github.com/Beneficial-AI-Foundation/vericoding, MIT) as t/lift_vericoding.py saved it; t/heldout_audit.py reads this file.",
+"ids": {
+"dd0643": {
+"mbpp": 2,
+"source_id": "dafny-synthesis_task_id_2_SharedElements",
+"via": "dafny-synthesis"
+},
+"dd0644": {
+"mbpp": 3,
+"source_id": "dafny-synthesis_task_id_3_IsNonPrime",
+"via": "dafny-synthesis"
+},
+"dd0646": {
+"mbpp": 14,
+"source_id": "dafny-synthesis_task_id_14_TriangularPrismVolume",
+"via": "dafny-synthesis"
+},
+"dd0648": {
+"mbpp": 18,
+"source_id": "dafny-synthesis_task_id_18_RemoveChars",
+"via": "dafny-synthesis"
+},
+"dd0653": {
+"mbpp": 69,
+"source_id": "dafny-synthesis_task_id_69_ContainsSequence",
+"via": "dafny-synthesis"
+},
+"dd0654": {
+"mbpp": 70,
+"source_id": "dafny-synthesis_task_id_70_AllSequencesEqualLength",
+"via": "dafny-synthesis"
+},
+"dd0662": {
+"mbpp": 94,
+"source_id": "dafny-synthesis_task_id_94_MinSecondValueFirst",
+"via": "dafny-synthesis"
+},
+"dd0663": {
+"mbpp": 95,
+"source_id": "dafny-synthesis_task_id_95_SmallestListLength",
+"via": "dafny-synthesis"
+},
+"dd0665": {
+"mbpp": 105,
+"source_id": "dafny-synthesis_task_id_105_CountTrue",
+"via": "dafny-synthesis"
+},
+"dd0666": {
+"mbpp": 106,
+"source_id": "dafny-synthesis_task_id_106_AppendArrayToSeq",
+"via": "dafny-synthesis"
+},
+"dd0667": {
+"mbpp": 113,
+"source_id": "dafny-synthesis_task_id_113_IsInteger",
+"via": "dafny-synthesis"
+},
+"dd0668": {
+"mbpp": 126,
+"source_id": "dafny-synthesis_task_id_126_SumOfCommonDivisors",
+"via": "dafny-synthesis"
+},
+"dd0669": {
+"mbpp": 127,
+"source_id": "dafny-synthesis_task_id_127_Multiply",
+"via": "dafny-synthesis"
+},
+"dd0670": {
+"mbpp": 133,
+"source_id": "dafny-synthesis_task_id_133_SumOfNegatives",
+"via": "dafny-synthesis"
+},
+"dd0673": {
+"mbpp": 142,
+"source_id": "dafny-synthesis_task_id_142_CountIdenticalPositions",
+"via": "dafny-synthesis"
+},
+"dd0674": {
+"mbpp": 143,
+"source_id": "dafny-synthesis_task_id_143_CountArrays",
+"via": "dafny-synthesis"
+},
+"dd0675": {
+"mbpp": 145,
+"source_id": "dafny-synthesis_task_id_145_MaxDifference",
+"via": "dafny-synthesis"
+},
+"dd0676": {
+"mbpp": 161,
+"source_id": "dafny-synthesis_task_id_161_RemoveElements",
+"via": "dafny-synthesis"
+},
+"dd0677": {
+"mbpp": 170,
+"source_id": "dafny-synthesis_task_id_170_SumInRange",
+"via": "dafny-synthesis"
+},
+"dd0678": {
+"mbpp": 171,
+"source_id": "dafny-synthesis_task_id_171_PentagonPerimeter",
+"via": "dafny-synthesis"
+},
+"dd0679": {
+"mbpp": 227,
+"source_id": "dafny-synthesis_task_id_227_MinOfThree",
+"via": "dafny-synthesis"
+},
+"dd0680": {
+"mbpp": 230,
+"source_id": "dafny-synthesis_task_id_230_ReplaceBlanksWithChar",
+"via": "dafny-synthesis"
+},
+"dd0681": {
+"mbpp": 233,
+"source_id": "dafny-synthesis_task_id_233_CylinderLateralSurfaceArea",
+"via": "dafny-synthesis"
+},
+"dd0682": {
+"mbpp": 234,
+"source_id": "dafny-synthesis_task_id_234_CubeVolume",
+"via": "dafny-synthesis"
+},
+"dd0683": {
+"mbpp": 238,
+"source_id": "dafny-synthesis_task_id_238_CountNonEmptySubstrings",
+"via": "dafny-synthesis"
+},
+"dd0684": {
+"mbpp": 240,
+"source_id": "dafny-synthesis_task_id_240_ReplaceLastElement",
+"via": "dafny-synthesis"
+},
+"dd0685": {
+"mbpp": 242,
+"source_id": "dafny-synthesis_task_id_242_CountCharacters",
+"via": "dafny-synthesis"
+},
+"dd0686": {
+"mbpp": 249,
+"source_id": "dafny-synthesis_task_id_249_Intersection",
+"via": "dafny-synthesis"
+},
+"dd0687": {
+"mbpp": 251,
+"source_id": "dafny-synthesis_task_id_251_InsertBeforeEach",
+"via": "dafny-synthesis"
+},
+"dd0689": {
+"mbpp": 261,
+"source_id": "dafny-synthesis_task_id_261_ElementWiseDivision",
+"via": "dafny-synthesis"
+},
+"dd0690": {
+"mbpp": 262,
+"source_id": "dafny-synthesis_task_id_262_SplitArray",
+"via": "dafny-synthesis"
+},
+"dd0696": {
+"mbpp": 273,
+"source_id": "dafny-synthesis_task_id_273_SubtractSequences",
+"via": "dafny-synthesis"
+},
+"dd0700": {
+"mbpp": 284,
+"source_id": "dafny-synthesis_task_id_284_AllElementsEqual",
+"via": "dafny-synthesis"
+},
+"dd0701": {
+"mbpp": 290,
+"source_id": "dafny-synthesis_task_id_290_MaxLengthList",
+"via": "dafny-synthesis"
+},
+"dd0703": {
+"mbpp": 304,
+"source_id": "dafny-synthesis_task_id_304_ElementAtIndexAfterRotation",
+"via": "dafny-synthesis"
+},
+"dd0710": {
+"mbpp": 399,
+"source_id": "dafny-synthesis_task_id_399_BitwiseXOR",
+"via": "dafny-synthesis"
+},
+"dd0711": {
+"mbpp": 401,
+"source_id": "dafny-synthesis_task_id_401_IndexWiseAddition",
+"via": "dafny-synthesis"
+},
+"dd0714": {
+"mbpp": 412,
+"source_id": "dafny-synthesis_task_id_412_RemoveOddNumbers",
+"via": "dafny-synthesis"
+},
+"dd0715": {
+"mbpp": 414,
+"source_id": "dafny-synthesis_task_id_414_AnyValueExists",
+"via": "dafny-synthesis"
+},
+"dd0716": {
+"mbpp": 424,
+"source_id": "dafny-synthesis_task_id_424_ExtractRearChars",
+"via": "dafny-synthesis"
+},
+"dd0717": {
+"mbpp": 426,
+"source_id": "dafny-synthesis_task_id_426_FilterOddNumbers",
+"via": "dafny-synthesis"
+},
+"dd0718": {
+"mbpp": 430,
+"source_id": "dafny-synthesis_task_id_430_ParabolaDirectrix",
+"via": "dafny-synthesis"
+},
+"dd0719": {
+"mbpp": 431,
+"source_id": "dafny-synthesis_task_id_431_HasCommonElement",
+"via": "dafny-synthesis"
+},
+"dd0720": {
+"mbpp": 432,
+"source_id": "dafny-synthesis_task_id_432_MedianLength",
+"via": "dafny-synthesis"
+},
+"dd0721": {
+"mbpp": 433,
+"source_id": "dafny-synthesis_task_id_433_IsGreater",
+"via": "dafny-synthesis"
+},
+"dd0722": {
+"mbpp": 435,
+"source_id": "dafny-synthesis_task_id_435_LastDigit",
+"via": "dafny-synthesis"
+},
+"dd0723": {
+"mbpp": 436,
+"source_id": "dafny-synthesis_task_id_436_FindNegativeNumbers",
+"via": "dafny-synthesis"
+},
+"dd0724": {
+"mbpp": 441,
+"source_id": "dafny-synthesis_task_id_441_CubeSurfaceArea",
+"via": "dafny-synthesis"
+},
+"dd0727": {
+"mbpp": 452,
+"source_id": "dafny-synthesis_task_id_452_CalculateLoss",
+"via": "dafny-synthesis"
+},
+"dd0729": {
+"mbpp": 455,
+"source_id": "dafny-synthesis_task_id_455_MonthHas31Days",
+"via": "dafny-synthesis"
+},
+"dd0730": {
+"mbpp": 457,
+"source_id": "dafny-synthesis_task_id_457_MinLengthSublist",
+"via": "dafny-synthesis"
+},
+"dd0732": {
+"mbpp": 460,
+"source_id": "dafny-synthesis_task_id_460_GetFirstElements",
+"via": "dafny-synthesis"
+},
+"dd0733": {
+"mbpp": 461,
+"source_id": "dafny-synthesis_task_id_461_CountUppercase",
+"via": "dafny-synthesis"
+},
+"dd0734": {
+"mbpp": 470,
+"source_id": "dafny-synthesis_task_id_470_PairwiseAddition",
+"via": "dafny-synthesis"
+},
+"dd0735": {
+"mbpp": 472,
+"source_id": "dafny-synthesis_task_id_472_ContainsConsecutiveNumbers",
+"via": "dafny-synthesis"
+},
+"dd0736": {
+"mbpp": 474,
+"source_id": "dafny-synthesis_task_id_474_ReplaceChars",
+"via": "dafny-synthesis"
+},
+"dd0737": {
+"mbpp": 476,
+"source_id": "dafny-synthesis_task_id_476_SumMinMax",
+"via": "dafny-synthesis"
+},
+"dd0738": {
+"mbpp": 477,
+"source_id": "dafny-synthesis_task_id_477_ToLowercase",
+"via": "dafny-synthesis"
+},
+"dd0739": {
+"mbpp": 554,
+"source_id": "dafny-synthesis_task_id_554_FindOddNumbers",
+"via": "dafny-synthesis"
+},
+"dd0740": {
+"mbpp": 555,
+"source_id": "dafny-synthesis_task_id_555_DifferenceSumCubesAndSumNumbers",
+"via": "dafny-synthesis"
+},
+"dd0741": {
+"mbpp": 557,
+"source_id": "dafny-synthesis_task_id_557_ToggleCase",
+"via": "dafny-synthesis"
+},
+"dd0742": {
+"mbpp": 565,
+"source_id": "dafny-synthesis_task_id_565_SplitStringIntoChars",
+"via": "dafny-synthesis"
+},
+"dd0743": {
+"mbpp": 566,
+"source_id": "dafny-synthesis_task_id_566_SumOfDigits",
+"via": "dafny-synthesis"
+},
+"dd0744": {
+"mbpp": 567,
+"source_id": "dafny-synthesis_task_id_567_IsSorted",
+"via": "dafny-synthesis"
+},
+"dd0745": {
+"mbpp": 572,
+"source_id": "dafny-synthesis_task_id_572_RemoveDuplicates",
+"via": "dafny-synthesis"
+},
+"dd0746": {
+"mbpp": 573,
+"source_id": "dafny-synthesis_task_id_573_UniqueProduct",
+"via": "dafny-synthesis"
+},
+"dd0747": {
+"mbpp": 574,
+"source_id": "dafny-synthesis_task_id_574_CylinderSurfaceArea",
+"via": "dafny-synthesis"
+},
+"dd0748": {
+"mbpp": 576,
+"source_id": "dafny-synthesis_task_id_576_IsSublist",
+"via": "dafny-synthesis"
+},
+"dd0749": {
+"mbpp": 577,
+"source_id": "dafny-synthesis_task_id_577_FactorialOfLastDigit",
+"via": "dafny-synthesis"
+},
+"dd0750": {
+"mbpp": 578,
+"source_id": "dafny-synthesis_task_id_578_Interleave",
+"via": "dafny-synthesis"
+},
+"dd0751": {
+"mbpp": 579,
+"source_id": "dafny-synthesis_task_id_579_DissimilarElements",
+"via": "dafny-synthesis"
+},
+"dd0752": {
+"mbpp": 581,
+"source_id": "dafny-synthesis_task_id_581_SquarePyramidSurfaceArea",
+"via": "dafny-synthesis"
+},
+"dd0753": {
+"mbpp": 586,
+"source_id": "dafny-synthesis_task_id_586_SplitAndAppend",
+"via": "dafny-synthesis"
+},
+"dd0754": {
+"mbpp": 587,
+"source_id": "dafny-synthesis_task_id_587_ArrayToSeq",
+"via": "dafny-synthesis"
+},
+"dd0755": {
+"mbpp": 588,
+"source_id": "dafny-synthesis_task_id_588_DifferenceMinMax",
+"via": "dafny-synthesis"
+},
+"dd0756": {
+"mbpp": 591,
+"source_id": "dafny-synthesis_task_id_591_SwapFirstAndLast",
+"via": "dafny-synthesis"
+},
+"dd0757": {
+"mbpp": 594,
+"source_id": "dafny-synthesis_task_id_594_FirstEvenOddDifference",
+"via": "dafny-synthesis"
+},
+"dd0758": {
+"mbpp": 598,
+"source_id": "dafny-synthesis_task_id_598_IsArmstrong",
+"via": "dafny-synthesis"
+},
+"dd0759": {
+"mbpp": 599,
+"source_id": "dafny-synthesis_task_id_599_SumAndAverage",
+"via": "dafny-synthesis"
+},
+"dd0760": {
+"mbpp": 600,
+"source_id": "dafny-synthesis_task_id_600_IsEven",
+"via": "dafny-synthesis"
+},
+"dd0761": {
+"mbpp": 602,
+"source_id": "dafny-synthesis_task_id_602_FindFirstRepeatedChar",
+"via": "dafny-synthesis"
+},
+"dd0762": {
+"mbpp": 603,
+"source_id": "dafny-synthesis_task_id_603_LucidNumbers",
+"via": "dafny-synthesis"
+},
+"dd0763": {
+"mbpp": 605,
+"source_id": "dafny-synthesis_task_id_605_IsPrime",
+"via": "dafny-synthesis"
+},
+"dd0764": {
+"mbpp": 606,
+"source_id": "dafny-synthesis_task_id_606_DegreesToRadians",
+"via": "dafny-synthesis"
+},
+"dd0765": {
+"mbpp": 610,
+"source_id": "dafny-synthesis_task_id_610_RemoveElement",
+"via": "dafny-synthesis"
+},
+"dd0766": {
+"mbpp": 616,
+"source_id": "dafny-synthesis_task_id_616_ElementWiseModulo",
+"via": "dafny-synthesis"
+},
+"dd0767": {
+"mbpp": 618,
+"source_id": "dafny-synthesis_task_id_618_ElementWiseDivide",
+"via": "dafny-synthesis"
+},
+"dd0768": {
+"mbpp": 622,
+"source_id": "dafny-synthesis_task_id_622_FindMedian",
+"via": "dafny-synthesis"
+},
+"dd0769": {
+"mbpp": 623,
+"source_id": "dafny-synthesis_task_id_623_PowerOfListElements",
+"via": "dafny-synthesis"
+},
+"dd0770": {
+"mbpp": 624,
+"source_id": "dafny-synthesis_task_id_624_ToUppercase",
+"via": "dafny-synthesis"
+},
+"dd0771": {
+"mbpp": 625,
+"source_id": "dafny-synthesis_task_id_625_SwapFirstAndLast",
+"via": "dafny-synthesis"
+},
+"dd0772": {
+"mbpp": 626,
+"source_id": "dafny-synthesis_task_id_626_AreaOfLargestTriangleInSemicircle",
+"via": "dafny-synthesis"
+},
+"dd0773": {
+"mbpp": 627,
+"source_id": "dafny-synthesis_task_id_627_SmallestMissingNumber",
+"via": "dafny-synthesis"
+},
+"dd0774": {
+"mbpp": 629,
+"source_id": "dafny-synthesis_task_id_629_FindEvenNumbers",
+"via": "dafny-synthesis"
+},
+"dd0775": {
+"mbpp": 632,
+"source_id": "dafny-synthesis_task_id_632_MoveZeroesToEnd",
+"via": "dafny-synthesis"
+},
+"dd0776": {
+"mbpp": 632,
+"source_id": "dafny-synthesis_task_id_632_swap",
+"via": "dafny-synthesis"
+},
+"dd0777": {
+"mbpp": 637,
+"source_id": "dafny-synthesis_task_id_637_IsBreakEven",
+"via": "dafny-synthesis"
+},
+"dd0778": {
+"mbpp": 641,
+"source_id": "dafny-synthesis_task_id_641_NthNonagonalNumber",
+"via": "dafny-synthesis"
+},
+"dd0779": {
+"mbpp": 644,
+"source_id": "dafny-synthesis_task_id_644_Reverse",
+"via": "dafny-synthesis"
+},
+"dd0780": {
+"mbpp": 644,
+"source_id": "dafny-synthesis_task_id_644_ReverseUptoK",
+"via": "dafny-synthesis"
+},
+"dd0781": {
+"mbpp": 728,
+"source_id": "dafny-synthesis_task_id_728_AddLists",
+"via": "dafny-synthesis"
+},
+"dd0782": {
+"mbpp": 732,
+"source_id": "dafny-synthesis_task_id_732_ReplaceWithColon",
+"via": "dafny-synthesis"
+},
+"dd0783": {
+"mbpp": 733,
+"source_id": "dafny-synthesis_task_id_733_FindFirstOccurrence",
+"via": "dafny-synthesis"
+},
+"dd0784": {
+"mbpp": 741,
+"source_id": "dafny-synthesis_task_id_741_AllCharactersSame",
+"via": "dafny-synthesis"
+},
+"dd0785": {
+"mbpp": 743,
+"source_id": "dafny-synthesis_task_id_743_RotateRight",
+"via": "dafny-synthesis"
+},
+"dd0786": {
+"mbpp": 750,
+"source_id": "dafny-synthesis_task_id_750_AddTupleToList",
+"via": "dafny-synthesis"
+},
+"dd0787": {
+"mbpp": 751,
+"source_id": "dafny-synthesis_task_id_751_IsMinHeap",
+"via": "dafny-synthesis"
+},
+"dd0788": {
+"mbpp": 755,
+"source_id": "dafny-synthesis_task_id_755_SecondSmallest",
+"via": "dafny-synthesis"
+},
+"dd0789": {
+"mbpp": 759,
+"source_id": "dafny-synthesis_task_id_759_IsDecimalWithTwoPrecision",
+"via": "dafny-synthesis"
+},
+"dd0790": {
+"mbpp": 760,
+"source_id": "dafny-synthesis_task_id_760_HasOnlyOneDistinctElement",
+"via": "dafny-synthesis"
+},
+"dd0791": {
+"mbpp": 762,
+"source_id": "dafny-synthesis_task_id_762_IsMonthWith30Days",
+"via": "dafny-synthesis"
+},
+"dd0793": {
+"mbpp": 769,
+"source_id": "dafny-synthesis_task_id_769_Difference",
+"via": "dafny-synthesis"
+},
+"dd0794": {
+"mbpp": 770,
+"source_id": "dafny-synthesis_task_id_770_SumOfFourthPowerOfOddNumbers",
+"via": "dafny-synthesis"
+},
+"dd0795": {
+"mbpp": 775,
+"source_id": "dafny-synthesis_task_id_775_IsOddAtIndexOdd",
+"via": "dafny-synthesis"
+},
+"dd0796": {
+"mbpp": 776,
+"source_id": "dafny-synthesis_task_id_776_CountVowelNeighbors",
+"via": "dafny-synthesis"
+},
+"dd0797": {
+"mbpp": 784,
+"source_id": "dafny-synthesis_task_id_784_FirstEvenOddIndices",
+"via": "dafny-synthesis"
+},
+"dd0798": {
+"mbpp": 784,
+"source_id": "dafny-synthesis_task_id_784_ProductEvenOdd",
+"via": "dafny-synthesis"
+},
+"dd0799": {
+"mbpp": 790,
+"source_id": "dafny-synthesis_task_id_790_IsEvenAtIndexEven",
+"via": "dafny-synthesis"
+},
+"dd0800": {
+"mbpp": 792,
+"source_id": "dafny-synthesis_task_id_792_CountLists",
+"via": "dafny-synthesis"
+},
+"dd0801": {
+"mbpp": 793,
+"source_id": "dafny-synthesis_task_id_793_LastPosition",
+"via": "dafny-synthesis"
+},
+"dd0802": {
+"mbpp": 798,
+"source_id": "dafny-synthesis_task_id_798_ArraySum",
+"via": "dafny-synthesis"
+},
+"dd0803": {
+"mbpp": 799,
+"source_id": "dafny-synthesis_task_id_799_RotateLeftBits",
+"via": "dafny-synthesis"
+},
+"dd0804": {
+"mbpp": 801,
+"source_id": "dafny-synthesis_task_id_801_CountEqualNumbers",
+"via": "dafny-synthesis"
+},
+"dd0805": {
+"mbpp": 803,
+"source_id": "dafny-synthesis_task_id_803_IsPerfectSquare",
+"via": "dafny-synthesis"
+},
+"dd0806": {
+"mbpp": 804,
+"source_id": "dafny-synthesis_task_id_804_IsProductEven",
+"via": "dafny-synthesis"
+},
+"dd0807": {
+"mbpp": 807,
+"source_id": "dafny-synthesis_task_id_807_FindFirstOdd",
+"via": "dafny-synthesis"
+},
+"dd0809": {
+"mbpp": 809,
+"source_id": "dafny-synthesis_task_id_809_IsSmaller",
+"via": "dafny-synthesis"
+},
+"dj0056": {
+"mbpp": 2,
+"source_id": "proofsynthesis_task_id_2",
+"via": "proofsynthesis"
+},
+"dj0057": {
+"mbpp": 3,
+"source_id": "proofsynthesis_task_id_3",
+"via": "proofsynthesis"
+},
+"dj0058": {
+"mbpp": 8,
+"source_id": "proofsynthesis_task_id_8",
+"via": "proofsynthesis"
+},
+"dj0059": {
+"mbpp": 18,
+"source_id": "proofsynthesis_task_id_18",
+"via": "proofsynthesis"
+},
+"dj0060": {
+"mbpp": 62,
+"source_id": "proofsynthesis_task_id_62",
+"via": "proofsynthesis"
+},
+"dj0061": {
+"mbpp": 69,
+"source_id": "proofsynthesis_task_id_69",
+"via": "proofsynthesis"
+},
+"dj0062": {
+"mbpp": 70,
+"source_id": "proofsynthesis_task_id_70",
+"via": "proofsynthesis"
+},
+"dj0063": {
+"mbpp": 94,
+"source_id": "proofsynthesis_task_id_94",
+"via": "proofsynthesis"
+},
+"dj0064": {
+"mbpp": 95,
+"source_id": "proofsynthesis_task_id_95",
+"via": "proofsynthesis"
+},
+"dj0065": {
+"mbpp": 105,
+"source_id": "proofsynthesis_task_id_105",
+"via": "proofsynthesis"
+},
+"dj0066": {
+"mbpp": 113,
+"source_id": "proofsynthesis_task_id_113",
+"via": "proofsynthesis"
+},
+"dj0067": {
+"mbpp": 133,
+"source_id": "proofsynthesis_task_id_133",
+"via": "proofsynthesis"
+},
+"dj0068": {
+"mbpp": 142,
+"source_id": "proofsynthesis_task_id_142",
+"via": "proofsynthesis"
+},
+"dj0069": {
+"mbpp": 145,
+"source_id": "proofsynthesis_task_id_145",
+"via": "proofsynthesis"
+},
+"dj0070": {
+"mbpp": 161,
+"source_id": "proofsynthesis_task_id_161",
+"via": "proofsynthesis"
+},
+"dj0071": {
+"mbpp": 170,
+"source_id": "proofsynthesis_task_id_170",
+"via": "proofsynthesis"
+},
+"dj0072": {
+"mbpp": 230,
+"source_id": "proofsynthesis_task_id_230",
+"via": "proofsynthesis"
+},
+"dj0073": {
+"mbpp": 240,
+"source_id": "proofsynthesis_task_id_240",
+"via": "proofsynthesis"
+},
+"dj0074": {
+"mbpp": 249,
+"source_id": "proofsynthesis_task_id_249",
+"via": "proofsynthesis"
+},
+"dj0075": {
+"mbpp": 251,
+"source_id": "proofsynthesis_task_id_251",
+"via": "proofsynthesis"
+},
+"dj0076": {
+"mbpp": 261,
+"source_id": "proofsynthesis_task_id_261",
+"via": "proofsynthesis"
+},
+"dj0077": {
+"mbpp": 262,
+"source_id": "proofsynthesis_task_id_262",
+"via": "proofsynthesis"
+},
+"dj0078": {
+"mbpp": 273,
+"source_id": "proofsynthesis_task_id_273",
+"via": "proofsynthesis"
+},
+"dj0079": {
+"mbpp": 282,
+"source_id": "proofsynthesis_task_id_282",
+"via": "proofsynthesis"
+},
+"dj0080": {
+"mbpp": 284,
+"source_id": "proofsynthesis_task_id_284",
+"via": "proofsynthesis"
+},
+"dj0081": {
+"mbpp": 307,
+"source_id": "proofsynthesis_task_id_307",
+"via": "proofsynthesis"
+},
+"dj0082": {
+"mbpp": 399,
+"source_id": "proofsynthesis_task_id_399",
+"via": "proofsynthesis"
+},
+"dj0083": {
+"mbpp": 412,
+"source_id": "proofsynthesis_task_id_412",
+"via": "proofsynthesis"
+},
+"dj0084": {
+"mbpp": 414,
+"source_id": "proofsynthesis_task_id_414",
+"via": "proofsynthesis"
+},
+"dj0085": {
+"mbpp": 424,
+"source_id": "proofsynthesis_task_id_424",
+"via": "proofsynthesis"
+},
+"dj0086": {
+"mbpp": 426,
+"source_id": "proofsynthesis_task_id_426",
+"via": "proofsynthesis"
+},
+"dj0087": {
+"mbpp": 431,
+"source_id": "proofsynthesis_task_id_431",
+"via": "proofsynthesis"
+},
+"dj0088": {
+"mbpp": 433,
+"source_id": "proofsynthesis_task_id_433",
+"via": "proofsynthesis"
+},
+"dj0089": {
+"mbpp": 436,
+"source_id": "proofsynthesis_task_id_436",
+"via": "proofsynthesis"
+},
+"dj0090": {
+"mbpp": 445,
+"source_id": "proofsynthesis_task_id_445",
+"via": "proofsynthesis"
+},
+"dj0091": {
+"mbpp": 447,
+"source_id": "proofsynthesis_task_id_447",
+"via": "proofsynthesis"
+},
+"dj0092": {
+"mbpp": 454,
+"source_id": "proofsynthesis_task_id_454",
+"via": "proofsynthesis"
+},
+"dj0093": {
+"mbpp": 460,
+"source_id": "proofsynthesis_task_id_460",
+"via": "proofsynthesis"
+},
+"dj0094": {
+"mbpp": 461,
+"source_id": "proofsynthesis_task_id_461",
+"via": "proofsynthesis"
+},
+"dj0095": {
+"mbpp": 472,
+"source_id": "proofsynthesis_task_id_472",
+"via": "proofsynthesis"
+},
+"dj0096": {
+"mbpp": 474,
+"source_id": "proofsynthesis_task_id_474",
+"via": "proofsynthesis"
+},
+"dj0097": {
+"mbpp": 476,
+"source_id": "proofsynthesis_task_id_476",
+"via": "proofsynthesis"
+},
+"dj0098": {
+"mbpp": 477,
+"source_id": "proofsynthesis_task_id_477",
+"via": "proofsynthesis"
+},
+"dj0099": {
+"mbpp": 554,
+"source_id": "proofsynthesis_task_id_554",
+"via": "proofsynthesis"
+},
+"dj0100": {
+"mbpp": 557,
+"source_id": "proofsynthesis_task_id_557",
+"via": "proofsynthesis"
+},
+"dj0101": {
+"mbpp": 567,
+"source_id": "proofsynthesis_task_id_567",
+"via": "proofsynthesis"
+},
+"dj0102": {
+"mbpp": 572,
+"source_id": "proofsynthesis_task_id_572",
+"via": "proofsynthesis"
+},
+"dj0103": {
+"mbpp": 576,
+"source_id": "proofsynthesis_task_id_576",
+"via": "proofsynthesis"
+},
+"dj0104": {
+"mbpp": 576,
+"source_id": "proofsynthesis_task_id_576_v2",
+"via": "proofsynthesis"
+},
+"dj0105": {
+"mbpp": 578,
+"source_id": "proofsynthesis_task_id_578",
+"via": "proofsynthesis"
+},
+"dj0106": {
+"mbpp": 579,
+"source_id": "proofsynthesis_task_id_579",
+"via": "proofsynthesis"
+},
+"dj0107": {
+"mbpp": 586,
+"source_id": "proofsynthesis_task_id_586",
+"via": "proofsynthesis"
+},
+"dj0108": {
+"mbpp": 588,
+"source_id": "proofsynthesis_task_id_588",
+"via": "proofsynthesis"
+},
+"dj0109": {
+"mbpp": 602,
+"source_id": "proofsynthesis_task_id_602",
+"via": "proofsynthesis"
+},
+"dj0110": {
+"mbpp": 605,
+"source_id": "proofsynthesis_task_id_605",
+"via": "proofsynthesis"
+},
+"dj0111": {
+"mbpp": 610,
+"source_id": "proofsynthesis_task_id_610",
+"via": "proofsynthesis"
+},
+"dj0112": {
+"mbpp": 616,
+"source_id": "proofsynthesis_task_id_616",
+"via": "proofsynthesis"
+},
+"dj0113": {
+"mbpp": 618,
+"source_id": "proofsynthesis_task_id_618",
+"via": "proofsynthesis"
+},
+"dj0114": {
+"mbpp": 624,
+"source_id": "proofsynthesis_task_id_624",
+"via": "proofsynthesis"
+},
+"dj0115": {
+"mbpp": 629,
+"source_id": "proofsynthesis_task_id_629",
+"via": "proofsynthesis"
+},
+"dj0116": {
+"mbpp": 644,
+"source_id": "proofsynthesis_task_id_644",
+"via": "proofsynthesis"
+},
+"dj0117": {
+"mbpp": 728,
+"source_id": "proofsynthesis_task_id_728",
+"via": "proofsynthesis"
+},
+"dj0118": {
+"mbpp": 732,
+"source_id": "proofsynthesis_task_id_732",
+"via": "proofsynthesis"
+},
+"dj0119": {
+"mbpp": 733,
+"source_id": "proofsynthesis_task_id_733",
+"via": "proofsynthesis"
+},
+"dj0120": {
+"mbpp": 741,
+"source_id": "proofsynthesis_task_id_741",
+"via": "proofsynthesis"
+},
+"dj0121": {
+"mbpp": 743,
+"source_id": "proofsynthesis_task_id_743",
+"via": "proofsynthesis"
+},
+"dj0122": {
+"mbpp": 755,
+"source_id": "proofsynthesis_task_id_755",
+"via": "proofsynthesis"
+},
+"dj0123": {
+"mbpp": 760,
+"source_id": "proofsynthesis_task_id_760",
+"via": "proofsynthesis"
+},
+"dj0124": {
+"mbpp": 764,
+"source_id": "proofsynthesis_task_id_764",
+"via": "proofsynthesis"
+},
+"dj0125": {
+"mbpp": 769,
+"source_id": "proofsynthesis_task_id_769",
+"via": "proofsynthesis"
+},
+"dj0126": {
+"mbpp": 775,
+"source_id": "proofsynthesis_task_id_775",
+"via": "proofsynthesis"
+},
+"dj0127": {
+"mbpp": 790,
+"source_id": "proofsynthesis_task_id_790",
+"via": "proofsynthesis"
+},
+"dj0128": {
+"mbpp": 798,
+"source_id": "proofsynthesis_task_id_798",
+"via": "proofsynthesis"
+},
+"dj0129": {
+"mbpp": 804,
+"source_id": "proofsynthesis_task_id_804",
+"via": "proofsynthesis"
+},
+"dj0130": {
+"mbpp": 807,
+"source_id": "proofsynthesis_task_id_807",
+"via": "proofsynthesis"
+},
+"dj0131": {
+"mbpp": 808,
+"source_id": "proofsynthesis_task_id_808",
+"via": "proofsynthesis"
+},
+"dj0132": {
+"mbpp": 809,
+"source_id": "proofsynthesis_task_id_809",
+"via": "proofsynthesis"
+},
+"ld0643": {
+"mbpp": 2,
+"source_id": "dafny-synthesis_task_id_2_SharedElements",
+"via": "dafny-synthesis"
+},
+"ld0644": {
+"mbpp": 3,
+"source_id": "dafny-synthesis_task_id_3_IsNonPrime",
+"via": "dafny-synthesis"
+},
+"ld0646": {
+"mbpp": 14,
+"source_id": "dafny-synthesis_task_id_14_TriangularPrismVolume",
+"via": "dafny-synthesis"
+},
+"ld0648": {
+"mbpp": 18,
+"source_id": "dafny-synthesis_task_id_18_RemoveChars",
+"via": "dafny-synthesis"
+},
+"ld0653": {
+"mbpp": 69,
+"source_id": "dafny-synthesis_task_id_69_ContainsSequence",
+"via": "dafny-synthesis"
+},
+"ld0654": {
+"mbpp": 70,
+"source_id": "dafny-synthesis_task_id_70_AllSequencesEqualLength",
+"via": "dafny-synthesis"
+},
+"ld0662": {
+"mbpp": 94,
+"source_id": "dafny-synthesis_task_id_94_MinSecondValueFirst",
+"via": "dafny-synthesis"
+},
+"ld0663": {
+"mbpp": 95,
+"source_id": "dafny-synthesis_task_id_95_SmallestListLength",
+"via": "dafny-synthesis"
+},
+"ld0665": {
+"mbpp": 105,
+"source_id": "dafny-synthesis_task_id_105_CountTrue",
+"via": "dafny-synthesis"
+},
+"ld0666": {
+"mbpp": 106,
+"source_id": "dafny-synthesis_task_id_106_AppendArrayToSeq",
+"via": "dafny-synthesis"
+},
+"ld0667": {
+"mbpp": 113,
+"source_id": "dafny-synthesis_task_id_113_IsInteger",
+"via": "dafny-synthesis"
+},
+"ld0668": {
+"mbpp": 126,
+"source_id": "dafny-synthesis_task_id_126_SumOfCommonDivisors",
+"via": "dafny-synthesis"
+},
+"ld0669": {
+"mbpp": 127,
+"source_id": "dafny-synthesis_task_id_127_Multiply",
+"via": "dafny-synthesis"
+},
+"ld0670": {
+"mbpp": 133,
+"source_id": "dafny-synthesis_task_id_133_SumOfNegatives",
+"via": "dafny-synthesis"
+},
+"ld0673": {
+"mbpp": 142,
+"source_id": "dafny-synthesis_task_id_142_CountIdenticalPositions",
+"via": "dafny-synthesis"
+},
+"ld0674": {
+"mbpp": 143,
+"source_id": "dafny-synthesis_task_id_143_CountArrays",
+"via": "dafny-synthesis"
+},
+"ld0675": {
+"mbpp": 145,
+"source_id": "dafny-synthesis_task_id_145_MaxDifference",
+"via": "dafny-synthesis"
+},
+"ld0676": {
+"mbpp": 161,
+"source_id": "dafny-synthesis_task_id_161_RemoveElements",
+"via": "dafny-synthesis"
+},
+"ld0677": {
+"mbpp": 170,
+"source_id": "dafny-synthesis_task_id_170_SumInRange",
+"via": "dafny-synthesis"
+},
+"ld0678": {
+"mbpp": 171,
+"source_id": "dafny-synthesis_task_id_171_PentagonPerimeter",
+"via": "dafny-synthesis"
+},
+"ld0679": {
+"mbpp": 227,
+"source_id": "dafny-synthesis_task_id_227_MinOfThree",
+"via": "dafny-synthesis"
+},
+"ld0680": {
+"mbpp": 230,
+"source_id": "dafny-synthesis_task_id_230_ReplaceBlanksWithChar",
+"via": "dafny-synthesis"
+},
+"ld0681": {
+"mbpp": 233,
+"source_id": "dafny-synthesis_task_id_233_CylinderLateralSurfaceArea",
+"via": "dafny-synthesis"
+},
+"ld0682": {
+"mbpp": 234,
+"source_id": "dafny-synthesis_task_id_234_CubeVolume",
+"via": "dafny-synthesis"
+},
+"ld0683": {
+"mbpp": 238,
+"source_id": "dafny-synthesis_task_id_238_CountNonEmptySubstrings",
+"via": "dafny-synthesis"
+},
+"ld0684": {
+"mbpp": 240,
+"source_id": "dafny-synthesis_task_id_240_ReplaceLastElement",
+"via": "dafny-synthesis"
+},
+"ld0685": {
+"mbpp": 242,
+"source_id": "dafny-synthesis_task_id_242_CountCharacters",
+"via": "dafny-synthesis"
+},
+"ld0686": {
+"mbpp": 249,
+"source_id": "dafny-synthesis_task_id_249_Intersection",
+"via": "dafny-synthesis"
+},
+"ld0687": {
+"mbpp": 251,
+"source_id": "dafny-synthesis_task_id_251_InsertBeforeEach",
+"via": "dafny-synthesis"
+},
+"ld0689": {
+"mbpp": 261,
+"source_id": "dafny-synthesis_task_id_261_ElementWiseDivision",
+"via": "dafny-synthesis"
+},
+"ld0690": {
+"mbpp": 262,
+"source_id": "dafny-synthesis_task_id_262_SplitArray",
+"via": "dafny-synthesis"
+},
+"ld0696": {
+"mbpp": 273,
+"source_id": "dafny-synthesis_task_id_273_SubtractSequences",
+"via": "dafny-synthesis"
+},
+"ld0700": {
+"mbpp": 284,
+"source_id": "dafny-synthesis_task_id_284_AllElementsEqual",
+"via": "dafny-synthesis"
+},
+"ld0701": {
+"mbpp": 290,
+"source_id": "dafny-synthesis_task_id_290_MaxLengthList",
+"via": "dafny-synthesis"
+},
+"ld0703": {
+"mbpp": 304,
+"source_id": "dafny-synthesis_task_id_304_ElementAtIndexAfterRotation",
+"via": "dafny-synthesis"
+},
+"ld0710": {
+"mbpp": 399,
+"source_id": "dafny-synthesis_task_id_399_BitwiseXOR",
+"via": "dafny-synthesis"
+},
+"ld0711": {
+"mbpp": 401,
+"source_id": "dafny-synthesis_task_id_401_IndexWiseAddition",
+"via": "dafny-synthesis"
+},
+"ld0714": {
+"mbpp": 412,
+"source_id": "dafny-synthesis_task_id_412_RemoveOddNumbers",
+"via": "dafny-synthesis"
+},
+"ld0715": {
+"mbpp": 414,
+"source_id": "dafny-synthesis_task_id_414_AnyValueExists",
+"via": "dafny-synthesis"
+},
+"ld0716": {
+"mbpp": 424,
+"source_id": "dafny-synthesis_task_id_424_ExtractRearChars",
+"via": "dafny-synthesis"
+},
+"ld0717": {
+"mbpp": 426,
+"source_id": "dafny-synthesis_task_id_426_FilterOddNumbers",
+"via": "dafny-synthesis"
+},
+"ld0718": {
+"mbpp": 430,
+"source_id": "dafny-synthesis_task_id_430_ParabolaDirectrix",
+"via": "dafny-synthesis"
+},
+"ld0719": {
+"mbpp": 431,
+"source_id": "dafny-synthesis_task_id_431_HasCommonElement",
+"via": "dafny-synthesis"
+},
+"ld0720": {
+"mbpp": 432,
+"source_id": "dafny-synthesis_task_id_432_MedianLength",
+"via": "dafny-synthesis"
+},
+"ld0721": {
+"mbpp": 433,
+"source_id": "dafny-synthesis_task_id_433_IsGreater",
+"via": "dafny-synthesis"
+},
+"ld0722": {
+"mbpp": 435,
+"source_id": "dafny-synthesis_task_id_435_LastDigit",
+"via": "dafny-synthesis"
+},
+"ld0723": {
+"mbpp": 436,
+"source_id": "dafny-synthesis_task_id_436_FindNegativeNumbers",
+"via": "dafny-synthesis"
+},
+"ld0724": {
+"mbpp": 441,
+"source_id": "dafny-synthesis_task_id_441_CubeSurfaceArea",
+"via": "dafny-synthesis"
+},
+"ld0727": {
+"mbpp": 452,
+"source_id": "dafny-synthesis_task_id_452_CalculateLoss",
+"via": "dafny-synthesis"
+},
+"ld0729": {
+"mbpp": 455,
+"source_id": "dafny-synthesis_task_id_455_MonthHas31Days",
+"via": "dafny-synthesis"
+},
+"ld0730": {
+"mbpp": 457,
+"source_id": "dafny-synthesis_task_id_457_MinLengthSublist",
+"via": "dafny-synthesis"
+},
+"ld0732": {
+"mbpp": 460,
+"source_id": "dafny-synthesis_task_id_460_GetFirstElements",
+"via": "dafny-synthesis"
+},
+"ld0733": {
+"mbpp": 461,
+"source_id": "dafny-synthesis_task_id_461_CountUppercase",
+"via": "dafny-synthesis"
+},
+"ld0734": {
+"mbpp": 470,
+"source_id": "dafny-synthesis_task_id_470_PairwiseAddition",
+"via": "dafny-synthesis"
+},
+"ld0735": {
+"mbpp": 472,
+"source_id": "dafny-synthesis_task_id_472_ContainsConsecutiveNumbers",
+"via": "dafny-synthesis"
+},
+"ld0736": {
+"mbpp": 474,
+"source_id": "dafny-synthesis_task_id_474_ReplaceChars",
+"via": "dafny-synthesis"
+},
+"ld0737": {
+"mbpp": 476,
+"source_id": "dafny-synthesis_task_id_476_SumMinMax",
+"via": "dafny-synthesis"
+},
+"ld0738": {
+"mbpp": 477,
+"source_id": "dafny-synthesis_task_id_477_ToLowercase",
+"via": "dafny-synthesis"
+},
+"ld0739": {
+"mbpp": 554,
+"source_id": "dafny-synthesis_task_id_554_FindOddNumbers",
+"via": "dafny-synthesis"
+},
+"ld0740": {
+"mbpp": 555,
+"source_id": "dafny-synthesis_task_id_555_DifferenceSumCubesAndSumNumbers",
+"via": "dafny-synthesis"
+},
+"ld0741": {
+"mbpp": 557,
+"source_id": "dafny-synthesis_task_id_557_ToggleCase",
+"via": "dafny-synthesis"
+},
+"ld0742": {
+"mbpp": 565,
+"source_id": "dafny-synthesis_task_id_565_SplitStringIntoChars",
+"via": "dafny-synthesis"
+},
+"ld0743": {
+"mbpp": 566,
+"source_id": "dafny-synthesis_task_id_566_SumOfDigits",
+"via": "dafny-synthesis"
+},
+"ld0744": {
+"mbpp": 567,
+"source_id": "dafny-synthesis_task_id_567_IsSorted",
+"via": "dafny-synthesis"
+},
+"ld0745": {
+"mbpp": 572,
+"source_id": "dafny-synthesis_task_id_572_RemoveDuplicates",
+"via": "dafny-synthesis"
+},
+"ld0746": {
+"mbpp": 573,
+"source_id": "dafny-synthesis_task_id_573_UniqueProduct",
+"via": "dafny-synthesis"
+},
+"ld0747": {
+"mbpp": 574,
+"source_id": "dafny-synthesis_task_id_574_CylinderSurfaceArea",
+"via": "dafny-synthesis"
+},
+"ld0748": {
+"mbpp": 576,
+"source_id": "dafny-synthesis_task_id_576_IsSublist",
+"via": "dafny-synthesis"
+},
+"ld0749": {
+"mbpp": 577,
+"source_id": "dafny-synthesis_task_id_577_FactorialOfLastDigit",
+"via": "dafny-synthesis"
+},
+"ld0750": {
+"mbpp": 578,
+"source_id": "dafny-synthesis_task_id_578_Interleave",
+"via": "dafny-synthesis"
+},
+"ld0751": {
+"mbpp": 579,
+"source_id": "dafny-synthesis_task_id_579_DissimilarElements",
+"via": "dafny-synthesis"
+},
+"ld0752": {
+"mbpp": 581,
+"source_id": "dafny-synthesis_task_id_581_SquarePyramidSurfaceArea",
+"via": "dafny-synthesis"
+},
+"ld0753": {
+"mbpp": 586,
+"source_id": "dafny-synthesis_task_id_586_SplitAndAppend",
+"via": "dafny-synthesis"
+},
+"ld0754": {
+"mbpp": 587,
+"source_id": "dafny-synthesis_task_id_587_ArrayToSeq",
+"via": "dafny-synthesis"
+},
+"ld0755": {
+"mbpp": 588,
+"source_id": "dafny-synthesis_task_id_588_DifferenceMinMax",
+"via": "dafny-synthesis"
+},
+"ld0756": {
+"mbpp": 591,
+"source_id": "dafny-synthesis_task_id_591_SwapFirstAndLast",
+"via": "dafny-synthesis"
+},
+"ld0757": {
+"mbpp": 594,
+"source_id": "dafny-synthesis_task_id_594_FirstEvenOddDifference",
+"via": "dafny-synthesis"
+},
+"ld0758": {
+"mbpp": 598,
+"source_id": "dafny-synthesis_task_id_598_IsArmstrong",
+"via": "dafny-synthesis"
+},
+"ld0759": {
+"mbpp": 599,
+"source_id": "dafny-synthesis_task_id_599_SumAndAverage",
+"via": "dafny-synthesis"
+},
+"ld0760": {
+"mbpp": 600,
+"source_id": "dafny-synthesis_task_id_600_IsEven",
+"via": "dafny-synthesis"
+},
+"ld0761": {
+"mbpp": 602,
+"source_id": "dafny-synthesis_task_id_602_FindFirstRepeatedChar",
+"via": "dafny-synthesis"
+},
+"ld0762": {
+"mbpp": 603,
+"source_id": "dafny-synthesis_task_id_603_LucidNumbers",
+"via": "dafny-synthesis"
+},
+"ld0763": {
+"mbpp": 605,
+"source_id": "dafny-synthesis_task_id_605_IsPrime",
+"via": "dafny-synthesis"
+},
+"ld0764": {
+"mbpp": 606,
+"source_id": "dafny-synthesis_task_id_606_DegreesToRadians",
+"via": "dafny-synthesis"
+},
+"ld0765": {
+"mbpp": 610,
+"source_id": "dafny-synthesis_task_id_610_RemoveElement",
+"via": "dafny-synthesis"
+},
+"ld0766": {
+"mbpp": 616,
+"source_id": "dafny-synthesis_task_id_616_ElementWiseModulo",
+"via": "dafny-synthesis"
+},
+"ld0767": {
+"mbpp": 618,
+"source_id": "dafny-synthesis_task_id_618_ElementWiseDivide",
+"via": "dafny-synthesis"
+},
+"ld0768": {
+"mbpp": 622,
+"source_id": "dafny-synthesis_task_id_622_FindMedian",
+"via": "dafny-synthesis"
+},
+"ld0769": {
+"mbpp": 623,
+"source_id": "dafny-synthesis_task_id_623_PowerOfListElements",
+"via": "dafny-synthesis"
+},
+"ld0770": {
+"mbpp": 624,
+"source_id": "dafny-synthesis_task_id_624_ToUppercase",
+"via": "dafny-synthesis"
+},
+"ld0771": {
+"mbpp": 625,
+"source_id": "dafny-synthesis_task_id_625_SwapFirstAndLast",
+"via": "dafny-synthesis"
+},
+"ld0772": {
+"mbpp": 626,
+"source_id": "dafny-synthesis_task_id_626_AreaOfLargestTriangleInSemicircle",
+"via": "dafny-synthesis"
+},
+"ld0773": {
+"mbpp": 627,
+"source_id": "dafny-synthesis_task_id_627_SmallestMissingNumber",
+"via": "dafny-synthesis"
+},
+"ld0774": {
+"mbpp": 629,
+"source_id": "dafny-synthesis_task_id_629_FindEvenNumbers",
+"via": "dafny-synthesis"
+},
+"ld0775": {
+"mbpp": 632,
+"source_id": "dafny-synthesis_task_id_632_MoveZeroesToEnd",
+"via": "dafny-synthesis"
+},
+"ld0776": {
+"mbpp": 632,
+"source_id": "dafny-synthesis_task_id_632_swap",
+"via": "dafny-synthesis"
+},
+"ld0777": {
+"mbpp": 637,
+"source_id": "dafny-synthesis_task_id_637_IsBreakEven",
+"via": "dafny-synthesis"
+},
+"ld0778": {
+"mbpp": 641,
+"source_id": "dafny-synthesis_task_id_641_NthNonagonalNumber",
+"via": "dafny-synthesis"
+},
+"ld0779": {
+"mbpp": 644,
+"source_id": "dafny-synthesis_task_id_644_Reverse",
+"via": "dafny-synthesis"
+},
+"ld0780": {
+"mbpp": 644,
+"source_id": "dafny-synthesis_task_id_644_ReverseUptoK",
+"via": "dafny-synthesis"
+},
+"ld0781": {
+"mbpp": 728,
+"source_id": "dafny-synthesis_task_id_728_AddLists",
+"via": "dafny-synthesis"
+},
+"ld0782": {
+"mbpp": 732,
+"source_id": "dafny-synthesis_task_id_732_ReplaceWithColon",
+"via": "dafny-synthesis"
+},
+"ld0783": {
+"mbpp": 733,
+"source_id": "dafny-synthesis_task_id_733_FindFirstOccurrence",
+"via": "dafny-synthesis"
+},
+"ld0784": {
+"mbpp": 741,
+"source_id": "dafny-synthesis_task_id_741_AllCharactersSame",
+"via": "dafny-synthesis"
+},
+"ld0785": {
+"mbpp": 743,
+"source_id": "dafny-synthesis_task_id_743_RotateRight",
+"via": "dafny-synthesis"
+},
+"ld0786": {
+"mbpp": 750,
+"source_id": "dafny-synthesis_task_id_750_AddTupleToList",
+"via": "dafny-synthesis"
+},
+"ld0787": {
+"mbpp": 751,
+"source_id": "dafny-synthesis_task_id_751_IsMinHeap",
+"via": "dafny-synthesis"
+},
+"ld0788": {
+"mbpp": 755,
+"source_id": "dafny-synthesis_task_id_755_SecondSmallest",
+"via": "dafny-synthesis"
+},
+"ld0789": {
+"mbpp": 759,
+"source_id": "dafny-synthesis_task_id_759_IsDecimalWithTwoPrecision",
+"via": "dafny-synthesis"
+},
+"ld0790": {
+"mbpp": 760,
+"source_id": "dafny-synthesis_task_id_760_HasOnlyOneDistinctElement",
+"via": "dafny-synthesis"
+},
+"ld0791": {
+"mbpp": 762,
+"source_id": "dafny-synthesis_task_id_762_IsMonthWith30Days",
+"via": "dafny-synthesis"
+},
+"ld0793": {
+"mbpp": 769,
+"source_id": "dafny-synthesis_task_id_769_Difference",
+"via": "dafny-synthesis"
+},
+"ld0794": {
+"mbpp": 770,
+"source_id": "dafny-synthesis_task_id_770_SumOfFourthPowerOfOddNumbers",
+"via": "dafny-synthesis"
+},
+"ld0795": {
+"mbpp": 775,
+"source_id": "dafny-synthesis_task_id_775_IsOddAtIndexOdd",
+"via": "dafny-synthesis"
+},
+"ld0796": {
+"mbpp": 776,
+"source_id": "dafny-synthesis_task_id_776_CountVowelNeighbors",
+"via": "dafny-synthesis"
+},
+"ld0797": {
+"mbpp": 784,
+"source_id": "dafny-synthesis_task_id_784_FirstEvenOddIndices",
+"via": "dafny-synthesis"
+},
+"ld0798": {
+"mbpp": 784,
+"source_id": "dafny-synthesis_task_id_784_ProductEvenOdd",
+"via": "dafny-synthesis"
+},
+"ld0799": {
+"mbpp": 790,
+"source_id": "dafny-synthesis_task_id_790_IsEvenAtIndexEven",
+"via": "dafny-synthesis"
+},
+"ld0800": {
+"mbpp": 792,
+"source_id": "dafny-synthesis_task_id_792_CountLists",
+"via": "dafny-synthesis"
+},
+"ld0801": {
+"mbpp": 793,
+"source_id": "dafny-synthesis_task_id_793_LastPosition",
+"via": "dafny-synthesis"
+},
+"ld0802": {
+"mbpp": 798,
+"source_id": "dafny-synthesis_task_id_798_ArraySum",
+"via": "dafny-synthesis"
+},
+"ld0803": {
+"mbpp": 799,
+"source_id": "dafny-synthesis_task_id_799_RotateLeftBits",
+"via": "dafny-synthesis"
+},
+"ld0804": {
+"mbpp": 801,
+"source_id": "dafny-synthesis_task_id_801_CountEqualNumbers",
+"via": "dafny-synthesis"
+},
+"ld0805": {
+"mbpp": 803,
+"source_id": "dafny-synthesis_task_id_803_IsPerfectSquare",
+"via": "dafny-synthesis"
+},
+"ld0806": {
+"mbpp": 804,
+"source_id": "dafny-synthesis_task_id_804_IsProductEven",
+"via": "dafny-synthesis"
+},
+"ld0807": {
+"mbpp": 807,
+"source_id": "dafny-synthesis_task_id_807_FindFirstOdd",
+"via": "dafny-synthesis"
+},
+"ld0809": {
+"mbpp": 809,
+"source_id": "dafny-synthesis_task_id_809_IsSmaller",
+"via": "dafny-synthesis"
+},
+"lj0056": {
+"mbpp": 2,
+"source_id": "proofsynthesis_task_id_2",
+"via": "proofsynthesis"
+},
+"lj0057": {
+"mbpp": 3,
+"source_id": "proofsynthesis_task_id_3",
+"via": "proofsynthesis"
+},
+"lj0058": {
+"mbpp": 8,
+"source_id": "proofsynthesis_task_id_8",
+"via": "proofsynthesis"
+},
+"lj0059": {
+"mbpp": 18,
+"source_id": "proofsynthesis_task_id_18",
+"via": "proofsynthesis"
+},
+"lj0060": {
+"mbpp": 62,
+"source_id": "proofsynthesis_task_id_62",
+"via": "proofsynthesis"
+},
+"lj0061": {
+"mbpp": 69,
+"source_id": "proofsynthesis_task_id_69",
+"via": "proofsynthesis"
+},
+"lj0062": {
+"mbpp": 70,
+"source_id": "proofsynthesis_task_id_70",
+"via": "proofsynthesis"
+},
+"lj0063": {
+"mbpp": 94,
+"source_id": "proofsynthesis_task_id_94",
+"via": "proofsynthesis"
+},
+"lj0064": {
+"mbpp": 95,
+"source_id": "proofsynthesis_task_id_95",
+"via": "proofsynthesis"
+},
+"lj0065": {
+"mbpp": 105,
+"source_id": "proofsynthesis_task_id_105",
+"via": "proofsynthesis"
+},
+"lj0066": {
+"mbpp": 113,
+"source_id": "proofsynthesis_task_id_113",
+"via": "proofsynthesis"
+},
+"lj0067": {
+"mbpp": 133,
+"source_id": "proofsynthesis_task_id_133",
+"via": "proofsynthesis"
+},
+"lj0068": {
+"mbpp": 142,
+"source_id": "proofsynthesis_task_id_142",
+"via": "proofsynthesis"
+},
+"lj0069": {
+"mbpp": 145,
+"source_id": "proofsynthesis_task_id_145",
+"via": "proofsynthesis"
+},
+"lj0070": {
+"mbpp": 161,
+"source_id": "proofsynthesis_task_id_161",
+"via": "proofsynthesis"
+},
+"lj0071": {
+"mbpp": 170,
+"source_id": "proofsynthesis_task_id_170",
+"via": "proofsynthesis"
+},
+"lj0072": {
+"mbpp": 230,
+"source_id": "proofsynthesis_task_id_230",
+"via": "proofsynthesis"
+},
+"lj0073": {
+"mbpp": 240,
+"source_id": "proofsynthesis_task_id_240",
+"via": "proofsynthesis"
+},
+"lj0074": {
+"mbpp": 249,
+"source_id": "proofsynthesis_task_id_249",
+"via": "proofsynthesis"
+},
+"lj0075": {
+"mbpp": 251,
+"source_id": "proofsynthesis_task_id_251",
+"via": "proofsynthesis"
+},
+"lj0076": {
+"mbpp": 261,
+"source_id": "proofsynthesis_task_id_261",
+"via": "proofsynthesis"
+},
+"lj0077": {
+"mbpp": 262,
+"source_id": "proofsynthesis_task_id_262",
+"via": "proofsynthesis"
+},
+"lj0078": {
+"mbpp": 273,
+"source_id": "proofsynthesis_task_id_273",
+"via": "proofsynthesis"
+},
+"lj0079": {
+"mbpp": 282,
+"source_id": "proofsynthesis_task_id_282",
+"via": "proofsynthesis"
+},
+"lj0080": {
+"mbpp": 284,
+"source_id": "proofsynthesis_task_id_284",
+"via": "proofsynthesis"
+},
+"lj0081": {
+"mbpp": 307,
+"source_id": "proofsynthesis_task_id_307",
+"via": "proofsynthesis"
+},
+"lj0082": {
+"mbpp": 399,
+"source_id": "proofsynthesis_task_id_399",
+"via": "proofsynthesis"
+},
+"lj0083": {
+"mbpp": 412,
+"source_id": "proofsynthesis_task_id_412",
+"via": "proofsynthesis"
+},
+"lj0084": {
+"mbpp": 414,
+"source_id": "proofsynthesis_task_id_414",
+"via": "proofsynthesis"
+},
+"lj0085": {
+"mbpp": 424,
+"source_id": "proofsynthesis_task_id_424",
+"via": "proofsynthesis"
+},
+"lj0086": {
+"mbpp": 426,
+"source_id": "proofsynthesis_task_id_426",
+"via": "proofsynthesis"
+},
+"lj0087": {
+"mbpp": 431,
+"source_id": "proofsynthesis_task_id_431",
+"via": "proofsynthesis"
+},
+"lj0088": {
+"mbpp": 433,
+"source_id": "proofsynthesis_task_id_433",
+"via": "proofsynthesis"
+},
+"lj0089": {
+"mbpp": 436,
+"source_id": "proofsynthesis_task_id_436",
+"via": "proofsynthesis"
+},
+"lj0090": {
+"mbpp": 445,
+"source_id": "proofsynthesis_task_id_445",
+"via": "proofsynthesis"
+},
+"lj0091": {
+"mbpp": 447,
+"source_id": "proofsynthesis_task_id_447",
+"via": "proofsynthesis"
+},
+"lj0092": {
+"mbpp": 454,
+"source_id": "proofsynthesis_task_id_454",
+"via": "proofsynthesis"
+},
+"lj0093": {
+"mbpp": 460,
+"source_id": "proofsynthesis_task_id_460",
+"via": "proofsynthesis"
+},
+"lj0094": {
+"mbpp": 461,
+"source_id": "proofsynthesis_task_id_461",
+"via": "proofsynthesis"
+},
+"lj0095": {
+"mbpp": 472,
+"source_id": "proofsynthesis_task_id_472",
+"via": "proofsynthesis"
+},
+"lj0096": {
+"mbpp": 474,
+"source_id": "proofsynthesis_task_id_474",
+"via": "proofsynthesis"
+},
+"lj0097": {
+"mbpp": 476,
+"source_id": "proofsynthesis_task_id_476",
+"via": "proofsynthesis"
+},
+"lj0098": {
+"mbpp": 477,
+"source_id": "proofsynthesis_task_id_477",
+"via": "proofsynthesis"
+},
+"lj0099": {
+"mbpp": 554,
+"source_id": "proofsynthesis_task_id_554",
+"via": "proofsynthesis"
+},
+"lj0100": {
+"mbpp": 557,
+"source_id": "proofsynthesis_task_id_557",
+"via": "proofsynthesis"
+},
+"lj0101": {
+"mbpp": 567,
+"source_id": "proofsynthesis_task_id_567",
+"via": "proofsynthesis"
+},
+"lj0102": {
+"mbpp": 572,
+"source_id": "proofsynthesis_task_id_572",
+"via": "proofsynthesis"
+},
+"lj0103": {
+"mbpp": 576,
+"source_id": "proofsynthesis_task_id_576",
+"via": "proofsynthesis"
+},
+"lj0104": {
+"mbpp": 576,
+"source_id": "proofsynthesis_task_id_576_v2",
+"via": "proofsynthesis"
+},
+"lj0105": {
+"mbpp": 578,
+"source_id": "proofsynthesis_task_id_578",
+"via": "proofsynthesis"
+},
+"lj0106": {
+"mbpp": 579,
+"source_id": "proofsynthesis_task_id_579",
+"via": "proofsynthesis"
+},
+"lj0107": {
+"mbpp": 586,
+"source_id": "proofsynthesis_task_id_586",
+"via": "proofsynthesis"
+},
+"lj0108": {
+"mbpp": 588,
+"source_id": "proofsynthesis_task_id_588",
+"via": "proofsynthesis"
+},
+"lj0109": {
+"mbpp": 602,
+"source_id": "proofsynthesis_task_id_602",
+"via": "proofsynthesis"
+},
+"lj0110": {
+"mbpp": 605,
+"source_id": "proofsynthesis_task_id_605",
+"via": "proofsynthesis"
+},
+"lj0111": {
+"mbpp": 610,
+"source_id": "proofsynthesis_task_id_610",
+"via": "proofsynthesis"
+},
+"lj0112": {
+"mbpp": 616,
+"source_id": "proofsynthesis_task_id_616",
+"via": "proofsynthesis"
+},
+"lj0113": {
+"mbpp": 618,
+"source_id": "proofsynthesis_task_id_618",
+"via": "proofsynthesis"
+},
+"lj0114": {
+"mbpp": 624,
+"source_id": "proofsynthesis_task_id_624",
+"via": "proofsynthesis"
+},
+"lj0115": {
+"mbpp": 629,
+"source_id": "proofsynthesis_task_id_629",
+"via": "proofsynthesis"
+},
+"lj0116": {
+"mbpp": 644,
+"source_id": "proofsynthesis_task_id_644",
+"via": "proofsynthesis"
+},
+"lj0117": {
+"mbpp": 728,
+"source_id": "proofsynthesis_task_id_728",
+"via": "proofsynthesis"
+},
+"lj0118": {
+"mbpp": 732,
+"source_id": "proofsynthesis_task_id_732",
+"via": "proofsynthesis"
+},
+"lj0119": {
+"mbpp": 733,
+"source_id": "proofsynthesis_task_id_733",
+"via": "proofsynthesis"
+},
+"lj0120": {
+"mbpp": 741,
+"source_id": "proofsynthesis_task_id_741",
+"via": "proofsynthesis"
+},
+"lj0121": {
+"mbpp": 743,
+"source_id": "proofsynthesis_task_id_743",
+"via": "proofsynthesis"
+},
+"lj0122": {
+"mbpp": 755,
+"source_id": "proofsynthesis_task_id_755",
+"via": "proofsynthesis"
+},
+"lj0123": {
+"mbpp": 760,
+"source_id": "proofsynthesis_task_id_760",
+"via": "proofsynthesis"
+},
+"lj0124": {
+"mbpp": 764,
+"source_id": "proofsynthesis_task_id_764",
+"via": "proofsynthesis"
+},
+"lj0125": {
+"mbpp": 769,
+"source_id": "proofsynthesis_task_id_769",
+"via": "proofsynthesis"
+},
+"lj0126": {
+"mbpp": 775,
+"source_id": "proofsynthesis_task_id_775",
+"via": "proofsynthesis"
+},
+"lj0127": {
+"mbpp": 790,
+"source_id": "proofsynthesis_task_id_790",
+"via": "proofsynthesis"
+},
+"lj0128": {
+"mbpp": 798,
+"source_id": "proofsynthesis_task_id_798",
+"via": "proofsynthesis"
+},
+"lj0129": {
+"mbpp": 804,
+"source_id": "proofsynthesis_task_id_804",
+"via": "proofsynthesis"
+},
+"lj0130": {
+"mbpp": 807,
+"source_id": "proofsynthesis_task_id_807",
+"via": "proofsynthesis"
+},
+"lj0131": {
+"mbpp": 808,
+"source_id": "proofsynthesis_task_id_808",
+"via": "proofsynthesis"
+},
+"lj0132": {
+"mbpp": 809,
+"source_id": "proofsynthesis_task_id_809",
+"via": "proofsynthesis"
+},
+"vd0643": {
+"mbpp": 2,
+"source_id": "dafny-synthesis_task_id_2_SharedElements",
+"via": "dafny-synthesis"
+},
+"vd0644": {
+"mbpp": 3,
+"source_id": "dafny-synthesis_task_id_3_IsNonPrime",
+"via": "dafny-synthesis"
+},
+"vd0646": {
+"mbpp": 14,
+"source_id": "dafny-synthesis_task_id_14_TriangularPrismVolume",
+"via": "dafny-synthesis"
+},
+"vd0648": {
+"mbpp": 18,
+"source_id": "dafny-synthesis_task_id_18_RemoveChars",
+"via": "dafny-synthesis"
+},
+"vd0653": {
+"mbpp": 69,
+"source_id": "dafny-synthesis_task_id_69_ContainsSequence",
+"via": "dafny-synthesis"
+},
+"vd0654": {
+"mbpp": 70,
+"source_id": "dafny-synthesis_task_id_70_AllSequencesEqualLength",
+"via": "dafny-synthesis"
+},
+"vd0662": {
+"mbpp": 94,
+"source_id": "dafny-synthesis_task_id_94_MinSecondValueFirst",
+"via": "dafny-synthesis"
+},
+"vd0663": {
+"mbpp": 95,
+"source_id": "dafny-synthesis_task_id_95_SmallestListLength",
+"via": "dafny-synthesis"
+},
+"vd0665": {
+"mbpp": 105,
+"source_id": "dafny-synthesis_task_id_105_CountTrue",
+"via": "dafny-synthesis"
+},
+"vd0666": {
+"mbpp": 106,
+"source_id": "dafny-synthesis_task_id_106_AppendArrayToSeq",
+"via": "dafny-synthesis"
+},
+"vd0667": {
+"mbpp": 113,
+"source_id": "dafny-synthesis_task_id_113_IsInteger",
+"via": "dafny-synthesis"
+},
+"vd0668": {
+"mbpp": 126,
+"source_id": "dafny-synthesis_task_id_126_SumOfCommonDivisors",
+"via": "dafny-synthesis"
+},
+"vd0669": {
+"mbpp": 127,
+"source_id": "dafny-synthesis_task_id_127_Multiply",
+"via": "dafny-synthesis"
+},
+"vd0670": {
+"mbpp": 133,
+"source_id": "dafny-synthesis_task_id_133_SumOfNegatives",
+"via": "dafny-synthesis"
+},
+"vd0673": {
+"mbpp": 142,
+"source_id": "dafny-synthesis_task_id_142_CountIdenticalPositions",
+"via": "dafny-synthesis"
+},
+"vd0674": {
+"mbpp": 143,
+"source_id": "dafny-synthesis_task_id_143_CountArrays",
+"via": "dafny-synthesis"
+},
+"vd0675": {
+"mbpp": 145,
+"source_id": "dafny-synthesis_task_id_145_MaxDifference",
+"via": "dafny-synthesis"
+},
+"vd0676": {
+"mbpp": 161,
+"source_id": "dafny-synthesis_task_id_161_RemoveElements",
+"via": "dafny-synthesis"
+},
+"vd0677": {
+"mbpp": 170,
+"source_id": "dafny-synthesis_task_id_170_SumInRange",
+"via": "dafny-synthesis"
+},
+"vd0678": {
+"mbpp": 171,
+"source_id": "dafny-synthesis_task_id_171_PentagonPerimeter",
+"via": "dafny-synthesis"
+},
+"vd0679": {
+"mbpp": 227,
+"source_id": "dafny-synthesis_task_id_227_MinOfThree",
+"via": "dafny-synthesis"
+},
+"vd0680": {
+"mbpp": 230,
+"source_id": "dafny-synthesis_task_id_230_ReplaceBlanksWithChar",
+"via": "dafny-synthesis"
+},
+"vd0681": {
+"mbpp": 233,
+"source_id": "dafny-synthesis_task_id_233_CylinderLateralSurfaceArea",
+"via": "dafny-synthesis"
+},
+"vd0682": {
+"mbpp": 234,
+"source_id": "dafny-synthesis_task_id_234_CubeVolume",
+"via": "dafny-synthesis"
+},
+"vd0683": {
+"mbpp": 238,
+"source_id": "dafny-synthesis_task_id_238_CountNonEmptySubstrings",
+"via": "dafny-synthesis"
+},
+"vd0684": {
+"mbpp": 240,
+"source_id": "dafny-synthesis_task_id_240_ReplaceLastElement",
+"via": "dafny-synthesis"
+},
+"vd0685": {
+"mbpp": 242,
+"source_id": "dafny-synthesis_task_id_242_CountCharacters",
+"via": "dafny-synthesis"
+},
+"vd0686": {
+"mbpp": 249,
+"source_id": "dafny-synthesis_task_id_249_Intersection",
+"via": "dafny-synthesis"
+},
+"vd0687": {
+"mbpp": 251,
+"source_id": "dafny-synthesis_task_id_251_InsertBeforeEach",
+"via": "dafny-synthesis"
+},
+"vd0689": {
+"mbpp": 261,
+"source_id": "dafny-synthesis_task_id_261_ElementWiseDivision",
+"via": "dafny-synthesis"
+},
+"vd0690": {
+"mbpp": 262,
+"source_id": "dafny-synthesis_task_id_262_SplitArray",
+"via": "dafny-synthesis"
+},
+"vd0696": {
+"mbpp": 273,
+"source_id": "dafny-synthesis_task_id_273_SubtractSequences",
+"via": "dafny-synthesis"
+},
+"vd0700": {
+"mbpp": 284,
+"source_id": "dafny-synthesis_task_id_284_AllElementsEqual",
+"via": "dafny-synthesis"
+},
+"vd0701": {
+"mbpp": 290,
+"source_id": "dafny-synthesis_task_id_290_MaxLengthList",
+"via": "dafny-synthesis"
+},
+"vd0703": {
+"mbpp": 304,
+"source_id": "dafny-synthesis_task_id_304_ElementAtIndexAfterRotation",
+"via": "dafny-synthesis"
+},
+"vd0710": {
+"mbpp": 399,
+"source_id": "dafny-synthesis_task_id_399_BitwiseXOR",
+"via": "dafny-synthesis"
+},
+"vd0711": {
+"mbpp": 401,
+"source_id": "dafny-synthesis_task_id_401_IndexWiseAddition",
+"via": "dafny-synthesis"
+},
+"vd0714": {
+"mbpp": 412,
+"source_id": "dafny-synthesis_task_id_412_RemoveOddNumbers",
+"via": "dafny-synthesis"
+},
+"vd0715": {
+"mbpp": 414,
+"source_id": "dafny-synthesis_task_id_414_AnyValueExists",
+"via": "dafny-synthesis"
+},
+"vd0716": {
+"mbpp": 424,
+"source_id": "dafny-synthesis_task_id_424_ExtractRearChars",
+"via": "dafny-synthesis"
+},
+"vd0717": {
+"mbpp": 426,
+"source_id": "dafny-synthesis_task_id_426_FilterOddNumbers",
+"via": "dafny-synthesis"
+},
+"vd0718": {
+"mbpp": 430,
+"source_id": "dafny-synthesis_task_id_430_ParabolaDirectrix",
+"via": "dafny-synthesis"
+},
+"vd0719": {
+"mbpp": 431,
+"source_id": "dafny-synthesis_task_id_431_HasCommonElement",
+"via": "dafny-synthesis"
+},
+"vd0720": {
+"mbpp": 432,
+"source_id": "dafny-synthesis_task_id_432_MedianLength",
+"via": "dafny-synthesis"
+},
+"vd0721": {
+"mbpp": 433,
+"source_id": "dafny-synthesis_task_id_433_IsGreater",
+"via": "dafny-synthesis"
+},
+"vd0722": {
+"mbpp": 435,
+"source_id": "dafny-synthesis_task_id_435_LastDigit",
+"via": "dafny-synthesis"
+},
+"vd0723": {
+"mbpp": 436,
+"source_id": "dafny-synthesis_task_id_436_FindNegativeNumbers",
+"via": "dafny-synthesis"
+},
+"vd0724": {
+"mbpp": 441,
+"source_id": "dafny-synthesis_task_id_441_CubeSurfaceArea",
+"via": "dafny-synthesis"
+},
+"vd0727": {
+"mbpp": 452,
+"source_id": "dafny-synthesis_task_id_452_CalculateLoss",
+"via": "dafny-synthesis"
+},
+"vd0729": {
+"mbpp": 455,
+"source_id": "dafny-synthesis_task_id_455_MonthHas31Days",
+"via": "dafny-synthesis"
+},
+"vd0730": {
+"mbpp": 457,
+"source_id": "dafny-synthesis_task_id_457_MinLengthSublist",
+"via": "dafny-synthesis"
+},
+"vd0732": {
+"mbpp": 460,
+"source_id": "dafny-synthesis_task_id_460_GetFirstElements",
+"via": "dafny-synthesis"
+},
+"vd0733": {
+"mbpp": 461,
+"source_id": "dafny-synthesis_task_id_461_CountUppercase",
+"via": "dafny-synthesis"
+},
+"vd0734": {
+"mbpp": 470,
+"source_id": "dafny-synthesis_task_id_470_PairwiseAddition",
+"via": "dafny-synthesis"
+},
+"vd0735": {
+"mbpp": 472,
+"source_id": "dafny-synthesis_task_id_472_ContainsConsecutiveNumbers",
+"via": "dafny-synthesis"
+},
+"vd0736": {
+"mbpp": 474,
+"source_id": "dafny-synthesis_task_id_474_ReplaceChars",
+"via": "dafny-synthesis"
+},
+"vd0737": {
+"mbpp": 476,
+"source_id": "dafny-synthesis_task_id_476_SumMinMax",
+"via": "dafny-synthesis"
+},
+"vd0738": {
+"mbpp": 477,
+"source_id": "dafny-synthesis_task_id_477_ToLowercase",
+"via": "dafny-synthesis"
+},
+"vd0739": {
+"mbpp": 554,
+"source_id": "dafny-synthesis_task_id_554_FindOddNumbers",
+"via": "dafny-synthesis"
+},
+"vd0740": {
+"mbpp": 555,
+"source_id": "dafny-synthesis_task_id_555_DifferenceSumCubesAndSumNumbers",
+"via": "dafny-synthesis"
+},
+"vd0741": {
+"mbpp": 557,
+"source_id": "dafny-synthesis_task_id_557_ToggleCase",
+"via": "dafny-synthesis"
+},
+"vd0742": {
+"mbpp": 565,
+"source_id": "dafny-synthesis_task_id_565_SplitStringIntoChars",
+"via": "dafny-synthesis"
+},
+"vd0743": {
+"mbpp": 566,
+"source_id": "dafny-synthesis_task_id_566_SumOfDigits",
+"via": "dafny-synthesis"
+},
+"vd0744": {
+"mbpp": 567,
+"source_id": "dafny-synthesis_task_id_567_IsSorted",
+"via": "dafny-synthesis"
+},
+"vd0745": {
+"mbpp": 572,
+"source_id": "dafny-synthesis_task_id_572_RemoveDuplicates",
+"via": "dafny-synthesis"
+},
+"vd0746": {
+"mbpp": 573,
+"source_id": "dafny-synthesis_task_id_573_UniqueProduct",
+"via": "dafny-synthesis"
+},
+"vd0747": {
+"mbpp": 574,
+"source_id": "dafny-synthesis_task_id_574_CylinderSurfaceArea",
+"via": "dafny-synthesis"
+},
+"vd0748": {
+"mbpp": 576,
+"source_id": "dafny-synthesis_task_id_576_IsSublist",
+"via": "dafny-synthesis"
+},
+"vd0749": {
+"mbpp": 577,
+"source_id": "dafny-synthesis_task_id_577_FactorialOfLastDigit",
+"via": "dafny-synthesis"
+},
+"vd0750": {
+"mbpp": 578,
+"source_id": "dafny-synthesis_task_id_578_Interleave",
+"via": "dafny-synthesis"
+},
+"vd0751": {
+"mbpp": 579,
+"source_id": "dafny-synthesis_task_id_579_DissimilarElements",
+"via": "dafny-synthesis"
+},
+"vd0752": {
+"mbpp": 581,
+"source_id": "dafny-synthesis_task_id_581_SquarePyramidSurfaceArea",
+"via": "dafny-synthesis"
+},
+"vd0753": {
+"mbpp": 586,
+"source_id": "dafny-synthesis_task_id_586_SplitAndAppend",
+"via": "dafny-synthesis"
+},
+"vd0754": {
+"mbpp": 587,
+"source_id": "dafny-synthesis_task_id_587_ArrayToSeq",
+"via": "dafny-synthesis"
+},
+"vd0755": {
+"mbpp": 588,
+"source_id": "dafny-synthesis_task_id_588_DifferenceMinMax",
+"via": "dafny-synthesis"
+},
+"vd0756": {
+"mbpp": 591,
+"source_id": "dafny-synthesis_task_id_591_SwapFirstAndLast",
+"via": "dafny-synthesis"
+},
+"vd0757": {
+"mbpp": 594,
+"source_id": "dafny-synthesis_task_id_594_FirstEvenOddDifference",
+"via": "dafny-synthesis"
+},
+"vd0758": {
+"mbpp": 598,
+"source_id": "dafny-synthesis_task_id_598_IsArmstrong",
+"via": "dafny-synthesis"
+},
+"vd0759": {
+"mbpp": 599,
+"source_id": "dafny-synthesis_task_id_599_SumAndAverage",
+"via": "dafny-synthesis"
+},
+"vd0760": {
+"mbpp": 600,
+"source_id": "dafny-synthesis_task_id_600_IsEven",
+"via": "dafny-synthesis"
+},
+"vd0761": {
+"mbpp": 602,
+"source_id": "dafny-synthesis_task_id_602_FindFirstRepeatedChar",
+"via": "dafny-synthesis"
+},
+"vd0762": {
+"mbpp": 603,
+"source_id": "dafny-synthesis_task_id_603_LucidNumbers",
+"via": "dafny-synthesis"
+},
+"vd0763": {
+"mbpp": 605,
+"source_id": "dafny-synthesis_task_id_605_IsPrime",
+"via": "dafny-synthesis"
+},
+"vd0764": {
+"mbpp": 606,
+"source_id": "dafny-synthesis_task_id_606_DegreesToRadians",
+"via": "dafny-synthesis"
+},
+"vd0765": {
+"mbpp": 610,
+"source_id": "dafny-synthesis_task_id_610_RemoveElement",
+"via": "dafny-synthesis"
+},
+"vd0766": {
+"mbpp": 616,
+"source_id": "dafny-synthesis_task_id_616_ElementWiseModulo",
+"via": "dafny-synthesis"
+},
+"vd0767": {
+"mbpp": 618,
+"source_id": "dafny-synthesis_task_id_618_ElementWiseDivide",
+"via": "dafny-synthesis"
+},
+"vd0768": {
+"mbpp": 622,
+"source_id": "dafny-synthesis_task_id_622_FindMedian",
+"via": "dafny-synthesis"
+},
+"vd0769": {
+"mbpp": 623,
+"source_id": "dafny-synthesis_task_id_623_PowerOfListElements",
+"via": "dafny-synthesis"
+},
+"vd0770": {
+"mbpp": 624,
+"source_id": "dafny-synthesis_task_id_624_ToUppercase",
+"via": "dafny-synthesis"
+},
+"vd0771": {
+"mbpp": 625,
+"source_id": "dafny-synthesis_task_id_625_SwapFirstAndLast",
+"via": "dafny-synthesis"
+},
+"vd0772": {
+"mbpp": 626,
+"source_id": "dafny-synthesis_task_id_626_AreaOfLargestTriangleInSemicircle",
+"via": "dafny-synthesis"
+},
+"vd0773": {
+"mbpp": 627,
+"source_id": "dafny-synthesis_task_id_627_SmallestMissingNumber",
+"via": "dafny-synthesis"
+},
+"vd0774": {
+"mbpp": 629,
+"source_id": "dafny-synthesis_task_id_629_FindEvenNumbers",
+"via": "dafny-synthesis"
+},
+"vd0775": {
+"mbpp": 632,
+"source_id": "dafny-synthesis_task_id_632_MoveZeroesToEnd",
+"via": "dafny-synthesis"
+},
+"vd0776": {
+"mbpp": 632,
+"source_id": "dafny-synthesis_task_id_632_swap",
+"via": "dafny-synthesis"
+},
+"vd0777": {
+"mbpp": 637,
+"source_id": "dafny-synthesis_task_id_637_IsBreakEven",
+"via": "dafny-synthesis"
+},
+"vd0778": {
+"mbpp": 641,
+"source_id": "dafny-synthesis_task_id_641_NthNonagonalNumber",
+"via": "dafny-synthesis"
+},
+"vd0779": {
+"mbpp": 644,
+"source_id": "dafny-synthesis_task_id_644_Reverse",
+"via": "dafny-synthesis"
+},
+"vd0780": {
+"mbpp": 644,
+"source_id": "dafny-synthesis_task_id_644_ReverseUptoK",
+"via": "dafny-synthesis"
+},
+"vd0781": {
+"mbpp": 728,
+"source_id": "dafny-synthesis_task_id_728_AddLists",
+"via": "dafny-synthesis"
+},
+"vd0782": {
+"mbpp": 732,
+"source_id": "dafny-synthesis_task_id_732_ReplaceWithColon",
+"via": "dafny-synthesis"
+},
+"vd0783": {
+"mbpp": 733,
+"source_id": "dafny-synthesis_task_id_733_FindFirstOccurrence",
+"via": "dafny-synthesis"
+},
+"vd0784": {
+"mbpp": 741,
+"source_id": "dafny-synthesis_task_id_741_AllCharactersSame",
+"via": "dafny-synthesis"
+},
+"vd0785": {
+"mbpp": 743,
+"source_id": "dafny-synthesis_task_id_743_RotateRight",
+"via": "dafny-synthesis"
+},
+"vd0786": {
+"mbpp": 750,
+"source_id": "dafny-synthesis_task_id_750_AddTupleToList",
+"via": "dafny-synthesis"
+},
+"vd0787": {
+"mbpp": 751,
+"source_id": "dafny-synthesis_task_id_751_IsMinHeap",
+"via": "dafny-synthesis"
+},
+"vd0788": {
+"mbpp": 755,
+"source_id": "dafny-synthesis_task_id_755_SecondSmallest",
+"via": "dafny-synthesis"
+},
+"vd0789": {
+"mbpp": 759,
+"source_id": "dafny-synthesis_task_id_759_IsDecimalWithTwoPrecision",
+"via": "dafny-synthesis"
+},
+"vd0790": {
+"mbpp": 760,
+"source_id": "dafny-synthesis_task_id_760_HasOnlyOneDistinctElement",
+"via": "dafny-synthesis"
+},
+"vd0791": {
+"mbpp": 762,
+"source_id": "dafny-synthesis_task_id_762_IsMonthWith30Days",
+"via": "dafny-synthesis"
+},
+"vd0793": {
+"mbpp": 769,
+"source_id": "dafny-synthesis_task_id_769_Difference",
+"via": "dafny-synthesis"
+},
+"vd0794": {
+"mbpp": 770,
+"source_id": "dafny-synthesis_task_id_770_SumOfFourthPowerOfOddNumbers",
+"via": "dafny-synthesis"
+},
+"vd0795": {
+"mbpp": 775,
+"source_id": "dafny-synthesis_task_id_775_IsOddAtIndexOdd",
+"via": "dafny-synthesis"
+},
+"vd0796": {
+"mbpp": 776,
+"source_id": "dafny-synthesis_task_id_776_CountVowelNeighbors",
+"via": "dafny-synthesis"
+},
+"vd0797": {
+"mbpp": 784,
+"source_id": "dafny-synthesis_task_id_784_FirstEvenOddIndices",
+"via": "dafny-synthesis"
+},
+"vd0798": {
+"mbpp": 784,
+"source_id": "dafny-synthesis_task_id_784_ProductEvenOdd",
+"via": "dafny-synthesis"
+},
+"vd0799": {
+"mbpp": 790,
+"source_id": "dafny-synthesis_task_id_790_IsEvenAtIndexEven",
+"via": "dafny-synthesis"
+},
+"vd0800": {
+"mbpp": 792,
+"source_id": "dafny-synthesis_task_id_792_CountLists",
+"via": "dafny-synthesis"
+},
+"vd0801": {
+"mbpp": 793,
+"source_id": "dafny-synthesis_task_id_793_LastPosition",
+"via": "dafny-synthesis"
+},
+"vd0802": {
+"mbpp": 798,
+"source_id": "dafny-synthesis_task_id_798_ArraySum",
+"via": "dafny-synthesis"
+},
+"vd0803": {
+"mbpp": 799,
+"source_id": "dafny-synthesis_task_id_799_RotateLeftBits",
+"via": "dafny-synthesis"
+},
+"vd0804": {
+"mbpp": 801,
+"source_id": "dafny-synthesis_task_id_801_CountEqualNumbers",
+"via": "dafny-synthesis"
+},
+"vd0805": {
+"mbpp": 803,
+"source_id": "dafny-synthesis_task_id_803_IsPerfectSquare",
+"via": "dafny-synthesis"
+},
+"vd0806": {
+"mbpp": 804,
+"source_id": "dafny-synthesis_task_id_804_IsProductEven",
+"via": "dafny-synthesis"
+},
+"vd0807": {
+"mbpp": 807,
+"source_id": "dafny-synthesis_task_id_807_FindFirstOdd",
+"via": "dafny-synthesis"
+},
+"vd0809": {
+"mbpp": 809,
+"source_id": "dafny-synthesis_task_id_809_IsSmaller",
+"via": "dafny-synthesis"
+},
+"vj0056": {
+"mbpp": 2,
+"source_id": "proofsynthesis_task_id_2",
+"via": "proofsynthesis"
+},
+"vj0057": {
+"mbpp": 3,
+"source_id": "proofsynthesis_task_id_3",
+"via": "proofsynthesis"
+},
+"vj0058": {
+"mbpp": 8,
+"source_id": "proofsynthesis_task_id_8",
+"via": "proofsynthesis"
+},
+"vj0059": {
+"mbpp": 18,
+"source_id": "proofsynthesis_task_id_18",
+"via": "proofsynthesis"
+},
+"vj0060": {
+"mbpp": 62,
+"source_id": "proofsynthesis_task_id_62",
+"via": "proofsynthesis"
+},
+"vj0061": {
+"mbpp": 69,
+"source_id": "proofsynthesis_task_id_69",
+"via": "proofsynthesis"
+},
+"vj0062": {
+"mbpp": 70,
+"source_id": "proofsynthesis_task_id_70",
+"via": "proofsynthesis"
+},
+"vj0063": {
+"mbpp": 94,
+"source_id": "proofsynthesis_task_id_94",
+"via": "proofsynthesis"
+},
+"vj0064": {
+"mbpp": 95,
+"source_id": "proofsynthesis_task_id_95",
+"via": "proofsynthesis"
+},
+"vj0065": {
+"mbpp": 105,
+"source_id": "proofsynthesis_task_id_105",
+"via": "proofsynthesis"
+},
+"vj0066": {
+"mbpp": 113,
+"source_id": "proofsynthesis_task_id_113",
+"via": "proofsynthesis"
+},
+"vj0067": {
+"mbpp": 133,
+"source_id": "proofsynthesis_task_id_133",
+"via": "proofsynthesis"
+},
+"vj0068": {
+"mbpp": 142,
+"source_id": "proofsynthesis_task_id_142",
+"via": "proofsynthesis"
+},
+"vj0069": {
+"mbpp": 145,
+"source_id": "proofsynthesis_task_id_145",
+"via": "proofsynthesis"
+},
+"vj0070": {
+"mbpp": 161,
+"source_id": "proofsynthesis_task_id_161",
+"via": "proofsynthesis"
+},
+"vj0071": {
+"mbpp": 170,
+"source_id": "proofsynthesis_task_id_170",
+"via": "proofsynthesis"
+},
+"vj0072": {
+"mbpp": 230,
+"source_id": "proofsynthesis_task_id_230",
+"via": "proofsynthesis"
+},
+"vj0073": {
+"mbpp": 240,
+"source_id": "proofsynthesis_task_id_240",
+"via": "proofsynthesis"
+},
+"vj0074": {
+"mbpp": 249,
+"source_id": "proofsynthesis_task_id_249",
+"via": "proofsynthesis"
+},
+"vj0075": {
+"mbpp": 251,
+"source_id": "proofsynthesis_task_id_251",
+"via": "proofsynthesis"
+},
+"vj0076": {
+"mbpp": 261,
+"source_id": "proofsynthesis_task_id_261",
+"via": "proofsynthesis"
+},
+"vj0077": {
+"mbpp": 262,
+"source_id": "proofsynthesis_task_id_262",
+"via": "proofsynthesis"
+},
+"vj0078": {
+"mbpp": 273,
+"source_id": "proofsynthesis_task_id_273",
+"via": "proofsynthesis"
+},
+"vj0079": {
+"mbpp": 282,
+"source_id": "proofsynthesis_task_id_282",
+"via": "proofsynthesis"
+},
+"vj0080": {
+"mbpp": 284,
+"source_id": "proofsynthesis_task_id_284",
+"via": "proofsynthesis"
+},
+"vj0081": {
+"mbpp": 307,
+"source_id": "proofsynthesis_task_id_307",
+"via": "proofsynthesis"
+},
+"vj0082": {
+"mbpp": 399,
+"source_id": "proofsynthesis_task_id_399",
+"via": "proofsynthesis"
+},
+"vj0083": {
+"mbpp": 412,
+"source_id": "proofsynthesis_task_id_412",
+"via": "proofsynthesis"
+},
+"vj0084": {
+"mbpp": 414,
+"source_id": "proofsynthesis_task_id_414",
+"via": "proofsynthesis"
+},
+"vj0085": {
+"mbpp": 424,
+"source_id": "proofsynthesis_task_id_424",
+"via": "proofsynthesis"
+},
+"vj0086": {
+"mbpp": 426,
+"source_id": "proofsynthesis_task_id_426",
+"via": "proofsynthesis"
+},
+"vj0087": {
+"mbpp": 431,
+"source_id": "proofsynthesis_task_id_431",
+"via": "proofsynthesis"
+},
+"vj0088": {
+"mbpp": 433,
+"source_id": "proofsynthesis_task_id_433",
+"via": "proofsynthesis"
+},
+"vj0089": {
+"mbpp": 436,
+"source_id": "proofsynthesis_task_id_436",
+"via": "proofsynthesis"
+},
+"vj0090": {
+"mbpp": 445,
+"source_id": "proofsynthesis_task_id_445",
+"via": "proofsynthesis"
+},
+"vj0091": {
+"mbpp": 447,
+"source_id": "proofsynthesis_task_id_447",
+"via": "proofsynthesis"
+},
+"vj0092": {
+"mbpp": 454,
+"source_id": "proofsynthesis_task_id_454",
+"via": "proofsynthesis"
+},
+"vj0093": {
+"mbpp": 460,
+"source_id": "proofsynthesis_task_id_460",
+"via": "proofsynthesis"
+},
+"vj0094": {
+"mbpp": 461,
+"source_id": "proofsynthesis_task_id_461",
+"via": "proofsynthesis"
+},
+"vj0095": {
+"mbpp": 472,
+"source_id": "proofsynthesis_task_id_472",
+"via": "proofsynthesis"
+},
+"vj0096": {
+"mbpp": 474,
+"source_id": "proofsynthesis_task_id_474",
+"via": "proofsynthesis"
+},
+"vj0097": {
+"mbpp": 476,
+"source_id": "proofsynthesis_task_id_476",
+"via": "proofsynthesis"
+},
+"vj0098": {
+"mbpp": 477,
+"source_id": "proofsynthesis_task_id_477",
+"via": "proofsynthesis"
+},
+"vj0099": {
+"mbpp": 554,
+"source_id": "proofsynthesis_task_id_554",
+"via": "proofsynthesis"
+},
+"vj0100": {
+"mbpp": 557,
+"source_id": "proofsynthesis_task_id_557",
+"via": "proofsynthesis"
+},
+"vj0101": {
+"mbpp": 567,
+"source_id": "proofsynthesis_task_id_567",
+"via": "proofsynthesis"
+},
+"vj0102": {
+"mbpp": 572,
+"source_id": "proofsynthesis_task_id_572",
+"via": "proofsynthesis"
+},
+"vj0103": {
+"mbpp": 576,
+"source_id": "proofsynthesis_task_id_576",
+"via": "proofsynthesis"
+},
+"vj0104": {
+"mbpp": 576,
+"source_id": "proofsynthesis_task_id_576_v2",
+"via": "proofsynthesis"
+},
+"vj0105": {
+"mbpp": 578,
+"source_id": "proofsynthesis_task_id_578",
+"via": "proofsynthesis"
+},
+"vj0106": {
+"mbpp": 579,
+"source_id": "proofsynthesis_task_id_579",
+"via": "proofsynthesis"
+},
+"vj0107": {
+"mbpp": 586,
+"source_id": "proofsynthesis_task_id_586",
+"via": "proofsynthesis"
+},
+"vj0108": {
+"mbpp": 588,
+"source_id": "proofsynthesis_task_id_588",
+"via": "proofsynthesis"
+},
+"vj0109": {
+"mbpp": 602,
+"source_id": "proofsynthesis_task_id_602",
+"via": "proofsynthesis"
+},
+"vj0110": {
+"mbpp": 605,
+"source_id": "proofsynthesis_task_id_605",
+"via": "proofsynthesis"
+},
+"vj0111": {
+"mbpp": 610,
+"source_id": "proofsynthesis_task_id_610",
+"via": "proofsynthesis"
+},
+"vj0112": {
+"mbpp": 616,
+"source_id": "proofsynthesis_task_id_616",
+"via": "proofsynthesis"
+},
+"vj0113": {
+"mbpp": 618,
+"source_id": "proofsynthesis_task_id_618",
+"via": "proofsynthesis"
+},
+"vj0114": {
+"mbpp": 624,
+"source_id": "proofsynthesis_task_id_624",
+"via": "proofsynthesis"
+},
+"vj0115": {
+"mbpp": 629,
+"source_id": "proofsynthesis_task_id_629",
+"via": "proofsynthesis"
+},
+"vj0116": {
+"mbpp": 644,
+"source_id": "proofsynthesis_task_id_644",
+"via": "proofsynthesis"
+},
+"vj0117": {
+"mbpp": 728,
+"source_id": "proofsynthesis_task_id_728",
+"via": "proofsynthesis"
+},
+"vj0118": {
+"mbpp": 732,
+"source_id": "proofsynthesis_task_id_732",
+"via": "proofsynthesis"
+},
+"vj0119": {
+"mbpp": 733,
+"source_id": "proofsynthesis_task_id_733",
+"via": "proofsynthesis"
+},
+"vj0120": {
+"mbpp": 741,
+"source_id": "proofsynthesis_task_id_741",
+"via": "proofsynthesis"
+},
+"vj0121": {
+"mbpp": 743,
+"source_id": "proofsynthesis_task_id_743",
+"via": "proofsynthesis"
+},
+"vj0122": {
+"mbpp": 755,
+"source_id": "proofsynthesis_task_id_755",
+"via": "proofsynthesis"
+},
+"vj0123": {
+"mbpp": 760,
+"source_id": "proofsynthesis_task_id_760",
+"via": "proofsynthesis"
+},
+"vj0124": {
+"mbpp": 764,
+"source_id": "proofsynthesis_task_id_764",
+"via": "proofsynthesis"
+},
+"vj0125": {
+"mbpp": 769,
+"source_id": "proofsynthesis_task_id_769",
+"via": "proofsynthesis"
+},
+"vj0126": {
+"mbpp": 775,
+"source_id": "proofsynthesis_task_id_775",
+"via": "proofsynthesis"
+},
+"vj0127": {
+"mbpp": 790,
+"source_id": "proofsynthesis_task_id_790",
+"via": "proofsynthesis"
+},
+"vj0128": {
+"mbpp": 798,
+"source_id": "proofsynthesis_task_id_798",
+"via": "proofsynthesis"
+},
+"vj0129": {
+"mbpp": 804,
+"source_id": "proofsynthesis_task_id_804",
+"via": "proofsynthesis"
+},
+"vj0130": {
+"mbpp": 807,
+"source_id": "proofsynthesis_task_id_807",
+"via": "proofsynthesis"
+},
+"vj0131": {
+"mbpp": 808,
+"source_id": "proofsynthesis_task_id_808",
+"via": "proofsynthesis"
+},
+"vj0132": {
+"mbpp": 809,
+"source_id": "proofsynthesis_task_id_809",
+"via": "proofsynthesis"
+}
+},
+"schema": 1,
+"sources": [
+"https://raw.githubusercontent.com/microsoft/verus-proof-synthesis/main/benchmarks/Verus-Bench/README.md",
+"https://api.github.com/repos/Mondego/dafny-synthesis/license"
+]
+}
