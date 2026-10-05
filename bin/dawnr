@@ -7,6 +7,7 @@
 #   dawnr verify FILE.py  a Python function you already have: a proved twin of it, or why not [--fn NAME] [--test ...]
 #   dawnr extract FILE... --field "total(number): the amount due"    fields from your files, each with the sentence it is in
 #   dawnr cite "QUESTION" FILE...    an answer from your files, every claim quoting one of their sentences
+#   dawnr calc "QUESTION WITH NUMBERS"    the working written down and computed exactly, shown when workings agree
 #   dawnr check FILE      replay a certificate (ask or prove with --certificate FILE wrote it): no model, this machine's provers
 #   dawnr doctor          what is installed and what each part found
 #   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
@@ -164,6 +165,15 @@ case $cmd in
     cd "$DAWNR_REPO"
     T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/verify_py.py --student "127.0.0.1:$SP" --file "$FILE" ${ARGS[@]+"${ARGS[@]}"}
     ;;
+  calc)
+    # a question with numbers: the model writes the working, it is computed exactly, and the answer is shown only
+    # when separate workings agree (locallm/calc.py); only the base model is needed
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr calc "QUESTION WITH NUMBERS" [--ways N] [--json OUT.json]' >&2; exit 2; }
+    QUESTION=$1; shift
+    own_paths "$@"
+    base_up
+    cd "$DAWNR_REPO" && "$DAWNR_PYTHON" locallm/calc.py --host "127.0.0.1:$BP" ${ARGS[@]+"${ARGS[@]}"} "$QUESTION"
+    ;;
   check)
     # a certificate replayed: the tests, the provers on this machine, the Python and the measurements, with no model
     # (t/certificate.py); exit 0 reproduced, 1 failed, 2 nothing here could decide
@@ -230,5 +240,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,16p' "$0";;
+  *) sed -n '2,17p' "$0";;
 esac
