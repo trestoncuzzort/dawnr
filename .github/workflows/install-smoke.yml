@@ -1,7 +1,7 @@
 name: install-smoke
 
 # Run by hand once the student is published: the README's install steps from a fresh checkout on GitHub's
-# machines (a Mac and Ubuntu 24.04), then one question, the way a new user would. It downloads about 8 GB.
+# machines (a Mac and Ubuntu 24.04), then each command once, the way a new user would. It downloads about 8 GB.
 on:
   workflow_dispatch:
 
@@ -12,7 +12,7 @@ jobs:
   install-and-ask:
     name: install and ask (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
@@ -54,6 +54,53 @@ jobs:
         run: |
           ~/.local/bin/dawnr check larger.cert.json | tee check.txt
           grep -q "^REPRODUCED:" check.txt
+
+      - name: the other commands, once each, as a new user would type them
+        # every command keeps to its own exit codes (0 shown, 1 refused); what must hold on any machine is that it runs,
+        # that a value shown is one the check allows, and that a certificate it writes replays
+        shell: bash
+        env:
+          DAWNR_GPU_LAYERS: ${{ runner.os == 'macOS' && '0' || '' }}
+          DAWNR_THREADS: ${{ runner.os == 'macOS' && '3' || '' }}
+        run: |
+          set -x
+          ~/.local/bin/dawnr serve start
+          printf '%s\n' 'INVOICE 2291' 'Harbor Supply Co., 14 Quay Road, Portsmouth.' 'Billed to: Northlight Marine Ltd.' \
+            'Invoice date: 12 February 2026. The total due is $1,250.00, payable by March 3, 2026.' > invoice.txt
+          ~/.local/bin/dawnr extract invoice.txt --field "total(number): the total amount due" --field "po: the purchase order number" | tee extract.txt
+          grep -Eq '^total +(1250\.0|NOT STATED)' extract.txt          # the value in the document, or nothing
+          ~/.local/bin/dawnr cite "Who is the invoice billed to?" invoice.txt | tee cite.txt
+          rc=0; ~/.local/bin/dawnr calc "A recipe needs 2.5 cups of flour for 12 muffins. How many cups are needed for 30 muffins?" | tee calc.txt || rc=$?
+          [ "$rc" -le 1 ] && grep -Eq '^(ANSWER: 6\.25|REFUSED:)' calc.txt   # the right number or a refusal, never another number
+          printf '%s\n' 'def largest(xs: list[int]) -> int:' '    best = xs[0]' '    for x in xs[1:]:' '        if x > best:' \
+            '            best = x' '    return best' > largest.py
+          rc=0; ~/.local/bin/dawnr verify largest.py --certificate largest.cert.json | tee verify.txt || rc=$?
+          [ "$rc" -le 1 ] && grep -Eq '^(VERIFIED|NOT VERIFIED):' verify.txt
+          if [ -s largest.cert.json ]; then ~/.local/bin/dawnr check largest.cert.json | tee verify-check.txt; grep -q '^REPRODUCED:' verify-check.txt; fi
+          ~/.local/bin/dawnr serve stop
+
+      - name: the local API answers its owner and nobody else
+        shell: bash
+        env:
+          DAWNR_GPU_LAYERS: ${{ runner.os == 'macOS' && '0' || '' }}
+          DAWNR_THREADS: ${{ runner.os == 'macOS' && '3' || '' }}
+        run: |
+          ~/.local/bin/dawnr serve api > api.out 2>&1 &
+          for _ in $(seq 1 900); do grep -q listening api.out && break; sleep 1; done
+          grep -q listening api.out
+          TOKEN=$(cat ~/.local/share/dawnr/run/api.token)
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8713/v1/health)" = 401 ]
+          [ "$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H 'Origin: http://evil.example' http://127.0.0.1:8713/v1/health)" = 403 ]
+          curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8713/v1/health | tee health.json
+          ID=$(curl -sf -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+            -d '{"kind": "check", "certificate": '"$(cat larger.cert.json)"'}' http://127.0.0.1:8713/v1/jobs | python3 -c 'import json, sys; print(json.load(sys.stdin)["id"])')
+          for _ in $(seq 1 600); do
+            curl -sf -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8713/v1/jobs/$ID > job.json
+            python3 -c 'import json, sys; sys.exit(0 if json.load(open("job.json"))["state"] in ("done", "failed", "cancelled") else 1)' && break; sleep 1
+          done
+          python3 -c 'import json; j = json.load(open("job.json")); print(j["state"], j.get("outcome")); assert j.get("outcome") == "reproduced", j'
+          pkill -f t/serve_api.py || true
+          ~/.local/bin/dawnr serve stop || true
 
       - name: the model servers' logs (on failure)
         if: failure()
