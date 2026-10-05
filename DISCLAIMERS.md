@@ -15,7 +15,8 @@ dawnr is research software. Read this before relying on anything it does.
   [internal/RELEASE-PROVENANCE-2026-10-01.md](internal/RELEASE-PROVENANCE-2026-10-01.md) and
   [release/NOTICE-student-v5](release/NOTICE-student-v5).
 - **A proof is only as good as its specification.** dawnr checks the specification against the problem's own
-  examples and against six independently written solutions, and still shows a wrong answer about one time in
+  examples and against six independently written solutions, on drawn inputs up to several times the size of the
+  examples (larger ones since 2026-10-05: [why](t/LARGER-INPUTS-2026-10-05.md)), and still shows a wrong answer about one time in
   eight on problems it has not seen (see below). A shown answer says how many of the seven provers proved it; it is
   not a guarantee that the question was understood.
 - **A certificate replays; it does not vouch.** `dawnr check` establishes again, on the reader's machine and with
@@ -102,36 +103,42 @@ programs that behave as the problem's solution does), so the panel is the other 
 on it, the prompted models too. The number first published is in brackets
 ([the audit, and how the rows got in](t/DECONTAMINATION-2026-10-05.md)).
 
-| on the clean 182 (on the 200, as first published) | proved by at least one prover | proved by all seven |
+**Corrected again 2026-10-05.** The check of a specification drew inputs no larger than the problem's examples (a
+list two longer than the longest example, a number twice the example), so a specification that lists the small cases
+and says nothing after them read as complete. Each row is counted a third time with every specification also held
+to larger inputs, which is the reading of record from now on; the two earlier readings follow it in brackets
+([what was found, and every row](t/LARGER-INPUTS-2026-10-05.md)).
+
+| on the clean 182, specifications held to larger inputs (the clean 182 before that; the 200 as first published) | proved by at least one prover | proved by all seven |
 |---|---:|---:|
-| the 4B on v5's rows, training seed 1 | 13 (18) | 5 (7) |
-| the 4B on v5's rows, training seed 2 | 13 (18) | 5 (8) |
-| the 4B on v5's rows, training seed 3 | 9 (15) | 6 (7) |
-| v3's rows, training seed 1 | 12 (17) | 7 (10) |
-| v3's rows, training seed 2 | 10 (16) | 4 (8) |
-| v3's rows, training seed 3 | 11 (17) | 4 (8) |
-| v3's rows plus 182 rows from a teacher's proved documents, training seed 3 | 15 (21) | 9 (12) |
-| the same, training seed 1 | 15 (19) | 5 (8) |
-| the same, training seed 2 | 9 (13) | 5 (7) |
-| v3's rows plus 598 rows from every document admitted since (teachers and the specification round), seed 1 | 16 (23) | 10 (13) |
-| the same, seed 3 | 19 (27) | 10 (13) |
-| the same, seed 2 | 17 (24) | 10 (15) |
-| those rows without the 46 a name filter removed, plus round 3's 129 APPS documents, seed 2 | 18 (27) | 10 (15) |
-| the same, seed 3 | 14 (23) | 8 (13) |
-| the same, seed 1: **dawnr v5**, the published model | 18 (26) | 12 (16) |
-| Qwen3.5-4B, dawnr's own starting weights, prompted, the same 17 answers a problem | 9 (15) | 6 (8) |
-| Qwen3.5-9B, prompted, the same 17 answers a problem | 15 (18) | 6 (7) |
-| Qwen3.5-2B, prompted, the same 17 answers a problem | 2 (4) | 2 (3) |
-| a Qwen3.5-2B fine-tuned on the release-v4 candidate's rows, seed 1 | 4 (8) | 3 (6) |
-| Qwen3.5-0.8B, prompted, the same 17 answers a problem | 1 (1) | 1 (1) |
-| Qwen3.5-27B (fp8), prompted, the same 17 answers a problem | 33 (43) | 23 (29) |
-| Phi-4-mini, prompted, the same 17 answers a problem | 2 (3) | 2 (3) |
-| Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 7 (9) | 5 (7) |
+| the 4B on v5's rows, training seed 1 | 12 (13; 18) | 5 (5; 7) |
+| the 4B on v5's rows, training seed 2 | 12 (13; 18) | 5 (5; 8) |
+| the 4B on v5's rows, training seed 3 | 9 (9; 15) | 6 (6; 7) |
+| v3's rows, training seed 1 | 11 (12; 17) | 7 (7; 10) |
+| v3's rows, training seed 2 | 9 (10; 16) | 4 (4; 8) |
+| v3's rows, training seed 3 | 10 (11; 17) | 4 (4; 8) |
+| v3's rows plus 182 rows from a teacher's proved documents, training seed 3 | 14 (15; 21) | 9 (9; 12) |
+| the same, training seed 1 | 14 (15; 19) | 5 (5; 8) |
+| the same, training seed 2 | 9 (9; 13) | 5 (5; 7) |
+| v3's rows plus 598 rows from every document admitted since (teachers and the specification round), seed 1 | 13 (16; 23) | 9 (10; 13) |
+| the same, seed 3 | 18 (19; 27) | 10 (10; 13) |
+| the same, seed 2 | 16 (17; 24) | 10 (10; 15) |
+| those rows without the 46 a name filter removed, plus round 3's 129 APPS documents, seed 2 | 17 (18; 27) | 10 (10; 15) |
+| the same, seed 3 | 12 (14; 23) | 7 (8; 13) |
+| the same, seed 1: **dawnr v5**, the published model | 17 (18; 26) | 12 (12; 16) |
+| Qwen3.5-4B, dawnr's own starting weights, prompted, the same 17 answers a problem | 9 (9; 15) | 6 (6; 8) |
+| Qwen3.5-9B, prompted, the same 17 answers a problem | 14 (15; 18) | 6 (6; 7) |
+| Qwen3.5-2B, prompted, the same 17 answers a problem | 2 (2; 4) | 2 (2; 3) |
+| a Qwen3.5-2B fine-tuned on the release-v4 candidate's rows, seed 1 | 4 (4; 8) | 3 (3; 6) |
+| Qwen3.5-0.8B, prompted, the same 17 answers a problem | 1 (1; 1) | 1 (1; 1) |
+| Qwen3.5-27B (fp8), prompted, the same 17 answers a problem | 32 (33; 43) | 22 (23; 29) |
+| Phi-4-mini, prompted, the same 17 answers a problem | 2 (2; 3) | 2 (2; 3) |
+| Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 7 (7; 9) | 5 (5; 7) |
 | every model trained here from scratch | 0 | 0 |
 
 v3's rows were not released: their first seed missed the release gate on the 33 given specifications by two (25 of 33 by all seven, against 27; [v3](t/PREDICT-2026-10-02-release-v3.md)); `student-v5`, published 2026-10-05, is the last row of the fine-tuned block. Every row is counted the same way: each program's specification checked against the problem's reference (EvalPlus's corrected MBPP+ solution where it keeps the problem's tests) on 1,000 drawn inputs, and every set's answers normalised alike ([correction](t/PREDICT-2026-10-01-replication.md)).
 
-This is not yet the win the project set itself. Given every advantage, decoding under t's grammar so it cannot write unparseable output, Phi-4-mini proves 7 at one prover and 5 at all seven on the 182. Every training seed of the published recipe is above both (18 and 12, 18 and 10, 14 and 8); the written bar asks for double on every seed, 14 and 10, and the third seed has 8 by all seven. The same 4B before any fine-tuning proves 9 and 6, so the rows the provers admitted add 9 problems and 6 by all seven to the published model, and much of the lead over Phi is the base model.
+This is not yet the win the project set itself. Given every advantage, decoding under t's grammar so it cannot write unparseable output, Phi-4-mini proves 7 at one prover and 5 at all seven on the 182. Every training seed of the published recipe is above both (17 and 12, 17 and 10, 12 and 7); the written bar asks for double on every seed, 14 and 10, and the third seed has 12 and 7. The same 4B before any fine-tuning proves 9 and 6, so the rows the provers admitted add 9 problems and 6 by all seven to the published model, and much of the lead over Phi is the base model.
 
 Without a reference solution, the gate can still tell most right answers from
 wrong ones. It checks the specification against a tested Python solution
@@ -149,7 +156,7 @@ by hand, most of the remaining "wrong" answers are faults in the benchmark's ref
 |---|---|
 | proof engine: `t`, seven provers, twins, specification checks | **Works.** Across 4,700 graded programs no prover has verified what another refuted ([t/README.md](t/README.md)). |
 | the model, given a specification | **Works, and the 33 questions say less than they seemed to.** The published model writes a body all seven provers accept on 27 of 33 held-out questions ([outcome](t/PREDICT-2026-10-05-release-v5.md)); 19 of the 33 have a program of the same behaviour in the training rows under another name, and on the other 14 it proves 10 ([the audit](t/DECONTAMINATION-2026-10-05.md)). A panel of 54 questions with no such program is what the next model is measured on. `dawnr prove SPEC.t` is this, for a specification you wrote; `dawnr spec` proposes specifications to read and pick from. |
-| the model, from English | **Works on a minority of problems** (18 of 182 held-out ones). Writing the right specification is the hard step: most of its specifications contradict the problem's own examples ([outcome](t/PREDICT-2026-10-01-v6.md)). |
+| the model, from English | **Works on a minority of problems** (17 of 182 held-out ones). Writing the right specification is the hard step: most of its specifications contradict the problem's own examples ([outcome](t/PREDICT-2026-10-01-v6.md)). |
 | the model behind the gate | Qwen3.5-4B (Apache-2.0), picked by a fixed rule from six candidates of 1.5B to 14B ([selection](t/PREDICT-2026-10-01-base-model-selection.md)). |
 | more proved data each round | The gate's verdicts become training data, after SAFE. The first round grew the pool from 527 to 693 proved answers ([proof round](t/PREDICT-2026-10-01-proof-round.md)). The specification round (the student writing specifications for training problems from their reference solutions) added 63 more, 28 of them proved by all seven ([spec round](t/PREDICT-2026-10-01-spec-round.md)). A teacher model on Amazon Bedrock (Qwen3-235B, openly licensed, $3.47) wrote 123 documents the provers admitted at six or seven kernels, 89 of them at all seven ([teacher round](t/PREDICT-2026-10-03-teacher-round-bedrock.md)); a student trained on them is being measured. |
 | data from verified code elsewhere | 464 lifted programs are clean in all seven provers, 569 with a recorded trust level ([t/LIFT-2026-09-26.md](t/LIFT-2026-09-26.md)). |

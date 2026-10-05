@@ -63,9 +63,8 @@ DRAWS = 100
 # 2026-10-05: the same three demands on inputs larger than the question's examples (spec_check.draw_beyond). A
 # specification that spells out the cases up to the size the ordinary draws reach and says nothing after them passed
 # every one of those draws; found the first time a larger model wrote the specification. The larger draws count once
-# at least MIN_BEYOND of them fall inside the `requires`; a Python that answers none of them leaves it unmeasured.
+# at least spec_check.MIN_LARGER of them fall inside the `requires`; a Python that answers none of them leaves it unmeasured.
 BEYOND_DRAWS = 60
-MIN_BEYOND = 5
 
 
 def python_oracle(session: py_sandbox.Session):
@@ -119,19 +118,10 @@ _KEEP = ("status", "draws", "outside_requires", "completeness", "mutants_rejecte
          "reference_said", "ensures", "weak_witness")
 
 
-def beyond_reason(larger: dict) -> str | None:
-    """Why a specification that stands on inputs the size of the examples does not stand on larger ones; None when
-    it does, or when too few larger inputs could be judged to say."""
-    if larger.get("status") == "disagrees":
-        return "the specification is false at the Python's answer on an input larger than the examples"
-    if larger.get("status") != "agrees":
-        return None
-    inside, outside = larger.get("draws", 0), larger.get("outside_requires", 0)
-    if inside + outside >= MIN_BEYOND and inside / (inside + outside) < MIN_DOMAIN:
-        return "the requires excludes most inputs larger than the examples"
-    if inside >= MIN_BEYOND and spec_check.complete(larger, MIN_COMPLETENESS) is False:
-        return "the specification says too little about inputs larger than the examples"
-    return None
+def beyond_reason(larger: dict, ordinary: dict | None = None) -> str | None:
+    """spec_check.larger_reason in the gate's words: the answer beside the specification is a Python solution."""
+    why = spec_check.larger_reason(larger, MIN_COMPLETENESS, ordinary)
+    return why.replace("the solution's answer", "the Python's answer") if why else None
 
 
 def judge(task: dict, entry: dict, code: str | None, seed: int = 1, n: int = DRAWS, beyond: int = BEYOND_DRAWS) -> dict:
@@ -147,16 +137,15 @@ def judge(task: dict, entry: dict, code: str | None, seed: int = 1, n: int = DRA
             oracle = python_oracle(session)
             result = spec_check.check_task(task, entry, n, random.Random(seed), oracle=oracle)
             if beyond and passes(result):
-                larger = spec_check.check_task(task, entry, beyond, random.Random(seed + 1000), oracle=oracle,
-                                               drawer=spec_check.beyond_drawer(len(task["params"])))
+                larger = spec_check.larger_inputs(task, entry, seed, beyond, oracle)
     except py_sandbox.LoadError as e:
         return dict(out, passes=False, why=f"the Python does not load: {e}"[:160])
     except Exception as e:                                      # noqa: BLE001
         return dict(out, passes=False, why=f"the check raised {type(e).__name__}: {e}"[:160])
     out = dict(out, passes=passes(result), why=reason(result), agreement={k: result[k] for k in _KEEP if k in result})
     if larger is not None:
-        out["larger"] = {k: larger[k] for k in _KEEP if k in larger}
-        why = beyond_reason(larger)
+        out["larger"] = {k: larger[k] for k in (*_KEEP, "requires_caps_size") if k in larger}
+        why = beyond_reason(larger, result)
         if why:
             out.update(passes=False, why=why)
     return out

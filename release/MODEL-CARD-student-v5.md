@@ -9,7 +9,9 @@ built from MBPP-DFY programs (github.com/Mondego/dafny-synthesis, GPL-3.0 at its
 under the vericoding benchmark's names, 40 by DafnyBench's copy and 21 by Verus-Bench's translation, and the card
 said there were none. Second, 18 of the 200 held-out problems had a row that came from the problem itself or
 behaves as its solution does; the counts are now given on the other 182. The model file is unchanged, and the
-next release is trained without those rows.
+next release is trained without those rows. A third thing followed the same day: the check of each specification
+drew inputs no larger than a problem's examples, and one counted answer rested on a specification that says too
+little on larger ones ([the record](../t/LARGER-INPUTS-2026-10-05.md)); the count below is given with that check.
 
 The model inside dawnr that writes `t`: given a programming question in English with example tests, or a
 specification, it writes a `t` task (what the program requires, what it guarantees, and a body the provers can
@@ -66,7 +68,7 @@ solution and the provers agree (see [../README.md](../README.md)).
 
 ## Measured
 
-At Q8_0, the file published here, through llama-server as `dawnr` runs it: 27 of the 33 given specifications proved by all seven provers (28 by at least one; v1 26), and 4 development problems proved on complete specifications from one answer each (2 by all seven) ([registration](../t/PREDICT-2026-10-05-release-v5.md), R1, R2 and R3 hold). On the corrected panels: 3 of the 95 development problems (2 by all seven); at full precision with 17 answers a problem, 18 of the 182 held-out problems, 12 by all seven (first published as 26 of 200 and 16); of the 33 specifications, 10 of the 14 whose function is not in the rows under another name. R1, R2 and R3 still hold.
+At Q8_0, the file published here, through llama-server as `dawnr` runs it: 27 of the 33 given specifications proved by all seven provers (28 by at least one; v1 26), and 4 development problems proved on complete specifications from one answer each (2 by all seven) ([registration](../t/PREDICT-2026-10-05-release-v5.md), R1, R2 and R3 hold). On the corrected panels: 3 of the 95 development problems (2 by all seven); at full precision with 17 answers a problem, 17 of the 182 held-out problems, 12 by all seven, each specification held to inputs larger than the examples too (18 and 12 before that second correction of the day, [why](../t/LARGER-INPUTS-2026-10-05.md); first published as 26 of 200 and 16); of the 33 specifications, 10 of the 14 whose function is not in the rows under another name. R1, R2 and R3 still hold.
 
 ## Limits
 

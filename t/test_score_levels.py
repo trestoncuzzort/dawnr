@@ -106,6 +106,29 @@ class WeakSpecification(unittest.TestCase):
         self.assertEqual((rows[0][">=7"], pooled[">=7"]), (3, 3))
         self.assertEqual(pooled[">=7 before the specification check"], 5)
 
+    def test_a_specification_that_does_not_stand_on_larger_inputs_is_not_counted_when_that_is_asked(self):
+        # 2026-10-05: complete on inputs the size of the examples, and saying too little, false, or closed off past them
+        stands = {"status": "agrees", "draws": 200, "completeness": 1.0}
+        self.verdicts["set/p1"]["larger"] = stands
+        self.verdicts["set/p2"]["larger"] = {"status": "agrees", "draws": 200, "completeness": 0.14}
+        self.verdicts["set/p5"]["larger"] = {"status": "disagrees", "args": [[1] * 9], "reference_said": 9}
+        asked = score_levels.tag_levels("set", {1, 2, 3, 4, 5}, self.verdicts, 0.6, larger=True)
+        self.assertEqual({tid: v[0] for tid, v in asked.items()}, {1: 7, 2: 0, 3: 0, 4: 0, 5: 0})
+        # not asked: every run registered before that day is scored by the rule it was registered under
+        self.assertEqual(self.levels(0.6), {1: 7, 2: 7, 3: 0, 4: 0, 5: 7})
+        self.verdicts["set/p1"]["larger"] = {"status": "agrees", "draws": 3, "completeness": 0.0}      # too few judged to say
+        self.assertEqual(score_levels.tag_levels("set", {1}, self.verdicts, 0.6, larger=True)[1][0], 7)
+        self.verdicts["set/p1"]["larger"] = {"status": "agrees", "draws": 4, "outside_requires": 30, "completeness": 1.0,
+                                             "requires_caps_size": True}
+        self.assertEqual(score_levels.tag_levels("set", {1}, self.verdicts, 0.6, larger=True)[1][0], 0)   # the requires closes it off
+        self.verdicts["set/p1"]["outside_requires"] = 700          # as narrow on the ordinary draws: not a matter of size
+        self.assertEqual(score_levels.tag_levels("set", {1}, self.verdicts, 0.6, larger=True)[1][0], 7)
+        del self.verdicts["set/p1"]["outside_requires"]
+        self.verdicts["set/p1"]["larger"]["requires_caps_size"] = False     # a requires that names no size is not judged by it
+        self.assertEqual(score_levels.tag_levels("set", {1}, self.verdicts, 0.6, larger=True)[1][0], 7)
+        rows, pooled = score_levels.table(["set"], {1, 2, 3, 4, 5}, self.verdicts, 0.6, larger=True)
+        self.assertEqual(pooled[">=7"], 1)                          # p1 alone: its larger inputs no longer count against it
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

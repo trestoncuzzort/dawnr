@@ -3,6 +3,8 @@
 > **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
 > later took out of the panel. Every published row is restated on the clean 182 in
 > [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+> A second correction that day holds each specification to inputs larger than the examples as well; the rows are
+> restated again in [LARGER-INPUTS-2026-10-05.md](LARGER-INPUTS-2026-10-05.md).
 
 Across the seven student answer sets graded with the corrected instrument (the shipped seeds, teacher1's three,
 teacher2's seed 1), the problems proved by at least one kernel but not by all seven lose most of their missing cells
