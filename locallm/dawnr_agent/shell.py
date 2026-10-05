@@ -13,6 +13,10 @@ The command allowlist (commands.py) is safe because it is short, and for the sam
   the changes   read back from that directory by the kernel's rules (Documentation/filesystems/overlayfs.rst): a file
                 there is a file written, a character device 0/0 (or a file marked overlay.whiteout) a name removed,
                 a directory marked opaque one replaced whole
+  or a copy     bubblewrap mounts overlays from 0.11 on; Ubuntu 24.04 ships 0.9 and Debian 12 ships 0.8. There the
+                folder is copied, the command runs with the copy in the folder's place, and the changes are the
+                differences between the two. The same sandbox, the same question to the person, slower, and only
+                for a folder of at most 256 MB and 20,000 files
   the decision  a command that changed nothing was a read, and its output is returned. One that changed something is
                 asked for, with the changes it made as the reason: the person approves effects, not a command line
   applying      through the journaled file operations (files.py), so every file changed or removed can be put back;
@@ -24,8 +28,9 @@ is overlaid, inside one. Research receipt d24c962e67be.
 
 What this does not do. A command's effects that are not files in the folder do not exist: it cannot install a
 package, change a setting or start a program that outlives it; those are asked for another way. Links, devices and
-files over the journal's size limit are listed and not applied. Where bubblewrap or the overlay does not work
-(Linux before 5.11, bubblewrap before 0.8, macOS, Windows without WSL), the tool is not offered.
+files over the journal's size limit are listed and not applied. A file the file tools never read (a key, a
+`.env`) is not there for the command either. Where bubblewrap does not work at all (macOS, Windows without WSL, a
+system that forbids user namespaces), the tool is not offered.
 """
 from __future__ import annotations
 
@@ -47,6 +52,8 @@ from dawnr_harness.tools import CallContext, Tool, ToolResult
 
 MAX_COMMAND = 4000             # characters of one shell line
 MAX_CHANGES = 400              # files one command may change and still be applied (each is kept for undo)
+COPY_BYTES = 256 * 1024 * 1024  # where there is no overlay: the largest folder a command is run over a copy of
+COPY_FILES = 20_000
 KEPT = 4                       # runs kept waiting for an answer; older ones are dropped
 KEPT_OUTPUT = 200_000          # bytes of a command's output read at all; the model is shown the start and the end of it
 ORDER = {"mkdir": 0, "write": 1, "delete": 2, "rmdir": 3, "skip": 4}
@@ -179,9 +186,27 @@ class ShellTools:
         self.sockets = home_sockets(home, [r.path for r in space.roots] + self.hide) if os.path.isdir(home) else []
         self.runs: dict[str, Run] = {}
         self._lock = threading.Lock()
+        self.mode = "overlay"                                   # or "copy", where bubblewrap cannot mount an overlay
         self.problem = self.probe()
 
     # ------------------------------------------------------------ the sandbox --
+
+    def _secrets(self) -> tuple[list, list]:
+        """(files, folders) inside the roots that the file tools never read: a command does not read them either."""
+        files, dirs, seen = [], [], 0
+        for r in self.space.roots:
+            for at, dnames, fnames in os.walk(r.path):
+                rel = os.path.relpath(at, r.path)
+                parts = () if rel == "." else tuple(rel.split(os.sep))
+                for d in list(dnames):
+                    if self.space.secret_reason(Target(r, parts + (d,))):
+                        dirs.append(os.path.join(at, d))
+                        dnames.remove(d)
+                files += [os.path.join(at, f) for f in fnames if self.space.secret_reason(Target(r, parts + (f,)))]
+                seen += len(dnames) + len(fnames)
+                if seen > 50_000:
+                    break
+        return files, dirs
 
     def _argv(self, command: list, cwd: str, layers: dict) -> list:
         a = [self.program, "--die-with-parent", "--new-session", "--unshare-all",
@@ -195,40 +220,100 @@ class ShellTools:
             if os.path.lexists(sock):
                 a += ["--ro-bind", "/dev/null", sock]
         for root, (upper, work) in layers.items():
-            a += ["--overlay-src", root, "--overlay", upper, work, root]
+            a += ["--overlay-src", root, "--overlay", upper, work, root] if work else ["--bind", upper, root]
+        files, dirs = self._secrets()
+        copied = [root for root, (_u, work) in layers.items() if not work]
+        for path in files + dirs:                               # a copy was made without them; elsewhere they are masked
+            if not any(path.startswith(root.rstrip("/") + "/") for root in copied):
+                a += ["--tmpfs", path] if path in dirs else ["--ro-bind", "/dev/null", path]
         for r in self.roots:                                    # the file tools call the folder by its name: so may a command
             if r.path in layers and not os.path.lexists(os.path.join(r.path, r.name)):
                 a += ["--symlink", ".", os.path.join(r.path, r.name)]
         return a + ["--chdir", cwd, "--"] + command
 
+    def _copy(self, root, to: Path) -> None:
+        """The folder, copied for a command to run over: links as links, no secret, nothing that is not a file or a
+        folder. Refused over COPY_BYTES or COPY_FILES."""
+        files, dirs = self._secrets()
+        secret = set(files) | set(dirs)
+        count = size = 0
+        for at, dnames, fnames in os.walk(root.path):
+            dnames[:] = [d for d in dnames if os.path.join(at, d) not in secret]
+            target = to / os.path.relpath(at, root.path)
+            target.mkdir(parents=True, exist_ok=True)
+            for d in list(dnames):
+                if os.path.islink(os.path.join(at, d)):
+                    os.symlink(os.readlink(os.path.join(at, d)), target / d)
+                    dnames.remove(d)
+            for name in fnames:
+                path = os.path.join(at, name)
+                if path in secret:
+                    continue
+                st = os.lstat(path)
+                count += 1
+                if stat.S_ISLNK(st.st_mode):
+                    os.symlink(os.readlink(path), target / name)
+                elif stat.S_ISREG(st.st_mode):
+                    size += st.st_size
+                    if size > COPY_BYTES or count > COPY_FILES:
+                        raise PathRefused(f"sh: this folder is over {COPY_BYTES >> 20} MB or {COPY_FILES} files, too large to run a "
+                                          "command over a copy of it; with bubblewrap 0.11 or newer no copy is needed")
+                    shutil.copy2(path, target / name)
+            try:
+                shutil.copystat(at, target)
+            except OSError:
+                pass
+
     def _layers(self, scratch: Path) -> dict:
         layers = {}
         for i, r in enumerate(self.roots):
+            if self.mode == "copy":
+                self._copy(r, scratch / f"copy{i}")
+                layers[r.path] = (str(scratch / f"copy{i}"), None)
+                continue
             upper, work = scratch / f"upper{i}", scratch / f"work{i}"
             upper.mkdir(parents=True)
             work.mkdir(parents=True)
             layers[r.path] = (str(upper), str(work))
         return layers
 
+    def _try(self) -> str | None:
+        scratch = self.scratch / f"probe-{os.getpid()}"
+        if scratch.exists():
+            _force_remove(str(scratch))
+        try:
+            layers = {self.roots[0].path: ((str(scratch / "u"), str(scratch / "w")) if self.mode == "overlay" else (str(scratch / "c"), None))}
+            for part in layers[self.roots[0].path]:
+                if part:
+                    Path(part).mkdir(parents=True)
+            got = run_argv(self._argv(["true"], self.roots[0].path, layers), cwd=self.roots[0].path, env=self.env,
+                           timeout=20, max_output=2000)
+        finally:
+            _force_remove(str(scratch))
+        return None if got["exit"] == 0 else (got["stderr"].strip()[:200] or f"exit {got['exit']}")
+
     def probe(self) -> str | None:
-        """None if a command can be run over an overlay here, else why not."""
+        """None if a command can be run here over an overlay or, failing that, over a copy; else why not."""
         if not self.roots:
             return "no folder here may be changed"
-        if os.name == "nt" or not hasattr(os, "getxattr"):
-            return "overlays are a Linux feature"
+        if os.name == "nt":
+            return "the sandbox is bubblewrap, a Linux program"
+        forced = os.environ.get("DAWNR_SH_MODE")
         try:
             self.scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
-            scratch = self.scratch / f"probe-{os.getpid()}"
-            if scratch.exists():
-                _force_remove(str(scratch))
-            got = run_argv(self._argv(["true"], self.roots[0].path, self._layers(scratch)), cwd=self.roots[0].path,
-                           env=self.env, timeout=20, max_output=2000)
-            _force_remove(str(scratch))
+            why = "overlay switched off"
+            if forced != "copy" and hasattr(os, "getxattr"):
+                self.mode = "overlay"
+                why = self._try()
+                if why is None:
+                    return None
+            if forced == "overlay":
+                return "bubblewrap cannot mount an overlay here: " + why
+            self.mode = "copy"
+            again = self._try()
         except OSError as e:
             return f"the sandbox could not start: {e}"
-        if got["exit"] != 0:
-            return "bubblewrap cannot mount an overlay here: " + (got["stderr"].strip()[:200] or f"exit {got['exit']}")
-        return None
+        return None if again is None else f"bubblewrap does not work here: {again}"
 
     # --------------------------------------------------------- reading a run --
 
@@ -313,6 +398,65 @@ class ShellTools:
                     out.append(Change("skip", display, why="it is not a regular file"))
         return sorted(out, key=lambda c: (ORDER[c.kind], -c.path.count("/") if c.kind == "rmdir" else c.path.count("/"), c.path))
 
+    def _read_copy(self, root, copy: str) -> list:
+        """What a command changed, where it ran over a copy: the differences between the copy and the folder."""
+        out: list = []
+        files, dirs = self._secrets()
+        secret = set(files) | set(dirs)
+        for at, dnames, fnames in os.walk(copy):
+            rel_dir = os.path.relpath(at, copy)
+            rel_dir = "" if rel_dir == "." else rel_dir
+            for name in sorted(dnames) + sorted(fnames):
+                path = os.path.join(at, name)
+                rel = f"{rel_dir}/{name}" if rel_dir else name
+                display, real = f"{root.name}/{rel}", self._real(root, rel)
+                st = os.lstat(path)
+                if stat.S_ISLNK(st.st_mode):
+                    if rel == root.name and os.readlink(path) == ".":
+                        continue                                # the sandbox's own name for the folder (_argv)
+                    if not (os.path.islink(real) and os.readlink(real) == os.readlink(path)):
+                        out.append(Change("skip", display, why="a link is not applied"))
+                elif stat.S_ISDIR(st.st_mode):
+                    if not (os.path.isdir(real) and not os.path.islink(real)):
+                        if os.path.lexists(real):
+                            self._removed(root, rel, out)
+                        out.append(Change("mkdir", display))
+                elif stat.S_ISREG(st.st_mode):
+                    if st.st_size > self.ops.limits.max_write_bytes:
+                        try:
+                            was = os.lstat(real)
+                            same = (was.st_size, was.st_mtime_ns) == (st.st_size, st.st_mtime_ns)
+                        except OSError:
+                            same = False
+                        if not same:
+                            out.append(Change("skip", display, why=f"over {self.ops.limits.max_write_bytes} bytes, too large to keep for undo"))
+                        continue
+                    with open(path, "rb") as f:
+                        data = f.read()
+                    change = self._checked(Change("write", display, data=data, mode=stat.S_IMODE(st.st_mode)))
+                    if change.kind == "write" and change.before == sha256(data):
+                        try:
+                            if stat.S_IMODE(os.lstat(real).st_mode) == change.mode:
+                                continue
+                        except OSError:
+                            pass
+                    out.append(change)
+                else:
+                    out.append(Change("skip", display, why="it is not a regular file"))
+        for at, dnames, fnames in os.walk(root.path):               # what the folder has and the copy no longer does
+            dnames[:] = [d for d in dnames if os.path.join(at, d) not in secret]
+            rel_dir = os.path.relpath(at, root.path)
+            rel_dir = "" if rel_dir == "." else rel_dir
+            for name in sorted(dnames) + sorted(fnames):
+                if os.path.join(at, name) in secret:
+                    continue
+                rel = f"{rel_dir}/{name}" if rel_dir else name
+                if not os.path.lexists(os.path.join(copy, rel)):
+                    self._removed(root, rel, out)
+                    if name in dnames:
+                        dnames.remove(name)
+        return sorted(out, key=lambda c: (ORDER[c.kind], -c.path.count("/") if c.kind == "rmdir" else c.path.count("/"), c.path))
+
     # ---------------------------------------------------------------- running --
 
     def _key(self, args: dict) -> str:
@@ -349,7 +493,7 @@ class ShellTools:
                            timeout=self.timeout, max_output=KEPT_OUTPUT)
             changes: list = []
             for root in self.roots:
-                changes += self._read_upper(root, layers[root.path][0])
+                changes += (self._read_copy if self.mode == "copy" else self._read_upper)(root, layers[root.path][0])
             run = Run(key, command, shown, got["exit"], got["seconds"], got["timed_out"], got["stdout"], got["stderr"],
                       changes, str(scratch))
             self.runs[key] = run
@@ -364,7 +508,7 @@ class ShellTools:
         except PathRefused as e:
             return "deny", str(e)
         if not run.changes:
-            return "allow", "the command changed nothing (it ran over an overlay, in a sandbox with no network)"
+            return "allow", f"the command changed nothing (it ran over {'a copy' if self.mode == 'copy' else 'an overlay'}, in a sandbox with no network)"
         if len(run.real) > MAX_CHANGES:
             return "deny", f"the command changes {len(run.real)} files, more than the {MAX_CHANGES} that are kept for undo"
         run.shown = True

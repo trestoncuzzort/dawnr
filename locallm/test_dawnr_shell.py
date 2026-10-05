@@ -32,6 +32,13 @@ def agent_in(tmp_path, approve=True, **files):
 pytestmark = pytest.mark.skipif(shutil.which("bwrap") is None, reason="bubblewrap is not installed")
 
 
+@pytest.fixture(autouse=True, params=["overlay", "copy"])
+def mode(request, monkeypatch):
+    """Every test twice: over an overlay (bubblewrap 0.11 and newer) and over a copy of the folder (older ones)."""
+    monkeypatch.setenv("DAWNR_SH_MODE", request.param)
+    return request.param
+
+
 def test_a_command_that_changes_nothing_is_a_read_and_runs_unasked(tmp_path):
     work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n", "b.txt": "two\n"})
     with harness:
@@ -95,6 +102,16 @@ def test_long_output_comes_back_as_its_start_and_its_end_with_what_was_left_out_
         r = harness.call("sh", {"command": "seq 1 5000; echo THE-ERROR-AT-THE-END"})
     assert len(r.text) < 4300 and r.text.startswith("exit 0\n1\n2\n") and r.text.rstrip().endswith("THE-ERROR-AT-THE-END")
     assert " lines (" in r.text and "characters) not shown]" in r.text
+
+
+def test_a_secret_in_the_folder_is_not_there_for_a_command_and_is_not_taken_for_removed(tmp_path, mode):
+    work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n", ".env": "TOKEN=abc123\n", "keys/id_rsa": "PRIVATE\n"})
+    with harness:
+        assert agent.shell.mode == mode
+        r = harness.call("sh", {"command": "cat .env keys/id_rsa; ls -a; echo two > b.txt"})
+    assert "abc123" not in r.text and "PRIVATE" not in r.text
+    assert asked == ["it would change 1: create here/b.txt"]                               # and the secrets were not "removed"
+    assert (work / ".env").read_text() == "TOKEN=abc123\n" and (work / "keys/id_rsa").read_text() == "PRIVATE\n" and (work / "b.txt").exists()
 
 
 def test_inside_a_command_the_folder_also_answers_to_the_name_the_file_tools_give_it(tmp_path):

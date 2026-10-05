@@ -48,6 +48,12 @@ jobs:
       - name: a user who is not root (the sandbox is for people, and root can write anywhere)
         run: |
           useradd -m tester && chown -R tester .
+          # GitHub's Ubuntu hosts restrict unprivileged user namespaces through AppArmor, which leaves bubblewrap
+          # unable to set up its own network namespace; a desktop of any of these distributions does not
+          sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 2>/dev/null || true
       - name: the sandbox, the file tools and the front door
         run: |
-          su tester -c "cd $PWD && python3 -m pytest locallm/test_dawnr_shell.py locallm/test_dawnr_cli.py locallm/test_dawnr_agent.py locallm/test_dawnr_tasks.py -q -rs"
+          su tester -c "cd $PWD && python3 -m pytest locallm/test_dawnr_shell.py locallm/test_dawnr_cli.py locallm/test_dawnr_agent.py locallm/test_dawnr_tasks.py -q -rs" | tee tests.txt
+          # a run in which the sandbox was skipped proves nothing about it: at least the copy mode must have run
+          ! grep -q "copy\] SKIPPED\|SKIPPED.*test_dawnr_shell.py.*no overlay sandbox here: shell: bubblewrap does not work" tests.txt
+          grep -E "SKIPPED|passed" tests.txt | cut -c1-200
