@@ -26,3 +26,24 @@ If all three hold it is published as `student-v5` under Apache-2.0, its model ca
 sources and naming the two teacher models (Apache-2.0 and MIT), and `install.sh` moves to it. Otherwise
 `student-v1` stays. Measuring any other seed on the 33 waits until this gate has decided, so the gate set never
 chooses its own candidate.
+
+## Outcome, 2026-10-05 03:47Z (`~/scratch/release-v5/log`, `q33-levels.json`)
+
+The candidate (teacher3's seed 1), exported to Q8_0 (4,482,402,752 bytes, sha256 15b28552a86ca3ca..., three shards) and
+measured on this desktop's CPU through llama-server:
+
+| | the candidate | v1 | v4's candidate |
+|---|---:|---:|---:|
+| the 33 given specifications, proved by all seven | **27** | 26 | 22 |
+| the same, by at least one (a kernel refutes 4) | 28 | | 25 |
+| one greedy dev answer, complete specifications, at least one / all seven | **4** / 2 | 4 | 7 / 3 |
+| the clean 200 (its own route), at least one / all seven | **26** / **16** | | 23 / 13 |
+
+- **R1 holds:** 27 of 33 by all seven, against at least 26.
+- **R2 holds:** 4 dev problems on complete specifications, against at least 3.
+- **R3 holds:** 26 and 16, against 17 and 9.
+
+**Published as `student-v5`; `install.sh` moves to it** (the gate's commit cbc724eb). v4's candidate, one seed of the
+round before on 516 fewer rows, read 22 on the same 33. With one seed of each, how much of that difference is the
+seed and how much the rows is not measured; the candidate was fixed by a rule before this set was measured, so the
+gate did not choose it.
