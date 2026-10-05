@@ -200,6 +200,19 @@ as one; a field nothing states is left empty. Neither can write a value that
 is not in your files. Whether the words picked are the right ones for the
 field is what the printed sentence is for.
 
+And for a question with numbers in it:
+
+```bash
+dawnr calc "A recipe needs 2.5 cups of flour for 12 muffins. How many cups for 30?"
+```
+
+The model writes the working as a few lines of arithmetic; dawnr computes it
+exactly (in fractions, so no rounding error creeps in), does not use a
+working that brings in a number your question does not state, asks three
+times, and shows an answer only when every working it could compute gives
+the same number. The working is printed, because it is the reading of your
+question that was computed.
+
 A question takes one to two minutes on an ordinary CPU (the two commands above
 took 130 and 92 seconds on a desktop's), and 11 to 27 seconds
 on that laptop's card (19 for a first question that also starts the models, 27

@@ -35,6 +35,11 @@ dawnr is research software. Read this before relying on anything it does.
   show text that is not in your files, by construction. `cite` is measured (below). `extract` is new (2026-10-05):
   how often the words it picks are the right ones, and how often a field that is not in the document is left
   empty, is registered in `locallm/PREDICT-2026-10-05-extract.md` and not yet measured.
+- **`dawnr calc` computes a working exactly; it does not know the right reading of the question.** The arithmetic
+  is exact, a working with a number the question does not state is not used, and an answer is shown only when
+  separate workings agree; several workings can still share one misreading. It is new (2026-10-05): how often a
+  shown answer is right and how many questions get one is registered in `locallm/PREDICT-2026-10-05-calc.md` and
+  not yet measured.
 - **The installer is new.** It was tested from an empty home directory on Linux x86_64 against the published
   release (about 9 minutes, almost all of it downloading 7.5 GB; the first question was answered and proved by
   Dafny in about a minute). It installs only Dafny
