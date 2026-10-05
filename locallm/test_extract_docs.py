@@ -112,16 +112,17 @@ def test_a_typed_field_reads_as_its_kind_or_says_why_not(kind, words, value, why
 
 
 def served(replies: dict, values: dict | None = None):
-    """A stand-in for the server: answers by the field named in the prompt, the grammar-held reading from `replies`
-    and the free one (a text field's first reading) from `values`, and records what it was sent."""
+    """A stand-in for the server. The grammar-held reading is answered from `replies` by the field named in the
+    prompt; the free reading (a text field's first) from `values` by the question asked, as the JSON it is held to.
+    Records what it was sent."""
     seen = []
 
     def post(url, body):
         seen.append(body)
-        field = body["messages"][-1]["content"].rsplit("Field: ", 1)[1].split(":")[0]
+        said = body["messages"][-1]["content"]
         if "response_format" in body:
-            return {"choices": [{"message": {"content": json.dumps({"value": (values or {}).get(field)})}}]}
-        return {"choices": [{"message": {"content": replies[field]}}]}
+            return {"choices": [{"message": {"content": json.dumps({"answer": (values or {}).get(said.rsplit("Question:\n", 1)[1])})}}]}
+        return {"choices": [{"message": {"content": replies[said.rsplit("Field: ", 1)[1].split(":")[0]]}}]}
     post.seen = seen
     return post
 
@@ -133,7 +134,7 @@ def test_each_field_comes_back_with_its_sentence_and_file_or_is_left_empty(tmp_p
     fields = [ex.read_field(x) for x in ("total(number): the amount due", "due(date): when payment is due",
                                          "vendor: who sent the invoice", "po: the purchase order number", "weight(number): shipping weight")]
     post = served({"total": "S2: 1,250.00", "due": "S2: March 3, 2026", "vendor": "S1: Invoice 2291 from Harbor Supply",
-                   "po": "NONE", "weight": "S3: dock office"}, {"vendor": "Harbor  Supply"})
+                   "po": "NONE", "weight": "S3: dock office"}, {"who sent the invoice": "Harbor  Supply"})
     rows = {r["name"]: r for r in ex.extract("h:1", fields, sentences, post)}
     assert rows["total"]["value"] == 1250.0 and rows["total"]["words"] == "1,250.00" and rows["total"]["n"] == 2
     # a text field: the words of the free reading, the sentence of the grammar-held one
@@ -141,12 +142,14 @@ def test_each_field_comes_back_with_its_sentence_and_file_or_is_left_empty(tmp_p
     assert rows["vendor"]["n"] == 1 and rows["vendor"]["sentence"] == "Invoice 2291 from Harbor Supply."
     assert rows["po"] == {"name": "po", "kind": "text", "value": None, "why": "no sentence shown states it"}
     assert rows["weight"]["value"] is None and rows["weight"]["why"] == "the words picked hold no number"
-    # the document is sent the same way for every field and both readings, so the server reads it once
-    heads = {body["messages"][-1]["content"].rsplit("\n\nField: ", 1)[0] for body in post.seen}
-    held = [body for body in post.seen if "grammar" in body]
-    assert len(heads) == 1 and len({body["messages"][0]["content"] for body in post.seen}) == 1
+    # every free reading is asked before any grammar-held one, and the document is sent the same way within each
+    # kind, so the server reads it once for each kind of reading
+    assert [("response_format" in body) for body in post.seen] == [True, True, False, False, False, False]
+    free, held = post.seen[:2], post.seen[2:]
+    assert len({body["messages"][-1]["content"].rsplit("\n\nQuestion:\n", 1)[0] for body in free}) == 1
+    assert len({body["messages"][-1]["content"].rsplit("\n\nField: ", 1)[0] for body in held}) == 1
+    assert all(body["messages"][0]["content"] == ex.VALUE_SYSTEM for body in free) and all(body["messages"][0]["content"] == ex.SYSTEM for body in held)
     assert len(held) == 4 and all(body["grammar"].startswith('root ::= "NONE" | s') for body in held)    # po: one reading
-    assert [("response_format" in body) for body in post.seen] == [False, False, True, False, True, False]
     text = ex.render(list(rows.values()))
     assert 'total   1250.0\n            "The total due is $1,250.00, payable by March 3, 2026." (invoice.txt, sentence 2)' in text
     assert "po      NOT STATED: no sentence shown states it." in text
@@ -183,8 +186,8 @@ def test_words_are_in_a_sentence_only_as_words():
 
 def test_the_free_reading_is_null_or_words_and_a_reply_that_is_not_its_json_is_nothing():
     field, texts = ex.read_field("vendor: who sent it"), ["Invoice 2291 from Harbor Supply."]
-    for reply, want in (('{"value": " Harbor\\n Supply "}', "Harbor Supply"), ('{"value": null}', None), ('{"value": ""}', None),
-                        ("Harbor Supply", None), ('["Harbor Supply"]', None), ('{"value": 7}', None)):
+    for reply, want in (('{"answer": " Harbor\\n Supply "}', "Harbor Supply"), ('{"answer": null}', None), ('{"answer": ""}', None),
+                        ("Harbor Supply", None), ('["Harbor Supply"]', None), ('{"answer": 7}', None), ('{"value": "Harbor Supply"}', None)):
         seen = []
 
         def post(url, body, reply=reply):
@@ -192,7 +195,8 @@ def test_the_free_reading_is_null_or_words_and_a_reply_that_is_not_its_json_is_n
             return {"choices": [{"message": {"content": reply}}]}
         assert ex.ask_value("h:1", field, texts, post) == want
         assert seen[0]["response_format"]["json_schema"]["schema"] == ex.VALUE_SCHEMA and "grammar" not in seen[0]
-        assert seen[0]["messages"][-1]["content"].endswith(ex.HOW_VALUE)
+        assert seen[0]["messages"] == [{"role": "system", "content": ex.VALUE_SYSTEM},
+                                       {"role": "user", "content": "Passage:\nInvoice 2291 from Harbor Supply.\n\nQuestion:\nwho sent it"}]
 
 
 def test_a_long_document_is_cut_to_the_passages_that_match_the_field(tmp_path):

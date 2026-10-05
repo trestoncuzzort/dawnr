@@ -22,8 +22,9 @@ The arms, one model and one temperature (0) for all:
             sentence's number and a run of its own words (its prompt of that day is kept here as SPAN_SYSTEM)
   twice     span asked a second time with the sentences listed in reverse; a value is kept only when both replies
             name the same sentence and one run of words contains the other (the shorter is kept)
-  value     extract_docs.ask_value, the free reading `dawnr extract` now makes of a text field (the numbered
-            sentences, the instruction last, a JSON Schema), kept when its words are in a sentence as words
+  value     extract_docs.ask_value, the free reading `dawnr extract` makes of a text field, kept when its words
+            are in a sentence as words. For X6 to X9 it was given the numbered sentences with the instruction last;
+            since then it is given the schema arm's prompt over the sentences joined (X10 to X13)
   both      extract_docs.held over that and the grammar-held reading: what `dawnr extract` shows for a text field
 
 Scoring is SQuAD's own: exact match and token F1 after its normalisation (lower case, punctuation and articles
@@ -112,9 +113,9 @@ def agree(a: tuple[int, str] | None, b: tuple[int, str] | None) -> str | None:
 
 
 def product(host: str, row: dict, post=rag_rgb._post) -> dict:
-    """The two arms that are `dawnr extract`'s own readings of a text field. Both readings are asked of every
-    question here (the command asks the second only when the first gave words that are in the document; `held`
-    gives the same answer either way), so that `value` can be read without the second."""
+    """The two arms that are `dawnr extract`'s own readings of a text field, through its own functions. Both
+    readings are asked of every question here (the command asks the second only when the first gave words that are
+    in the document; `held` gives the same answer either way), so that `value` can be read without the second."""
     sentences = cite_docs.sentences(row["context"])
     field = {"name": "answer", "kind": "text", "description": row["question"]}
     value = ex.ask_value(host, field, sentences, post)

@@ -46,17 +46,18 @@ def test_the_arms_read_one_question_through_a_stand_in_server():
     def post(url, body):
         seen.append(body)
         if "response_format" in body:
-            return {"choices": [{"message": {"content": '{"answer": "the code is 4417", "value": "4417"}'}}]}
+            return {"choices": [{"message": {"content": '{"answer": "4417"}'}}]}
         return {"choices": [{"message": {"content": "S1: The door code is 4417"}}]}
     values = ev.answers("h:1", row, post)
-    assert values == {"schema": "the code is 4417", "located": None, "span": "The door code is 4417", "twice": "The door code is 4417",
+    assert values == {"schema": "4417", "located": "4417", "span": "The door code is 4417", "twice": "The door code is 4417",
                       "value": "4417", "both": "4417"}
     assert seen[0]["response_format"]["json_schema"]["schema"] == ev.SCHEMA
     first, second = seen[1]["messages"][-1]["content"], seen[2]["messages"][-1]["content"]
     assert first.startswith("S1: The door code is 4417.\nS2: Ask Dana.") and second.startswith("S2: Ask Dana.\nS1: The door code is 4417.")
-    # the first method's arms keep the prompt they were registered with; the last two requests are the command's own
-    assert seen[1]["messages"][0]["content"] == ev.SPAN_SYSTEM and seen[3]["messages"][0]["content"] == ev.ex.SYSTEM
-    assert seen[3]["messages"][-1]["content"].endswith(ev.ex.HOW_VALUE) and seen[4]["messages"][-1]["content"].endswith(ev.ex.HOW_SPAN)
+    # the command's own two readings are the measured arms' prompts, word for word
+    assert seen[3]["messages"] == seen[0]["messages"] and seen[3]["response_format"] == seen[0]["response_format"]
+    assert seen[4]["messages"] == seen[1]["messages"] and seen[4]["grammar"] == seen[1]["grammar"]
+    assert ev.SCHEMA_SYSTEM == ev.ex.VALUE_SYSTEM and ev.SPAN_SYSTEM == ev.ex.SYSTEM and ev.SCHEMA == ev.ex.VALUE_SCHEMA
 
 
 def test_a_second_sample_leaves_out_the_first_ones_questions():
