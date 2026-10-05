@@ -78,3 +78,36 @@ Conversations of more than one turn (BFCL v3's `miss_param`), whether the questi
 completes the call, requests that need no tool at all, any model but this one, and the leaks the dev part showed
 the rule cannot see: an identifier assembled from the request's own words, and a value the benchmark removed but
 the request still implies.
+
+## Outcome, 2026-10-05 12:02Z (T1 to T4)
+
+Run on the lab from commit 2fccaaba, its own llama-server (build b11325, the base model at 4 bits), the 900 test
+items, one request an item. `locallm/tool_check_eval.py report`:
+
+| kind (300 each) | native: a call released | checked: a call released | checked: asked |
+|---|---|---|---|
+| tool_call | 287, of which 214 agree with the reference | 245, of which 203 agree | 42 |
+| request_for_info | 203 | 50 | 153, of which 142 name the removed parameter |
+| cannot_answer | 73 | 37 | 36 |
+
+Of calls released over the 900: 214 of 563 agree with a reference call natively (38.0%), 203 of 332 checked (61.1%).
+
+- **T1: holds.** On requests with a required value removed the model alone calls a tool on 203 of 300 (67.7%; the
+  bar was 55%).
+- **T2: holds.** With the check a call is released on 50 of them (16.7%; the bar was at most 30%), and 142 of the
+  153 questions it asks name the removed parameter (92.8%; the bar was 85%).
+- **T3: holds.** Of the model's 214 calls that agree with the reference, 203 are still released (94.9%; the bar
+  was 90%). Eleven right calls became questions.
+- **T4: holds.** The share of released calls that agree with a reference call is 23.1 points higher checked than
+  native (the bar was 15).
+
+Reported beside them, not predicted: with `--any-enum` (a choice among a parameter's listed values is released
+even when nobody made it) 211 of the 214 right calls are kept and 74 calls get through on the requests missing a
+value. The stricter rule is the default.
+
+By the rule above the check now stands wherever dawnr hands a tool call back: `dawnr tools`, and the local API's
+chat endpoint for a request that offers `tools` (`t/serve_api.py`, `checked_tools`). The 50 calls that still get
+through are of the two kinds the dev part showed: a value the benchmark removed that the request still implies,
+and an identifier put together from the request's own words. Neither is visible to a rule about where words
+came from.
+

@@ -200,7 +200,7 @@ def test_each_kind_becomes_the_terminals_own_command_with_its_inputs_inside_the_
 
 def test_a_chat_program_picks_the_kind_of_job_as_its_model_and_gets_the_gates_text_back(api):
     status, models = api("GET", "/v1/models")
-    assert status == 200 and [m["id"] for m in models["data"]] == [f"dawnr-{k}" for k in serve_api.KINDS]
+    assert status == 200 and [m["id"] for m in models["data"]] == [f"dawnr-{k}" for k in serve_api.KINDS] + ["dawnr-tools"]
     status, reply = api("POST", "/v1/chat/completions", {"model": "dawnr-ask", "messages": [
         {"role": "user", "content": "Double a number.\nassert double(3) == 6"}]})
     assert status == 200 and reply["object"] == "chat.completion" and reply["choices"][0]["finish_reason"] == "stop"
@@ -222,6 +222,82 @@ def test_a_chat_reply_can_be_streamed_and_starts_before_the_job_ends(api):
     assert events[0]["choices"][0]["delta"] == {"role": "assistant", "content": ""}
     assert events[1]["choices"][0]["delta"]["content"].startswith("SHOWN: a stand-in") and events[-1]["choices"][0]["finish_reason"] == "stop"
     assert raw.rstrip().endswith("data: [DONE]")
+
+
+WEATHER = {"type": "function", "function": {"name": "get_weather", "description": "The weather.", "parameters": {
+    "type": "object", "required": ["loc"], "properties": {"loc": {"type": "string", "description": "The city"}, "days": {"type": "integer"}}}}}
+
+
+def offered(api, monkeypatch, reply, request="Get the weather for me.", **more):
+    """One request that offers a tool, with the base model's turn stood in for; (status, reply, what the model was sent)."""
+    from locallm import tool_check
+    sent = []
+
+    def ask_model(host, tools, messages, post=None, max_tokens=400):
+        sent.append({"host": host, "tools": tools, "messages": messages, "max_tokens": max_tokens})
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+    monkeypatch.setattr(tool_check, "ask_model", ask_model)
+    status, got = api("POST", "/v1/chat/completions", {"model": "dawnr-tools", "tools": [WEATHER], "messages": [{"role": "user", "content": request}], **more})
+    return status, got, sent
+
+
+def call_of(**arguments):
+    return {"content": "", "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "get_weather", "arguments": json.dumps(arguments)}}]}
+
+
+def test_a_tool_call_is_handed_back_only_when_its_values_were_said(api, monkeypatch):
+    # the person gave no city and the model made one up: the reply is a question that names the parameter
+    status, got, sent = offered(api, monkeypatch, call_of(loc="Paris, France"))
+    choice = got["choices"][0]
+    assert status == 200 and choice["finish_reason"] == "stop" and "tool_calls" not in choice["message"]
+    assert choice["message"]["content"].startswith("To call get_weather I need `loc` (The city). What should it be?")
+    assert got["dawnr"]["check"] == "asked" and got["dawnr"]["proposed"] == [{"name": "get_weather", "arguments": {"loc": "Paris, France"}}]
+    assert got["dawnr"]["ask"][0]["parameter"] == "loc" and got["dawnr"]["ask"][0]["tool"] == "get_weather"
+    assert sent[0]["host"] == "127.0.0.1:1" and sent[0]["tools"] == [WEATHER]                    # the base model's server, the tools as offered
+    # the city was said: the call comes back in OpenAI's shape, without the optional value nobody gave
+    status, got, _ = offered(api, monkeypatch, call_of(loc="Lisbon", days=7), "Weather in Lisbon?")
+    choice = got["choices"][0]
+    assert choice["finish_reason"] == "tool_calls" and choice["message"]["content"] is None
+    assert choice["message"]["tool_calls"] == [{"id": "c1", "type": "function", "function": {"name": "get_weather", "arguments": '{"loc": "Lisbon"}'}}]
+    assert got["dawnr"] == {"check": "released", "left_out": [{"parameter": "days", "value": 7, "why": "that number was not said", "tool": "get_weather"}]}
+    # a tool that was not offered is refused, and plain words pass through
+    undeclared = {"content": "", "tool_calls": [{"function": {"name": "send_email", "arguments": "{}"}}]}
+    assert offered(api, monkeypatch, undeclared)[1]["dawnr"]["check"] == "refused"
+    status, got, _ = offered(api, monkeypatch, {"content": "Which city?"})
+    assert got["choices"][0]["message"] == {"role": "assistant", "content": "Which city?"} and got["dawnr"] == {"check": "no call was written"}
+
+
+def test_a_tools_request_that_cannot_be_served_says_why(api, monkeypatch):
+    assert offered(api, monkeypatch, ConnectionRefusedError("refused"))[0] == 502
+    assert api("POST", "/v1/chat/completions", {"model": "dawnr-tools", "messages": [{"role": "user", "content": "hi"}]})[0] == 400
+    assert api("POST", "/v1/chat/completions", {"model": "dawnr-tools", "tools": [WEATHER], "messages": []})[0] == 400
+    status, got = api("POST", "/v1/chat/completions", {"model": "dawnr-ask", "tools": [WEATHER], "messages": [{"role": "user", "content": "hi"}]})
+    assert status == 400 and "tools are offered to the model dawnr-tools" in got["error"]["message"]
+    assert api("POST", "/v1/chat/completions", {"model": "dawnr-tools", "tools": [WEATHER], "messages": [{"role": "user", "content": "x"}]}, token=None)[0] == 401
+    # a program that names some other model and offers tools gets the checked turn too
+    from locallm import tool_check
+    monkeypatch.setattr(tool_check, "ask_model", lambda host, tools, messages, post=None, max_tokens=400: {"content": "Which city?"})
+    status, got = api("POST", "/v1/chat/completions", {"model": "gpt-4o", "tools": [WEATHER], "messages": [{"role": "user", "content": "weather"}]})
+    assert status == 200 and got["model"] == "dawnr-tools"
+
+
+def test_a_checked_call_can_be_streamed(api, monkeypatch):
+    import http.client
+    from locallm import tool_check
+    monkeypatch.setattr(tool_check, "ask_model", lambda host, tools, messages, post=None, max_tokens=400: call_of(loc="Lisbon"))
+    c = http.client.HTTPConnection("127.0.0.1", api.port, timeout=20)
+    c.request("POST", "/v1/chat/completions", body=json.dumps({"model": "dawnr-tools", "stream": True, "tools": [WEATHER],
+                                                               "messages": [{"role": "user", "content": "Weather in Lisbon?"}]}),
+              headers={"Host": f"127.0.0.1:{api.port}", "Authorization": "Bearer t0ken", "Content-Type": "application/json"})
+    r = c.getresponse()
+    raw = r.read().decode()
+    c.close()
+    events = [json.loads(l[6:]) for l in raw.splitlines() if l.startswith("data: {")]
+    assert r.status == 200 and events[1]["choices"][0]["delta"]["tool_calls"][0]["function"] == {"name": "get_weather", "arguments": '{"loc": "Lisbon"}'}
+    assert events[1]["choices"][0]["delta"]["tool_calls"][0]["index"] == 0 and events[-1]["choices"][0]["finish_reason"] == "tool_calls"
+    assert events[-1]["dawnr"]["check"] == "released" and raw.rstrip().endswith("data: [DONE]")
 
 
 def test_each_kind_reads_the_last_message_by_its_own_convention():

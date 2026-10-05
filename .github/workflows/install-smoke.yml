@@ -72,6 +72,12 @@ jobs:
           ~/.local/bin/dawnr cite "Who is the invoice billed to?" invoice.txt | tee cite.txt
           rc=0; ~/.local/bin/dawnr calc "A recipe needs 2.5 cups of flour for 12 muffins. How many cups are needed for 30 muffins?" | tee calc.txt || rc=$?
           [ "$rc" -le 1 ] && grep -Eq '^(ANSWER: 6\.25|REFUSED:)' calc.txt   # the right number or a refusal, never another number
+          printf '%s\n' '[{"type": "function", "function": {"name": "get_weather", "description": "The current weather in a city.",' \
+            ' "parameters": {"type": "object", "required": ["city"], "properties": {"city": {"type": "string", "description": "The city"}}}}}]' > tools.json
+          rc=0; ~/.local/bin/dawnr tools tools.json "Get the current weather for me." | tee tools.txt || rc=$?
+          [ "$rc" -le 1 ] && ! grep -q '^CALL ' tools.txt                    # no city was given: a call must not come out
+          rc=0; ~/.local/bin/dawnr tools tools.json "What is the weather in Lisbon?" | tee tools2.txt || rc=$?
+          [ "$rc" -le 1 ] && { ! grep -q '^CALL ' tools2.txt || grep -q '^CALL get_weather({"city": "Lisbon"})' tools2.txt; }
           printf '%s\n' 'def largest(xs: list[int]) -> int:' '    best = xs[0]' '    for x in xs[1:]:' '        if x > best:' \
             '            best = x' '    return best' > largest.py
           rc=0; ~/.local/bin/dawnr verify largest.py --certificate largest.cert.json | tee verify.txt || rc=$?
