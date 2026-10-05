@@ -547,3 +547,28 @@ times the faster. What the small ones miss is not the interface's any more as fa
 that must reject `1h1h`, a cache's eviction order, an option tried in one position, a CSV cleaned with a rule
 missing, a count not added up, a chain of renames run in the order that loses two files, whitespace stripped by
 hand. That is the gap a smaller driver would have to be taught across.
+
+## The ordinary machine: all 161 on an 8 GB laptop card. Registered 2026-10-05 21:12Z
+
+From 20:53Z the 48 GB cards the afternoon's readings ran on are not available to this work. Readings move to the
+two machines an ordinary person might own: the laptop (an 8 GB card, 16 GB of memory, Windows with Ubuntu under
+WSL2) and the desktop's CPU. That is also the question the product has to answer: the afternoon's table says what
+the 4B does on a workstation card, and nobody runs the assistant on one.
+
+What is run: the same commit, the same 4B file with its own drafting layer, the model server started with the
+product's own settings (`bin/dawnr`: one conversation at a time, 16,384 tokens of context, drafting three tokens
+ahead), every layer on the laptop's card, the five sets in order, one task at a time. All 161 tasks have been seen
+before, so the counts are not predictions about the model; what is predicted is that the ordinary machine gives
+the workstation's reading, and how fast.
+
+- **G1.** Sets one to four: at least 125 of 135 done (the 48 GB card read 129).
+- **G2.** The fifth set: at least 16 of 26 (the card read 19).
+- **G3.** A file touched without reason, or a line let through unasked, in at most one task of the 161.
+- **G4.** At least 60 tokens a second written, over the whole run.
+- **G5.** Half the tasks take under 20 seconds each, and the whole run under 90 minutes.
+
+G1 or G2 fails: every task that differs from the card's reading is read step by step, and the difference is
+either the machine's (a program the bare Ubuntu image lacks, a fact about the computer the judge reads another
+way under WSL) or the arithmetic's (another card, another order of sums, another token at a close call); which
+one is said per task. G3 fails: published with the case. G4 or G5 fails: said with the numbers, and the settings
+that cost the speed are looked for before anything else is built.
