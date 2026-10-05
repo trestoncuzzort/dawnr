@@ -33,9 +33,13 @@ dawnr is research software. Read this before relying on anything it does.
   not yet measured; on four hand-written files the published model verified two and refused two, one of them a
   function written to stop one short of what its docstring says, which the refusal pointed at with the example.
 - **`dawnr cite` and `dawnr extract` say where words came from, not that they are the right words.** Neither can
-  show text that is not in your files, by construction. `cite` is measured (below). `extract` is new (2026-10-05):
-  how often the words it picks are the right ones, and how often a field that is not in the document is left
-  empty, is registered in `locallm/PREDICT-2026-10-05-extract.md` and not yet measured.
+  show text that is not in your files, by construction. `cite` is measured (below). `extract` was measured the
+  day it was written (SQuAD 2.0, 300 questions the paragraph answers and 300 it does not, the base model): held to
+  a run of a sentence's words it quoted too much, and 43% of the values it showed were exactly right where the
+  same model writing freely under a JSON schema reached 63%; it left 66% of the absent fields empty, the schema
+  74%. The command was changed because of that: a text field's words are now written freely and shown only when
+  they are in your document as words, inside the sentence a second, grammar-held reading names. The changed
+  command's own numbers are registered in `locallm/PREDICT-2026-10-05-extract.md` (X6 to X9) and not yet measured.
 - **`dawnr calc` computes a working exactly; it does not know the right reading of the question.** The arithmetic
   is exact, a working with a number the question does not state is not used, and an answer is shown only when
   separate workings agree; several workings can still share one misreading. It is new (2026-10-05): how often a

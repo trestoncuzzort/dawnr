@@ -20,6 +20,16 @@ What this does not check is that the span is the right one for the field: the se
 so that a glance settles it, and how often the span is right, and how often a field that is not in the document is
 left empty, is measured on SQuAD 2.0 (arXiv:1806.03822; locallm/PREDICT-2026-10-05-extract.md).
 
+Measured the day it was written, and changed by it (X1 to X5 of that file; 300 answerable and 300 unanswerable
+questions). Held to a run of a sentence's words, the model quoted the whole sentence where two words were the
+value: 165 of the 300 answerable exact, against 227 when it wrote a short answer freely under a JSON Schema, and
+225 when that free answer was kept only if it is in the paragraph word for word (LangExtract's rule). So a text
+field is now read twice. Once freely, under a schema, for the value: the fewest exact words. Once under the grammar
+above, for the sentence. The value is shown only when its words are in the document as words and inside the
+sentence the second reading named (`held`). That rule was found on the first sample's answers, so its own numbers
+are a second registration on questions it has not seen (X6 to X9, same file). A number or a date keeps the grammar
+of typed runs, which are short by construction.
+
 A short document is read whole, so the model reads it once for all fields; a long one is cut to the passages BM25
 ranks best for each field (locallm/dawnr_retrieval/bm25.py).
 """
@@ -36,9 +46,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from locallm import cite_docs, doc_read, rag_cite, rag_rgb  # noqa: E402
 
 NONE = "NONE"
-SYSTEM = ("You fill in one field from the numbered sentences of a document. Reply with the number of the sentence that "
-          "states the field's value, then the exact words of that sentence that are the value and nothing more, like "
-          "`S3: 4417`. If no sentence states it, reply " + NONE + ".")
+# One system line and the document first for both readings, the instruction last: the server reads the document once.
+SYSTEM = "You fill in fields from the numbered sentences of a document, using only what the sentences state."
+HOW_SPAN = ("Reply with the number of the sentence that states the field's value, then the exact words of that sentence "
+            "that are the value and nothing more, like `S3: 4417`. If no sentence states it, reply " + NONE + ".")
+HOW_VALUE = ("Reply with JSON: {\"value\": the exact words from the document that are the field's value, as few words as "
+             "state it, or null if no sentence states it}.")
+VALUE_SCHEMA = {"type": "object", "properties": {"value": {"type": ["string", "null"]}}, "required": ["value"]}
 WHOLE = 40                     # a document of at most this many sentences is read whole
 PIECE = re.compile(r"\w+(?:[.,'’:/-]\w+)*|[^\w\s]")
 REPLY = re.compile(r"S(\d+): (.+)", re.S)
@@ -112,10 +126,10 @@ def grammar(sentences: list[str], kind: str = "text") -> str:
     return "\n".join([f'root ::= "{NONE}"' + "".join(f" | {p}" for p in picks)] + lines) + "\n"
 
 
-def messages(field: dict, sentences: list[str]) -> list[dict]:
+def messages(field: dict, sentences: list[str], how: str = HOW_SPAN) -> list[dict]:
     body = "\n".join(f"S{n}: {s}" for n, s in enumerate(sentences, 1))
     return [{"role": "system", "content": SYSTEM},
-            {"role": "user", "content": f"{body}\n\nField: {field['name']}: {field['description']}"}]
+            {"role": "user", "content": f"{body}\n\nField: {field['name']}: {field['description']}\n\n{how}"}]
 
 
 def parse(reply: str, sentences: list[str]) -> tuple[int, str] | None:
@@ -194,6 +208,47 @@ def ask(host: str, field: dict, texts: list[str], post=rag_rgb._post) -> str:
     return post(f"http://{host}/v1/chat/completions", body)["choices"][0]["message"]["content"] or ""
 
 
+def ask_value(host: str, field: dict, texts: list[str], post=rag_rgb._post) -> str | None:
+    """The free reading: the value in as few words as state it, held only to a JSON Schema; None for null or a reply
+    that is not that JSON."""
+    body = {"messages": messages(field, texts, HOW_VALUE), "temperature": 0, "max_tokens": 120,
+            "response_format": {"type": "json_schema", "json_schema": {"schema": VALUE_SCHEMA}}}
+    reply = post(f"http://{host}/v1/chat/completions", body)["choices"][0]["message"]["content"] or ""
+    try:
+        value = json.loads(reply).get("value")
+    except (ValueError, AttributeError):
+        return None
+    return " ".join(value.split()) if isinstance(value, str) and value.strip() else None
+
+
+def stated_in(value: str, sentence: str) -> bool:
+    """Whether the words are in the sentence as words: `art` is not in `party`, `12` is not in `2012`."""
+    pattern = (r"(?<!\w)" if value[:1].isalnum() else "") + re.escape(value) + (r"(?!\w)" if value[-1:].isalnum() else "")
+    return bool(value) and re.search(pattern, sentence) is not None
+
+
+def held(value: str | None, named: tuple[int, str] | None, texts: list[str]) -> tuple[int, str] | str:
+    """The rule for a text field, given its two readings: (sentence number, the value's words), or why the value is
+    not taken. `value` is the free reading; `named` is the grammar-held reading, of which only the sentence is used."""
+    if value is None:
+        return "no sentence shown states it"
+    holders = [n for n, s in enumerate(texts, 1) if stated_in(value, s)]
+    if not holders:
+        return "the words given for it are not in the document"
+    if named is None:
+        return "a second reading found no sentence that states it"
+    if named[0] not in holders:
+        return "two readings put it in different sentences"
+    return named[0], value
+
+
+def read_text_field(host: str, field: dict, texts: list[str], post=rag_rgb._post) -> tuple[int, str] | str:
+    """`held` over the two readings; the second is asked only when the first gave words that are in the document."""
+    value = ask_value(host, field, texts, post)
+    found = value is not None and any(stated_in(value, s) for s in texts)
+    return held(value, parse(ask(host, field, texts, post), texts) if found else None, texts)
+
+
 def extract(host: str, fields: list[dict], sentences: list[dict], post=rag_rgb._post) -> list[dict]:
     """One row a field: {"name", "kind", "value", "words", "sentence", "file", "n"} or {"name", "kind", "value": None, "why"}."""
     rows = []
@@ -203,9 +258,13 @@ def extract(host: str, fields: list[dict], sentences: list[dict], post=rag_rgb._
         if not shown:
             rows.append(dict(row, why="no passage shares a word with the field"))
             continue
-        found = parse(ask(host, field, [s["text"] for s in shown], post), [s["text"] for s in shown])
-        if found is None:
-            rows.append(dict(row, why="no sentence shown states it"))
+        texts = [s["text"] for s in shown]
+        if field["kind"] == "text":
+            found = read_text_field(host, field, texts, post)
+        else:
+            found = parse(ask(host, field, texts, post), texts) or "no sentence shown states it"
+        if isinstance(found, str):
+            rows.append(dict(row, why=found))
             continue
         n, words = found
         value, why = typed(field["kind"], words)
