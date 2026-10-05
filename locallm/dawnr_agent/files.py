@@ -476,6 +476,10 @@ def _session_id(ctx: CallContext) -> str:
     return ctx.session.id if ctx is not None and ctx.session is not None else ""
 
 
+DOCUMENT_SUFFIXES = (".pdf", ".docx", ".epub", ".html", ".htm")     # read as documents when a front end gives a reader
+DOCUMENT_BYTES = 64 * 1024 * 1024
+
+
 class FileTools:
     """fs_list, fs_read, fs_search (untrusted output) and fs_write, fs_edit, fs_undo (ask by default)."""
 
@@ -483,6 +487,9 @@ class FileTools:
         self.ops = ops
         self.space = ops.space
         self.limits = ops.limits
+        # (reader, scratch directory) from a front end: reader(path) -> ([(page number or None, text)], how it was
+        # read), raising with a sentence when it cannot. None: fs_read returns text files only.
+        self.document_reader = None
 
     # ------------------------------------------------------------ decisions --
 
@@ -592,12 +599,53 @@ class FileTools:
 
     # --------------------------------------------------------------- read --
 
+    def _document(self, target: Target, args: dict) -> ToolResult:
+        """A document that is not plain text (a PDF, a Word file, a saved page), through the front end's reader:
+        the file is read here, inside the roots like any other, and the reader is handed a private copy."""
+        reader, scratch = self.document_reader
+        data, size = self.ops.read(target, DOCUMENT_BYTES)
+        if len(data) > DOCUMENT_BYTES:
+            return ToolResult(f"{target.display} is over {DOCUMENT_BYTES} bytes; not read", is_error=True, trust="untrusted")
+        os.makedirs(scratch, mode=0o700, exist_ok=True)
+        copy = os.path.join(scratch, f"doc-{uuid.uuid4().hex[:12]}{os.path.splitext(target.name)[1].lower()}")
+        try:
+            fd = os.open(copy, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            try:
+                _write_fd(fd, data)
+            finally:
+                os.close(fd)
+            pages, how = reader(copy)
+        except Exception as e:                                  # noqa: BLE001 -- the reader says why in a sentence
+            return ToolResult(f"{target.display} could not be read as a document: {str(e).replace(os.path.basename(copy), target.name)}",
+                              is_error=True, trust="untrusted")
+        finally:
+            try:
+                os.unlink(copy)
+            except OSError:
+                pass
+        lines = []
+        for number, text in pages:
+            if number is not None:
+                lines.append(f"[page {number}]")
+            lines += text.splitlines()
+        start = max(1, int(args.get("start", 1)))
+        count = min(int(args.get("lines", self.limits.read_lines)), self.limits.max_lines)
+        window = lines[start - 1:start - 1 + count]
+        last = start - 1 + len(window)
+        head = f"{target.display} ({how}): lines {start}-{last} of {len(lines)} of its text, {size} bytes"
+        tail = f"\n[lines {last + 1}-{len(lines)} not shown; read again with \"start\": {last + 1}]" if last < len(lines) else ""
+        return ToolResult(_clip(head + "\n" + "\n".join(window) + tail, self.limits.max_output_chars), trust="untrusted")
+
     def fs_read(self, args: dict, ctx: CallContext) -> ToolResult:
         target = self.space.resolve(args["path"])
+        if self.document_reader is not None and target.name.lower().endswith(DOCUMENT_SUFFIXES):
+            return self._document(target, args)
         data, size = self.ops.read(target, self.limits.max_read_bytes)
         whole = len(data) <= self.limits.max_read_bytes
         data = data[:self.limits.max_read_bytes]
         if b"\x00" in data[:8192]:
+            if self.document_reader is not None:
+                return self._document(target, args)
             return ToolResult(f"{target.display} is not text (it has NUL bytes); not returned", is_error=True,
                               trust="untrusted")
         try:
