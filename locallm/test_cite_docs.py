@@ -15,6 +15,13 @@ def test_sentences_and_passages(tmp_path):
     assert [p["title"] for p in ps] == ["notes.txt, part 1", "notes.txt, part 2", "notes.txt, part 3"]
 
 
+def test_an_abbreviation_inside_a_sentence_does_not_end_it():
+    text = "Goods remain the property of Harbor Supply Co. until paid in full. Returns are accepted within 30 days. see the terms."
+    assert cd.sentences(text) == ["Goods remain the property of Harbor Supply Co. until paid in full.",
+                                  "Returns are accepted within 30 days. see the terms."]
+    assert cd.sentences('He said "No." Then he left. (It was late.) 3 people stayed.') == ['He said "No."', "Then he left.", "(It was late.)", "3 people stayed."]
+
+
 def test_pick_ranks_by_shared_words_and_finds_nothing_for_an_unrelated_question(tmp_path):
     f = tmp_path / "notes.txt"; f.write_text(NOTES)
     ps = cd.passages([f], size=2)

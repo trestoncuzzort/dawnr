@@ -33,7 +33,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from locallm import cite_docs, rag_cite, rag_rgb  # noqa: E402
+from locallm import cite_docs, doc_read, rag_cite, rag_rgb  # noqa: E402
 
 NONE = "NONE"
 SYSTEM = ("You fill in one field from the numbered sentences of a document. Reply with the number of the sentence that "
@@ -160,11 +160,17 @@ def typed(kind: str, words: str) -> tuple[object, str | None]:
 
 
 def located(paths: list[Path]) -> list[dict]:
-    """Every sentence of the files: {"file", "n" (its number in that file), "text"}."""
+    """Every sentence of the files: {"file", "n" (its number in that file), "text", "page" where the file has pages}.
+    A file is read by locallm/doc_read.py (text in its real encoding, Word, a saved web page, a PDF through
+    pdftotext); doc_read.Unreadable says why one could not be."""
     out = []
     for p in paths:
-        for n, s in enumerate(cite_docs.sentences(Path(p).read_text(encoding="utf-8", errors="replace")), 1):
-            out.append({"file": Path(p).name, "n": n, "text": s})
+        pages, _how = doc_read.read(p)
+        n = 0
+        for page, text in pages:
+            for s in cite_docs.sentences(text):
+                n += 1
+                out.append({"file": Path(p).name, "n": n, "text": s, **({"page": page} if page is not None else {})})
     return out
 
 
@@ -204,7 +210,7 @@ def extract(host: str, fields: list[dict], sentences: list[dict], post=rag_rgb._
         n, words = found
         value, why = typed(field["kind"], words)
         source = shown[n - 1]
-        row.update(words=words, sentence=source["text"], file=source["file"], n=source["n"])
+        row.update(words=words, sentence=source["text"], file=source["file"], n=source["n"], **({"page": source["page"]} if "page" in source else {}))
         rows.append(dict(row, value=value) if why is None else dict(row, why=why))
     return rows
 
@@ -217,7 +223,8 @@ def render(rows: list[dict]) -> str:
             lines.append(f"{r['name']:<{width}}  NOT STATED: {r['why']}.")
             continue
         head = r["value"] if r["value"] is not None else f"NOT TAKEN: {r['why']} (\"{r['words']}\")"
-        lines += [f"{r['name']:<{width}}  {head}", f"{'':<{width}}      \"{r['sentence']}\" ({r['file']}, sentence {r['n']})"]
+        where = f"{r['file']}, " + (f"page {r['page']}, " if "page" in r else "") + f"sentence {r['n']}"
+        lines += [f"{r['name']:<{width}}  {head}", f"{'':<{width}}      \"{r['sentence']}\" ({where})"]
     return "\n".join(lines)
 
 
@@ -238,7 +245,12 @@ def main(argv=None) -> int:
     except ValueError as error:
         print(f"extract: {error}", file=sys.stderr)
         return 2
-    rows = extract(a.host, fields, located(a.files))
+    try:
+        sentences = located(a.files)
+    except doc_read.Unreadable as unreadable:
+        print(f"extract: {unreadable}.", file=sys.stderr)
+        return 2
+    rows = extract(a.host, fields, sentences)
     print(render(rows))
     if a.json:
         a.json.write_text(json.dumps({"fields": rows}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

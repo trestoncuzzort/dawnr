@@ -19,10 +19,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from locallm import rag_cite, rag_rgb  # noqa: E402
+from locallm import doc_read, rag_cite, rag_rgb  # noqa: E402
 from locallm.dawnr_retrieval.bm25 import BM25Index  # noqa: E402
 
-SENTENCE = re.compile(r"(?<=[.!?])\s+|\n\s*\n|\n(?=\s*[-*•]\s)")
+# a sentence ends at . ! ? before a capital, a digit or an opening mark; "Harbor Supply Co. until paid" is one sentence
+SENTENCE = re.compile(r"(?:(?<=[.!?])|(?<=[.!?][\"'”’)\]]))\s+(?=[A-Z0-9\"'“‘(\[])|\n\s*\n|\n(?=\s*[-*•]\s)")
 
 
 def sentences(text: str) -> list[str]:
@@ -36,12 +37,17 @@ def sentences(text: str) -> list[str]:
 
 
 def passages(paths: list[Path], size: int = 6) -> list[dict]:
-    """[{"title", "sentences"}]: each file in windows of `size` sentences, titled by file name and position."""
+    """[{"title", "sentences"}]: each file in windows of `size` sentences, titled by file name, page (where the
+    file has pages) and position. A file is read by locallm/doc_read.py: text in its real encoding, a Word
+    document, a saved web page, a PDF through pdftotext; doc_read.Unreadable says why one could not be."""
     out = []
     for p in paths:
-        ss = sentences(Path(p).read_text(encoding="utf-8", errors="replace"))
-        for i in range(0, len(ss), size):
-            out.append({"title": f"{Path(p).name}, part {i // size + 1}", "sentences": ss[i:i + size]})
+        pages, _how = doc_read.read(p)
+        for page, text in pages:
+            ss = sentences(text)
+            where = f"{Path(p).name}, page {page}" if page is not None else Path(p).name
+            for i in range(0, len(ss), size):
+                out.append({"title": f"{where}, part {i // size + 1}", "sentences": ss[i:i + size]})
     return out
 
 
@@ -80,7 +86,11 @@ def main(argv=None) -> int:
     if missing:
         print(f"cite: not a file: {', '.join(missing)}", file=sys.stderr)
         return 2
-    docs = pick(passages(a.files), a.question)
+    try:
+        docs = pick(passages(a.files), a.question)
+    except doc_read.Unreadable as unreadable:
+        print(f"cite: {unreadable}.", file=sys.stderr)
+        return 2
     if not docs:
         print("NOT IN YOUR FILES: no passage shares a word with the question.")
         return 0
