@@ -756,8 +756,9 @@ ELSEWHERE = {"exit": 1, "seconds": 0.0, "timed_out": False, "stdout": "", "bytes
 SAID_NO = ("not ", "n't", "cannot", "unable", "stopped", "no such", "failed", "refus", "did not", "could not", "mistake")
 
 
-def split_of(task_id: int) -> str:
-    return "dev" if task_id % 2 == 0 else "test"
+def split_of(task_id) -> str:
+    """dev or test by the number's parity; "made" for a task the factory drew (its id is a family and a seed)."""
+    return "made" if not isinstance(task_id, int) else "dev" if task_id % 2 == 0 else "test"
 
 
 def snapshot(work: Path) -> dict:
@@ -885,7 +886,9 @@ def run_one(task, host: str, name: str, post=None) -> dict:
         if agent.system is not None:
             agent.system.runner = recorded
             agent.system.starter = lambda argv, **how: acted.append(argv[-1])
-            if expect.get("machine"):
+            if expect.get("simulated") is not None:             # a described machine with answers of its own (dawnr_factory.py)
+                agent.system.reader = lambda argv, **how: expect["simulated"].run(argv[-1])
+            elif expect.get("machine"):
                 agent.system.reader = lambda argv, **how: dict(ELSEWHERE)
         said: list = []
         ctx: dict = {}
