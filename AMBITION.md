@@ -26,6 +26,28 @@ was aimed at and are re-read as follows: section 1's comparison is now the stude
 same reference on the clean 200; section 2's product is the gate with the student behind it;
 section 3's curve is fine-tuned small models against prompted large ones.
 
+## The direction since 2026-10-05
+
+The operator, with the count of proved problems flat for a week: "we are trying to make a god model at coding and
+computer control but we have been stuck writing proofs"; "an offline version of a cli where it can access
+documents and do things on each distro and control the pc without causing harm and also access the internet";
+"while sticking with token efficiency and hallucinationless as we can be"; "literally as many tokens as we can
+get".
+
+- **The assistant is the main track**: `dawnr` in a terminal, reading the person's documents, acting in the
+  folder and on the machine, offline unless told otherwise. The rows "to do things, not only talk" and "to act on
+  the machine, in control" below are where the work is.
+- **The rule does not change, the check does**: nothing is relied on unchecked, and the check is the strongest
+  one the task has: the folder's state after an action, a command run over a copy before it is real, a quoted
+  sentence, a number recomputed, and a proof where there is a specification. A proof is no longer the door
+  everything waits behind.
+- **Two numbers beside every result**: tokens a second on the person's own machine, and what the task cost in
+  tokens.
+
+Where it stands (`locallm/PREDICT-2026-10-05-assistant.md`): on unseen tasks judged by the folder's end state, 20
+of 20 and then 14 of 15 harder ones, with no file touched without reason; 29 tokens a second on a 12-core CPU and
+72 on an 8 GB laptop card, from the 4B the gate already used.
+
 ## The north star: dawnr, a model you could trust on a spaceship
 
 **dawnr is the track this project is on** (the operator, 2026-09-26). Work is

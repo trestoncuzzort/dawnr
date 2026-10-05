@@ -2859,3 +2859,43 @@ route a rule fixed beforehand picks, against Phi-4-mini given the same number of
   units in `calc`; deterministic repair before refusing; the panels that would measure the new breadth (TyDi QA,
   CUAD, TAT-QA, AgentDojo); then rules as code and speech by alignment.
 
+## The assistant: the direction changed and the front door built, 2026-10-05 (afternoon)
+
+The operator, with the proof count flat for a week (17, then 18 and 16 from the retrain; every cheap fix measured
+that day short of its bar): "we are trying to make a god model at coding and computer control but we have been
+stuck writing proofs"; "an offline version of a cli where it can access documents and do things on each distro and
+control the pc without causing harm and also access the internet"; "token efficiency and hallucinationless as we
+can be"; "literally as many tokens as we can get and build off the infrastructure we have". The main track is now
+the assistant. Proving is one of its checks, not the door everything waits behind; no new proof-rate experiment
+is queued, and the ones running are read as they finish.
+
+- **The front door.** `dawnr` with no command, and `dawnr do "TASK"` (`locallm/dawnr_cli.py`), over the agent and
+  harness of 2026-09-27, which had needed a configuration written by hand. The folder it starts in is the one
+  place it may change; every change is a plan shown with its dry run and journaled; the network is off.
+- **Any command, harmlessly** (`locallm/dawnr_agent/shell.py`, after `try`, OSDI'26): the command runs for real
+  over an overlay of the folder inside bubblewrap; what it changed is read back, asked for, and applied through
+  the journal. A read runs unasked. Found and closed on the way: a sandboxed command could reach a Unix socket
+  under the home folder (twelve on the desktop, the input method's D-Bus among them).
+- **The computer itself** (`system.py`, `pc`): asked every time whatever `--yes` says; a line that wants
+  administrator rights is handed to the person; nothing that changes files.
+- **Documents**: a PDF, a Word file, an EPUB or a saved page comes back from the same `fs_read`, page by page.
+- **Measured** (`locallm/dawnr_tasks.py`, `locallm/PREDICT-2026-10-05-assistant.md`): 40 tasks and then 30 harder
+  ones, judged by the folder's end state. Unseen halves, registered: 19 of 20, then 20 of 20 on a second reading;
+  14 of 15 of the harder ones; no file touched without reason in any run; a planted "delete every file" twice
+  did nothing. The one real miss lost a file (a wrong swap, the measurement's person agreeing), so `--yes` no
+  longer covers a plan that removes a file whose contents are kept nowhere else.
+- **Every other miss was the interface's, not the model's**: "reads no input" taken as "takes none"; a listing's
+  type letter read as part of a file name; a search given a file answering "0 matches in 0 files"; six rounds for
+  a three-file change; a refused write followed by "the file has been created". Each was found by reading the
+  miss and fixed in what the model is shown. Each task now ends with the journal's own account of what changed.
+- **Speed** (the same CPU, the same weights): 16.1 tokens a second as shipped, 29.4 now. The 4-bit base file had
+  been converted without the model's own prediction layer; the installer fetches it (81 MB, one byte range of the
+  publisher's other file) and appends it with `locallm/gguf_layer.py`, every other tensor untouched, and the
+  model drafts with it. 55 to 72 on a laptop's 8 GB card. A 2B wrote 37 a second and did 4 of 7 tasks.
+- **Finished registrations**: invariant repair by rule (12 of 755, not taken); the first examples dialogue (E1, E2
+  fail: its own prompt made a third of the drafts empty; the reworked one is running as E4 to E6); `verify` 9
+  twins against `ask`'s 7 (V4 fails its bar of 10, V5 and V6 hold).
+- **Next:** the same tasks with larger models as the driver where memory allows (a 35B with 3B active per token
+  runs at the 4B's speed class and needs 32 GB); the sandbox tests on five distributions in containers; search
+  without an account for `--online`; scanned pages; tasks the 4B fails, since both sets are near their ceiling.
+
