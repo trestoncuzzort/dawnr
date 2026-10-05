@@ -3,7 +3,9 @@ site's page: Jupyter Server's and OWASP's rules), what a job is (the terminal's 
 submitted, read, cancelled and erased."""
 import http.client
 import json
+import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -36,7 +38,6 @@ def stand_in(kind, body, job, student, base):
 def api(tmp_path):
     server, token = serve_api.serve(tmp_path, "127.0.0.1:1", "127.0.0.1:1", 0, seconds=30.0, token="t0ken")
     server.jobs.build = stand_in
-    import threading
     threading.Thread(target=server.serve_forever, daemon=True).start()
     port = server.server_address[1]
 
@@ -138,6 +139,25 @@ def test_a_running_job_is_cancelled_by_killing_it_and_what_it_left_is_erased(api
     assert after["state"] == "done"
     assert api("DELETE", f"/v1/jobs/{after['id']}")[1]["state"] == "done" and not (api.server.jobs.dir / after["id"]).exists()
     assert api("DELETE", "/v1/jobs/" + "0" * 16)[0] == 404
+
+
+def test_a_cancel_that_arrives_while_the_command_is_starting_still_ends_it(api, monkeypatch):
+    """Between `running` and the process existing there is nothing to kill; the worker must end the command itself.
+    (Seen once on a slow CI machine as the next job staying queued behind a cancelled one.)"""
+    real, started, gate = subprocess.Popen, [], threading.Event()
+
+    def slow_start(*args, **kwargs):
+        gate.wait(5)                                            # the cancel lands here
+        started.append(real(*args, **kwargs))
+        return started[-1]
+    monkeypatch.setattr(serve_api.subprocess, "Popen", slow_start)
+    slow = api("POST", "/v1/jobs", {"kind": "ask", "slow": True})[1]
+    api.wait(slow["id"], states=("running",))
+    assert api("DELETE", f"/v1/jobs/{slow['id']}")[1]["state"] == "cancelled" and not started
+    gate.set()
+    after = api.wait(api("POST", "/v1/jobs", {"kind": "ask"})[1]["id"], seconds=10)        # the worker is free again
+    assert after["state"] == "done" and len(started) == 2 and started[0].poll() is not None
+    assert not (api.server.jobs.dir / slow["id"]).exists() and api("GET", f"/v1/jobs/{slow['id']}")[1]["state"] == "cancelled"
 
 
 def test_the_queue_is_bounded_and_says_so(api, monkeypatch):
