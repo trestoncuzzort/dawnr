@@ -1,0 +1,2769 @@
+{
+ "counts": {
+  "areas": 8,
+  "distinct": 127,
+  "checked": 23
+ },
+ "areas": [
+  {
+   "key": "proof",
+   "shifts": [
+    {
+     "claim": "A 'proved' count can rise for the wrong reason: models learn to write weak or trivial specs that the prover accepts.",
+     "because": "Re:Form reports that verification-only rewards led to trivial specification clauses and needed a subset reward (GTpre=>GENpre, GTpre=>(GENpost=>GTpost)). dawnr's published count needs a spec-strength column before any RL or self-play round.",
+     "source": "https://arxiv.org/html/2507.16331v3"
+    },
+    {
+     "claim": "Executable specs can leak the implementation, and then the proof is trivial.",
+     "because": "CLEVER found that with computable specs GPT-4o copied the spec into the implementation and proved it by rewriting, so it switched to non-computable specs. dawnr should measure how often t programs restate their spec.",
+     "source": "https://arxiv.org/html/2505.13938v3"
+    },
+    {
+     "claim": "Data may not be the hard limit: a 3B model generated its own verified training problems.",
+     "because": "PSV used no human data, only verifier-filtered self-proposed Verus specs, and raised pass@1 2.6-5.7x. The levers were solution verification, difficulty-aware proposing and proposal diversity, not more human rows.",
+     "source": "https://arxiv.org/html/2512.18160v1"
+    },
+    {
+     "claim": "Retrieval of similar proved rows may beat a bigger model on CPU.",
+     "because": "In Rango, adding similar proofs to a 1.3B model's context proved 47% more theorems, while lemma retrieval added only 3%.",
+     "source": "https://arxiv.org/html/2412.14063v2"
+    },
+    {
+     "claim": "End-to-end verified code generation is hard for every model, including frontier ones, so a high refusal rate is the expected state of the field and not unique to a 4B model.",
+     "because": "VERINA: the best model (o3) got 4.9% proof success in one trial with 52.3% of specs sound and complete. CLEVER: 1 of 161 problems verified end to end by any approach.",
+     "source": "https://github.com/sunblaze-ucb/verina"
+    },
+    {
+     "claim": "Deterministic, model-free repair (pruning, mutation, hints) is a cheap source of extra proved answers that dawnr may be under-using.",
+     "because": "SpecGen's mutation phase added 61 of 279 verified programs, and DafnyPro's 8 fixed hint strategies were its largest single gain (~10%) alongside pruning of non-inductive invariant clauses.",
+     "source": "https://arxiv.org/html/2401.08807v5"
+    },
+    {
+     "claim": "Verifying people's ordinary Python directly through staged formalization is a credible alternative audience path to asking them to use t.",
+     "because": "NFV formalises Python into Dafny/CBMC obligations in stages and reaches 92% precision, against 72% for an LLM judge and 50% for an unstaged agent.",
+     "source": "https://arxiv.org/abs/2608.21516"
+    }
+   ],
+   "not_found": "Not found or not fetchable: code or licence for AutoSpec/AutoSpec+ (ACSL spec synthesis) and SpecGen's artifact; any DafnyPro code; a licence file for PSV (abwilf/psv shows none); the CoqStoq data licence; the method details of VeriEquivBench's equivalence score (the abstract does not give them); the Lemur and NeuralInvariantRanker repos (not fetched); a permissively licensed Why3 or ACSL verified-code corpus; Dafny<->Verus/Lean translators with a released tool; a Kimina-Prover small-model card (not fetched, left out). Kani (MIT/Apache, Rust contracts) and Nagini (MPL-2.0, Python verifier) were fetched but left out as lower fit (Rust audience; MPL not on the licence list)."
+  },
+  {
+   "key": "rate",
+   "shifts": [
+    {
+     "claim": "RL on the 4B student will mostly raise pass@1, not the set of problems it can ever solve. Coverage comes from distillation and from searching with the prover.",
+     "because": "Across model families, base models beat their RLVR versions at large k. On LiveCodeBench, Qwen2.5-7B scores 50% pass@128 vs 42.8% for Code-R1. Distilled models sit above the base at every k.",
+     "source": "https://arxiv.org/html/2504.13837v1"
+    },
+    {
+     "claim": "A verifier reward on specs is not enough: on its own it trains vacuous specs. dawnr's 'complete specification' bottleneck needs a reward checked by a prover for dominance or completeness, and the wrong 'LLM reward' label on Re:Form in t/RELATED-WORK.md should be fixed.",
+     "because": "Re:Form saw the model omit clauses until it added a subset reward, which Dafny checks, requiring the generated spec to imply the reference spec.",
+     "source": "https://arxiv.org/html/2507.16331v3"
+    },
+    {
+     "claim": "'Holding output to the grammar gained nothing' is expected. Constrain only the program region after free reasoning.",
+     "because": "CRANE proves restrictive grammars reduce reasoning; constrained decoding fell below unconstrained for Qwen2.5-1.5B (22% vs 26%), while switching modes reached 31%.",
+     "source": "https://arxiv.org/html/2502.09061v4"
+    },
+    {
+     "claim": "Whole-program self-repair with error text is not worth its compute at small size. Repair pays when the checker localises the failing subgoal and only that part is resampled.",
+     "because": "Olausson et al. found self-repair gains at matched cost are 'modest ... sometimes not present', limited by feedback quality. Meanwhile APOLLO's compiler-localised hole repair cut samples from 25,600 to about 362 at higher accuracy, and Verina found Lean-feedback refinement 'reliably outperforms direct generation at matched query budgets'.",
+     "source": "https://arxiv.org/abs/2306.09896"
+    },
+    {
+     "claim": "Any dawnr RL gain on a Qwen base needs a random-reward control and a second model family before it is reported.",
+     "because": "GRPO with random rewards raised Qwen2.5-Math-7B on MATH-500 by 21.4 pts vs 29.1 with true rewards; the effect did not appear on Llama3 or OLMo2.",
+     "source": "https://arxiv.org/abs/2506.10947"
+    },
+    {
+     "claim": "Small models fine-tuned on in-domain verified data can match frontier models on formal-verification tasks; the 4B bet is limited by data and search, not size.",
+     "because": "A LoRA-fine-tuned Qwen2.5-7B reaches 68% on DafnyBench with DafnyPro, Re:Form's 0.5B SFT model writes verifiable Dafny, and PSV at 3B improved pass@1 2.6x to 9.6x over expert iteration.",
+     "source": "https://arxiv.org/html/2601.05385v1"
+    },
+    {
+     "claim": "Expect self-play to help a 4B model less than a 14B one; seed it with distilled or teacher data and do not rely on self-play alone.",
+     "because": "Absolute Zero's gain grows with base size (3B +5.7, 7B +10.2, 14B +13.2), and smaller models plateau sooner.",
+     "source": "https://arxiv.org/html/2505.03335v3"
+    }
+   ],
+   "not_found": "I could not fetch a licence or location for the F* PoPAI dataset (fstar-lang.org/popai returns 404, and no FStarLang/PoPAI repo exists). I found no repo for dafny-annotator or a licence for DafnySynth, and could not tell which model generated DafnySynth. The PSV and Pass@k Training repos have no licence file. Verina's licence conflicts: the HF tag says Apache-2.0, but the paper says GPL-3.0 from MBPP-DFY-50. I found no published negative result for type-constrained or semantic decoding on Dafny or Verus, and no open preference-tuning (DPO) work that uses formal-verifier outcomes at 1B to 10B. Left out because dawnr's docs already cover them: Lahiri spec symbolic testing (nl-2-postcond, already in t/spec_quality.py), Verina, Large Language Monkeys, STP, and 1-shot RLVR. LeDex was left out of findings because it is CC BY-NC-ND and its data was generated by GPT-3.5."
+  },
+  {
+   "key": "docs",
+   "shifts": [
+    {
+     "claim": "For extraction, the 4B generative step may be unnecessary. A 0.2B span reader returns offsets inside the source by construction, so the 4B model's role shrinks to choosing fields, or it drops out.",
+     "because": "deberta-v3-base-squad2 reports 83.8 EM on SQuAD 2.0 dev. dawnr's grammar-held 4B extractor got 165/300 answerable exact because it copied whole sentences. The numbers are not on the same split, but the gap points to an architecture problem.",
+     "source": "https://huggingface.co/deepset/deberta-v3-base-squad2"
+    },
+    {
+     "claim": "For a scan, a verbatim quote certifies the OCR transcript, not the page. OCR and VLM parsers are models that write the 'source', so a scan needs two independent readers that agree, or the page crop shown beside the quote.",
+     "because": "The best small parsers (PaddleOCR-VL 0.9B, GLM-OCR 0.9B, granite-docling) are generative VLMs. Their own scores are below perfect, for example full-page OCR F1 0.84 for granite-docling.",
+     "source": "https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.5"
+    },
+    {
+     "claim": "The cite bottleneck is finding the right sentence, not quoting it verbatim. Effort belongs in ranking sentences and retrieval, not in more decoding constraints.",
+     "because": "FullCite with Qwen3-8B and constrained decoding over a citation grammar: document-level F1 33.87 but snippet-level F1 12.80. Over 80% of BioASQ citations went to the first two documents.",
+     "source": "https://www.alphaxiv.org/abs/2606.07130"
+    },
+    {
+     "claim": "Report 'correct and attributable' as the headline document metric. Accuracy against a gold answer overstates what can be trusted, which supports dawnr's quote-or-refuse design.",
+     "because": "In XOR-AttriQA, up to 50% of answers that exactly matched the gold reference were not attributable to the retrieved passage.",
+     "source": "https://arxiv.org/abs/2305.14332"
+    },
+    {
+     "claim": "Fine-tuning on domain documents can raise numeric fabrication sharply. Every dawnr fine-tune for document or number tasks should be checked with a 'numbers not in the source' rule before and after.",
+     "because": "A finance fine-tune went from a 5.4% hallucination rate in the base model to 82.5% overt numeric hallucination, and 98% after further stages.",
+     "source": "https://arxiv.org/abs/2609.04806"
+    },
+    {
+     "claim": "rag_cite gates support with AlignScore, which is a model, contrary to 'a language model is never the check'. The extract design (the value must be a span of the quoted sentence) is the non-model version, and cite could adopt it: the answer must be a substring of its quote.",
+     "because": "The attribution literature finds NLI models and fine-tuned LLMs are the best detectors, which places such support gates on the model side of dawnr's line.",
+     "source": "https://arxiv.org/abs/2305.14332"
+    },
+    {
+     "claim": "Contract and finance reviewers are an audience dawnr has not targeted, for whom 'quote the clause or say it is not there' is already the norm. Expert, permissively licensed benchmarks for them exist.",
+     "because": "CUAD has 13k+ expert labels on 510 contract PDFs (CC-BY-4.0). ContractNLI has 607 NDAs with evidence spans and a 'NotMentioned' label (CC-BY-4.0).",
+     "source": "https://huggingface.co/datasets/theatticusproject/cuad"
+    }
+   ],
+   "not_found": "I found no rule-based (non-model) entailment checker that is alive and permissively licensed. The numeric-hallucination work uses only regex or arithmetic checks, and no tool was released with it. RecaLLM's verbatim-recall decoding has Apache-2.0 code, but its SFT data was written by GPT-5.2 and its bases are Qwen2.5-7B and Llama-3.1-8B, so it is an idea only. The FullCite code and licence were not on the page. Marker's code is Apache-2.0, but its weights are under a modified OpenRAIL-M licence with a $5M revenue limit, so I excluded it. MinerU's licence shows NOASSERTION, so I excluded it. I did not fetch a CPU throughput number for PaddleOCR-VL or for the CUAD baselines. No attributed-QA benchmark built from personal documents (email, receipts, letters) under a permissive licence turned up."
+  },
+  {
+   "key": "compute",
+   "shifts": [
+    {
+     "claim": "Gold, human-written rules turn the spec bottleneck into a fact-parsing task. For everyday domains, dawnr should ship hand-written spec and rule libraries (Catala law, calculators, constraint templates) and have the 4B model fill in only the facts, rather than writing the program and the spec.",
+     "because": "With gold Prolog statutes, GPT-5 few-shot got 86 of 100 SARA cases; the paper credits the gold statutes with reducing reliance on the model's parsing of the law. dawnr's own record says writing a right, complete spec is the bottleneck.",
+     "source": "https://arxiv.org/html/2508.21051v3"
+    },
+    {
+     "claim": "The answer rate should be scored with prices, not as a raw count of 17/182: price each refusal at the cost of the human alternative and each wrong answer at its penalty, then report a break-even cost.",
+     "because": "The tax paper prices abstention at $270 and errors at IRS penalties; its best system breaks even at $15.78 per return. Under that scoring, a gate that refuses often can still be shown to be worth using.",
+     "source": "https://arxiv.org/html/2508.21051v3"
+    },
+    {
+     "claim": "Where no prover or spec exists (tax, SQL, constraints), two independent formalizations that agree can be the check, which extends dawnr's principle beyond the seven provers.",
+     "because": "The winning tax configuration required two independent solver-backed solutions to agree before answering; QED can prove two SQL queries equivalent (about 290 of about 440 Calcite cases).",
+     "source": "https://github.com/qed-solver/prover"
+    },
+    {
+     "claim": "A deterministic data-flow gate on tool calls costs little utility. dawnr's 'arguments were said' rule is a narrow case of capability and information-flow tracking and could become the full design (plan from the trusted query only, label every value).",
+     "because": "CaMeL solves 77% of AgentDojo tasks with provable security against 84% undefended, a 7-point cost; FIDES enforces integrity and confidentiality labels deterministically.",
+     "source": "https://arxiv.org/abs/2503.18813"
+    },
+    {
+     "claim": "Checker-only reward is enough to train a small model well; dawnr can train with prover acceptance as the whole reward.",
+     "because": "Arctic-Text2SQL-R1-7B used only execution correctness and syntax validity as GRPO rewards and reached 68.5% on BIRD-test.",
+     "source": "https://huggingface.co/Snowflake/Arctic-Text2SQL-R1-7B"
+    },
+    {
+     "claim": "There is an everyday audience where checked computation beats frontier models outright: tax and fee calculations, where the strongest models still fail a third of returns.",
+     "because": "On TaxCalcBench v2 (tax year 2025) the best model reaches 66% strict accuracy, while the expected outputs come from a deterministic tax engine. This is the gap a fact-extraction-plus-rules engine is built for.",
+     "source": "https://github.com/column-tax/tax-calc-bench"
+    },
+    {
+     "claim": "Declarative constraint models may be easier for models to write correctly than verified imperative programs, so a constraint fragment checked by a solver could lift the answer rate on planning-type questions.",
+     "because": "On DCP-Bench-Open, CPMpy modelling reached about 70% at baseline and 90.2% with inference-time methods, with solution-level checking.",
+     "source": "https://arxiv.org/html/2506.06052v3"
+    }
+   ],
+   "not_found": "I looked for an Apache or MIT rules-as-code engine for US benefits; PolicyEngine-US is AGPL-3.0, so it is idea only. I looked for a code repository for Progent: the arXiv page links none, and its policies are model-generated and checked deterministically with an SMT solver for expansion. I looked for a permissively licensed statistics-applicability benchmark: StatQA is GPL-3.0. I looked for the per-row generator in SynSQL-2.5M: the HF card returned 401, and the paper lists Llama 3.1 among the generators, so the data is not usable for training without filtering. I did not find an open dosage or drug-label rules engine. Fetched but cut for space: Test of Time (CC-BY-4.0, 2,800 date-arithmetic rows, training explicitly prohibited, so evaluation only); Logic-LM (MIT, Z3/Prover9/Pyke, +39.2% over the plain LLM); Invariant Guardrails (Apache-2.0, deterministic flow rules over agent traces); Pint (BSD units library); Duckling (BSD, Haskell, 13 dimensions); ARM causality-laundering monitor (no code released)."
+  },
+  {
+   "key": "senses",
+   "shifts": [
+    {
+     "claim": "A speech recognizer is itself a language model writing text, so dawnr's rule that a language model is never the check covers whisper.cpp. A transcript is not evidence until something acoustic (CTC alignment score, VAD span, word confidence) agrees with it.",
+     "because": "About 1% of Whisper transcriptions contained whole invented phrases or sentences. 38% of those were harmful, and the rate was higher for speakers with long pauses.",
+     "source": "https://arxiv.org/abs/2402.08021"
+    },
+    {
+     "claim": "Checking a given text against audio is far easier than writing it, which is the asymmetry dawnr relies on for programs. Quotes from recordings should be checked by aligning the proposed text, not by trusting a second ASR.",
+     "because": "NFA with the true text reached 98.35% precision. With ASR-predicted text it fell to 85.65% precision and 71.09% recall, and WhisperX to 90.26% and 70.12%.",
+     "source": "https://www.isca-archive.org/interspeech_2023/rastorgueva23_interspeech.pdf"
+    },
+    {
+     "claim": "For reading documents, a tiny specialist trained with RL beats a huge generalist. dawnr should add vision as separate small specialists behind checks, not move to one large multimodal model.",
+     "because": "OvisOCR2 (0.8B, on Qwen3.5-0.8B) and TeleOCR (1.2B) lead OmniDocBench at about 96.6-96.9. Qwen3-VL-235B scores 89.78.",
+     "source": "https://github.com/opendatalab/OmniDocBench"
+    },
+    {
+     "claim": "dawnr's deterministic checks can be training rewards for the document reader, not only gates. The binding limit is a permissive generator of synthetic test documents, since AI2's was Claude.",
+     "because": "Binary unit-test rewards with GRPO took olmOCR from 78.5 to 82.4. The synthetic HTML and tests came from Claude Sonnet 4.",
+     "source": "https://arxiv.org/html/2510.19817v1"
+    },
+    {
+     "claim": "An Apache or MIT tag on the weights does not clear a model for dawnr. The licence gate has to read each card's training-data section too.",
+     "because": "Molmo2-4B is Apache-2.0 but trained on datasets restricted to academic, non-commercial research use. Kokoro-82M (Apache-2.0) used synthetic audio from closed commercial TTS. openWakeWord's models are CC-BY-NC-SA because of their training data.",
+     "source": "https://huggingface.co/allenai/Molmo2-4B"
+    },
+    {
+     "claim": "Do not build speech alignment on torchaudio. It has been removed.",
+     "because": "torchaudio entered maintenance in 2.9: the forced-alignment APIs were deprecated in 2.8 and removed in 2.9, and its MMS_FA bundle is Meta's MMS model.",
+     "source": "https://docs.pytorch.org/audio/stable/tutorials/ctc_forced_alignment_api_tutorial.html"
+    }
+   ],
+   "not_found": "These were left out because a fetched page did not settle them: a licence for the sherpa-onnx gigaspeech KWS model (none stated), word confidence in NeMo-Speech.cpp (not documented), NFA's own licence line, the CPU speed of Kokoro, and benchmark numbers for Qwen3-VL-2B (the card gave none). Fetched but not listed: Vosk (Apache-2.0 but older), Moondream2 (Apache-2.0, 2B), RF-DETR (closed-vocabulary detection, so not a check on claims), Montreal Forced Aligner (MIT; English model CC-BY-4.0; NFA beats it). KittenTTS weights were excluded because they carry per-model and community licences. The NFA paper PDF was read with pdftotext after WebFetch failed on it."
+  },
+  {
+   "key": "ship",
+   "shifts": [
+    {
+     "claim": "Split dawnr by where each check can run. The quote, extract, arithmetic and tool-argument checks are plain code that can run in a browser tab or on a phone; only the provers need a real machine. Ship the light checks everywhere first rather than waiting until every prover can be installed.",
+     "because": "Browser llama.cpp (wllama) and phone llama.cpp (PocketPal) are released and current. The provers do not travel: Z3 does reach the browser via npm, but Rocq-in-browser (jsCoq) is AGPL and stuck at Coq 8.17-8.21, and Dafny has no shown browser path.",
+     "source": "https://github.com/ngxson/wllama"
+    },
+    {
+     "claim": "The model is becoming something the operating system or browser provides. dawnr's lasting value is the checker and the replayable certificate, which could sit in front of any local model, including one the user already has.",
+     "because": "Chrome 138+ ships a built-in on-device model (Gemini Nano) with a JSON-schema responseConstraint to web pages. It needs 22 GB of disk and 16 GB RAM or a GPU with more than 4 GB, so a model is arriving on desktops without anyone installing one. (Its outputs could only be checked, never used as training data.)",
+     "source": "https://developer.chrome.com/docs/ai/prompt-api"
+    },
+    {
+     "claim": "On a CPU, the answer rate may be set by how many prove-and-repair attempts fit in the user's patience, not only by model quality. Decoding speed is an answer-rate lever.",
+     "because": "SuffixDecoding reports up to 5.3x speedups precisely on self-refinement and agentic loops with repeated text, which is the shape of dawnr's repair loop. DFlash ships a drafter for Qwen3.5-4B.",
+     "source": "https://arxiv.org/abs/2411.04975"
+    },
+    {
+     "claim": "Comparable open projects gained users mostly as a backend other apps plug into, or with a one-command install, not through their own UI alone. dawnr should be selectable inside apps people already run.",
+     "because": "Ollama's onboarding is one curl/PowerShell line, an OpenAI-compatible API and a long list of third-party integrations. AnythingLLM and Jan both consume such OpenAI/Ollama-style providers.",
+     "source": "https://github.com/ollama/ollama"
+    },
+    {
+     "claim": "A browser-only zero-install path would miss Linux, dawnr's main platform today, so a native installer stays necessary.",
+     "because": "WebGPU shipped in Chrome, Edge, Firefox and Safari by Nov 2025, but Linux support is still 'in progress' across all browsers. Firefox covers only Windows and macOS ARM64.",
+     "source": "https://web.dev/blog/webgpu-supported-major-browsers"
+    },
+    {
+     "claim": "An unconsidered audience is offline hotspots: one box runs the model and provers, and nearby phones use dawnr's page over local Wi-Fi. That matches the 'spaceship' framing better than one laptop per person.",
+     "because": "Internet-in-a-Box serves schools, clinics and prisons from a Raspberry Pi and serves nearby phones and tablets; it currently bundles no local AI. Its code is GPL-2.0, so this is idea-only: dawnr would be an add-on app, not copied code.",
+     "source": "https://github.com/iiab/iiab"
+    },
+    {
+     "claim": "A dense 4B may not be the fastest shape for CPU users. Sparse or hybrid models with about 1B active parameters per token should be on the base-model ladder.",
+     "because": "Granite-4.0-H-Tiny (Apache-2.0) has 7B total and 1B active parameters, scoring HumanEval 83 and MBPP 80.",
+     "source": "https://huggingface.co/ibm-granite/granite-4.0-h-tiny"
+    }
+   ],
+   "not_found": "Release dates or numbers for Dafny running in a browser via .NET WebAssembly: the search hinted at net*-browser targets but nothing fetched confirms it. CPU (not GPU) speedup figures for DFlash or SuffixDecoding. Moonshine's WER and latency table: the models doc page did not render it. Specifics of Apple's Foundation Models framework: the page is script-rendered and the fetch came back generic, so it was left out. Real download or user counts for Jan, Ollama, PocketPal or AnythingLLM: their READMEs give only stars. Training code for the DFlash drafters, needed if dawnr fine-tunes the 4B."
+  },
+  {
+   "key": "trust",
+   "shifts": [
+    {
+     "claim": "Refusals are partly a routing problem, not only a model-quality problem: a 4B model already knows, before writing, whether its code will be right.",
+     "because": "A linear probe on Qwen3-4B's final prompt state predicts first-attempt correctness at AUC 0.881. dawnr can put CPU time on the problems likely to be proved and refuse the others quickly, before chasing a bigger model.",
+     "source": "https://arxiv.org/abs/2606.14530"
+    },
+    {
+     "claim": "'Up to seven provers agree' is less independent than it sounds; Dafny's result rests on Boogie plus an SMT solver such as Z3, and soundness bugs have been found in both Dafny's verifier and compiler.",
+     "because": "Independence should be counted by trusted base (Z3-backed vs kernel-checked vs proof-certificate-checked), and the certificate should carry checkable proof objects where possible (Carcara for Alethe, nanoda for Lean, coqchk for Rocq).",
+     "source": "https://arxiv.org/html/2512.05262v1"
+    },
+    {
+     "claim": "dawnr is a small working instance of 'Guaranteed Safe AI' (world model + safety specification + verifier that emits an auditable proof certificate). That framing comes with an audience of researchers and safety funders who have few running examples.",
+     "because": "Bengio, Russell, Tegmark, Dalrymple and others propose exactly this three-part architecture for safety-critical AI. dawnr's certificate and spec bottleneck map onto it, which gives a vocabulary and a community beyond 'local assistant'.",
+     "source": "https://arxiv.org/abs/2405.06624"
+    },
+    {
+     "claim": "Refusal need not be all-or-nothing for unprovable answers: back off to a less specific answer that still meets a calibrated correctness level.",
+     "because": "Conformal factuality reaches 80-90% correctness guarantees while keeping most of the output. For documents, dawnr could release the subset of quoted sentences that clears a calibrated threshold instead of refusing outright.",
+     "source": "https://arxiv.org/abs/2402.10978"
+    },
+    {
+     "claim": "Do not lean on the model's own refusals for unanswerable or underspecified questions; reasoning training makes them worse.",
+     "because": "Reasoning fine-tuning degrades abstention by 24% on average across 20 datasets. If dawnr trains a reasoning student, the external gate must carry all abstention, and 'unanswerable' document questions need their own non-model check.",
+     "source": "https://github.com/facebookresearch/AbstentionBench"
+    },
+    {
+     "claim": "Prover order matters for the answer rate: on the same problems a strong model does about five times better in Dafny than in Lean.",
+     "because": "AlgoVeri reports 40.3% Dafny vs 24.7% Verus vs 7.8% Lean, and says Verus and Lean trap models in syntax and semantics. t should try the most forgiving target first and report per-prover rates.",
+     "source": "https://arxiv.org/abs/2602.09464"
+    },
+    {
+     "claim": "Spec completeness can be scored by a number, not only read by hand: count how many defective (mutant) implementations the spec rejects while it still accepts correct runs.",
+     "because": "POSTCONDBENCH (420 tasks) uses defect discrimination as completeness and finds a large correctness-completeness gap in five frontier LLMs. A fine-tuned 7B matched GPT-4o on postconditions in the companion study, which supports a small spec writer behind dawnr's gate.",
+     "source": "https://arxiv.org/abs/2605.03356"
+    }
+   ],
+   "not_found": "Not found: a permissive SAE suite for Qwen3.5-4B (Qwen-Scope is under the Qwen licence and the pages I fetched showed no 4B checkpoint). The Sigsum project pages would not load, so its licence is unconfirmed beyond a search snippet and Sigsum is left out of the findings. A per-answer signing scheme designed for LLM outputs (rather than files or media) did not turn up. Neither did deterministic or batch-invariant inference for llama.cpp on CPU; only SGLang documents it, on GPU. For verifier-based abstention on code, 'When to Answer and When to Defer' (arXiv 2605.19369) had no code release, so it is left out. A licence for the AbstentionBench repo is not stated (GitHub reports NOASSERTION), so it appears only as a shift. The CycloneDX ML-BOM page gave no spec version or signing details. PyPI dates for model-signing would not load; release dates come from the GitHub API."
+  },
+  {
+   "key": "reframe",
+   "shifts": [
+    {
+     "claim": "Treat the answer rate first as a sampling and search budget problem, and only then as a training problem. Measure coverage@k before the next training round.",
+     "because": "With an automatic verifier, coverage converts directly into solved problems and rises log-linearly with samples (15.9% to 56% at 250 samples), while unverified selection plateaus. dawnr already has the verifier, so it may be leaving most of its answer rate unsampled.",
+     "source": "https://arxiv.org/abs/2407.21787"
+    },
+    {
+     "claim": "dawnr's most durable product may be the checker toolkit (t, the gate, replayable certificates) that any model can use, more than its own 4B model.",
+     "because": "ARIA's GBP 59M Safeguarded AI programme stopped funding specialised AI teams because frontier models beat expectations ('more likely than not we'd select zero successful teams for Phase 2'). It now funds the TA1 tooling for mathematical assurance and auditability.",
+     "source": "https://aria.org.uk/insights/ai-progress-and-a-safeguarded-ai-pivot"
+    },
+    {
+     "claim": "The specification should be agreed with the person through examples they approve, not written completely by the model. A refusal over a weak spec should become a question.",
+     "because": "Test-driven intent formalization added about 46 points of pass@1 within 5 interactions, and users judged code correctness better with less cognitive load. Separately, LLM-written postconditions caught 64 real bugs, so specs are checkable artefacts in their own right.",
+     "source": "https://arxiv.org/abs/2404.10100"
+    },
+    {
+     "claim": "Replace answer-or-refuse with graded, exact verdicts: proved, proved under named assumptions, partially proved (the strongest sub-spec), and ambiguous (several readings).",
+     "because": "AWS's shipped checker reports valid, invalid, satisfiable (depends on assumptions) and ambiguous. Conformal back-off keeps most of the output while guaranteeing what is kept. Both turn would-be refusals into honest, narrower answers.",
+     "source": "https://aws.amazon.com/blogs/aws/minimize-ai-hallucinations-and-deliver-up-to-99-verification-accuracy-with-automated-reasoning-checks-now-available/"
+    },
+    {
+     "claim": "Frame 'trustworthy for a spaceship' as a guarantee about symbolic answers relative to a stated spec. Certificates should name that spec, and the trusted checker deserves its own verification.",
+     "because": "Dickson argues proofs hold only for symbol systems, not physical outcomes. GSAI's own reply concedes guarantees are 'relative to' simplified models and keeps them useful only if those models are sound. The GSAI framework names three parts (world model, safety spec, verifier); dawnr makes the third explicit, but the first two are mostly implicit.",
+     "source": "https://lesswrong.com/posts/B2bg677TaS4cmDPzL/limitations-on-formal-verification-for-ai-safety"
+    },
+    {
+     "claim": "Repair loops should feed only sound checker output (prover errors, counterexamples) back to the model. Self-critique steps should be removed rather than tuned.",
+     "because": "With GPT-4 on Game of 24, graph colouring and STRIPS planning, self-critique collapsed performance while a sound external verifier gave significant gains, and much of the critique machinery could be removed without loss. LLM-Modulo planning gained 4.6x from external critics.",
+     "source": "https://arxiv.org/abs/2402.08115"
+    },
+    {
+     "claim": "The 4B may be doing too much. Have it propose small creative pieces (an invariant, a lemma, a spec clause) and let deterministic search build the rest.",
+     "because": "In AlphaGeometry a 152M model that only proposes auxiliary constructions lifts a symbolic engine from 14/30 to 25/30 IMO problems. The division of labour mattered more than model size.",
+     "source": "https://github.com/google-deepmind/alphageometry"
+    },
+    {
+     "claim": "Expect fine-tuning gains to show up in-distribution and fade on the held-out panel. A small domain model can still beat a much larger general one in its own domain.",
+     "because": "Li and Ellis found fine-tuned LLMs are strong at programming by example only when test problems are in-distribution. FLAME (60M, Excel-specific tokenizer) beat 175B Codex in 10 of 14 settings. The clean 182 is exactly the out-of-distribution test that exposes this.",
+     "source": "https://arxiv.org/abs/2406.08316"
+    },
+    {
+     "claim": "There is a ready audience dawnr has not targeted: rules as code for law, benefits and tax, where governments and legal-aid groups already want answers with explanations a lawyer can review.",
+     "because": "Catala (Inria, Apache-2.0) produces lawyer-readable output so domain experts can certify code against law articles. Blawx (MIT) gives non-programmers explained answers over encoded rules. Both lack the natural-language front end dawnr has.",
+     "source": "https://github.com/CatalaLang/catala"
+    }
+   ],
+   "not_found": "Catala production users: catala-lang.org returned only its title, so I list no government uses. FinQA: the README does not give the dataset size. Query4Regex: the README does not say who wrote the natural-language forms (a person or a model). VeriEQL: I did not check the artifact licence on Zenodo. The Dafny spec-hacking result (RLVR 9.7% to 31.1% after filtering weak specs) appeared only in a search snippet; the paper I fetched (AxDafny, arXiv 2606.32007) did not show those numbers, so I left it out. Certora Prover is GPL-3.0 and its README says nothing about how specs are written, so I left it out. lean4game is GPL-3.0 (left out). I found no permissively licensed hardware-assertion (SystemVerilog) project, no medicine or finance checker with a licence dawnr could train on (MedCalc-Bench is CC-BY-SA), and no user study measuring how people react to a high refusal rate."
+  }
+ ],
+ "findings": [
+  {
+   "name": "Re:Form subset reward (Veri-Code/ReForm)",
+   "url": "https://github.com/Veri-Code/ReForm",
+   "kind": "repo",
+   "licence": "MIT (repo README); Python2Dafny data written by Claude 3.5 Sonnet per paper arXiv 2507.16331",
+   "take": "method",
+   "what": "RL for Dafny code+spec generation with small Qwen models (0.5B-14B) and a reward that checks a generated spec is at least as strong as a reference spec.",
+   "steal": "Add a 'spec strength' gate to dawnr's spec check: prove GTpre => GENpre and GTpre => (GENpost => GTpost) against a reference spec with the existing provers, and use the same check as the reward for any t RL round.",
+   "moves": "Answer rate and trust: stops weak or vacuous specs counting as proved; gives a verifier-based reward for spec writing, the named bottleneck",
+   "evidence": "Paper: verification-only rewards produced trivial specs; with the subset reward the 14B RL model reaches 14.0% pass@1 on DafnyComp vs 8.3% SFT-only; 0.5B SFT passes over 80% validation",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Data and the released weights come from Claude 3.5 Sonnet translations, so neither can be dawnr training data; take only the reward formula and code.",
+   "areas": [
+    "proof",
+    "rate"
+   ]
+  },
+  {
+   "name": "Propose, Solve, Verify (PSV)",
+   "url": "https://arxiv.org/html/2512.18160v1",
+   "kind": "paper",
+   "licence": "code at github.com/abwilf/psv: no licence file visible; paper CC BY 4.0",
+   "take": "method",
+   "what": "Self-play for verified code: a proposer writes Verus specs, a solver is trained by expert iteration, and the verifier is the only signal; no human data, base Qwen2.5-Coder-3B.",
+   "steal": "Run a PSV loop on t: the dawnr model proposes new t specs, filtered by the spec checker and difficulty (solve rate), and the solver trains on rows the provers accept. This becomes a self-generating source of rows in the training pipeline.",
+   "moves": "Data scarcity (a few thousand accepted rows) and answer rate",
+   "evidence": "3B model pass@1: Dafny2Verus 24.06%->65.63%, MBPP 6.48%->36.78%, HumanEval 7.24%->19.07%; ablations: no solution verification -51.5%, no difficulty-aware proposing -5.6%, fixed prompts -10.6%; only 47.7% of proposed specs valid",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "No licence on the repo, so reimplement from the paper and do not copy code; proposed specs need dawnr's held-out contamination audit.",
+   "areas": [
+    "proof",
+    "rate"
+   ]
+  },
+  {
+   "name": "Rango (proof + premise retrieval)",
+   "url": "https://github.com/rkthomps/coq-modeling",
+   "kind": "repo",
+   "licence": "MIT (repo); paper arXiv 2412.14063; CoqStoq data licence not stated",
+   "take": "method",
+   "what": "Rocq proof synthesis that retrieves similar already-proved proofs from the same project into the context of a fine-tuned 1.3B model at every step.",
+   "steal": "At inference, retrieve the k most similar proved t rows (program+spec+proof) from dawnr's accepted corpus into the 4B prompt. This is cheap on CPU and needs no retraining.",
+   "moves": "Answer rate on CPU without a bigger model",
+   "evidence": "Proof retriever gives +47% theorems proved vs the variant without it; lemma retriever only +3%; Rango proves 32.0% on CoqStoq benchmark (paper)",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Rango's model is a DeepSeek-Coder fine-tune (not a permissive base), so take only the retrieval method; retrieved rows must exclude held-out panel neighbours.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "CrossHair",
+   "url": "https://github.com/pschanely/CrossHair",
+   "kind": "tool",
+   "licence": "MIT for most sources, plus Apache-2.0 and PSF parts (LICENSE)",
+   "take": "code",
+   "what": "SMT-backed symbolic execution of Python contracts, with test generation (cover) and behaviour diffing (diffbehavior) between two functions.",
+   "steal": "Use diffbehavior between dawnr's Python hand-back and the reference, and symbolic contract checks, as a cheap counterexample finder before spending prover time. It also extends the spec check beyond example-size inputs.",
+   "moves": "Spec check strength (larger-inputs gap) and Python breadth for ordinary users",
+   "evidence": "2,401 commits on main; three modes: contracts, cover, diffbehavior; the docs state limits (it is not a proof)",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Not sound or complete, so it can only be a refuter and never a passing check; it is slow on heavy library code.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "nl-2-postcond / intent-formalization (Microsoft)",
+   "url": "https://github.com/microsoft/nl-2-postcond",
+   "kind": "repo",
+   "licence": "MIT (repo)",
+   "take": "method",
+   "what": "Artifacts for NL-to-postcondition studies: test-set correctness plus a bug-completeness score that counts how many mutant implementations a postcondition rejects. Also includes AutoCLRS F* specs and FMCAD'24 Dafny/Verus intent-formalization evaluations.",
+   "steal": "Add a mutant-kill completeness score to dawnr's spec check: mutate the reference t program, and count a spec as complete only if it rejects the mutants that change behaviour. Report it beside 'proved'.",
+   "moves": "Spec completeness, the named bottleneck; also gives a trust number per answer",
+   "evidence": "Repo bundles TiCoder (TSE'24), the FSE'24 nl2postcond study and the FMCAD'24 evaluation; 67 commits",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Postconditions in the study were produced by GPT-family models, so eval only; the mutant method itself is free.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "VERINA",
+   "url": "https://github.com/sunblaze-ucb/verina",
+   "kind": "dataset",
+   "licence": "Apache-2.0 (repo)",
+   "take": "data",
+   "what": "Lean 4 benchmark that scores code, specification and proof generation separately and in combination, with reference code, specs, proofs and tests.",
+   "steal": "Lift VERINA tasks into t as an extra held-out panel that scores spec soundness and completeness separately from proof, using its test.json to grade specs.",
+   "moves": "Measurement of the spec bottleneck separately from proof; a wider held-out panel",
+   "evidence": "Abstract: o3 gets 72.6% code correct, 52.3% specs sound and complete, 4.9% proof success (one trial)",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Run heldout_audit for overlap with MBPP/HumanEval-derived rows; lifting from Lean into t may need hand work.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "CLEVER",
+   "url": "https://github.com/trishullab/clever",
+   "kind": "dataset",
+   "licence": "MIT (repo)",
+   "take": "data",
+   "what": "161 HumanEval-derived Lean 4 problems with non-computable ground-truth specs. A model must prove its spec equivalent to the hidden spec, then prove its implementation correct.",
+   "steal": "Use as an evaluation panel and copy its 'spec certification' step: dawnr proves a generated t spec equivalent to a reference spec, rather than only testing it.",
+   "moves": "Spec trust; exposes spec-leak shortcuts",
+   "evidence": "Only 1 of 161 problems verified end-to-end by any evaluated approach (problem 53, add two integers)",
+   "effort": "days",
+   "priority": 2,
+   "risk": "HumanEval-derived, so contamination against dawnr's training rows must be audited; Lean only.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "Verus-Bench and VeruSAGE-Bench (AutoVerus)",
+   "url": "https://github.com/microsoft/verus-proof-synthesis",
+   "kind": "repo",
+   "licence": "MIT (repo)",
+   "take": "data",
+   "what": "AutoVerus proof agent (generate, refine with tips, repair from verifier errors) plus 150 algorithm tasks and 849 repository-level Verus tasks.",
+   "steal": "Lift the 150 Verus-Bench algorithm tasks into t rows or panel items, and port AutoVerus's error-class-specific repair prompts into dawnr's prover-feedback repair loop.",
+   "moves": "Data rows; repair from prover feedback",
+   "evidence": "Paper: AutoVerus proves over 90% of 150 tasks, over half in under 30 s or 3 LLM calls; repo 192 commits, leaderboard included",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Generated proofs in /generated are LLM-written (GPT family) and are eval only; VeruSAGE tasks are systems code, far from t.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "DafnyPro",
+   "url": "https://arxiv.org/html/2601.05385v1",
+   "kind": "paper",
+   "licence": "none stated (no code link found)",
+   "take": "method",
+   "what": "Dafny proof-annotation pipeline with a diff checker (code unchanged once annotations are stripped), iterative pruning of non-inductive invariant clauses, and 8 problem-independent hint strategies.",
+   "steal": "Add a Houdini-style pruner that drops failing invariant clauses one by one and re-verifies, plus a diff check that the model never edits the program or spec, in dawnr's repair loop. Both run without a model.",
+   "moves": "Answer rate via deterministic repair; protection against spec tampering",
+   "evidence": "Hint augmentation gave the largest gain (~10% on DafnyBench); fine-tuned Qwen 7B 68%, 14B 70% verified",
+   "effort": "days",
+   "priority": 2,
+   "risk": "No code release, so reimplement; numbers are on DafnyBench (contamination-prone).",
+   "areas": [
+    "proof",
+    "rate"
+   ]
+  },
+  {
+   "name": "SpecGen mutation phase",
+   "url": "https://arxiv.org/html/2401.08807v5",
+   "kind": "paper",
+   "licence": "none stated for code (paper arXiv non-exclusive)",
+   "take": "method",
+   "what": "When a model's spec fails to verify, apply predicate, logical, comparative and arithmetic mutation operators to it and keep verifiable mutants by heuristic selection (Java/JML, OpenJML).",
+   "steal": "After a failed proof, mutate the model's t spec or invariants (<= to <, add/drop conjunct, quantifier bounds) and re-run the provers before refusing; keep only mutants that pass dawnr's spec strength/completeness check.",
+   "moves": "Answer rate without more model calls",
+   "evidence": "Mutation lifts 218 to 279 of 385 programs verified (+61); expert rating 4.54 vs oracle 4.83",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Mutation can weaken specs to pass, so it must be gated by the subset/mutant-kill checks above.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "FStarDataSet-V2",
+   "url": "https://huggingface.co/datasets/microsoft/FStarDataSet-V2",
+   "kind": "dataset",
+   "licence": "CDLA-Permissive-2.0 (dataset card)",
+   "take": "idea",
+   "what": "Human-written verified F* definitions, lemmas and proofs extracted from FStar, HACL* and Steel, with dependency and typing metadata.",
+   "steal": "Mine the small pure-functional lemmas and specs as a source for lifting into t, or use them as F* prover regression tests. This needs a decision that CDLA-P-2.0 is acceptable first.",
+   "moves": "Data scarcity (human-written, not model-generated)",
+   "evidence": "54.4k rows: 30.9k train, 1.96k validation, 21.5k test",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "CDLA-Permissive-2.0 is not on dawnr's licence list; most content is crypto/systems code far from everyday t problems.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "dafny-annotator + DafnySynth pipeline",
+   "url": "https://github.com/metareflection/dafny-annotator",
+   "kind": "repo",
+   "licence": "MIT (repo)",
+   "take": "code",
+   "what": "LLM-guided search that adds Dafny annotations until verification, plus an 'edit graph' synthesis pipeline (idea proposer, implementer, annotator, change proposer).",
+   "steal": "Reuse the edit-graph data generator with dawnr's own permissive teacher writing t, so that each verified edit becomes a new row.",
+   "moves": "Data scarcity",
+   "evidence": "Paper: LoRA fine-tuned Llama 3.1 8B goes from 15.7% to 50.6% of DafnyBench methods annotated",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "The released DafnySynth used GPT-4o in some editors and the models are Llama-based, so no data or weights; take the code only.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "Kimina Lean Server",
+   "url": "https://github.com/project-numina/kimina-lean-server",
+   "kind": "tool",
+   "licence": "MIT (repo)",
+   "take": "code",
+   "what": "REST server that runs pooled Lean 4 REPLs with import reuse and gc, for batch proof checking.",
+   "steal": "Put dawnr's Lean leg behind it during grading and data generation so that Lean imports are not reloaded per row.",
+   "moves": "Prover throughput on lab CPUs (cheaper grading, more rows per hour)",
+   "evidence": "Defaults to CPU count minus 1 REPLs, 8 GB per REPL; Lean v4.26.0 default; paper reports 1.5-2x speedup",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Memory-heavy (8 GB per REPL), so cap the REPL count on the lab beside training.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "Goedel-Prover-V2-8B",
+   "url": "https://huggingface.co/Goedel-LM/Goedel-Prover-V2-8B",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card)",
+   "take": "weights",
+   "what": "Lean 4 whole-proof prover on Qwen3-8B with two rounds of compiler-feedback self-correction.",
+   "steal": "Use as an optional Lean lemma closer, invoked only when the t-to-Lean obligation fails, at Q4 on the desktop or lab.",
+   "moves": "Proof leg of the answer rate for Lean obligations",
+   "evidence": "MiniF2F test 83.0% at pass@32; PutnamBench 57 at pass@32",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Trained for competition math, not program obligations; 8B is slow on a consumer CPU and needs pass@k.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "ESBMC (Python frontend)",
+   "url": "https://github.com/esbmc/esbmc",
+   "kind": "tool",
+   "licence": "Apache-2.0 mainly; third-party parts per COPYING",
+   "take": "code",
+   "what": "SMT bounded model checker with k-induction for C, C++, Rust and type-annotated Python (division by zero, index errors, overflow, user assertions).",
+   "steal": "Check a user's own typed Python directly for runtime errors and asserts, as a refusal-or-pass check in the extract/calc paths, alongside t.",
+   "moves": "Breadth: verify mainstream Python for non-t users",
+   "evidence": "Supports C, C++, CUDA, CHERI, Kotlin, Python, Rust, Solidity; strategies include incremental BMC and k-induction",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Bounded unless k-induction succeeds; Python subset needs annotations; it is a large C++ dependency to ship.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "FVAPPS",
+   "url": "https://huggingface.co/datasets/quinn-dougherty/fvapps",
+   "kind": "dataset",
+   "licence": "MIT (dataset card); specs generated by Claude 3.5 Sonnet per paper arXiv 2502.05714",
+   "take": "data",
+   "what": "APPS problems with unit tests generalised into Lean 4 theorems stated with sorry, in three quality tiers.",
+   "steal": "Evaluation only: the 1,083 guarded-and-plausible items as a large hard panel for dawnr's Lean leg.",
+   "moves": "Wider evaluation of hard problems",
+   "evidence": "4,715 unguarded, 2,089 guarded, 1,083 guarded+plausible (property-based tested)",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Claude-written, so never training data; APPS overlap with dawnr sources requires the contamination audit.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "Neuro-Formal Verification (NFV)",
+   "url": "https://arxiv.org/abs/2608.21516",
+   "kind": "paper",
+   "licence": "paper CC-BY-4.0; no code release found",
+   "take": "idea",
+   "what": "Agent that formalises a Python verification question into Dafny proof obligations in staged steps, with CBMC as a counterexample backend.",
+   "steal": "Pattern for a 'bring your own Python' mode: stage the formalization (translate, state spec, prove) and keep each stage's artifact in the certificate.",
+   "moves": "Breadth: mainstream language verification; certificate design",
+   "evidence": "Dafny: 57% correct resolution at 92% precision; CBMC: 63% bug detection at 90% precision; LLM-as-judge 72% precision; unstaged agent 50%",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "No code; precision numbers are on its own balanced dataset.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "VeriEquivBench",
+   "url": "https://arxiv.org/abs/2510.06296",
+   "kind": "paper",
+   "licence": "CC BY-NC-SA 4.0 (arXiv page)",
+   "take": "idea",
+   "what": "Benchmark that grades Dafny code+spec by a formal equivalence score instead of matching a hand-written ground-truth spec.",
+   "steal": "Idea only: score t spec/code pairs for mutual consistency without reference specs, so new self-play rows can be graded.",
+   "moves": "Spec evaluation at scale without hand-written references",
+   "evidence": "2,389 algorithmic problems; revised April 2026",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Non-commercial licence, so the data can never be used; method details were not in the fetched abstract.",
+   "areas": [
+    "proof"
+   ]
+  },
+  {
+   "name": "APOLLO (sorrify plus subgoal repair)",
+   "url": "https://github.com/aziksh-ospanov/APOLLO",
+   "kind": "repo",
+   "licence": "MIT (GitHub licence field); paper CC BY 4.0",
+   "take": "method",
+   "what": "A repair loop driven by the Lean compiler. It fixes syntax, replaces failing blocks with sorry, tries automatic tactics on each hole, and recursively asks the LLM only about the sub-lemmas still open. Then it reassembles the proof and re-checks it.",
+   "steal": "Build a 'hole-and-recurse' repair stage in dawnr's prover driver. When a t program's proof fails, cut the failing assertion or lemma out as a hole, run the prover's automation on it, and resample only that hole with local context, never the whole program. Start on the Lean and Dafny legs.",
+   "moves": "Answer rate at a CPU sample budget",
+   "evidence": "Kimina-Prover-Distill-7B went from 70.8% to 75.0% on miniF2F with samples cut to 307; Goedel-Prover-SFT's budget fell from 25,600 to about 362. 84.9% for under-8B models at budget 128.",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "The code targets Lean 4 and Mathlib tactics; the Dafny, Verus and F* legs need their own hole operators. Last push Nov 2025.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "CRANE (constrain only the answer region)",
+   "url": "https://github.com/uiuc-focal-lab/crane",
+   "kind": "repo",
+   "licence": "MIT (GitHub licence field); paper CC BY 4.0",
+   "take": "code",
+   "what": "Decoding that reasons without constraint and switches to grammar-constrained generation only between delimiters such as << >>. The paper also proves why a strict output grammar reduces reasoning.",
+   "steal": "Replace whole-output grammar holding in dawnr's t generation with CRANE switching: free reasoning first, then the t program between delimiters under the t grammar. This is a llama.cpp-side change to the existing GBNF use.",
+   "moves": "Answer rate; explains why the grammar gained nothing",
+   "evidence": "GSM-Symbolic, Qwen2.5-1.5B: 26% unconstrained, 22% constrained, 31% CRANE. FOLIO, Llama-3.1-8B: 32.0% to 46.3%.",
+   "effort": "days",
+   "priority": 1,
+   "risk": "The gains were measured on symbolic math and logic, not program synthesis. It adds reasoning tokens, which cost CPU time.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "Pass@k Training",
+   "url": "https://arxiv.org/html/2508.10751v1",
+   "kind": "paper",
+   "licence": "none stated (repo RUCAIBox/Passk_Training has no licence)",
+   "take": "method",
+   "what": "RLVR whose reward is pass@k over groups, with a closed-form advantage. It counters the conservative collapse of pass@1 GRPO.",
+   "steal": "Use the analytical pass@k advantage in dawnr's GRPO and expert-iteration weighting, since dawnr serves with sampling plus prover selection: train pass@k first, then pass@1.",
+   "moves": "Answer rate under sampling with a verifier",
+   "evidence": "Qwen2.5-7B on Enigmata: pass@1 training scored 12.9 pass@1 and 21.3 pass@8; pass@k training 17.9 and 29.8; both in sequence 30.8 and 40.6.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The repo has no licence, so reimplement from the paper's formula. Not tested on formal code.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "Goedel-Prover-V2 (scaffolded data, extract_goal, model averaging)",
+   "url": "https://ar5iv.labs.arxiv.org/html/2508.03613",
+   "kind": "model",
+   "licence": "Apache-2.0 (HF model card tag for Goedel-Prover-V2-8B); GitHub repo has no licence file",
+   "take": "method",
+   "what": "An 8B Lean prover built on Qwen3-8B. It makes training problems from the unsolved goals of failed proofs, corrects itself with compiler feedback, and averages checkpoints to keep diversity.",
+   "steal": "Mine dawnr's failed prover runs for their failing subgoals and add each, with its context, as a new and easier row; this grows the scarce prover-accepted data. Also average dawnr checkpoints after SFT and RL ((1-a)theta0 + a*theta). The Apache-2.0 8B weights could be measured as a Lean-leg helper.",
+   "moves": "Data scarcity; answer rate",
+   "evidence": "Self-correction (2 rounds) raised miniF2F pass@32 from 88.1% to 90.4% and PutnamBench from 43 to 57 solved. The 8B model reaches 84.6% pass@32 on miniF2F.",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Training data includes DeepSeek-Prover-V2 outputs (allowed, but say so). Lean only. 8B is heavy on CPU.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "VerMCTS",
+   "url": "https://github.com/namin/llm-verified-with-monte-carlo-tree-search",
+   "kind": "repo",
+   "licence": "MIT (GitHub licence field)",
+   "take": "code",
+   "what": "MCTS over program prefixes. The LLM proposes the next step, and Dafny or Coq checks each partial program to bound its value.",
+   "steal": "Reuse the MCTS loop with dawnr's t checker as the partial-program heuristic: check t prefixes (type check plus prover on the finished parts) and expand only the live branches, instead of independent whole samples.",
+   "moves": "Answer rate per token on CPU",
+   "evidence": "More than a 30% absolute increase in average pass@5000 tokens over repeated sampling across its Dafny and Coq suite.",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "dawnr's repos-verification.md already notes it. The baseline is CodeLlama-34B on A100s; t needs a prefix checker that is fast on CPU.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "OpenCodeReasoning",
+   "url": "https://huggingface.co/datasets/nvidia/OpenCodeReasoning",
+   "kind": "dataset",
+   "licence": "CC BY 4.0 (dataset card); problems keep their source licences",
+   "take": "data",
+   "what": "735,255 Python reasoning traces and solutions to 28,319 competitive-programming problems, all generated by DeepSeek R1.",
+   "steal": "Use it as distillation SFT for the 'write a right program' half, through dawnr's Python hand-back. First execute every solution against the problems' tests and keep only passing rows from MIT, Apache or CC-BY sources.",
+   "moves": "Answer rate (program correctness), data volume",
+   "evidence": "735k samples; the card says R1 generated all outputs and does not state that they were execution-verified.",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Model-generated by R1 (not on the banned list). The per-problem licences vary and must be filtered. Competitive-programming style differs from t.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "Type-constrained decoding (prefix automata)",
+   "url": "https://github.com/eth-sri/type-constrained-code-generation",
+   "kind": "repo",
+   "licence": "MIT (GitHub licence field)",
+   "take": "method",
+   "what": "Decoding that admits only well-typed prefixes, through prefix automata, formalised for a simply typed language and extended to TypeScript.",
+   "steal": "Build a t prefix automaton for t's type system and combine it with CRANE switching, so the program region is both parseable and well typed.",
+   "moves": "Answer rate, only where ill-typed programs are a measurable share of failures",
+   "evidence": "Cuts compilation errors by more than half on HumanEval and MBPP, and raises functional correctness, across models including ones over 30B.",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "dawnr found syntax is not the bottleneck; first measure what share of t failures are type errors. Repo pushed Mar 2026.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "Seed-Coder-8B-Instruct / Reasoning",
+   "url": "https://huggingface.co/ByteDance-Seed/Seed-Coder-8B-Instruct",
+   "kind": "model",
+   "licence": "MIT (model card)",
+   "take": "weights",
+   "what": "An 8B code model trained on LLM-filtered code data, with a 64K-context Reasoning variant.",
+   "steal": "Add it to dawnr's base-model measurement for the t student and as a second, non-Qwen family for RL controls.",
+   "moves": "Answer rate; robustness of RL claims across model families",
+   "evidence": "LiveCodeBench (2410-2502): 24.7 vs 17.3 for Qwen2.5-Coder-7B; MBPP 85.2 vs 83.5; HumanEval 84.8 vs 88.4.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "8B is about twice the CPU cost of 4B. Python benchmarks may not transfer to t.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "F* PoPAI (type-based retrieval)",
+   "url": "https://arxiv.org/abs/2405.01787",
+   "kind": "paper",
+   "licence": "paper CC BY 4.0; dataset licence not found",
+   "take": "idea",
+   "what": "A corpus of 600K lines (32K definitions) of F* programs and proofs. Fine-tuned Phi-2 and StarCoder rival GPT-4, and type-based retrieval helps a lot.",
+   "steal": "Add retrieval by type and signature over dawnr's accepted rows: at generation time, insert the nearest proved t definitions with matching types as context.",
+   "moves": "Answer rate with scarce data",
+   "evidence": "Small fine-tuned models 'compare favorably with large language models (such as GPT-4)'; type-based retrieval 'boost[s] performance significantly'.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "The dataset location and licence were not on the fetched page.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "Absolute Zero (deduction, abduction, induction tasks)",
+   "url": "https://arxiv.org/html/2505.03335v3",
+   "kind": "paper",
+   "licence": "repo MIT (GitHub licence field)",
+   "take": "method",
+   "what": "Self-play with no data, where an executor checks three task types: predict the output, infer the input, and synthesize the program from examples.",
+   "steal": "Use dawnr's t interpreter to make free auxiliary rows (predict a t program's output, find an input that gives a stated output) and mix them into SFT as cheap, checked data.",
+   "moves": "Data scarcity",
+   "evidence": "Gains grow with size: 3B +5.7, 7B +10.2, 14B +13.2. Removing induction cut math from 38.4 to 33.3.",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Small models gain least and plateau faster. Its executor is 'not secure'. A Llama-8B run produced unsafe 'uh-oh' text.",
+   "areas": [
+    "rate"
+   ]
+  },
+  {
+   "name": "Docling",
+   "url": "https://github.com/docling-project/docling",
+   "kind": "repo",
+   "licence": "MIT (GitHub licence field and README)",
+   "take": "code",
+   "what": "Local document converter for PDF, DOCX, PPTX, XLSX, HTML, EML/MSG and images, with layout, reading order, table structure and OCR, and output that keeps page numbers and bounding boxes.",
+   "steal": "Use it as an optional reader inside locallm/doc_read.py for scanned PDFs, tables, slides, spreadsheets and email, so each quoted sentence has a page and a box. pdftotext stays the default.",
+   "moves": "Breadth for ordinary people: scans and tables are refused today, and doc_read.py itself says Docling is what they need.",
+   "evidence": "Paper arXiv:2501.17887: median 0.79 s/page, mean 3.1 s/page on an 8-thread x86 CPU (MinerU 3.3, Marker 16+). Release v2.133.0 on 2026-10-03.",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Large install (torch and layout models). Pages in the slowest 5% take 16.3 s on CPU. Keep it an optional extra.",
+   "areas": [
+    "docs",
+    "senses"
+   ]
+  },
+  {
+   "name": "deepset/deberta-v3-base-squad2",
+   "url": "https://huggingface.co/deepset/deberta-v3-base-squad2",
+   "kind": "model",
+   "licence": "CC-BY-4.0 (model card)",
+   "take": "weights",
+   "what": "A 0.2B encoder that reads a question and returns the start and end offsets of an answer in the text, or no answer.",
+   "steal": "Put it in extract_docs.py as the span picker: it proposes character offsets inside the sentence the grammar chose, and the existing check that the span is in the source stays. A span model cannot write text that is not in the source.",
+   "moves": "Extraction quality: dawnr's grammar-held 4B extractor copied whole sentences and got 165/300 answerable exact on SQuAD 2.0.",
+   "evidence": "SQuAD 2.0 dev: 83.8 EM / 87.4 F1 at 0.2B parameters.",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Trained on SQuAD (CC-BY-SA), so check the share-alike question. English only. The evaluation set overlaps dawnr's SQuAD panel, so measure on a different set.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "TAT-QA",
+   "url": "https://github.com/NExTplusplus/TAT-QA",
+   "kind": "dataset",
+   "licence": "CC-BY-4.0 (README; HF tag license:cc-by-4.0); code MIT",
+   "take": "data",
+   "what": "Questions written by people over real financial reports that mix tables and text, with answers that are spans, several spans, counts, or arithmetic with the derivation shown.",
+   "steal": "Use it as training and evaluation data for 'questions with numbers in my documents': quote the cells or sentences, then compute the derivation in calc.py, and grade the result exactly.",
+   "moves": "Number questions and data scarcity: about 16.5k rows with human answers that can be checked exactly.",
+   "evidence": "16,552 questions over 2,757 table-plus-text contexts.",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Finance only and English only. Tables must be flattened into sentences or cells that the quote grammar can cite.",
+   "areas": [
+    "docs",
+    "compute"
+   ]
+  },
+  {
+   "name": "FinQA",
+   "url": "https://github.com/czyssrs/FinQA",
+   "kind": "dataset",
+   "licence": "MIT (repository footer)",
+   "take": "data",
+   "what": "Questions about financial reports, written by financial experts, each with a gold reasoning program in a small arithmetic language and the supporting facts.",
+   "steal": "Translate its programs into calc.py expressions and use them as training rows where the arithmetic is the check: quoted facts in, an exact result out.",
+   "moves": "Data for number answers with provenance, and a calc-mode benchmark that a program can grade.",
+   "evidence": "Abstract: 'written by financial experts', with gold programs. Corrected baseline is 61.24 execution accuracy.",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Repository last pushed in 2022. Read the dataset terms beyond the MIT footer before training on it.",
+   "areas": [
+    "docs",
+    "compute",
+    "reframe"
+   ]
+  },
+  {
+   "name": "PaddleOCR-VL-1.5",
+   "url": "https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.5",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card)",
+   "take": "weights",
+   "what": "A 0.9B document VLM that turns page images into markdown or JSON with layout polygons, tables, formulas and reading order, and runs on CPU through llama.cpp GGUF.",
+   "steal": "Use it as the recognizer for scans on the llama.cpp server dawnr already runs, with Tesseract as an independent second reader so a quote from a scan is shown only when both agree.",
+   "moves": "Scanned documents, which are refused today, and vision in the installed command.",
+   "evidence": "94.5 on OmniDocBench v1.5. Released 2026-01-29. GGUF builds exist.",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Speed of a 0.9B VLM per page on CPU is not measured. It is a model writing the source text, so quotes need an agreement check (see shifts).",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "granite-docling-258M",
+   "url": "https://huggingface.co/ibm-granite/granite-docling-258M",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card)",
+   "take": "weights",
+   "what": "A 258M page-to-DocTags model (Idefics3 with SigLIP2) for tables, code, equations and full-page OCR, quantised for llama.cpp.",
+   "steal": "Use it as the lightweight table reader behind Docling for born-digital PDFs on low-end machines.",
+   "moves": "Tables in documents on CPU-only installs.",
+   "evidence": "FinTabNet TEDS 0.97 for structure and 0.96 with content. Full-page OCR F1 0.84.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "English only (Japanese, Arabic and Chinese are experimental). Weak on general images (MMStar 0.30).",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "wtpsplit (SaT)",
+   "url": "https://github.com/segment-any-text/wtpsplit",
+   "kind": "repo",
+   "licence": "MIT (GitHub licence field and README)",
+   "take": "code",
+   "what": "Sentence and paragraph segmentation in 85 languages that works without punctuation, with LoRA domain adapters and ONNX.",
+   "steal": "Use it as the multilingual splitter behind cite and extract, so a 'sentence' means the same thing in Thai, Japanese or a PDF without punctuation. Keep pySBD and UAX 29 as fallbacks.",
+   "moves": "Documents beyond English: the quote unit is the sentence, so a wrong split is a wrong quote.",
+   "evidence": "sat-12l-sm: 97.4 English F1 and 96.0 multilingual F1, against Punkt at 92.2 English. Release 2.2.2 on 2026-09-25.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "A transformer on CPU is slower than rules; sat-3l is the small option (89.2 multilingual F1).",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "TyDi QA",
+   "url": "https://github.com/google-research-datasets/tydiqa",
+   "kind": "dataset",
+   "licence": "Apache-2.0 (README)",
+   "take": "data",
+   "what": "About 204k information-seeking questions in 11 typologically diverse languages, with byte-offset minimal answer spans or NULL.",
+   "steal": "Use it as the multilingual panel for cite and extract (answerable and NULL), measured the same way the SQuAD 2.0 panel is now.",
+   "moves": "Documents are measured in English only.",
+   "evidence": "11 languages. Questions were 'written by people who want to know the answer, but don't know the answer yet', so they were not translated or primed.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The passages are Wikipedia, not personal documents. GoldP leaves out Thai and Japanese.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "CUAD",
+   "url": "https://huggingface.co/datasets/theatticusproject/cuad",
+   "kind": "dataset",
+   "licence": "CC-BY-4.0 (dataset card)",
+   "take": "data",
+   "what": "Expert-labelled clause spans in 510 real commercial contracts, shipped as PDF and TXT, in SQuAD 2.0 style.",
+   "steal": "Use it as an end-to-end PDF benchmark for dawnr extract: real PDFs go through doc_read, and a field is right only if its span matches the expert span.",
+   "moves": "Breadth: real PDFs and long documents instead of Wikipedia paragraphs. Also adds extraction rows.",
+   "evidence": "More than 13,000 labels, 41 clause categories, 510 contracts with PDFs included.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Legal English only. 33 of the 41 categories are yes/no presence, not a value.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "granite-embedding-97m-multilingual-r2",
+   "url": "https://huggingface.co/ibm-granite/granite-embedding-97m-multilingual-r2",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card)",
+   "take": "weights",
+   "what": "A 97M multilingual embedding model with a 32k context, 384 dimensions and 200+ languages.",
+   "steal": "Use it as the CPU dense retriever next to BM25 in dawnr_retrieval for documents not in English.",
+   "moves": "Retrieval over a person's documents in many languages, on a CPU.",
+   "evidence": "60.3 on MTEB Multilingual Retrieval, which the card calls the best open model under 100M, ahead by about 9.4 points.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Trained partly on 'IBM-generated synthetic data' from an unnamed generator. This is fine for weights dawnr uses, but not a data source.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "GLiNER2",
+   "url": "https://github.com/fastino-ai/GLiNER2",
+   "kind": "repo",
+   "licence": "Apache-2.0 (repository and model card)",
+   "take": "weights",
+   "what": "A 205M-340M encoder for schema-driven extraction (entities, classification, structured records) that returns character offsets and confidences.",
+   "steal": "Use it as a CPU field extractor for dawnr extract: the schema fields become labels and the output is offsets that are checked against the source, with no generation.",
+   "moves": "Extraction speed and span precision on CPU, without the 4B model.",
+   "evidence": "Paper arXiv:2507.18546: CrossNER average F1 0.590 vs GPT-4o 0.599; 163 ms CPU with 20 labels. Release v2.0.0 on 2026-08-24.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "118,636 of its 254k training rows were generated by GPT-4o. Use the weights only if that is allowed; never use its data. English only.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "Microsoft Recognizers-Text",
+   "url": "https://github.com/microsoft/Recognizers-Text",
+   "kind": "repo",
+   "licence": "MIT (GitHub licence field and README)",
+   "take": "code",
+   "what": "A rule-based recognizer for numbers, ordinals, percentages, ranges, currency, dimensions, temperature, dates and times, phone numbers and emails in about 10 languages.",
+   "steal": "Use it as the non-model check that a span 'reads as a number' or 'reads as a date' in extract_docs.py typed fields, in languages beyond English.",
+   "moves": "Typed fields and number questions beyond English, with a deterministic check.",
+   "evidence": "Full support for 10 languages (zh, en, fr, es, pt, de, it, tr, hi, nl). Last push 2026-04-17.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The Python port is labelled alpha; .NET is the primary implementation.",
+   "areas": [
+    "docs",
+    "compute"
+   ]
+  },
+  {
+   "name": "quantulum3",
+   "url": "https://github.com/nielstron/quantulum3",
+   "kind": "repo",
+   "licence": "MIT (README)",
+   "take": "code",
+   "what": "A quantity and unit parser that returns value, unit, entity, uncertainty and span offsets, including ranges.",
+   "steal": "Feed its output into a unit-consistency check in calc.py: the quoted quantity's unit must match the unit in the answer, with the arithmetic done in exact units.",
+   "moves": "Numeric and unit checks that are not a language model.",
+   "evidence": "Returns span offsets and uncertainties (for example ±0.1 and the range '12.8–13.0 TeV').",
+   "effort": "days",
+   "priority": 3,
+   "risk": "English only on the main branch. Its optional disambiguation classifier uses GloVe vectors; skip it.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "llguidance for quote grammars",
+   "url": "https://github.com/guidance-ai/llguidance",
+   "kind": "tool",
+   "licence": "MIT (README)",
+   "take": "code",
+   "what": "A constrained-decoding engine built into llama.cpp (LLAMA_LLGUIDANCE) that takes Lark, regex and JSON-schema grammars.",
+   "steal": "Compile the per-document quote grammar (any sentence, or a run of a sentence's words) as Lark through llguidance instead of large GBNF alternations, so cite and extract scale to long documents.",
+   "moves": "Cite and extract over long documents, where the sentence-alternation grammar grows with the document.",
+   "evidence": "About 50 µs of CPU per token for a 128k tokenizer; under 1% of masks take over 1 ms. dawnr's own measurement on t: 0.602 ms.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "dawnr found llguidance does not accept its GBNF, so the grammars must be written in Lark. Not measured on grammars with thousands of sentences.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "ContractNLI",
+   "url": "https://stanfordnlp.github.io/contract-nli/",
+   "kind": "dataset",
+   "licence": "CC-BY-4.0 (project page and GitHub). The HF copy kiddothe2b/contract-nli is tagged CC-BY-NC-SA, so use the original.",
+   "take": "data",
+   "what": "607 NDAs, each with 17 hypotheses labelled entailed, contradicted or not mentioned, plus the evidence sentences.",
+   "steal": "Use it as a refusal and contradiction panel for cite: the shown sentence must be the evidence span, and 'not mentioned' must be refused.",
+   "moves": "Honest refusal when a document does not say something, including negation by exception.",
+   "evidence": "607 contracts × 17 hypotheses with sentence-level evidence.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "English NDAs only; a narrow domain.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "ParseBench",
+   "url": "https://github.com/run-llama/ParseBench",
+   "kind": "dataset",
+   "licence": "Apache-2.0 (README and HF tag)",
+   "take": "data",
+   "what": "A benchmark of document parsers on 2,078 enterprise pages, including content faithfulness (omissions and hallucinations) and visual grounding of each element.",
+   "steal": "Use its faithfulness and grounding subsets to choose dawnr's parser (pdftotext vs Docling vs a VLM) by measurement before shipping one.",
+   "moves": "Choosing a document reader by measurement; provenance back to page location.",
+   "evidence": "1,211 documents, 2,078 pages, 169,011 rules. Grounding is scored by element pass rate.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "The leaderboard does not list the open CPU parsers, so dawnr would run them itself.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "trafilatura",
+   "url": "https://github.com/adbar/trafilatura",
+   "kind": "repo",
+   "licence": "Apache-2.0 since v1.8.0 (README; older versions GPLv3+)",
+   "take": "code",
+   "what": "Main-text and metadata extraction from HTML that removes navigation and boilerplate, with tables and comments optional.",
+   "steal": "Use it in ingest.py for saved web pages, so quotes come from the article and not from menus or footers.",
+   "moves": "Breadth for HTML documents.",
+   "evidence": "Best single tool by ROUGE-LSum mean F1 in Bevendorff et al. 2023 (README). Pushed 2026-10-02.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Pin version 1.8.0 or later to stay off the GPL releases. It adds lxml dependencies.",
+   "areas": [
+    "docs"
+   ]
+  },
+  {
+   "name": "CaMeL (Defeating Prompt Injections by Design)",
+   "url": "https://github.com/google-research/camel-prompt-injection",
+   "kind": "repo",
+   "licence": "Apache-2.0 (repo)",
+   "take": "method",
+   "what": "A privileged model turns only the trusted user query into a program; a custom interpreter runs it with capability labels on every value and checks a security policy before each tool call; untrusted data is read by a quarantined model and never changes control flow.",
+   "steal": "Extend dawnr's 'arguments were actually said' gate into capability tracking: tag each argument value with its source (user said / document / tool output), have the interpreter carry those tags, and write deterministic policies per tool, recording the tags in the certificate.",
+   "moves": "Tool calls and MCP safety; certificates (the provenance tags are replayable)",
+   "evidence": "77% of AgentDojo tasks solved with provable security, against 84% with no defence (arXiv 2503.18813)",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "The authors say the interpreter 'likely contains bugs' and 'might not be fully secure'. It is a research artifact (3 commits), so reimplement the design rather than vendoring it.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "Catala + catala-examples",
+   "url": "https://github.com/CatalaLang/catala",
+   "kind": "tool",
+   "licence": "Apache-2.0 (compiler LICENSE; catala-examples also Apache-2.0)",
+   "take": "code",
+   "what": "A language for writing law as code with default logic, compiling to Python, Java, OCaml and C; it has a test runner and execution traces, and the example repo encodes French family and housing benefits, US tax code sections and Polish taxes.",
+   "steal": "Ship the compiled Python of the catala-examples programs as everyday checkers (benefits and tax sections). The model only fills in the facts each scope takes as input, quoted from what the person said, and the `clerk run --trace` JSON becomes the certificate a third party replays.",
+   "moves": "Breadth for ordinary people (tax and benefits questions); answer rate in that domain (the model writes facts, not programs or specs)",
+   "evidence": "Release 1.3.0 on 2026-10-01 added `clerk run --trace` JSON output and trace generation in the Java, Python and OCaml backends; 5,730 commits",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "The encoded laws are mostly French and only cover parts of US tax; each law needs upkeep every year; building requires an OCaml toolchain (ship the generated Python, not the compiler).",
+   "areas": [
+    "compute",
+    "reframe"
+   ]
+  },
+  {
+   "name": "sqlglot",
+   "url": "https://github.com/tobymao/sqlglot",
+   "kind": "tool",
+   "licence": "MIT (repo)",
+   "take": "code",
+   "what": "A SQL parser and optimizer with no dependencies, over 30 dialects; it resolves columns against a schema (qualify, annotate_types), computes semantic diffs between queries, and includes a Python executor.",
+   "steal": "Use it as the deterministic gate for 'SQL over your own tables': parse the model's SQL, reject anything that is not a single read-only SELECT, qualify it against the schema of the user's CSV or XLSX file, then run it in the sandbox and put the SQL and a hash of the table in the certificate.",
+   "moves": "Breadth (spreadsheets and tables for non-programmers); checked action",
+   "evidence": "No-dependency parser; the optimizer's qualify and annotate_types rules resolve columns against a schema; 8,403 commits",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Checking syntax and schema does not make the query correct; it needs an agreement check (see QED) or execution checks.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "TaxCalcBench",
+   "url": "https://github.com/column-tax/tax-calc-bench",
+   "kind": "dataset",
+   "licence": "MIT (repo)",
+   "take": "data",
+   "what": "Personal income tax returns built from the tests of a deterministic tax engine; inputs are realistic W-2 and 1099 PDFs plus JSON, and expected outputs are IRS MeF XML.",
+   "steal": "Use it as the evaluation set for dawnr's document-plus-calculation path (extract the fields with their source sentences, then compute with Catala or exact arithmetic). Score strict accuracy and the refusal rate.",
+   "moves": "Breadth (high-stakes everyday computation); a public comparison against frontier models",
+   "evidence": "Version 2 (June 2026) has 50 cases for tax year 2025; the best is GPT-6 Sol with web search at 66% strict, and top models get 88-90% per line",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Small (50 cases) and US federal only. Use it for evaluation only, never training (it is a benchmark).",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "Language Models and Logic Programs for Trustworthy Tax Reasoning (legal_logic_programs)",
+   "url": "https://arxiv.org/html/2508.21051v3",
+   "kind": "paper",
+   "licence": "CC BY-SA 4.0 (code, as stated in the paper)",
+   "take": "idea",
+   "what": "A model parses a tax case into Prolog facts, the solver computes the tax, and the system abstains unless two independent parses agree; the paper scores it by break-even price per return, with errors and abstentions priced.",
+   "steal": "Adopt two independent formalizations that must agree before an answer is shown, for domains with no gold spec, and adopt the scoring that prices each refusal at the cost of the human alternative. Reimplement it; the CC BY-SA code is not copied.",
+   "moves": "Answer-rate measurement; gate design outside the provers",
+   "evidence": "o3 got 75 of 100 SARA cases; GPT-5 few-shot with gold statutes got 86 correct with a $15.78 break-even price per return, against a $270 average human preparer",
+   "effort": "days",
+   "priority": 2,
+   "risk": "CC BY-SA is share-alike, so take the idea only. The best results use closed models; the open models tested were 32B to 671B.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "Numbat",
+   "url": "https://github.com/sharkdp/numbat",
+   "kind": "tool",
+   "licence": "Apache-2.0 and MIT, dual (repo)",
+   "take": "code",
+   "what": "A small scientific language where physical dimensions are static types, with first-class units, conversions with ->, assert_eq, a large prelude written in Numbat itself, and a WebAssembly build.",
+   "steal": "Make Numbat the units checker behind dawnr's calc: the model writes a Numbat expression, the type checker rejects dimension errors before evaluation, and the expression plus result go in the certificate. The WASM build serves dawnr's browser page.",
+   "moves": "Checked computation beyond arithmetic (units); breadth for ordinary questions",
+   "evidence": "Dimensions such as Length and Time act as types with inference; prelude covers SI, US Customary, Imperial, Nautical, Astronomical and Atomic units; runs as WASM at numbat.dev",
+   "effort": "days",
+   "priority": 2,
+   "risk": "It is a Rust dependency (Pint, BSD, is the pure-Python alternative). Check how it handles currency and dates before relying on it for money.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "CPMpy",
+   "url": "https://github.com/CPMpy/cpmpy",
+   "kind": "tool",
+   "licence": "Apache-2.0 (repo)",
+   "take": "code",
+   "what": "A Python constraint-modelling library over OR-Tools, Z3, Exact, Pumpkin, SCIP, HiGHS and PySAT, with companion explanation tooling (XCP-explain).",
+   "steal": "Add a constraint path for everyday scheduling, budgeting and assignment questions: the model writes a CPMpy model, the solver solves it, an independent check confirms the solution satisfies every constraint, and an unsatisfiable core names the constraint that failed in the refusal.",
+   "moves": "Checked computation (constraints and SMT); refusals that name the check",
+   "evidence": "Supports CP, ILP, SAT and SMT (Z3) backends; 1,990 commits",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Checking a solution against the model does not prove the model matches the question; this path needs quoting or agreement checks like the other paths.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "DCP-Bench-Open (CP-Bench)",
+   "url": "https://github.com/DCP-Bench/DCP-Bench-Open",
+   "kind": "dataset",
+   "licence": "CC BY 4.0 (as stated in arXiv 2506.06052v3)",
+   "take": "data",
+   "what": "164 combinatorial problems (167 instances) for model-written constraint models in MiniZinc, CPMpy and OR-Tools, scored by whether the solution is feasible and optimal.",
+   "steal": "Use it as the test set for the CPMpy path and as seed problems for prover-free, solution-checked training rows.",
+   "moves": "Data (checkable rows outside the provers); measuring the constraint path",
+   "evidence": "CPMpy about 70% at baseline and 90.2% with inference-time methods; 10-sample solution majority voting added over 10%",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Puzzle-style problems are not everyday questions. The license was read from the paper, so confirm it in the repo's LICENSE.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "Arctic-Text2SQL-R1-7B",
+   "url": "https://huggingface.co/Snowflake/Arctic-Text2SQL-R1-7B",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card)",
+   "take": "method",
+   "what": "Qwen2.5-Coder-7B-Instruct trained with GRPO using only execution correctness and syntax validity as rewards.",
+   "steal": "Copy the recipe: dawnr's prover acceptance (or SQL execution match) is the whole reward, with no shaped or model-judged reward. The weights could also serve as a teacher for the SQL path.",
+   "moves": "Answer rate (training recipe); SQL over a person's tables",
+   "evidence": "BIRD-test 68.5%, Spider-test 88.8%, Spider2.0-DK 15.6%",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "7B is heavy on CPU. The training data sources are not stated on the card; the related OmniSQL/SynSQL-2.5M data (Apache-2.0) was partly generated by Llama 3.1, so it cannot be dawnr training data unless filtered by generator.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "QED prover (SQL query equivalence)",
+   "url": "https://github.com/qed-solver/prover",
+   "kind": "tool",
+   "licence": "MIT (repo)",
+   "take": "code",
+   "what": "A Rust decider for SQL query equivalence (VLDB 2024), built on Z3 and CVC5.",
+   "steal": "Gate SQL answers on agreement: two independently written queries (two samples, or a model and a template) must be proved equivalent by QED before the result is shown; when QED cannot decide, fall back to comparing executions on the user's table.",
+   "moves": "Checked SQL where no spec exists; the 'something that did not write it agrees' principle",
+   "evidence": "About 290 of about 440 Calcite rewrite cases are provable (about 66%); default SMT timeout 10 s",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Input is a JSON intermediate form produced by a separate parser; 66 commits, research-grade; not every SQL feature is covered.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "FIDES (information-flow control for agents)",
+   "url": "https://github.com/microsoft/fides",
+   "kind": "repo",
+   "licence": "MIT (repo)",
+   "take": "method",
+   "what": "A planner that puts integrity (trusted/untrusted) and confidentiality (public/private) labels on every value, propagates them through tool calls, and deterministically enforces policies before sensitive tools run, with primitives to hide or reveal values.",
+   "steal": "Use its label lattice and hide/reveal variables as the design for dawnr's MCP tool gate: document text and tool outputs enter as untrusted variables the planner cannot read, and a policy blocks writing tools whose arguments carry untrusted labels.",
+   "moves": "Tool-call and MCP safety; certificate content (labels)",
+   "evidence": "Repo is a tutorial notebook (5 commits); the design ships experimentally in Microsoft agent-framework-core as agent_framework.security (arXiv 2505.23643)",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "The notebook calls Azure OpenAI (GPT-4o, GPT-4.1); take the design, not the setup.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "AgentDojo",
+   "url": "https://github.com/ethz-spylab/agentdojo",
+   "kind": "dataset",
+   "licence": "MIT (repo)",
+   "take": "data",
+   "what": "A benchmark of agent tasks plus prompt-injection attacks, with pluggable defence pipelines, published at NeurIPS 2024.",
+   "steal": "Measure dawnr's tool gate (said-arguments plus capability labels) as a defence pipeline in AgentDojo and report utility alongside attack success, so it can be compared directly with CaMeL's 77% and Progent.",
+   "moves": "A measured claim for tool-call safety",
+   "evidence": "`pip install agentdojo`; CaMeL and Progent both report results on it",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The tasks assume a strong planner model; a 4B model's utility may be low regardless of the gate.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "DABstep",
+   "url": "https://huggingface.co/datasets/adyen/DABstep",
+   "kind": "dataset",
+   "licence": "CC-BY-4.0 (dataset card)",
+   "take": "data",
+   "what": "Multi-step data-analysis questions over a payments CSV and a fee manual, scored by exact match on numbers, yes/no answers, lists and 'Not Applicable'.",
+   "steal": "Use it as the evaluation for 'questions about my own spreadsheet': dawnr answers with SQL or calc plus quoted fee-manual rules and must refuse with 'Not Applicable' when the data cannot answer.",
+   "moves": "Breadth (tables and documents together); refusal quality",
+   "evidence": "450 tasks plus 10 dev, split into easy and hard; answers rounded to specified decimals for exact scoring",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Use it for evaluation only (it has a public leaderboard). The domain is payments, not household.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "s(CASP) and Blawx",
+   "url": "https://github.com/SWI-Prolog/sCASP",
+   "kind": "tool",
+   "licence": "s(CASP) Apache-2.0; Blawx MIT (repos)",
+   "take": "code",
+   "what": "A goal-directed constraint answer-set reasoner that returns justification trees and natural-language explanations; Blawx is a block-based rules-as-code editor on top of it, aimed at non-programmers.",
+   "steal": "Use s(CASP) justification trees as the human-readable part of a rule-based certificate and refusal ('not eligible because condition X was not shown'), and Blawx's block editor as a model for letting non-programmers write or inspect rules.",
+   "moves": "Refusals that name the check; non-programmer audience",
+   "evidence": "Justification trees with the ?++ operator; about 10x faster than the original Ciao implementation; Blawx has 1,134 commits",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Needs SWI-Prolog 8.5.6 or later; Blawx says it is 'not production-quality software'.",
+   "areas": [
+    "compute"
+   ]
+  },
+  {
+   "name": "MedCalc-Bench",
+   "url": "https://github.com/ncbi-nlp/MedCalc-Bench",
+   "kind": "dataset",
+   "licence": "CC-BY-SA 4.0 (repo); the HF v1.0 card says CC-BY-4.0",
+   "take": "idea",
+   "what": "55 clinical calculators implemented as Python functions, with patient notes, questions, relevant entities and ground-truth explanations.",
+   "steal": "Learn the pattern for the dosage and medical-score domain: extract the entities with their source sentences from the note, then run a fixed calculator function. Use it for evaluation; train on it only if the licence conflict resolves to CC-BY.",
+   "moves": "Breadth (dosage and clinical calculations as checked computation)",
+   "evidence": "10,543 training and 1,100 evaluation instances; v1.0 is flagged 'highly unreliable' and v1.2 fixed 12 calculator implementations",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Share-alike licence (not on the allowed list); the two pages state the licence differently; it is medical, so it carries safety and liability weight.",
+   "areas": [
+    "compute",
+    "reframe"
+   ]
+  },
+  {
+   "name": "NeMo-Speech.cpp",
+   "url": "https://github.com/NVIDIA/NeMo-Speech.cpp",
+   "kind": "repo",
+   "licence": "Apache-2.0 for NVIDIA code, third-party parts keep their own terms (README); the models it runs are CC-BY-4.0 (Parakeet and Sortformer cards)",
+   "take": "code",
+   "what": "NVIDIA's C++ runtime on ggml for Parakeet TDT 0.6B v3, Parakeet CTC 1.1B, Streaming Sortformer diarization and MagpieTTS. It exposes OpenAI-compatible transcription routes.",
+   "steal": "Ship it next to llama.cpp as the speech backend of the installed `dawnr` command, behind dawnr's existing local OpenAI-style API, so speech stops being a research harness.",
+   "moves": "Speech only in research harnesses; the local API; offline on CPU",
+   "evidence": "CPU: 27 ms per 160 ms chunk and 6x real time; Q8_0 quantization; OpenAI-compatible transcription subset plus realtime WebSocket",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "Young repo (22 commits). Word confidence is not documented. MagpieTTS licence not checked. The VoiceChat 11B and Translate 4B models are out of scope.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "NeMo Forced Aligner (method) + parakeet-ctc-0.6b",
+   "url": "https://www.isca-archive.org/interspeech_2023/rastorgueva23_interspeech.pdf",
+   "kind": "paper",
+   "licence": "Paper: none stated. Weights nvidia/parakeet-ctc-0.6b: CC-BY-4.0 (model card). The NFA docs page states no licence.",
+   "take": "method",
+   "what": "Viterbi alignment of a given text on a CTC model's log-probabilities. It gives token, word and segment timestamps and works on audio over an hour long.",
+   "steal": "Use it as the check for quotes from recordings: the model proposes a quote, Viterbi on CTC log-probs aligns it to the audio, and the certificate records start, end and per-word score. If alignment fails, the answer is refused. Reimplement the Viterbi in a few hundred lines rather than depend on NeMo.",
+   "moves": "Lets a quote from a recording carry its time, so speech gets the same quote check that documents have",
+   "evidence": "AMI meetings, ground-truth text: NFA precision 98.35% at RTF 149. MFA got 82.93% and aligned only 5 of 16 files. When the text came from ASR, NFA dropped to 85.65% precision and 71.09% recall.",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "English CTC model only. Parakeet weights are CC-BY, so the credit must ship. 600M parameters on CPU is slow for long audio.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "OvisOCR2",
+   "url": "https://huggingface.co/ATH-MaaS/OvisOCR2",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card)",
+   "take": "weights",
+   "what": "An end-to-end document OCR model with 0.8B parameters, built on Qwen3.5-0.8B with SFT, RL and OPD. It outputs Markdown with formulas, tables and bounding boxes for image regions.",
+   "steal": "Run its GGUF in the same llama.cpp process to read scanned PDFs and photos into text. Check that text against an independent OCR reader (RapidOCR) before any quote from it is accepted.",
+   "moves": "Documents for ordinary people: scanned pages, photos of letters, forms",
+   "evidence": "OmniDocBench v1.6 overall 96.58, top of the leaderboard (Qwen3-VL-235B scores 89.78 there); 25 quantized variants for llama.cpp",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Released July 2026. Its training data mixes real and synthetic data from an unnamed generator, which matters only if dawnr fine-tunes on its outputs. The card says to verify its output by hand.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "sherpa-onnx",
+   "url": "https://github.com/k2-fsa/sherpa-onnx",
+   "kind": "repo",
+   "licence": "Apache-2.0 (README)",
+   "take": "code",
+   "what": "An offline speech toolkit on ONNX Runtime. It covers ASR (Parakeet, Moonshine and others), VAD, open-vocabulary keyword spotting, speaker diarization, TTS and word timestamps, on Linux, macOS, Windows, Raspberry Pi and WASM.",
+   "steal": "Use it as the fallback speech layer for machines where ggml speech is not built. Its open-vocabulary KWS (3 to 19 MB, keywords given as text, no retraining) would serve as dawnr's wake word.",
+   "moves": "Speech and wake word in the installed command; install across platforms",
+   "evidence": "v1.13.8 released 2026-09-10. The English gigaspeech KWS encoder is 4.6 MB in int8. Diarization confidence is exposed in recent releases.",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "Each pretrained model has its own licence. The fetched page states no licence for the gigaspeech KWS model, and GigaSpeech data terms must be checked.",
+   "areas": [
+    "senses",
+    "ship"
+   ]
+  },
+  {
+   "name": "Parakeet-TDT-0.6B-v3",
+   "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3",
+   "kind": "model",
+   "licence": "CC-BY-4.0 (model card)",
+   "take": "weights",
+   "what": "A FastConformer-TDT recognizer with 600M parameters for 25 European languages. It gives timestamps for words, segments and characters and handles up to 24 minutes of audio with full attention.",
+   "steal": "Replace whisper.cpp as the default recognizer. It is a transducer, not a free-running text decoder, it gives word times natively, and it covers non-English speech.",
+   "moves": "Speech; breadth beyond English",
+   "evidence": "Average WER 6.34% on the Open ASR leaderboard; LibriSpeech clean 1.93%. Trained on 10k hours of human-transcribed audio plus 660k hours of pseudo-labeled Granary.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Pseudo-labels came from a model. The card says it is optimized for NVIDIA GPUs, so CPU speed has to be measured (NeMo-Speech.cpp reports 6x real time). The attribution must ship.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Entropy-based word confidence for CTC and RNN-T",
+   "url": "https://arxiv.org/abs/2212.08703",
+   "kind": "paper",
+   "licence": "arXiv non-exclusive distribution licence (paper; the method is free to reimplement)",
+   "take": "method",
+   "what": "Word confidence for CTC and RNN-T recognizers without training: per-frame entropy is normalized and aggregated per word.",
+   "steal": "Compute a confidence for each transcript word from the Parakeet logits and write it into the certificate. Low-confidence words inside a quoted span make the quote refused, and the refusal names the word.",
+   "moves": "Gives a checkable confidence per word, so a refusal can name the word that failed",
+   "evidence": "Up to 2x (Conformer-CTC) and 4x (Conformer-RNN-T) better than max-probability at detecting wrong words on LibriSpeech",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The confidence is not calibrated for every domain, so a threshold must be set on held-out audio.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Silero VAD",
+   "url": "https://github.com/snakers4/silero-vad",
+   "kind": "model",
+   "licence": "MIT (README)",
+   "take": "weights",
+   "what": "A voice activity detector of about 2 MB at 8 and 16 kHz.",
+   "steal": "Gate every recognizer input with it, so silence never reaches the decoder (the main trigger of invented ASR text). Record the speech spans in the certificate.",
+   "moves": "Makes speech output safer to trust, in the installed command",
+   "evidence": "Under 1 ms per chunk on one CPU thread; ONNX up to 4-5x faster than PyTorch",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The README gives no numeric accuracy. Threshold tuning is needed for noisy rooms.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "RapidOCR",
+   "url": "https://github.com/RapidAI/RapidOCR",
+   "kind": "repo",
+   "licence": "Apache-2.0 code; converted PaddleOCR models redistributed under Apache-2.0 (README)",
+   "take": "code",
+   "what": "PaddleOCR detection and recognition models converted to ONNX. They run on ONNX Runtime or OpenVINO and give a box, text and score for each line.",
+   "steal": "Make it the second reader that does not depend on the first: a quote from a scanned page counts only if the VLM's text and RapidOCR's line text agree, and the certificate stores the line box and score. docTR (Apache-2.0 code and weights, per-word boxes and confidence) is the alternative.",
+   "moves": "Documents, as an independent check on a model's reading",
+   "evidence": "Line-level box plus confidence. Upstream PP-OCRv6 claims +4.6% detection and +5.1% recognition over v5, with 50 languages in one model.",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The default models are Chinese and English, and other scripts need other models. The release date was not visible.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Florence-2-base",
+   "url": "https://huggingface.co/microsoft/Florence-2-base",
+   "kind": "model",
+   "licence": "MIT (model card)",
+   "take": "weights",
+   "what": "A vision model with 0.23B parameters. Its task prompts include object detection, OCR_WITH_REGION and caption-to-phrase grounding.",
+   "steal": "Use it as a cheap independent checker: every object or text a VLM claims to see must be grounded to a box by Florence-2, or the claim is refused and the refusal names the ungrounded noun.",
+   "moves": "Vision moves out of the research harness, and OWLv2 is not the only check",
+   "evidence": "Zero-shot COCO detection 34.7 mAP; RefCOCO val 53.9%. Trained on FLD-5B (5.4B annotations, 126M images).",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Released in 2023 with modest grounding accuracy. FLD-5B annotations were partly made by models (not stated on the card).",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Woodpecker (method)",
+   "url": "https://github.com/BradyFU/Woodpecker",
+   "kind": "repo",
+   "licence": "none stated (idea only)",
+   "take": "idea",
+   "what": "Corrects VLM hallucinations in five stages: extract key concepts, form questions, validate them with GroundingDINO and VQA, write claims, then correct the answer.",
+   "steal": "Reuse the pipeline shape without its OpenAI step. Nouns are extracted deterministically, an open-vocabulary detector validates each one, and claims that fail are refused. Measure it on AMBER (Apache-2.0, an LLM-free hallucination benchmark).",
+   "moves": "Vision answers trustworthy by an independent check",
+   "evidence": "POPE +30.66 points for MiniGPT-4 and +24.33 for mPLUG-Owl",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "No licence, and it uses the OpenAI API for extraction and correction, so neither can be copied.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "olmOCR 2 unit-test rewards (method)",
+   "url": "https://arxiv.org/html/2510.19817v1",
+   "kind": "paper",
+   "licence": "Code Apache-2.0 (repo). olmOCR-mix-1025 and synthmix-1025 Apache-2.0. olmOCR-Bench ODC-BY-1.0.",
+   "take": "method",
+   "what": "GRPO on a 7B OCR model where the reward is the fraction of binary deterministic unit tests passed: text presence and absence, reading order, tables, math.",
+   "steal": "Apply the recipe to dawnr's document reader: its quote and extraction checks become the reward for a small model. Use olmOCR-Bench's 7,010 deterministic tests as an evaluation set only.",
+   "moves": "The answer rate on documents, and data scarcity",
+   "evidence": "Synthetic data plus RLVR took olmOCR-Bench from 78.5 to 82.4. Synthmix is 2,186 pages and 30,381 tests at about $0.12 per page.",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "The synthmix HTML was written by Claude Sonnet 4, and bench tests by Gemini Flash 2.0 and Claude 3.7, so both are evaluation only and never training data.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Moonshine streaming small",
+   "url": "https://huggingface.co/moonshine-ai/moonshine-streaming-small",
+   "kind": "model",
+   "licence": "MIT (model card); legacy non-English models are under a non-commercial community licence (README)",
+   "take": "weights",
+   "what": "A streaming ASR model of 123M parameters (v2 tiny 34M, medium 245M) for edge CPUs.",
+   "steal": "The low-latency English recognizer for live dictation and the wake-then-listen loop on weak laptops, with Parakeet kept for transcripts that need to be quoted.",
+   "moves": "Speech on ordinary and weak hardware",
+   "evidence": "Average WER 7.84%; LibriSpeech clean 2.49%; RTFx 566; tiny int8 WER 12.81 vs 12.72",
+   "effort": "days",
+   "priority": 3,
+   "risk": "It has an autoregressive decoder and so can invent text (sherpa-onnx v1.13.5 fixed hallucination on silence). Avoid the non-English legacy models (non-commercial).",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Streaming Sortformer 4spk v2",
+   "url": "https://huggingface.co/nvidia/diar_streaming_sortformer_4spk-v2",
+   "kind": "model",
+   "licence": "CC-BY-4.0 (model card)",
+   "take": "weights",
+   "what": "A streaming speaker diarizer of 117M parameters for up to 4 speakers.",
+   "steal": "Attach a speaker label and time span to every quote from a meeting recording, run through NeMo-Speech.cpp. pyannote community-1 (weights CC-BY-4.0, gated) is the alternative.",
+   "moves": "Who said it, for quotes from recordings",
+   "evidence": "DER 6.57% on CALLHOME 2-speaker, 12.44% on CALLHOME 4-speaker, 13.24% on DIHARD III; latency configurable from 0.32 s to 30.4 s",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Degrades with 5 or more speakers. Only GPU numbers are given.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Kokoro-82M",
+   "url": "https://huggingface.co/hexgrad/Kokoro-82M",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card)",
+   "take": "weights",
+   "what": "A StyleTTS2 voice with 82M parameters: 54 voices in 8 languages.",
+   "steal": "Use it as the read-aloud voice for answers and refusals for people who do not read easily, beside or instead of Piper.",
+   "moves": "Usable by everyone (accessibility)",
+   "evidence": "v1.0 released 2025-01-27; trained on a few hundred hours for about 1,000 GPU hours",
+   "effort": "days",
+   "priority": 3,
+   "risk": "The card says the training data includes synthetic audio from closed commercial TTS models, so the provenance is weaker than the Apache tag. The card gives no CPU speed.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "openWakeWord (method)",
+   "url": "https://github.com/dscripka/openWakeWord",
+   "kind": "repo",
+   "licence": "Code Apache-2.0; pretrained models CC-BY-NC-SA-4.0 (README)",
+   "take": "idea",
+   "what": "Wake-word models trained only on synthetic TTS speech of the phrase, with about 30k hours of negative audio.",
+   "steal": "Train dawnr's own wake word the same way, using Kokoro or Piper speech of the phrase and permissive negative audio. Do not use the shipped non-commercial models.",
+   "moves": "Wake word in the installed command without a non-commercial dependency",
+   "evidence": "Target under 0.5 false accepts per hour and under 5% false rejects; 15-20 models run in real time on one Raspberry Pi 3 core",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Last release v0.6.0 (Feb 2024). The negative data must be permissively licensed.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Grounding DINO / LLMDet",
+   "url": "https://github.com/iSEE-Laboratory/LLMDet",
+   "kind": "model",
+   "licence": "LLMDet Apache-2.0 (README); Grounding DINO Apache-2.0 (README)",
+   "take": "weights",
+   "what": "Open-vocabulary detectors that find any phrase as boxes. LLMDet adds co-training on detailed captions.",
+   "steal": "Use as a stronger check than Florence-2 when it is too weak: a VLM claim about an object passes only if the detector finds it above a threshold.",
+   "moves": "An independent check on what a model says it sees",
+   "evidence": "LLMDet LVIS minival 44.7 AP (Swin-T) to 51.1 AP (Swin-L); Grounding DINO-T 48.4 AP zero-shot on COCO with a CPU mode; LLMDet is in transformers 4.55+",
+   "effort": "days",
+   "priority": 3,
+   "risk": "LLMDet's GroundingCap-1M captions were written by a fine-tuned LLaVA-OneVision-Qwen2-0.5B. Swin backbones are slow on CPU.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "PaddleOCR-VL",
+   "url": "https://huggingface.co/PaddlePaddle/PaddleOCR-VL",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card); PaddleOCR toolkit Apache-2.0 (README)",
+   "take": "weights",
+   "what": "A document parser of about 1B parameters (NaViT encoder and ERNIE-4.5-0.3B) for 109 languages. It outputs element bounding boxes, tables, formulas and charts.",
+   "steal": "Use it as the non-English document reader, so the document check stops being measured in English only.",
+   "moves": "Documents beyond English",
+   "evidence": "109 languages; released 2025-10-16; PaddleOCR-VL-1.6 reports 96.3% on OmniDocBench v1.6; OpenVINO CPU speed-up 5.2x",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "The card says it was trained partly on proprietary datasets. The Paddle stack is heavy, and there is no llama.cpp path on the fetched page.",
+   "areas": [
+    "senses"
+   ]
+  },
+  {
+   "name": "Jan (desktop app on Tauri + llama.cpp)",
+   "url": "https://github.com/janhq/jan",
+   "kind": "product",
+   "licence": "Apache-2.0 (LICENSE, Copyright 2025 Menlo Research; attribution requested in user-facing docs)",
+   "take": "code",
+   "what": "Offline ChatGPT-style desktop app built on Tauri and llama.cpp, with an OpenAI-compatible server on localhost:1337 and MCP.",
+   "steal": "Take Jan's Tauri shell: its model download/hardware-detect screens and how it packages llama-server. dawnr's bin/dawnr and page become a native app with .exe, .dmg, AppImage, .deb and Flatpak builds, as a new desktop/ directory.",
+   "moves": "Install is a shell script; people who do not use a terminal",
+   "evidence": "Ships jan.exe, jan.dmg, AppImage, .deb and Flatpak; minimum is macOS 13.6+ with 8 GB RAM; pushed 2026-10-05",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "Large TypeScript codebase to trim. The provers (.NET Dafny, Lean, Rocq) still need their own packaging per OS. Attribution is requested.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "DFlash block-diffusion drafters",
+   "url": "https://github.com/z-lab/dflash",
+   "kind": "repo",
+   "licence": "MIT (GitHub licence field; README states MIT)",
+   "take": "weights",
+   "what": "Speculative decoding where a small block-diffusion drafter proposes a whole block of tokens in one pass, conditioned on the target model's hidden states.",
+   "steal": "Use the released drafter for Qwen3.5-4B through its llama.cpp backend in dawnr's serve path. Measure tokens/s on the CPU box and the 4080 before turning it on by default.",
+   "moves": "CPU speed, which gives more prove-and-repair attempts per question inside a fixed time budget (and so the answer rate)",
+   "evidence": "README lists drafters for Qwen3.5 4B/9B/27B/35B-A3B and llama.cpp, vLLM, SGLang and MLX backends. Paper (arXiv 2602.06036, ICML 2026) claims over 6x lossless speedup, up to 2.5x over EAGLE-3. v0.1.0 released 2026-08-18.",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Speedups were measured on GPUs, and CPU gain is unknown. The drafter must be retrained if dawnr fine-tunes the 4B away from base Qwen3.5. The training code was not shown in the README.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "SuffixDecoding (Arctic Inference)",
+   "url": "https://arxiv.org/abs/2411.04975",
+   "kind": "paper",
+   "licence": "Apache-2.0 (github.com/snowflakedb/ArcticInference README)",
+   "take": "method",
+   "what": "Model-free speculative decoding that keeps suffix trees of prompts and earlier outputs and drafts long repeated spans from them.",
+   "steal": "Port the suffix-tree drafter idea to dawnr's repair loop (re-asking with prover errors) and to quoted-answer generation, using llama.cpp's speculative hook. Keep a per-question tree of the earlier attempts.",
+   "moves": "CPU latency of repair loops and of quote-heavy document answers",
+   "evidence": "Up to 5.3x faster on agentic workloads (SWE-Bench, Text-to-SQL); 2.8x over EAGLE-2/3; 1.9x over Token Recycling; NeurIPS 2025 spotlight",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "The reference code is a vLLM (GPU) plugin, so the port to llama.cpp is ours to write and maintain.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "wllama v3",
+   "url": "https://github.com/ngxson/wllama",
+   "kind": "repo",
+   "licence": "MIT (README)",
+   "take": "code",
+   "what": "llama.cpp compiled to WebAssembly, with WebGPU offload, multimodal and tool calling, running fully in a browser tab.",
+   "steal": "Build a zero-install 'dawnr in a tab' for the checks that are pure code (quote, extract, exact arithmetic, tool-argument release). The model runs via wllama, and the same GGUF is split into 512 MB chunks.",
+   "moves": "Zero-install reach for people who do not program; the browser page",
+   "evidence": "Release 3.8.1 on 2026-10-02. Hard 2 GB per-file ArrayBuffer limit (split with llama-gguf-split). Multi-thread needs COOP/COEP headers.",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "A 4B Q4 model is about 2.5 GB, a heavy first download. The provers cannot follow into the tab (see z3-solver and jsCoq), so the program check stays native.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "cargo-dist (dist)",
+   "url": "https://github.com/axodotdev/cargo-dist",
+   "kind": "tool",
+   "licence": "Apache-2.0 OR MIT (README)",
+   "take": "code",
+   "what": "Release tool that builds and hosts artifacts and generates shell, PowerShell, MSI, Homebrew and npm installers plus its own CI, including for non-Rust apps.",
+   "steal": "Replace dawnr's hand-written install.sh with dist-generated installers, adding PowerShell/MSI for native Windows without WSL and a Homebrew tap, plus a machine-readable release manifest that the certificate can cite.",
+   "moves": "Install is a shell script for Linux, macOS and WSL only",
+   "evidence": "Generates shell, PowerShell, MSI, Homebrew and npm installers and GitHub Actions CI; pushed 2026-10-05",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The provers' own toolchains (dotnet, elan, opam) do not fit a single-binary model; they may need a separate 'dawnr provers install' step.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "Tauri sidecars",
+   "url": "https://v2.tauri.app/develop/sidecar/",
+   "kind": "tool",
+   "licence": "Apache-2.0 (GitHub licence field for tauri-apps/tauri)",
+   "take": "method",
+   "what": "Tauri's mechanism to bundle external binaries per target triple and spawn them, with an allowlist of arguments in capability files.",
+   "steal": "Ship llama-server and the prover binaries as sidecars ('externalBin'). Lock their arguments with the regex validators in capabilities/default.json, which matches dawnr's rule that tool calls run only with stated arguments.",
+   "moves": "Desktop install; sandboxing of spawned checkers",
+   "evidence": "Each binary must carry its target-triple suffix (e.g. -x86_64-unknown-linux-gnu); permission is shell:allow-execute with static or regex-validated args",
+   "effort": "days",
+   "priority": 2,
+   "risk": "The prover runtimes are large, so the app grows to gigabytes.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "Handy",
+   "url": "https://github.com/cjpais/Handy",
+   "kind": "product",
+   "licence": "MIT (README; name, logo and brand assets excluded)",
+   "take": "code",
+   "what": "Offline push-to-talk app: press a shortcut, speak, and the transcript is pasted into whatever app is focused. Built with Tauri and ggml, using Silero VAD and Parakeet V3 on CPU.",
+   "steal": "Take its global-hotkey, record and paste loop (Rust/Tauri) as dawnr's 'ask anywhere' entry point. A spoken question goes to dawnr, and the checked answer (or the named refusal) is pasted back.",
+   "moves": "Accessible interface for people who do not use a terminal; speech in the product",
+   "evidence": "32.9k stars is not evidence. Concrete facts: distributed via direct download, Homebrew, winget and APT; Parakeet V3 runs on CPU with automatic language detection.",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "The brand cannot be reused. Accessibility permissions differ per OS (macOS needs an accessibility grant).",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "PocketPal AI",
+   "url": "https://github.com/a-ghorbani/pocketpal-ai",
+   "kind": "product",
+   "licence": "MIT (README)",
+   "take": "code",
+   "what": "React Native phone app running GGUF models via llama.cpp, published on the App Store and Google Play, with in-app Hugging Face download and a tokens/s benchmark.",
+   "steal": "Fork it for a dawnr phone client that runs the pure-code checks (quote, extract, arithmetic) on the phone. Its benchmark screen can report whether a device is fast enough.",
+   "moves": "Breadth for ordinary people (phones); hardware coverage",
+   "evidence": "Metal on iOS; OpenCL/Adreno and NPU on Android; ONNX Runtime TTS; 11 UI languages; pushed 2026-10-05",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "No provers on phones, so the program answers need a paired desktop or box. App-store review and upkeep fall on the operator.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "z3-solver (npm)",
+   "url": "https://app.unpkg.com/z3-solver@5.2.0/files/README.md",
+   "kind": "tool",
+   "licence": "MIT (upstream Z3 LICENSE.txt in Z3Prover/z3; the npm README itself states none)",
+   "take": "code",
+   "what": "Z3 compiled to WebAssembly with high-level (Z3Py-like) and low-level TypeScript bindings for browsers and Node.",
+   "steal": "Run t's SMT-level checks (e.g. spec-consistency or arithmetic side conditions) inside the browser page, so a third party can replay part of a certificate client-side with nothing installed.",
+   "moves": "Third-party replay without installing anything; browser page",
+   "evidence": "Version 5.2.0. Needs SharedArrayBuffer with COOP/COEP headers. Chrome 92+, Firefox 89+, Safari 15.2+.",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "This is not Dafny, Verus or Lean: Dafny's .NET-in-browser path is unproven, so only checks dawnr can lower to raw SMT replay in a tab.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "llamafile 0.10",
+   "url": "https://github.com/mozilla-ai/llamafile",
+   "kind": "tool",
+   "licence": "Apache-2.0 (LICENSE, Mozilla Foundation); llama.cpp/whisper.cpp changes MIT",
+   "take": "code",
+   "what": "One executable (Cosmopolitan APE) that bundles llama.cpp, GGUF weights and default args and runs on macOS, Linux, BSD and Windows.",
+   "steal": "Publish a 'dawnr-lite.llamafile' holding the published 4B GGUF plus an .args file (-m /zip/...) for the no-prover modes. That gives people a download-and-double-click trial.",
+   "moves": "Install friction; first-run for non-programmers",
+   "evidence": "Release 0.10.6 on 2026-09-15. Windows executables are capped at 4 GB. Weights are embedded with zipalign and referenced as /zip/.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "The 4 GB Windows cap. It cannot carry the provers or Python checks, so it is a taster, not the product.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "Granite-4.0-H-Tiny",
+   "url": "https://huggingface.co/ibm-granite/granite-4.0-h-tiny",
+   "kind": "model",
+   "licence": "Apache-2.0 (model card)",
+   "take": "weights",
+   "what": "A 7B-total, 1B-active hybrid Mamba2/MoE model (36 Mamba2 + 4 attention layers) with 128K context.",
+   "steal": "Add it to the base-model ladder as a CPU-speed candidate: with 1B active parameters per token it may decode several times faster than the dense 4B on the consumer box. Measure it under the gate on the clean-182 panel.",
+   "moves": "CPU latency; base-model choice by measurement",
+   "evidence": "HumanEval pass@1 83, MBPP 80, BFCL v3 57.65; 64 experts, 6 active",
+   "effort": "days",
+   "priority": 3,
+   "risk": "About 14 GB at BF16, so it needs Q4 to fit RAM. 'Internal synthetic data' in its SFT has an unnamed source (fine for weights we use, not for distilling as data). Contamination audit owed.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "ik_llama.cpp",
+   "url": "https://github.com/ikawrakow/ik_llama.cpp",
+   "kind": "repo",
+   "licence": "MIT (README)",
+   "take": "code",
+   "what": "A llama.cpp fork adding IQ_K and trellis (KT) quants, row-interleaved formats, faster CPU prompt processing and MoE offload controls (--cpu-moe, auto-fit to VRAM).",
+   "steal": "Benchmark dawnr's 4B in IQ4_K / IQ4_KT against mainline Q4_K_M on the Acer Nitro box. Prompt processing speed dominates long document questions, so adopt it only if the gain is real.",
+   "moves": "CPU speed on long document prompts; small-GPU MoE offload",
+   "evidence": "Adds IQ2_K-IQ6_K and IQ1_KT-IQ4_KT, plus Hadamard transforms for the K/V cache; pushed 2026-10-05",
+   "effort": "days",
+   "priority": 3,
+   "risk": "The README gives no head-to-head numbers; a fork drifts from upstream, and its quant files do not load in mainline.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "WebLLM",
+   "url": "https://arxiv.org/abs/2412.15803",
+   "kind": "paper",
+   "licence": "Apache-2.0 (GitHub licence field, mlc-ai/web-llm)",
+   "take": "code",
+   "what": "In-browser LLM engine compiled with MLC/TVM to WebGPU kernels, with an OpenAI-style API.",
+   "steal": "An alternative to wllama for the browser tab on GPU-equipped machines. Its OpenAI-style API lets dawnr's existing page code talk to it unchanged.",
+   "moves": "Zero-install browser reach",
+   "evidence": "Retains up to 80% of native performance on the same device (abstract); pushed 2026-10-03",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Models need MLC compilation, not GGUF. WebGPU on Linux is not shipped by any major browser yet (web.dev).",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "transformers.js v4",
+   "url": "https://github.com/huggingface/transformers.js",
+   "kind": "repo",
+   "licence": "Apache-2.0 (README)",
+   "take": "code",
+   "what": "ONNX models in the browser, Node, Deno and Bun on WASM or WebGPU, with fp32/fp16/q8/q4 dtypes. Pipelines cover ASR, TTS, embeddings and document QA.",
+   "steal": "Use it for the browser tab's small non-LLM parts (sentence embeddings for document retrieval, Moonshine/Parakeet ONNX ASR), not for the 4B.",
+   "moves": "Browser page breadth (speech and retrieval in the tab)",
+   "evidence": "Version 4.3.0; q8 is the WASM default, fp32 the WebGPU default",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Duplicates what the native path already does; another runtime to keep in step.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "Moonshine Voice",
+   "url": "https://github.com/moonshine-ai/moonshine",
+   "kind": "model",
+   "licence": "MIT for code and all streaming and English models (LICENSE); legacy non-English non-streaming models are under the non-commercial Moonshine Community License",
+   "take": "weights",
+   "what": "On-device streaming speech-to-text, intent recognition and TTS, for Python, JS/WASM, iOS, Android and Raspberry Pi.",
+   "steal": "Use the MIT streaming English models as the low-latency 'listen' option on weak CPUs and in the browser tab. Skip the non-commercial legacy models entirely.",
+   "moves": "Speech in the installed command and on phones/Pi",
+   "evidence": "Sizes range down to about 1 MB; some variants claim higher accuracy than Whisper Large V3 (README; no table was on the fetched page)",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Mixed licences need a per-model check. The accuracy claim was unquantified on the page fetched.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "AnythingLLM",
+   "url": "https://github.com/Mintplex-Labs/anything-llm",
+   "kind": "product",
+   "licence": "MIT (README)",
+   "take": "idea",
+   "what": "Desktop and Docker 'chat with your documents' app with drag-and-drop upload, source citations, a no-code agent builder, MCP, and connectors for Ollama, LM Studio and any llama.cpp model.",
+   "steal": "Study its document-upload and citation UI as the reference for dawnr's page. Also register dawnr's OpenAI-style API as a provider it can select, so its users get checked, word-for-word answers without leaving their app.",
+   "moves": "Documents for ordinary people; distribution through an existing user base",
+   "evidence": "Desktop for Mac/Windows/Linux plus an open-source Android app; PDF, TXT and DOCX supported",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Its citations are model-asserted, not verified, so any UI copied must still show dawnr's refusals plainly.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "BitNet b1.58 2B4T + bitnet.cpp",
+   "url": "https://github.com/microsoft/BitNet",
+   "kind": "repo",
+   "licence": "MIT (README and model card huggingface.co/microsoft/bitnet-b1.58-2B-4T)",
+   "take": "idea",
+   "what": "Native ternary-weight LLMs with a dedicated CPU runtime.",
+   "steal": "Track it as the long-run CPU path. If a ternary coder of about 4B appears, it would fit phones and old laptops. For now, run one gate measurement of the 2B4T as a speed floor, not a candidate.",
+   "moves": "Ordinary hardware, energy and latency",
+   "evidence": "0.4 GB non-embedding memory; 29 ms/token CPU decode vs 65 ms for Qwen2.5-1.5B. bitnet.cpp gives 2.37x-6.17x x86 speedup with 71.9-82.2% energy cut. Parallel kernels (Jan 2026) add 1.15x-2.1x.",
+   "effort": "days",
+   "priority": 3,
+   "risk": "The card says research use, not production. No ternary model of dawnr's quality class exists, and it needs its own runtime.",
+   "areas": [
+    "ship"
+   ]
+  },
+  {
+   "name": "ReasoningLab (code-correctness probe before generation)",
+   "url": "https://github.com/CarloDiCicco/ReasoningLab",
+   "kind": "repo",
+   "licence": "Apache-2.0 (repo README / GitHub licence field); paper arXiv 2606.14530 CC BY 4.0",
+   "take": "code",
+   "what": "Linear probe on the final-prompt hidden state of Qwen3-4B-Instruct-2507 that predicts, before any token is generated, whether the first-attempt code will be correct.",
+   "steal": "Take its hidden-state extraction and probe training. Retrain the probe on Qwen3.5-4B states, labelled for free by dawnr's own prover pass/fail logs, and use it only to share out compute: more samples, escalate to 9B, or skip early. It never releases or blocks an answer.",
+   "moves": "Answer rate under a fixed CPU budget (most of the 182 are refused; spend samples where proof is likely)",
+   "evidence": "Held-out AUC 0.881 ± 0.008 on 444 LiveCodeBench tasks; 0.842 after removing prompt length, vs a 0.657 length-only baseline (arXiv 2606.14530 abstract)",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Measured on tests passing, not on proof plus spec completeness; Qwen3.5 GGUF hidden states would need llama.cpp eval callbacks or an HF copy; single-author repo, last push 2026-07-16",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "MAPIE (conformal prediction and risk control)",
+   "url": "https://github.com/scikit-learn-contrib/MAPIE",
+   "kind": "repo",
+   "licence": "BSD-3-Clause (README / GitHub licence field)",
+   "take": "code",
+   "what": "Python library for conformal prediction and distribution-free risk control, including Learn Then Test and precision/recall guarantees.",
+   "steal": "Use Learn Then Test or precision control to set the thresholds where dawnr's checker is weaker than a proof: the document-quote retrieval score, extraction field acceptance and the probe's routing cut-off. Ship the calibrated alpha with each release, e.g. 'wrong-answer rate ≤ 5% at 95% confidence on the calibration set'.",
+   "moves": "Calibration of non-proof answers (documents, extraction), and a stated, measured error bound for everyone instead of an adjective",
+   "evidence": "v1.5.0 released 2026-08-05; README lists risk control with probabilistic guarantees, LTT calibration and exchangeability tests (new in 2026)",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Guarantees need exchangeable labelled calibration data per domain, and English-only document sets limit what can be claimed; scikit-learn dependency",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "model-signing (sigstore/model-transparency, OpenSSF Model Signing)",
+   "url": "https://github.com/sigstore/model-transparency",
+   "kind": "tool",
+   "licence": "Apache-2.0 (README / GitHub licence field)",
+   "take": "code",
+   "what": "CLI and library that sign a model directory as a Sigstore bundle (DSSE envelope with an in-toto statement of per-file digests), with Sigstore, private-key, certificate or PKCS#11 signing.",
+   "steal": "Sign every released GGUF plus its row manifest with `model_signing sign` in key mode. Have install.sh and `dawnr` verify before loading, and record the signature digest in each answer certificate so a replay names the exact weights.",
+   "moves": "Trust chain from installed weights to each certificate; the spaceship goal",
+   "evidence": "Releases v1.0.0 to v1.1.1 (2025-10-10, adds PKCS#11, BLAKE3, private Sigstore trust config); repo pushed 2026-10-05",
+   "effort": "days",
+   "priority": 1,
+   "risk": "Python dependency in the installer path; Sigstore keyless mode needs network (use key mode offline)",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Tessera (tile-based transparency log)",
+   "url": "https://github.com/transparency-dev/tessera",
+   "kind": "repo",
+   "licence": "Apache-2.0 (README / GitHub licence field)",
+   "take": "code",
+   "what": "Go library for append-only tile-based transparency logs with POSIX/GCP/AWS storage, C2SP witness cosigning and offline inclusion proofs.",
+   "steal": "Run a POSIX-backed log as static files (e.g. a GitHub Pages tree) that records hashes of released weights, row sets, held-out panels and published certificates. Each certificate then carries an inclusion proof, so a third party can check offline that the claim was published and never rewritten.",
+   "moves": "Third-party replay; makes contamination and panel audits tamper-evident",
+   "evidence": "v1.0.4 released 2026-07-16; production-ready since v0.2.0; offline proofs once a checkpoint is published",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Go service to maintain; witnesses must be found (Sigsum's are an option, BSD per its docs)",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "LM-Polygraph",
+   "url": "https://github.com/IINemo/lm-polygraph",
+   "kind": "repo",
+   "licence": "MIT (README / GitHub licence field)",
+   "take": "code",
+   "what": "Framework of 40+ uncertainty estimators for LLM generation (token entropy, claim-conditioned probability, semantic entropy, Mahalanobis, EigenScore) with a benchmark.",
+   "steal": "Take the white-box estimators (claim-conditioned probability, mean token entropy) as extra cheap features for the routing probe and for ranking document-answer candidates before the quote check. Use its benchmark protocol (PRR) to report how well the score sorts proved from refused.",
+   "moves": "Answer rate (sample ranking) and calibration without an LLM judge",
+   "evidence": "v0.7.0 released 2026-05-04; examples run Qwen2.5-0.5B and Llama-3.1-8B locally",
+   "effort": "days",
+   "priority": 2,
+   "risk": "HF/PyTorch based, not llama.cpp; some methods (p(True), verbalized) are LLM self-judges and must be excluded",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Generative Prediction Sets (GPS)",
+   "url": "https://arxiv.org/abs/2503.10512",
+   "kind": "paper",
+   "licence": "CC BY-SA 4.0 (arXiv page)",
+   "take": "method",
+   "what": "Conformal method that calibrates the minimum number of samples needed to get an admissible output from a black-box generator, giving a coverage guarantee (tested on code with pass-all-tests as admissibility).",
+   "steal": "Set admissibility to 'proved by the gate'. Calibrate per-domain k, the number of samples to draw before refusing, from dawnr's logs, so 'we tried k and none proved' is a calibrated statement rather than a fixed budget.",
+   "moves": "Answer rate per CPU second and an honest refusal rate",
+   "evidence": "Submitted 2025-03-13, revised 2025-06-16; validity guarantee on code and math across several LLMs",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Paper only (CC BY-SA text, re-implement from the description); guarantee assumes exchangeable problems",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Croissant + RAI vocabulary (mlcroissant)",
+   "url": "https://github.com/mlcommons/croissant",
+   "kind": "tool",
+   "licence": "Apache-2.0 code (README); spec text CC BY-ND 4.0",
+   "take": "code",
+   "what": "MLCommons JSON-LD dataset metadata format, read by Hugging Face, Kaggle and OpenML, with a Responsible-AI extension.",
+   "steal": "Publish dawnr's prover-accepted rows with a Croissant file. Set rai:machineAnnotationTools to the provers and versions, rai:dataCollection to the teacher models (which must be permissive), and rai:dataLimitations to the clean-182 exclusion, then validate with mlcroissant in CI.",
+   "moves": "Data trust and reuse; makes the scarce rows citable and auditable",
+   "evidence": "v1.1.1 released 2026-10-05; RAI spec 1.0 (2024-03-06) defines rai:machineAnnotationTools, rai:dataCollectionRawData, rai:personalSensitiveInformation",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Spec text is No-Derivatives (use it, don't fork it); the metadata is only as honest as the pipeline that fills it",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "ConStat (performance-based contamination test)",
+   "url": "https://github.com/eth-sri/ConStat",
+   "kind": "repo",
+   "licence": "Apache-2.0 (README / GitHub licence field)",
+   "take": "code",
+   "what": "Statistical test (bootstrap, no judge model) for whether a model's score on a benchmark is inflated relative to a matched reference benchmark.",
+   "steal": "Run it on dawnr vN and the base model, comparing the clean-182 against a freshly written, difficulty-matched reference set. This tests whether the base model's pretraining, which row audits cannot see, inflates the panel.",
+   "moves": "Contamination audit beyond dawnr's own rows (the 9/21 finding was row-side only)",
+   "evidence": "Uses bootstrap over accuracy with a random-model baseline; tested on GSM8K, MMLU, ARC, HellaSwag with 20+ reference models",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Stale (last push 2024-07-29); the paper's reference sets were rephrased by a GPT model, so dawnr must write its own reference set, and only for evaluation",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Letta memory blocks",
+   "url": "https://docs.letta.com/guides/agents/memory-blocks",
+   "kind": "repo",
+   "licence": "Apache-2.0 (github.com/letta-ai/letta licence field)",
+   "take": "method",
+   "what": "Agent memory as labelled, size-limited text blocks (label, description, value, limit, read_only) that are always in context and that the user can read and edit through the API.",
+   "steal": "Copy the block schema for a per-person ~/.dawnr/memory file. Each entry holds the person's own sentence plus source and date, with a read_only flag and a character limit. Recall goes through the existing word-for-word quote check, so memory answers carry the same certificate.",
+   "moves": "Breadth for ordinary people (local, inspectable personalisation)",
+   "evidence": "letta 0.16.8 released 2026-05-14, repo pushed 2026-09-10; blocks have a read_only field and full-replace updates via API",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Letta itself is a server platform (too heavy to ship); take only the schema and idea. Its agents rewrite memory with the LLM, which dawnr must not allow",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "AlgoVeri",
+   "url": "https://github.com/haoyuzhao123/algoveri",
+   "kind": "dataset",
+   "licence": "Apache-2.0 (GitHub licence field)",
+   "take": "data",
+   "what": "77 classical algorithms with aligned vericoding tasks in Dafny, Verus and Lean, plus evaluation code (ICML 2026).",
+   "steal": "Add it as a cross-prover held-out evaluation for t (after a heldout_audit against rows), to measure per-prover answer rate on the same problems and pick the order of the seven provers.",
+   "moves": "Reproducible evaluation; prover routing for answer rate",
+   "evidence": "Gemini-3 Flash: 40.3% Dafny, 24.7% Verus, 7.8% Lean on the same 77 problems",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Who wrote the specs is not stated (check before training; use for evaluation); small (77)",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "c2pa-unstructured-text",
+   "url": "https://github.com/writerslogic/c2pa-unstructured-text",
+   "kind": "repo",
+   "licence": "Apache-2.0 OR MIT (docs.rs crate page)",
+   "take": "code",
+   "what": "Rust crate implementing C2PA 2.4 manifest embedding in plain text as invisible Unicode variation selectors, with hard binding, so provenance survives copy and paste.",
+   "steal": "Optionally embed a C2PA manifest that points to the answer certificate digest when a user copies a dawnr answer out of the page or CLI, so the pasted text still names its check. Keep it off by default.",
+   "moves": "Certificates that travel with answers for non-programmers",
+   "evidence": "v0.2.0 released 2026-08-02; implements C2PA spec 2.4 text binding",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Single maintainer, new; invisible characters can be stripped or can upset screen readers and diffs; spec says use only when no other embedding works",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Carcara (Alethe SMT proof checker)",
+   "url": "https://github.com/ufmg-smite/carcara",
+   "kind": "tool",
+   "licence": "Apache-2.0 (README / GitHub licence field)",
+   "take": "code",
+   "what": "Rust checker and elaborator for Alethe-format SMT proofs produced by cvc5 and veriT (TACAS 2023).",
+   "steal": "For provers that can call cvc5 (Frama-C/Why3, SPARK, optionally Dafny/Boogie), emit Alethe proofs and check them with Carcara in the certificate replay. 'Proved' then rests on a small checker, not on the solver's say-so.",
+   "moves": "Spaceship-grade trust; makes the replay independent of SMT solver bugs",
+   "evidence": "Repo pushed 2026-10-04 (last tagged release carcara-1.1.0, 2023-08-29); needs Rust 1.93+",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Z3, the default for Dafny/Verus/F*, does not emit Alethe; cvc5 may prove less, which lowers the answer rate",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "nanoda_lib (external Lean 4 checker)",
+   "url": "https://github.com/ammkrn/nanoda_lib",
+   "kind": "tool",
+   "licence": "Apache-2.0 (GitHub licence field)",
+   "take": "code",
+   "what": "Independent Rust type checker for Lean 4 export files (lean4export), separate from Lean's kernel.",
+   "steal": "Re-check Lean certificates with nanoda in the replay script, the way Rocq has coqchk, so a Lean 'proved' is confirmed by a second kernel.",
+   "moves": "Independent replay of certificates",
+   "evidence": "Repo pushed 2026-09-22; checks lean4export output with configurable axiom handling",
+   "effort": "days",
+   "priority": 3,
+   "risk": "No performance numbers on the page; needs lean4export in the toolchain",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "infini-gram",
+   "url": "https://github.com/liujch1998/infini-gram",
+   "kind": "tool",
+   "licence": "Apache-2.0 (README / GitHub licence field)",
+   "take": "code",
+   "what": "Suffix-array engine that counts arbitrary-length n-grams and retrieves matching documents in trillion-token corpora in tens of milliseconds, with self-hostable indexes and a free API.",
+   "steal": "Add a heldout_audit pass that looks up long n-grams of each clean-182 problem and reference solution in public pretraining-corpus indexes. Self-index dawnr's own row store the same way for exact-overlap audits at any scale.",
+   "moves": "Contamination audits beyond dawnr's rows",
+   "evidence": "v2.6.0 released 2025-05-15, repo pushed 2026-01-24",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Qwen's pretraining corpus is not public, so a hit is evidence and a miss is not proof; large indexes need disk",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Inspect (UK AISI eval framework)",
+   "url": "https://github.com/UKGovernmentBEIS/inspect_ai",
+   "kind": "tool",
+   "licence": "MIT (README / GitHub licence field)",
+   "take": "code",
+   "what": "Open framework for LLM evaluations with tools, multi-turn dialogue and 200+ prebuilt evals, from the UK AI Security Institute.",
+   "steal": "Port score_levels and the panels to Inspect tasks so each published number comes with a standard log a third party can rerun. Use its scorer slot for the prover gate, not a model grader.",
+   "moves": "Reproducible evaluation that others recognise",
+   "evidence": "7,902 commits, pushed 2026-10-05; over 200 prebuilt evaluations",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Porting cost; the fetched page did not confirm llama.cpp support (use its OpenAI-compatible provider against dawnr's API)",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Data Provenance Collection",
+   "url": "https://github.com/Data-Provenance-Initiative/Data-Provenance-Collection",
+   "kind": "dataset",
+   "licence": "Apache-2.0 (README / GitHub licence field)",
+   "take": "data",
+   "what": "Audit of 1,800+ fine-tuning datasets in 44 collections, with licence, creator and model-generated-source metadata, plus filter scripts.",
+   "steal": "Use its metadata and filters as an extra input to the --refuse-gpl and 'no GPT/Claude/Gemini/Llama-written rows' gate when admitting any outside dataset.",
+   "moves": "Data admission by graded trust without licence mistakes",
+   "evidence": "44 collections, 1,800+ datasets; filters by licence and by model-generated provenance",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Stale (last push 2025-03-26); not legal advice; covers older datasets only",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "SAELens + nnsight (train your own SAE)",
+   "url": "https://github.com/ndif-team/nnsight",
+   "kind": "tool",
+   "licence": "nnsight MIT; SAELens MIT (GitHub licence fields)",
+   "take": "code",
+   "what": "nnsight reads and edits any PyTorch model's internals (also wraps vLLM); SAELens trains and loads sparse autoencoders.",
+   "steal": "Train a small SAE on Qwen3.5-4B residuals over dawnr's own prompts, since Qwen-Scope's weights are not permissively licensed. Use its features to explain refusals per domain (what kind of problem fails) and to find gaps in the panel.",
+   "moves": "Interpretability of a small open model, and understanding the answer-rate bottleneck",
+   "evidence": "nnsight v0.8.0.rc1 2026-09-09; SAELens pushed 2026-10-04",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "GPU time on the 4080; SAE features are descriptive, never a check",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Qwen-Scope SAEs",
+   "url": "https://huggingface.co/Qwen/SAE-Res-Qwen3.5-9B-Base-W64K-L0_50",
+   "kind": "model",
+   "licence": "Qwen licence (model card: 'License: Qwen') — not permissive, idea only",
+   "take": "idea",
+   "what": "Qwen team's sparse-autoencoder suite: 14 groups across 7 Qwen3/Qwen3.5 backbones, e.g. 9B with 64K features, L0 50, on all 32 layers.",
+   "steal": "Copy the paper's uses (arXiv 2605.11887) with a self-trained SAE: steering against code-switching and repetition, and measuring benchmark redundancy and capability coverage of the clean-182.",
+   "moves": "Interpretability; panel coverage analysis",
+   "evidence": "Released 2026-04-30; 9B checkpoint is 32 layer files, width 65,536, L0 50",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Licence blocks shipping or training on the weights; no 4B checkpoint was seen on the pages fetched",
+   "areas": [
+    "trust"
+   ]
+  },
+  {
+   "name": "Large Language Monkeys (repeated sampling)",
+   "url": "https://arxiv.org/abs/2407.21787",
+   "kind": "paper",
+   "licence": "none stated on abs page (method only, nothing copied)",
+   "take": "method",
+   "what": "Study showing coverage (any sample correct) grows log-linearly with sample count over four orders of magnitude.",
+   "steal": "Measure coverage@k (k=1..64) of the 4B on the clean 182 under the existing gate, then add a per-question sampling budget to bin/dawnr; the gate already picks the winner, so coverage becomes answer rate directly.",
+   "moves": "Answer rate (17/182) without new training",
+   "evidence": "DeepSeek-Coder-V2 on SWE-bench Lite: 15.9% at 1 sample to 56% at 250; with automatic verifiers coverage converts to accuracy, while majority vote and reward models plateau after a few hundred samples",
+   "effort": "days",
+   "priority": 1,
+   "risk": "CPU latency: k samples of a 4B is k times slower; needs a time budget and early stop on first proof",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "TiCoder (test-driven user-intent formalization)",
+   "url": "https://arxiv.org/abs/2404.10100",
+   "kind": "paper",
+   "licence": "none stated on abs page (method only)",
+   "take": "method",
+   "what": "Interactive loop where the system proposes tests and the user says yes or no, which both pins the intent and prunes candidate programs.",
+   "steal": "Before proving, show the person 1-3 concrete input/output examples drawn from disagreements among sampled candidates ('should f([3,1]) give [1,3]?'); approved examples are added to the t spec and filter candidates. A refusal from a weak spec turns into a question.",
+   "moves": "Spec bottleneck (right, complete specification) and use by non-programmers",
+   "evidence": "Average absolute +45.97% pass@1 within 5 user interactions across 4 LLMs and 2 datasets; earlier version 48.39% to 70.49% with one query on MBPP; user study n=15 showed better judgement of AI code and lower cognitive load",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "Numbers come from simulated users and large models; needs an offline-friendly UI in the page and CLI",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "Amazon Bedrock Automated Reasoning checks",
+   "url": "https://aws.amazon.com/blogs/aws/minimize-ai-hallucinations-and-deliver-up-to-99-verification-accuracy-with-automated-reasoning-checks-now-available/",
+   "kind": "product",
+   "licence": "proprietary service (idea only)",
+   "take": "idea",
+   "what": "Compiles a natural-language policy document into variables, typed rules and SMT, then checks each model answer against it.",
+   "steal": "Copy the shape for dawnr's documents mode: compile a person's rule document once into checked rules with IDs and saved test scenarios, and adopt the four verdicts (valid, invalid, satisfiable = true only under named assumptions, ambiguous = several readings) instead of answer-or-refuse.",
+   "moves": "Documents breadth and answer rate (conditional answers instead of refusals)",
+   "evidence": "Claims up to 99% accuracy detecting correct responses; policies up to 122,880 tokens (about 100 pages); rules carry IDs for traceability and SMT-LIB is viewable",
+   "effort": "weeks",
+   "priority": 1,
+   "risk": "Proprietary; the document-to-logic translation is itself LLM work and must be gated (round-trip or user-approved scenarios)",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "Logic-LM",
+   "url": "https://github.com/teacherpeterpan/Logic-LLM",
+   "kind": "repo",
+   "licence": "MIT (repo)",
+   "take": "code",
+   "what": "LLM translates a word problem into FOL/CSP/SMT, a deterministic solver answers, solver errors drive self-refinement.",
+   "steal": "Take the translation prompts and solver glue as a new dawnr answer class 'rules and logic puzzles' checked by Z3, with the solver's model as the certificate; reuse its refinement-from-solver-error loop.",
+   "moves": "Breadth for ordinary people (scheduling, eligibility, logic questions) with a non-LLM check",
+   "evidence": "+39.2% over standard prompting and +18.4% over chain-of-thought across ProntoQA, ProofWriter, FOLIO, LogicalDeduction, AR-LSAT",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Only 18 commits, looks unmaintained; bundled datasets carry their own licences (FOLIO etc. not checked here); translation faithfulness is not checked by the solver",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "nl2postcond (Endres, Fakhoury, Chakraborty, Lahiri)",
+   "url": "https://arxiv.org/abs/2310.01831",
+   "kind": "paper",
+   "licence": "none stated on abs page (method only)",
+   "take": "method",
+   "what": "Measures LLM-written postconditions by test-set correctness and by how many buggy variants they reject.",
+   "steal": "Add a spec-strength score to the gate and the data pipeline: a t spec must accept the reference and reject mutated implementations; rows whose spec kills few mutants are flagged as weak before training.",
+   "moves": "Spec completeness and data quality",
+   "evidence": "Generated postconditions caught 64 real historical Defects4J bugs (FSE 2024)",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Mutant generation for t needs writing; mutants can be equivalent programs",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "Conformal factuality (Mohri and Hashimoto)",
+   "url": "https://arxiv.org/abs/2402.10978",
+   "kind": "paper",
+   "licence": "none stated on abs page (method only)",
+   "take": "method",
+   "what": "Back-off that removes sub-claims until the remaining output meets a calibrated correctness level.",
+   "steal": "Apply the back-off idea deterministically: when the full spec fails, release the strongest sub-specification that did prove ('proved: output sorted; not proved: same elements') and, for documents, the subset of sentences that quote-check.",
+   "moves": "Answer rate via honest partial answers",
+   "evidence": "80-90% correctness guarantees while retaining the majority of the original output, on FActScore, NaturalQuestions and MATH",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Their guarantee is statistical; dawnr must keep its parts exact and label partial answers clearly",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "Grounded abstraction matching (CHI 2023) and ColDeco",
+   "url": "https://arxiv.org/abs/2304.06597",
+   "kind": "paper",
+   "licence": "none stated on abs page (idea only)",
+   "take": "idea",
+   "what": "Translates generated code back into a systematic, editable English utterance that re-invokes exactly that code; ColDeco adds helper columns and edge-case rows for checking table programs.",
+   "steal": "In the browser page, render each released t program and spec as a canonical English paraphrase generated by rule (not by the model), editable and re-runnable, plus intermediate-value columns for table questions.",
+   "moves": "Use by people who do not program; makes what was checked visible",
+   "evidence": "Think-aloud study n=24 improved users' grasp of the model's scope and of the phrasing it needs; ColDeco within-subjects study n=24, helper columns most valued (VL/HCC 2023)",
+   "effort": "weeks",
+   "priority": 2,
+   "risk": "Microsoft research prototypes; no code taken",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "cedar-spec (verification-guided development)",
+   "url": "https://github.com/cedar-policy/cedar-spec",
+   "kind": "repo",
+   "licence": "Apache-2.0 (repo)",
+   "take": "method",
+   "what": "Lean formalization of the Cedar policy language plus differential randomized testing against the production Rust engine.",
+   "steal": "Write t's semantics once in Lean and differentially fuzz dawnr's t interpreter and its seven prover translations against it, so the trusted base (not just answers) has evidence.",
+   "moves": "Spaceship-grade trust in the checker itself",
+   "evidence": "764 commits; components cedar-lean (proofs), cedar-drt (fuzzing/differential tests), cedar-policy-generators",
+   "effort": "months",
+   "priority": 2,
+   "risk": "Large upfront Lean work; needs a maintainer who knows Lean",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "AlphaGeometry",
+   "url": "https://github.com/google-deepmind/alphageometry",
+   "kind": "repo",
+   "licence": "Apache-2.0 code; CC BY 4.0 checkpoints (README)",
+   "take": "idea",
+   "what": "A 152M language model proposes only auxiliary constructions; a symbolic deduction engine (DD+AR) does the rest of the proof.",
+   "steal": "Shift the model's job toward the small creative piece (a loop invariant, a helper lemma, one spec clause) and let deterministic search and templates fill the remainder of the t program and proof.",
+   "moves": "Answer rate; small-model feasibility on CPU",
+   "evidence": "DDAR alone 14/30 IMO problems, with the 152M model 25/30; JGEX 198/231 to 228/231",
+   "effort": "months",
+   "priority": 2,
+   "risk": "Paper setup used 4 V100s and 250 CPU workers at beam 512; geometry is a narrow domain",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "Pint",
+   "url": "https://github.com/hgrecco/pint",
+   "kind": "repo",
+   "licence": "BSD (README)",
+   "take": "code",
+   "what": "Python library for quantities with units and dimensional analysis.",
+   "steal": "Run numeric answers with units through Pint in dawnr calc: refuse when dimensions disagree, convert exactly, and record units in the certificate.",
+   "moves": "Questions with numbers for ordinary people (recipes, travel, science homework)",
+   "evidence": "3,008 commits; supports Python 3.12+; unit definitions from editable text files; NumPy/pandas integration",
+   "effort": "days",
+   "priority": 2,
+   "risk": "Float by default; must pair with dawnr's exact arithmetic (Fraction/Decimal magnitudes)",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "docassemble",
+   "url": "https://docassemble.org/docs/license.html",
+   "kind": "tool",
+   "licence": "MIT (software); CC BY 3.0 (docs)",
+   "take": "idea",
+   "what": "Guided-interview engine (Python/YAML) that asks only the questions needed to reach a document or answer.",
+   "steal": "When a check fails for a missing fact, generate the specific follow-up question (docassemble's demand-driven question order) instead of a refusal.",
+   "moves": "Use by everyone; converts refusals into questions",
+   "evidence": "Licence page: MIT core; GPL tools (Pandoc, LaTeX) called only as subprocesses",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Heavy server stack; take the pattern, not the platform",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "Blawx",
+   "url": "https://github.com/Lexpedite/blawx",
+   "kind": "repo",
+   "licence": "MIT (repo)",
+   "take": "idea",
+   "what": "Visual (Blockly) rules-as-code tool over s(CASP) that gives answers with logical explanations and hypothetical reasoning for non-programmers.",
+   "steal": "Borrow its explanation trees (each conclusion with the rule and fact that justify it) as the plain-language view of a dawnr certificate.",
+   "moves": "Explainable refusals and answers for non-programmers",
+   "evidence": "1,134 commits; 198 open issues; self-described as not production-ready",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Not production-ready; SWI-Prolog/s(CASP) dependency",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "Equational Theories Project",
+   "url": "https://github.com/teorth/equational_theories",
+   "kind": "repo",
+   "licence": "Apache-2.0 (repo)",
+   "take": "method",
+   "what": "Tao's crowdsourced project settling about 22 million magma-law implications with ATPs and counterexample finders, every result certified in Lean.",
+   "steal": "Put cheap refuters (Mace4-style finite model search, random testing) in front of the seven provers to reject wrong specs fast, and mine automated-tool output as bulk training rows.",
+   "moves": "Data scarcity and prover time",
+   "evidence": "4,694 laws, about 22M implications; tools used: Prover9, Mace4, Vampire, E, twee, Zipperposition, Z3, egg; 1,785 commits",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Domain is abstract algebra, not programs; transfer is the pipeline, not the data",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "VeriEQL",
+   "url": "https://arxiv.org/abs/2403.03193",
+   "kind": "paper",
+   "licence": "paper CC BY 4.0; artifact on Zenodo (licence not checked)",
+   "take": "idea",
+   "what": "SMT-based bounded equivalence checker for complex SQL that produces counterexamples.",
+   "steal": "For questions over a person's spreadsheets, answer with SQL run by an embedded engine and check candidate queries against each other; a counterexample table becomes the follow-up question.",
+   "moves": "Questions with numbers over tables",
+   "evidence": "Proves or disproves over 70% of 24,455 benchmarks; found bugs in MySQL and Apache Calcite (OOPSLA 2024)",
+   "effort": "weeks",
+   "priority": 3,
+   "risk": "Bounded equivalence only; equivalence between two model outputs is not correctness",
+   "areas": [
+    "reframe"
+   ]
+  },
+  {
+   "name": "Query4Regex",
+   "url": "https://github.com/peer0/Query4Regex",
+   "kind": "dataset",
+   "licence": "MIT (repo)",
+   "take": "data",
+   "what": "1,000 regex-transformation tasks from natural language or a DSL, graded by DFA equivalence via pyformlang.",
+   "steal": "Add 'find text matching a pattern' as an answer class whose check is DFA equivalence or exhaustive matching on the person's text; use the set for evaluation.",
+   "moves": "Breadth with a decidable check",
+   "evidence": "Best five-shot: Phi-4-reasoning 14B 29.2%, gpt-oss-120B 28.3%, gemma-3-27B 20.2%",
+   "effort": "days",
+   "priority": 3,
+   "risk": "Only 3 commits; README does not say who wrote the natural-language forms; confirm no model wrote them before training (evaluation is fine)",
+   "areas": [
+    "reframe"
+   ]
+  }
+ ],
+ "verified": [
+  {
+   "name": "Re:Form subset reward (Veri-Code/ReForm)",
+   "url": "https://github.com/Veri-Code/ReForm",
+   "exists": true,
+   "last_activity": "2026-05-07 (last push)",
+   "licence_found": "\"The Re:Form-specific code and documentation in this repository are released under the MIT License. Third-party components keep their original licenses; in particular, `LLaMA-Factory/` and the copied `verl/` code include Apache-2.0 notices.\"",
+   "may_copy": true,
+   "evidence_supported": "partly",
+   "verdict": "take",
+   "note": "The MIT licence is confirmed. The abstract confirms that 0.5B SFT gives verifiable Dafny and that RL beats the baselines on DafnyComp, but I did not find the 14.0%/8.3% figures or the trivial-spec claim in what I fetched. The Claude-written data may carry provider terms."
+  },
+  {
+   "name": "Propose, Solve, Verify (PSV)",
+   "url": "https://arxiv.org/html/2512.18160v1",
+   "exists": true,
+   "last_activity": "2026-03-28 (abwilf/psv last push)",
+   "licence_found": "github.com/abwilf/psv: GitHub API licence = null, and the README states no licence. I did not check the paper's own licence.",
+   "may_copy": false,
+   "evidence_supported": "partly",
+   "verdict": "idea-only",
+   "note": "The paper HTML confirms 65.63%, 36.78% and 19.07%, the 47.7% valid specs and the -10.6% fixed-prompt drop. I did not find the -51.5% and -5.6% figures as worded. The code has no licence, so learn the method only."
+  },
+  {
+   "name": "Rango (proof + premise retrieval)",
+   "url": "https://github.com/rkthomps/coq-modeling",
+   "exists": true,
+   "last_activity": "2026-02-23 (last push)",
+   "licence_found": "GitHub licence field: MIT",
+   "may_copy": true,
+   "evidence_supported": "partly",
+   "verdict": "take",
+   "note": "The abstract confirms 32.0% on CoqStoq and +47% from adding proofs. I did not check the lemma-retriever +3%. The CoqStoq data licence is unstated, so treat the data as not copyable."
+  },
+  {
+   "name": "APOLLO (sorrify plus subgoal repair)",
+   "url": "https://github.com/aziksh-ospanov/APOLLO",
+   "exists": true,
+   "last_activity": "2025-11-17 (last push)",
+   "licence_found": "GitHub licence field: MIT",
+   "may_copy": true,
+   "evidence_supported": "partly",
+   "verdict": "take",
+   "note": "The README table confirms Kimina 70.8%→75.0% at 307 samples and Goedel-SFT 25600→362. The 84.9% figure is Goedel-V2-8B at budget 63, not 'under-8B models at budget 128'."
+  },
+  {
+   "name": "CRANE (constrain only the answer region)",
+   "url": "https://github.com/uiuc-focal-lab/crane",
+   "exists": true,
+   "last_activity": "2026-01-11 (last push)",
+   "licence_found": "GitHub licence field: MIT",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The paper confirms Qwen2.5-1.5B with CRANE at 31%, 5 points above unconstrained (26%), and FOLIO Llama-3.1-8B at 32.02→46.31. It depends on SynCode, whose licence needs a separate check."
+  },
+  {
+   "name": "Docling",
+   "url": "https://github.com/docling-project/docling",
+   "exists": true,
+   "last_activity": "v2.133.0 released 2026-10-03; pushed 2026-10-05",
+   "licence_found": "\"The Docling codebase is under MIT license. For individual model usage, please refer to the model licenses found in the original packages.\"",
+   "may_copy": true,
+   "evidence_supported": "partly",
+   "verdict": "take",
+   "note": "The release date and MIT licence are confirmed. The s/page timings are not in the abstract and I did not check them. The models have their own licences."
+  },
+  {
+   "name": "deepset/deberta-v3-base-squad2",
+   "url": "https://huggingface.co/deepset/deberta-v3-base-squad2",
+   "exists": true,
+   "last_activity": "2024-09-24 (last modified)",
+   "licence_found": "model card license: cc-by-4.0",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The card metadata gives exact_match 83.8248 and F1 87.41."
+  },
+  {
+   "name": "TAT-QA",
+   "url": "https://github.com/NExTplusplus/TAT-QA",
+   "exists": true,
+   "last_activity": "2024-12-09 (last push)",
+   "licence_found": "\"The TAT-QA dataset is under the license of Creative Commons (CC BY) Attribution 4.0 International\"; repo licence field MIT",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The README states 16,552 questions over 2,757 hybrid contexts."
+  },
+  {
+   "name": "FinQA",
+   "url": "https://github.com/czyssrs/FinQA",
+   "exists": true,
+   "last_activity": "2022-06-06 (last push)",
+   "licence_found": "LICENSE: \"MIT License Copyright (c) 2021 Zhiyu Chen\"",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The abstract says \"written by financial experts\", and the README gives the corrected 61.24 execution accuracy. The repo has been inactive since 2022, but the data is static."
+  },
+  {
+   "name": "CaMeL (Defeating Prompt Injections by Design)",
+   "url": "https://github.com/google-research/camel-prompt-injection",
+   "exists": true,
+   "last_activity": "2025-06-20 (last push)",
+   "licence_found": "GitHub licence field: Apache-2.0",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The abstract confirms 77% vs 84% on AgentDojo. The README warns this is a research artifact that \"likely contains bugs\" and \"might not be fully secure\", so take the method, not production code."
+  },
+  {
+   "name": "Catala + catala-examples",
+   "url": "https://github.com/CatalaLang/catala",
+   "exists": true,
+   "last_activity": "1.3.0 released 2026-10-01; pushed 2026-10-05",
+   "licence_found": "README: \"the Apache license (version 2) unless another license is explicited\"; catala-examples licence field Apache-2.0",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The 1.3.0 release notes confirm `clerk run --trace` with `--trace-format=json` and traces in the Java, Python and OCaml backends. I did not check the commit count."
+  },
+  {
+   "name": "NeMo-Speech.cpp",
+   "url": "https://github.com/NVIDIA/NeMo-Speech.cpp",
+   "exists": true,
+   "last_activity": "v0.2.0 released 2026-10-02; nightly 2026-10-04",
+   "licence_found": "README: \"Apache License 2.0, NOTICE. Third-party ... Third-Party Notices\"; LICENSE is Apache 2.0",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The README confirms 27 ms per 160 ms chunk on CPU, 6x real time, Q8_0, OpenAI-compatible subsets and realtime WebSocket. Check THIRD_PARTY_NOTICES before vendoring."
+  },
+  {
+   "name": "NeMo Forced Aligner (method) + parakeet-ctc-0.6b",
+   "url": "https://www.isca-archive.org/interspeech_2023/rastorgueva23_interspeech.pdf",
+   "exists": true,
+   "last_activity": "unknown",
+   "licence_found": "Paper: no licence statement found. nvidia/parakeet-ctc-0.6b card: cc-by-4.0",
+   "may_copy": false,
+   "evidence_supported": "yes",
+   "verdict": "idea-only",
+   "note": "The paper table confirms 98.35, MFA 82.93* (only 5 of 16 files), 85.65/71.09 on ASR text, and RTF 149. Implement the method ourselves; the weights alone are CC-BY and copyable."
+  },
+  {
+   "name": "OvisOCR2",
+   "url": "https://huggingface.co/ATH-MaaS/OvisOCR2",
+   "exists": true,
+   "last_activity": "2026-08-28 (last modified)",
+   "licence_found": "\"This project is licensed under the Apache License, Version 2.0 (SPDX-License-Identifier: Apache-2.0)\"",
+   "may_copy": true,
+   "evidence_supported": "partly",
+   "verdict": "take",
+   "note": "The card confirms 96.58 on OmniDocBench v1.6 and top of the leaderboard. The Qwen3-VL 89.78 comparison is in an image I did not read. A Hub search shows 11 GGUF repos, not 25 quantized variants."
+  },
+  {
+   "name": "sherpa-onnx",
+   "url": "https://github.com/k2-fsa/sherpa-onnx",
+   "exists": true,
+   "last_activity": "v1.13.8 released 2026-09-10",
+   "licence_found": "GitHub licence field: Apache-2.0",
+   "may_copy": true,
+   "evidence_supported": "partly",
+   "verdict": "take",
+   "note": "The release date and keyword spotting are confirmed. I did not check the 4.6 MB int8 KWS encoder or diarization confidence."
+  },
+  {
+   "name": "Jan (desktop app on Tauri + llama.cpp)",
+   "url": "https://github.com/janhq/jan",
+   "exists": true,
+   "last_activity": "pushed 2026-10-05; v0.8.4 released 2026-07-23",
+   "licence_found": "LICENSE: \"Copyright 2025 Menlo Research ... Licensed under the Apache License, Version 2.0 ... Attribution is requested in user-facing documentation and materials, where appropriate.\"",
+   "may_copy": true,
+   "evidence_supported": "partly",
+   "verdict": "take",
+   "note": "The README confirms exe, dmg, deb, AppImage and macOS 13.6+ with 8 GB for 3B models. I did not see Flatpak. GitHub shows NOASSERTION because of the attribution line."
+  },
+  {
+   "name": "DFlash block-diffusion drafters",
+   "url": "https://github.com/z-lab/dflash",
+   "exists": true,
+   "last_activity": "v0.1.0 released 2026-08-18",
+   "licence_found": "GitHub licence field: MIT",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The README lists Qwen3.5 4B/9B/27B/35B-A3B drafters and llama.cpp/vLLM/SGLang/MLX backends. The abstract confirms over 6x lossless and up to 2.5x over EAGLE-3. The licences of the individual drafter weights on HF were not checked."
+  },
+  {
+   "name": "ReasoningLab (code-correctness probe before generation)",
+   "url": "https://github.com/CarloDiCicco/ReasoningLab",
+   "exists": true,
+   "last_activity": "2026-07-16 (last push)",
+   "licence_found": "README: \"Apache 2.0. See LICENSE.\"",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The abstract confirms AUC 0.881±0.008 on 444 LCB tasks, 0.842 residualized, and a 0.657 length baseline. It is a single-model (Qwen3-4B) study."
+  },
+  {
+   "name": "MAPIE (conformal prediction and risk control)",
+   "url": "https://github.com/scikit-learn-contrib/MAPIE",
+   "exists": true,
+   "last_activity": "v1.5.0 released 2026-08-05",
+   "licence_found": "\"MAPIE is free and open-source software licensed under the BSD-3-Clause license\"",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The README's 2026 section names risk control and exchangeability tests and cites Learn Then Test."
+  },
+  {
+   "name": "model-signing (sigstore/model-transparency)",
+   "url": "https://github.com/sigstore/model-transparency",
+   "exists": true,
+   "last_activity": "v1.1.1 released 2025-10-10; pushed 2026-10-05",
+   "licence_found": "GitHub licence field: Apache-2.0",
+   "may_copy": true,
+   "evidence_supported": "yes",
+   "verdict": "take",
+   "note": "The v1.1.0 notes (2025-10-10) list PKCS#11, a private Sigstore trust_config and BLAKE3."
+  },
+  {
+   "name": "Large Language Monkeys (repeated sampling)",
+   "url": "https://arxiv.org/abs/2407.21787",
+   "exists": true,
+   "last_activity": "unknown",
+   "licence_found": "none stated in the arXiv API abstract I fetched",
+   "may_copy": false,
+   "evidence_supported": "yes",
+   "verdict": "idea-only",
+   "note": "The abstract confirms 15.9%→56% at 250 samples, that verifiers convert coverage to accuracy, and that majority vote and reward models plateau. It is a method only."
+  },
+  {
+   "name": "TiCoder (test-driven user-intent formalization)",
+   "url": "https://arxiv.org/abs/2404.10100",
+   "exists": true,
+   "last_activity": "unknown",
+   "licence_found": "none stated in the arXiv API abstract I fetched",
+   "may_copy": false,
+   "evidence_supported": "partly",
+   "verdict": "idea-only",
+   "note": "The abstract confirms +45.97% within 5 interactions and the n=15 study with lower cognitive load. I did not check the earlier-version 48.39→70.49 MBPP figures."
+  },
+  {
+   "name": "Amazon Bedrock Automated Reasoning checks",
+   "url": "https://aws.amazon.com/blogs/aws/minimize-ai-hallucinations-and-deliver-up-to-99-verification-accuracy-with-automated-reasoning-checks-now-available/",
+   "exists": true,
+   "last_activity": "unknown",
+   "licence_found": "proprietary AWS service; no open licence",
+   "may_copy": false,
+   "evidence_supported": "yes",
+   "verdict": "idea-only",
+   "note": "The blog confirms up to 99%, 122,880 tokens (about 100 pages), a unique ID per rule for traceability, and viewable SMT-LIB."
+  }
+ ]
+}
