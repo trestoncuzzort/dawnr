@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import functools
 import hashlib
 import json
 import os
@@ -361,9 +362,13 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("file", type=Path)
     c.add_argument("--spec", type=Path, help="a specification the program must keep unchanged (a t task, as `dawnr prove` reads)")
     c.add_argument("--jobs", type=int, default=2, help="provers at once")
+    c.add_argument("--kernels", default="", help="replay with these provers only, comma-separated (default: every one installed)")
     c.add_argument("--json", type=Path)
     a = ap.parse_args(argv)
     os.environ.setdefault("T_MIN_KERNELS", "1")                 # one installed prover is enough to replay with
+    unknown = [k for k in a.kernels.split(",") if k and k not in spec_check.KERNELS]
+    if unknown:
+        raise SystemExit(f"check: no prover is called {unknown[0]}; the seven are {', '.join(spec_check.KERNELS)}")
     try:
         certificate = json.loads(a.file.read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
@@ -376,7 +381,7 @@ def main(argv: list[str] | None = None) -> int:
             spec = prove.read_spec(a.spec.read_text(encoding="utf-8"))
         except (OSError, prove.Refused) as error:
             raise SystemExit(f"check: {error}")
-    report = check(certificate, jobs=a.jobs, spec=spec)
+    report = check(certificate, prover=functools.partial(gate.prove, kernels=a.kernels) if a.kernels else None, jobs=a.jobs, spec=spec)
     print(render(report))
     if a.json:
         a.json.write_text(json.dumps(report, indent=1, default=str) + "\n", encoding="utf-8")

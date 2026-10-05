@@ -213,6 +213,14 @@ times, and shows an answer only when every working it could compute gives
 the same number. The working is printed, because it is the reading of your
 question that was computed.
 
+If you would rather not use a terminal, `dawnr serve api` starts the models
+and prints a link. The page behind it has everything above (ask, check a
+function you have, prove a specification, answer from your files, numbers,
+replay a certificate), and the same address is an HTTP API for programs:
+`POST /v1/jobs` with `{"kind": "ask", "question": ..., "tests": [...]}`
+returns a job to poll, cancel, and fetch a certificate from. It listens on
+your machine only, and every request needs the token in that link.
+
 A question takes one to two minutes on an ordinary CPU (the two commands above
 took 130 and 92 seconds on a desktop's), and 11 to 27 seconds
 on that laptop's card (19 for a first question that also starts the models, 27

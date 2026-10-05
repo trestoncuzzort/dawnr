@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dawnr</title>
+<!-- The page over t/serve_api.py. One file, nothing fetched from anywhere but this machine. Everything a job
+     returns is put on the page as text (textContent), never as markup: it is model output and the person's files. -->
+<style>
+  :root { --ink: #1c2024; --soft: #5b6470; --line: #d9dee4; --paper: #fbfcfd; --card: #ffffff; --go: #1f6f43; --hold: #8a5a00;
+          --stop: #a3261f; --accent: #24507a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #e6e9ec; --soft: #9aa4af; --line: #2c333b; --paper: #14181c; --card: #1b2026; --go: #6fcf97; --hold: #e3b35b;
+            --stop: #f08a80; --accent: #8ab8e6; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 18px 16px 6px; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: .01em; }
+  header p { margin: 4px 0 0; color: var(--soft); }
+  main { max-width: 900px; margin: 0 auto; padding: 8px 16px 48px; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 12px; }
+  nav button { border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 7px 12px; border-radius: 6px;
+               font: inherit; cursor: pointer; }
+  nav button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  section { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  section.on { display: block; }
+  section > p { margin: 0 0 10px; color: var(--soft); }
+  label { display: block; font-weight: 600; margin: 10px 0 4px; }
+  label small { font-weight: 400; color: var(--soft); }
+  textarea, input[type=text], select { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+            background: var(--paper); color: var(--ink); font: 13.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  textarea { min-height: 84px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 110px 2fr 34px; gap: 6px; margin-bottom: 6px; }
+  .row button, .plain { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 6px; cursor: pointer;
+                        font: inherit; padding: 6px 10px; }
+  .run { margin-top: 12px; background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 9px 18px; font: inherit;
+         font-weight: 600; cursor: pointer; }
+  .run:disabled { opacity: .5; cursor: default; }
+  #out { margin-top: 16px; display: none; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  #state { color: var(--soft); }
+  #verdict { font-weight: 700; font-size: 16px; margin: 4px 0 8px; overflow-wrap: anywhere; }
+  #verdict.go { color: var(--go); } #verdict.hold { color: var(--hold); } #verdict.stop { color: var(--stop); }
+  pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  #actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  #health { color: var(--soft); font-size: 13px; }
+  #notoken { display: none; background: var(--card); border: 1px solid var(--stop); border-radius: 8px; padding: 14px 16px; margin-top: 14px; }
+  .modes { display: flex; gap: 16px; margin: 8px 0; } .modes label { font-weight: 400; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>dawnr</h1>
+  <p>Everything here runs on this machine. Nothing is shown unless something that did not write it agreed.</p>
+  <div id="health"></div>
+</header>
+<main>
+  <div id="notoken">This page needs the link dawnr printed when it started (it ends in <code>#token=…</code>). Open that link.</div>
+  <nav role="tablist" id="tabs"></nav>
+
+  <section id="ask">
+    <p>Describe a function and give examples. An answer is shown only if it passes them, its specification holds at an independently written solution's answers, and a prover proves it.</p>
+    <label for="ask-q">The function, in words</label>
+    <textarea id="ask-q" placeholder="Write a function that returns the larger of two numbers."></textarea>
+    <label for="ask-t">Examples <small>one <code>assert f(arguments) == value</code> a line</small></label>
+    <textarea id="ask-t" placeholder="assert larger(3, 5) == 5&#10;assert larger(9, 2) == 9"></textarea>
+  </section>
+
+  <section id="verify">
+    <p>Paste a Python function you already have. dawnr runs it in a sandbox to see what it does, and shows a proved twin with the specification it meets, or says why not.</p>
+    <label for="verify-p">Your function <small>annotate the parameters (int, bool, str, list[int], list[str], list[list[int]]) or give examples below</small></label>
+    <textarea id="verify-p" style="min-height:150px" placeholder="def largest(xs: list[int]) -> int:&#10;    best = xs[0]&#10;    for x in xs[1:]:&#10;        if x > best:&#10;            best = x&#10;    return best"></textarea>
+    <label for="verify-t">Examples <small>optional</small></label>
+    <textarea id="verify-t" placeholder="assert largest([1, 5, 2]) == 5"></textarea>
+  </section>
+
+  <section id="prove">
+    <p>Write the specification yourself, with an empty body; the model writes a body and the provers decide. The specification is never changed.</p>
+    <label for="prove-s">The specification, in t</label>
+    <textarea id="prove-s" style="min-height:150px" placeholder="t 1&#10;gate loops&#10;task largest(s: seq) returns (r: int)&#10;  requires len(s) > 0&#10;  ensures forall i in [0, len(s)) . r >= s[i]&#10;  ensures exists i in [0, len(s)) . r == s[i]&#10;{&#10;}"></textarea>
+    <label for="prove-t">Examples <small>optional</small></label>
+    <textarea id="prove-t" placeholder="assert largest([1, 5, 2]) == 5"></textarea>
+  </section>
+
+  <section id="files">
+    <p>Answers come only from the text you give here, each with the sentence it was copied from. What is not in the text is left empty.</p>
+    <label for="files-pick">Your files <small>plain text; they are read by this page and sent only to this machine</small></label>
+    <input type="file" id="files-pick" multiple>
+    <label for="files-text">…or paste text</label>
+    <textarea id="files-text" placeholder="Invoice 2291. The total due is $1,250.00, payable by March 3, 2026."></textarea>
+    <div class="modes">
+      <label><input type="radio" name="mode" value="extract" checked> Fill in fields</label>
+      <label><input type="radio" name="mode" value="cite"> Answer a question</label>
+    </div>
+    <div id="fields-box">
+      <label>Fields <small>a name, its kind, and what it is</small></label>
+      <div id="fields"></div>
+      <button class="plain" id="add-field" type="button">Add a field</button>
+    </div>
+    <div id="cite-box" style="display:none">
+      <label for="cite-q">The question</label>
+      <textarea id="cite-q" placeholder="When is payment due?"></textarea>
+    </div>
+  </section>
+
+  <section id="calc">
+    <p>A question with numbers. The working is written down, computed exactly, and shown only when separate ways of working it out agree.</p>
+    <label for="calc-q">The question</label>
+    <textarea id="calc-q" placeholder="A recipe needs 2.5 cups of flour for 12 muffins. How many cups for 30?"></textarea>
+  </section>
+
+  <section id="check">
+    <p>Replay a certificate someone gave you: the tests, the provers on this machine and the Python, with no model.</p>
+    <label for="check-pick">The certificate file</label>
+    <input type="file" id="check-pick" accept=".json,application/json">
+    <label for="check-text">…or paste it</label>
+    <textarea id="check-text" style="min-height:120px"></textarea>
+  </section>
+
+  <button class="run" id="run" type="button">Run</button>
+
+  <div id="out">
+    <div id="state"></div>
+    <div id="verdict"></div>
+    <pre id="text"></pre>
+    <div id="actions">
+      <button class="plain" id="cancel" type="button" style="display:none">Cancel</button>
+      <button class="plain" id="save-cert" type="button" style="display:none">Save the certificate</button>
+      <button class="plain" id="copy" type="button" style="display:none">Copy the text</button>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+const TABS = [["ask", "Ask for a function"], ["verify", "Check a function I have"], ["prove", "Prove a specification"],
+              ["files", "From my files"], ["calc", "Numbers"], ["check", "Replay a certificate"]];
+const GO = /^(SHOWN|PROVED|VERIFIED|ANSWER|REPRODUCED)\b/, STOP = /^(FAILED)\b/;
+const $ = id => document.getElementById(id);
+let token = (location.hash.match(/token=([A-Za-z0-9_-]+)/) || [])[1] || sessionStorage.getItem("dawnr-token") || "";
+if (token) { sessionStorage.setItem("dawnr-token", token); history.replaceState(null, "", location.pathname); }
+let current = "ask", job = null, timer = null;
+
+function api(path, options) {
+  options = options || {};
+  options.headers = Object.assign({"Authorization": "Bearer " + token}, options.headers || {});
+  return fetch(path, options);
+}
+function lines(id) { return $(id).value.split("\n").map(s => s.trim()).filter(Boolean); }
+function select(name) {
+  current = name;
+  for (const [id] of TABS) { $(id).classList.toggle("on", id === name); $("tab-" + id).setAttribute("aria-selected", id === name); }
+}
+function addField(name, kind, what) {
+  const row = document.createElement("div"); row.className = "row";
+  const n = document.createElement("input"); n.type = "text"; n.placeholder = "total"; n.value = name || "";
+  const k = document.createElement("select");
+  for (const v of ["text", "number", "date"]) { const o = document.createElement("option"); o.value = v; o.textContent = v; k.appendChild(o); }
+  k.value = kind || "text";
+  const w = document.createElement("input"); w.type = "text"; w.placeholder = "the amount due"; w.value = what || "";
+  const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.title = "Remove"; x.onclick = () => row.remove();
+  row.append(n, k, w, x); $("fields").appendChild(row);
+}
+function readFiles(input) {
+  return Promise.all(Array.from(input.files).map(f => f.text().then(text => ({name: f.name, text}))));
+}
+async function body() {
+  if (current === "ask") return {kind: "ask", question: $("ask-q").value, tests: lines("ask-t")};
+  if (current === "verify") return {kind: "verify", python: $("verify-p").value, tests: lines("verify-t")};
+  if (current === "prove") return {kind: "prove", specification: $("prove-s").value, tests: lines("prove-t")};
+  if (current === "calc") return {kind: "calc", question: $("calc-q").value};
+  if (current === "check") {
+    const picked = await readFiles($("check-pick"));
+    return {kind: "check", certificate: JSON.parse(picked.length ? picked[0].text : $("check-text").value)};
+  }
+  const files = await readFiles($("files-pick"));
+  if ($("files-text").value.trim()) files.push({name: "pasted.txt", text: $("files-text").value});
+  if (document.querySelector("input[name=mode]:checked").value === "cite") return {kind: "cite", question: $("cite-q").value, files};
+  const fields = Array.from($("fields").children).map(r => {
+    const [n, k, w] = [r.children[0].value.trim(), r.children[1].value, r.children[2].value.trim()];
+    return n ? n + (k === "text" ? "" : "(" + k + ")") + ": " + (w || n) : "";
+  }).filter(Boolean);
+  return {kind: "extract", fields, files};
+}
+function show(state, verdict, text) {
+  $("out").style.display = "block";
+  $("state").textContent = state;
+  $("verdict").textContent = verdict || "";
+  $("verdict").className = !verdict ? "" : GO.test(verdict) ? "go" : STOP.test(verdict) ? "stop" : "hold";
+  $("text").textContent = text || "";
+}
+function done(running) {
+  $("run").disabled = running; $("cancel").style.display = running ? "" : "none";
+  if (running) { $("save-cert").style.display = "none"; $("copy").style.display = "none"; }
+}
+async function poll(id, began) {
+  const r = await api("/v1/jobs/" + id);
+  if (!r.ok) { show("The job is gone.", "", ""); done(false); return; }
+  const j = await r.json(); job = j;
+  const seconds = Math.round((Date.now() - began) / 1000);
+  if (j.state === "queued") show("Waiting for " + (j.ahead || 0) + " job(s) ahead… " + seconds + " s", "", "");
+  else if (j.state === "running") show("Working… " + seconds + " s (a question takes one to a few minutes on a CPU)", "", "");
+  else {
+    const text = (j.text || "").trim(), first = text.split("\n").find(l => /^[A-Z][A-Z ]+:/.test(l)) || text.split("\n")[0] || "";
+    const head = j.state === "cancelled" ? "Cancelled." : j.state === "failed" ? "It did not finish: " + (j.why || "") : "Done in " + seconds + " s.";
+    show(head, j.state === "done" ? first : "", text);
+    done(false);
+    $("save-cert").style.display = j.certificate ? "" : "none"; $("copy").style.display = text ? "" : "none";
+    return;
+  }
+  timer = setTimeout(() => poll(id, began), 1500);
+}
+$("run").onclick = async () => {
+  let request;
+  try { request = await body(); } catch (e) { show("That could not be read: " + e.message, "", ""); return; }
+  done(true); show("Sending…", "", "");
+  const r = await api("/v1/jobs", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(request)});
+  const j = await r.json();
+  if (!r.ok) { show(j.error || "The request was refused.", "", ""); done(false); return; }
+  poll(j.id, Date.now());
+};
+$("cancel").onclick = async () => { if (job) { clearTimeout(timer); await api("/v1/jobs/" + job.id, {method: "DELETE"}); show("Cancelled.", "", ""); done(false); } };
+$("save-cert").onclick = async () => {
+  const r = await api("/v1/jobs/" + job.id + "/certificate"); if (!r.ok) return;
+  const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = "dawnr-" + job.kind + ".cert.json"; a.click();
+  URL.revokeObjectURL(a.href);
+};
+$("copy").onclick = () => navigator.clipboard.writeText($("text").textContent);
+$("add-field").onclick = () => addField();
+for (const radio of document.querySelectorAll("input[name=mode]")) radio.onchange = () => {
+  const cite = document.querySelector("input[name=mode]:checked").value === "cite";
+  $("cite-box").style.display = cite ? "" : "none"; $("fields-box").style.display = cite ? "none" : "";
+};
+for (const [id, label] of TABS) {
+  const b = document.createElement("button"); b.id = "tab-" + id; b.type = "button"; b.setAttribute("role", "tab"); b.textContent = label;
+  b.onclick = () => select(id); $("tabs").appendChild(b);
+}
+addField("total", "number", "the amount due"); addField("due", "date", "when payment is due");
+select("ask");
+if (!token) { $("notoken").style.display = "block"; $("run").disabled = true; }
+else api("/v1/health").then(r => r.ok ? r.json() : null).then(h => {
+  if (!h) { $("notoken").style.display = "block"; $("run").disabled = true; return; }
+  const provers = Object.keys(h.provers);
+  $("health").textContent = "Provers on this machine: " + (provers.length ? provers.join(", ") : "none found") + ". Models: "
+    + (h.student && h.base ? "running" : "not running (start them with `dawnr serve api`)") + ".";
+});
+</script>
+</body>
+</html>
