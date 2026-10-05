@@ -623,6 +623,42 @@ def serve(home: Path, student: str, base: str, port: int, seconds: float = 1800.
     return server, token
 
 
+OPEN_PAGE = """<!doctype html>
+<meta charset="utf-8">
+<title>dawnr</title>
+<meta http-equiv="refresh" content="0; url={url}">
+<p>Opening dawnr. If nothing happens, <a href="{url}">go to the page</a>.</p>
+"""
+
+
+def open_page(home: Path, port: int, token: str, start=None) -> Path | None:
+    """Open the page in the person's browser, and return the file that did it (None when no browser was started).
+    The browser is handed a file only its owner can read, which sends it on to the page with the token; the token
+    is never on a command line, where another user of the machine could read it. This is how Jupyter Server opens
+    its own page (jupyter_server/serverapp.py, `use_redirect_file`). Under WSL the Windows browser cannot read
+    that file, so nothing is opened and the address printed is used instead."""
+    import html
+    import platform
+    if "microsoft" in platform.release().lower():
+        return None
+    if start is None:
+        import webbrowser
+        start = webbrowser.open
+    path = home / "run" / "open.html"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch(mode=0o600, exist_ok=True)
+    os.chmod(path, 0o600)
+    path.write_text(OPEN_PAGE.format(url=html.escape(f"http://127.0.0.1:{port}/#token={token}", quote=True)), encoding="utf-8")
+    try:
+        started = start(path.as_uri())
+    except Exception:                                           # noqa: BLE001 -- no browser is not an error: the address is printed
+        started = False
+    if not started:
+        path.unlink(missing_ok=True)
+        return None
+    return path
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--student", required=True, help="host:port of the server holding the model that writes t")
@@ -632,6 +668,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--home", type=Path, default=Path(os.environ.get("DAWNR_HOME") or Path.home() / ".local/share/dawnr"),
                     help="where jobs and the token are kept")
     ap.add_argument("--seconds", type=float, default=1800.0, help="the longest a job may run")
+    ap.add_argument("--open", action="store_true", help="open the page in your browser once the server is listening")
     a = ap.parse_args(argv)
     a.home.mkdir(parents=True, exist_ok=True)
     server, token = serve(a.home, a.student, a.base, a.port, a.seconds, writer=a.writer)
@@ -644,6 +681,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"dawnr is listening on this machine only.\n  the page:   http://127.0.0.1:{port}/#token={token}\n"
           f"  the API:    http://127.0.0.1:{port}/v1/jobs   (Authorization: Bearer <the token in {token_file}>)\n"
           "Stop it with Ctrl-C.", flush=True)
+    opened = open_page(a.home, port, token) if a.open else None
+    if a.open:
+        print("The page is opening in your browser." if opened else "No browser could be opened from here: copy the page's address above into yours.", flush=True)
+
     def stop(*_):                                               # a service manager's TERM ends it as Ctrl-C does
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, stop)
@@ -654,10 +695,12 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         for p in list(server.jobs.process.values()):
             Jobs._kill(p)
-        try:
-            token_file.unlink()
-        except OSError:
-            pass
+        for f in (token_file, opened):
+            try:
+                if f is not None:
+                    f.unlink()
+            except OSError:
+                pass
     return 0
 
 

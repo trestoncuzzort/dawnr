@@ -12,7 +12,8 @@
 #   dawnr check FILE      replay a certificate (ask or prove with --certificate FILE wrote it): no model, this machine's provers
 #   dawnr doctor          what is installed and what each part found
 #   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
-#   dawnr serve api       all of the above as a page in your browser and a local HTTP API (this machine only)
+#   dawnr ui              all of the above as a page, opened in your browser (this machine only; no terminal needed after this)
+#   dawnr serve api       the same page and a local HTTP API, without opening a browser
 #   dawnr mcp             the checks as tools for the assistant you already use (Model Context Protocol, stdio)
 #
 # Installed by install.sh. From a specification the gate is t/prove.py: a body counts only if it keeps the specification
@@ -260,10 +261,15 @@ case $cmd in
         # a token made at start; the models stay up while it runs and stop with it if this started them
         both_up; sent_away
         cd "$DAWNR_REPO"
-        "$DAWNR_PYTHON" t/serve_api.py --student "$STUDENT_AT" ${DAWNR_WRITER_MODEL:+--writer "$DAWNR_WRITER_MODEL"} --base "127.0.0.1:$BP" --port "${DAWNR_API_PORT:-8713}" --home "$DAWNR_HOME"
+        "$DAWNR_PYTHON" t/serve_api.py --student "$STUDENT_AT" ${DAWNR_WRITER_MODEL:+--writer "$DAWNR_WRITER_MODEL"} --base "127.0.0.1:$BP" --port "${DAWNR_API_PORT:-8713}" --home "$DAWNR_HOME" "${@:2}"
         ;;
       *) echo "dawnr serve start|stop|status|api" >&2; exit 2;;
     esac;;
+  ui)
+    # the page, opened in the person's browser: `serve api`, and the browser handed a file only its owner can read
+    # that sends it on to the page (t/serve_api.py, open_page)
+    exec "$0" serve api --open
+    ;;
   doctor)
     echo "dawnr at $DAWNR_REPO, data in $DAWNR_HOME"
     echo "python: $("$DAWNR_PYTHON" -V 2>&1)"
@@ -285,5 +291,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,20p' "$0";;
+  *) sed -n '2,21p' "$0";;
 esac

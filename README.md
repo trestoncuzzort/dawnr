@@ -288,8 +288,9 @@ workings agree on your question's own numbers) and `check_quotes` (is each
 quoted sentence in your text word for word). Its model is the writer and is
 trusted exactly as far as dawnr's own: not at all.
 
-If you would rather not use a terminal, `dawnr serve api` starts the models
-and prints a link. The page behind it has everything above (ask, check a
+If you would rather not use a terminal, `dawnr ui` starts the models and
+opens a page in your browser (`dawnr serve api` does the same and prints the
+link instead of opening it). The page has everything above (ask, check a
 function you have, prove a specification, answer from your files, numbers,
 replay a certificate), and the same address is an HTTP API for programs:
 `POST /v1/jobs` with `{"kind": "ask", "question": ..., "tests": [...]}`
