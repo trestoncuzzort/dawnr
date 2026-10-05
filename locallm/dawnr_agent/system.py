@@ -53,7 +53,8 @@ FORBIDDEN = [
      "what is mounted or loaded into the kernel is not changed from here"),
     (re.compile(r"\b(curl|wget)\b[^|;&]*\|\s*(ba|z|da)?sh\b"), "a download is never piped into a shell"),
     (re.compile(r":\(\)\s*\{"), "that is a fork bomb"),
-    (re.compile(r">\s*/(dev|etc|boot|usr|bin|sbin|lib|proc|sys)\b"), "writing into a system directory is not done from here"),
+    (re.compile(r">\s*/(?!dev/(null|stdout|stderr)\b)(dev|etc|boot|usr|bin|sbin|lib|proc|sys)\b"),
+     "writing into a system directory is not done from here"),
 ]
 NETWORK = re.compile(r"(^|[;&|(`]\s*)(curl|wget|nc|ncat|netcat|ssh|scp|sftp|rsync|ftp|telnet)\b|\b(https?|ftp)://")
 # the names the file tools never read (paths.py) and the folders the sandbox hides (commands.py): a line that names
@@ -95,6 +96,8 @@ def facts() -> str:
 # model's text but the words read from it, each quoted again, so the shell expands and substitutes nothing.
 
 OPERATORS = ("|", "&&", "||", ";")
+# the redirections that only throw output away or join the two streams: part of a plain command, and kept
+QUIET = re.compile(r"(?:2>\s*/dev/null|2>&1|&>\s*/dev/null|>\s*/dev/null)(?=\s|$|[|&;])")
 NUMBER = re.compile(r"^[+-]?\d+$")
 READABLE = re.compile(r"^(/sys/|/proc/(?!\d|self\b|thread-self\b)|/usr/lib/os-release$|/etc/(os-release|lsb-release|hostname|"
                       r"timezone|issue|machine-info|debian_version|fedora-release|redhat-release|arch-release|shells|hosts|"
@@ -102,16 +105,26 @@ READABLE = re.compile(r"^(/sys/|/proc/(?!\d|self\b|thread-self\b)|/usr/lib/os-re
 
 
 def _words(command: str) -> list | None:
-    """[(word, is_operator)] for a line of plain commands, or None when it holds anything else: a redirection, a
+    """[(word, kind)] for a line of plain commands, kind False for a word, True for an operator and "quiet" for a
+    redirection that only discards output; None when the line holds anything else: another redirection, a
     substitution, a variable, a subshell, a background job, a comment, a backslash outside single quotes."""
     out, word, quote, i = [], None, "", 0
     while i < len(command):
         c = command[i]
+        quiet = QUIET.match(command, i) if not quote and word is None else None
+        if quiet:
+            out.append((re.sub(r"\s", "", quiet.group(0)), "quiet"))
+            i = quiet.end()
+            continue
         if quote:
             if c == quote:
                 quote = ""
-            elif c in "\n\r" or (quote == '"' and c in "\\$`"):
+            elif c in "\n\r" or (quote == '"' and c in "$`"):
                 return None
+            elif quote == '"' and c == "\\":                    # the shell keeps it before any character but these
+                if command[i + 1:i + 2] in ("", "$", "`", '"', "\\", "\n"):
+                    return None
+                word += c
             else:
                 word += c
         elif c in "'\"":
@@ -319,9 +332,14 @@ def look(command: str) -> str | None:
     words = _words(command) if isinstance(command, str) else None
     if not words:
         return None
-    out, argv = [], []
-    for word, operator in words + [(";", True)]:
-        if not operator:
+    out, argv, quiet = [], [], []
+    for word, kind in words + [(";", True)]:
+        if kind == "quiet":
+            quiet.append(word)
+            continue
+        if not kind:
+            if quiet:
+                return None                                     # a word after the redirection: not the plain shape
             argv.append(word)
             continue
         if not argv or "/" in argv[0] or argv[0] not in LOOK or not LOOK[argv[0]](argv[1:]):
@@ -331,8 +349,8 @@ def look(command: str) -> str | None:
             if any(not _readable(f) for f in found):
                 return None
             out += [shlex.quote(f) for f in found] or [shlex.quote(a)]
-        out.append(word)
-        argv = []
+        out += quiet + [word]
+        argv, quiet = [], []
     return " ".join(out[:-1])
 
 

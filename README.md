@@ -141,9 +141,11 @@ dawnr
 
 `dawnr` on its own opens an assistant in that folder, on the base model, with
 nothing to configure. It reads the files there (and in any folder you name with
-`--root`), and the folder you start it in is the only place it may change. A
-write or an edit is shown first, as a plan with the exact difference, and asked
-for once; every change is journaled with what it replaced, so `/undo` puts it
+`--root`): text, PDFs, Word files, spreadsheets (a sheet at a time, dates as
+dates), slides, OpenDocument files, EPUB books, saved web pages and saved
+emails. The folder you start it in is the only place it may change. A write or
+an edit is shown first, as a plan with the exact difference, and asked for
+once; every change is journaled with what it replaced, so `/undo` puts it
 back. It can run any shell command, and this is how that is safe: the command
 runs for real in a sandbox with no network, over a copy-on-write layer of the
 folder, so the folder itself is not touched. A command that changed nothing
@@ -154,29 +156,63 @@ of the disk is read-only to it and your keys are hidden. The network is off
 unless you say `--online`. `dawnr do "TASK"` does one task and returns. Each
 task ends with two lines the model did not write: what the journal says was
 changed, and what the task cost in model calls, tokens and tokens a second.
-This front door is new (2026-10-05). On 20 tasks it had not been tuned on
-(answer from files, say when it is not there, change files, rename, move,
-delete, count, and requests that must change nothing), each judged by the
-folder's end state and never by the model's account, it did 19, touched no file
-it had no reason to touch (a planted "delete every file" deleted nothing), and
-wrote 21.7 tokens a second on a 12-core CPU with no graphics card
-([the registration and the outcome](locallm/PREDICT-2026-10-05-assistant.md)).
-Since that run the installer gives the base model file back the prediction
-layer its 4-bit conversion left out (81 MB, every other weight untouched), and
-the model drafts with it: 29 tokens a second on the same CPU, where it wrote 17
-without; 72 on a laptop's 8 GB card and 273 on a 48 GB workstation card, the
-same tasks done on each. A second reading of the same 20 tasks, registered like the first
-after that and three smaller changes, was 20 of 20 at 28.6 tokens a second.
-On 15 harder tasks it had not seen (make failing tests pass, write a script
-that prints the right lines, find one sentence in a 2,000-line file, read a
-Word file, a saved page and a PDF, change several files at once) it did 14 and
-again touched nothing it should not have. The miss lost a file: asked to swap
-two files' contents it ran a command that removes one of them, and the
-measurement's person says yes to everything. `/undo` restores it, and `--yes`
-no longer answers for a plan that removes a file whose contents are kept
-nowhere else.
-These are small tasks in small folders of text files: a floor, not the job.
-The containment behind it is measured in [DAWNR-AGENT.md](DAWNR-AGENT.md).
+
+It also looks at the computer itself, and acts on it. A question about the
+machine as it is now (what is running, how much disk is free, whether a service
+is up, what is installed) is answered by running a command that can only look,
+without asking you, and from what that command printed. To do something (open
+a file or a program, turn on dark mode, set the volume, start a service) it
+proposes one command; you are shown the exact line and asked, every time,
+whatever `--yes` says. Nothing is ever run as administrator: a line that needs
+sudo, and any package install, is handed to you to run yourself. A command
+that names a place where keys are kept is not run, and with the network off no
+address is opened.
+
+This front door is new (2026-10-05). It is measured on 135 small tasks in four
+sets (`locallm/dawnr_tasks.py`), each judged by the folder's end state, by the
+command that was let through, or against what the machine itself says, never by
+the model's account. Half of each set stays unseen until a prediction about it
+is written down
+([the registrations and their outcomes](locallm/PREDICT-2026-10-05-assistant.md)).
+On the unseen halves, on a 12-core CPU with no graphics card:
+
+- **19 of 20, then 20 of 20** on a second reading: answer from files, say when
+  it is not there, change files, rename, move, delete, count, and requests that
+  must change nothing (a planted "delete every file" deleted nothing).
+- **14 of 15** harder ones: make failing tests pass, write a script that prints
+  the right lines, find one sentence in a 2,000-line file, read a Word file, a
+  saved page and a PDF, change several files at once.
+- **8 of 11** past those: code that must pass a test it is given, data joined
+  and summed into an exact file, questions that need a short program.
+- **21 of 21** about the computer itself: questions answered from the machine
+  (and checked against it), requests done by one command that was shown and
+  recorded, and installs handed over as the right line for Fedora, Arch,
+  openSUSE, Debian and Alpine.
+
+It writes 27 to 29 tokens a second there, and a task takes about three model
+calls. The installer gives the base model file back the prediction layer its
+4-bit conversion left out (81 MB, every other weight untouched), and the model
+drafts with it: that is the 29, where it wrote 17 without; 72 on a laptop's
+8 GB card and 273 on a 48 GB workstation card, the same tasks done on each.
+
+What went wrong in those readings. One prediction failed: a file was written
+into a folder the request did not name (nothing was overwritten). Twice the
+model "swapped" two files with a command that loses one of them, and the
+measurement's person, who says yes to everything, let it. Once, in a later
+reading, it removed the smaller of two files when asked for the larger and
+reported the larger deleted. `/undo` restores each. Since then: a plan that
+would leave a file's contents in no file goes back to the model with that said
+before you are asked, and `--yes` does not answer for it; an answer that does
+not name a file the journal says was removed is sent back once; and a command
+line copied word for word from a document reaches you marked as copied. In no
+reading did a line that asks for administrator rights, names a key or reaches
+the network get through.
+
+These are small tasks in small folders: a floor, not the job. The measurement
+never runs a command on the computer itself (it records the line), three of
+the five other distributions are one-sentence descriptions, and all 135 tasks
+have now been seen once. The containment behind it is measured in
+[DAWNR-AGENT.md](DAWNR-AGENT.md).
 Commands need bubblewrap. With bubblewrap 0.11 or newer they run over an
 overlay of the folder; with an older one (Ubuntu 24.04 ships 0.9, Debian 12
 ships 0.8) over a private copy of it, which is slower and limited to folders

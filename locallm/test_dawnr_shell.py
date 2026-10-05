@@ -225,9 +225,9 @@ def test_yes_does_not_answer_for_a_plan_that_loses_a_files_contents(tmp_path):
     def turn(command):
         return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
             {"id": "c", "type": "function", "function": {"name": "sh", "arguments": json.dumps({"command": command})}}]}}]}
-    wrong, right = "mv c.txt b.txt && mv b.txt c.txt", "cp b.txt t && mv c.txt b.txt && mv t c.txt"
+    wrong, worse, right = "mv c.txt b.txt && mv b.txt c.txt", "cp c.txt b.txt && cp b.txt c.txt", "cp b.txt t && mv c.txt b.txt && mv t c.txt"
     replies = [turn("mv a.txt c.txt"), {"choices": [{"message": {"content": "Renamed."}}]},
-               turn(wrong), turn(right), {"choices": [{"message": {"content": "Swapped."}}]},
+               turn(wrong), turn(worse), turn(right), {"choices": [{"message": {"content": "Swapped."}}]},
                turn(wrong), turn(wrong), {"choices": [{"message": {"content": "Swapped."}}]}]
     bodies = []
     work = tmp_path / "work"
@@ -247,13 +247,15 @@ def test_yes_does_not_answer_for_a_plan_that_loses_a_files_contents(tmp_path):
     approve.agent = agent
     with harness:
         meter = cli.Meter(lambda url, body, timeout=0: bodies.append(body) or replies.pop(0))
-        planner = cli.Planner(harness, agent, "x:1", "base", post=meter)
+        planner = cli.Planner(harness, agent, "x:1", "base", post=meter, look_first=False)
         cli.run_task(agent, planner, meter, "Rename a.txt to c.txt.", [], said.append)
         assert asked == [] and sorted(os.listdir(work)) == ["b.txt", "c.txt"]          # a rename loses nothing: --yes covers it
         # the model's wrong swap: it hears what the plan would lose before anybody is asked, and sends a right one
         cli.run_task(agent, planner, meter, "Swap b.txt and c.txt.", [], said.append)
-        heard = bodies[3]["messages"][-1]["content"]
-        assert heard.startswith("This would remove here/b.txt, and what it holds would be kept in no other file.") and "send exactly this again" in heard
+        heard, again = bodies[3]["messages"][-1]["content"], bodies[4]["messages"][-1]["content"]
+        assert heard.startswith("After this, what here/b.txt holds now would be in no file: removed, or written over with a copy of another file.")
+        assert "Nothing has run." in heard and "send exactly this again" in heard
+        assert again.startswith("After this, what here/b.txt holds now would be in no file")       # a copy over it loses it as well
         assert asked == [] and (work / "b.txt").read_text() == "alpha\n" and (work / "c.txt").read_text() == "beta\n" and sorted(os.listdir(work)) == ["b.txt", "c.txt"]
         # sent again as it was, it is the person's to answer, and --yes does not answer for them
         cli.run_task(agent, planner, meter, "Swap b.txt and c.txt.", [], said.append)
