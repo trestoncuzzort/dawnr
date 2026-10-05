@@ -222,6 +222,21 @@ def test_a_word_file_and_a_saved_page_are_read_as_their_text_and_what_cannot_be_
     assert sent["role"] == "tool" and "The rent is 900 a month" in sent["content"]
 
 
+def test_a_listing_reaches_the_model_as_whole_paths_it_can_hand_back(tmp_path):
+    assert cli.listing("here: 3 entries\nd archive/\nf notes.md (41 bytes)\ns .env: secret, never read\nl x: symbolic link, not followed", "here") == (
+        "here: 3 entries\nhere/archive/  (a folder)\nhere/notes.md  (41 bytes)\nhere/.env  (secret, never read)\nhere/x  (a link, not followed)")
+    assert cli.listing("1 roots\nd here/ (write)\nd docs/ (read)", "") == "1 roots\nhere/  (a folder, you may change it)\ndocs/  (a folder, read only)"
+    assert cli.listing("here/sub: 1 entries\nf deep/a b.txt (5 bytes)", "here/sub") == "here/sub: 1 entries\nhere/sub/deep/a b.txt  (5 bytes)"
+    model = Model(turn(("fs_list", {"path": "here"})), turn(("fs_read", {"path": "here/a.txt"})), turn(text="one"))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "a.txt").write_text("one\n")
+    (work / "sub").mkdir()
+    with harness:
+        cli.run_task(agent, planner, meter, "What is in a.txt?", [], said.append)
+    seen = model.bodies[1]["messages"][-1]["content"]
+    assert "here/a.txt  (4 bytes)" in seen and "here/sub/  (a folder)" in seen and "\nf a.txt" not in seen
+
+
 def test_a_task_that_does_not_finish_says_why(tmp_path):
     read = ("fs_read", {"path": "here/missing.txt"})
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, Model(turn(read), turn(read)))
