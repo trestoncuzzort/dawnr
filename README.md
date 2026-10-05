@@ -2,7 +2,7 @@
 
 **An assistant whose answers come with proof.**
 
-> **New, 5 October 2026: `student-v5`.** The model inside dawnr now proves **26 of 200 held-out programming
+> **New, 5 October 2026: dawnr v5.** The dawnr model now proves **26 of 200 held-out programming
 > problems** with a specification checked against the problem's own solution, **16 of them by all seven provers**.
 > Phi-4-mini, given the same 17 tries a problem and its output forced into valid `t`, proves 9 and 7. Every training
 > seed of the recipe beats it at both levels, and given a specification the new model proves **27 of 33** held-out
@@ -10,6 +10,10 @@
 > runs offline on an ordinary CPU or an 8 GB laptop graphics card.
 > [The release](../../releases/tag/student-v5) · [how it was measured](t/PREDICT-2026-10-05-release-v5.md) ·
 > [every number, good and bad](DISCLAIMERS.md)
+>
+> *A note on names:* dawnr is the name for the models from now on. Earlier versions were called the student, and the
+> release tags, files and commands that still say `student` (the `student-v5` release among them) are these same
+> dawnr models.
 
 dawnr writes programs together with a precise statement of what they do, then
 has seven independent mathematical provers check that the program does exactly
@@ -27,7 +31,7 @@ and rejects most wrong answers:
 
 | | proved by at least one prover | proved by all seven |
 |---|---:|---:|
-| **dawnr `student-v5`** (Qwen3.5-4B, fine-tuned here on proved answers) | **26** | **16** |
+| **dawnr v5** (Qwen3.5-4B, fine-tuned here on proved answers) | **26** | **16** |
 | the same recipe, its two other training seeds | 27, 23 | 15, 13 |
 | the same 4B before any fine-tuning, prompted, 17 tries a problem | 15 | 8 |
 | Phi-4-mini (3.8B), output forced into valid `t`, 17 tries a problem | 9 | 7 |

@@ -1,4 +1,7 @@
-# dawnr-student-v5
+# dawnr v5 (released as dawnr-student-v5)
+
+*dawnr is the name for the models from now on; earlier versions were called the student, and this release keeps
+that name in its tag and files.*
 
 The model inside dawnr that writes `t`: given a programming question in English with example tests, or a
 specification, it writes a `t` task (what the program requires, what it guarantees, and a body the provers can

@@ -6,7 +6,7 @@ dawnr is research software. Read this before relying on anything it does.
 
 - **Research and education use only.** See [LICENSE](LICENSE). Third-party material keeps its own licence
   ([NOTICE](NOTICE)); the problem corpora's licences are documented under `nl/`.
-- **The published student is v5.** `student-v5` (Apache-2.0) is the 4B trained on v3's rows plus 1,068 rows from
+- **The published model is dawnr v5** (released as `student-v5`; dawnr is the models' name from now on). It (Apache-2.0) is the 4B trained on v3's rows plus 1,068 rows from
   documents the provers admitted since, some written by two openly licensed teacher models on Amazon Bedrock, none from
   GPL-licensed programs. At 8 bits it proves 27 of 33 held-out given specifications by all seven provers (v1 26). Where every training row comes from, and under what licence, is in
   [internal/RELEASE-PROVENANCE-2026-10-01.md](internal/RELEASE-PROVENANCE-2026-10-01.md) and
