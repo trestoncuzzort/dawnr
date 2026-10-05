@@ -164,7 +164,8 @@ wrote 21.7 tokens a second on a 12-core CPU with no graphics card
 Since that run the installer gives the base model file back the prediction
 layer its 4-bit conversion left out (81 MB, every other weight untouched), and
 the model drafts with it: 29 tokens a second on the same CPU, where it wrote 17
-without, the same tasks done.
+without. A second reading of the same 20 tasks, registered like the first
+after that and three smaller changes, was 20 of 20 at 28.6 tokens a second.
 These are small tasks in small folders of text files: a floor, not the job.
 The containment behind it is measured in [DAWNR-AGENT.md](DAWNR-AGENT.md).
 Commands need Linux 5.11 or newer with bubblewrap 0.8 or newer; elsewhere the
