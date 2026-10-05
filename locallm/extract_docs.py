@@ -42,10 +42,12 @@ import json
 import re
 import sys
 from datetime import datetime
+from fractions import Fraction
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from locallm import cite_docs, doc_read, rag_cite, rag_rgb  # noqa: E402
+from locallm.dawnr_retrieval.bm25 import UNSPACED, tokenize_any  # noqa: E402
 
 NONE = "NONE"
 SYSTEM = ("You fill in one field from the numbered sentences of a document. Reply with the number of the sentence that "
@@ -56,10 +58,18 @@ VALUE_SYSTEM = ("You answer a question from a passage. Reply with JSON: {\"answe
                 "that answers the question, or null if the passage does not state the answer}.")
 VALUE_SCHEMA = {"type": "object", "properties": {"answer": {"type": ["string", "null"]}}, "required": ["answer"]}
 WHOLE = 40                     # a document of at most this many sentences is read whole
-PIECE = re.compile(r"\w+(?:[.,'’:/-]\w+)*|[^\w\s]")
+# a piece: a character of a script written without spaces (Han, kana, Hangul, Thai: any run of characters can be a
+# value there), else a word or number whole, else one other mark
+_SPACED = f"[^\\W{UNSPACED}]"
+PIECE = re.compile(f"[{UNSPACED}]|{_SPACED}+(?:[.,'’:/-]{_SPACED}+)*|[^\\w\\s]")
 REPLY = re.compile(r"S(\d+): (.+)", re.S)
-FIELD = re.compile(r"\s*([A-Za-z_][\w -]*?)\s*(?:\((number|date|text)\))?\s*(?::\s*(.*))?$", re.S)
-NUMBER = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
+FIELD = re.compile(r"\s*([^\W\d][\w -]*?)\s*(?:\((number|date|text)\))?\s*(?:[:：]\s*(.*))?$", re.S)     # a name in any script
+NUMBER = re.compile(r"-?\d[\d.,]*\d|-?\d")                  # a numeric piece: digits, with separators only inside
+# The two ways a number is written. 1,250.00 is English and 1.250,00 continental; 1.250 and 1,250 can be either.
+_ENGLISH = re.compile(r"-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?")
+_CONTINENTAL = re.compile(r"-?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?")
+_SURELY_CONTINENTAL = re.compile(r"-?(?:\d{1,3}(?:\.\d{3})+,\d+|\d+,\d{2})")     # both separators, or a comma and two decimals
+_SURELY_ENGLISH = re.compile(r"-?(?:\d{1,3}(?:,\d{3})+\.\d+|\d+\.\d{1,2})")
 _DATES = ("%Y-%m-%d", "%d %B %Y", "%B %d, %Y", "%B %d %Y", "%d %b %Y", "%b %d, %Y", "%b %d %Y", "%B %Y")
 _NUMERIC_DATE = re.compile(r"(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})")
 
@@ -94,11 +104,29 @@ def runs(sentence: str, longest: int = 7) -> list[str]:
     return out
 
 
+def read_number(text: str) -> tuple[Fraction | None, Fraction | None]:
+    """(the English reading, the continental reading) of a numeric piece, None where it is not written that way:
+    `1,250.00` is (1250, None), `1.250,00` is (None, 1250), `1.250` is (1.25, 1250), `1,2,3` is (None, None)."""
+    english = Fraction(text.replace(",", "")) if _ENGLISH.fullmatch(text) else None
+    continental = Fraction(text.replace(".", "").replace(",", ".")) if _CONTINENTAL.fullmatch(text) else None
+    return english, continental
+
+
+def convention(sentences: list[str]) -> str:
+    """How the document writes numbers: `continental` when it has a number that can only be continental and of a
+    sure kind (`1.250,00`, `12,50`) and none that is surely English (`1,250.00`, `12.5`); `mixed` when it has both;
+    else `english`, which is also how a number is read when nothing in the document decides."""
+    seen = {p for s in sentences for p, _ in pieces(s) if p[0].isdigit() or p[0] == "-"}
+    continental = any(_SURELY_CONTINENTAL.fullmatch(p) for p in seen)
+    english = any(_SURELY_ENGLISH.fullmatch(p) for p in seen)
+    return "mixed" if continental and english else "continental" if continental else "english"
+
+
 def typed_spans(kind: str, sentence: str) -> list[str]:
     """The runs of the sentence that read as the field's kind, the longest reading of each place only: for a number
     its own piece (`1,250.00`, not `$1,250.00, payable`), for a date the whole date (`March 3, 2026`, not `3, 2026`)."""
     if kind == "number":
-        return list(dict.fromkeys(p for p, _ in pieces(sentence) if NUMBER.fullmatch(p)))
+        return list(dict.fromkeys(p for p, _ in pieces(sentence) if NUMBER.fullmatch(p) and read_number(p) != (None, None)))
     good = [r for r in runs(sentence) if r[0].isalnum() and r[-1].isalnum() and typed(kind, r)[1] is None]
     return [r for r in good if not any(r != other and r in other for other in good)]
 
@@ -152,14 +180,24 @@ def parse(reply: str, sentences: list[str]) -> tuple[int, str] | None:
     return n, words
 
 
-def typed(kind: str, words: str) -> tuple[object, str | None]:
-    """(the value in the field's kind, None), or (None, why the words do not read as that kind)."""
+def typed(kind: str, words: str, numbers: str = "english") -> tuple[object, str | None]:
+    """(the value in the field's kind, None), or (None, why the words do not read as that kind). `numbers` is the
+    document's `convention`: it decides a number that can be read two ways (`1.250`), and where the document
+    writes numbers both ways such a number is not taken."""
     if kind == "number":
         m = NUMBER.search(words)
         if not m:
             return None, "the words picked hold no number"
-        digits = m.group(0).replace(",", "")
-        return (float(digits) if "." in digits else int(digits)), None
+        english, continental = read_number(m.group(0))
+        if english is None and continental is None:
+            return None, "the number is not written in a way that can be read"
+        if english is not None and continental is not None and english != continental and numbers == "mixed":
+            return None, f"the number can be read as {show(english)} or as {show(continental)}, and the document writes numbers both ways"
+        if english is None or (numbers == "continental" and continental is not None):
+            x, decimal = continental, "," in m.group(0)
+        else:
+            x, decimal = english, "." in m.group(0)
+        return (float(x) if decimal else int(x)), None
     if kind == "date":
         text = re.sub(r"(\d)(st|nd|rd|th)\b", r"\1", words.strip().rstrip(".,"))
         for form in _DATES:
@@ -201,7 +239,7 @@ def candidates(sentences: list[dict], field: dict, whole: int = WHOLE, k: int = 
     if len(sentences) <= whole:
         return sentences
     from locallm.dawnr_retrieval.bm25 import BM25Index
-    index, windows = BM25Index(), [sentences[i:i + size] for i in range(0, len(sentences), size)]
+    index, windows = BM25Index(tokenizer=tokenize_any), [sentences[i:i + size] for i in range(0, len(sentences), size)]
     for n, w in enumerate(windows):
         index.add(n, " ".join(s["text"] for s in w))
     picked = sorted(n for n, _score in index.search(f"{field['name']} {field['description']}", k))
@@ -229,10 +267,18 @@ def ask_value(host: str, field: dict, texts: list[str], post=rag_rgb._post) -> s
     return " ".join(value.split()) if isinstance(value, str) and value.strip() else None
 
 
+def show(x: Fraction) -> str:
+    return str(x.numerator) if x.denominator == 1 else str(float(x))
+
+
 def stated_in(value: str, sentence: str) -> bool:
-    """Whether the words are in the sentence as words: `art` is not in `party`, `12` is not in `2012`."""
-    pattern = (r"(?<!\w)" if value[:1].isalnum() else "") + re.escape(value) + (r"(?!\w)" if value[-1:].isalnum() else "")
-    return bool(value) and re.search(pattern, sentence) is not None
+    """Whether the words are in the sentence as words: `art` is not in `party`, `12` is not in `2012`. An edge of
+    the value in a script written without spaces has no word boundary to respect, nor has an edge beside one."""
+    if not value:
+        return False
+    before = f"(?<!{_SPACED})" if re.match(_SPACED, value[0]) else ""
+    after = f"(?!{_SPACED})" if re.match(_SPACED, value[-1]) else ""
+    return re.search(before + re.escape(value) + after, sentence) is not None
 
 
 def held(value: str | None, named: tuple[int, str] | None, texts: list[str]) -> tuple[int, str] | str:
@@ -256,6 +302,7 @@ def extract(host: str, fields: list[dict], sentences: list[dict], post=rag_rgb._
     keeps the prompt it last read, reads the document once for each kind of reading and not once a field."""
     shown = [candidates(sentences, field) for field in fields]
     texts = [[s["text"] for s in ss] for ss in shown]
+    numbers = convention([s["text"] for s in sentences])
     free = {i: ask_value(host, field, texts[i], post) for i, field in enumerate(fields) if field["kind"] == "text" and shown[i]}
     rows = []
     for i, field in enumerate(fields):
@@ -272,7 +319,7 @@ def extract(host: str, fields: list[dict], sentences: list[dict], post=rag_rgb._
             rows.append(dict(row, why=found))
             continue
         n, words = found
-        value, why = typed(field["kind"], words)
+        value, why = typed(field["kind"], words, numbers)
         source = shown[i][n - 1]
         row.update(words=words, sentence=source["text"], file=source["file"], n=source["n"], **({"page": source["page"]} if "page" in source else {}))
         rows.append(dict(row, value=value) if why is None else dict(row, why=why))
@@ -314,7 +361,11 @@ def main(argv=None) -> int:
     except doc_read.Unreadable as unreadable:
         print(f"extract: {unreadable}.", file=sys.stderr)
         return 2
-    rows = extract(a.host, fields, sentences)
+    try:
+        rows = extract(a.host, fields, sentences)
+    except OSError as error:
+        print(f"extract: the model server at {a.host} did not answer ({error}).", file=sys.stderr)
+        return 2
     print(render(rows))
     if a.json:
         a.json.write_text(json.dumps({"fields": rows}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

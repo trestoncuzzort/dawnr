@@ -16,23 +16,77 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from locallm import doc_read, rag_cite, rag_rgb  # noqa: E402
-from locallm.dawnr_retrieval.bm25 import BM25Index  # noqa: E402
+from locallm.dawnr_retrieval.bm25 import BM25Index, tokenize_any  # noqa: E402
 
-# a sentence ends at . ! ? before a capital, a digit or an opening mark; "Harbor Supply Co. until paid" is one sentence
-SENTENCE = re.compile(r"(?:(?<=[.!?])|(?<=[.!?][\"'”’)\]]))\s+(?=[A-Z0-9\"'“‘(\[])|\n\s*\n|\n(?=\s*[-*•]\s)")
+# Where a sentence ends: a profile of Unicode's default rules (UAX #29, section 5.1; research receipt 6d3963f1027c).
+#  - After . ! ? and following whitespace, when the next character can open a sentence: for ASCII a capital, a digit
+#    or an opening mark, which is the whole rule every measurement of cite and extract ran with ("Harbor Supply Co.
+#    until paid" is one sentence); beyond ASCII, read by Unicode category, any uppercase letter, any letter of a
+#    script without case (Arabic, Hebrew, Devanagari, Han, kana, Thai), a digit, an opening mark.
+#  - Right after a sentence terminal of another script (the ideographic full stop, the danda, the Arabic question
+#    mark and the rest of Sentence_Break=STerm, and the fullwidth full stop), whitespace or not.
+#  - At an empty line, and before a list item.
+#  - Not between the day and the month of a date written `3. März 2026` (a day's number, a full stop, a capitalised
+#    word, a year), the one case of a full stop inside a sentence that needs no word list.
+# Not in the profile: per-language abbreviation lists (PySBD, arXiv:2010.09657), so German `Nr. 2291` still breaks
+# after the full stop.
+TERMINALS = ("\u0589\u061d\u061e\u061f\u06d4\u0700\u0701\u0702\u07f9\u0964\u0965\u104a\u104b\u1362\u1367\u1368\u166e\u17d4\u17d5"
+             "\u1803\u1809\u203c\u203d\u2047\u2048\u2049\u3002\ua4ff\ua60e\ua60f\ufe52\ufe56\ufe57\uff01\uff0e\uff1f\uff61")
+CLOSERS = "\"'”’)\\]」』）】》〉"
+_AFTER = re.compile(r"(?:(?<=[.!?])|(?<=[.!?][\"'”’)\]»›」』）】》〉]))\s+")
+_HARD = re.compile(f"(?<=[{TERMINALS}])(?![{TERMINALS}{CLOSERS}])\\s*|(?<=[{TERMINALS}][{CLOSERS}])(?![{TERMINALS}{CLOSERS}])\\s*"
+                   r"|\n\s*\n|\n(?=\s*[-*•]\s)")
+_ASCII_OPENS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\"'([")
+_DAY = re.compile(r"(?<![\w.])\d{1,2}\.$")                    # what a block ends on before the break
+_MONTH_YEAR = re.compile(r"[^\W\d_]+\.? \d{4}(?!\d)")         # what follows it
+LONGEST = 400                  # characters; a longer sentence is cut, at a clause mark or a space where there is one
+_CLAUSE = ";:,،、，；："
+
+
+def _opens(ch: str) -> bool:
+    """Whether a sentence can start with this character (see the profile above)."""
+    if ch.isascii():
+        return ch in _ASCII_OPENS
+    return unicodedata.category(ch) in ("Lu", "Lt", "Lo", "Nd", "Ps", "Pi") or ch in "¿¡"
+
+
+def _fit(s: str) -> list[str]:
+    """A sentence in pieces of at most LONGEST characters, cut after the last clause mark in the second half of
+    what fits, else at the last space there, else at the limit. Nothing is dropped."""
+    out = []
+    while len(s) > LONGEST:
+        window = s[:LONGEST]
+        at = max(window.rfind(c) for c in _CLAUSE)
+        if at < LONGEST // 2:
+            at = window.rfind(" ")
+        cut = at + 1 if at >= LONGEST // 2 else LONGEST
+        out.append(s[:cut].strip())
+        s = s[cut:].strip()
+    return out + [s]
 
 
 def sentences(text: str) -> list[str]:
-    """A file's sentences, whitespace collapsed (the grammar and the shown text must hold the same string)."""
+    """A file's sentences, whitespace collapsed (the grammar and the shown text must hold the same string). All of
+    the text is in them: a sentence longer than LONGEST characters comes back as several."""
+    parts = []
+    for block in _HARD.split(text):
+        start = 0
+        for m in _AFTER.finditer(block):
+            if m.end() < len(block) and _opens(block[m.end()]):
+                if _DAY.search(block[start:m.start()]) and _MONTH_YEAR.match(block, m.end()):
+                    continue
+                parts.append(block[start:m.start()])
+                start = m.end()
+        parts.append(block[start:])
     out = []
-    for part in SENTENCE.split(text):
+    for part in parts:
         s = " ".join(part.split())
-        if len(s) >= 3:
-            out.append(s[:400])
+        out += [piece for piece in _fit(s) if len(piece) >= 3] if len(s) >= 3 else []
     return out
 
 
@@ -53,7 +107,7 @@ def passages(paths: list[Path], size: int = 6) -> list[dict]:
 
 def pick(ps: list[dict], question: str, k: int = 5) -> list[dict]:
     """The k passages BM25 ranks best for the question; none when no passage shares a word with it."""
-    index = BM25Index()
+    index = BM25Index(tokenizer=tokenize_any)
     for n, p in enumerate(ps):
         index.add(n, " ".join(p["sentences"]))
     return [ps[n] for n, _score in index.search(question, k)]
@@ -94,7 +148,12 @@ def main(argv=None) -> int:
     if not docs:
         print("NOT IN YOUR FILES: no passage shares a word with the question.")
         return 0
-    print(render(ask(a.host, a.question, docs), docs))
+    try:
+        reply = ask(a.host, a.question, docs)
+    except OSError as error:
+        print(f"cite: the model server at {a.host} did not answer ({error}).", file=sys.stderr)
+        return 2
+    print(render(reply, docs))
     return 0
 
 

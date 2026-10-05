@@ -45,6 +45,18 @@ dawnr is research software. Read this before relying on anything it does.
   `locallm/PREDICT-2026-10-05-extract.md` (X10 to X13) and not yet measured. Until they are: a schema-holding
   runtime is at least as often right as `dawnr extract` has been measured to be, and what `extract` adds is the
   sentence beside every value.
+- **Documents in other languages are read, and only English is measured.** Until 2026-10-05 `cite` and `extract`
+  split sentences by an English rule, so a Chinese or Japanese document was one sentence, any sentence was cut at
+  400 characters with the rest silently dropped, a long document not in the Latin alphabet could not be searched,
+  and `1.250,00` could not be read as a number. Sentences are now found by a stated profile of Unicode's rules
+  (`locallm/cite_docs.py`), nothing is dropped, the search indexes any script, and a number is read the English or
+  the continental way as the document itself writes numbers (where it writes both ways an ambiguous one is refused).
+  This was tried by hand on one Chinese, one German and one Spanish invoice, where every field came back right
+  and the absent one empty; that is three documents, not a measurement. Known gaps: a number such as `1.250` in a
+  document that nowhere writes a decimal comma is read the English way; abbreviations of other languages
+  (`Nr. 2291`) still end a sentence; dates are read only when written with English month names or as numbers. On
+  English text the sentences are the ones every measurement here used, except that the tail of an over-long
+  sentence is kept (39 of 767 SQuAD paragraphs had lost one) and a sentence may begin with an accented capital.
 - **`dawnr calc` computes a working exactly; it does not know the right reading of the question.** Its first form
   (the model writes the working, an answer is shown when workings agree) was measured on 300 GSM8K problems with
   the base model: it showed 203 answers, 94.6% of them right, where the same model simply reasoning in words

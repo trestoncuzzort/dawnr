@@ -198,7 +198,10 @@ dawnr extract invoice.txt --field "total(number): the amount due" --field "due(d
 
 The files can be plain text in any common encoding, Word documents, saved
 web pages or PDFs (read with `pdftotext` when your machine has it; a quote
-from a PDF is shown with its page). `cite` answers in claims that each quote
+from a PDF is shown with its page), in any script: sentences are found by
+Unicode's rules, so a Chinese, Arabic or Hindi document is read sentence by
+sentence, and an amount written `1.250,00` is read as a person there would
+read it. Only English has been measured. `cite` answers in claims that each quote
 one of your sentences word for word, or says the files do not hold the answer. `extract` fills each field
 with a run of words copied from one of your sentences and prints that
 sentence beside it; a number or date field is offered only words that read
