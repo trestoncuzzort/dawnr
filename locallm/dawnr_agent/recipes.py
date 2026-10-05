@@ -13,6 +13,14 @@ PipeWire: `gsettings range`, `wpctl --help`, `loginctl --help`, `gio help trash`
 Plasma programs, from their source (invent.kde.org: plasma-workspace/kcms/colors/plasma-apply-colorscheme.cpp, a
 positional scheme name; kio/src/kioworkers/trash/ktrash.cpp, `--empty`). Research receipt 2549b0a8f435. A line
 that could not be read that way is not in the table.
+
+Windows, reached from Ubuntu under WSL (2026-10-05): Windows's programs are called by their .exe names and take
+Windows paths (Microsoft Learn, "Working across file systems": interop). Each line is from Microsoft's own pages:
+explorer.exe opening a path (the same page); LockWorkStation (winuser.h) behind `rundll32.exe user32.dll`;
+`Clear-RecycleBin -Force` (PowerShell 5.1); the volume keys as virtual-key codes 173, 174 and 175 (Winuser.h), sent
+with WScript.Shell's SendKeys; `shutdown /s /r /h /l /a /t`. Receipt f69fc63e80f2. Not here, because no documented
+line does it: dark mode (a registry value apps read only when told it changed) and a volume set to a number
+(Windows has no command for it; the keys move it two percent a press).
 """
 from __future__ import annotations
 
@@ -23,6 +31,27 @@ import shutil
 # XDG_CURRENT_DESKTOP gives it; or two of these joined by +. For one job the lines are in order of preference and the
 # first that fits is given.
 RECIPES = [
+    # a Windows desktop under WSL: first, so that they win where both a Windows program and a Linux one are found
+    ("open a file, a folder or a web page", "WINDOWS", "explorer.exe", 'explorer.exe "$(wslpath -w PATH)"',
+     'a web page: explorer.exe "https://..."; it reports exit 1 even when it opened the item'),
+    ("start a program", "WINDOWS", "powershell.exe", "powershell.exe -NoProfile -Command 'Start-Process notepad'", ""),
+    ("close a program", "WINDOWS", "taskkill.exe", "taskkill.exe /IM notepad.exe", "what is running: tasklist.exe"),
+    ("copy text to the clipboard", "WINDOWS", "clip.exe", "printf %s 'TEXT' | clip.exe", ""),
+    ("lock the screen", "WINDOWS", "rundll32.exe", "rundll32.exe user32.dll,LockWorkStation", ""),
+    ("a desktop notification", "WINDOWS", "powershell.exe",
+     "powershell.exe -NoProfile -Command 'Add-Type -AssemblyName System.Windows.Forms; $n = New-Object System.Windows.Forms.NotifyIcon; "
+     "$n.Icon = [System.Drawing.SystemIcons]::Information; $n.Visible = $true; $n.ShowBalloonTip(5000, \"dawnr\", \"TEXT\", \"Info\"); "
+     "Start-Sleep 6; $n.Dispose()'", ""),
+    ("mute", "WINDOWS", "powershell.exe", "powershell.exe -NoProfile -Command '(New-Object -ComObject WScript.Shell).SendKeys([char]173)'",
+     "the mute key: it toggles"),
+    ("sound volume", "WINDOWS", "powershell.exe",
+     "powershell.exe -NoProfile -Command '$k = New-Object -ComObject WScript.Shell; 1..50 | ForEach-Object { $k.SendKeys([char]174) }; "
+     "1..20 | ForEach-Object { $k.SendKeys([char]175) }'", "the volume keys, two percent a press: all the way down, then up to 40%"),
+    ("empty the trash", "WINDOWS", "powershell.exe", "powershell.exe -NoProfile -Command 'Clear-RecycleBin -Force'", ""),
+    ("Wi-Fi off", "WINDOWS", "netsh.exe", "netsh.exe wlan disconnect",
+     'turning the adapter off takes an administrator\'s prompt: netsh interface set interface name="Wi-Fi" admin=disabled'),
+    ("shut down in N minutes", "WINDOWS", "shutdown.exe", "shutdown.exe /s /t SECONDS", "shutdown.exe /a cancels; /r restarts; /h hibernates"),
+    ("sign out", "WINDOWS", "shutdown.exe", "shutdown.exe /l", ""),
     ("open a file, a folder or a web page", "session", "xdg-open", "xdg-open PATH"),
     ("dark mode", "GNOME", "gsettings", "gsettings set org.gnome.desktop.interface color-scheme prefer-dark (light again: default)"),
     ("dark mode", "KDE", "plasma-apply-colorscheme", "plasma-apply-colorscheme BreezeDark (light again: BreezeLight)"),
@@ -57,8 +86,8 @@ def recipes(machine: str, has=shutil.which) -> str:
     desktop = found.group(1).upper().split() if found else []
     fits = {"": True, "session": bool(desktop), "systemd": "systemd" in machine}
     given: dict = {}
-    for job, where, program, line in RECIPES:
+    for job, where, program, line, *note in RECIPES:            # a note of its own, or the line's trailing parenthesis
         if job not in given and all(fits.get(w, w.upper() in desktop) for w in where.split("+")) and has(program):
-            given[job] = line
-    return ("Lines that work on this computer, to use rather than guess: " + "; ".join(f"{job}: `{line.split(' (')[0]}`"
-            + (" (" + line.split(" (", 1)[1] if " (" in line else "") for job, line in given.items()) + ".") if given else ""
+            given[job] = (line, note[0]) if note else (line.split(" (")[0], line.split(" (", 1)[1].rstrip(")") if " (" in line else "")
+    return ("Lines that work on this computer, to use rather than guess: " + "; ".join(f"{job}: `{line}`" + (f" ({note})" if note else "")
+            for job, (line, note) in given.items()) + ".") if given else ""

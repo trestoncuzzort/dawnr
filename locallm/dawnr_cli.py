@@ -117,6 +117,8 @@ THINK = os.environ.get("DAWNR_THINK", "")
 THINK_BUDGET = int(os.environ.get("DAWNR_THINK_BUDGET", "800") or 800)
 THINK_END = "Considering the limited time by the user, I have to give the solution based on the thinking directly now."
 FAILED_RUN = re.compile(r"exit [1-9]|timed out")
+# a Windows program called from Ubuntu under WSL (name.exe): it runs on the machine, never in the sandbox
+WINDOWS_PROGRAM = re.compile(r"(?:^|[;&|(`$]\s*)[\w.-]+\.exe\b", re.I)
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
 
@@ -315,8 +317,9 @@ class Planner(NativePlanner):
         if name == "sysinfo" and not looks:
             reads = re.match(r"\s*(%s)\b" % "|".join(FILE_READERS), command)
             return "sh" if reads and "sh" in offered else "pc" if not reads and "pc" in offered else name
-        if name == "sh" and "sysinfo" in offered and LIVE.search(command.split("\n", 1)[0].split("<<", 1)[0]):
-            return "sysinfo" if looks else "pc" if "pc" in offered else name
+        head = command.split("\n", 1)[0].split("<<", 1)[0]
+        if name == "sh" and "sysinfo" in offered and (LIVE.search(head) or WINDOWS_PROGRAM.search(head)):
+            return "sysinfo" if looks else "pc" if "pc" in offered else name     # Windows's programs run outside the sandbox
         if name == "sh" and "pc" in offered and (PRIVILEGED.search(command) or MANAGERS.match(command)):
             return "pc"                                         # no sudo works in the sandbox: `pc` hands the line over
         return name

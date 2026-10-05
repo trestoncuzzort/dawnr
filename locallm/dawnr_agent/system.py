@@ -44,7 +44,7 @@ from .paths import DEFAULT_SECRETS
 from dawnr_harness.tools import CallContext, Tool, ToolResult
 
 MAX_COMMAND = 1000
-PRIVILEGED = re.compile(r"(^|[;&|]\s*|\$\(\s*|`\s*)(sudo|pkexec|doas|su)\b")
+PRIVILEGED = re.compile(r"(^|[;&|]\s*|\$\(\s*|`\s*)(sudo|pkexec|doas|su|runas(\.exe)?|sudo\.exe|gsudo(\.exe)?)\b|-Verb\s+RunAs\b", re.I)
 # (pattern, what to do instead): refused without asking
 FORBIDDEN = [
     (re.compile(r"(^|[;&|(`]\s*)(rm|rmdir|shred|truncate|mv|dd|mkfs(\.\w+)?|wipefs|fdisk|parted|chmod|chown)\b"),
@@ -55,17 +55,31 @@ FORBIDDEN = [
     (re.compile(r":\(\)\s*\{"), "that is a fork bomb"),
     (re.compile(r">\s*/(?!dev/(null|stdout|stderr)\b)(dev|etc|boot|usr|bin|sbin|lib|proc|sys)\b"),
      "writing into a system directory is not done from here"),
+    # a Windows desktop reached from WSL: what formats, partitions or boots, and what sweeps a drive or Windows itself
+    (re.compile(r"(^|[;&|(`]\s*)(format(\.com|\.exe)?|diskpart(\.exe)?|bcdedit(\.exe)?|cipher(\.exe)?\s+/w)\b|"
+                r"\b(Format-Volume|Clear-Disk|Initialize-Disk|Remove-Partition|Set-Partition)\b", re.I),
+     "disks, partitions and the boot settings are not changed from here"),
+    (re.compile(r"\b(rd|rmdir|del|erase)(\.exe)?\s+(/[sq]\s+)*['\"]?[A-Za-z]:\\(Windows|Users|Program Files[^\\\s]*)?\\?['\"]?(\s|$)|"
+                r"\bRemove-Item\b[^|;]*-Recurse[^|;]*['\"]?[A-Za-z]:\\(Windows|Users|Program Files[^\\\s]*)?\\?['\"]?(\s|$)", re.I),
+     "sweeping a drive, Windows or every user's folder away is not done from here"),
 ]
-NETWORK = re.compile(r"(^|[;&|(`]\s*)(curl|wget|nc|ncat|netcat|ssh|scp|sftp|rsync|ftp|telnet)\b|\b(https?|ftp)://")
+NETWORK = re.compile(r"(^|[;&|(`]\s*)(curl|wget|nc|ncat|netcat|ssh|scp|sftp|rsync|ftp|telnet)(\.exe)?\b|\b(https?|ftp)://|"
+                     r"\b(Invoke-WebRequest|iwr|Invoke-RestMethod|irm|Start-BitsTransfer|bitsadmin|Test-NetConnection|Test-Connection|"
+                     r"ping(\.exe)?|tracert(\.exe)?|nslookup(\.exe)?|Net\.WebClient|Net\.Sockets|certutil(\.exe)?\s+-urlcache)\b", re.I)
 # the names the file tools never read (paths.py) and the folders the sandbox hides (commands.py): a line that names
 # one is not run, whatever program it names it to
-SECRET = re.compile(r"(?:^|[\s/'\"=:])(" + "|".join(
-    sorted({re.escape(n).replace(r"\*", r"[^\s/'\"]*") for n in DEFAULT_SECRETS + HIDE_UNDER_HOME}, key=len, reverse=True))
-    + r")(?=$|[\s/'\";|&)])")
+SECRET = re.compile(r"(?:^|[\s/\\'\"=:])(" + "|".join(
+    sorted({re.escape(n).replace(r"\*", r"[^\s/\\'\"]*") for n in DEFAULT_SECRETS + HIDE_UNDER_HOME}, key=len, reverse=True))
+    + r")(?=$|[\s/\\'\";|&)])")
+# ... and on a Windows desktop: browsers' saved passwords, the credential store, and `netsh wlan show profile ... key=clear`,
+# which prints a Wi-Fi password
+WINDOWS_SECRET = re.compile(r"key\s*=\s*clear|\bLogin Data\b|\blogins\.json\b|\bkey4\.db\b|\\Microsoft\\(Credentials|Vault|Protect)\\?|"
+                            r"\bcmdkey(\.exe)?\b", re.I)
 PACKAGE_MANAGERS = (("apt-get", "apt"), ("dnf", "dnf"), ("pacman", "pacman"), ("zypper", "zypper"), ("apk", "apk"), ("brew", "brew"))
 # what the person's programs need to find their session: nothing else of the environment is passed on
 SESSION = ("HOME", "PATH", "LANG", "LC_ALL", "USER", "LOGNAME", "SHELL", "DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
-           "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "DBUS_SESSION_BUS_ADDRESS", "XAUTHORITY")
+           "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "DBUS_SESSION_BUS_ADDRESS", "XAUTHORITY",
+           "WSL_INTEROP", "WSL_DISTRO_NAME", "WSLENV")                  # under WSL, what a Windows program needs to be reached
 
 
 def facts() -> str:
@@ -83,8 +97,24 @@ def facts() -> str:
     desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").replace(":", " ").strip()
     session = os.environ.get("XDG_SESSION_TYPE", "").strip()
     parts = [name] + ([f"packages with {manager}"] if manager else []) + (["services with systemd"] if shutil.which("systemctl") else [])
-    parts += [f"desktop {desktop}" + (f" on {session}" if session in ("wayland", "x11") else "")] if desktop else ["no desktop session"]
-    return "This computer: " + ", ".join(parts) + "."
+    if under_windows():
+        parts += ["desktop Windows under WSL"]
+        tail = (" Windows itself is the desktop here: its programs are called by name with .exe (explorer.exe, powershell.exe, "
+                "clip.exe) and take Windows paths, which `wslpath -w PATH` gives.")
+    else:
+        parts += [f"desktop {desktop}" + (f" on {session}" if session in ("wayland", "x11") else "")] if desktop else ["no desktop session"]
+        tail = ""
+    return "This computer: " + ", ".join(parts) + "." + tail
+
+
+def under_windows() -> bool:
+    """Whether this Linux runs under Windows (WSL) with Windows's own programs reachable: the kernel says so, and
+    explorer.exe is on the PATH (Microsoft's interop; a person can turn it off, and then there is no desktop here)."""
+    try:
+        release = os.uname().release.lower()
+    except AttributeError:
+        return False
+    return "microsoft" in release and shutil.which("explorer.exe") is not None
 
 
 # ------------------------------------------------------------------ looking --
@@ -324,6 +354,101 @@ for _name in ("dnf", "yum", "zypper", "apt-get", "python3", "python", "git", "no
               "chromium", "chromium-browser", "google-chrome", "libreoffice", "soffice", "vim", "nvim", "emacs", "nano",
               "tmux", "ssh", "openssl", "perl", "ruby", "php", "R", "julia", "dotnet", "gnome-shell", "plasmashell"):
     LOOK[_name] = _version
+# A Windows desktop under WSL: Windows's own programs, called by their .exe names (Microsoft's interop), where they only
+# look. PowerShell takes the Codex CLI's shape for it (codex-rs/core/src/command_safety/windows_safe_commands.rs at
+# rust-v0.50.0; receipt f69fc63e80f2): a few plain switches, one -Command script, the script split into pipeline
+# segments, any token holding a separator, a redirection, a variable, a call or a block refuses the whole line, and
+# each segment's first word must be on a short list. The list here is what shows the computer's state; Codex's has the
+# file readers (Get-Content, Get-ChildItem), which are left out, since a file is read only where no secret is kept.
+_PS_FLAGS = {"-nologo", "-noprofile", "-noninteractive", "-mta", "-sta"}
+_PS_READS = {"get-ciminstance", "get-wmiobject", "get-process", "get-service", "get-date", "get-psdrive", "get-volume", "get-disk",
+             "get-partition", "get-physicaldisk", "get-netadapter", "get-netipaddress", "get-netipconfiguration",
+             "get-netconnectionprofile", "get-netroute", "get-dnsclientserveraddress", "get-computerinfo", "get-timezone",
+             "get-culture", "get-uiculture", "get-hotfix", "get-printer", "get-pnpdevice", "get-appxpackage", "get-startapps",
+             "get-localuser", "get-localgroup", "get-scheduledtask", "get-host", "get-executionpolicy", "get-command",
+             "get-module", "get-help", "get-member", "select-object", "sort-object", "measure-object", "group-object",
+             "format-list", "format-table", "format-wide", "out-string", "select-string", "where-object"}
+
+
+def _powershell(args) -> bool:
+    i = 0
+    while i < len(args) and args[i].lower() in _PS_FLAGS:
+        i += 1
+    if i >= len(args):
+        return False
+    if args[i].lower() in ("-command", "-c"):
+        if i + 2 != len(args):
+            return False
+        try:
+            tokens = shlex.split(args[i + 1])
+        except ValueError:
+            return False
+    elif args[i].startswith("-"):
+        return False
+    else:
+        tokens = list(args[i:])
+    segments, current = [], []
+    for t in tokens:
+        if t in ("|", "||", "&&", ";"):
+            if not current:
+                return False
+            segments.append(current)
+            current = []
+        elif any(ch in t for ch in "|;<>&$`{}()[]@") or t.startswith("."):
+            return False
+        else:
+            current.append(t)
+    if not current:
+        return False
+    segments.append(current)
+    return all(seg[0].lower() in _PS_READS for seg in segments)
+
+
+def _tasklist(args) -> bool:
+    a = [x.lower() for x in args]
+    for i, x in enumerate(a):
+        if x in ("/v", "/nh", "/svc", "/apps", "/m"):
+            continue
+        if x in ("/fo", "/fi") and i + 1 < len(a):
+            continue
+        if i and a[i - 1] in ("/fo", "/fi"):
+            continue
+        return False
+    return True
+
+
+_REG_KEYS = ("hklm\\software\\microsoft\\windows nt\\currentversion", "hkcu\\software\\microsoft\\windows\\currentversion\\themes",
+             "hkcu\\control panel\\desktop", "hkcu\\control panel\\international", "hklm\\system\\currentcontrolset\\control\\timezoneinformation",
+             "hklm\\hardware\\description\\system")
+
+
+def _reg(args) -> bool:
+    a = [x.lower().strip('"') for x in args]
+    if len(a) < 2 or a[0] != "query" or not any(a[1].startswith(k) for k in _REG_KEYS):
+        return False
+    return all(x in ("/v", "/ve") or (i and a[i - 1] == "/v") for i, x in enumerate(a[2:], 2))
+
+
+def _netsh(args) -> bool:
+    a = [x.lower() for x in args]
+    if any(x.startswith("key") for x in a) or any(x in ("set", "add", "delete", "reset", "connect", "disconnect") for x in a):
+        return False
+    return ((a[:2] == ["wlan", "show"] and len(a) >= 3 and a[2] in ("interfaces", "networks", "profiles", "drivers", "settings"))
+            or (a[:1] == ["interface"] and "show" in a[1:4]))
+
+
+WINDOWS_LOOK = {
+    "powershell.exe": _powershell, "pwsh.exe": _powershell,
+    "tasklist.exe": _tasklist,
+    "systeminfo.exe": lambda a: all(x.lower() in ("/fo", "table", "list", "csv", "/nh") for x in a),
+    "ipconfig.exe": lambda a: all(x.lower() in ("/all", "/displaydns") for x in a),
+    "hostname.exe": _no(), "whoami.exe": lambda a: all(x.lower() in ("/user", "/groups", "/priv", "/all", "/upn", "/fqdn", "/logonid") for x in a),
+    "tzutil.exe": lambda a: [x.lower() for x in a] == ["/g"],
+    "wslpath": _no(), "where.exe": _no(),
+    "reg.exe": _reg, "netsh.exe": _netsh,
+    "cmd.exe": lambda a: [x.lower() for x in a] == ["/c", "ver"],
+}
+LOOK.update(WINDOWS_LOOK)
 # sent to `pc` or `sysinfo`, these are pointed to `sh`, which reads files with the secret ones hidden
 FILE_READERS = ("ls", "cat", "head", "tail", "less", "more", "find", "du", "stat", "tree", "file", "grep", "wc")
 
@@ -453,9 +578,9 @@ def refusal(command: str, offline: bool = False) -> str | None:
                 f"can run it themselves: sudo {command.strip()}")
     if re.match(r"\s*dawnr\b", command):
         return "dawnr does not start itself: how it is started is the person's to decide"
-    secret = SECRET.search(command)
+    secret = SECRET.search(command) or WINDOWS_SECRET.search(command)
     if secret:
-        return f"it names a place where secrets are kept (`{secret.group(1)}`), and dawnr does not read or pass on what is there"
+        return f"it names a place where secrets are kept (`{secret.group(1) or secret.group(0)}`), and dawnr does not read or pass on what is there"
     for pattern, instead in FORBIDDEN:
         if pattern.search(command):
             return instead
