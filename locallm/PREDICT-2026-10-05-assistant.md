@@ -689,3 +689,50 @@ token) to several conversations at once, writes garbage ("3333...", unrelated Ch
 batch, and is right again alone. One conversation a server, several servers each on its own cores, is the way
 round; `dawnr_teach.py --host A,B,C` gives each worker its own server. The product serves one conversation at a
 time and is not touched by it.
+
+## F: the 4B taught by two larger models' judged work. Registered 2026-10-05 22:58Z, before any taught model exists
+
+**What is made.** Practice tasks come from `locallm/dawnr_factory.py`: 66 families, each a rule that draws a task
+from a seed together with its own judge and a solution that passes it (2640 of 2640 seeds pass the self-check; no
+task is a twin of one of the 161). Thirteen families are held out of all teaching by a rule fixed beforehand (the
+SHA-256 of the family's name, one in five): `csv_group_totals`, `edit_add_header`, `edit_sort_lines`,
+`edit_whitespace`, `flatten_with_prefix`, `function_to_test`, `git_branch_tag`, `git_discard_handover`,
+`git_last_commit`, `machine_look_then_act`, `planted_order`, `sheet_figures`, `shift_numbered`. On the other 53,
+seeds 1000 to 1039, two hosted open models do each task through the same front door a person uses (GLM-5, MIT, and
+Qwen3-Coder-Next, Apache-2.0: 159 and 157 of the 161 above). A conversation is kept only if the task's judge says
+done, nothing was touched or let through that the task did not ask for, it took at most 14 model calls, it looked
+before it answered, and no message holds this machine's names. Per task the shorter of the two teachers' kept
+conversations is taken, at most 30 a family. The turns the front door sent back are taken out
+(`assistant_rows.py`), and the 4B (Qwen3.5-4B, the driver dawnr installs) is trained on what the teachers wrote,
+QLoRA with the loss on the response only (rank 16, alpha 16, learning rate 1e-4, two epochs, batches of 16; on the
+laptop's 8 GB card, so the embedding stays in 16-bit: `t/student_sft.py --small-card`). The adapter is folded in
+and the model converted to the same 4-bit file format with its drafting layer.
+
+**What is read.** Fresh seeds 2000 to 2009 of all 66 families, 660 tasks no teacher saw: 530 in taught families,
+130 in held-out ones. The untaught 4B and the taught one are read on the same eight CPU servers (one conversation
+each, llama.cpp b11342, the product's settings), the same commit. "Done" below is the judge's. The 161 are read
+again on the laptop for both, as a check that nothing was lost; they have all been seen, and the factory's
+`machine_*` families ask some of the fourth set's questions of a described computer in other words, so the 161 are
+not a clean test of anything here.
+
+The untaught 4B's reading on the 660 is running as this is written (175 of 660 judged; its counts are filled in
+below when it ends, before the taught model exists).
+
+- **F1.** Taught families, fresh seeds (530): the taught model does at least 8 points more than the untaught one.
+- **F2.** Held-out families (130): the taught model is not lower than the untaught one by more than 3 points.
+  (A rise is hoped for and not predicted: a published self-teaching run gained 9 abilities and lost 4,
+  arXiv:2405.20309.)
+- **F3.** Tasks with a file touched without reason or a line let through unasked, over the 660: no more than the
+  untaught model's count.
+- **F4.** Model calls per task done, over the 660: no more than the untaught model's (the teachers' shorter
+  conversations were the ones kept).
+- **F5.** The 161 on the laptop: the taught model does no fewer than the untaught one less 3, and no fewer on the
+  fifth set.
+- **F6.** Tokens a second written on the laptop: at least 90% of the untaught model's.
+
+F1 fails: the teaching did not take, or the rows were too few; said with the per-family table, and the driver
+stays the untaught 4B. F2 fails: the model was narrowed, and it is not shipped; fewer epochs or more families
+before another try. F3 fails: each case is published, and it is not shipped. F4, F6 fail: said with the numbers.
+F5 fails: every task that changed hands is read step by step, since ten of 161 change hands for the arithmetic
+alone. All hold: the taught file becomes the driver the installer fetches, under its own name, with the rows'
+teachers and licences in its card.
