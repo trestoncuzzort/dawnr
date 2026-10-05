@@ -67,6 +67,7 @@ SYSTEM = ("You are dawnr, an assistant working on this person's computer, offlin
 # added when `pc` is offered, with one sentence about the machine (dawnr_agent/system.py, facts)
 ON_THE_COMPUTER = ("To open a program, a file or a web page, or to change a setting or a service on the computer itself, "
                    "call `pc` with one command; the person is asked each time. It is not for files and never uses sudo.")
+UNFINISHED = "Stopped: it ran out of rounds before it finished. What was changed is what the line below says."
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
 
@@ -84,7 +85,7 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
             name += "-2"
         names.add(name)
         listed.append({"name": name, "path": str(path)})
-    agent = {"roots": listed, "budget": {"max_steps": 12, "max_rounds": 6, "max_failures": 2}}
+    agent = {"roots": listed, "budget": {"max_steps": 30, "max_rounds": 12, "max_failures": 2}}
     if state is not None:
         agent["state"] = str(state)
     # Left out of what the model is offered, each some hundreds of tokens read on every first call: `t` (proving is
@@ -225,7 +226,9 @@ class Planner(NativePlanner):
         msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
         calls = msg.get("tool_calls") or []
         if not calls:
-            return Finish((msg.get("content") or "").strip())
+            text = (msg.get("content") or "").strip()
+            # asked to answer with nothing left to call, the model sometimes writes the call it wanted as text
+            return Finish(UNFINISHED if "<tool_call>" in text or "<function=" in text else text)
         steps = []
         for c in calls:
             fn = c.get("function") or {}

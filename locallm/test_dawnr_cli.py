@@ -246,16 +246,33 @@ def test_a_task_that_does_not_finish_says_why(tmp_path):
 
 
 def test_in_its_last_round_it_is_asked_to_answer_and_given_nothing_to_call(tmp_path):
-    looks = [turn(("fs_search", {"query": f"phone {i}"})) for i in range(5)]
+    looks = [turn(("fs_search", {"query": f"phone {i}"})) for i in range(11)]
     model = Model(*looks, turn(text="The phone number is not in the files."))
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
     (work / "invoice.txt").write_text("Harbor Cafe\nTotal due: 194.40\n")
     with harness:
         answer = cli.run_task(agent, planner, meter, "What is Harbor Cafe's phone number?", [], said.append)
-    assert answer == "The phone number is not in the files." and len(model.bodies) == 6
-    assert all("tools" in body for body in model.bodies[:5]) and "tools" not in model.bodies[5]
-    assert model.bodies[5]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
-    assert model.bodies[4]["messages"][-1]["role"] == "tool"
+    assert answer == "The phone number is not in the files." and len(model.bodies) == 12
+    assert all("tools" in body for body in model.bodies[:11]) and "tools" not in model.bodies[11]
+    assert model.bodies[11]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
+    assert model.bodies[10]["messages"][-1]["role"] == "tool"
+    # a call written out as text in that last round is not an answer, and is not shown as one
+    model = Model(*looks, turn(text="I will edit it. <tool_call> <function=fs_edit> ... </function> </tool_call>"))
+    (tmp_path / "again").mkdir()
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "again", model)
+    with harness:
+        assert cli.run_task(agent, planner, meter, "Rename it everywhere.", [], said.append) == cli.UNFINISHED
+
+
+def test_a_search_in_one_file_searches_that_file_and_a_search_of_nothing_says_so(tmp_path):
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, Model())
+    (work / "app.log").write_text("0001 INFO start\n0002 WARN request timeout\n0003 INFO done\n")
+    with harness:
+        one = harness.call("fs_search", {"query": "timeout", "path": "here/app.log"})
+        assert "1 matches in 1 files, 1 files searched" in one.text and "here/app.log:2: 0002 WARN request timeout" in one.text
+        none = harness.call("fs_search", {"query": "timeout", "path": "here", "glob": "*.md"})
+        assert "0 files searched" in none.text and "which is not the same as no match" in none.text
+        assert "no file was searched" in harness.call("fs_search", {"query": "x", "path": "here/missing.log"}).text
 
 
 def test_without_a_task_and_without_a_terminal_it_refuses_to_start(tmp_path, monkeypatch, capsys):
