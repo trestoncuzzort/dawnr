@@ -54,6 +54,7 @@ QUESTIONS = 4                  # at most this many examples are put to the perso
 EXAMPLES = 3                   # once the drafts no longer disagree, stop when this many are approved
 INPUTS = 40                    # small inputs every draft is run on
 NOT_ALLOWED = "x"
+FUTURE = "from __future__ import annotations\n"
 
 
 class Refused(Exception):
@@ -207,7 +208,9 @@ def run(fs: list[dict], inputs: list[tuple]) -> list[dict]:
     rows = [{"args": args, "said": []} for args in inputs]
     for f in fs:
         try:
-            session = py_sandbox.Session(f["code"] + verify_py._wrapper(f["fn"], f["kinds"]), "_t_repr_call")
+            # annotations are read as text and never evaluated: a draft that writes `List[int]` without importing
+            # List is a NameError before Python 3.14 and would answer nothing
+            session = py_sandbox.Session(FUTURE + f["code"] + verify_py._wrapper(f["fn"], f["kinds"]), "_t_repr_call")
         except py_sandbox.LoadError:                            # a draft that does not load answers nothing
             for row in rows:
                 row["said"].append(None)
