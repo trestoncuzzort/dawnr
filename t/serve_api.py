@@ -17,7 +17,9 @@ states that end (done, failed, cancelled).
     DELETE /v1/jobs/ID                 cancel it if it has not ended, and erase what it left on disk
     GET    /v1/health                  what is installed and how long the queue is
     GET    /v1/models                  the kinds of job as "models" (dawnr-ask, dawnr-verify, ...), for a chat program
-    POST   /v1/chat/completions        OpenAI's chat shape: the model named is the kind of job, the last message is its input
+    POST   /v1/chat/completions        OpenAI's chat shape: the model named is the kind of job, the last message is its input;
+                                       with `tools` and the model `dawnr-tools`, the base model's own turn, a call
+                                       handed back only when its values were said (locallm/tool_check.py)
     GET    /                           the page (t/ui.html)
 
 The chat endpoint is there so that a chat program a person already has (anything that takes an OpenAI-compatible
@@ -162,6 +164,46 @@ HOW = {"ask": "Describe the function, then give examples, one `assert f(argument
        "cite": "Write the question, then a line of `---`, then the document (or send the document in an earlier message).",
        "calc": "Ask the question with its numbers.",
        "check": "Paste the certificate's JSON."}
+
+
+TOOLS_MODEL = "dawnr-tools"
+HOW_TOOLS = ("Offer `tools` as OpenAI's chat shape does. A call comes back only when each value it passes was said in the "
+             "conversation or is the tool's own default or choice; otherwise the reply is a question that names the parameter.")
+
+
+def checked_tools(base: str, body: dict) -> dict:
+    """The base model's own turn for a request that offers tools, with every call it wrote put through
+    locallm/tool_check.py before it is handed back: {"message", "finish", "dawnr"}. Measured on When2Call
+    (locallm/PREDICT-2026-10-05-tool-check.md, T1 to T4): on requests missing a required value the model alone
+    called a tool 203 times in 300 and 50 with the check, and 203 of its 214 right calls were still handed back.
+    Raises Bad for a request that cannot be read and OSError when the base model's server does not answer."""
+    sys.path.insert(0, str(REPO))
+    from locallm import tool_check
+    messages, tools = body.get("messages"), body.get("tools")
+    if not isinstance(tools, list) or not tools or not all(isinstance(t, dict) for t in tools):
+        raise Bad("`tools` must be a list of the tools offered, in OpenAI's shape")
+    if not isinstance(messages, list) or not messages or not all(isinstance(m, dict) for m in messages):
+        raise Bad("`messages` must be the conversation so far")
+    try:
+        limit = max(16, min(2048, int(body.get("max_tokens") or 400)))
+    except (TypeError, ValueError):
+        raise Bad("`max_tokens` must be a number") from None
+    reply = tool_check.ask_model(base, tools, messages, max_tokens=limit)
+    calls = reply.get("tool_calls") or []
+    if not calls:
+        return {"message": {"role": "assistant", "content": reply.get("content") or ""}, "finish": "stop", "dawnr": {"check": "no call was written"}}
+    verdict = tool_check.check_all(tools, messages, calls)
+    proposed = [dict(zip(("name", "arguments"), tool_check.read_call(c))) for c in calls]
+    left_out = [dict(x, tool=v["name"]) for v in verdict["verdicts"] for x in v.get("left_out", [])]
+    if verdict["action"] == "call":
+        released = [{"id": (c.get("id") if isinstance(c, dict) else None) or f"call_{secrets.token_hex(6)}", "type": "function",
+                     "function": {"name": v["name"], "arguments": json.dumps(v["arguments"], ensure_ascii=False)}}
+                    for c, v in zip(calls, verdict["calls"])]
+        return {"message": {"role": "assistant", "content": None, "tool_calls": released}, "finish": "tool_calls",
+                "dawnr": {"check": "released", "left_out": left_out}}
+    asked = [dict(a, tool=v["name"]) for v in verdict["verdicts"] if v["action"] == "ask" for a in v["ask"]]
+    return {"message": {"role": "assistant", "content": tool_check.question(verdict)}, "finish": "stop",
+            "dawnr": {"check": "asked" if verdict["action"] == "ask" else "refused", "proposed": proposed, "ask": asked, "left_out": left_out}}
 
 
 def _said(message: dict) -> str:
@@ -450,7 +492,8 @@ def make_handler(jobs: Jobs, token: str, port: int, page: bytes):
                 return self._send(200, health(jobs))
             if path == "/v1/models":
                 return self._send(200, {"object": "list", "data": [{"id": m, "object": "model", "owned_by": "dawnr", "description": HOW[k]}
-                                                                    for m, k in CHAT_MODELS.items()]})
+                                                                    for m, k in CHAT_MODELS.items()]
+                                        + [{"id": TOOLS_MODEL, "object": "model", "owned_by": "dawnr", "description": HOW_TOOLS}]})
             m = re.fullmatch(r"/v1/jobs/([a-f0-9]{16})(/certificate)?", path)
             if not m:
                 return self._send(404, {"error": "no such path"})
@@ -463,8 +506,13 @@ def make_handler(jobs: Jobs, token: str, port: int, page: bytes):
         def _chat(self, body: dict):
             """OpenAI's chat completions over the gate: the model named is the kind of job; the reply is its text."""
             model = body.get("model")
+            if model == TOOLS_MODEL or (body.get("tools") and model not in CHAT_MODELS):
+                return self._tools(body)
+            if body.get("tools"):
+                return self._send(400, {"error": {"message": f"tools are offered to the model {TOOLS_MODEL}; {model} is a kind of job", "type": "invalid_request_error"}})
             if model not in CHAT_MODELS:
-                return self._send(404, {"error": {"message": f"no model {model!r}; the kinds of job are {', '.join(CHAT_MODELS)}", "type": "invalid_request_error"}})
+                return self._send(404, {"error": {"message": f"no model {model!r}; the kinds of job are {', '.join(CHAT_MODELS)}, and {TOOLS_MODEL} takes tools",
+                                                  "type": "invalid_request_error"}})
             kind, stream = CHAT_MODELS[model], bool(body.get("stream"))
             rid, made = "chatcmpl-" + secrets.token_hex(8), int(time.time())
 
@@ -495,6 +543,33 @@ def make_handler(jobs: Jobs, token: str, port: int, page: bytes):
             return self._send(200, {"id": rid, "object": "chat.completion", "created": made, "model": model,
                                     "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
                                     "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}})
+
+        def _tools(self, body: dict):
+            """A request that offers tools: the base model's turn, its calls checked (checked_tools)."""
+            try:
+                r = checked_tools(jobs.base, body)
+            except Bad as bad:
+                return self._send(400, {"error": {"message": str(bad), "type": "invalid_request_error"}})
+            except OSError as error:
+                return self._send(502, {"error": {"message": f"the base model's server did not answer ({error})", "type": "server_error"}})
+            rid, made, model = "chatcmpl-" + secrets.token_hex(8), int(time.time()), TOOLS_MODEL
+            if not body.get("stream"):
+                return self._send(200, {"id": rid, "object": "chat.completion", "created": made, "model": model, "dawnr": r["dawnr"],
+                                        "choices": [{"index": 0, "message": r["message"], "finish_reason": r["finish"]}],
+                                        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}})
+
+            def chunk(delta: dict, finish=None, **more) -> bytes:
+                return ("data: " + json.dumps({"id": rid, "object": "chat.completion.chunk", "created": made, "model": model, **more,
+                                               "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}) + "\n\n").encode("utf-8")
+            calls = r["message"].get("tool_calls")
+            delta = ({"tool_calls": [dict(c, index=i) for i, c in enumerate(calls)]} if calls else {"content": r["message"]["content"]})
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(chunk({"role": "assistant", "content": None if calls else ""}) + chunk(delta) + chunk({}, r["finish"], dawnr=r["dawnr"]) + b"data: [DONE]\n\n")
+            return self.wfile.flush()
 
         def do_POST(self):                                      # noqa: N802
             if not self._gate():

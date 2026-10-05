@@ -65,6 +65,16 @@ dawnr is research software. Read this before relying on anything it does.
   problems, computed afterwards, that shows 269 answers with 97.4% right; its own measurement on problems it has
   not seen is registered in `locallm/PREDICT-2026-10-05-calc.md` (K6 to K9) and not yet made. A misreading that the
   reasoning and the working share is shown; the working is printed so that it can be read.
+- **`dawnr tools` checks where a call's values came from, not that they are the right ones.** A call is handed
+  back only when each value it passes was said in the conversation (its words as written, its number), or is the
+  tool's default, or a choice among the tool's listed values that the conversation makes. Measured on When2Call's
+  test items (900 the rule had not been fitted on, the base model): on 300 requests with a required value
+  removed, the model alone called a tool 203 times and 50 with the check, and 142 of the 153 questions the check
+  asked named the removed parameter; on 300 complete requests, 203 of the model's 214 right calls were still
+  handed back (eleven became questions). What it cannot see: a word of the request passed to the wrong parameter,
+  an identifier assembled from the request's own words, a truth value nobody stated, and a value the person
+  implied without saying. Words the model writes when it calls nothing are passed on as they are, unchecked, and
+  the reply says so. One turn at a time was measured; conversations of several turns were not.
 - **With `DAWNR_WRITER_URL` set, what you ask leaves your machine.** The question, its tests, a specification or the
   Python file you give `verify` are sent to the address you named, to be written into `t` by the model there; dawnr
   prints a line saying so each time. Nothing it returns is trusted unchecked, so a wrong or hostile writer costs

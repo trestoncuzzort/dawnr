@@ -226,6 +226,23 @@ creeps in). The number is shown only when a working computes that same
 number, and that working is printed, because it is the reading of your
 question that was computed.
 
+And for programs that give a model tools to call:
+
+```bash
+dawnr tools tools.json "Book me a table at Luigi's."
+```
+
+A model offered a tool fills in every value the tool requires, whether you
+gave one or not. dawnr hands a call back only when each value it passes was
+said in the conversation, or is the tool's own default, or is a choice among
+the tool's listed values that the conversation makes; otherwise it asks for
+the parameter by name and shows what the model proposed. On 300 requests
+with a required value missing (When2Call), the model alone called a tool 203
+times and 50 with the check; of its 214 right calls on complete requests,
+203 were still handed back. The same check runs behind the local API for
+any chat request that offers `tools` (model `dawnr-tools`), so a program
+written for OpenAI's tool calling gets it by changing the address.
+
 The model that comes with dawnr is small, and most questions are refused
 because it cannot write a program the provers accept. The writing does not
 have to be done by that model. Whatever writes the program is never

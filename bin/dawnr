@@ -7,7 +7,8 @@
 #   dawnr verify FILE.py  a Python function you already have: a proved twin of it, or why not [--fn NAME] [--test ...]
 #   dawnr extract FILE... --field "total(number): the amount due"    fields from your files, each with the sentence it is in
 #   dawnr cite "QUESTION" FILE...    an answer from your files, every claim quoting one of their sentences
-#   dawnr calc "QUESTION WITH NUMBERS"    the working written down and computed exactly, shown when workings agree
+#   dawnr calc "QUESTION WITH NUMBERS"    the number reasoned in words, shown when a working computed exactly gives it too
+#   dawnr tools TOOLS.json "REQUEST"    your tools offered to the model; a call is shown only when its values were said
 #   dawnr check FILE      replay a certificate (ask or prove with --certificate FILE wrote it): no model, this machine's provers
 #   dawnr doctor          what is installed and what each part found
 #   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
@@ -185,13 +186,25 @@ case $cmd in
     T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/verify_py.py --student "$STUDENT_AT" ${WRITER[@]+"${WRITER[@]}"} --file "$FILE" ${ARGS[@]+"${ARGS[@]}"}
     ;;
   calc)
-    # a question with numbers: the model writes the working, it is computed exactly, and the answer is shown only
-    # when separate workings agree (locallm/calc.py); only the base model is needed
-    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr calc "QUESTION WITH NUMBERS" [--ways N] [--json OUT.json]' >&2; exit 2; }
+    # a question with numbers: the model reasons its way to a number in words, writes the working separately, the
+    # working is computed exactly, and the number is shown only when the two agree (locallm/calc.py); only the base
+    # model is needed
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr calc "QUESTION WITH NUMBERS" [--ways N] [--needed N] [--json OUT.json]' >&2; exit 2; }
     QUESTION=$1; shift
     own_paths "$@"
     base_up
     cd "$DAWNR_REPO" && "$DAWNR_PYTHON" locallm/calc.py --host "127.0.0.1:$BP" ${ARGS[@]+"${ARGS[@]}"} "$QUESTION"
+    ;;
+  tools)
+    # a person's tools offered to the base model: a call it writes is shown only when every value it passes was said
+    # in the request or is the tool's own default or choice; otherwise the question that names the parameter
+    # (locallm/tool_check.py)
+    [ $# -ge 2 ] && [ "${1#--}" = "$1" ] && [ "${2#--}" = "$2" ] || { echo 'usage: dawnr tools TOOLS.json "REQUEST" [--any-enum] [--json OUT.json]' >&2; exit 2; }
+    [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
+    TOOLS=$(abspath "$1"); REQUEST=$2; shift 2
+    own_paths "$@"
+    base_up
+    cd "$DAWNR_REPO" && "$DAWNR_PYTHON" locallm/tool_check.py --host "127.0.0.1:$BP" --tools "$TOOLS" ${ARGS[@]+"${ARGS[@]}"} "$REQUEST"
     ;;
   mcp)
     # dawnr's checks as Model Context Protocol tools on stdio, for an assistant that is not dawnr's (t/mcp_gate.py):
@@ -272,5 +285,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,19p' "$0";;
+  *) sed -n '2,20p' "$0";;
 esac
