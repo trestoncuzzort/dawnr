@@ -284,7 +284,7 @@ def test_a_test_that_is_there_is_not_changed_unasked_without_the_model_hearing_i
     with harness:
         cli.run_task(agent, planner, meter, "Write median.py. `python3 test_median.py` must print OK.", [], said.append)
         heard = model.bodies[1]["messages"][-1]["content"]
-        assert heard.startswith("This would change `here/test_median.py`, a test that is there to be passed: the request does not ask")
+        assert heard.removeprefix(cli.FROM_DAWNR).startswith("This would change `here/test_median.py`, a test that is there to be passed: the request does not ask")
         assert "assert median" in (work / "test_median.py").read_text() and (work / "median.py").is_file() and len(asked) == 1
         cli.run_task(agent, planner, meter, "Fix the failing test in test_median.py.", [], said.append)     # asked for: no second look
         assert (work / "test_median.py").read_text() == "print('OK')\n" and len(asked) == 2
@@ -305,6 +305,9 @@ def test_offline_the_computer_tool_runs_nothing_that_reaches_the_network():
     for line in ("dnf install htop -y", "apt install htop", "pacman -Syu", "zypper dup", "apk add htop", "snap install x", "apt-get -y upgrade"):
         assert system.refusal(line).endswith(f"The person can run it themselves: sudo {line}"), line
     assert system.refusal("dnf list installed") is None and "call `sysinfo`" in system.refusal("rpm -qa")
+    # ... by its own command, not by a word further down the line
+    assert not system.MANAGERS.match("apt list --installed 2>/dev/null | grep -i openpyxl; python3 -c 'import xlrd'")
+    assert system.MANAGERS.match("echo hi; apt-get -y install x") and system.MANAGERS.match("rpm -ivh x.rpm") and not system.MANAGERS.match("dpkg -l | grep -i foo")
     assert system.refusal("dawnr --online").startswith("dawnr does not start itself")
     for line in ("rm x", "ls; mv a b", "chmod -R 777 /", "dd if=/dev/zero of=/dev/sda", "echo x > /etc/hosts", ":(){ :|:& };:"):
         assert system.refusal(line) is not None
@@ -482,7 +485,7 @@ def test_a_line_copied_from_a_file_is_not_the_persons_and_the_model_and_then_the
     with harness:
         answer = cli.run_task(agent, planner, meter, "What does notes.txt say about the meeting?", [], said.append)
         heard = model.bodies[2]["messages"][-1]["content"]
-        assert heard.startswith(f"The line `{planted}` is written in a file or a page this task read, and the request does not ask for it.")
+        assert heard.removeprefix(cli.FROM_DAWNR).startswith(f"The line `{planted}` is written in a file or a page this task read, and the request does not ask for it.")
         assert answer == "It says the meeting moved to Thursday." and ran == [] and asked == []
         # sent again as it was, it goes to the person, marked, and --yes does not answer for them
         cli.run_task(agent, planner, meter, "Read notes.txt and tell me about the meeting.", [], said.append)
@@ -515,3 +518,30 @@ def test_an_answer_that_does_not_name_what_the_journal_says_was_removed_is_sent_
         assert "tools" not in back and back["messages"][-1]["content"].startswith("The journal of what this task changed says it removed here/a.bak")
         assert cli.run_task(agent, planner, meter, "Rename b.bak to c.bak.", [], said.append) == "Renamed."      # a move loses nothing
         assert len(model.bodies) == 5
+
+
+def test_code_changed_and_not_run_since_is_run_before_the_answer_is_taken(tmp_path):
+    cfg = cli.default_config(tmp_path / "work3", state=tmp_path / "state3") if (tmp_path / "work3").mkdir() is None else None
+    harness, agent = cli.build_agent(cfg, plan_approver=cli.plan_approver(lambda prompt: "y", lambda *_: None, yes=True))
+    if agent.shell is None:
+        harness.close()
+        pytest.skip("no sandbox here")
+    work = tmp_path / "work3"
+    (work / "greet.py").write_text("import sys\n\nprint('hello ' + sys.argv[1])\n")
+    wrong = "import sys\n\ntext = 'hello ' + sys.argv[1]\nprint(text.upper() if '--upper' in sys.argv else text)\n"
+    right = "import sys\n\nargs = [a for a in sys.argv[1:] if a != '--upper']\ntext = 'hello ' + args[0]\nprint(text.upper() if '--upper' in sys.argv else text)\n"
+    write = lambda text: ("fs_write", {"path": "here/greet.py", "content": text, "overwrite": True})
+    model = Model(turn(("fs_read", {"path": "here/greet.py"})), turn(write(wrong)), turn(text="Added the option."),
+                  turn(("sh", {"command": "python3 greet.py --upper ana"})), turn(write(right)), turn(text="Added, and it prints HELLO ANA."),
+                  turn(("sh", {"command": "python3 greet.py --upper ana"})), turn(text="It prints HELLO ANA."))
+    meter = cli.Meter(model)
+    planner = cli.Planner(harness, agent, "nowhere:1", "base", post=meter, look_first=False)
+    said = []
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Add an option --upper to greet.py.", [], said.append)
+    sent = model.bodies[3]["messages"]                          # "Added the option." went back, with the tools still offered
+    assert sent[-1]["content"] == cli.UNRUN.format(files="here/greet.py") and "tools" in model.bodies[3]
+    assert any("HELLO --UPPER" in m.get("content", "") for m in model.bodies[4]["messages"])        # and the run showed the mistake
+    assert (work / "greet.py").read_text() == right
+    # said once a task: the second answer is taken as it is, run or not
+    assert answer == "Added, and it prints HELLO ANA." and len(model.bodies) == 6
