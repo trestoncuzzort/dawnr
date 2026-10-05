@@ -28,9 +28,11 @@ grammar above, for the sentence. The value is shown only when its words are in t
 the sentence the second reading named (`held`). The first build of that rule also rearranged both prompts so that
 the server would read the document once, and the rearranged free reading filled in 148 of 300 absent fields where
 the measured one filled in 83; the prompts are therefore the measured ones again, word for word (`VALUE_SYSTEM` and
-`value_messages` are the schema arm's, `SYSTEM` and `messages` the span arm's), the document is read once for each
-kind of reading, and the rule's numbers are a third registration (X10 to X13). A number or a date keeps the grammar
-of typed runs, which are short by construction.
+`value_messages` are the schema arm's, `SYSTEM` and `messages` the span arm's) and the document is read once for
+each kind of reading. Measured so, on 600 questions it had not seen (X10 to X13): 340 values shown, 65.9% exactly
+right, 230 of 300 absent fields left empty, nothing shown that is not in the document; the schema alone 378,
+64.5%, 215, and 9 values not in the document as words. A number or a date keeps the grammar of typed runs, which
+are short by construction, and is not measured.
 
 A short document is read whole, so the model reads it once for all fields; a long one is cut to the passages BM25
 ranks best for each field (locallm/dawnr_retrieval/bm25.py).

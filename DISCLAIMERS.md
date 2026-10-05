@@ -33,18 +33,17 @@ dawnr is research software. Read this before relying on anything it does.
   not yet measured; on four hand-written files the published model verified two and refused two, one of them a
   function written to stop one short of what its docstring says, which the refusal pointed at with the example.
 - **`dawnr cite` and `dawnr extract` say where words came from, not that they are the right words.** Neither can
-  show text that is not in your files, by construction. `cite` is measured (below). `extract` has been measured
-  twice (SQuAD 2.0, each time 300 questions the paragraph answers and 300 it does not, the base model), and
-  changed after each. Held to a run of a sentence's words it quoted too much: 43% and 41% of the values it showed
-  were exactly right, where the same model writing freely under a JSON schema reached 63% both times. Reading a
-  text field twice (the words written freely, shown only when they are in your document as words and inside the
-  sentence a second, grammar-held reading names) was then built with a prompt of its own, and measured at 56%
-  exact of shown with 60% of absent fields left empty (the schema: 63% and 72%): worse than a schema. The same
-  rule over the two prompts that had been measured gives 66% and 79% on those questions, computed afterwards, so
-  the command now uses those prompts word for word, and its own numbers are registered in
-  `locallm/PREDICT-2026-10-05-extract.md` (X10 to X13) and not yet measured. Until they are: a schema-holding
-  runtime is at least as often right as `dawnr extract` has been measured to be, and what `extract` adds is the
-  sentence beside every value.
+  show text that is not in your files, by construction. `cite` is measured (below). `extract` was measured three
+  times on 2026-10-05 (SQuAD 2.0, each time 300 questions the paragraph answers and 300 it does not, none repeated,
+  the base model) and changed after the first two. As it stands, for a text field: a value was shown for 270 of
+  the 300 answerable questions and was exactly right for 224; 230 of the 300 absent ones were left empty; of all
+  340 values shown 65.9% were exactly right. The same model filling a JSON schema showed 378 values, 64.5% exactly
+  right, left 215 absent ones empty, and 9 of its values were not in the paragraph as words. So `extract` is about
+  as often right as a schema, more often silent where the document does not say, and never shows words that are
+  not there; one field in four that is not in the document is still filled with something that is, and the
+  printed sentence is what you check. What did not work, for the record: holding the value to a run of the
+  sentence's words by grammar (39 to 43% exactly right, three samples), and a prompt of my own in place of the
+  measured one (56%). Number and date fields are not measured.
 - **Documents in other languages are read, and only English is measured.** Until 2026-10-05 `cite` and `extract`
   split sentences by an English rule, so a Chinese or Japanese document was one sentence, any sentence was cut at
   400 characters with the rest silently dropped, a long document not in the Latin alphabet could not be searched,
