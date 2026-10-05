@@ -2,7 +2,7 @@
 """t/verify_py.py -- a Python function you already have, given a proved twin (2026-10-05).
 
     python3 t/verify_py.py --student HOST:PORT --file F.py [--fn NAME] [--test "assert f(1) == 2" ...]
-        [--specs 3] [--answers 3] [--save-t OUT.t] [--save-python OUT.py] [--certificate OUT.json]
+        [--whole 5] [--specs 3] [--answers 3] [--save-t OUT.t] [--save-python OUT.py] [--certificate OUT.json]
 
 `dawnr verify F.py` is this.
 
@@ -10,9 +10,20 @@ Why. Most people who want a function checked already wrote it. The function is t
 what it does: it can be run. VERT (Yang et al., arXiv:2404.18852) checks a model-written translation against an
 oracle built from the source program by property-based testing and regenerates one that fails; CrossHair
 (github.com/pschanely/CrossHair) searches a typed, contracted Python function for counterexamples with an SMT
-solver. Here the model writes, as SAFE's two stages do (arXiv:2410.15756 3.2 and 3.3, the `spec` and `proof-py`
-rows the student was trained on, t/spec_first_rows.py), first a specification from the function and its examples,
-then a `t` body for it; and three things that did not write them decide. Research receipt 6f200fb63ee1.
+solver. Here the model writes by two routes, and three things that did not write decide. Research receipt
+6f200fb63ee1.
+
+  whole answers first   as `dawnr ask` does: a program with its specification from the docstring and the examples,
+                        the function not shown, five tries (`by_answers`)
+  then SAFE's stages    when none of those is shown: a specification written from the function and its examples,
+                        then a `t` body for it (arXiv:2410.15756 3.2 and 3.3, the `spec` and `proof-py` rows the
+                        student was trained on, t/spec_first_rows.py; `by_specification`)
+
+The second route was the whole command when it was first measured (V1 of t/PREDICT-2026-10-05-verify-python.md):
+on 111 held-out functions it found a proved twin for 9, where `ask`, given the same words and examples and no
+function, showed an answer for 12; the two sets shared 7. The registered consequence was to ask the whole-answer
+question with the person's function standing where `ask`'s independently written Python stands, and that is the
+first route; the specification route stays behind it because it reached two functions the other did not.
 
   the function itself   run in the sandbox (t/py_sandbox.py): a specification is kept only if it holds at the
                         function's own answers on drawn inputs and rejects most wrong ones (t/spec_gate.py), and a
@@ -197,9 +208,79 @@ def _false_at(spec: dict, entry: dict) -> str | None:
     return None
 
 
+def _shown(text: str, task: dict, row: dict, proved: int, stage: dict, same: dict, entry: dict) -> dict:
+    a = stage.get("agreement", {})
+    return {"program": text, "proved by": proved,
+            "provers": sorted(k for k, cell in row.items() if cell == score_levels.VERIFIED),
+            "undecided": sorted(k for k, cell in row.items() if cell != score_levels.VERIFIED), "cells": dict(row),
+            "specification": [l.strip() for l in text.splitlines() if l.strip().startswith(("requires ", "ensures "))],
+            "behind the specification": {"tests passed": len(entry["points"]), "agrees with the Python on": a.get("draws"),
+                                         "drawn inputs outside its requires": a.get("outside_requires", 0),
+                                         "mutated outputs rejected": a.get("completeness")},
+            "same as yours on": same["inputs"], "python": gate.python_of(task, entry)}
+
+
+def by_answers(entry: dict, function: dict, student, answers: int = 5, max_new: int = 1024, prover=gate.prove, jobs: int = 2) -> dict:
+    """`dawnr ask`'s route with the person's function standing where the independently written Python stands: the
+    model is asked for whole answers (a program with its specification) from the docstring and the examples,
+    without being shown the function; an answer's specification must hold at the function's answers and pin them
+    down, the program must answer as the function does, and it must be proved. Taken up after V1
+    (t/PREDICT-2026-10-05-verify-python.md): three specifications written first found fewer twins than five whole
+    answers did."""
+    fn, code, tests = entry["fn"], function["code"], entry["rec"]["test_list"]
+    question = se.build_prompt(entry, "s2")
+    replies = [student([question], 0.0, 0, "q", max_new)[0][0]]
+    for seed in range(1, answers):
+        replies.append(student([question], TEMPERATURE, seed, "q", max_new)[0][0])
+    kept, refused = gate.candidates(replies, entry)
+    out = {"fn": fn, "tests": tests, "refused": refused, "shown": None, "answers asked": len(replies)}
+    for c in kept:
+        label = f"answer {c['n']}"
+        v = spec_gate.judge(c["task"], entry, code)
+        if not v["passes"]:
+            a = v.get("agreement") or {}
+            if a.get("status") == "disagrees" and a.get("args") is not None:
+                call = f"{fn}({', '.join(json.dumps(x) for x in a['args'])}) == {json.dumps(a.get('reference_said'))}"
+                refused.append(f"{label}: {_ensures(c['task'])} is false at your function's own answer `{call}`")
+            else:
+                refused.append(f"{label}: {_ensures(c['task'])}: {v['why']}")
+            continue
+        same = to_python.check(c["task"], code, fn, tests, outside=0)
+        if not same.get("agrees"):
+            where = f" (`{same['first'][7:]}` is the program's answer, not yours)" if same.get("first") else ""
+            refused.append(f"{label}: it does not answer as your function does{where}")
+            continue
+        named = se.rename_task(copy.deepcopy(c["task"]), f"answer_{c['n']}__{fn}")
+        row = prover([named], jobs).get(named["name"])
+        _level, proved = score_levels.answer_level("pass", row, None)
+        if not proved:
+            refuting = [k for k, cell in (row or {}).items() if str(cell).split(" / ")[0] == "refuted"]
+            refused.append(f"{label}: " + (f"refuted by {', '.join(refuting)}" if refuting else "no prover proved it"))
+            continue
+        out["shown"] = _shown(c["text"], c["task"], row, proved, v, same, entry)
+        return out
+    return dict(out, why="no whole answer the model wrote held at your function's answers, answered as it does and was proved")
+
+
 def verify(entry: dict, function: dict, student, specs: int = 3, answers: int = 3, max_new: int = 1024,
-           prover=gate.prove, jobs: int = 2) -> dict:
-    """The whole of `verify` for one function. `student` is a `decode` (python_beside.api_decode's shape).
+           prover=gate.prove, jobs: int = 2, whole: int = 5) -> dict:
+    """The whole of `verify` for one function: `by_answers` first, and `by_specification` when that shows nothing.
+    `student` is a `decode` (python_beside.api_decode's shape). {"shown": {...} | None, "refused": [...], "why"?,
+    "route": which of the two showed the twin}."""
+    first = by_answers(entry, function, student, whole, max_new, prover, jobs) if whole else None
+    if first and first["shown"]:
+        return dict(first, route="answers")
+    second = by_specification(entry, function, student, specs, answers, max_new, prover, jobs)
+    if first:
+        second["refused"] = first["refused"] + second["refused"]
+        second["answers asked"] = first["answers asked"]
+    return dict(second, **({"route": "specification"} if second["shown"] else {}))
+
+
+def by_specification(entry: dict, function: dict, student, specs: int = 3, answers: int = 3, max_new: int = 1024,
+                     prover=gate.prove, jobs: int = 2) -> dict:
+    """SAFE's two stages with the function shown (arXiv:2410.15756): specifications written from the function and
+    its docstring, each held against the function, then bodies for a supported one, each proved.
     {"shown": {...} | None, "refused": [...], "why"?}."""
     fn, code, shown_code = entry["fn"], function["code"], function["shown"]
     tests = entry["rec"]["test_list"]
@@ -278,16 +359,7 @@ def verify(entry: dict, function: dict, student, specs: int = 3, answers: int = 
                 refuting = [k for k, cell in (row or {}).items() if str(cell).split(" / ")[0] == "refuted"]
                 out["refused"].append(f"{label}: " + (f"refuted by {', '.join(refuting)}" if refuting else "no prover proved it"))
                 continue
-            a = s["stage"].get("agreement", {})
-            out["shown"] = {
-                "program": text, "proved by": proved,
-                "provers": sorted(k for k, cell in row.items() if cell == score_levels.VERIFIED),
-                "undecided": sorted(k for k, cell in row.items() if cell != score_levels.VERIFIED), "cells": dict(row),
-                "specification": [l.strip() for l in text.splitlines() if l.strip().startswith(("requires ", "ensures "))],
-                "behind the specification": {"tests passed": len(entry["points"]), "agrees with the Python on": a.get("draws"),
-                                             "drawn inputs outside its requires": a.get("outside_requires", 0),
-                                             "mutated outputs rejected": a.get("completeness")},
-                "same as yours on": same["inputs"], "python": gate.python_of(task, entry)}
+            out["shown"] = _shown(text, task, row, proved, s["stage"], same, entry)
             return out
     return dict(out, why="no body the model wrote answered as your function does and was proved")
 
@@ -327,6 +399,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--file", type=Path, required=True, help="a Python file with the function")
     ap.add_argument("--fn", help="the function's name, when the file has more than one")
     ap.add_argument("--test", action="append", default=[], help="your own example, an `assert f(arguments) == value` line; repeat")
+    ap.add_argument("--whole", type=int, default=5, help="whole answers asked for first (0: write the specification first, as V1 measured)")
     ap.add_argument("--specs", type=int, default=3, help="specifications asked for")
     ap.add_argument("--answers", type=int, default=3, help="bodies asked for a specification")
     ap.add_argument("--jobs", type=int, default=2, help="provers at once")
@@ -346,7 +419,8 @@ def main(argv: list[str] | None = None) -> int:
     except Refused as refused:
         raise SystemExit(f"verify: {refused}")
     student = python_beside.api_decode("openai", [a.student], a.student_name)
-    r = verify(entry, function, python_beside.referenced(student) if a.reference else student, a.specs, a.answers, max_new=a.max_new, jobs=a.jobs)
+    r = verify(entry, function, python_beside.referenced(student) if a.reference else student, a.specs, a.answers, max_new=a.max_new, jobs=a.jobs,
+               whole=a.whole)
     print(render(r, drawn))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")

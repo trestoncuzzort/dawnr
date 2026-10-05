@@ -105,7 +105,7 @@ def test_a_function_that_fails_the_persons_own_example_is_said_before_any_model_
 def test_a_specification_then_a_body_that_answers_as_the_function_does_and_is_proved_is_shown():
     entry, _ = verify_py.entry_for(function(), ["assert double(3) == 6", "assert double(0) == 0"])
     model = student(SPEC, BODY)
-    r = verify_py.verify(entry, function(), model, specs=1, answers=1, prover=prover(lambda task: dict(ALL, lean="timeout / refuted")))
+    r = verify_py.by_specification(entry, function(), model, specs=1, answers=1, prover=prover(lambda task: dict(ALL, lean="timeout / refuted")))
     s = r["shown"]
     assert s["proved by"] == 6 and s["undecided"] == ["lean"] and s["specification"] == ["ensures r == 2 * n"]
     assert s["same as yours on"] >= 10 and s["behind the specification"]["mutated outputs rejected"] == 1.0
@@ -120,7 +120,7 @@ def test_a_specification_then_a_body_that_answers_as_the_function_does_and_is_pr
 def test_a_specification_false_at_the_functions_own_answers_never_reaches_a_body():
     entry, _ = verify_py.entry_for(function(), ["assert double(3) == 6", "assert double(0) == 0"])
     model = student(WRONG_SPEC, WEAK_SPEC)
-    r = verify_py.verify(entry, function(), model, specs=2, answers=1, prover=prover(lambda task: ALL))
+    r = verify_py.by_specification(entry, function(), model, specs=2, answers=1, prover=prover(lambda task: ALL))
     assert r["shown"] is None and len(model.asked) == 2 and r["bodies asked"] == 0
     assert r["why"].startswith("no specification the model wrote holds at your function's answers")
     assert verify_py.render(r).startswith("NOT VERIFIED: no specification the model wrote holds")
@@ -135,7 +135,7 @@ def test_a_function_that_does_not_do_what_its_docstring_says_is_pointed_at_with_
     f = verify_py.read_function(source)
     entry, drawn = verify_py.entry_for(f, [])
     promised = "```t\nt 1\ntask triangle(n: int) returns (r: int)\n  requires n >= 0\n  ensures r == n * (n + 1) / 2\n{\n}\n```"
-    r = verify_py.verify(entry, f, student(promised), specs=1, answers=1, prover=prover(lambda task: ALL))
+    r = verify_py.by_specification(entry, f, student(promised), specs=1, answers=1, prover=prover(lambda task: ALL))
     assert r["shown"] is None and drawn
     assert "specification 1: `r == n * (n + 1) / 2` is false at your function's own answer `triangle(2) == 1`" in r["refused"]
     assert "either the model misread the docstring, or the function does not do what it says" in r["why"]
@@ -149,7 +149,7 @@ def test_a_body_that_parts_from_the_function_on_one_input_is_refused_with_that_i
     def proving(tasks, jobs):
         called.append([task["name"] for task in tasks])
         return {task["name"]: ALL for task in tasks}
-    r = verify_py.verify(entry, function(), student(SPEC, ODD_ONE_OUT, BODY), specs=1, answers=2, prover=proving)
+    r = verify_py.by_specification(entry, function(), student(SPEC, ODD_ONE_OUT, BODY), specs=1, answers=2, prover=proving)
     assert r["shown"] and len(called) == 1                       # the odd one never reached a prover
     assert any("it does not answer as your function does (`double(*[7]) == 0`" in x for x in r["refused"]), r["refused"]
 
@@ -157,7 +157,7 @@ def test_a_body_that_parts_from_the_function_on_one_input_is_refused_with_that_i
 @needs_sandbox
 def test_a_body_no_prover_proves_or_one_refutes_is_not_shown():
     entry, _ = verify_py.entry_for(function(), ["assert double(3) == 6", "assert double(0) == 0"])
-    r = verify_py.verify(entry, function(), student(SPEC, BODY), specs=1, answers=1,
+    r = verify_py.by_specification(entry, function(), student(SPEC, BODY), specs=1, answers=1,
                          prover=prover(lambda task: dict(ALL, dafny="refuted / refuted")))
     assert r["shown"] is None and r["refused"] == ["specification 1, body 1: refuted by dafny"]
     assert r["why"] == "no body the model wrote answered as your function does and was proved"
@@ -168,8 +168,8 @@ def test_the_command_writes_the_twin_its_python_and_a_certificate_that_replays(t
     source = tmp_path / "double.py"
     source.write_text(DOUBLE, encoding="utf-8")
     real = verify_py.verify
-    monkeypatch.setattr(verify_py, "verify", lambda entry, f, model, specs, answers, max_new=1024, jobs=2:
-                        real(entry, f, student(SPEC, BODY), 1, 1, prover=prover(lambda task: ALL)))
+    monkeypatch.setattr(verify_py, "verify", lambda entry, f, model, specs, answers, max_new=1024, jobs=2, whole=5:
+                        real(entry, f, student(BODY), 1, 1, prover=prover(lambda task: ALL), whole=1))
     monkeypatch.setattr(verify_py.python_beside, "api_decode", lambda *a, **k: None)
     out_t, out_py, out_c = tmp_path / "double.t", tmp_path / "proved.py", tmp_path / "double.cert.json"
     assert verify_py.main(["--student", "h:1", "--file", str(source), "--save-t", str(out_t), "--save-python", str(out_py),
@@ -188,3 +188,48 @@ def test_the_command_writes_the_twin_its_python_and_a_certificate_that_replays(t
     c["subject"] = [{"name": n, "digest": {"sha256": certificate.digest(x)}} for n, x in certificate._artifacts(c["predicate"])]
     report = certificate.check(c, prover=prover(lambda task: ALL))
     assert report["verdict"] == certificate.FAILED and {s["what"] for s in report["steps"] if s["result"] == "FAILED"} >= {"original"}
+
+
+@needs_sandbox
+def test_whole_answers_are_tried_first_and_the_function_is_the_oracle_without_being_shown():
+    entry, _ = verify_py.entry_for(function(), ["assert double(3) == 6", "assert double(0) == 0"])
+    wrong = t("r == 2 * n + 1", "  r := 2 * n + 1;\n")          # fails the examples: never judged
+    weak = t("r >= n or r < n", "  r := 2 * n;\n")              # passes them, and its specification says nothing
+    model = student(wrong, weak, BODY)
+    r = verify_py.by_answers(entry, function(), model, answers=3, prover=prover(lambda task: ALL))
+    s = r["shown"]
+    assert s["proved by"] == 7 and s["specification"] == ["ensures r == 2 * n"] and s["same as yours on"] >= 10
+    assert r["answers asked"] == 3 and len(model.asked) == 3
+    # the question is `ask`'s: the docstring and the examples; the function's code is not in it
+    assert all("Twice the number." in c[-1]["content"] and "return 2 * n" not in c[-1]["content"] for c in model.asked)
+    assert any(x.startswith("answer 1: fails") for x in r["refused"]) and any(x.startswith("answer 2: `r >= n or r < n`") for x in r["refused"])
+    assert verify_py.render(r).startswith("VERIFIED: a proved twin of `double`")
+
+
+@needs_sandbox
+def test_an_answer_that_passes_the_examples_and_is_not_the_function_is_not_shown():
+    entry, _ = verify_py.entry_for(function(), ["assert double(3) == 6", "assert double(0) == 0"])
+    r = verify_py.by_answers(entry, function(), student(ODD_ONE_OUT), answers=1, prover=prover(lambda task: ALL))
+    assert r["shown"] is None and r["why"].startswith("no whole answer the model wrote held at your function's answers")
+    assert any("it does not answer as your function does" in x or "is false at your function's own answer" in x for x in r["refused"])
+    unproved = verify_py.by_answers(entry, function(), student(BODY), answers=1, prover=prover(lambda task: {k: "timeout / refuted" for k in ALL}))
+    assert unproved["shown"] is None and unproved["refused"] == ["answer 1: no prover proved it"]
+
+
+@needs_sandbox
+def test_verify_falls_back_to_writing_the_specification_first_and_says_which_route_showed_the_twin():
+    entry, _ = verify_py.entry_for(function(), ["assert double(3) == 6", "assert double(0) == 0"])
+    proving = prover(lambda task: ALL)
+    first = verify_py.verify(entry, function(), student(BODY), whole=1, prover=proving)
+    assert first["route"] == "answers" and first["shown"]["proved by"] == 7 and "specifications asked" not in first
+    # no whole answer is usable: the specification is then written from the function, and a body proved for it
+    model = student("no t here", SPEC, BODY)
+    second = verify_py.verify(entry, function(), model, specs=1, answers=1, whole=1, prover=proving)
+    assert second["route"] == "specification" and second["shown"]["proved by"] == 7 and second["answers asked"] == 1
+    assert second["refused"][0].startswith("answer 1:") and len(model.asked) == 3
+    assert "def double(n: int) -> int:" in model.asked[1][-1]["content"]                 # only this route shows the function
+    nothing = verify_py.verify(entry, function(), student(), specs=1, answers=1, whole=1, prover=proving)
+    assert nothing["shown"] is None and "route" not in nothing and nothing["why"].startswith("no specification the model wrote")
+    assert [x.split(":")[0] for x in nothing["refused"]] == ["answer 1", "specification 1"]
+    # whole=0 is the specification route alone, as V1 was measured
+    assert "answers asked" not in verify_py.verify(entry, function(), student(SPEC, BODY), specs=1, answers=1, whole=0, prover=proving)
