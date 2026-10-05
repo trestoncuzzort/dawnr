@@ -131,7 +131,8 @@ def make(*, kind: str, function: str, shown: dict, question: str | None = None, 
         "reference python": reference_python,
         "measured": measured,
         "made": {"at": now or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                 "provers": _versions() if versions is None else versions, "dawnr": _commit()},
+                 "provers": _versions() if versions is None else versions, "dawnr": _commit(),
+                 **({"writer": os.environ["DAWNR_WRITER"]} if os.environ.get("DAWNR_WRITER") else {})},   # who wrote it: provenance, never evidence
     }
     return {"_type": STATEMENT,
             "subject": [{"name": name, "digest": {"sha256": digest(text)}} for name, text in _artifacts(predicate)],

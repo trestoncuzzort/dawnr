@@ -330,6 +330,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--specs", type=int, default=3, help="specifications asked for")
     ap.add_argument("--answers", type=int, default=3, help="bodies asked for a specification")
     ap.add_argument("--jobs", type=int, default=2, help="provers at once")
+    ap.add_argument("--reference", action="store_true",
+                    help="the writer has never seen t: put the language's reference before each question")
+    ap.add_argument("--max-new", type=int, default=1024, help="tokens an answer may take")
     ap.add_argument("--save-t", type=Path, metavar="FILE", help="write the proved t program here")
     ap.add_argument("--save-python", type=Path, metavar="FILE", help="write the proved twin as Python here (it refuses what was not proved)")
     ap.add_argument("--certificate", type=Path, metavar="FILE", help="write the certificate here, for `dawnr check`")
@@ -342,7 +345,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"verify: cannot read {a.file}: {error.strerror}")
     except Refused as refused:
         raise SystemExit(f"verify: {refused}")
-    r = verify(entry, function, python_beside.api_decode("openai", [a.student], a.student_name), a.specs, a.answers, jobs=a.jobs)
+    student = python_beside.api_decode("openai", [a.student], a.student_name)
+    r = verify(entry, function, python_beside.referenced(student) if a.reference else student, a.specs, a.answers, max_new=a.max_new, jobs=a.jobs)
     print(render(r, drawn))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")

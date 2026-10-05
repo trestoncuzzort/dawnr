@@ -197,6 +197,65 @@ def draw(kind: str, rnd: random.Random, like=None, strings: bool = False):
     return None
 
 
+FAR = 0.15                     # of the larger draws, the share drawn far past the examples
+
+
+def draw_beyond(kind: str, rnd: random.Random, like=None, strings: bool = False, share: float = 0.7):
+    """A value in the example's style and LARGER than any `draw` makes of it (2026-10-05).
+
+    `draw` stops at the longest example plus two elements, and at twice the example for an integer. A larger writer
+    found what that leaves open: a specification that spells out the cases up to that size and says nothing after
+    them (`if len(s) == 0 then ... else if len(s) == 6 then ... else r`) held on every draw and rejected every wrong
+    output, because no draw was longer than six. QuickCheck grows its test size to 100 as a run proceeds
+    (Test/QuickCheck/Test.hs, `maxSize`), and EvalPlus (arXiv:2305.01210) found tests the size of a benchmark's own
+    missing a fifth to a quarter of wrong programs. Research receipt 5deec846ed0c.
+
+    A `share` of the draws are larger: most from just past `draw`'s bound to about three times it, and FAR of them
+    far past it (sequences of 28 to 40, integers to twenty times the bound), because a case-by-case specification
+    costs its writer text that grows with the size it covers, and an answer has a budget. The style is the
+    example's (a sorted example stays sorted, code points stay near the example's). The rest are ordinary draws, so a
+    problem whose arguments constrain each other still gets inputs it defines; with one argument every draw is
+    larger (`beyond_drawer`)."""
+    if kind == "bool" or rnd.random() >= share:
+        return draw(kind, rnd, like, strings)
+    far = rnd.random() < FAR
+    if kind == "int":
+        if isinstance(like, int) and not isinstance(like, bool):
+            top = max(2, abs(like) * 2)
+            x = rnd.randint(4 * top, 20 * top) if far else rnd.randint(top + 1, max(top * 3, top + 12))
+            return x if like >= 0 else -x
+        return rnd.choice([rnd.randint(41, 160), -rnd.randint(9, 40)]) if not far else rnd.randint(161, 800)
+    if kind == "seq":
+        ex = list(like) if isinstance(like, (list, tuple)) else []
+        top = max(3, len(ex) + 2)
+        n = rnd.randint(28, 40) if far else rnd.randint(top + 1, max(top * 3, 12))
+        if ex and all(isinstance(x, int) for x in ex):
+            lo, hi = min(ex), max(ex)
+            lo, hi = (lo - 2, hi + 2) if lo != hi else (lo - 2, lo + 2)
+            vals = [rnd.randint(lo, hi) for _ in range(n)]
+            if ex == sorted(ex):
+                vals.sort()
+            return vals
+        return [rnd.randint(-6, 6) for _ in range(n)]
+    if kind == "seq-of-seq":
+        rows = [list(r) for r in like if isinstance(r, (list, tuple))] if isinstance(like, (list, tuple)) else []
+        points = [x for r in rows for x in r if isinstance(x, int) and not isinstance(x, bool)]
+        count = rnd.randint(16, 24) if far else rnd.randint(max(4, len(rows) + 3), max(8, 3 * (len(rows) + 2)))
+        if strings and points:
+            lo, hi = max(0, min(points) - 2), max(points) + 2
+            longest = max(len(r) for r in rows)
+            return [[rnd.randint(lo, hi) for _ in range(rnd.randint(0, longest + 2))] for _ in range(count)]
+        return [[rnd.randint(-4, 4) for _ in range(rnd.randint(0, 3))] for _ in range(count)]
+    return None
+
+
+def beyond_drawer(arguments: int):
+    """`draw_beyond` for a problem of that many arguments: every draw larger when there is one argument, seven in ten
+    of each argument's draws when there are several."""
+    share = 1.0 if arguments == 1 else 0.7
+    return lambda kind, rnd, like=None, strings=False: draw_beyond(kind, rnd, like, strings, share)
+
+
 def to_t(value, kind: str | None = None):
     """A Python value from the reference solution as an interpreter value, read the way the pool
     reads the problem's own assertions (t/mbpp_dfy.py `_literal`, SPEC.md "Strings as sequences of
@@ -582,13 +641,17 @@ def check_points(task: dict, entry: dict) -> dict:
     return out
 
 
-def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None) -> dict:
+def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None, drawer=None) -> dict:
     """One task against its problem's solution: how many draws agreed, and the first that did not.
 
     `oracle`, when given, is called in place of the problem's reference solution, with the same
     arguments (t/spec_gate.py passes a sandboxed Python function the model itself wrote: Clover's
     doc2code edge, arXiv:2310.17807, which compares two artifacts by their outputs on inputs).
-    Nothing else changes: the draws, the mutants and the statuses are the reference check's."""
+    Nothing else changes: the draws, the mutants and the statuses are the reference check's.
+
+    `drawer`, when given, makes the inputs in place of `draw` (`draw_beyond`: the same check on inputs
+    larger than the examples). Without it every draw is the one it has always been."""
+    draw_one = drawer or draw
     fn = oracle if oracle is not None else reference(entry["rec"], entry["fn"])
     if fn is None:
         return {"status": "no reference"}
@@ -662,7 +725,7 @@ def check_task(task: dict, entry: dict, n: int, rnd: random.Random, oracle=None)
         if skipped["reference did not finish"] >= MAX_REFERENCE_TIMEOUTS:
             break
         examples = seeds[0] if len(seeds) == 1 else rnd.choice(seeds)
-        args = [draw(k, rnd, ex, strings=i in nested) for i, (k, ex) in enumerate(zip(kinds, examples))]
+        args = [draw_one(k, rnd, ex, strings=i in nested) for i, (k, ex) in enumerate(zip(kinds, examples))]
         if any(a is None for a in args):
             return {"status": f"cannot draw {kinds}"}
         try:

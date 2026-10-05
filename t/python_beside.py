@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -39,10 +40,24 @@ import spec_first_rows                                          # noqa: E402
 TEMPERATURE, TOP_P = 0.7, 0.95
 
 
-def _post(url: str, body: dict, timeout: float) -> dict:
-    req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"})
+def _post(url: str, body: dict, timeout: float, key: str | None = None) -> dict:
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = "Bearer " + key
+    req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())
+
+
+def endpoint(host: str) -> str:
+    """The chat-completions address of a writer: a bare host:port is a local server, a full base URL
+    (https://host/v1) is used as given."""
+    return (host.rstrip("/") if host.startswith(("http://", "https://")) else f"http://{host}/v1") + "/chat/completions"
+
+
+def referenced(decode):
+    """`decode` for a writer that has never seen `t`: every question carries the language's reference first."""
+    return lambda conversations, *rest: decode([se.with_reference(c) for c in conversations], *rest)
 
 
 def api_decode(api: str, hosts: list[str], name: str, extra: dict | None = None, timeout: float = 900.0, post=_post):
@@ -65,7 +80,13 @@ def api_decode(api: str, hosts: list[str], name: str, extra: dict | None = None,
                     return post(f"http://{host}/api/chat", body, timeout)["message"]["content"] or ""
             body = {"model": name, "messages": messages, "temperature": temperature, "top_p": TOP_P, "seed": seed,
                     "max_tokens": max_new, **(extra or {})}
-            return post(f"http://{host}/v1/chat/completions", body, timeout)["choices"][0]["message"]["content"] or ""
+            # a writer named by a full base URL is a hosted endpoint and gets the key (T_API_KEY, as
+            # t/spec_experiment.py chat sends it); a bare host:port is a server on this machine and gets none
+            if post is _post and host.startswith(("http://", "https://")):
+                reply = _post(endpoint(host), body, timeout, key=os.environ.get("T_API_KEY"))
+            else:
+                reply = post(endpoint(host), body, timeout)
+            return reply["choices"][0]["message"]["content"] or ""
         except Exception:                                       # noqa: BLE001
             return ""
 

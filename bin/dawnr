@@ -27,6 +27,21 @@ RUN=$DAWNR_HOME/run; mkdir -p "$RUN"
 
 healthy() { curl -s -m 2 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '"ok"'; }
 
+# A writer other than the installed model (optional). The program may be written by any model behind an
+# OpenAI-compatible address, a larger one on a machine of yours or a hosted one; the tests, the independently written
+# Python, the provers and the certificate stay on this machine, and nothing the writer returns is relied on unchecked.
+#   DAWNR_WRITER_URL=https://host/v1  DAWNR_WRITER_MODEL=name  [DAWNR_WRITER_KEY=key]
+WRITER=(); STUDENT_AT=127.0.0.1:$SP
+if [ -n "${DAWNR_WRITER_URL:-}" ]; then
+  [ -n "${DAWNR_WRITER_MODEL:-}" ] || { echo "dawnr: DAWNR_WRITER_URL needs DAWNR_WRITER_MODEL, the model's name at that address" >&2; exit 2; }
+  export T_API_KEY=${DAWNR_WRITER_KEY:-${T_API_KEY:-}}
+  export DAWNR_WRITER="$DAWNR_WRITER_MODEL at ${DAWNR_WRITER_URL#*://}"
+  WRITER=(--student-name "$DAWNR_WRITER_MODEL" --reference --max-new 3072); STUDENT_AT=$DAWNR_WRITER_URL
+fi
+sent_away() {  # said every time: with a writer elsewhere, what is asked leaves this machine
+  [ -z "${DAWNR_WRITER_URL:-}" ] || echo "dawnr: this is sent to $DAWNR_WRITER to be written; what comes back is checked here, and none of it is trusted unchecked." >&2
+}
+
 # --cache-ram 256: llama-server keeps up to 8 GiB of old prompts in RAM by default, a speed feature for switching
 # between prompts (github.com/ggml-org/llama.cpp/pull/16391); dawnr repeats one prompt, which the slot reuses anyway,
 # and the default pushed the student's server to 10.8 GB (measured 2026-10-02)
@@ -91,6 +106,7 @@ own_paths() {
 }
 
 both_up() {  # start the two models if they are not running, and stop them again on the way out
+  if [ -n "${DAWNR_WRITER_URL:-}" ]; then base_up; return 0; fi   # the writer is elsewhere: only the base runs here
   started=0
   if ! { healthy "$SP" && healthy "$BP"; }; then
     echo "starting the models (half a minute here, a few minutes the first time on a small machine)..." >&2
@@ -102,6 +118,7 @@ both_up() {  # start the two models if they are not running, and stop them again
 
 student_up() {  # only the model that writes t: start it if it is not running, and stop it again on the way out
   started=0
+  [ -z "${DAWNR_WRITER_URL:-}" ] || return 0
   if ! healthy "$SP"; then
     echo "starting the model (a quarter of a minute here, longer the first time on a small machine)..." >&2
     start_one student "$STUDENT_GGUF" "$SP"; started=1
@@ -129,29 +146,29 @@ case $cmd in
     [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
     SPEC=$(abspath "$1"); shift
     own_paths "$@"
-    student_up
+    student_up; sent_away
     cd "$DAWNR_REPO"
-    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/prove.py prove --student "127.0.0.1:$SP" --spec "$SPEC" ${ARGS[@]+"${ARGS[@]}"}
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/prove.py prove --student "$STUDENT_AT" ${WRITER[@]+"${WRITER[@]}"} --spec "$SPEC" ${ARGS[@]+"${ARGS[@]}"}
     ;;
   spec)
     [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr spec "QUESTION" --test "assert f(x) == y" [--test ...] [--save SPEC.t]' >&2; exit 2; }
     QUESTION=$1; shift
     own_paths "$@"
     why=$(sandbox_check) || { echo "dawnr: model-written Python only runs in a sandbox, and $why" >&2; exit 1; }
-    both_up
+    both_up; sent_away
     cd "$DAWNR_REPO"
-    "$DAWNR_PYTHON" t/prove.py spec --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" --text "$QUESTION" ${ARGS[@]+"${ARGS[@]}"}
+    "$DAWNR_PYTHON" t/prove.py spec --student "$STUDENT_AT" ${WRITER[@]+"${WRITER[@]}"} --python "127.0.0.1:$BP" --text "$QUESTION" ${ARGS[@]+"${ARGS[@]}"}
     ;;
   ask)
     [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr ask "QUESTION" --test "assert f(x) == y" [--test ...] [--save-python FILE] [--certificate FILE]' >&2; exit 2; }
     QUESTION=$1; shift
     own_paths "$@"
     why=$(sandbox_check) || { echo "dawnr: model-written Python only runs in a sandbox, and $why" >&2; exit 1; }
-    both_up
+    both_up; sent_away
     cd "$DAWNR_REPO"
     # --consistency 5: five more Python solutions sampled at 0.8 must not find the specification false
     # (t/PREDICT-2026-10-02-ambiguity.md: 80% -> 87% of shown answers right); a later --consistency overrides it
-    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" \
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "$STUDENT_AT" ${WRITER[@]+"${WRITER[@]}"} --python "127.0.0.1:$BP" \
       --consistency 5 --text "$QUESTION" ${ARGS[@]+"${ARGS[@]}"}
     ;;
   verify)
@@ -162,9 +179,9 @@ case $cmd in
     FILE=$(abspath "$1"); shift
     own_paths "$@"
     why=$(sandbox_check) || { echo "dawnr: your Python only runs in a sandbox here, and $why" >&2; exit 1; }
-    student_up
+    student_up; sent_away
     cd "$DAWNR_REPO"
-    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/verify_py.py --student "127.0.0.1:$SP" --file "$FILE" ${ARGS[@]+"${ARGS[@]}"}
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/verify_py.py --student "$STUDENT_AT" ${WRITER[@]+"${WRITER[@]}"} --file "$FILE" ${ARGS[@]+"${ARGS[@]}"}
     ;;
   calc)
     # a question with numbers: the model writes the working, it is computed exactly, and the answer is shown only
@@ -221,9 +238,9 @@ case $cmd in
       api)
         # the same gate behind a local HTTP API, and a page in the browser over it (t/serve_api.py): loopback only,
         # a token made at start; the models stay up while it runs and stop with it if this started them
-        both_up
+        both_up; sent_away
         cd "$DAWNR_REPO"
-        "$DAWNR_PYTHON" t/serve_api.py --student "127.0.0.1:$SP" --base "127.0.0.1:$BP" --port "${DAWNR_API_PORT:-8713}" --home "$DAWNR_HOME"
+        "$DAWNR_PYTHON" t/serve_api.py --student "$STUDENT_AT" ${DAWNR_WRITER_MODEL:+--writer "$DAWNR_WRITER_MODEL"} --base "127.0.0.1:$BP" --port "${DAWNR_API_PORT:-8713}" --home "$DAWNR_HOME"
         ;;
       *) echo "dawnr serve start|stop|status|api" >&2; exit 2;;
     esac;;

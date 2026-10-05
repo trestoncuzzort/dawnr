@@ -40,6 +40,11 @@ dawnr is research software. Read this before relying on anything it does.
   separate workings agree; several workings can still share one misreading. It is new (2026-10-05): how often a
   shown answer is right and how many questions get one is registered in `locallm/PREDICT-2026-10-05-calc.md` and
   not yet measured.
+- **With `DAWNR_WRITER_URL` set, what you ask leaves your machine.** The question, its tests, a specification or the
+  Python file you give `verify` are sent to the address you named, to be written into `t` by the model there; dawnr
+  prints a line saying so each time. Nothing it returns is trusted unchecked, so a wrong or hostile writer costs
+  refusals, not wrong answers that pass; but the privacy of what you send is that service's, not dawnr's. Without
+  the variable, dawnr sends nothing anywhere. The option is new (2026-10-05) and not yet measured on a panel.
 - **`dawnr serve api` is for one person on one machine.** It binds to 127.0.0.1, requires a token made at start on
   every request, refuses a request whose Host is not this machine's own or whose Origin is another site's, and runs
   each job as the same command the terminal runs. It has no accounts, no encryption in transit and no per-project

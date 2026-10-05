@@ -192,3 +192,48 @@ def test_a_refusal_names_the_rule_the_answer_broke_or_what_the_parser_found():
     assert r["shown"] is None
     assert r["refused"][0].startswith("answer 1: not well formed (task decreases without a self-call")
     assert r["refused"][1].startswith("answer 2: does not parse (") and len(r["refused"][1]) < 160
+
+
+# ---- a writer that is not the installed student (2026-10-05): any model may write, the gate decides ----
+
+def test_a_writer_named_by_a_base_url_gets_the_key_and_a_local_server_does_not(monkeypatch):
+    import python_beside
+    seen = []
+
+    class Reply:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def read(self):
+            return b'{"choices": [{"message": {"content": "ok"}}]}'
+
+    def urlopen(request, timeout):
+        seen.append((request.full_url, request.get_header("Authorization")))
+        return Reply()
+    monkeypatch.setattr(python_beside.urllib.request, "urlopen", urlopen)
+    monkeypatch.setenv("T_API_KEY", "secret")
+    remote = python_beside.api_decode("openai", ["https://writer.example/v1"], "big-model")
+    local = python_beside.api_decode("openai", ["127.0.0.1:8711"], "student")
+    assert remote([[{"role": "user", "content": "q"}]], 0.0, 0, "q", 64)[0][0] == "ok"
+    assert local([[{"role": "user", "content": "q"}]], 0.0, 0, "q", 64)[0][0] == "ok"
+    assert seen == [("https://writer.example/v1/chat/completions", "Bearer secret"),
+                    ("http://127.0.0.1:8711/v1/chat/completions", None)]
+
+
+def test_a_writer_that_has_never_seen_t_is_given_the_languages_reference_before_the_question():
+    import python_beside
+    import spec_experiment as se
+    asked = []
+
+    def decode(conversations, temperature, salt, first, max_new):
+        asked.append(conversations[0])
+        return [("no answer", True, 0)]
+    question = [{"role": "system", "content": "Reply with one fenced t task."}, {"role": "user", "content": "Complete this t task."}]
+    python_beside.referenced(decode)([question], 0.0, 0, "q", 64)
+    system, user = asked[0]
+    assert system["role"] == "system" and system["content"].startswith(se.GRAMMAR_V5[:200])
+    assert "Examples of complete t tasks:" in system["content"] and system["content"].endswith("Reply with one fenced t task.")
+    assert user == question[1] and len(asked[0]) == 2
