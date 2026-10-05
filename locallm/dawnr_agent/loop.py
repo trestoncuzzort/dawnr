@@ -30,6 +30,11 @@ The stop rule, checked in this order, every round:
   dry run      the loop was asked only to show the first plan
   planner      the planner raised or returned something that is not a plan
 
+The approver answers for the person: true, false, or a sentence. A sentence
+is neither: the plan is not run and goes back to the planner with it (the
+front door's second look at a plan that would lose a file's contents), and
+the same plan proposed again is then put to the person like any other.
+
 The planner is anything callable as planner(state) -> Plan | Finish (or the
 dict forms {"steps": [...]} and {"answer": "..."}). A model plans through
 ModelPlanner, which renders the loop in dawnr's chat format and reads a
@@ -221,9 +226,14 @@ class AgentLoop:
             if self.plan_approver is not None and not dry.refused:
                 approvals += 1
                 try:
-                    approved = bool(self.plan_approver(dry))
+                    approved = self.plan_approver(dry)
                 except Exception:                                  # noqa: BLE001
                     approved = False
+                if isinstance(approved, str) and approved:         # neither yes nor no: back to the planner, with this
+                    seen.discard(dry.digest)                       # said; the same plan sent again is not a repeat
+                    state.rounds.append(Round(plan=proposal, dry=dry, note=approved))
+                    continue
+                approved = bool(approved)
             mark = journal_mark(self.agent)
             outcome = execute(self.harness, dry, approved=approved, session=session, context=context,
                               steps_left=state.steps_left)

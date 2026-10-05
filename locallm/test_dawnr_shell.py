@@ -87,11 +87,15 @@ def test_the_command_cannot_reach_the_network_write_outside_the_folder_or_read_a
         monkeypatch.setenv("HOME", str(home))
         work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
         with harness:
-            r = harness.call("sh", {"command": f"echo hacked > {outside} ; cat {home}/.ssh/id ; cat {home}/notes.txt ; "
+            r = harness.call("sh", {"command": f"echo hacked > {outside} ; cat {home}/.s*/id ; ls {home}/.s* ; cat {home}/notes.txt ; "
                                                "python3 -c \"import urllib.request; urllib.request.urlopen('http://93.184.216.34', timeout=3)\" ; echo end"})
+            named = harness.call("sh", {"command": f"ls -la {home}/.ssh/ || echo 'No SSH keys'"})
         assert outside.read_text() == "mine\n" and "Read-only file system" in r.text      # the rest of the disk is read-only
-        assert "PRIVATE KEY" not in r.text and "not a secret" in r.text                    # read, but for the secret folders
+        assert "PRIVATE KEY" not in r.text and "not a secret" in r.text                    # read, but for the secret folders,
+        assert "hidden-by-dawnr" in r.text                                                  # which are seen to be hidden, not empty
         assert "end" in r.text and "unreachable" in r.text and asked == []                  # and there is no network
+        # a line that names such a place is not run at all: its "no such file" was once reported as "you have no keys"
+        assert named.is_error and "names `.ssh`, a place where secrets are kept" in named.text and "No SSH keys" not in named.text
     finally:
         shutil.rmtree(base, ignore_errors=True)
 
@@ -132,8 +136,9 @@ def test_a_secret_in_the_folder_is_not_there_for_a_command_and_is_not_taken_for_
     work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n", ".env": "TOKEN=abc123\n", "keys/id_rsa": "PRIVATE\n"})
     with harness:
         assert agent.shell.mode == mode
-        r = harness.call("sh", {"command": "cat .env keys/id_rsa; ls -a; echo two > b.txt"})
-    assert "abc123" not in r.text and "PRIVATE" not in r.text
+        r = harness.call("sh", {"command": "cat .e* keys/id_r*; ls -a; echo two > b.txt"})
+        assert harness.call("sh", {"command": "cat .env"}).is_error
+    assert "abc123" not in r.text and "PRIVATE" not in r.text and (mode == "copy" or "hidden by dawnr" in r.text)
     assert asked == ["it would change 1: create here/b.txt"]                               # and the secrets were not "removed"
     assert (work / ".env").read_text() == "TOKEN=abc123\n" and (work / "keys/id_rsa").read_text() == "PRIVATE\n" and (work / "b.txt").exists()
 
@@ -220,8 +225,11 @@ def test_yes_does_not_answer_for_a_plan_that_loses_a_files_contents(tmp_path):
     def turn(command):
         return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
             {"id": "c", "type": "function", "function": {"name": "sh", "arguments": json.dumps({"command": command})}}]}}]}
+    wrong, right = "mv c.txt b.txt && mv b.txt c.txt", "cp b.txt t && mv c.txt b.txt && mv t c.txt"
     replies = [turn("mv a.txt c.txt"), {"choices": [{"message": {"content": "Renamed."}}]},
-               turn("mv c.txt b.txt && mv b.txt c.txt"), {"choices": [{"message": {"content": "Swapped."}}]}]
+               turn(wrong), turn(right), {"choices": [{"message": {"content": "Swapped."}}]},
+               turn(wrong), turn(wrong), {"choices": [{"message": {"content": "Swapped."}}]}]
+    bodies = []
     work = tmp_path / "work"
     work.mkdir()
     (work / "a.txt").write_text("alpha\n")
@@ -238,13 +246,21 @@ def test_yes_does_not_answer_for_a_plan_that_loses_a_files_contents(tmp_path):
         pytest.skip("no overlay sandbox here")
     approve.agent = agent
     with harness:
-        meter = cli.Meter(lambda url, body, timeout=0: replies.pop(0))
+        meter = cli.Meter(lambda url, body, timeout=0: bodies.append(body) or replies.pop(0))
         planner = cli.Planner(harness, agent, "x:1", "base", post=meter)
         cli.run_task(agent, planner, meter, "Rename a.txt to c.txt.", [], said.append)
         assert asked == [] and sorted(os.listdir(work)) == ["b.txt", "c.txt"]          # a rename loses nothing: --yes covers it
-        cli.run_task(agent, planner, meter, "Swap b.txt and c.txt.", [], said.append)   # the model's wrong swap
+        # the model's wrong swap: it hears what the plan would lose before anybody is asked, and sends a right one
+        cli.run_task(agent, planner, meter, "Swap b.txt and c.txt.", [], said.append)
+        heard = bodies[3]["messages"][-1]["content"]
+        assert heard.startswith("This would remove here/b.txt, and what it holds would be kept in no other file.") and "send exactly this again" in heard
+        assert asked == [] and (work / "b.txt").read_text() == "alpha\n" and (work / "c.txt").read_text() == "beta\n" and sorted(os.listdir(work)) == ["b.txt", "c.txt"]
+        # sent again as it was, it is the person's to answer, and --yes does not answer for them
+        cli.run_task(agent, planner, meter, "Swap b.txt and c.txt.", [], said.append)
         assert len(asked) == 1 and any("This removes here/b.txt and its contents are kept in no other file" in line for line in said)
-        assert (work / "b.txt").read_text() == "beta\n" and (work / "c.txt").read_text() == "alpha\n"      # no: nothing ran
+        assert (work / "b.txt").read_text() == "alpha\n" and (work / "c.txt").read_text() == "beta\n"     # no: nothing ran
+        # asked to remove, nothing is said twice: the request has the word for it
+        assert cli.second_look(agent, type("Dry", (), {"views": []})(), "Delete b.txt.") == ""
 
 
 def test_the_assistant_offers_sh_by_default_and_not_the_tools_it_replaces(tmp_path):

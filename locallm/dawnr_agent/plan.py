@@ -383,9 +383,13 @@ def plan_tool(agent) -> Tool:
         approved = None
         if agent.plan_approver is not None and not dry.refused:
             try:
-                approved = bool(agent.plan_approver(dry))
+                approved = agent.plan_approver(dry)
             except Exception:                                      # noqa: BLE001  (a broken prompt is a no)
                 approved = False
+            if isinstance(approved, str) and approved:             # sent back with this said (loop.py)
+                state.digests.discard(dry.digest)
+                return ToolResult("not run: " + approved, is_error=True)
+            approved = bool(approved)
         mark = journal_mark(agent)
         outcome = execute(harness, dry, approved=approved, session=session, context=ctx.context if ctx else "",
                           steps_left=max(0, agent.budget.max_steps - state.steps))

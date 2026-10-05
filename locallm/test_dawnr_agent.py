@@ -730,6 +730,17 @@ class FileTools(Env):
         self.assertNotIn("def g(self):\n", dry.render(for_person=False))
         self.assertIn("           def g(self):\n               return 4", dry.render(for_person=False, quoted=True))
 
+    def test_a_long_search_result_says_to_count_with_a_command_where_one_can_run(self):
+        (self.proj / "access.log").write_text("".join(f"{i} FAILED login user={'ab'[i % 2]}\n" for i in range(30)))
+        h, a = self.build()
+        self.assertNotIn("count", h.call("fs_search", {"query": "FAILED"}).text)
+        a.files.count_hint = "with sh: grep -c, or sort | uniq -c"
+        r = h.call("fs_search", {"query": "FAILED"})
+        self.assertTrue(r.text.endswith("[30 matches. To count or group them run a command (with sh: grep -c, or sort | uniq -c): "
+                                        "a count made by eye over this many lines goes wrong.]"))
+        self.assertNotIn("count or group", h.call("fs_search", {"query": "user=a", "max_results": 5}).text.split("\n")[0])
+        self.assertNotIn("count or group", h.call("fs_search", {"query": "29 FAILED"}).text)
+
     def test_write_creates_refuses_to_clobber_and_undo_reverts(self):
         h, a = self.build(permissions={"fs_write": "allow", "fs_edit": "allow", "fs_undo": "allow"})
         r = h.call("fs_write", {"path": "project/new.txt", "content": "one\n"})
