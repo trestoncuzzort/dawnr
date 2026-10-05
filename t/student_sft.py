@@ -129,15 +129,16 @@ def pad_batch(features: list[dict], pad_id: int) -> dict:
     return {"input_ids": ids, "labels": labels, "attention_mask": mask}
 
 
-def merge(adapter: Path, out: Path) -> int:
+def merge(adapter: Path, out: Path, cpu: bool = False) -> int:
     """The adapter folded into its full-precision base and saved as one model, the form that is
     served and later converted for release (peft's merge_and_unload, as t/loop_train.py's export
-    does: in bf16 against the unquantised base, never the 4-bit one)."""
+    does: in bf16 against the unquantised base, never the 4-bit one). `cpu`: on a machine with
+    memory and no card to use (the same arithmetic, in the same 16-bit type)."""
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from peft import PeftModel
     base_id = json.loads((adapter / "adapter_config.json").read_text(encoding="utf-8"))["base_model_name_or_path"]
-    base = AutoModelForCausalLM.from_pretrained(base_id, dtype=torch.bfloat16, device_map={"": 0})
+    base = AutoModelForCausalLM.from_pretrained(base_id, dtype=torch.bfloat16, device_map={"": "cpu" if cpu else 0})
     merged = PeftModel.from_pretrained(base, str(adapter)).merge_and_unload()
     out.mkdir(parents=True, exist_ok=True)
     merged.save_pretrained(str(out))
@@ -154,6 +155,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sft", type=Path, help="t/graded_pool.py rows (prompt, chosen)")
     ap.add_argument("--merge", type=Path, metavar="ADAPTER",
                     help="instead of training: fold this adapter into its base and save the model to --out")
+    ap.add_argument("--cpu", action="store_true", help="with --merge: fold on the CPU (a machine with memory and no card)")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--epochs", type=float, default=5.0, help="SAFE trains five epochs a round")
     ap.add_argument("--lr", type=float, default=2e-4, help="QLoRA table 9 (7B, 13B)")
@@ -178,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
                          "one when --out already holds any (a run of many hours on a laptop)")
     a = ap.parse_args(argv)
     if a.merge:
-        return merge(a.merge, a.out)
+        return merge(a.merge, a.out, a.cpu)
     if not a.model or not a.sft:
         ap.error("--model and --sft are required to train")
 
