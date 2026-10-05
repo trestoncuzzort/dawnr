@@ -150,7 +150,7 @@ class Bwrap:
         self.space = space
         self.program = program
         home = os.path.expanduser("~")
-        self.hide = [p for p in (hide if hide is not None else [os.path.join(home, h) for h in HIDE_UNDER_HOME])
+        self.hide = [os.path.realpath(p) for p in (hide if hide is not None else [os.path.join(home, h) for h in HIDE_UNDER_HOME])
                      if os.path.lexists(p)]
 
     def wrap(self, argv: list, cwd: str, network: bool) -> list:

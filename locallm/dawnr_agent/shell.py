@@ -214,8 +214,9 @@ class ShellTools:
         self.markers = Path(state) / "sh-hidden"                # what stands in a hidden folder's and a hidden file's place
         self.env.update(GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="core.attributesFile", GIT_CONFIG_VALUE_0="/run/dawnr-gitattributes")
         home = os.path.expanduser("~")
-        self.hide = [p for p in (hide if hide is not None else [os.path.join(home, h) for h in HIDE_UNDER_HOME])
-                     if os.path.lexists(p)]
+        # where a secret folder is a link (~/.ssh kept on another volume), what is hidden is where the link leads
+        self.hide = sorted({os.path.realpath(p) for p in (hide if hide is not None else [os.path.join(home, h) for h in HIDE_UNDER_HOME])
+                            if os.path.lexists(p)})
         self.roots = [r for r in space.roots if r.write]
         self.sockets = home_sockets(home, [r.path for r in space.roots] + self.hide) if os.path.isdir(home) else []
         self.runs: dict[str, Run] = {}

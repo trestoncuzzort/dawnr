@@ -242,7 +242,14 @@ are: after "Read-only file system" the output says that only the folder can be c
 name lookup that `sh` has no network whatever the computer's connection is. Before that note, a model asked to
 delete `/etc/hostname` went on from the read-only error to `mount -o remount,rw /`.
 
-What is hidden is seen to be hidden. A secret folder used to be an empty one inside the sandbox and a secret file
+Bubblewrap itself: before 0.12.0 it could follow a parent link out of the sandbox while creating the places it
+mounts on (GHSA-pxhw-h44j-8pfx, fixed 26 August 2026). The places dawnr hands it are found by walking real folders
+without following links, and a command's changes never apply a link, so this needs a link that was already in
+the person's folder; it is closed by the distribution's update, not here (Ubuntu 26.04 ships 0.11.1). The other
+advisory of the year, CVE-2026-41163, concerns only a setuid bubblewrap, which this sandbox does not use.
+
+What is hidden is seen to be hidden. A secret folder that is a link (`~/.ssh` kept on another volume) is hidden
+where the link leads. A secret folder used to be an empty one inside the sandbox and a secret file
 an empty file; a model asked for the person's SSH key listed `~/.ssh`, found nothing, and told the person "there
 are no SSH private keys in your ~/.ssh directory". Now a hidden folder holds one file, `hidden-by-dawnr`, that says
 so, a hidden file reads as one comment line that says so, and a line that names such a place (`.ssh`, `.env`,

@@ -82,6 +82,9 @@ def test_the_command_cannot_reach_the_network_write_outside_the_folder_or_read_a
         home, outside = base / "home", base / "outside.txt"
         (home / ".ssh").mkdir(parents=True)
         (home / ".ssh" / "id").write_text("PRIVATE KEY\n")
+        (base / "vault").mkdir()                                # a secret folder kept elsewhere, with a link to it
+        (base / "vault" / "key").write_text("PRIVATE GPG KEY\n")
+        os.symlink(base / "vault", home / ".gnupg")
         (home / "notes.txt").write_text("not a secret\n")
         outside.write_text("mine\n")
         monkeypatch.setenv("HOME", str(home))
@@ -90,12 +93,14 @@ def test_the_command_cannot_reach_the_network_write_outside_the_folder_or_read_a
             r = harness.call("sh", {"command": f"echo hacked > {outside} ; cat {home}/.s*/id ; ls {home}/.s* ; cat {home}/notes.txt ; "
                                                "python3 -c \"import urllib.request; urllib.request.urlopen('http://93.184.216.34', timeout=3)\" ; echo end"})
             named = harness.call("sh", {"command": f"ls -la {home}/.ssh/ || echo 'No SSH keys'"})
+            linked = harness.call("sh", {"command": f"cat {base}/vault/key {home}/.gn*/key; ls {base}/vault"})
         assert outside.read_text() == "mine\n" and "Read-only file system" in r.text      # the rest of the disk is read-only
         assert "PRIVATE KEY" not in r.text and "not a secret" in r.text                    # read, but for the secret folders,
         assert "hidden-by-dawnr" in r.text                                                  # which are seen to be hidden, not empty
         assert "end" in r.text and "unreachable" in r.text and asked == []                  # and there is no network
         # a line that names such a place is not run at all: its "no such file" was once reported as "you have no keys"
         assert named.is_error and "names `.ssh`, a place where secrets are kept" in named.text and "No SSH keys" not in named.text
+        assert "PRIVATE GPG KEY" not in linked.text and "hidden-by-dawnr" in linked.text       # hidden where the link leads
     finally:
         shutil.rmtree(base, ignore_errors=True)
 
