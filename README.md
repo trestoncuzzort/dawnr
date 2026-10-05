@@ -20,6 +20,11 @@
 > examples, so a specification that only lists the small cases passed it. Held to larger inputs too, the count
 > reads 17, not 18; Phi-4-mini's does not move. [What was found and how](t/LARGER-INPUTS-2026-10-05.md).
 >
+> *Read more closely at 12:30 UTC.* In 8 of those 17 the program is its own specification written again (one
+> formula on both sides, or the same recursion), so the proof adds little to the tests behind the specification; in
+> the other 9 a loop or a property is proved. All 7 of Phi-4-mini's are of the first kind, and the same 4B before
+> training proves 2 of the second. [What a proof is of](t/PROOF-KIND-2026-10-05.md).
+>
 > *A note on names:* dawnr is the name for the models from now on. Earlier versions were called the student, and the
 > release tags, files and commands that still say `student` (the `student-v5` release among them) are these same
 > dawnr models.
@@ -38,14 +43,21 @@ On 182 programming problems no training row touches (from MBPP), a problem count
 program passes its tests, a prover verifies it, and its specification agrees with the problem's reference solution
 and rejects most wrong answers, on inputs larger than the problem's examples as well as on ones their size:
 
-| | proved by at least one prover | proved by all seven |
-|---|---:|---:|
-| **dawnr v5** (Qwen3.5-4B, fine-tuned here on proved answers) | **17** | **12** |
-| the same recipe, its two other training seeds | 17, 12 | 10, 7 |
-| the same 4B before any fine-tuning, prompted, 17 tries a problem | 9 | 6 |
-| Phi-4-mini (3.8B), output forced into valid `t`, 17 tries a problem | 7 | 5 |
-| Phi-4-mini, prompted, 17 tries a problem | 2 | 2 |
-| Qwen3.5-27B, six times larger, prompted, 17 tries a problem | 32 | 22 |
+| | proved by at least one prover | of those, an algorithm and not a restatement | proved by all seven |
+|---|---:|---:|---:|
+| **dawnr v5** (Qwen3.5-4B, fine-tuned here on proved answers) | **17** | **9** | **12** |
+| the same recipe, its two other training seeds | 17, 12 | 8, 6 | 10, 7 |
+| the same 4B before any fine-tuning, prompted, 17 tries a problem | 9 | 2 | 6 |
+| Phi-4-mini (3.8B), output forced into valid `t`, 17 tries a problem | 7 | 0 | 5 |
+| Phi-4-mini, prompted, 17 tries a problem | 2 | 0 | 2 |
+| Qwen3.5-27B, six times larger, prompted, 17 tries a problem | 32 | 17 | 22 |
+
+The middle column sorts each proved answer by what its proof is of ([t/PROOF-KIND-2026-10-05.md](t/PROOF-KIND-2026-10-05.md)).
+A restatement is a program that is its specification written again, such as `r := d1 * d2 / 2` under
+`ensures r == d1 * d2 / 2`: the proof says the two agree, and what the answer rests on is the specification's
+agreement with the problem's own solution on drawn inputs. An algorithm is a loop, or a recursion of its own,
+proved to reach what the specification defines, or a program proved to have a property that does not hand over
+the answer.
 
 Plainly: much of the lead over Phi comes from the base model, chosen by measurement among openly licensed ones;
 training on answers the provers admitted, some written by two openly licensed teacher models, adds 8 problems and 6

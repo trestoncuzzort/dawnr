@@ -32,6 +32,15 @@ dawnr is research software. Read this before relying on anything it does.
   only in the specification you are asked to read. How many functions get a twin is registered in the same file and
   not yet measured; on four hand-written files the published model verified two and refused two, one of them a
   function written to stop one short of what its docstring says, which the refusal pointed at with the example.
+- **"Proved" covers two different things, and about half of the scoreboard's count is the lesser one.** When a
+  specification gives the result as a formula and the program is that formula again (`r := d1 * d2 / 2` under
+  `ensures r == d1 * d2 / 2`, or a recursion held to a specification function that is the same recursion), the
+  proof says only that the two writings agree; what the answer rests on is the specification, which was tested
+  against a solution, not proved. Of the published model's 17 proved problems, 8 are of that kind and 9 are a
+  loop, another recursion or a property proved; Phi-4-mini's 7 are all of the first kind, the untrained 4B's 9 hold
+  2 of the second, and the prompted 27B's 32 hold 17 (`t/PROOF-KIND-2026-10-05.md`, by a rule that reads the
+  answer's text; it was checked by hand on 58 answers and is not a measure of difficulty). `dawnr ask`, `prove` and
+  `verify` say beside each answer which kind it is.
 - **`dawnr cite` and `dawnr extract` say where words came from, not that they are the right words.** Neither can
   show text that is not in your files, by construction. `cite` is measured (below). `extract` was measured three
   times on 2026-10-05 (SQuAD 2.0, each time 300 questions the paragraph answers and 300 it does not, none repeated,
