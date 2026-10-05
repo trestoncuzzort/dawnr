@@ -236,7 +236,11 @@ asked separately, three times, to write the working as a few lines of
 arithmetic, which dawnr computes exactly (in fractions, so no rounding error
 creeps in). The number is shown only when a working computes that same
 number, and that working is printed, because it is the reading of your
-question that was computed.
+question that was computed. On 300 grade-school word problems it had not
+seen (GSM8K) it answered 260, and 254 of those were right; the same model
+answering in words alone was right on 282 of the 300. So it shows one wrong
+answer where the model alone shows three, and withholds about one right
+answer in ten.
 
 And for programs that give a model tools to call:
 

@@ -65,15 +65,16 @@ dawnr is research software. Read this before relying on anything it does.
   (`Nr. 2291`) still end a sentence; dates are read only when written with English month names or as numbers. On
   English text the sentences are the ones every measurement here used, except that the tail of an over-long
   sentence is kept (39 of 767 SQuAD paragraphs had lost one) and a sentence may begin with an accented capital.
-- **`dawnr calc` computes a working exactly; it does not know the right reading of the question.** Its first form
-  (the model writes the working, an answer is shown when workings agree) was measured on 300 GSM8K problems with
-  the base model: it showed 203 answers, 94.6% of them right, where the same model simply reasoning in words
-  answered all 300 and was right on 93.0%. Held to lines of arithmetic the model sets a problem up worse than
-  when it reasons freely. The command was changed because of that: the number the model reasons its way to is
-  shown only when a working written separately and computed exactly gives the same number. On those same 300
-  problems, computed afterwards, that shows 269 answers with 97.4% right; its own measurement on problems it has
-  not seen is registered in `locallm/PREDICT-2026-10-05-calc.md` (K6 to K9) and not yet made. A misreading that the
-  reasoning and the working share is shown; the working is printed so that it can be read.
+- **`dawnr calc` computes a working exactly; it does not know the right reading of the question.** The number the
+  model reasons its way to is shown only when a working written separately and computed exactly gives the same
+  number. Measured on 300 GSM8K problems it had not seen (the base model): 260 answered, 254 right (97.7%), where
+  the same model answering in words alone was right on 282 of 300 (94.0%); of the 18 the model alone got wrong, 6
+  were still shown, because the reasoning and the working misread the question the same way. The working is
+  printed so that it can be read. The command's first form, in which the model only wrote the working, was
+  measured first and lost to the model's own prose (203 answers, 94.6% right, against 93.0% of all 300): held to
+  lines of arithmetic the model sets a problem up worse than when it reasons freely
+  (`locallm/PREDICT-2026-10-05-calc.md`). Grade-school arithmetic is what was measured; units, dates and compound
+  interest were not.
 - **`dawnr tools` checks where a call's values came from, not that they are the right ones.** A call is handed
   back only when each value it passes was said in the conversation (its words as written, its number), or is the
   tool's default, or a choice among the tool's listed values that the conversation makes. Measured on When2Call's

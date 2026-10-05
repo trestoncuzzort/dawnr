@@ -29,10 +29,10 @@ stand between it and the person. Research receipt f8e8dafb74c0.
   the question    a working that uses a number the question does not state is still used, and the number is
                   pointed out beside it (as a filter this rule cost answers and bought nothing: K5)
 
-On the replies of K1 to K5, after the fact, that rule shows 269 of 300 with 262 right (97.4%), and of the 21
-answers prose got wrong it still shows 7; its own measurement on problems it has not seen is K6 to K9 of the same
-file. What this cannot check is that both the reasoning and the working read the question rightly: a misreading
-they share is shown, and the working is printed to be read.
+Measured on 300 problems it had not seen (K6 to K9 of the same file): 260 answered and 254 right (97.7%), where
+prose alone was right on 282 of the 300; of the 18 answers prose got wrong it still shows 6. Requiring two
+agreeing workings (`--needed 2`) shows 223 with 4 wrong. What this cannot check is that both the reasoning and
+the working read the question rightly: a misreading they share is shown, and the working is printed to be read.
 """
 from __future__ import annotations
 
