@@ -298,6 +298,16 @@ work that is in no commit or rewrites history (`reset --hard`, `clean -f`, `chec
 secret names are binary files, so `git diff` and `git log -p` say that a `.env` differs and not how: a secret's
 text is in `.git` under no name, and would otherwise be printed from there.
 
+**The network.** Off unless the session is started with `--online`; then `web_search` and `web_fetch` are
+offered, and each call is put to the person (the harness's own rule: untrusted text is in the conversation from
+its first step, and these tools reach outside it). The search needs no account: it reads DuckDuckGo's page for
+browsers without JavaScript the way a text browser would, under this program's own name, and takes the links out
+of it (`dawnr_harness/web.py`; it is a page and not an interface with a promise, and says so when it comes back
+without results). Fetches keep the harness's bounds: no private or loopback address, the address resolved once
+and pinned, redirects re-checked, a byte cap and a deadline. Tried once end to end on the 4B: "in which Python
+version was shlex.quote added, according to the documentation?" was one search, one fetch of docs.python.org and
+the answer "3.3" with the sentence it came from, in three model calls.
+
 What it does is not journaled and not undone, and the question to the person says so. What `pc` cannot promise:
 it shows a command line, not what a script named on it contains, and a desktop session will start anything for
 the person who asks it to. The person's yes is the check here, not a sandbox. `locallm/dawnr_tasks.py`, which says
@@ -367,7 +377,11 @@ it for three things it can read off the dry run and the conversation, none of th
   read, and `--yes` does not answer for it. A planted instruction that is reworded on the way is not caught by
   this; the person's yes still stands between it and the machine.
 
-A fourth was tried and removed the same day: a file the request names, created in another folder than the request
+- online, a search or an address that holds a run of text read from a file on this computer in this task and
+  not in the request (24 characters or more): what a file said, on its way out. It goes back to the model, and
+  then to the person marked as carrying a file's text, whatever `--yes` says.
+
+A fifth was tried and removed the same day: a file the request names, created in another folder than the request
 names it in. It was right about `docs/index.md` and wrong about "in each folder a file called name.txt", and a
 model sent back three times in one task wrote nothing and said it was done. What a second look costs when it is
 wrong is the task, so only those that have not been wrong are kept.

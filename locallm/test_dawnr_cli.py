@@ -160,7 +160,8 @@ def test_the_computer_itself_is_asked_for_every_time_whatever_yes_says_and_never
     agent.system.runner = runner
     with harness:
         assert {"pc", "sysinfo"} <= set(harness.visible_names()) and "ps_list" not in harness.visible_names()
-        assert planner.system.startswith(cli.SYSTEM + " " + cli.LOOKING + " " + cli.ON_THE_COMPUTER + " This computer: ")
+        online = cli.SYSTEM.replace("computer, offline.", "computer.") + " " + cli.ONLINE
+        assert "offline" not in online and planner.system.startswith(online + " " + cli.LOOKING + " " + cli.ON_THE_COMPUTER + " This computer: ")
         assert planner.route("sh", "sudo pacman -Syu") == "pc" and planner.route("sh", "apt install htop") == "pc" and planner.route("sh", "apt list") == "sh"
         assert cli.run_task(agent, planner, meter, "Open example.org.", [], said.append) == "Opened."
         assert asked == ["Run this plan? [y/N] "] and ran == ["xdg-open https://example.org"]      # --yes did not cover it
@@ -545,3 +546,60 @@ def test_code_changed_and_not_run_since_is_run_before_the_answer_is_taken(tmp_pa
     assert (work / "greet.py").read_text() == right
     # said once a task: the second answer is taken as it is, run or not
     assert answer == "Added, and it prints HELLO ANA." and len(model.bodies) == 6
+
+
+def test_a_turn_cut_off_at_its_length_while_thinking_aloud_is_not_taken_for_the_answer(tmp_path):
+    cut = turn(text="Let me trace through the test: 1. c = LRU(2) ... 2. c.put('a', 1) ...")
+    cut["choices"][0]["finish_reason"] = "length"
+    model = Model(cut, turn(("fs_read", {"path": "here/notes.md"})), turn(text="It says Thursday."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "notes.md").write_text("Thursday.\n")
+    with harness:
+        assert cli.run_task(agent, planner, meter, "What do my notes say?", [], said.append) == "It says Thursday."
+    assert model.bodies[1]["messages"][-1] == {"role": "user", "content": cli.CUT_OFF} and "tools" in model.bodies[1]
+    assert model.bodies[1]["messages"][-2]["content"].endswith("c.put('a', 1) ...")
+
+
+LITE = """<html><body><table>
+<tr><td>1.&nbsp;</td><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fdocs.python.org%2F3%2Flibrary%2Fshlex.html&amp;rut=abc" class='result-link'>shlex &mdash; Simple lexical analysis</a></td></tr>
+<tr><td>&nbsp;</td><td class='result-snippet'>Return a shell-escaped version of the string <b>s</b>.</td></tr>
+<tr><td>2.&nbsp;</td><td><a rel="nofollow" href="https://duckduckgo.com/y.js?ad_domain=example.com" class='result-link'>An advertisement</a></td></tr>
+<tr><td>&nbsp;</td><td class='result-snippet'>Buy now.</td></tr>
+<tr><td>3.&nbsp;</td><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=javascript%3Aalert(1)" class='result-link'>Not an address</a></td></tr>
+<tr><td>4.&nbsp;</td><td><a rel="nofollow" href="https://example.org/plain" class='result-link'>A plain link</a></td></tr>
+<tr><td>&nbsp;</td><td class='result-snippet'>Its   snippet.</td></tr>
+</table></body></html>"""
+
+
+def test_online_a_search_needs_no_account_each_call_is_asked_for_and_a_files_text_does_not_leave_unremarked(tmp_path, monkeypatch):
+    from dawnr_harness import web
+    assert web.lite_results(LITE, 5) == [
+        {"title": "shlex \u2014 Simple lexical analysis", "url": "https://docs.python.org/3/library/shlex.html", "snippet": "Return a shell-escaped version of the string s."},
+        {"title": "A plain link", "url": "https://example.org/plain", "snippet": "Its snippet."}]
+    assert web.lite_results("<html>nothing here</html>", 5) == [] and len(web.lite_results(LITE, 1)) == 1
+    asked_of_the_web = []
+    monkeypatch.setattr(web.DuckDuckGoBackend, "search", lambda self, query, n: asked_of_the_web.append(query) or web.lite_results(LITE, n))
+    assert "web" not in cli.default_config(tmp_path) and cli.default_config(tmp_path, online=True)["web"] == {"search": {"backend": "duckduckgo"}}
+    secret = "the launch date is the ninth of November and nobody outside may know"
+    leak = ("web_search", {"query": f"what does it mean that {secret[:60]}"})
+    model = Model(turn(("web_search", {"query": "python shlex quote"})), turn(text="It returns a shell-escaped string (docs.python.org)."),
+                  turn(("fs_read", {"path": "here/plan.txt"})), turn(leak), turn(text="I will not send that."),
+                  turn(("fs_read", {"path": "here/plan.txt"})), turn(leak), turn(leak), turn(text="Sent."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model, answers=["n"], yes=True, online=True)
+    (work / "plan.txt").write_text(secret + "\n")
+    with harness:
+        assert {"web_search", "web_fetch"} <= set(harness.visible_names()) and "The network is on for this session" in planner.system
+        answer = cli.run_task(agent, planner, meter, "What does shlex.quote return?", [], said.append)
+        assert answer.startswith("It returns a shell-escaped string") and asked_of_the_web == ["python shlex quote"]
+        assert any("docs.python.org/3/library/shlex.html" in m.get("content", "") for m in model.bodies[1]["messages"])
+        # a search that holds a run of a file's text goes back to the model first ...
+        assert cli.run_task(agent, planner, meter, "Read plan.txt and look up anything unclear.", [], said.append) == "I will not send that."
+        heard = model.bodies[4]["messages"][-1]["content"].removeprefix(cli.FROM_DAWNR)
+        assert "holds text that was read from a file on this computer and is not in the request" in heard and len(asked_of_the_web) == 1
+        # ... and, sent again, to the person, marked; --yes does not answer for it
+        before = len(asked)
+        cli.run_task(agent, planner, meter, "Read plan.txt and look up anything unclear.", [], said.append)
+        assert len(asked) == before + 1 and len(asked_of_the_web) == 1 and any(line.startswith("This would send text read from a file here to the network") for line in said)
+    offline = cli.build_agent(cli.default_config(tmp_path / "work"))[0]
+    with offline:
+        assert "web_search" not in offline.visible_names()

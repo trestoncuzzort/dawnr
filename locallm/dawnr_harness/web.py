@@ -13,8 +13,19 @@ Search has no default backend and no hard-coded key. A backend is anything
 with `search(query, n) -> [{"title", "url", "snippet"}]`: `searxng` (a
 self-hosted SearXNG instance's keyless JSON API, docs.searxng.org/dev/search_api.html:
 GET /search?q=...&format=json), `command` (an operator program given the
-query as its last argument, printing a JSON list), or one added with
-register_backend().
+query as its last argument, printing a JSON list), `duckduckgo` (below), or
+one added with register_backend().
+
+`duckduckgo` needs no account and no instance of one's own: it reads
+DuckDuckGo's page for browsers without JavaScript (lite.duckduckgo.com/lite),
+as a text browser would, with this program's own name as the user agent, and
+takes the result links, titles and snippets out of it. It is a page and not an
+interface with a promise: its markup can change and a busy address can be
+refused, and then the backend says so and returns nothing rather than guess.
+Read on 2026-10-05: ten results to a plain client; the links are redirects
+whose `uddg` parameter is the address (the open ddgs library reads
+DuckDuckGo's other no-JavaScript page the same way and drops the
+advertisements' y.js links: github.com/deedy5/ddgs, MIT). Receipt a7a54198b8a0.
 
 DNS pinning. check_url resolves the host once and validates that address;
 fetch() then connects to that exact address (_PinnedHTTPConnection,
@@ -199,8 +210,9 @@ def html_to_text(html: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
 
-def fetch(url: str, cfg: WebConfig, *, allow_private: bool | None = None, accept: str | None = None) -> dict:
-    """{"url", "status", "content_type", "bytes", "truncated", "text"}; raises FetchRefused."""
+def fetch(url: str, cfg: WebConfig, *, allow_private: bool | None = None, accept: str | None = None, markup: bool = False) -> dict:
+    """{"url", "status", "content_type", "bytes", "truncated", "text"}; raises FetchRefused. `markup`: a page as it
+    came, tags and all, for a caller that reads the links out of it itself."""
     allow_private = cfg.allow_private_hosts if allow_private is None else allow_private
     url, address = check_url(url, allow_private)
     opener = urllib.request.build_opener(_Redirects(cfg, allow_private), _PinnedHTTPHandler(), _PinnedHTTPSHandler())
@@ -258,7 +270,7 @@ def fetch(url: str, cfg: WebConfig, *, allow_private: bool | None = None, accept
         except LookupError:
             text = raw.decode("utf-8", errors="replace")
         final = resp.geturl() if hasattr(resp, "geturl") else url
-    if ctype in ("text/html", "application/xhtml+xml"):
+    if ctype in ("text/html", "application/xhtml+xml") and not markup:
         text = html_to_text(text)
     return {"url": final, "status": status, "content_type": ctype, "bytes": len(raw), "truncated": truncated,
             "text": text}
@@ -315,8 +327,70 @@ class CommandBackend:
                 for r in (rows if isinstance(rows, list) else [])[:n] if isinstance(r, dict)]
 
 
+class _LiteResults(HTMLParser):
+    """The result links of the lite page, each with the snippet that follows it."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows: list = []
+        self._in = ""                                           # "title" inside a result link, "snippet" inside its cell
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "a" and "result-link" in (a.get("class") or ""):
+            self.rows.append({"title": "", "url": a.get("href") or "", "snippet": ""})
+            self._in = "title"
+        elif tag == "td" and "result-snippet" in (a.get("class") or "") and self.rows:
+            self._in = "snippet"
+
+    def handle_endtag(self, tag):
+        if (tag == "a" and self._in == "title") or (tag == "td" and self._in == "snippet"):
+            self._in = ""
+
+    def handle_data(self, data):
+        if self._in and self.rows:
+            self.rows[-1][self._in] += data
+
+
+def lite_results(page: str, n: int) -> list[dict]:
+    """[{"title", "url", "snippet"}] from the text of DuckDuckGo's lite results page: the address behind each
+    redirect, no advertisement, nothing that is not http or https."""
+    parser = _LiteResults()
+    parser.feed(page)
+    out = []
+    for row in parser.rows:
+        url = row["url"]
+        if url.startswith("//"):
+            url = "https:" + url
+        parts = urllib.parse.urlsplit(url)
+        if parts.netloc.endswith("duckduckgo.com"):
+            if parts.path.startswith("/y.js"):
+                continue                                        # an advertisement
+            url = (urllib.parse.parse_qs(parts.query).get("uddg") or [""])[0]
+        if urllib.parse.urlsplit(url).scheme not in ("http", "https"):
+            continue
+        out.append({"title": " ".join(row["title"].split()), "url": url, "snippet": " ".join(row["snippet"].split())})
+    return out[:n]
+
+
+class DuckDuckGoBackend:
+    URL = "https://lite.duckduckgo.com/lite/"
+
+    def __init__(self, spec: dict, cfg: WebConfig):
+        self.cfg = cfg
+
+    def search(self, query: str, n: int) -> list[dict]:
+        page = fetch(self.URL + "?" + urllib.parse.urlencode({"q": query}), self.cfg, markup=True)
+        rows = lite_results(page["text"], n)
+        if not rows and "result-link" not in page["text"] and "No results" not in page["text"] and "No more results" not in page["text"]:
+            raise FetchRefused("the search page came back without results and without saying there are none (it may have "
+                               "changed, or refused this address for now)")
+        return rows
+
+
 register_backend("searxng", SearxngBackend)
 register_backend("command", CommandBackend)
+register_backend("duckduckgo", DuckDuckGoBackend)
 
 
 def make_backend(spec: dict | None, cfg: WebConfig):
