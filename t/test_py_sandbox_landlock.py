@@ -18,6 +18,11 @@ import py_sandbox                                               # noqa: E402
 @pytest.fixture(autouse=True)
 def landlock(monkeypatch):
     monkeypatch.setenv("T_SANDBOX", "landlock")
+    # Landlock is a Linux kernel feature. On macOS py_sandbox.backend() is seatbelt whatever T_SANDBOX says, and
+    # seatbelt is available there, so the check below alone let every test here run against the wrong sandbox:
+    # the macOS job of the tests workflow failed on all four from 2026-10-03 to 2026-10-05.
+    if py_sandbox.backend() != "landlock":
+        pytest.skip(f"the Landlock backend is Linux's; this platform's sandbox is {py_sandbox.backend()}")
     if not py_sandbox.available():
         pytest.skip(f"no Landlock sandbox here: {py_sandbox.why_unavailable()}")
 
