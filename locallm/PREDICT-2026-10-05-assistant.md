@@ -66,3 +66,22 @@ change to the assistant. What it does not show is in "Not measured here" above, 
 the miss on the dev half was a real error of the model's (it answered a hypothetical by cutting the extensions off
 file names), so "19 of 20" is two different things in the two halves.
 
+## After the registration: speed (dev half only, 2026-10-05)
+
+Not predictions; the test half has not been run again. The same 20 dev tasks, the same machine, the base model
+file with its prediction layer added (`locallm/gguf_layer.py`: 15 tensors the 4-bit conversion left out, every other
+tensor byte for byte), two runs of each setting:
+
+| the base model server | done | tokens a second | seconds for the 20 |
+|---|---:|---:|---:|
+| no drafting | 19, 19 | 16.8, 16.8 | 130, 122 |
+| drafting with the layer, 2 tokens ahead | 19, 19 | 26.4, 26.3 | 94, 86 |
+| drafting with the layer, 3 tokens ahead (installed) | 19, 19 | 29.4, 29.4 | 88, 80 |
+
+The same task is missed in every run (the hypothetical about the `.log` files), no file was touched without
+reason in any, and through the installed command the half reads 19 of 20 at 29.3 a second. Other settings tried
+on seven of the assistant's tasks: twelve threads for everything 16.1; six to write and twelve to read 16.7; the
+0.8B of the family as a separate drafter 22.2; n-gram lookup from the context 16.2 and 17.1; the 2B as the driver
+37, with 4 of the 7 tasks right. ik_llama.cpp on the same file wrote 7% faster and read prompts twice as fast
+(467 against 234 tokens a second on 12 threads); it has no built release to install, so it is not used.
+

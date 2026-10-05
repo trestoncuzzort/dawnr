@@ -68,12 +68,13 @@ start_both() {  # the student, then the base: on a GPU build the base waits for 
 start_one() {  # name gguf port [context] [seconds idle before the model is unloaded]
   healthy "$3" && return 0
   [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
-  # The base model on a CPU drafts with the 0.8B of its family where the installer fetched it: the small model
-  # guesses the next tokens and the 4B checks them in one pass, so what is written is the 4B's own and comes a third
-  # faster (16.1 to 22.2 tokens a second over the assistant's tasks, 2026-10-05; DAWNR_DRAFT=0 turns it off)
+  # The base model on a CPU drafts with its own prediction layer where the installer added it to the file
+  # (locallm/gguf_layer.py): the layer guesses the next tokens and the model checks them in one pass, so what is
+  # written is the model's own and comes sooner (16.8 to 29.4 tokens a second on the assistant's tasks, the same
+  # tasks done, 2026-10-05; DAWNR_DRAFT=0 turns it off). Not yet measured on a graphics card, so not used there.
   local draft=()
-  if [ "$1" = base ] && [ "${DAWNR_DRAFT:-1}" != 0 ] && [ -s "${DRAFT_GGUF:-}" ] && { [ "${DAWNR_BUILD:-cpu}" = cpu ] || [ "${DAWNR_GPU_LAYERS:-}" = 0 ]; }; then
-    draft=(--spec-type draft-simple --spec-draft-model "$DRAFT_GGUF" --spec-draft-ngl 0 --spec-draft-threads 4 --spec-draft-n-max 16 --spec-draft-p-min 0.6)
+  if [ "$1" = base ] && [ "${DAWNR_DRAFT:-1}" != 0 ] && [ "${BASE_DRAFT:-}" = mtp ] && { [ "${DAWNR_BUILD:-cpu}" = cpu ] || [ "${DAWNR_GPU_LAYERS:-}" = 0 ]; }; then
+    draft=(--spec-type draft-mtp --spec-draft-n-max 3 --spec-draft-p-min 0.6)
   fi
   # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only)
   LD_LIBRARY_PATH="$(dirname "$LLAMA_SERVER"):${LD_LIBRARY_PATH:-}" \
