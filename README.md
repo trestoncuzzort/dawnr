@@ -196,8 +196,10 @@ dawnr cite "When is payment due?" invoice.txt
 dawnr extract invoice.txt --field "total(number): the amount due" --field "due(date): when payment is due"
 ```
 
-`cite` answers in claims that each quote one of your sentences word for
-word, or says the files do not hold the answer. `extract` fills each field
+The files can be plain text in any common encoding, Word documents, saved
+web pages or PDFs (read with `pdftotext` when your machine has it; a quote
+from a PDF is shown with its page). `cite` answers in claims that each quote
+one of your sentences word for word, or says the files do not hold the answer. `extract` fills each field
 with a run of words copied from one of your sentences and prints that
 sentence beside it; a number or date field is offered only words that read
 as one; a field nothing states is left empty. Neither can write a value that
