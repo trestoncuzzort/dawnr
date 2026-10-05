@@ -273,3 +273,46 @@ def test_the_assistant_offers_sh_by_default_and_not_the_tools_it_replaces(tmp_pa
         names = harness.visible_names()
         assert {"fs_read", "fs_write", "fs_edit", "fs_list", "fs_search"} <= set(names) and "plan" not in names and "t" not in names
         assert ("sh" in names) == (agent.shell is not None)
+
+
+def test_a_repository_is_read_in_the_sandbox_and_changed_only_on_itself_through_pc(tmp_path, mode):
+    import subprocess
+    if shutil.which("git") is None:
+        pytest.skip("git is not installed")
+    work = tmp_path / "work"
+    work.mkdir()
+    git = lambda *a: subprocess.run(["git", "-c", "user.email=x@example.org", "-c", "user.name=x", *a], cwd=work, capture_output=True, text=True)
+    git("init", "-q")
+    (work / "a.py").write_text("x = 1\n")
+    (work / ".env").write_text("TOKEN=abc123\n")
+    git("add", "-f", "a.py", ".env")
+    git("commit", "-q", "-m", "first")
+    (work / "a.py").write_text("x = 2\n")
+    (work / ".env").write_text("TOKEN=zzz999\n")
+    (work / "b.py").write_text("y = 1\n")
+    asked = []
+    cfg = cli.default_config(work, state=tmp_path / "state")
+    harness, agent = cli.build_agent(cfg, approver=lambda name, arguments, why: asked.append((name, arguments.get("command"))) or True)
+    if agent.shell is None:
+        harness.close()
+        pytest.skip("no sandbox here")
+    planner = cli.Planner(harness, agent, "x:1", "base", look_first=False)
+    with harness:
+        status = harness.call("sh", {"command": "git status --short"})
+        assert status.text.startswith("exit 0\n") and " M a.py" in status.text and "?? b.py" in status.text and "here" not in status.text and asked == []
+        shown = harness.call("sh", {"command": "git diff; git log -p --all | cat"}).text       # read unasked; no secret's text, old or new
+        assert "+x = 2" in shown and "abc123" not in shown and "zzz999" not in shown and asked == []
+        # what changes the repository is not carried out of the sandbox, in whole or in part
+        for line in ("git add -A && git commit -q -m second", "git stash"):
+            r = harness.call("sh", {"command": line})
+            assert r.is_error and "changes the repository itself" in r.text and "call `pc` with the git line" in r.text, line
+        assert (work / "a.py").read_text() == "x = 2\n" and git("log", "--oneline").stdout.count("\n") == 1 and asked == []
+        # the front door takes each git line where it belongs
+        assert planner.route("sh", "git add -A && git commit -m second") == "pc" and planner.route("pc", "git log --oneline") == "sh"
+        assert planner.route("sh", "git diff | head") == "sh" and planner.route("sh", "git reset --hard") == "pc"
+        done = harness.call("pc", {"command": "git add a.py b.py && git -c user.email=x@example.org -c user.name=x commit -q -m second"})
+        assert not done.is_error and asked[-1][0] == "pc" and git("log", "--oneline").stdout.count("\n") == 2
+        for line in ("git reset --hard HEAD~1", "git clean -fd", "git checkout -- a.py", "git push --force"):
+            r = harness.call("pc", {"command": line})
+            assert r.is_error and "throws away work that is in no commit" in r.text and line in r.text, line
+        assert harness.call("pc", {"command": "git push"}).is_error and len(asked) == 1 and (work / "b.py").exists()

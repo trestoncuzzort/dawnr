@@ -425,3 +425,26 @@ rotation's direction, the `# reviewed` line, and "add a line to /etc/hosts" answ
 sudo in it. One `pc` line was let through unasked, on the described Mac: `brew info htop`, and then `htop` itself.
 None of the six is the interface's as far as reading them shows; they are what a larger driver would be measured
 against.
+
+## Four sizes of driver on the same 135 tasks (2026-10-05 19:20Z; development, no prediction)
+
+The same front door and tasks, the model alone changed, each served from one 48 GB card (the tools run on the
+desktop). All four are the same family at 4 bits; only the 4B has its prediction layer and drafts with it.
+
+| driver | file | done of 135 | lines or files nobody asked for | not done and not said | tokens a second | seconds for the 135 |
+|---|---:|---:|---:|---:|---:|---:|
+| 4B, drafting | 2.8 GB | 129 | 0 | 1 | 270 | 138 |
+| 9B | 5.6 GB | 132 | 2 | 3 | 122 | 187 |
+| 27B | 16.7 GB | 131 | 2 | 2 | 43 | 536 |
+| 35B, 3B active per token | 22.1 GB | 133 | 3 | 0 | 162 | 193 |
+
+Three to four tasks separate the smallest from the largest, on sets where one reading moves by a task or two;
+the 4B finishes first and let nothing through that was not asked for. What the larger ones did that it did not:
+the two data tasks (they wrote a short program where the 4B wrote a one-liner with a mistake and repeated it),
+the rotation, the `# reviewed` line, the larger `.bak`. What they did that it did not do: the 35B wrote
+`primes.py` as a file named `prim` and tried to rename it to itself; the 9B restarted bluetooth as a user
+service and opened `/etc/hosts` in an editor when asked to add a line to it; the 27B put `index.md` in `docs`, as
+the 4B had in C. The 27B and the 35B look before they act more than the 4B does (is the unit there, what does
+`/etc/os-release` say), which on a described machine showed them the real one through `sh`; described-machine
+tasks are now run without `sh`, and "start my user service" accepts "there is no such unit" on a machine where
+that is true. These sets do not show what a larger driver is for; a fifth, made of longer work, has to.

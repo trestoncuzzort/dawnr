@@ -59,7 +59,7 @@ from dawnr_agent import build_agent as _build_agent  # noqa: E402
 from dawnr_agent.journal import sha256  # noqa: E402
 from dawnr_agent.recipes import recipes  # noqa: E402
 from dawnr_agent.shell import LIVE  # noqa: E402
-from dawnr_agent.system import FILE_READERS, MANAGERS, PRIVILEGED, facts, look  # noqa: E402
+from dawnr_agent.system import FILE_READERS, MANAGERS, PRIVILEGED, facts, git_kind, look  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -262,7 +262,11 @@ class Planner(NativePlanner):
         refuses the others' lines and says where they go; that cost a round each time, and two in a row ended the
         task ("empty the trash" died of a redirect and one failed lookup)."""
         offered = {t["function"]["name"] for t in self.tools}
-        looks = look(command) is not None
+        looks, git = look(command) is not None, git_kind(command)
+        if git == "read" and name in ("pc", "sysinfo") and "sh" in offered:
+            return "sh"                                         # a repository is read in the sandbox, like its files
+        if git in ("write", "remote", "discard") and name in ("sh", "sysinfo") and "pc" in offered:
+            return "pc"                                         # and changed on the repository itself, asked for
         if name == "pc" and looks and "sysinfo" in offered:
             return "sysinfo"
         if name == "sysinfo" and not looks:
