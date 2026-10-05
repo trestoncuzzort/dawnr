@@ -1,6 +1,6 @@
 # The round-4 student on rows built through the row gates, three seeds, scored on the corrected panels: registered before any of it trains
 
-Registered 2026-10-05 05:38Z. Two things changed since the last student round
+Registered 2026-10-05 05:37Z. Two things changed since the last student round
 (`PREDICT-2026-10-04-teacher3-student.md`), and this round is the first to carry both.
 
 1. **Round 4's documents.** The prompted Qwen3.5-27B on our own cards admitted 114 training documents and 124
