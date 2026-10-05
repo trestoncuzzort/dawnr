@@ -470,7 +470,7 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
     """Run the translation beside the interpreter, in the sandbox (t/py_sandbox.py), on the question's own tests,
     on up to `n` inputs from the interpreter's own domain that the program's `requires` admits, and on up to
     `outside` that it excludes, which the Python must refuse with a ValueError.
-    {"agrees": bool, "inputs": N, "refused": M, "why"?}."""
+    {"agrees": bool, "inputs": N, "refused": M, "why"?, "first"?: the first assertion that did not pass}."""
     import py_sandbox
     ins, out = _boundary_kinds(task, tests or [])
     names = [(p["name"], p["type"]) for p in task["params"]]
@@ -500,4 +500,8 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
         return {"agrees": False, "inputs": 0, "why": "no input to check on"}
     r = py_sandbox.run_tests(src + _REFUSES, asserts + refusals, per_test=per_test)
     ok = r.get("status") == "ran" and bool(r.get("all_pass"))
-    return {"agrees": ok, "inputs": len(asserts), "refused": len(refusals), **({} if ok else {"why": json.dumps(r)[:300]})}
+    if ok:
+        return {"agrees": True, "inputs": len(asserts), "refused": len(refusals)}
+    first = next((a for a, v in zip(asserts + refusals, r.get("verdicts") or []) if v != "pass"), None)
+    return {"agrees": False, "inputs": len(asserts), "refused": len(refusals), "why": json.dumps(r)[:300],
+            **({"first": first} if first else {})}

@@ -18,6 +18,23 @@ dawnr is research software. Read this before relying on anything it does.
   examples and against six independently written solutions, and still shows a wrong answer about one time in
   eight on problems it has not seen (see below). A shown answer says how many of the seven provers proved it; it is
   not a guarantee that the question was understood.
+- **A certificate replays; it does not vouch.** `dawnr check` establishes again, on the reader's machine and with
+  the reader's provers, what a certificate records: the tests, a search for an input that breaks the specification,
+  the proof and its sabotaged twin, the Python handed back, the measurements of the specification. A prover that
+  machine lacks is named and not counted, and a slower machine can read `UNDECIDED HERE` where the first one proved.
+  It cannot say that the specification is what was meant. A certificate written by `dawnr verify` contains the
+  Python file it was run on. The format is new (2026-10-05); how certificates travel between machines and whether
+  forged ones are caught is registered in `t/PREDICT-2026-10-05-verify-python.md` and not yet measured.
+- **`dawnr verify` proves a twin, not your Python.** The `t` program is proved against its specification; that it
+  and your function are the same function is tested on drawn inputs inside the twin's `requires`, not proved. When
+  you give no examples they are taken from your function, so a bug in it is recorded as its behaviour and shows up
+  only in the specification you are asked to read. How many functions get a twin is registered in the same file and
+  not yet measured; on four hand-written files the published model verified two and refused two, one of them a
+  function written to stop one short of what its docstring says, which the refusal pointed at with the example.
+- **`dawnr cite` and `dawnr extract` say where words came from, not that they are the right words.** Neither can
+  show text that is not in your files, by construction. `cite` is measured (below). `extract` is new (2026-10-05):
+  how often the words it picks are the right ones, and how often a field that is not in the document is left
+  empty, is registered in `locallm/PREDICT-2026-10-05-extract.md` and not yet measured.
 - **The installer is new.** It was tested from an empty home directory on Linux x86_64 against the published
   release (about 9 minutes, almost all of it downloading 7.5 GB; the first question was answered and proved by
   Dafny in about a minute). It installs only Dafny

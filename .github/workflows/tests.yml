@@ -92,6 +92,11 @@ jobs:
             python -m pytest -v $FILES
           fi
 
+      - name: answers from a person's files (standard library; run from the repository root)
+        # cite and extract hold the model's reply to the person's own sentences by a grammar; these suites test the
+        # grammars, the parsing and the scoring with a stand-in for the model server
+        run: python -m pytest -v locallm/test_cite_docs.py locallm/test_extract_docs.py locallm/test_extract_eval.py
+
       - name: t/ unit tests that need neither provers nor torch
         # t/ is the research pipeline and runs on POSIX by design: its interpreter
         # timeouts are SIGALRM/setitimer, its stall checks read /proc, its verifiers

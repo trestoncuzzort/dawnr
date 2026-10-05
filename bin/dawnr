@@ -4,6 +4,9 @@
 #   dawnr prove SPEC.t    a specification you wrote: the model writes the body, the provers decide [--test ...] [--save-python FILE]
 #   dawnr spec "QUESTION" --test "assert f(x) == y" [--save SPEC.t]    specifications to read and pick from
 #   dawnr ask "Write a function that doubles a number." --test "assert double(3) == 6" [--test ...] [--save-python FILE]
+#   dawnr verify FILE.py  a Python function you already have: a proved twin of it, or why not [--fn NAME] [--test ...]
+#   dawnr extract FILE... --field "total(number): the amount due"    fields from your files, each with the sentence it is in
+#   dawnr cite "QUESTION" FILE...    an answer from your files, every claim quoting one of their sentences
 #   dawnr check FILE      replay a certificate (ask or prove with --certificate FILE wrote it): no model, this machine's provers
 #   dawnr doctor          what is installed and what each part found
 #   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
@@ -95,6 +98,28 @@ both_up() {  # start the two models if they are not running, and stop them again
   fi
 }
 
+student_up() {  # only the model that writes t: start it if it is not running, and stop it again on the way out
+  started=0
+  if ! healthy "$SP"; then
+    echo "starting the model (a quarter of a minute here, longer the first time on a small machine)..." >&2
+    start_one student "$STUDENT_GGUF" "$SP"; started=1
+    trap '[ $started = 1 ] && stop_all' EXIT
+    for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$SP" && break; sleep 1; done
+    healthy "$SP" || { echo "dawnr: the model did not come up; see $RUN/student.log" >&2; exit 1; }
+  fi
+}
+
+base_up() {  # only the base model, for what is answered from the person's files
+  started=0
+  if ! healthy "$BP"; then
+    echo "starting the base model..." >&2
+    start_one base "$BASE_GGUF" "$BP"; started=1
+    trap '[ $started = 1 ] && stop_all' EXIT
+    for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$BP" && break; sleep 1; done
+    healthy "$BP" || { echo "dawnr: the base model did not come up; see $RUN/base.log" >&2; exit 1; }
+  fi
+}
+
 cmd=${1:-help}; shift || true
 case $cmd in
   prove)
@@ -102,14 +127,7 @@ case $cmd in
     [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
     SPEC=$(abspath "$1"); shift
     own_paths "$@"
-    started=0
-    if ! healthy "$SP"; then                                    # only the model that writes t is needed
-      echo "starting the model (a quarter of a minute here, longer the first time on a small machine)..." >&2
-      start_one student "$STUDENT_GGUF" "$SP"; started=1
-      trap '[ $started = 1 ] && stop_all' EXIT
-      for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$SP" && break; sleep 1; done
-      healthy "$SP" || { echo "dawnr: the model did not come up; see $RUN/student.log" >&2; exit 1; }
-    fi
+    student_up
     cd "$DAWNR_REPO"
     T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/prove.py prove --student "127.0.0.1:$SP" --spec "$SPEC" ${ARGS[@]+"${ARGS[@]}"}
     ;;
@@ -134,6 +152,18 @@ case $cmd in
     T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" \
       --consistency 5 --text "$QUESTION" ${ARGS[@]+"${ARGS[@]}"}
     ;;
+  verify)
+    # a Python function the person already has: the model writes a specification and a t twin of it, and the function
+    # itself (run in the sandbox) and the provers decide (t/verify_py.py); only the model that writes t is needed
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr verify FILE.py [--fn NAME] [--test "assert f(x) == y" ...] [--save-t FILE] [--save-python FILE] [--certificate FILE]' >&2; exit 2; }
+    [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
+    FILE=$(abspath "$1"); shift
+    own_paths "$@"
+    why=$(sandbox_check) || { echo "dawnr: your Python only runs in a sandbox here, and $why" >&2; exit 1; }
+    student_up
+    cd "$DAWNR_REPO"
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/verify_py.py --student "127.0.0.1:$SP" --file "$FILE" ${ARGS[@]+"${ARGS[@]}"}
+    ;;
   check)
     # a certificate replayed: the tests, the provers on this machine, the Python and the measurements, with no model
     # (t/certificate.py); exit 0 reproduced, 1 failed, 2 nothing here could decide
@@ -150,15 +180,27 @@ case $cmd in
     [ $# -ge 2 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr cite "QUESTION" FILE [FILE ...]' >&2; exit 2; }
     QUESTION=$1; shift
     FILES=(); for f in "$@"; do FILES+=("$(cd "$(dirname "$f")" && pwd)/$(basename "$f")"); done
-    started=0
-    if ! healthy "$BP"; then
-      echo "starting the base model..." >&2
-      start_one base "$BASE_GGUF" "$BP"; started=1
-      trap '[ $started = 1 ] && stop_all' EXIT
-      for i in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$BP" && break; sleep 1; done
-      healthy "$BP" || { echo "dawnr: the base model did not come up; see $RUN/base.log" >&2; exit 1; }
-    fi
+    base_up
     cd "$DAWNR_REPO" && "$DAWNR_PYTHON" locallm/cite_docs.py --host "127.0.0.1:$BP" "$QUESTION" "${FILES[@]}"
+    ;;
+  extract)
+    # fields out of the person's own files, each value a run of words of one of their sentences, shown with it, or
+    # left empty (locallm/extract_docs.py); only the base model is needed
+    ARGS=(); fields=0; files=0
+    while [ $# -gt 0 ]; do
+      case $1 in
+        --field) [ $# -ge 2 ] || { echo "dawnr: --field needs \"name: what it is\"" >&2; exit 2; }
+          ARGS+=("$1" "$2"); fields=$((fields + 1)); shift 2;;
+        --json) [ $# -ge 2 ] || { echo "dawnr: --json needs a file name" >&2; exit 2; }
+          ARGS+=("$1" "$(abspath "$2")"); shift 2;;
+        --*) echo "dawnr: extract does not know $1" >&2; exit 2;;
+        *) [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
+          ARGS+=("$(abspath "$1")"); files=$((files + 1)); shift;;
+      esac
+    done
+    [ $fields -ge 1 ] && [ $files -ge 1 ] || { echo 'usage: dawnr extract FILE [FILE ...] --field "name: what it is" [--field "total(number): ..."] [--field "due(date): ..."] [--json OUT.json]' >&2; exit 2; }
+    base_up
+    cd "$DAWNR_REPO" && "$DAWNR_PYTHON" locallm/extract_docs.py --host "127.0.0.1:$BP" "${ARGS[@]}"
     ;;
   serve)
     case ${1:-status} in
@@ -188,5 +230,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,13p' "$0";;
+  *) sed -n '2,16p' "$0";;
 esac
