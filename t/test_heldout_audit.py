@@ -175,7 +175,7 @@ class CandidateTests(unittest.TestCase):
         self.assertEqual(ha.length_arguments(entry), [])
 
 
-@unittest.skipUnless(ha.SPLIT.exists() and ha.POLICY.exists(), "the split or the policy is absent")
+@unittest.skipUnless(ha.SPLIT.exists() and ha.POLICY.exists() and ha.WIDER_POLICY.exists(), "the split or a policy is absent")
 class PolicyTests(unittest.TestCase):
     def test_the_panels_are_182_and_95(self):
         eval_ids = {int(i) for i in json.loads(ha.SPLIT.read_text())["eval_ids"]}
@@ -185,6 +185,15 @@ class PolicyTests(unittest.TestCase):
         for tid in (447, 472, 474, 605, 644, 804):                 # the six that are the problem's own formalisation
             self.assertNotIn(tid, clean)
         self.assertTrue(clean <= eval_ids)
+
+    def test_the_wider_panel_is_the_new_problems_the_rows_never_matched(self):
+        wider = set(se.wider_pool())
+        clean = ha.wider_clean()
+        self.assertEqual((len(wider), len(clean)), (145, 114))
+        self.assertTrue(clean <= wider and not clean & {int(i) for i in json.loads(ha.SPLIT.read_text())["eval_ids"]})
+        self.assertIn(95, wider - clean)                           # MBPP-DFY's smallestListLength is in the rows
+        self.assertIn(616, clean)                                  # its elementWiseModulo left the corpus on 2026-09-21
+        self.assertTrue(ha.wider_flagged() <= ha.removed_ids())
 
     def test_a_policy_that_removes_nothing_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
@@ -235,6 +244,33 @@ class AuditTests(unittest.TestCase):
         row = {"name": "dafny_synthesis_task_id_95__smallestListLength", "kind": "spec-given", "chosen": fenced(DOUBLE)}
         self.assertEqual([f["why"] for f in self.audit([row], refuse_gpl=True)["findings"] if f["why"] == "gpl"], ["gpl"])
         self.assertEqual([f for f in self.audit([row])["findings"] if f["why"] == "gpl"], [])
+
+    def test_a_row_that_answers_a_wider_problem_is_flagged_for_the_wider_panel(self):
+        # MBPP 616, read only by the wider reader: tuple_modulo((10, 4, 5, 6), (5, 6, 7, 5)) == (0, 4, 5, 1)
+        modulo = """
+t 1
+gate loops
+task element_wise_modulo(a: seq, b: seq) returns (r: seq)
+  requires len(a) == len(b)
+  requires forall i in [0, len(b)) . b[i] != 0
+  ensures len(r) == len(a)
+  ensures forall i in [0, len(r)) . r[i] == a[i] % b[i]
+{
+  r := [];
+  var i: int := 0;
+  while i < len(a)
+    invariant 0 <= i and i <= len(a)
+    invariant len(r) == i
+    invariant forall k in [0, i) . r[k] == a[k] % b[k]
+    decreases len(a) - i
+  {
+    r := r + [a[i] % b[i]];
+    i := i + 1;
+  }
+}
+"""
+        result = self.audit([{"name": "some_modulo", "kind": "spec-given", "chosen": fenced(modulo)}])
+        self.assertIn(("wider", 616), ha.by_problem(result["findings"]))
 
     def test_the_gate_of_a_row_build(self):
         with tempfile.TemporaryDirectory() as d:

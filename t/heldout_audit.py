@@ -51,6 +51,11 @@ problems; what it buys is a panel nobody has to argue about.
 by either route: a redistribution or a translation does not change the licence of the original
 (internal/RELEASE-PROVENANCE-2026-10-01.md), and the filter of 2026-10-01 matched the name alone.
 
+A third panel since the same day: the problems only the wider reader reads (pool v7's additions,
+t/spec_experiment.py wider_pool), which no split names and no model was trained on. They are gated as "wider";
+the ones the published model's rows already match are recorded in t/decontamination-wider-2026-10-05.json and
+the rest are a held-out panel from their first day (`wider_clean()`).
+
 What it cannot see: the same task under a signature that differs by more than a length argument (arguments in
 another order, a pair where the problem takes two values) when the benchmark records no lineage; a problem
 whose reference does not run, or whose inputs no draw can produce, keeps every candidate (the conservative
@@ -80,6 +85,7 @@ LINEAGE = HERE / "vericoding-mbpp-lineage.json"
 SPLIT = HERE / "out" / "loop" / "split-v5.json"
 DEV = HERE / "r12-dev-ids.json"
 POLICY = HERE / "decontamination-rows-2026-10-05.json"
+WIDER_POLICY = HERE / "decontamination-wider-2026-10-05.json"
 SOURCES = ("https://arxiv.org/abs/2311.04850", "https://ar5iv.labs.arxiv.org/html/2305.01210",
            "https://raw.githubusercontent.com/microsoft/verus-proof-synthesis/main/benchmarks/Verus-Bench/README.md")
 RULE = ("a training row is flagged for a gated problem (held-out or dev) when it names that problem's own "
@@ -150,16 +156,17 @@ def blocks(row: dict) -> list[str]:
 
 # ------------------------------------------------------------------- twin --
 
-def gates(split_path: Path = SPLIT, dev_path: Path = DEV) -> dict[int, str]:
-    """problem id -> "held-out" | "dev", for every gated problem, with test points or without."""
+def gates(split_path: Path = SPLIT, dev_path: Path = DEV, wider: bool = True) -> dict[int, str]:
+    """problem id -> "held-out" | "dev" | "wider", for every gated problem, with test points or without."""
     eval_ids = {int(i) for i in json.loads(Path(split_path).read_text(encoding="utf-8"))["eval_ids"]}
-    out = {int(tid): "dev" for tid in loop_filter.r12_dev_ids(dev_path)}
+    out = {int(tid): "wider" for tid in (se.wider_pool() if wider else {})}
+    out.update({int(tid): "dev" for tid in loop_filter.r12_dev_ids(dev_path)})
     out.update({tid: "held-out" for tid in eval_ids})
     return out
 
 
 def gated_problems(pool: dict, split_path: Path = SPLIT, dev_path: Path = DEV) -> dict[int, tuple[dict, str]]:
-    """problem id -> (pool entry, "held-out" | "dev"), for every gated problem with test points."""
+    """problem id -> (pool entry, its gate), for every gated problem the pool holds with test points."""
     return {tid: (pool[tid], gate) for tid, gate in sorted(gates(split_path, dev_path).items())
             if tid in pool and pool[tid].get("points")}
 
@@ -282,11 +289,27 @@ def policy(path: Path = POLICY) -> dict:
     return data
 
 
-def removed_ids(path: Path = POLICY) -> set[int]:
-    """Every problem already out of a panel: this audit's held-out and dev ids and the 32 of 2026-09-21."""
+def wider_flagged(path: Path = WIDER_POLICY) -> set[int]:
+    """The wider reader's problems the published model's rows already matched (never in the wider panel)."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    flagged = data.get("flagged_ids")
+    if data.get("schema") != 1 or not isinstance(flagged, list):
+        raise ValueError(f"{path}: not a wider-panel record")
+    return {int(i) for i in flagged}
+
+
+def wider_clean(path: Path = WIDER_POLICY) -> set[int]:
+    """The wider panel: pool v7's additions without the ones the rows of 2026-10-05 matched."""
+    return set(se.wider_pool()) - wider_flagged(path)
+
+
+def removed_ids(path: Path = POLICY, wider_path: Path = WIDER_POLICY) -> set[int]:
+    """Every problem already out of a panel: this audit's held-out and dev ids, the 32 of 2026-09-21, and the
+    wider reader's problems that never entered its panel."""
     data = policy(path)
     return ({int(i) for i in data["overlap_eval_ids"]} | {int(i) for i in data["dev_overlap_ids"]}
-            | set(loop_filter.decontamination().overlap_eval_ids))
+            | set(loop_filter.decontamination().overlap_eval_ids)
+            | (wider_flagged(wider_path) if Path(wider_path).exists() else set()))
 
 
 def clean_182(eval_ids: set[int], path: Path = POLICY) -> set[int]:
@@ -330,7 +353,7 @@ def read_rows(paths: list[Path]) -> list[tuple[str, int, dict]]:
     return out
 
 
-def audit(rows: list[tuple[str, int, dict]], *, pool_name: str = "v5", split_path: Path = SPLIT,
+def audit(rows: list[tuple[str, int, dict]], *, pool_name: str = "v7", split_path: Path = SPLIT,
           dev_path: Path = DEV, table: dict[str, dict] | None = None, jobs: int = 8,
           refuse_gpl: bool = False, hung_path: Path | None = None) -> dict:
     """{"findings": [...], "flagged": sorted (file, line) pairs, "programs": N, "unparsed": N}. A finding is one
@@ -432,14 +455,32 @@ def policy_of(result: dict, row_files: list[Path], split_path: Path = SPLIT) -> 
         "overlap_eval_ids": [tid for tid in held if tid in clean],
         "flagged_already_excluded": [tid for tid in held if tid not in clean],
         "dev_overlap_ids": sorted(tid for (gate, tid) in table if gate == "dev"),
-        "evidence": {f"{gate}:{tid}": v for (gate, tid), v in table.items()},
+        "evidence": {f"{gate}:{tid}": v for (gate, tid), v in table.items() if gate in ("held-out", "dev")},
+    }
+
+
+def wider_policy_of(result: dict, row_files: list[Path]) -> dict:
+    """The record of the wider panel's first day: which of pool v7's additions the rows already matched."""
+    table = {tid: v for (gate, tid), v in by_problem(result["findings"]).items() if gate == "wider"}
+    return {
+        "schema": 1,
+        "about": "The MBPP problems only the wider reader reads (t/spec_experiment.py wider_pool) that the training rows "
+                 "of 2026-10-05 already matched, by t/heldout_audit.py's lineage and twin readings. They never enter the "
+                 "wider panel; the rest are held out from their first day. t/PREDICT-2026-10-05-wider-reader.md",
+        "rule": RULE,
+        "audited": [{"file": Path(f).name, "sha256": hashlib.sha256(Path(f).read_bytes()).hexdigest(),
+                     "rows": sum(1 for line in Path(f).read_text(encoding="utf-8").splitlines() if line.strip())}
+                    for f in row_files],
+        "problems": len(se.wider_pool()),
+        "flagged_ids": sorted(table),
+        "evidence": {str(tid): v for tid, v in sorted(table.items())},
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--rows", type=Path, nargs="+", required=True, help="training rows, one JSON object a line")
-    ap.add_argument("--pool", default="v5")
+    ap.add_argument("--pool", default="v7", help="v7 (default) holds the wider reader's problems; v5 audits without them")
     ap.add_argument("--split", type=Path, default=SPLIT)
     ap.add_argument("--dev", type=Path, default=DEV)
     ap.add_argument("--jobs", type=int, default=8)
@@ -450,6 +491,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="a match with a problem already out of the panels is reported and not refused")
     ap.add_argument("--write-policy", type=Path, help="write the panels' record from this audit (every row file "
                                                       "a measured model trained on, no --panels)")
+    ap.add_argument("--write-wider-policy", type=Path, help="write the wider panel's record (the published model's rows)")
     a = ap.parse_args(argv)
     if a.keep and len(a.rows) != 1:
         raise SystemExit("heldout_audit: --keep takes one --rows file")
@@ -472,6 +514,11 @@ def main(argv: list[str] | None = None) -> int:
     if a.write_policy:
         a.write_policy.write_text(json.dumps(policy_of(result, a.rows, a.split), indent=1) + "\n", encoding="utf-8")
         print(f"wrote {a.write_policy}")
+    if a.write_wider_policy:
+        if a.panels:
+            raise SystemExit("heldout_audit: --write-wider-policy records a whole audit; it does not take --panels")
+        a.write_wider_policy.write_text(json.dumps(wider_policy_of(result, a.rows), indent=1) + "\n", encoding="utf-8")
+        print(f"wrote {a.write_wider_policy}")
     if a.keep:
         bad = {line for _file, line in result["flagged"]}
         kept = [text for k, text in enumerate(a.rows[0].read_text(encoding="utf-8").splitlines())

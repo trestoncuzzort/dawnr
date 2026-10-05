@@ -193,3 +193,79 @@ def test_strings_agree_through_the_boundary():
     source, fn = to_python.translate(task, tests, "rev")
     report = to_python.check(task, source, fn, tests)
     assert report["agrees"], report
+
+
+# ---- 2026-10-05, the wider reader: a result the question's tests write as a tuple leaves as one ----
+
+MODULO = """
+t 1
+gate loops
+task tuple_modulo(a: seq, b: seq) returns (r: seq)
+  requires len(a) == len(b)
+  requires forall i in [0, len(b)) . b[i] != 0
+  ensures len(r) == len(a)
+{
+  r := [];
+  var i: int := 0;
+  while i < len(a)
+    invariant 0 <= i and i <= len(a)
+    invariant len(r) == i
+    decreases len(a) - i
+  {
+    r := r + [a[i] % b[i]];
+    i := i + 1;
+  }
+}
+"""
+
+PAIRS = """
+t 1
+gate loops
+task swap_rows(m: seq<seq>) returns (r: seq<seq>)
+  ensures len(r) == len(m)
+{
+  r := [];
+  var i: int := len(m);
+  while i > 0
+    invariant 0 <= i and i <= len(m)
+    invariant len(r) == len(m) - i
+    decreases i
+  {
+    i := i - 1;
+    r := r + [m[i]];
+  }
+}
+"""
+
+
+def test_a_tuple_in_and_a_tuple_out():
+    tests = ["assert tuple_modulo((10, 4, 5, 6), (5, 6, 7, 5)) == (0, 4, 5, 1)"]
+    source, fn = to_python.translate(parse(MODULO), tests, "tuple_modulo")
+    got = run(source, fn, (10, 4, 5, 6), (5, 6, 7, 5))
+    assert got == (0, 4, 5, 1) and isinstance(got, tuple)
+    assert run(source, fn, [10, 4], [5, 6]) == (0, 4)           # a list goes in as well
+
+
+def test_a_list_of_tuples_keeps_each_writing_at_its_depth():
+    tests = ["assert swap_rows([(1, 2), (3, 4)]) == [(3, 4), (1, 2)]"]
+    source, fn = to_python.translate(parse(PAIRS), tests, "swap_rows")
+    got = run(source, fn, [(1, 2), (3, 4)])
+    assert got == [(3, 4), (1, 2)] and isinstance(got, list) and isinstance(got[0], tuple)
+    tests = ["assert swap_rows(((1, 2), (3, 4))) == ((3, 4), (1, 2))"]
+    source, fn = to_python.translate(parse(PAIRS), tests, "swap_rows")
+    assert run(source, fn, ((1, 2), (3, 4))) == ((3, 4), (1, 2))
+
+
+def test_without_a_tuple_in_the_tests_nothing_changes():
+    tests = ["assert tuple_modulo([10, 4], [5, 6]) == [0, 4]"]
+    source, fn = to_python.translate(parse(MODULO), tests, "tuple_modulo")
+    assert "_t_shape" not in source and run(source, fn, [10, 4], [5, 6]) == [0, 4]
+
+
+@needs_sandbox
+def test_check_passes_the_questions_own_tuple_test():
+    task = parse(MODULO)
+    tests = ["assert tuple_modulo((10, 4, 5, 6), (5, 6, 7, 5)) == (0, 4, 5, 1)"]
+    source, fn = to_python.translate(task, tests, "tuple_modulo")
+    report = to_python.check(task, source, fn, tests)
+    assert report["agrees"], report

@@ -789,6 +789,18 @@ side. A certificate rung for `%` on ints is the named next lever; the lifter's p
 Tests: t/test_lift_char_cast.py (9); t/test_lift_seq_elements.py's cast fixture now carries no
 bound, since with one it lifts.
 
+### 20. Tuples and rows of ints at the boundary (2026-10-05, the test reader; no kernel touched)
+
+**Refused: 237 of MBPP's 974 problems** by the pools' reader at a tuple (170) or a list of lists (67), before any
+model was asked anything. `t/mbpp_dfy.py parse_assertion` gained `tuples` (a tuple is the list of the same elements)
+and `nested_ints` (a list of int lists is `seq<seq>`), both off by default: every pool to v5 reads as before, byte
+for byte, and the additions are pool v7 (`spec_experiment.wider_pool`, 145 problems, none in any split). A person's
+question is read with both (`answer.entry_of`), and the Python handed back keeps the tests' own writing, tuple or
+list at each depth (`to_python`). 796 of 974 read, from 651. 31 of the 145 were already matched by a training row
+and 114 are a held-out panel from their first day (`heldout_audit.wider_clean`). Registration and what is measured
+on it: `PREDICT-2026-10-05-wider-reader.md`. Not done, each a language change with every lowering behind it: a
+mixed tuple (a record at the boundary), a finite map (34 problems stop at a dictionary), reals (61).
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
