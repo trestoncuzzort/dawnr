@@ -32,6 +32,8 @@ What `check` does again, none of it with a model:
                  lacks is reported as not checked here, never counted
   python         the Python in the certificate answers as the proved program does, in the sandbox, on the tests
                  and on inputs drawn from the program's own domain (t/to_python.check)
+  original       (from `dawnr verify`) inside its `requires` the program answers as the recorded Python function
+                 does, in the sandbox, on drawn inputs
   measured       what was said about the specification is measured again: from a question, that it holds at the
                  recorded independent Python's answers on drawn inputs and rejects wrong outputs (t/spec_gate.py);
                  from a specification, the share of wrong results it rejects (t/prove.pins_down)
@@ -152,6 +154,16 @@ def from_proof(r: dict, tests=(), **kw) -> dict | None:
     return make(kind="prove", function=r["name"], tests=tests or (), shown=s, measured=s.get("specification"), **kw)
 
 
+def from_verify(r: dict, function: dict, **kw) -> dict | None:
+    """The certificate of `dawnr verify`'s proved twin (verify_py.verify's result); the person's own file is the
+    recorded Python the specification and the twin were held against. None when nothing was verified."""
+    s = r.get("shown")
+    if not s:
+        return None
+    return make(kind="verify", function=r["fn"], tests=r.get("tests") or (), shown=s, reference_python=function["code"],
+                measured=s.get("behind the specification"), **kw)
+
+
 def write(path: Path, certificate: dict) -> None:
     path.write_text(json.dumps(certificate, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -180,7 +192,7 @@ def _same(a, b) -> bool:
 def _measured_again(predicate: dict, task: dict, entry: dict | None) -> tuple[str, str]:
     """(result, detail) for what the certificate says about the specification."""
     said = predicate.get("measured") or {}
-    if predicate.get("kind") == "ask":
+    if predicate.get("kind") in ("ask", "verify"):
         code = predicate.get("reference python")
         if not code or entry is None:
             return BAD, "a question's certificate needs its tests and the independent Python the specification was held against"
@@ -289,7 +301,19 @@ def check(certificate: dict, prover=None, jobs: int = 2, spec: dict | None = Non
             step("python", OK if r.get("agrees") else BAD,
                  f"the same answer as the proved program on {r.get('inputs')} inputs" if r.get("agrees")
                  else f"the Python does not answer as the proved program does ({str(r.get('why'))[:160]})")
-    if predicate.get("measured") is not None or predicate.get("kind") == "ask":
+    if predicate.get("kind") == "verify":                       # the twin beside the function it was written for
+        if not py_sandbox.available():
+            step("original", SKIPPED, f"the recorded function only runs in a sandbox, and {py_sandbox.why_unavailable()}")
+        else:
+            try:
+                r = to_python.check(task, predicate.get("reference python") or "", predicate.get("function"), tests, outside=0)
+            except Exception as error:                          # noqa: BLE001
+                r = {"agrees": False, "why": f"{type(error).__name__}: {error}"}
+            step("original", OK if r.get("agrees") else BAD,
+                 f"inside its `requires` the program answers as the recorded function does on {r.get('inputs')} drawn inputs"
+                 if r.get("agrees") else "the program does not answer as the recorded function does"
+                 + (f" (`{r['first'][7:]}` is the program's answer)" if r.get("first") else ""))
+    if predicate.get("measured") is not None or predicate.get("kind") in ("ask", "verify"):
         try:
             result, detail = _measured_again(predicate, task, entry)
         except Exception as error:                              # noqa: BLE001
@@ -305,7 +329,9 @@ def check(certificate: dict, prover=None, jobs: int = 2, spec: dict | None = Non
 _WHAT = {"certificate": "the file is a certificate", "digests": "each part is the text its digest was taken of",
          "program": "the program parses and is well formed", "specification": "the specification listed is the program's own",
          "specification kept": "the program keeps the given specification", "tests": "the recorded tests pass",
-         "counterexample": "the search for an input that breaks the specification", "proof": "the provers on this machine", "python": "the Python handed back", "measured": "what was said of the specification"}
+         "counterexample": "the search for an input that breaks the specification", "proof": "the provers on this machine",
+         "python": "the Python handed back", "original": "the function it is a twin of",
+         "measured": "what was said of the specification"}
 
 
 def render(report: dict) -> str:

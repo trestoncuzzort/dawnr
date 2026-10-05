@@ -168,6 +168,38 @@ program's `requires` raises `ValueError`, an argument of another type raises
 `TypeError`, and that guard is itself run beside the proved program before
 the function is shown.
 
+If you already have the function, start from it:
+
+```bash
+dawnr verify largest.py
+```
+
+dawnr runs your function in the sandbox to see what it does, asks the model
+for a specification that holds at your function's own answers and then for a
+`t` program that meets it, and shows the pair only when that program answers
+as yours does on every input tried and the provers prove it. Annotate the
+parameters (`int`, `bool`, `str`, `list[int]`, `list[str]`,
+`list[list[int]]`) or give examples with `--test`. What you get is a proved
+twin and the specification to read; that the twin and your Python are the
+same function is tested, not proved, and the output says so. On a desktop
+CPU a ten-line function took one and a half to four and a half minutes.
+
+And for documents rather than code, two commands answer only from your own
+files:
+
+```bash
+dawnr cite "When is payment due?" invoice.txt
+dawnr extract invoice.txt --field "total(number): the amount due" --field "due(date): when payment is due"
+```
+
+`cite` answers in claims that each quote one of your sentences word for
+word, or says the files do not hold the answer. `extract` fills each field
+with a run of words copied from one of your sentences and prints that
+sentence beside it; a number or date field is offered only words that read
+as one; a field nothing states is left empty. Neither can write a value that
+is not in your files. Whether the words picked are the right ones for the
+field is what the printed sentence is for.
+
 A question takes one to two minutes on an ordinary CPU (the two commands above
 took 130 and 92 seconds on a desktop's), and 11 to 27 seconds
 on that laptop's card (19 for a first question that also starts the models, 27
