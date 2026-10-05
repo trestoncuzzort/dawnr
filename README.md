@@ -63,6 +63,10 @@ by two seeds of three, and a much larger model still does better. Every row link
   meets its specification. dawnr also checks the specification against the
   problem's own examples and against a second solution written independently,
   so a correct proof of the wrong thing does not get through.
+- **You get code you can run.** The proved program also comes back as a Python
+  function under your own name. It is shown only when it gave the same answer as
+  the proved program on your tests and on up to 200 further inputs, and it says
+  plainly that it is tested against the proof, not proved itself.
 - **It works offline and on ordinary hardware.** The model is a small, openly
   licensed one, fine-tuned here only on answers that passed the provers. It
   runs on an ordinary CPU, and much faster on a gaming laptop's graphics card
@@ -81,7 +85,14 @@ by two seeds of three, and a much larger model still does better. Every row link
 4. **The provers decide.** The program is translated into each prover's own
    language. Each must prove it, and each must reject a deliberately broken
    twin of it.
-5. **You get the answer with its evidence**, or a refusal that says why.
+5. **You get the answer with its evidence**, and the same function in Python,
+   or a refusal that says why.
+
+If you can say precisely what you want, you can start one step later: give
+dawnr the specification, or let it propose some and pick one, and the model
+only has to write a body the provers accept. That is where it is strongest,
+and it puts your own check where it belongs, on the statement of what the
+program must do.
 
 ## Get it
 
@@ -104,14 +115,35 @@ A fresh Ubuntu (WSL's included) first needs
 before downloading anything and prints the line with what is missing. The installer itself
 needs no administrator rights. It downloads the model server,
 the two models and the first prover into `~/.local/share/dawnr`, checks each
-download against its published checksum, and adds a `dawnr` command. Then:
+download against its published checksum, and adds a `dawnr` command. Then,
+starting from a specification:
+
+```bash
+dawnr spec "Write a function that returns the largest element of a non-empty list." \
+  --test "assert largest([1, 5, 2]) == 5" --test "assert largest([-3, -1]) == -1" --save largest.t
+dawnr prove largest.t --save-python largest.py
+```
+
+`dawnr spec` shows the specifications the model proposes that hold on your
+tests and at an independently written solution's answers, each with the share
+of wrong results it rejects. You read them, and the one you keep is what gets
+proved. `dawnr prove` asks the model for a body that keeps your specification
+unchanged, lets the provers decide, tells you what else your specification
+would accept if it is loose, and writes the function in Python. You can also
+write `largest.t` yourself ([the notation](t/SYNTAX.md)). Or ask in one step
+and let dawnr choose the specification:
 
 ```bash
 dawnr ask "Write a function that returns the larger of two numbers." \
-  --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9"
+  --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9" --save-python larger.py
 ```
 
-A question takes one to two minutes on an ordinary CPU, and 11 to 27 seconds
+Tests may use whole numbers, strings, lists, tuples and lists of lists; when a
+test uses something `t` has no value for yet (a decimal number, a dictionary),
+dawnr says so before asking anything.
+
+A question takes one to two minutes on an ordinary CPU (the two commands above
+took 130 and 92 seconds on a desktop's), and 11 to 27 seconds
 on that laptop's card (19 for a first question that also starts the models, 27
 for a refusal, which tries every answer). `dawnr doctor`
 shows what is installed. dawnr runs code the models write only inside a sandbox

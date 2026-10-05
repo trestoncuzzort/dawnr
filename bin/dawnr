@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # dawnr: one question through the whole gate, offline, on this machine.
 #
-#   dawnr ask "Write a function that doubles a number." --test "assert double(3) == 6" [--test ...] [--answers N]
+#   dawnr prove SPEC.t    a specification you wrote: the model writes the body, the provers decide [--save-python FILE]
+#   dawnr spec "QUESTION" --test "assert f(x) == y" [--save SPEC.t]    specifications to read and pick from
+#   dawnr ask "Write a function that doubles a number." --test "assert double(3) == 6" [--test ...] [--save-python FILE]
 #   dawnr doctor          what is installed and what each part found
 #   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
 #
-# Installed by install.sh. The gate is t/answer.py: the student answers, the answers that pass the tests are checked
+# Installed by install.sh. From a specification the gate is t/prove.py: a body counts only if it keeps the specification
+# and is proved. From a question it is t/answer.py: the model answers, the answers that pass the tests are checked
 # against an independent Python solution, then proved; one is shown with its evidence, or the question is refused.
 set -euo pipefail
 ENVF=${DAWNR_HOME:-$HOME/.local/share/dawnr}/env
@@ -67,24 +70,68 @@ sandbox_check() {  # prints why model-written Python cannot be sandboxed here, a
 ok = py_sandbox.available(); ok or print(py_sandbox.why_unavailable()); sys.exit(0 if ok else 1)')
 }
 
+abspath() { case $1 in /*) printf '%s' "$1";; *) printf '%s/%s' "$PWD" "$1";; esac; }
+
+# the options that name a file are the caller's paths; the gate runs from the repository's folder
+own_paths() {
+  ARGS=()
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --save-python|--save-t|--save|--json) [ $# -ge 2 ] || { echo "dawnr: $1 needs a file name" >&2; exit 2; }
+        ARGS+=("$1" "$(abspath "$2")"); shift 2;;
+      *) ARGS+=("$1"); shift;;
+    esac
+  done
+}
+
+both_up() {  # start the two models if they are not running, and stop them again on the way out
+  started=0
+  if ! { healthy "$SP" && healthy "$BP"; }; then
+    echo "starting the models (half a minute here, a few minutes the first time on a small machine)..." >&2
+    start_both; started=1
+    trap '[ $started = 1 ] && stop_all' EXIT
+    wait_ready
+  fi
+}
+
 cmd=${1:-help}; shift || true
 case $cmd in
+  prove)
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr prove SPEC.t [--answers N] [--save-python FILE] [--save-t FILE]' >&2; exit 2; }
+    [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
+    SPEC=$(abspath "$1"); shift
+    own_paths "$@"
+    started=0
+    if ! healthy "$SP"; then                                    # only the model that writes t is needed
+      echo "starting the model (a quarter of a minute here, longer the first time on a small machine)..." >&2
+      start_one student "$STUDENT_GGUF" "$SP"; started=1
+      trap '[ $started = 1 ] && stop_all' EXIT
+      for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$SP" && break; sleep 1; done
+      healthy "$SP" || { echo "dawnr: the model did not come up; see $RUN/student.log" >&2; exit 1; }
+    fi
+    cd "$DAWNR_REPO"
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/prove.py prove --student "127.0.0.1:$SP" --spec "$SPEC" ${ARGS[@]+"${ARGS[@]}"}
+    ;;
+  spec)
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr spec "QUESTION" --test "assert f(x) == y" [--test ...] [--save SPEC.t]' >&2; exit 2; }
+    QUESTION=$1; shift
+    own_paths "$@"
+    why=$(sandbox_check) || { echo "dawnr: model-written Python only runs in a sandbox, and $why" >&2; exit 1; }
+    both_up
+    cd "$DAWNR_REPO"
+    "$DAWNR_PYTHON" t/prove.py spec --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" --text "$QUESTION" ${ARGS[@]+"${ARGS[@]}"}
+    ;;
   ask)
     [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr ask "QUESTION" --test "assert f(x) == y" [--test ...]' >&2; exit 2; }
     QUESTION=$1; shift
+    own_paths "$@"
     why=$(sandbox_check) || { echo "dawnr: model-written Python only runs in a sandbox, and $why" >&2; exit 1; }
-    started=0
-    if ! { healthy "$SP" && healthy "$BP"; }; then
-      echo "starting the models (half a minute here, a few minutes the first time on a small machine)..." >&2
-      start_both; started=1
-      trap '[ $started = 1 ] && stop_all' EXIT
-      wait_ready
-    fi
+    both_up
     cd "$DAWNR_REPO"
     # --consistency 5: five more Python solutions sampled at 0.8 must not find the specification false
     # (t/PREDICT-2026-10-02-ambiguity.md: 80% -> 87% of shown answers right); a later --consistency overrides it
     T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" \
-      --consistency 5 --text "$QUESTION" "$@"
+      --consistency 5 --text "$QUESTION" ${ARGS[@]+"${ARGS[@]}"}
     ;;
   cite)
     # an answer from the person's own files, every claim quoting one of their sentences word for word, or a plain
@@ -130,5 +177,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,8p' "$0";;
+  *) sed -n '2,11p' "$0";;
 esac
