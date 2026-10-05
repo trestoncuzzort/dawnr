@@ -447,8 +447,14 @@ WINDOWS_LOOK = {
     "wslpath": _no(), "where.exe": _no(),
     "reg.exe": _reg, "netsh.exe": _netsh,
     "cmd.exe": lambda a: [x.lower() for x in a] == ["/c", "ver"],
+    # the filter of a pipe (a file named instead would be read from anywhere: not here)
+    "findstr.exe": lambda a: bool(a) and all(re.match(r"^/[a-zA-Z]+(:.*)?$", x) or not any(ch in x for ch in "\\/:") for x in a),
+    "find.exe": lambda a: bool(a) and all(re.match(r"^/[a-zA-Z]+$", x) or not any(ch in x for ch in "\\/:") for x in a),
 }
 LOOK.update(WINDOWS_LOOK)
+# PowerShell's own file readers: like `cat` and `ls`, they belong to the file tools, where secrets stay hidden
+PS_FILE_READERS = re.compile(r"(?<![\w-])(Get-Content|gc|cat|type|Get-ChildItem|gci|dir|ls|Get-Item|gi|Get-ItemProperty|gp|Test-Path|"
+                             r"Resolve-Path|Select-String|sls|Out-File|Set-Content|Add-Content|Copy-Item|Move-Item|Remove-Item|New-Item)(?![\w-])", re.I)
 # sent to `pc` or `sysinfo`, these are pointed to `sh`, which reads files with the secret ones hidden
 FILE_READERS = ("ls", "cat", "head", "tail", "less", "more", "find", "du", "stat", "tree", "file", "grep", "wc")
 
@@ -588,6 +594,9 @@ def refusal(command: str, offline: bool = False) -> str | None:
         return "that only looks, and needs nobody's yes: call `sysinfo` with it"
     if re.match(r"\s*(%s)\b" % "|".join(FILE_READERS), command):
         return "reading and listing files is done with fs_list, fs_read and fs_search, or with `sh`"
+    if re.match(r"\s*(powershell|pwsh)(\.exe)?\b", command, re.I) and PS_FILE_READERS.search(command):
+        return ("reading, listing and changing files is done with fs_list, fs_read, fs_search, fs_write and fs_edit, or with `sh` "
+                "(a Windows folder is reachable under /mnt/c)")
     return None
 
 

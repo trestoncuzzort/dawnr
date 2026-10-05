@@ -463,7 +463,8 @@ def test_the_line_for_a_common_job_is_given_for_the_desktop_and_programs_the_mac
     assert said.startswith('Lines that work on this computer, to use rather than guess: open a file, a folder or a web page: `explorer.exe "$(wslpath -w PATH)"` (a web page')
     assert "lock the screen: `rundll32.exe user32.dll,LockWorkStation`" in said and "empty the trash: `powershell.exe -NoProfile -Command 'Clear-RecycleBin -Force'`" in said
     assert "mute: `powershell.exe -NoProfile -Command '(New-Object -ComObject WScript.Shell).SendKeys([char]173)'` (the mute key: it toggles)" in said
-    assert "xdg-open" not in said and "gsettings" not in said and "dark mode" not in said
+    assert "xdg-open" not in said and "gsettings" not in said and "dark mode: `" not in said
+    assert "whether dark mode is on: `reg.exe query" in said and "battery left: `powershell.exe" in said and "the time zone: `tzutil.exe /g`" in said
     assert "explorer.exe" not in recipes(gnome, every) and "rundll32" not in recipes(gnome, every)
 
 

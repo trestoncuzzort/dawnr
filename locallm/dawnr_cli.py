@@ -45,6 +45,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -60,7 +61,7 @@ from dawnr_agent import build_agent as _build_agent  # noqa: E402
 from dawnr_agent.journal import sha256  # noqa: E402
 from dawnr_agent.recipes import recipes  # noqa: E402
 from dawnr_agent.shell import LIVE  # noqa: E402
-from dawnr_agent.system import FILE_READERS, MANAGERS, PRIVILEGED, facts, git_kind, look  # noqa: E402
+from dawnr_agent.system import FILE_READERS, MANAGERS, PRIVILEGED, facts, git_kind, look, under_windows  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -119,6 +120,17 @@ THINK_END = "Considering the limited time by the user, I have to give the soluti
 FAILED_RUN = re.compile(r"exit [1-9]|timed out")
 # a Windows program called from Ubuntu under WSL (name.exe): it runs on the machine, never in the sandbox
 WINDOWS_PROGRAM = re.compile(r"(?:^|[;&|(`$]\s*)[\w.-]+\.exe\b", re.I)
+COMMAND_WORD = re.compile(r"(^|[;&|]\s*)([A-Za-z][\w-]*)(?=\s|$)")
+
+
+def windows_names(command: str, has=shutil.which) -> str:
+    """Under WSL a Windows program is called by its .exe name, and the model drops the suffix as often as not
+    (`netsh wlan show interfaces`, `tasklist.exe | findstr notepad`: both failed with "command not found" in the
+    first reading of the sixth set). A command word that names no program here but names one with .exe gets it."""
+    def fix(m):
+        word = m.group(2)
+        return m.group(1) + (word + ".exe" if has(word) is None and has(word + ".exe") is not None else word)
+    return COMMAND_WORD.sub(fix, command)
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
 
@@ -238,6 +250,7 @@ class Planner(NativePlanner):
                  look_first: bool = True, think: str | None = None, think_budget: int | None = None):
         super().__init__(harness, host, name, max_tokens=max_tokens, post=post)
         self.think = THINK if think is None else think          # which turns are taken with the driver's reasoning on
+        self.windows = under_windows() and machine is None      # Windows's programs by their .exe names (not for a described machine)
         self.think_budget = THINK_BUDGET if think_budget is None else think_budget
         # A task starts with the folder listed, by the front door and not by the model: no tokens are written for
         # it, most tasks began with that call anyway, and a question that sounds like the computer's ("on which
@@ -514,6 +527,8 @@ class Planner(NativePlanner):
                     args[key] = self.path(args[key])
             name = fn.get("name", "")
             if isinstance(args.get("command"), str):
+                if self.windows:
+                    args["command"] = windows_names(args["command"])
                 to = self.route(name, args["command"])
                 if to != name:                                  # the other tool's call takes the line and nothing else of this one's
                     name, args = to, {"command": args["command"]}
