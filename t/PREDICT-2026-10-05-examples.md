@@ -92,3 +92,16 @@ write tests, with these counts and the note that the measurement gave the functi
 fails: the failures are read by hand before anything else changes. E5 or E6 fails: said with the counts; the
 dialogue stays, and the README leads with `--test`.
 
+## Outcome of E1 to E3, the first form on all 111 (2026-10-05, commit 5772ca72, a lab card)
+
+- **E1 fails.** 22 of the 111 questions ended with two or more approved examples (20%; the bar was 70%), and 44
+  with none. The causes are the five listed above, found on the first 31.
+- **E2 fails.** `ask` with the approved examples showed an answer for 4 questions; with the benchmark's tests, in
+  the run of V4 on the same card and gate, it showed 7 (57%, and fewer than the 5 asked for).
+- **E3 holds, on four answers.** 3 of the 4 agree with the reference on 1,000 drawn inputs with a complete
+  specification; the fourth could not be run against the reference at all (its function takes other parameters,
+  the fault E4's header removes).
+
+As registered for a failing E1, the first 31 were read by hand before anything was changed, and the changed flow
+is E4 to E6 above, running on the 80 questions that had not been read.
+
