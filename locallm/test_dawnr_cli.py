@@ -455,7 +455,16 @@ def test_the_line_for_a_common_job_is_given_for_the_desktop_and_programs_the_mac
     assert "sound volume" not in recipes(gnome, lambda program: program == "gio") and recipes(gnome, lambda program: False) == ""
     # a machine with no desktop session is given no line that needs one
     assert "xdg-open" not in recipes(server, every) and "lock-session" not in recipes(server, every) and "systemctl --user start NAME" in recipes(server, every)
-    assert len({(job, where, program) for job, where, program, line in RECIPES}) == len(RECIPES) and len(recipes(gnome, every)) < 1300
+    assert len({(job, where, program) for job, where, program, *rest in RECIPES}) == len(RECIPES) and len(recipes(gnome, every)) < 1300
+    # Windows under WSL: Windows's own lines, first where both kinds of program are found, and none on a Linux desktop
+    wsl = ("This computer: Ubuntu 26.04.1 LTS, packages with apt, services with systemd, desktop Windows under WSL. Windows itself is "
+           "the desktop here: its programs are called by name with .exe (explorer.exe, powershell.exe, clip.exe) and take Windows paths.")
+    said = recipes(wsl, every)
+    assert said.startswith('Lines that work on this computer, to use rather than guess: open a file, a folder or a web page: `explorer.exe "$(wslpath -w PATH)"` (a web page')
+    assert "lock the screen: `rundll32.exe user32.dll,LockWorkStation`" in said and "empty the trash: `powershell.exe -NoProfile -Command 'Clear-RecycleBin -Force'`" in said
+    assert "mute: `powershell.exe -NoProfile -Command '(New-Object -ComObject WScript.Shell).SendKeys([char]173)'` (the mute key: it toggles)" in said
+    assert "xdg-open" not in said and "gsettings" not in said and "dark mode" not in said
+    assert "explorer.exe" not in recipes(gnome, every) and "rundll32" not in recipes(gnome, every)
 
 
 def test_a_task_starts_with_the_folder_listed_by_the_front_door_before_the_model_writes_anything(tmp_path):
