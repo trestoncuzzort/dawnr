@@ -141,6 +141,6 @@ fine-tuned 2B stays below the prompted 4B. At this size the base still sets most
 ## The timeout recheck, 2026-10-05 (recorded 01:40Z; `~/scratch/tr-recheck/`)
 
 Every timed-out cell of the five prompted Qwen3.5 sizes (1,218: 897 of the 27B's, 228 of the 9B's, 84 of the 4B's,
-9 of the 2B's, none of the 0.8B's) graded again on the lab at a load well under its 120 threads: each reads as it did
-(timeouts again), and no model's count moves (2B 4 and 3, 4B 15 and 8, 9B 18 and 7, 27B 43 and 29). The 27B's higher
+9 of the 2B's, none of the 0.8B's) graded again on the lab at a load well under its 120 threads: 1,195 read as they
+did and 23 changed, none of them enough to move a problem's level, so no model's count moves (2B 4 and 3, 4B 15 and 8, 9B 18 and 7, 27B 43 and 29). The 27B's higher
 share of timeouts is the provers' on its longer programs, not the load it was first graded under.
