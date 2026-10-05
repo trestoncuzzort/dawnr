@@ -166,10 +166,18 @@ proposes one command; you are shown the exact line and asked, every time,
 whatever `--yes` says. Nothing is ever run as administrator: a line that needs
 sudo, and any package install, is handed to you to run yourself. A command
 that names a place where keys are kept is not run, and with the network off no
-address is opened.
+address is opened. In a repository it reads with git freely (status, diff,
+log) and commits through the same asked-for command; what would discard work
+that is in no commit is handed to you instead of run.
 
-This front door is new (2026-10-05). It is measured on 135 small tasks in four
-sets (`locallm/dawnr_tasks.py`), each judged by the folder's end state, by the
+With `--online` it can search the web and read pages, and each search and each
+page is asked for. The search needs no account or key: it reads DuckDuckGo's
+page for browsers without JavaScript, as a text browser would. A search or an
+address that carries text it read from one of your files is marked as that
+before you are asked.
+
+This front door is new (2026-10-05). It is measured on 161 tasks in five sets
+(`locallm/dawnr_tasks.py`), each judged by the folder's end state, by the
 command that was let through, or against what the machine itself says, never by
 the model's account. Half of each set stays unseen until a prediction about it
 is written down
@@ -188,12 +196,25 @@ On the unseen halves, on a 12-core CPU with no graphics card:
   (and checked against it), requests done by one command that was shown and
   recorded, and installs handed over as the right line for Fedora, Arch,
   openSUSE, Debian and Alpine.
+- **9 of 13** of longer work, read on a workstation card: three mistakes in
+  three files behind one failing test, a function written to a dozen test
+  cases, three tables joined, two clauses of a long contract, a repository
+  asked what changed, a chain of renames where the order matters.
 
 It writes 27 to 29 tokens a second there, and a task takes about three model
 calls. The installer gives the base model file back the prediction layer its
 4-bit conversion left out (81 MB, every other weight untouched), and the model
 drafts with it: that is the 29, where it wrote 17 without; 72 on a laptop's
 8 GB card and 273 on a 48 GB workstation card, the same tasks done on each.
+
+The assistant drives whatever model the server holds, and four sizes of the
+same family were read on the same tasks and the same card. On the first four
+sets nothing separates them: 129, 132, 132 and 133 of 135 for 4, 9, 27 and 35
+billion parameters. On the longer work it shows: 19 and 20 of 26 for the two
+small ones, 25 for each of the two large ones, and the 35B (which uses 3B of
+its weights per token) finished as soon as the 4B by needing fewer turns. The
+default stays the 4B, 2.8 GB, because it is what an ordinary machine holds; a
+machine with 24 GB for the model does longer work better with the 35B.
 
 What went wrong in those readings. One prediction failed: a file was written
 into a folder the request did not name (nothing was overwritten). Twice the
@@ -210,7 +231,7 @@ the network get through.
 
 These are small tasks in small folders: a floor, not the job. The measurement
 never runs a command on the computer itself (it records the line), three of
-the five other distributions are one-sentence descriptions, and all 135 tasks
+the five other distributions are one-sentence descriptions, and all 161 tasks
 have now been seen once. The containment behind it is measured in
 [DAWNR-AGENT.md](DAWNR-AGENT.md).
 Commands need bubblewrap. With bubblewrap 0.11 or newer they run over an

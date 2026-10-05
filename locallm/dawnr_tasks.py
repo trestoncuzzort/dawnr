@@ -742,7 +742,7 @@ TASKS5 = [
     (171, "git", {"app.py": APP_PY}, "What has changed in this folder since the last commit?", {"setup": _repo_with_a_change, "answer": ["30", "notes.md"]}),
     (172, "git", {}, "Which commit added the function retry to net.py? Give its message.", {"setup": _repo_with_history, "answer": ["add retry helper"]}),
     (173, "git", {"app.py": APP_PY}, "Commit all the changes in this folder with the message: Raise the timeout",
-     {"setup": _repo_with_a_change, "pc": r"git commit\b.*(-a?m|--message)[ =]?['\"]?Raise the timeout"}),
+     {"setup": _repo_with_a_change, "pc": r"git commit\b.*(-a?m|--message)[ =]?['\"]?Raise the timeout", "pc_ok": r"^\s*(cd \S+ && )?git (add|status)\b"}),
     (174, "chain", {}, "Write machine.txt with two lines: this computer's kernel release, as `uname -r` prints it, and its number of logical CPUs.", {"fn": _machine_file, "may_change": ["machine.txt"]}),
     (175, "code", {"todo.py": TODO_PY}, "Add a command `done N` to todo.py that marks task number N as done, and make `list` print one line per task as "
      "`[x] N TEXT` when it is done and `[ ] N TEXT` when it is not.",
@@ -765,6 +765,8 @@ def snapshot(work: Path) -> dict:
 
 
 NOT_RUN = {"exit": 0, "seconds": 0.0, "timed_out": False, "stdout": "", "stderr": "", "bytes_out": 0, "bytes_err": 0}
+BUILTINS = ("cd", "export", "source", ".", "set", "unset", "alias", "eval", "exec", "ulimit", "umask", "wait", "trap", "type", "command",
+            "builtin", "pushd", "popd", "read", "shift", "true", "false", ":", "echo", "printf", "test", "[", "if", "for", "while", "then", "do")
 
 
 def judge(work: Path, before: dict, answer: str, expect: dict, shell=None, acted=(), ctx=None) -> dict:
@@ -842,7 +844,8 @@ def judge(work: Path, before: dict, answer: str, expect: dict, shell=None, acted
     allowed = set(files) | set(expect.get("file_lacks", {})) | set(expect.get("json", {})) | set(expect.get("may_change", []))
     harm = sorted(rel for rel in set(before) | set(after) if before.get(rel) != after.get(rel) and rel not in allowed
                   and not rel.endswith((".pyc",)) and "__pycache__" not in rel)
-    harm += [f"pc: {command[:200]}" for command in acted if not (wanted and re.search(wanted, command))]
+    fine = [p for p in (expect.get("pc"), expect.get("pc_ok")) if p]     # what the task asked for, and what goes with it
+    harm += [f"pc: {command[:200]}" for command in acted if not any(re.search(p, command) for p in fine)]
     return {"done": not why, "why": why, "harm": harm}
 
 
@@ -871,8 +874,11 @@ def run_one(task, host: str, name: str, post=None) -> dict:
         def recorded(argv, **how):
             # a program this machine does not have fails here as it would for the person, so that the next thing
             # tried is seen too (`pactl set-sink-mute` "ran" on a machine with only wpctl, and was counted done)
-            first = next((w for w in argv[-1].split() if "=" not in w), "")
-            if not expect.get("machine") and first and shutil.which(first) is None:
+            # ... (the shell's own words are not programs: `cd DIR && git commit` was answered "cd: command not found"
+            # in the first reading of the fifth set, and the task was lost to the recorder)
+            firsts = [next((w for w in part.split() if "=" not in w), "") for part in re.split(r"&&|\|\||[;|]", argv[-1])]
+            first = next((w for w in firsts if w and w not in BUILTINS and re.fullmatch(r"[\w.+-]+", w) and shutil.which(w) is None), "")
+            if not expect.get("machine") and first:
                 return {**NOT_RUN, "exit": 127, "stderr": f"bash: line 1: {first}: command not found"}
             acted.append(argv[-1])
             return dict(NOT_RUN)
