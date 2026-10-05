@@ -40,6 +40,11 @@ dawnr is research software. Read this before relying on anything it does.
   separate workings agree; several workings can still share one misreading. It is new (2026-10-05): how often a
   shown answer is right and how many questions get one is registered in `locallm/PREDICT-2026-10-05-calc.md` and
   not yet measured.
+- **`dawnr serve api` is for one person on one machine.** It binds to 127.0.0.1, requires a token made at start on
+  every request, refuses a request whose Host is not this machine's own or whose Origin is another site's, and runs
+  each job as the same command the terminal runs. It has no accounts, no encryption in transit and no per-project
+  separation, so it is not something to expose to a network. It is new (2026-10-05) and has been driven end to end
+  on one desktop.
 - **The installer is new.** It was tested from an empty home directory on Linux x86_64 against the published
   release (about 9 minutes, almost all of it downloading 7.5 GB; the first question was answered and proved by
   Dafny in about a minute). It installs only Dafny
