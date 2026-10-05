@@ -57,6 +57,8 @@ T_CHECK = {
 
 
 class Server:
+    info, instructions = SERVER_INFO, INSTRUCTIONS            # a subclass serving other tools names itself
+
     def __init__(self, *, modern: bool = True, legacy: bool = True):
         if not (modern or legacy):
             raise ValueError("a server must speak at least one era")
@@ -64,7 +66,7 @@ class Server:
         self.legacy_version: str | None = None
 
     def _complete(self, value: dict) -> dict:
-        return {"resultType": "complete", **value, "_meta": {META_SERVER: SERVER_INFO}}
+        return {"resultType": "complete", **value, "_meta": {META_SERVER: self.info}}
 
     def handle(self, msg) -> dict | None:
         """One incoming message -> the reply to write, or None (notifications, stray responses)."""
@@ -93,7 +95,7 @@ class Server:
             self.legacy_version = asked if asked in LEGACY_VERSIONS else LEGACY_VERSIONS[0]
             return result(rid, {"protocolVersion": self.legacy_version,
                                 "capabilities": {"tools": {"listChanged": False}},
-                                "serverInfo": SERVER_INFO, "instructions": INSTRUCTIONS})
+                                "serverInfo": self.info, "instructions": self.instructions})
         meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
         if self.modern and META_VERSION in meta:
             if META_CAPS not in meta:
@@ -108,7 +110,7 @@ class Server:
             return error(rid, INVALID_PARAMS, f"_meta is missing {META_VERSION} (or send initialize first)")
         if method == "server/discover":
             return result(rid, self._complete({"supportedVersions": list(MODERN_VERSIONS),
-                                               "capabilities": {"tools": {}}, "instructions": INSTRUCTIONS}))
+                                               "capabilities": {"tools": {}}, "instructions": self.instructions}))
         if method == "tools/list":
             return result(rid, self._complete({"tools": self.tools(), "ttlMs": 3600000, "cacheScope": "public"}))
         if method == "tools/call":

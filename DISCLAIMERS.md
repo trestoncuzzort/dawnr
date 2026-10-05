@@ -46,6 +46,10 @@ dawnr is research software. Read this before relying on anything it does.
   prints a line saying so each time. Nothing it returns is trusted unchecked, so a wrong or hostile writer costs
   refusals, not wrong answers that pass; but the privacy of what you send is that service's, not dawnr's. Without
   the variable, dawnr sends nothing anywhere. The option is new (2026-10-05) and not yet measured on a panel.
+- **`dawnr mcp` checks what another assistant writes; it does not make that assistant right.** The tools run the
+  same gate on whatever they are given, and say which check stopped it. Whether the assistant calls them, and what
+  it does with a refusal, is the assistant's. It is new (2026-10-05), tested against the protocol's messages and
+  with stand-in provers, and has been driven by no assistant on a panel.
 - **`dawnr serve api` is for one person on one machine.** It binds to 127.0.0.1, requires a token made at start on
   every request, refuses a request whose Host is not this machine's own or whose Origin is another site's, and runs
   each job as the same command the terminal runs. It has no accounts, no encryption in transit and no per-project
