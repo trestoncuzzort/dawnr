@@ -80,8 +80,8 @@ which restrict the sandbox by default, run once: `sudo bash t/apparmor-bwrap.sh`
 The installer sets up Dafny; adding the other six
 provers (see [t/README.md](t/README.md)) lets an answer be proved up to seven
 times over. The student model is published under Apache-2.0 as the
-[`student-v1` release](../../releases/tag/student-v1), with its
-[model card](release/MODEL-CARD-student-v1.md); see also [DISCLAIMERS.md](DISCLAIMERS.md).
+[`student-v5` release](../../releases/tag/student-v5), with its
+[model card](release/MODEL-CARD-student-v5.md); see also [DISCLAIMERS.md](DISCLAIMERS.md).
 
 ## Learn more
 

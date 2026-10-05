@@ -6,13 +6,11 @@ dawnr is research software. Read this before relying on anything it does.
 
 - **Research and education use only.** See [LICENSE](LICENSE). Third-party material keeps its own licence
   ([NOTICE](NOTICE)); the problem corpora's licences are documented under `nl/`.
-- **The published student is v1, not the strongest one measured.** `student-v1` (Apache-2.0) is the 4B trained
-  on v6, chosen because it already left out every row that traces to GPL-licensed programs; it writes t a little
-  less well than the v5 recipe behind the held-out results above. The v5 recipe without those rows was trained
-  and measured too and proved fewer of the 33 given specifications by all seven provers (24, v1 26), so it was not
-  released ([registration](t/PREDICT-2026-10-02-release-student.md)). Where every training row comes from, and under what
-  licence, is in [internal/RELEASE-PROVENANCE-2026-10-01.md](internal/RELEASE-PROVENANCE-2026-10-01.md) and
-  [release/NOTICE-student](release/NOTICE-student).
+- **The published student is v5.** `student-v5` (Apache-2.0) is the 4B trained on v3's rows plus 1,068 rows from
+  documents the provers admitted since, some written by two openly licensed teacher models on Amazon Bedrock, none from
+  GPL-licensed programs. At 8 bits it proves 27 of 33 held-out given specifications by all seven provers (v1 26). Where every training row comes from, and under what licence, is in
+  [internal/RELEASE-PROVENANCE-2026-10-01.md](internal/RELEASE-PROVENANCE-2026-10-01.md) and
+  [release/NOTICE-student-v5](release/NOTICE-student-v5).
 - **A proof is only as good as its specification.** dawnr checks the specification against the problem's own
   examples and against six independently written solutions, and still shows a wrong answer about one time in
   eight on problems it has not seen (see below). A shown answer says how many of the seven provers proved it; it is
