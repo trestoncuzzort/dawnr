@@ -116,3 +116,30 @@ What each outcome changes:
 - K9 holds: `--needed 2` becomes the default. K9 fails: it stays 1, and `--needed 2` is documented as the stricter
   setting with its measured cost.
 
+## Outcome, 2026-10-05 12:31Z (K6 to K9)
+
+Run on the lab from commit 3c5852a5, two llama-servers (build b11325, the base model at 4 bits), 300 problems none
+of which was in the first 300. `locallm/calc_eval.py report`:
+
+| arm | shown, of 300 | right | right, of shown | wrong shown |
+|---|---|---|---|---|
+| prose | 300 | 282 | 94.0% | 18 |
+| one | 283 | 226 | 79.9% | 57 |
+| agree | 204 | 195 | 95.6% | 9 |
+| calc (the first build) | 189 | 182 | 96.3% | 7 |
+| settled (`dawnr calc`) | 260 | 254 | 97.7% | 6 |
+| settled2 | 223 | 219 | 98.2% | 4 |
+
+- **K6: holds.** `settled` shows an answer for 260 of the 300 (86.7%; the bar was 80%).
+- **K7: holds.** 97.7% of them are right (the bar was 96%), 3.7 points above `prose` on the same problems (the bar
+  was 2).
+- **K8: holds.** Of the 18 problems `prose` gets wrong, `settled` still shows a wrong answer for 6 (a third; the
+  bar was at most half).
+- **K9: fails, as the first sample suggested.** `settled2` shows 4 wrong answers against 6, which is not half, and
+  37 fewer answers. `--needed` stays 1; `--needed 2` is the stricter setting at that cost.
+
+**What `dawnr calc` is measured to do, then.** Against the same model simply answering in words: of every three
+wrong answers it shows one, and it withholds about one right answer in ten (254 against 282). The first sample,
+read afterwards, gave 269 shown and 97.4%. The six wrong answers that get through are problems the reasoning and
+the working misread the same way, which no agreement between them can see.
+
