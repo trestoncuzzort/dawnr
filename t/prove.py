@@ -160,7 +160,7 @@ def python_of(task: dict, name: str, tests: list[str] | None = None) -> dict:
     if not report.get("agrees"):
         return {"source": None, "inputs": report.get("inputs", 0),
                 "why": "its Python translation did not answer every input as the proved program does"}
-    return {"source": source, "inputs": report["inputs"]}
+    return {"source": source, "function": fn, "inputs": report["inputs"], "refused": report.get("refused", 0)}
 
 
 def prove(spec: dict, student=None, answers: int = 5, max_new: int = 1024, prover=gate.prove, jobs: int = 2,
@@ -219,7 +219,7 @@ def prove(spec: dict, student=None, answers: int = 5, max_new: int = 1024, prove
             best_c = c
             best = {"answer": c["n"], "program": c["text"], "proved by": proved,
                     "provers": sorted(k for k, cell in row.items() if cell == score_levels.VERIFIED),
-                    "undecided": sorted(k for k, cell in row.items() if cell != score_levels.VERIFIED)}
+                    "undecided": sorted(k for k, cell in row.items() if cell != score_levels.VERIFIED), "cells": dict(row)}
     if best is None:
         # the specification is the person's to fix, and "not proved" names nothing they could act on; Dafny's own
         # diagnostics name the clause (t/dafny_feedback.py, after SAFE's verifier-error triplets, arXiv:2410.15756 3.3)
@@ -285,8 +285,8 @@ def render_proof(r: dict) -> str:
         py = s.get("python") or {}
         if py.get("source"):
             lines += ["", f"The same function in Python. It is translated from the proved program and gave the same answer on "
-                          f"{py['inputs']} inputs; the proof is of the t program above, and the Python is tested against it, "
-                          f"not proved.", "", py["source"].rstrip()]
+                          f"{py['inputs']} inputs{gate._refusing(py)}; the proof is of the t program above, and the Python "
+                          f"is tested against it, not proved.", "", py["source"].rstrip()]
         elif py:
             lines += ["", f"No Python version is shown: {py['why']}."]
     if r["refused"]:
@@ -368,6 +368,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--jobs", type=int, default=2, help="provers at once")
     p.add_argument("--save-python", type=Path, metavar="FILE")
     p.add_argument("--save-t", type=Path, metavar="FILE", help="write the proved t program here")
+    p.add_argument("--certificate", type=Path, metavar="FILE",
+                   help="write the proof's certificate here, for `dawnr check` to replay without the model")
     p.add_argument("--json", type=Path)
     s = sub.add_parser("spec")
     s.add_argument("--student", required=True)
@@ -406,6 +408,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"\nPython written to {a.save_python}")
             else:
                 print(f"\nNothing written to {a.save_python}: there is no checked Python for this specification.", file=sys.stderr)
+        if a.certificate:
+            import certificate
+            made = certificate.from_proof(r, a.test)
+            if made:
+                certificate.write(a.certificate, made)
+                print(f"\nCertificate written to {a.certificate}; `dawnr check` replays it on any machine, without the model.")
+            else:
+                print(f"\nNothing written to {a.certificate}: nothing was proved.", file=sys.stderr)
         return 0 if r["shown"] else 1
     try:
         entry = gate.entry_of(a.text, a.test)

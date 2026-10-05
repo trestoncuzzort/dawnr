@@ -46,8 +46,14 @@ jobs:
         run: |
           ~/.local/bin/dawnr ask "Write a function that returns the larger of two numbers." \
             --test "assert larger(3, 5) == 5" --test "assert larger(9, 2) == 9" --test "assert larger(4, 4) == 4" \
-            | tee answer.txt
+            --certificate larger.cert.json | tee answer.txt
           grep -q "^SHOWN:" answer.txt
+
+      - name: replay the answer's certificate with no model
+        # the models are stopped by now; the check runs the tests, the prover and the Python again (t/certificate.py)
+        run: |
+          ~/.local/bin/dawnr check larger.cert.json | tee check.txt
+          grep -q "^REPRODUCED:" check.txt
 
       - name: the model servers' logs (on failure)
         if: failure()

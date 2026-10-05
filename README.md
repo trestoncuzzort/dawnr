@@ -144,6 +144,30 @@ Tests may use whole numbers, strings, lists, tuples and lists of lists; when a
 test uses something `t` has no value for yet (a decimal number, a dictionary),
 dawnr says so before asking anything.
 
+Nobody has to take the answer on trust, including from you. Add
+`--certificate larger.cert.json` to `ask` or `prove` and dawnr writes the
+answer's record: the program, its specification, the tests, the Python, and
+the independently written solution the specification was held against. Anyone
+with dawnr installed can replay it, with no model involved:
+
+```bash
+dawnr check larger.cert.json
+```
+
+That runs the tests again, searches for an input that breaks the
+specification, runs the provers on their machine against the program and its
+sabotaged twin, and runs the Python beside the proved program. It prints
+`REPRODUCED`, `FAILED` with the first thing that did not hold, or
+`UNDECIDED HERE` when nothing failed and no prover there finished; a prover
+their machine lacks is named, never counted. A certificate that was altered
+fails. What a replay cannot tell them is whether the specification is what
+you meant, and it says so.
+
+The Python that comes back refuses what was not proved: an input outside the
+program's `requires` raises `ValueError`, an argument of another type raises
+`TypeError`, and that guard is itself run beside the proved program before
+the function is shown.
+
 A question takes one to two minutes on an ordinary CPU (the two commands above
 took 130 and 92 seconds on a desktop's), and 11 to 27 seconds
 on that laptop's card (19 for a first question that also starts the models, 27

@@ -19,6 +19,13 @@ defines them, not Python's floor division; the string library's operations are t
 copied in by source. Only the boundary converts: a sequence the question's tests pass as a Python `str` arrives as
 its code points and leaves as a `str`, a `list` arrives as a tuple and leaves as a list.
 
+The proof covers the inputs the program's `requires` admits, of the types it declares, and nothing else, so the
+Python refuses the rest instead of answering it: a `ValueError` outside the `requires`, a `TypeError` for an
+argument that is not of the declared type ("a runtime wrapper enforces the proved input domain",
+internal/ENTERPRISE-PLAN-2026-09-19.md; Meyer's design by contract, where a violated precondition is the caller's
+fault and is reported at the call). The check runs the guard beside the interpreter too: on drawn inputs the
+`requires` excludes, the Python must refuse.
+
 Not translated (the answer keeps its `t` form only): datatypes (constructors and `match`), which no answer has
 needed yet.
 """
@@ -292,6 +299,35 @@ _OUT = {"str": "''.join(chr(c) for c in {v})", "strs": "[''.join(chr(c) for c in
         "char": "chr({v})", "list": "_t_list({v})", "set": "set({v})", "value": "{v}"}
 
 
+def _depth(ttype) -> int | None:
+    """How deep a parameter's sequences nest: 1 for seq, 2 for seq<seq>; None for a type that is not one of these."""
+    if ttype == "seq":
+        return 1
+    if isinstance(ttype, dict) and ttype.get("seq") == "seq":
+        return 2
+    return None
+
+
+def _type_guard(ttype, kind: str, v: str) -> tuple[str, str] | None:
+    """(a Python test that the argument is of the declared type as the boundary writes it, its name in words), or
+    None for a type the guard does not know and so does not judge."""
+    if kind == "str":
+        return f"isinstance({v}, str)", "a string"
+    if kind == "char":
+        return f"isinstance({v}, str) and len({v}) == 1", "a one-character string"
+    if kind == "strs":
+        return f"isinstance({v}, (list, tuple)) and all(isinstance(x, str) for x in {v})", "a list of strings"
+    if kind == "set":
+        return f"isinstance({v}, (set, frozenset)) and all(_t_ints(x, 0) for x in {v})", "a set of integers"
+    if kind == "list" and _depth(ttype):
+        return f"_t_ints({v}, {_depth(ttype)})", "a list of integers" if _depth(ttype) == 1 else "a list of lists of integers"
+    if kind == "value" and ttype == "int":
+        return f"_t_ints({v}, 0)", "an integer"
+    if kind == "value" and ttype == "bool":
+        return f"isinstance({v}, bool)", "a boolean"
+    return None
+
+
 def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = None) -> tuple[str, str]:
     """(Python source, the function's name). Raises Unsupported for what it does not write."""
     w = _Writer(task)
@@ -307,9 +343,23 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
     ins, out = _boundary_kinds(task, tests or [])
     params = [_ident(p["name"]) for p in task["params"]]
     conv_in = []
+    for p, decl, kind in zip(params, task["params"], ins):      # the declared types first: nothing was proved for another
+        typed = _type_guard(decl["type"], kind, p)
+        if typed:
+            conv_in += [f"{INDENT}if not ({typed[0]}):",
+                        f"{INDENT}{INDENT}raise TypeError({f'{name}: `{p}` must be {typed[1]}; nothing was proved for anything else'!r})"]
     for p, kind in zip(params, ins):
         if kind in _IN:
             conv_in.append(f"{INDENT}{p} = " + _IN[kind].format(v=p))
+    requires = [w.expr(c) for c in task.get("requires", [])]
+    if requires:                                                # then the `requires`, on the values the program will see
+        said = "; ".join(surface.pexpr(c) for c in task["requires"])
+        conv_in += [f"{INDENT}if not _t_requires({', '.join(params)}):",
+                    f"{INDENT}{INDENT}raise ValueError({f'{name}: this input is outside what was proved (requires {said})'!r})"]
+        funs += [f"def _t_requires({', '.join(params)}):", f"{INDENT}try:",
+                 f"{INDENT}{INDENT}return " + " and ".join(f"bool({r})" for r in requires),
+                 f"{INDENT}except (IndexError, ZeroDivisionError):   # a `requires` with no value here admits nothing",
+                 f"{INDENT}{INDENT}return False", ""]
     if out.startswith("shape:"):
         result = f"_t_shape(_t_result, {tuple(out[6:].split(','))!r})"
     elif out == "strs-tuple":
@@ -320,6 +370,8 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
     doc = [f'{INDENT}"""The program dawnr proved in `t`, written in Python (checked against `t`, not itself proved).',
            ""]
     doc += [f"{INDENT}requires {r}" for r in spec[0]] + [f"{INDENT}ensures  {e}" for e in spec[1]]
+    if spec[0]:
+        doc += ["", f"{INDENT}Outside its `requires` it raises ValueError: nothing was proved there."]
     doc += [f'{INDENT}"""']
     lines = [f"def {name}({', '.join(params)}):"] + doc + conv_in
     lines += [f"{INDENT}_t_result = _t_core({', '.join(params)})", f"{INDENT}return {result}", ""]
@@ -329,6 +381,10 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
         support += ["def _t_update(s, i, v):", f"{INDENT}return s[:i] + (v,) + s[i + 1:]", ""]
     if any("_t_tuple(" in l for l in lines):
         support += ["def _t_tuple(v):", f"{INDENT}return tuple(_t_tuple(x) for x in v) if isinstance(v, (list, tuple)) else v", ""]
+    if any("_t_ints(" in l for l in lines):
+        support += ["def _t_ints(v, depth):", f"{INDENT}if depth == 0:",
+                    f"{INDENT}{INDENT}return isinstance(v, int) and not isinstance(v, bool)",
+                    f"{INDENT}return isinstance(v, (list, tuple)) and all(_t_ints(x, depth - 1) for x in v)", ""]
     if any("_t_list(" in l for l in lines):
         support += ["def _t_list(v):", f"{INDENT}return [_t_list(x) for x in v] if isinstance(v, tuple) else v", ""]
     if any("_t_shape(" in l for l in lines):
@@ -399,15 +455,26 @@ def _interp_result(task: dict, env: dict):
     return env2[ret], None
 
 
+_REFUSES = """
+def _t_refuses(f, *args):
+    try:
+        f(*args)
+    except ValueError:
+        return True
+    return False
+"""
+
+
 def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int = 200,
-          per_test: int = 3) -> dict:
-    """Run the translation beside the interpreter, in the sandbox (t/py_sandbox.py), on the question's own tests
-    and on up to `n` inputs from the interpreter's own domain that the program's `requires` admits.
-    {"agrees": bool, "inputs": N, "why"?}."""
+          per_test: int = 3, outside: int = 50) -> dict:
+    """Run the translation beside the interpreter, in the sandbox (t/py_sandbox.py), on the question's own tests,
+    on up to `n` inputs from the interpreter's own domain that the program's `requires` admits, and on up to
+    `outside` that it excludes, which the Python must refuse with a ValueError.
+    {"agrees": bool, "inputs": N, "refused": M, "why"?}."""
     import py_sandbox
     ins, out = _boundary_kinds(task, tests or [])
     names = [(p["name"], p["type"]) for p in task["params"]]
-    asserts = []
+    asserts, refusals = [], []
     for env in interp.domain(task, names, interp.MAX_POINTS):
         if len(asserts) >= n:
             break
@@ -415,6 +482,11 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
             got, refusal = _interp_result(task, env)
         except (interp.Undef, interp.Budget, RecursionError, ZeroDivisionError):
             continue
+        if refusal and len(refusals) < outside:
+            try:
+                refusals.append(f"assert _t_refuses({fn}, *{[_t_value_to_py(env[p], k) for (p, _t), k in zip(names, ins)]!r})")
+            except (ValueError, TypeError, OverflowError):
+                pass
         if refusal or got is None:
             continue
         try:
@@ -426,6 +498,6 @@ def check(task: dict, src: str, fn: str, tests: list[str] | None = None, n: int 
     asserts += [t.strip() for t in tests or [] if t.strip()]
     if not asserts:
         return {"agrees": False, "inputs": 0, "why": "no input to check on"}
-    r = py_sandbox.run_tests(src, asserts, per_test=per_test)
+    r = py_sandbox.run_tests(src + _REFUSES, asserts + refusals, per_test=per_test)
     ok = r.get("status") == "ran" and bool(r.get("all_pass"))
-    return {"agrees": ok, "inputs": len(asserts), **({} if ok else {"why": json.dumps(r)[:300]})}
+    return {"agrees": ok, "inputs": len(asserts), "refused": len(refusals), **({} if ok else {"why": json.dumps(r)[:300]})}
