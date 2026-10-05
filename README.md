@@ -212,11 +212,11 @@ And for a question with numbers in it:
 dawnr calc "A recipe needs 2.5 cups of flour for 12 muffins. How many cups for 30?"
 ```
 
-The model writes the working as a few lines of arithmetic; dawnr computes it
-exactly (in fractions, so no rounding error creeps in), does not use a
-working that brings in a number your question does not state, asks three
-times, and shows an answer only when every working it could compute gives
-the same number. The working is printed, because it is the reading of your
+The model reasons its way to a number in words, as it does best. It is then
+asked separately, three times, to write the working as a few lines of
+arithmetic, which dawnr computes exactly (in fractions, so no rounding error
+creeps in). The number is shown only when a working computes that same
+number, and that working is printed, because it is the reading of your
 question that was computed.
 
 The model that comes with dawnr is small, and most questions are refused

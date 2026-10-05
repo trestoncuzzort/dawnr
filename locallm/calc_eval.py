@@ -3,6 +3,7 @@ model answering step by step in prose (2026-10-05).
 
     python3 locallm/calc_eval.py prep --parquet test.parquet --out gsm8k-test.jsonl
     python3 locallm/calc_eval.py run --host H:P[,H:P ...] --data gsm8k-test.jsonl --out answers.jsonl [--n 300]
+                                     [--seed 2026] [--skip earlier-answers.jsonl]
     python3 locallm/calc_eval.py report --answers answers.jsonl [--json r.json]
 
 GSM8K's test split (Cobbe et al., arXiv:2110.14168; MIT): grade-school word problems, each with one final number.
@@ -18,9 +19,14 @@ What is scored, from those replies alone:
   prose      the number after ####
   one        the first working, computed (PAL, arXiv:2211.10435), shown whenever it computes
   agree      the three workings, shown when at least two compute and all that compute give one number
-  calc       `dawnr calc`: as agree, and a working that uses a number the question does not state is not used
+  calc       what `dawnr calc` did when K1 to K5 were registered: as agree, and a working that uses a number the
+             question does not state is not used (calc.judge)
+  settled    what `dawnr calc` does since (calc.settle): the prose number, shown when at least one of the three
+             workings computes that same number
+  settled2   the same with at least two
 
-An answer is right when it equals the problem's final number exactly.
+An answer is right when it equals the problem's final number exactly. `--skip` leaves out the questions of an
+earlier run, so a rule found on one sample is measured on another.
 """
 from __future__ import annotations
 
@@ -34,31 +40,18 @@ from fractions import Fraction
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from locallm import calc, rag_rgb  # noqa: E402
+from locallm import calc  # noqa: E402
 
 SEED = 2026
-ARMS = ("prose", "one", "agree", "calc")
-PROSE_SYSTEM = ("Work the problem out step by step. Then give the final number on a line of its own, after ####, "
-                "with no units.")
-_NUMBER = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
+ARMS = ("prose", "one", "agree", "calc", "settled", "settled2")
+PROSE_SYSTEM = calc.REASON_SYSTEM                               # the command's own prompt since K6; the same words as K1's
+prose_number = calc.reasoned_number
+ask_prose = calc.ask_reasoned
 
 
 def gold(answer: str) -> Fraction:
     """GSM8K's final number: what follows ####."""
     return Fraction(answer.rsplit("####", 1)[1].strip().replace(",", "").replace("$", ""))
-
-
-def prose_number(reply: str) -> Fraction | None:
-    """The number after the last ####, or the last number of a reply that has none."""
-    tail = reply.rsplit("####", 1)[1] if "####" in reply else reply
-    found = _NUMBER.findall(tail)
-    if not found:
-        return None
-    text = (found[0] if "####" in reply else found[-1]).replace(",", "")
-    try:
-        return Fraction(text)
-    except (ValueError, ZeroDivisionError):
-        return None
 
 
 def shown(arm: str, row: dict) -> Fraction | None:
@@ -70,6 +63,8 @@ def shown(arm: str, row: dict) -> Fraction | None:
             return calc.evaluate(row["workings"][0])[0]
         except calc.Unusable:
             return None
+    if arm in ("settled", "settled2"):
+        return calc.settle(row["question"], row["prose"], row["workings"], needed=1 if arm == "settled" else 2)["answer"]
     return calc.judge(row["question"], row["workings"], grounded=arm == "calc")["answer"]
 
 
@@ -86,14 +81,10 @@ def report(rows: list[dict]) -> dict:
         "questions": len(missed),
         "calc shows a wrong answer": sum(1 for r in missed if shown("calc", r) is not None and shown("calc", r) != gold(r["answer"])),
         "calc shows the right answer": sum(1 for r in missed if shown("calc", r) == gold(r["answer"])),
-        "calc refuses": sum(1 for r in missed if shown("calc", r) is None)}
+        "calc refuses": sum(1 for r in missed if shown("calc", r) is None),
+        "settled shows a wrong answer": sum(1 for r in missed if shown("settled", r) is not None),
+        "settled2 shows a wrong answer": sum(1 for r in missed if shown("settled2", r) is not None)}
     return out
-
-
-def ask_prose(host: str, question: str, post=rag_rgb._post) -> str:
-    body = {"messages": [{"role": "system", "content": PROSE_SYSTEM}, {"role": "user", "content": question}],
-            "temperature": 0, "max_tokens": 600}
-    return post(f"http://{host}/v1/chat/completions", body)["choices"][0]["message"]["content"] or ""
 
 
 def cmd_prep(a) -> int:
@@ -108,7 +99,9 @@ def cmd_prep(a) -> int:
 
 def cmd_run(a) -> int:
     rows = [json.loads(l) for l in Path(a.data).read_text(encoding="utf-8").splitlines() if l.strip()]
-    rows = sorted(random.Random(SEED).sample(rows, min(a.n, len(rows))), key=lambda r: r["id"])
+    skip = {json.loads(l)["id"] for l in Path(a.skip).read_text(encoding="utf-8").splitlines() if l.strip()} if a.skip else set()
+    rows = [r for r in rows if r["id"] not in skip]
+    rows = sorted(random.Random(a.seed).sample(rows, min(a.n, len(rows))), key=lambda r: r["id"])
     done = set()
     if Path(a.out).exists():
         done = {json.loads(l)["id"] for l in Path(a.out).read_text(encoding="utf-8").splitlines() if l.strip()}
@@ -139,10 +132,10 @@ def cmd_report(a) -> int:
     r = report(rows)
     for arm in ARMS:
         v = r[arm]
-        print(f"{arm:6} shown {v['shown']}/{v['questions']}, right {v['right']} ({100 * v['right of shown']:.1f}% of shown), wrong shown {v['wrong shown']}")
+        print(f"{arm:8} shown {v['shown']}/{v['questions']}, right {v['right']} ({100 * v['right of shown']:.1f}% of shown), wrong shown {v['wrong shown']}")
     w = r["where prose is wrong"]
     print(f"where prose is wrong ({w['questions']}): calc right {w['calc shows the right answer']}, refuses {w['calc refuses']}, "
-          f"wrong {w['calc shows a wrong answer']}")
+          f"wrong {w['calc shows a wrong answer']}; settled still shows {w['settled shows a wrong answer']}, settled2 {w['settled2 shows a wrong answer']}")
     if a.json:
         Path(a.json).write_text(json.dumps(r, indent=1) + "\n", encoding="utf-8")
     return 0
@@ -159,6 +152,8 @@ def main(argv=None) -> int:
     r.add_argument("--data", required=True)
     r.add_argument("--out", required=True)
     r.add_argument("--n", type=int, default=300)
+    r.add_argument("--seed", type=int, default=SEED)
+    r.add_argument("--skip", help="an earlier run's answers; its questions are left out of this sample")
     s = sub.add_parser("report")
     s.add_argument("--answers", required=True)
     s.add_argument("--json")

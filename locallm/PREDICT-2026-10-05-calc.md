@@ -47,3 +47,72 @@ Right means equal to the problem's final number.
 
 Questions that are not grade-school arithmetic (interest over time with compounding, units, dates); a person's
 own phrasing. The gate does not know the right reading of a question; the working is printed for that.
+
+## Outcome, 2026-10-05 11:40Z (K1 to K5)
+
+Run on the lab from commit 35c2b88e, one llama-server (build b11325, the base model at 4 bits), 300 problems, four
+requests a problem. `locallm/calc_eval.py report`:
+
+| arm | shown, of 300 | right | right, of shown | wrong shown |
+|---|---|---|---|---|
+| prose | 300 | 279 | 93.0% | 21 |
+| one | 284 | 239 | 84.2% | 45 |
+| agree | 207 | 197 | 95.2% | 10 |
+| calc | 203 | 192 | 94.6% | 11 |
+
+- **K1: holds, at its upper edge.** `prose` is right on 93.0% (the range was 70% to 93%).
+- **K2: fails.** `one` is right on 239 of 300, 13.3 points fewer than `prose` (the bar was 5).
+- **K3: fails on the share right.** `calc` shows an answer for 67.7% (the bar was 60%), and 94.6% of them are right
+  (the bar was 95%).
+- **K4: holds.** Of the 21 problems `prose` gets wrong, `calc` shows a wrong answer for 5 (24%; the bar was 25%),
+  the right one for 6, and refuses 10.
+- **K5: fails on its first clause.** `calc`'s share right among shown is 0.6 points below `agree`'s; it shows 4
+  fewer answers.
+
+**What the registered rules say.** K3 fails on the share right: the answers are called "computed exactly from the
+working shown" and nothing more. K5 fails: the rule about the question's own numbers becomes a note printed beside
+the answer, not a filter. K2 fails: the problems were read by hand before anything was changed.
+
+**The 48 problems prose gets right and the first working does not, read by hand** (twelve in full, all 48 tallied).
+In 14 the working could not be computed, and in every one the model was trying to do what the grammar does not
+offer: algebra (`amy = jackson + 5` with `jackson` not yet known), a loop or a condition (`while = budget - ...`,
+`if = 0`, written as names because only assignments are allowed), or it initialised `answer = 0` and the grammar,
+which ends a working at its first assignment to `answer`, stopped it there. In the other 34 the working computed a
+wrong number from a set-up the prose answer gets right: held to assignments, the model starts writing lines before
+it has reasoned about the problem. Whole-number division written where a fraction was meant (`2 // 5`) is in 19
+of the 48 but decides only one of them. The grammar is not costing arithmetic; it is costing the reasoning.
+
+## What the command does now, registered 2026-10-05 11:46Z before it is run on any new problem (K6 to K9)
+
+The two routes are made to check each other (`calc.settle`): the model answers once in prose, step by step, with
+the `prose` arm's prompt word for word; it is asked three times for a working under the same grammar, without
+being shown its prose; the number the prose ends on is shown only when at least one working, computed exactly,
+gives the same number, and that working is printed. A number the question does not state is noted beside the
+working and no longer disqualifies it.
+
+On the 300 problems above, computed afterwards from the replies already kept (so the rule was chosen with these
+in view and this is not a result): `settled` shows 269 with 262 right (97.4%), 7 wrong; with two workings
+required (`settled2`) 236, 232 right (98.3%), 4 wrong.
+
+**The sample.** 300 problems of GSM8K's test split, seed 2027, none of them among the first 300. Same model,
+server build, prompts, grammar and temperatures. The four arms above are scored again, with `settled` and
+`settled2`.
+
+- **K6, more answers than the first build.** `settled` shows an answer for at least 80% of the 300.
+- **K7, and they are more often right than the model alone.** At least 96% of the answers `settled` shows are
+  right, and at least 2 points more than `prose`'s share right on the same problems.
+- **K8, it withholds where the model errs.** Of the problems `prose` gets wrong, `settled` still shows a wrong
+  answer for at most half.
+- **K9, whether a second agreeing working is worth its refusals.** `settled2` shows at most half as many wrong
+  answers as `settled`. (On the first sample: 4 against 7, which is not half.)
+
+What each outcome changes:
+
+- K6 and K7 hold: `dawnr calc` is documented with this sample's numbers for `settled`, beside `prose`'s.
+- K7 fails: the README says the command's answers are about as often right as the model's own and that what it
+  adds is the working, computed exactly, printed beside the answer.
+- K8 fails: said in DISCLAIMERS with the count; a misreading shared by the reasoning and the working is the known
+  way this check is blind.
+- K9 holds: `--needed 2` becomes the default. K9 fails: it stays 1, and `--needed 2` is documented as the stricter
+  setting with its measured cost.
+

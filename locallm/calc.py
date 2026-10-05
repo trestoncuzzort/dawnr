@@ -1,30 +1,38 @@
-"""calc.py: a question with numbers, answered by arithmetic that is written down, computed exactly, and shown only
-when separate ways of working it out agree (2026-10-05).
+"""calc.py: a question with numbers, answered by the number the model reasons its way to, shown only when a working
+written separately and computed exactly gives the same number (2026-10-05).
 
     python3 locallm/calc.py --host 127.0.0.1:8712 "A shop sells pens at $1.20 each. What do 15 pens cost with 10% off?"
-        [--ways 3] [--json OUT.json]
+        [--ways 3] [--needed 1] [--json OUT.json]
 
 `dawnr calc` is this.
 
 A language model that answers a sum in prose can set it up right and still get the arithmetic wrong; PAL (Gao et
-al., arXiv:2211.10435) has the model write the steps as a program and leaves the solving to an interpreter. Here
-the program is held by a grammar (llama-server's `grammar` field) to comment lines and assignments of arithmetic,
-and three things that are not the model stand between it and the person. Research receipt f8e8dafb74c0.
+al., arXiv:2211.10435) has the model write the steps as a program and leaves the solving to an interpreter. The
+first build of this command was that alone: the working held by a grammar (llama-server's `grammar` field) to
+comment lines and assignments of arithmetic, computed exactly, and shown when the workings agreed. Measured on
+GSM8K (arXiv:2110.14168; K1 to K5 of locallm/PREDICT-2026-10-05-calc.md, 300 problems, the base model) it lost to
+the model simply reasoning in prose: the first working was right on 239 where the prose answer was right on 279,
+because held to assignments the model sets a problem up without having reasoned about it; the gate over three
+workings showed 203 answers, 94.6% of them right, where prose showed 300 at 93.0%.
 
-  the evaluator   reads the assignments with Python's own parser, admits only numbers, names already assigned, the
-                  arithmetic operators and min, max, abs, round, floor and ceil, and computes in exact rationals:
-                  no floating point, so 0.1 + 0.2 is 0.3
-  the question    every number written in the working must be in the question (as itself, as a percentage of
-                  itself, or as a word such as "dozen" or "half"), or be one of a few unit constants (the hours in
-                  a day, the percent in a whole); a working that brings in any other number is not used
-  agreement       the question is asked several times (once greedily, the rest sampled), and an answer is shown
-                  only when every working that could be computed gives the same number, and at least two could:
-                  self-consistency (Wang et al., arXiv:2203.11171) used as a gate, not as a vote
+So the two are made to check each other, which is the rule "two independent formalisations must agree" of
+Trustworthy Tax Reasoning (arXiv:2508.21051) and the reason CRANE (arXiv:2502.09061) lets a model reason freely
+before it is constrained. The model answers once in prose, step by step, as it does best. It is then asked, without
+being shown that reasoning, for the working under the grammar, several times. Three things that are not the model
+stand between it and the person. Research receipt f8e8dafb74c0.
 
-What is shown is the answer, the working it came from, and how many workings agreed. What this cannot check is
-that the working is the right reading of the question; it is printed to be read. How often a shown answer is
-right, and how many questions get one, is measured on GSM8K (arXiv:2110.14168;
-locallm/PREDICT-2026-10-05-calc.md).
+  the evaluator   reads a working's assignments with Python's own parser, admits only numbers, names already
+                  assigned, the arithmetic operators and min, max, abs, round, floor and ceil, and computes in
+                  exact rationals: no floating point, so 0.1 + 0.2 is 0.3
+  agreement       the number the prose ends on is shown only when at least one working (`--needed`), computed
+                  exactly, gives that same number; the working that agrees is printed with it
+  the question    a working that uses a number the question does not state is still used, and the number is
+                  pointed out beside it (as a filter this rule cost answers and bought nothing: K5)
+
+On the replies of K1 to K5, after the fact, that rule shows 269 of 300 with 262 right (97.4%), and of the 21
+answers prose got wrong it still shows 7; its own measurement on problems it has not seen is K6 to K9 of the same
+file. What this cannot check is that both the reasoning and the working read the question rightly: a misreading
+they share is shown, and the working is printed to be read.
 """
 from __future__ import annotations
 
@@ -184,6 +192,32 @@ def show(x: Fraction) -> str:
     return f"{x.numerator}/{x.denominator} (about {float(x):.4f})"
 
 
+# The prose answer's prompt, word for word what was measured as the `prose` arm of K1 to K5.
+REASON_SYSTEM = ("Work the problem out step by step. Then give the final number on a line of its own, after ####, "
+                 "with no units.")
+_STATED = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
+
+
+def ask_reasoned(host: str, question: str, post=rag_rgb._post) -> str:
+    """The model answering as it does: step by step in words, ending `#### <number>`."""
+    body = {"messages": [{"role": "system", "content": REASON_SYSTEM}, {"role": "user", "content": question}],
+            "temperature": 0, "max_tokens": 600}
+    return post(f"http://{host}/v1/chat/completions", body)["choices"][0]["message"]["content"] or ""
+
+
+def reasoned_number(reply: str) -> Fraction | None:
+    """The number after the last ####, or the last number of a reply that has none."""
+    tail = reply.rsplit("####", 1)[1] if "####" in reply else reply
+    found = _STATED.findall(tail)
+    if not found:
+        return None
+    text = (found[0] if "####" in reply else found[-1]).replace(",", "")
+    try:
+        return Fraction(text)
+    except (ValueError, ZeroDivisionError):
+        return None
+
+
 def ask(host: str, question: str, temperature: float, seed: int, post=rag_rgb._post) -> str:
     body = {"messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}],
             "temperature": temperature, "seed": seed, "max_tokens": 400, "grammar": GRAMMAR}
@@ -214,12 +248,42 @@ def judge(question: str, programs: list[str], grounded: bool = True) -> dict:
     return dict(out, answer=values[0])
 
 
-def calc(host: str, question: str, ways: int = 3, post=rag_rgb._post) -> dict:
+def settle(question: str, reasoned: str, programs: list[str], needed: int = 1) -> dict:
+    """The gate `dawnr calc` runs: the number the prose reasoning ends on is the answer only when at least `needed`
+    of the workings, computed exactly, give that number. {"answer": Fraction | None, "why", "stated", "reasoned",
+    "ways": [{"program", "value" | "why", "note"?}], "agree": n}."""
+    stated, ways = reasoned_number(reasoned), []
+    for program in programs:
+        try:
+            value, written = evaluate(program)
+        except Unusable as unusable:
+            ways.append({"program": program, "why": str(unusable)})
+            continue
+        extra = ungrounded(written, question)
+        ways.append({"program": program, "value": value,
+                     **({"note": "it uses " + ", ".join(show(x) for x in extra) + ", which the question does not state"} if extra else {})})
+    values = [w["value"] for w in ways if "value" in w]
+    out = {"answer": None, "stated": stated, "reasoned": reasoned, "ways": ways, "agree": sum(1 for v in values if v == stated)}
+    if stated is None:
+        return dict(out, why="the reasoning does not end on a number")
+    if not values:
+        return dict(out, why="no working could be computed to check the reasoning's " + show(stated))
+    if out["agree"] < needed:
+        return dict(out, why=f"the reasoning ends on {show(stated)} and " + (
+            "no working computed gives that (" if not out["agree"] else f"only {out['agree']} of the workings computed gives that (")
+            + ", ".join(show(v) for v in values) + ")")
+    return dict(out, answer=stated)
+
+
+def calc(host: str, question: str, ways: int = 3, needed: int = 1, post=rag_rgb._post) -> dict:
+    reasoned = ask_reasoned(host, question, post)
     programs = [ask(host, question, 0.0 if k == 0 else TEMPERATURE, k, post) for k in range(ways)]
-    return dict(judge(question, programs), question=question)
+    return dict(settle(question, reasoned, programs, needed), question=question)
 
 
 def render(r: dict) -> str:
+    if "stated" in r:
+        return _render_settled(r)
     if r["answer"] is None:
         lines = ["REFUSED: " + r["why"] + "."]
         for k, w in enumerate(r["ways"], 1):
@@ -234,14 +298,33 @@ def render(r: dict) -> str:
     return "\n".join(lines)
 
 
+def _render_settled(r: dict) -> str:
+    def working(w: dict) -> list[str]:
+        return ["  " + l for l in w["program"].rstrip().splitlines()]
+    if r["answer"] is None:
+        lines = ["REFUSED: " + r["why"] + "."]
+        for k, w in enumerate(r["ways"], 1):
+            lines += ["", f"Working {k}" + (f" gives {show(w['value'])}:" if "value" in w else f" could not be computed: {w['why']}.")] + working(w)
+        return "\n".join(lines + ["", "The reasoning:", ""] + ["  " + l for l in r["reasoned"].strip().splitlines()])
+    used = next(w for w in r["ways"] if w.get("value") == r["answer"])
+    lines = [f"ANSWER: {show(r['answer'])}", ""] + working(used)
+    lines += ["", f"The model reasoned its way to {show(r['answer'])} in words; this working, written separately and computed exactly, "
+                  f"gives the same ({r['agree']} of {len(r['ways'])} workings do)."]
+    if "note" in used:
+        lines.append("Note: " + used["note"] + ".")
+    lines.append("Read the working: it is the reading of your question that was computed.")
+    return "\n".join(lines)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--host", required=True, help="host:port of a llama-server holding the base model")
     ap.add_argument("--ways", type=int, default=3, help="how many times the working is asked for")
+    ap.add_argument("--needed", type=int, default=1, help="how many workings must compute the number the reasoning ends on")
     ap.add_argument("--json", type=Path)
     ap.add_argument("question")
     a = ap.parse_args(argv)
-    r = calc(a.host, a.question, a.ways)
+    r = calc(a.host, a.question, a.ways, a.needed)
     print(render(r))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=lambda x: show(x) if isinstance(x, Fraction) else str(x)) + "\n",
