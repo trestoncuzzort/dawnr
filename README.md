@@ -166,6 +166,14 @@ layer its 4-bit conversion left out (81 MB, every other weight untouched), and
 the model drafts with it: 29 tokens a second on the same CPU, where it wrote 17
 without. A second reading of the same 20 tasks, registered like the first
 after that and three smaller changes, was 20 of 20 at 28.6 tokens a second.
+On 15 harder tasks it had not seen (make failing tests pass, write a script
+that prints the right lines, find one sentence in a 2,000-line file, read a
+Word file, a saved page and a PDF, change several files at once) it did 14 and
+again touched nothing it should not have. The miss lost a file: asked to swap
+two files' contents it ran a command that removes one of them, and the
+measurement's person says yes to everything. `/undo` restores it, and `--yes`
+no longer answers for a plan that removes a file whose contents are kept
+nowhere else.
 These are small tasks in small folders of text files: a floor, not the job.
 The containment behind it is measured in [DAWNR-AGENT.md](DAWNR-AGENT.md).
 Commands need Linux 5.11 or newer with bubblewrap 0.8 or newer; elsewhere the

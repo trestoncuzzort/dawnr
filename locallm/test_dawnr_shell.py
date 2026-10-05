@@ -163,6 +163,39 @@ def test_in_a_plan_the_dry_run_is_the_run_and_a_command_after_another_change_is_
         assert agent.preview("sh", {"command": ""}, {}).error and agent.shell.decide({"command": "true"})[0] == "allow"
 
 
+def test_yes_does_not_answer_for_a_plan_that_loses_a_files_contents(tmp_path):
+    import json
+
+    def turn(command):
+        return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+            {"id": "c", "type": "function", "function": {"name": "sh", "arguments": json.dumps({"command": command})}}]}}]}
+    replies = [turn("mv a.txt c.txt"), {"choices": [{"message": {"content": "Renamed."}}]},
+               turn("mv c.txt b.txt && mv b.txt c.txt"), {"choices": [{"message": {"content": "Swapped."}}]}]
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "a.txt").write_text("alpha\n")
+    (work / "b.txt").write_text("beta\n")
+    said, asked = [], []
+
+    def ask(prompt):
+        asked.append(prompt)
+        return "n"
+    approve = cli.plan_approver(ask, said.append, yes=True)
+    harness, agent = cli.build_agent(cli.default_config(work, state=tmp_path / "state"), plan_approver=approve)
+    if agent.shell is None:
+        harness.close()
+        pytest.skip("no overlay sandbox here")
+    approve.agent = agent
+    with harness:
+        meter = cli.Meter(lambda url, body, timeout=0: replies.pop(0))
+        planner = cli.Planner(harness, agent, "x:1", "base", post=meter)
+        cli.run_task(agent, planner, meter, "Rename a.txt to c.txt.", [], said.append)
+        assert asked == [] and sorted(os.listdir(work)) == ["b.txt", "c.txt"]          # a rename loses nothing: --yes covers it
+        cli.run_task(agent, planner, meter, "Swap b.txt and c.txt.", [], said.append)   # the model's wrong swap
+        assert len(asked) == 1 and any("This removes here/b.txt and its contents are kept in no other file" in line for line in said)
+        assert (work / "b.txt").read_text() == "beta\n" and (work / "c.txt").read_text() == "alpha\n"      # no: nothing ran
+
+
 def test_the_assistant_offers_sh_by_default_and_not_the_tools_it_replaces(tmp_path):
     work = tmp_path / "w"
     work.mkdir()
