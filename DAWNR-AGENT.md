@@ -221,8 +221,12 @@ that is not a file in a root does not exist afterwards: it cannot install a pack
 program running. Tried on the desktop this was written on (bubblewrap 0.11.1, Linux 7.0): a line that renamed a
 file, appended to another, made two folders and an executable script was asked for as six changes and applied
 as six journal rows; `locallm/test_dawnr_shell.py` holds that, the refusals, and that the network, the rest of the
-disk and the secret folders are out of reach. It needs Linux 5.11 and bubblewrap 0.8; where the overlay cannot be
-mounted the tool is not offered. Not yet measured: a model driving it on a set of tasks.
+disk, the secret folders, a secret-named file in the folder itself and the Unix sockets under the home folder are
+out of reach. Bubblewrap mounts overlays from 0.11 on (it was first written here as 0.8, which was wrong; Ubuntu
+24.04 ships 0.9 and Debian 12 ships 0.8). With an older bubblewrap the folder is copied, the command runs with the
+copy bound in the folder's place, and the changes are the differences between the two: the same sandbox and the
+same question to the person, for folders of at most 256 MB and 20,000 files. Every test runs in both modes. A
+model driving it is measured in `locallm/PREDICT-2026-10-05-assistant.md`.
 
 ## 5. Plans, the dry run and approval
 
