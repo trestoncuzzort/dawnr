@@ -14,7 +14,8 @@ what the assistant can do at all, and when it must ask.
 
   here         the folder dawnr is started in is the one place it may change. Started in the home folder itself,
                or with --read-only, it changes nothing
-  reading      files in that folder and in each --root, never a key or a password, never through a link out
+  reading      files in that folder and in each --root, never a key or a password, never through a link out;
+               a PDF, a Word file, an EPUB or a saved web page is read as its text, page by page
   changing     a write or an edit is shown first, as a plan with its dry run, and asked for once (--yes: shown,
                not asked); each is journaled with the bytes it replaced, and /undo puts them back
   commands     any shell line, run for real over an overlay of the folder, inside bubblewrap with no network
@@ -43,8 +44,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "t"))
 
+import doc_read  # noqa: E402
 from agent_eval_native import NativePlanner, _post, messages_for  # noqa: E402
-from dawnr_agent import AgentLoop, Finish, build_agent  # noqa: E402
+from dawnr_agent import AgentLoop, Finish  # noqa: E402
+from dawnr_agent import build_agent as _build_agent  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
@@ -84,6 +87,16 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
     else:
         permissions.update(fs_write="deny", fs_edit="deny")
     return {"offline": not online, "permissions": permissions, "agent": agent}
+
+
+def build_agent(config, **how):
+    """The harness and the agent for a session, reading documents as well as text: a PDF, a Word file, an EPUB or a
+    saved web page comes back from fs_read as its text, page by page (locallm/doc_read.py), or with why it cannot be
+    read. The file is read inside the roots like any other; the reader only ever opens a private copy."""
+    harness, agent = _build_agent(config, **how)
+    if agent.files is not None:
+        agent.files.document_reader = (doc_read.read, str(Path(agent.ops.journal.dir) / "doc"))
+    return harness, agent
 
 
 class Meter:

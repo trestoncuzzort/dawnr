@@ -139,6 +139,36 @@ def test_a_plain_path_is_one_in_the_folder_and_a_refused_plan_goes_back_with_its
     assert back["role"] == "tool" and back["content"].startswith("Nothing ran. plan ") and "Correct the call" in back["content"]
 
 
+def docx(path, *paragraphs):
+    import zipfile
+    body = "".join(f"<w:p><w:r><w:t>{t}</w:t></w:r></w:p>" for t in paragraphs)
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("[Content_Types].xml", "<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'/>")
+        z.writestr("word/document.xml", "<?xml version='1.0'?><w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'>"
+                                        f"<w:body>{body}</w:body></w:document>")
+
+
+def test_a_word_file_and_a_saved_page_are_read_as_their_text_and_what_cannot_be_read_says_why(tmp_path):
+    model = Model(turn(("fs_read", {"path": "lease.docx"})), turn(text="The rent is 900."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    docx(work / "lease.docx", "Lease agreement", "The rent is 900 a month, due on the first.")
+    (work / "page.html").write_text("<html><head><title>T</title><script>var x = 1;</script></head><body><h1>Opening hours</h1><p>Open 9 to 5.</p></body></html>")
+    (work / "blob.pdf").write_bytes(b"%PDF-1.4\n\x00\x01 not really a pdf")
+    with harness:
+        cli.run_task(agent, planner, meter, "What is the rent?", [], said.append)
+        got = harness.call("fs_read", {"path": "here/lease.docx"})
+        assert not got.is_error and got.trust == "untrusted" and "The rent is 900 a month, due on the first." in got.text
+        assert got.text.startswith("here/lease.docx (docx): lines 1-")
+        page = harness.call("fs_read", {"path": "here/page.html"})
+        assert "Open 9 to 5." in page.text and "var x" not in page.text and "<p>" not in page.text
+        bad = harness.call("fs_read", {"path": "here/blob.pdf"})
+        assert bad.is_error and "could not be read as a document" in bad.text and "blob.pdf" in bad.text
+        assert harness.call("fs_read", {"path": "here/lease.docx", "start": 2, "lines": 1}).text.count("\n") == 1
+    assert not list((tmp_path / "state" / "doc").glob("*"))      # the private copies are gone
+    sent = model.bodies[1]["messages"][-1]
+    assert sent["role"] == "tool" and "The rent is 900 a month" in sent["content"]
+
+
 def test_a_task_that_does_not_finish_says_why(tmp_path):
     read = ("fs_read", {"path": "here/missing.txt"})
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, Model(turn(read), turn(read)))
