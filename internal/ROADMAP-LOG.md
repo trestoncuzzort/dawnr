@@ -2824,3 +2824,38 @@ route a rule fixed beforehand picks, against Phi-4-mini given the same number of
 - **Next:** the training rows read with larger inputs (a student that writes a table learned it from a row); a
   larger local writer through Colibrì (Qwen3.6-35B-A3B, Apache-2.0); an MCP server and an OpenAI-style chat
   endpoint over the gate; invariants pooled and pruned by the prover.
+
+
+## What the afternoon's measurements settled, and a sweep of other people's work, 2026-10-05
+
+- **One lesson, three times.** Holding the model's writing to a grammar made the writing worse each time it was
+  measured: a field's value held to a span of a sentence (39 to 43% exactly right against 63% written freely), a
+  working held to lines of arithmetic (84% right against 93% reasoned in words), the student's `t` held to the
+  language's grammar (unparseable answers 31 to 12 of 120, problems solved 7 to 7). What held up each time: let the
+  model write by the route it is best at, and keep the constrained or computed route to check it. A prompt
+  rearranged for speed without being measured cost a third of `extract`'s refusals; the commands' prompts are now
+  pinned by test to the ones that were measured.
+- **`extract`** after three registered samples: 65.9% exactly right of 340 shown, 230 of 300 absent fields left
+  empty; a JSON schema alone 64.5% of 378 and 215 (`locallm/PREDICT-2026-10-05-extract.md`).
+- **`calc`**: the first form lost to the model's own prose and was rebuilt (the reasoned number shown only when a
+  separately written working computes it); its fresh-sample run is K6 to K9.
+- **Tool calls**: released only when each value was said. On 900 unseen When2Call items, 203 calls on requests
+  missing a value become 50, 203 of 214 right calls kept; in `dawnr tools` and behind the API.
+- **`verify`**: 9 twins of 111, fewer than `ask`'s 12, so it now asks for whole answers first with the person's
+  function as the oracle (V4 to V6 running). Certificates: 16 of 16 reproduce on a second machine, 45 of 45
+  forgeries fail. One refusal was a benchmark reference that sorts where its words say reverse.
+- **The wider panel**: the published model shows 12 of 111 through the product's gate, the 27B at 4 bits 16; by
+  the rule set beforehand that is not enough for an installer tier.
+- **What a proof is of** (`t/PROOF-KIND-2026-10-05.md`): of the published model's 17 proved problems 9 are an
+  algorithm proved and 8 a program that restates its specification; Phi-4-mini 0 of 7, the untrained 4B 2 of 9, the
+  27B 17 of 32. The commands now say which beside each answer.
+- **How answers grow with tries** (`t/coverage_curve.py`): on the scoreboard's own graded sets no model has
+  flattened at 17 answers; the published model's curve through the product's gate is W6, running.
+- **For people who do not program**: `dawnr ask` with no tests proposes examples to approve (E1 to E3 running);
+  `dawnr ui` opens the page; documents are read in any script.
+- **The sweep** (`internal/RESEARCH-2026-10-05-what-to-steal.md`): 127 open projects in eight areas, 23 re-checked,
+  twelve ways the work should be seen differently, and the order things are taken in.
+- **Next, from that order:** read K6 to K9, V4 to V6, E1 to E3 and W6 as they finish; exact partial verdicts;
+  units in `calc`; deterministic repair before refusing; the panels that would measure the new breadth (TyDi QA,
+  CUAD, TAT-QA, AgentDojo); then rules as code and speech by alignment.
+
