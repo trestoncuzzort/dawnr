@@ -1,0 +1,429 @@
+{
+ "schema": 1,
+ "about": "Problems of the held-out and dev panels that the training rows held under another name, found by t/heldout_audit.py on every row file a measured model trained on. overlap_eval_ids leave the clean 200 (the clean 182); dev_overlap_ids leave the 100 dev problems (95). Human-readable version with the restated scores: t/DECONTAMINATION-2026-10-05.md",
+ "rule": "a training row is flagged for a gated problem (held-out or dev) when it names that problem's own formalisation (lineage), or holds a t program, in its answer or its prompt, that passes at least one of the problem's test points, fails none, and on 100 drawn inputs answers fewer than 10% of the inputs both answer differently from the problem's reference (twin; t/twin_draws.py), the problem's length argument left out where it has one",
+ "sources": [
+  "https://arxiv.org/abs/2311.04850",
+  "https://ar5iv.labs.arxiv.org/html/2305.01210",
+  "https://raw.githubusercontent.com/microsoft/verus-proof-synthesis/main/benchmarks/Verus-Bench/README.md"
+ ],
+ "audited": [
+  {
+   "file": "sft-student-v4.jsonl",
+   "sha256": "447035f6acb1e7b1878088f14dda6113f95ec717e260accc99c84ae9be92390b",
+   "rows": 1791
+  },
+  {
+   "file": "sft-student-v5-0457.jsonl",
+   "sha256": "18e1621f7a4a4802d2a2727396248e475ded6b07c008d74621a6ae5682028140",
+   "rows": 3347
+  },
+  {
+   "file": "sft-student-v5-0653.jsonl",
+   "sha256": "3809d45fbd24caa29011e238cf913d7918c37ad79b34e16248884eff41579f2d",
+   "rows": 3767
+  },
+  {
+   "file": "sft-student-v5-0659.jsonl",
+   "sha256": "3809d45fbd24caa29011e238cf913d7918c37ad79b34e16248884eff41579f2d",
+   "rows": 3767
+  },
+  {
+   "file": "sft-student-v5-0750-nogpl-k6.jsonl",
+   "sha256": "b2fbb089daf6e4e8c55283d54f6b39a0d74952eeedaf588f49be9f82ed5c4a21",
+   "rows": 4027
+  },
+  {
+   "file": "sft-student-v5-0750-nogpl.jsonl",
+   "sha256": "37ed912876d28ae51cf3c39492ad0b80a8ec30b24edda6634560a8bdaeba2949",
+   "rows": 3944
+  },
+  {
+   "file": "sft-student-v5-0750.jsonl",
+   "sha256": "fb0a662204551403703e770c1b3c1518b6f2cb2475f5d5fca3350d0590d1e44b",
+   "rows": 3988
+  },
+  {
+   "file": "sft-student-v6-1412-nogpl.jsonl",
+   "sha256": "0e29040614eb9a4042501be8e5111e52d2920bb17ce1402c04946d0b895ec5a1",
+   "rows": 3835
+  },
+  {
+   "file": "sft-student-v6-1412.jsonl",
+   "sha256": "60f6241066abab034adb41dc71f84fa88ff72c6e6a3866b13b5c04c6c5dcc040",
+   "rows": 3887
+  },
+  {
+   "file": "sft-student-teacher1.jsonl",
+   "sha256": "754f607c04ef796e3b29562e1cce6d056e41b214e50e6c6f15fe63108cc02218",
+   "rows": 4209
+  },
+  {
+   "file": "sft-student-teacher2-nogpl.jsonl",
+   "sha256": "1adba7e4a9df95d3e10061cd88a24bdf3c03f781205e2a7ae8c7b70d13ec58c2",
+   "rows": 4579
+  },
+  {
+   "file": "sft-student-teacher2.jsonl",
+   "sha256": "ba80902ae004179e83b93e16e33cddb896c42b5727d4365e306bd576cebc10da",
+   "rows": 4625
+  },
+  {
+   "file": "sft-student-teacher3.jsonl",
+   "sha256": "848fca29d9399ef91fcb867006e4ff42f60b53e9e2e084e4f1e93dae37811110",
+   "rows": 5095
+  }
+ ],
+ "overlap_eval_ids": [
+  78,
+  86,
+  224,
+  334,
+  436,
+  447,
+  472,
+  474,
+  605,
+  644,
+  736,
+  741,
+  798,
+  804,
+  822,
+  899,
+  908,
+  947
+ ],
+ "flagged_already_excluded": [
+  138,
+  269,
+  443,
+  518,
+  565,
+  566,
+  626,
+  687,
+  813
+ ],
+ "dev_overlap_ids": [
+  113,
+  508,
+  547,
+  727,
+  874
+ ],
+ "evidence": {
+  "dev:113": {
+   "why": [
+    "twin"
+   ],
+   "rows": 451,
+   "names": [
+    "apps_3514__validate_sequence",
+    "mbpp_913__end_num"
+   ]
+  },
+  "dev:508": {
+   "why": [
+    "twin"
+   ],
+   "rows": 153,
+   "names": [
+    "mbpp_69__is_sublist"
+   ]
+  },
+  "dev:547": {
+   "why": [
+    "twin"
+   ],
+   "rows": 79,
+   "names": [
+    "apps_3508__halving_sum"
+   ]
+  },
+  "dev:727": {
+   "why": [
+    "twin"
+   ],
+   "rows": 362,
+   "names": [
+    "mbpp_173__remove_splchar",
+    "mbpp_676__remove_extra_char"
+   ]
+  },
+  "dev:874": {
+   "why": [
+    "twin"
+   ],
+   "rows": 52,
+   "names": [
+    "apps_4464__feast"
+   ]
+  },
+  "held-out:78": {
+   "why": [
+    "twin"
+   ],
+   "rows": 116,
+   "names": [
+    "mbpp_509__average_Odd"
+   ]
+  },
+  "held-out:86": {
+   "why": [
+    "twin"
+   ],
+   "rows": 13,
+   "names": []
+  },
+  "held-out:138": {
+   "why": [
+    "twin"
+   ],
+   "rows": 11,
+   "names": [
+    "apps_3211__divide",
+    "dafny_verify_tmp_tmphq7j0row_dataset_error_data_real_error_iseven_success_1__is_even"
+   ]
+  },
+  "held-out:224": {
+   "why": [
+    "twin"
+   ],
+   "rows": 13,
+   "names": [
+    "vericoding_da0140__minBacteria"
+   ]
+  },
+  "held-out:269": {
+   "why": [
+    "twin"
+   ],
+   "rows": 766,
+   "names": [
+    "abs",
+    "apps_296__findMin",
+    "apps_3352__find_longest",
+    "apps_3420__absolute_values_sum_minimization"
+   ]
+  },
+  "held-out:334": {
+   "why": [
+    "twin"
+   ],
+   "rows": 65,
+   "names": []
+  },
+  "held-out:436": {
+   "why": [
+    "twin"
+   ],
+   "rows": 6,
+   "names": [
+    "apps_3352__find_longest"
+   ]
+  },
+  "held-out:443": {
+   "why": [
+    "twin"
+   ],
+   "rows": 74,
+   "names": [
+    "apps_296__findMin"
+   ]
+  },
+  "held-out:447": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 15,
+   "names": [
+    "vericoding_dj0091__cubeElement"
+   ]
+  },
+  "held-out:472": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 111,
+   "names": [
+    "apps_3514__validate_sequence",
+    "vericoding_dd0735__containsConsecutiveNumbers"
+   ]
+  },
+  "held-out:474": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 13,
+   "names": [
+    "vericoding_dd0736__replaceChars"
+   ]
+  },
+  "held-out:518": {
+   "why": [
+    "twin"
+   ],
+   "rows": 166,
+   "names": [
+    "apps_2474__mySqrt",
+    "apps_3591__doors",
+    "apps_419__bulbSwitch"
+   ]
+  },
+  "held-out:565": {
+   "why": [
+    "twin"
+   ],
+   "rows": 1532,
+   "names": [
+    "apps_2441__makeGood",
+    "apps_2494__defangIPaddr",
+    "apps_2817__DNA_strand",
+    "apps_3358__correct"
+   ]
+  },
+  "held-out:566": {
+   "why": [
+    "twin"
+   ],
+   "rows": 10,
+   "names": []
+  },
+  "held-out:605": {
+   "why": [
+    "lineage"
+   ],
+   "rows": 13,
+   "names": [
+    "vericoding_dd0763__isPrime"
+   ]
+  },
+  "held-out:626": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 138,
+   "names": [
+    "dafny_synthesis_task_id_80__tetrahedralNumber",
+    "dafny_verify_tmp_tmphq7j0row_dataset_bql_exampls_square__square",
+    "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare",
+    "formal_methods_of_software_development_tmp_tmppryvbyty_bloque_1_lab3__sqare2"
+   ]
+  },
+  "held-out:644": {
+   "why": [
+    "lineage"
+   ],
+   "rows": 3,
+   "names": [
+    "vericoding_DJ0116"
+   ]
+  },
+  "held-out:687": {
+   "why": [
+    "twin"
+   ],
+   "rows": 5,
+   "names": [
+    "dafny_tmp_tmpmvs2dmry_examples2__gcdCalc"
+   ]
+  },
+  "held-out:736": {
+   "why": [
+    "twin"
+   ],
+   "rows": 64,
+   "names": [
+    "apps_284__bagOfTokensScore",
+    "vericoding_dd0050__binarySearch",
+    "vericoding_dv0068__searchInsert"
+   ]
+  },
+  "held-out:741": {
+   "why": [
+    "twin"
+   ],
+   "rows": 252,
+   "names": [
+    "apps_3514__validate_sequence",
+    "dafny_synthesis_task_id_396__startAndEndWithSameChar",
+    "he_48__is_palindrome"
+   ]
+  },
+  "held-out:798": {
+   "why": [
+    "twin"
+   ],
+   "rows": 37,
+   "names": [
+    "vericoding_dv0073__solution"
+   ]
+  },
+  "held-out:804": {
+   "why": [
+    "lineage",
+    "twin"
+   ],
+   "rows": 10,
+   "names": [
+    "vericoding_DD0806",
+    "vericoding_DJ0129"
+   ]
+  },
+  "held-out:813": {
+   "why": [
+    "twin"
+   ],
+   "rows": 131,
+   "names": [
+    "dafny_exercises_tmp_tmpjm75muf__session4exercises_exercisefirstzero__mfirstCero",
+    "mbpp_9__find_Rotations"
+   ]
+  },
+  "held-out:822": {
+   "why": [
+    "twin"
+   ],
+   "rows": 8,
+   "names": [
+    "apps_3523__password"
+   ]
+  },
+  "held-out:899": {
+   "why": [
+    "twin"
+   ],
+   "rows": 189,
+   "names": [
+    "apps_2479__judgeCircle",
+    "apps_3609__is_onion_array",
+    "apps_4289__happy_g"
+   ]
+  },
+  "held-out:908": {
+   "why": [
+    "twin"
+   ],
+   "rows": 14,
+   "names": [
+    "vericoding_DD0199",
+    "vericoding_DD0835"
+   ]
+  },
+  "held-out:947": {
+   "why": [
+    "twin"
+   ],
+   "rows": 19,
+   "names": [
+    "dafny_synthesis_task_id_95__smallestListLength",
+    "vericoding_dd0663__smallestListLength"
+   ]
+  }
+ }
+}

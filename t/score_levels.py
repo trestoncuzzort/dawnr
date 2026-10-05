@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """t/score_levels.py -- how many problems are answered at each trust level (2026-10-01).
 
-    python3 t/score_levels.py --split t/out/loop/split-v5.json --panel clean-200 \\
+    python3 t/score_levels.py --split t/out/loop/split-v5.json --panel clean-182 \\
         --verdicts PATH TAG [TAG ...]
     python3 t/score_levels.py --ids-file dev-ids.txt --verdicts PATH TAG [TAG ...]
 
@@ -124,6 +124,12 @@ def panel_ids(split_path: Path | None, panel: str, ids_file: Path | None) -> set
     if split_path is None:
         raise SystemExit("score_levels: give --split with --panel, or --ids-file")
     eval_ids = {int(i) for i in json.loads(split_path.read_text(encoding="utf-8"))["eval_ids"]}
+    if panel == "clean-182":
+        # 2026-10-05: the clean 200 without the 18 problems the training rows held under another name
+        # (t/heldout_audit.py, t/DECONTAMINATION-2026-10-05.md); the panel of record since. clean-200
+        # stays for reading the scores published before it.
+        import heldout_audit
+        return heldout_audit.clean_182(eval_ids)
     return score_heldout.clean_eval_ids(eval_ids) if panel == "clean-200" else eval_ids
 
 
@@ -131,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("tags", nargs="+")
     ap.add_argument("--split", type=Path)
-    ap.add_argument("--panel", choices=("clean-200", "all-232"), default="clean-200")
+    ap.add_argument("--panel", choices=("clean-182", "clean-200", "all-232"), default="clean-182")
     ap.add_argument("--ids-file", type=Path, help="score these problem ids instead of a held-out panel")
     ap.add_argument("--verdicts", type=Path, default=HERE / "out" / "spec-disagree.json",
                     help="a spec_check verdict file covering every answer (--only all)")
