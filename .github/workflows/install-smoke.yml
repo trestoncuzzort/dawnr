@@ -85,6 +85,23 @@ jobs:
           if [ -s largest.cert.json ]; then ~/.local/bin/dawnr check largest.cert.json | tee verify-check.txt; grep -q '^REPRODUCED:' verify-check.txt; fi
           ~/.local/bin/dawnr serve stop
 
+      - name: the assistant, in a folder of its own
+        run: |
+          mkdir -p ~/assistant-try && cd ~/assistant-try
+          printf 'From: Sam\nThe planning meeting moved to Thursday at 10.\n' > inbox.md
+          ~/.local/bin/dawnr do "When is the planning meeting?" 2> ../assistant.err | tee ../assistant-read.txt
+          cat ../assistant.err
+          grep -qi thursday ../assistant-read.txt
+          grep -q '^\[Nothing was changed.\]' ../assistant-read.txt
+          ~/.local/bin/dawnr do "Create todo.txt with three lines: milk, eggs, bread." --yes | tee ../assistant-write.txt
+          grep -q milk todo.txt && grep -q '^\[Changed: ' ../assistant-write.txt
+          # a command, run over an overlay in the sandbox and applied: only where that sandbox works
+          if [ "$(uname -s)" = Linux ] && ! grep -q "sh is not offered" ../assistant.err; then
+            ~/.local/bin/dawnr do "Rename todo.txt to shopping.txt." --yes | tee ../assistant-sh.txt
+            [ -f shopping.txt ] && [ ! -e todo.txt ]
+          fi
+          ~/.local/bin/dawnr serve stop
+
       - name: the local API answers its owner and nobody else
         shell: bash
         env:
