@@ -111,13 +111,16 @@ def test_a_typed_field_reads_as_its_kind_or_says_why_not(kind, words, value, why
     assert ex.typed(kind, words) == (value, why)
 
 
-def served(replies: dict):
-    """A stand-in for the server: answers by the field named in the prompt, and records what it was sent."""
+def served(replies: dict, values: dict | None = None):
+    """A stand-in for the server: answers by the field named in the prompt, the grammar-held reading from `replies`
+    and the free one (a text field's first reading) from `values`, and records what it was sent."""
     seen = []
 
     def post(url, body):
         seen.append(body)
         field = body["messages"][-1]["content"].rsplit("Field: ", 1)[1].split(":")[0]
+        if "response_format" in body:
+            return {"choices": [{"message": {"content": json.dumps({"value": (values or {}).get(field)})}}]}
         return {"choices": [{"message": {"content": replies[field]}}]}
     post.seen = seen
     return post
@@ -129,16 +132,21 @@ def test_each_field_comes_back_with_its_sentence_and_file_or_is_left_empty(tmp_p
     sentences = ex.located([f])
     fields = [ex.read_field(x) for x in ("total(number): the amount due", "due(date): when payment is due",
                                          "vendor: who sent the invoice", "po: the purchase order number", "weight(number): shipping weight")]
-    post = served({"total": "S2: 1,250.00", "due": "S2: March 3, 2026", "vendor": "S1: Harbor Supply", "po": "NONE",
-                   "weight": "S3: dock office"})
+    post = served({"total": "S2: 1,250.00", "due": "S2: March 3, 2026", "vendor": "S1: Invoice 2291 from Harbor Supply",
+                   "po": "NONE", "weight": "S3: dock office"}, {"vendor": "Harbor  Supply"})
     rows = {r["name"]: r for r in ex.extract("h:1", fields, sentences, post)}
     assert rows["total"]["value"] == 1250.0 and rows["total"]["words"] == "1,250.00" and rows["total"]["n"] == 2
+    # a text field: the words of the free reading, the sentence of the grammar-held one
     assert rows["due"]["value"] == "2026-03-03" and rows["vendor"]["value"] == "Harbor Supply" and rows["vendor"]["file"] == "invoice.txt"
+    assert rows["vendor"]["n"] == 1 and rows["vendor"]["sentence"] == "Invoice 2291 from Harbor Supply."
     assert rows["po"] == {"name": "po", "kind": "text", "value": None, "why": "no sentence shown states it"}
     assert rows["weight"]["value"] is None and rows["weight"]["why"] == "the words picked hold no number"
-    # the document is sent the same way for every field, so the server reads it once
+    # the document is sent the same way for every field and both readings, so the server reads it once
     heads = {body["messages"][-1]["content"].rsplit("\n\nField: ", 1)[0] for body in post.seen}
-    assert len(heads) == 1 and all(body["grammar"].startswith('root ::= "NONE" | s') for body in post.seen)
+    held = [body for body in post.seen if "grammar" in body]
+    assert len(heads) == 1 and len({body["messages"][0]["content"] for body in post.seen}) == 1
+    assert len(held) == 4 and all(body["grammar"].startswith('root ::= "NONE" | s') for body in held)    # po: one reading
+    assert [("response_format" in body) for body in post.seen] == [False, False, True, False, True, False]
     text = ex.render(list(rows.values()))
     assert 'total   1250.0\n            "The total due is $1,250.00, payable by March 3, 2026." (invoice.txt, sentence 2)' in text
     assert "po      NOT STATED: no sentence shown states it." in text
@@ -151,6 +159,40 @@ def test_a_reply_outside_the_grammar_is_never_shown(tmp_path):
     rows = ex.extract("h:1", [ex.read_field("total(number): the amount due")], ex.located([f]),
                       served({"total": "S2: 9,999.00"}))
     assert rows[0]["value"] is None and rows[0]["why"] == "no sentence shown states it"
+
+
+@pytest.mark.parametrize("value, named, want", [
+    ("Harbor Supply", (1, "Invoice 2291 from Harbor Supply"), (1, "Harbor Supply")),
+    (None, (1, "Harbor Supply"), "no sentence shown states it"),
+    ("Harbour Supply", (1, "Harbor Supply"), "the words given for it are not in the document"),
+    ("arbor Supply", (1, "Harbor Supply"), "the words given for it are not in the document"),     # not as words
+    ("Harbor Supply", None, "a second reading found no sentence that states it"),
+    ("Harbor Supply", (2, "1,250.00"), "two readings put it in different sentences"),
+    ("$1,250.00", (2, "1,250.00"), (2, "$1,250.00")),
+])
+def test_a_text_field_is_shown_only_when_its_words_are_in_the_sentence_a_second_reading_names(value, named, want):
+    texts = ["Invoice 2291 from Harbor Supply.", "The total due is $1,250.00, payable by March 3, 2026."]
+    assert ex.held(value, named, texts) == want
+
+
+def test_words_are_in_a_sentence_only_as_words():
+    assert ex.stated_in("art", "The art of it.") and not ex.stated_in("art", "A party of five.")
+    assert ex.stated_in("12", "Take 12.") and not ex.stated_in("12", "In 2012 it opened.")
+    assert ex.stated_in("$1,250.00", "It is $1,250.00, payable now.") and not ex.stated_in("", "Anything.")
+
+
+def test_the_free_reading_is_null_or_words_and_a_reply_that_is_not_its_json_is_nothing():
+    field, texts = ex.read_field("vendor: who sent it"), ["Invoice 2291 from Harbor Supply."]
+    for reply, want in (('{"value": " Harbor\\n Supply "}', "Harbor Supply"), ('{"value": null}', None), ('{"value": ""}', None),
+                        ("Harbor Supply", None), ('["Harbor Supply"]', None), ('{"value": 7}', None)):
+        seen = []
+
+        def post(url, body, reply=reply):
+            seen.append(body)
+            return {"choices": [{"message": {"content": reply}}]}
+        assert ex.ask_value("h:1", field, texts, post) == want
+        assert seen[0]["response_format"]["json_schema"]["schema"] == ex.VALUE_SCHEMA and "grammar" not in seen[0]
+        assert seen[0]["messages"][-1]["content"].endswith(ex.HOW_VALUE)
 
 
 def test_a_long_document_is_cut_to_the_passages_that_match_the_field(tmp_path):
