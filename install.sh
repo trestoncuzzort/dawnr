@@ -20,6 +20,7 @@ BIN_DIR=${BIN_DIR:-$HOME/.local/bin}
 LLAMA_TAG=b11342
 DAFNY_VERSION=4.11.0
 BASE_URL=https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf
+DRAFT_URL=https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf
 STUDENT_RELEASE=${DAWNR_STUDENT_RELEASE:-https://github.com/trestoncuzzort/dawnr/releases/download/student-v5}
 BUILD=auto
 STUDENT=""
@@ -67,6 +68,7 @@ sum_of() {
     dafny-4.11.0-arm64-macos-13.zip) echo c90c75e7d5db9c6ccbb7127840dfe43f0ac938b039a7ebed146d8ead383a572f;;
     dafny-4.11.0-x64-macos-13.zip) echo 5fc0de946c5b2fad33f16bd22a5b06f4fd0dfa7f6d770284237e3f1f3ca9f73d;;
     Qwen3.5-4B-Q4_K_M.gguf) echo 00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4;;
+    Qwen3.5-0.8B-Q4_K_M.gguf) echo bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517;;
   esac
 }
 
@@ -150,6 +152,10 @@ echo "  llama-server ready"
 
 say "The models"
 fetch "$BASE_URL" "$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf" "$(sum_of Qwen3.5-4B-Q4_K_M.gguf)" || fail "could not download the base model"
+# the 0.8B of the same family (Apache-2.0), which drafts for the base model on a CPU: a third more tokens a second.
+# dawnr works without it, so a failed download is said and passed over
+fetch "$DRAFT_URL" "$DAWNR_HOME/models/Qwen3.5-0.8B-Q4_K_M.gguf" "$(sum_of Qwen3.5-0.8B-Q4_K_M.gguf)" \
+  || echo "  the small drafting model did not download; dawnr runs without it, a little slower"
 if [ -n "$STUDENT" ] && [ -f "$STUDENT" ]; then
   # used where it is: a split model is found from its first shard's own name (llama.cpp's gguf-split)
   STUDENT_GGUF="$(cd "$(dirname "$STUDENT")" && pwd)/$(basename "$STUDENT")"
@@ -210,6 +216,7 @@ DAWNR_BUILD=$BUILD
 STUDENT_GGUF=$STUDENT_GGUF
 BASE_GGUF=$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf
 ENV
+[ -s "$DAWNR_HOME/models/Qwen3.5-0.8B-Q4_K_M.gguf" ] && echo "DRAFT_GGUF=$DAWNR_HOME/models/Qwen3.5-0.8B-Q4_K_M.gguf" >> "$DAWNR_HOME/env"
 [ -x "$DAWNR_HOME/provers/dafny/dafny" ] && echo "T_DAFNY=$DAWNR_HOME/provers/dafny/dafny" >> "$DAWNR_HOME/env"
 [ -n "${INVARIANT:-}" ] && echo "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1" >> "$DAWNR_HOME/env"
 ln -sf "$REPO/bin/dawnr" "$BIN_DIR/dawnr"

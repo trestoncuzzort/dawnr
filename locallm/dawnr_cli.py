@@ -50,9 +50,11 @@ MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a 
 HISTORY = 3                    # earlier tasks of the session handed back, each cut short
 # said once, ahead of the first task; it does not change within a session, so the server reads it once and reuses it
 SYSTEM = ("You are dawnr, an assistant working on this person's computer, offline. The folder you work in is called "
-          "`here`, and a path is written `here/notes.md`. Look before you answer: list, search or read the files, and "
-          "answer only from what you read; if it is not there, say so. To change a file, call a tool. Never say a "
-          "thing was done unless a tool result says it ran.")
+          "`here`, and every path starts with `here/`. Look before you answer: list, search or read the files, and "
+          "answer only from what you read; if it is not there, say so. To rename, move, copy or delete files, to make "
+          "folders, to count, sort or compare, or to run a program, call `sh` with the shell command. To change text "
+          "inside a file call fs_edit, and to create a file with text call fs_write; neither can rename or delete. "
+          "Never say a thing was done unless a tool result says it ran.")
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
 
@@ -245,10 +247,18 @@ def _journal(agent) -> list:
     return agent.ops.journal.entries() if agent.ops else []
 
 
+def _did(row: dict) -> str:
+    """A journal row's change in a word: what a command did to a file is read from the hashes it left."""
+    action = row.get("action")
+    if action == "sh":
+        return "created" if row.get("before") is None else "removed" if row.get("after") is None else "changed"
+    return {"mkdir": "new folder", "rmdir": "removed folder"}.get(action, action)
+
+
 def done(agent, before: int, rounds: list) -> str:
     """What the task changed, from the journal and the plans' outcomes, never from the answer."""
     made = _journal(agent)[before:]
-    lines = [f"{row.get('action')} {row.get('path')}" + (f" (undoes {row['undoes']})" if row.get("undoes") else "") for row in made]
+    lines = [f"{_did(row)} {row.get('path')}" + (f" (undoes {row['undoes']})" if row.get("undoes") else "") for row in made]
     last = next((r for r in reversed(rounds) if r.plan is not None), None)
     unrun = last is not None and (last.outcome is None or any(o.status != "ran" for o in last.outcome.outcomes))
     said = "Changed: " + "; ".join(lines) + "." if lines else "Nothing was changed."
