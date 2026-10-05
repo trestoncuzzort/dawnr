@@ -79,3 +79,29 @@ test and every mutant at up to 60 s each. `t/spec_quality.py` now also bounds a 
 past which it is unscorable) and gives one evaluation 10 s (7174b736). Rescored under these clocks, every one of the 871
 specifications seeds 2 and 3 scored reads the same (the slowest took 0.08 s), so neither seed's measurement could have
 moved. Seed 1's route runs a third time with them. Predictions stand.
+
+## Seed 1 and the outcome, 2026-10-05 01:38Z (`~/scratch/teacher3/levels-teacher3-seed1.md`; recorded 01:39Z)
+
+Seed 1 (1,585 steps, final loss 0.0267; its route's third run, above): 105 problems with tested Python, 56 with a kept
+specification, 49 answered, all 49 pass their tests; **26 proved by at least one prover, 23 by three, 21 by five, 18 by
+six, 16 by all seven**. The case split decided cells on 605, 3 and 552, none of which reaches seven kernels.
+
+| seed | teacher2's rows | plus round 3's 129 APPS documents (teacher3) |
+|---|---:|---:|
+| 1 | 23 and 13 | 26 and 16 |
+| 2 | 24 and 15 | 27 and 15 |
+| 3 | 27 and 13 | 23 and 13 |
+| mean | 24.7 and 13.7 | **25.3 and 14.7** |
+
+- **T1 holds:** every seed proves at least 18 at one kernel and 11 by all seven (26, 27, 23; 16, 15, 13).
+- **T2 holds:** the mean by all seven is 14.7, against teacher2's 13.7.
+- **Section 1:** Phi-4-mini under `t`'s grammar (9 and 7) is beaten with every seed at both levels. Doubled needs
+  every seed at 18 and 14: seeds 1 and 2 are (26 and 16, 27 and 15), seed 3 stops one short by all seven (23 and 13).
+  **Not doubled**, by one problem on one seed.
+
+**Reading.** The 516 rows from round 3's APPS documents moved the mean up by about one problem at each level, with one
+seed down four at one kernel and another up three: inside the seeds' spread, as teacher1's addition was. What
+teacher2 bought (598 rows, mostly MBPP- and HumanEval-like documents and specification documents) moved every seed;
+APPS documents, whose statements read nothing like the clean 200's, transfer less. The seed that misses doubling
+(seed 3, 13) is held at six kernels by rocq on 741 and 860 and at five on 605, the gaps the case split's record
+diagnoses.
