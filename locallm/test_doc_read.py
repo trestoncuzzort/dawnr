@@ -84,12 +84,47 @@ def test_a_pdf_with_no_text_in_it_is_refused_as_a_scan(tmp_path):
         doc_read.read(f)
 
 
-def test_without_pdftotext_a_pdf_is_refused_with_how_to_get_it(tmp_path, monkeypatch):
+def has_pdfium() -> bool:
+    import os
+    import subprocess
+    import sys
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(x for x in (doc_read.pylib(), os.environ.get("PYTHONPATH")) if x))
+    return subprocess.run([sys.executable, "-c", "import pypdfium2"], env=env, capture_output=True).returncode == 0
+
+
+def test_with_neither_reader_a_pdf_is_refused_with_how_to_get_one(tmp_path, monkeypatch):
     f = tmp_path / "invoice.pdf"
     f.write_bytes(pdf([["The total due is $5."]]))
     monkeypatch.setattr(doc_read.shutil, "which", lambda name: None)
-    with pytest.raises(doc_read.Unreadable, match="no pdftotext to read it with. Install poppler"):
+    monkeypatch.setenv("DAWNR_HOME", str(tmp_path / "nothing-installed"))
+    monkeypatch.setenv("PYTHONPATH", "")
+    if has_pdfium():
+        pytest.skip("pypdfium2 is installed for this Python itself")
+    with pytest.raises(doc_read.Unreadable, match="nothing to read it with. Run dawnr's install.sh again"):
         doc_read.read(f)
+
+
+def test_without_pdftotext_a_pdf_is_read_by_pdfium_page_by_page(tmp_path, monkeypatch):
+    if not has_pdfium():
+        pytest.skip("no pypdfium2 here (install.sh unpacks it into dawnr's own folder)")
+    f = tmp_path / "invoice.pdf"
+    f.write_bytes(pdf([["Invoice 2291 from Harbor Supply.", "Billed to Northlight Marine."],
+                       ["The total due is $1,250.00, payable by March 3, 2026."]]))
+    with_poppler = doc_read.read(f) if shutil.which("pdftotext") else None
+    monkeypatch.setattr(doc_read.shutil, "which", lambda name: None)
+    pages, how = doc_read.read(f)
+    assert [n for n, _text in pages] == [1, 2] and how == "pdf, 2 pages" and "total due is $1,250.00" in pages[1][1]
+    assert "Billed to Northlight Marine." in pages[0][1].split("\n")                 # a line is a line, not a run of the page
+    if with_poppler is not None:                                                     # and the two readers agree on this one
+        assert [(n, " ".join(t.split())) for n, t in with_poppler[0]] == [(n, " ".join(t.split())) for n, t in pages]
+    scan = tmp_path / "scan.pdf"
+    scan.write_bytes(pdf([[]]))
+    with pytest.raises(doc_read.Unreadable, match="no text in it, most likely a scan"):
+        doc_read.read(scan)
+    broken = tmp_path / "broken.pdf"
+    broken.write_bytes(b"%PDF-1.4\nnot a pdf at all\n")
+    with pytest.raises(doc_read.Unreadable, match="could not read"):
+        doc_read.read(broken)
 
 
 def test_what_cannot_be_read_stops_the_command_with_the_sentence(tmp_path, capsys):

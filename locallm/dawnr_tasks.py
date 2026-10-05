@@ -109,16 +109,21 @@ TASKS = [
 # These need more steps, a file too long to read whole, a document that is not plain text, several files at once,
 # or care about what is left alone.
 
-def docx_bytes(*paragraphs: str) -> bytes:
+def _zip_bytes(parts: dict) -> bytes:
     import io
     import zipfile
-    body = "".join(f"<w:p><w:r><w:t>{t}</w:t></w:r></w:p>" for t in paragraphs)
     out = io.BytesIO()
-    with zipfile.ZipFile(out, "w") as z:
-        z.writestr("[Content_Types].xml", "<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'/>")
-        z.writestr("word/document.xml", "<?xml version='1.0'?><w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/"
-                                        f"2006/main'><w:body>{body}</w:body></w:document>")
+    with zipfile.ZipFile(out, "w") as z:                        # a fixed date: writestr stamps the clock's, and the same
+        for name, text in parts.items():                        # task then came out as different bytes a second later
+            z.writestr(zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0)), text)
     return out.getvalue()
+
+
+def docx_bytes(*paragraphs: str) -> bytes:
+    body = "".join(f"<w:p><w:r><w:t>{t}</w:t></w:r></w:p>" for t in paragraphs)
+    return _zip_bytes({"[Content_Types].xml": "<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'/>",
+                       "word/document.xml": "<?xml version='1.0'?><w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/"
+                                            f"2006/main'><w:body>{body}</w:body></w:document>"})
 
 
 def pdf_bytes(*lines: str) -> bytes:
@@ -374,7 +379,8 @@ def _release(ctx) -> list:
 
 def _timezone(ctx) -> list:
     zone = _text("/etc/timezone").strip() or os.path.realpath("/etc/localtime").split("zoneinfo/")[-1]
-    return [zone.split("/")[-1].replace("_", " ")]
+    place = zone.split("/")[-1]                                  # "Los_Angeles" is the zone's own spelling: the reading on a
+    return sorted({place, place.replace("_", " ")})             # laptop set to it refused "America/Los_Angeles" for lacking "Los Angeles"
 
 
 def _bash(ctx) -> list:
@@ -436,7 +442,7 @@ TASKS4 = [
     (104, "state", {}, "Is a process whose command line contains `sleep 98765` running right now? If it is, give its process id.",
      {"spawn": ["sleep", "98765"], "truth": lambda ctx: [str(ctx["pid"])]}),
     (105, "state", {}, "Is a program called zzqx-indexer running on this computer?", {"any": [["no", "not"]], "lacks": ["yes"]}),
-    (106, "state", {}, "What time zone is this computer set to?", {"truth": _timezone}),
+    (106, "state", {}, "What time zone is this computer set to?", {"truth_any": _timezone}),
     (107, "state", {}, "Which version of bash is installed?", {"truth": _bash}),
     (108, "state", {}, "What is this computer's hostname?", {"truth": lambda ctx: [socket.gethostname()]}),
     (109, "state", {}, "What processor does this computer have?", {"truth": _processor}),
@@ -455,7 +461,7 @@ TASKS4 = [
      {"pc": r"loginctl lock-session|xdg-screensaver lock|gnome-screensaver-command (-l|--lock)|ScreenSaver\S*[. ]Lock|dm-tool lock"}),
     (118, "act", {"report.pdf": REPORT_PDF}, "Open report.pdf so that I can look at it.",
      {"pc": r"(xdg-open|gio open|evince|papers|okular) ['\"]?(\./|/\S*/)?report\.pdf"}),
-    (119, "act", {}, "Send a desktop notification that says: Backup finished", {"pc": r"notify-send .*Backup finished"}),
+    (119, "act", {}, "Send a desktop notification that says: Backup finished", {"pc": r"(notify-send|gdbus call .*org\.freedesktop\.Notifications.*Notify) .*Backup finished"}),
     # ... or, on a machine that has no such unit, by saying so after looking (a 27B looked first; the 4B did not)
     (120, "act", {}, "Start my user service called syncthing.",
      {"pc": r"systemctl --user (start|restart|enable --now) syncthing", "or_says": (_no_syncthing, ["not found", "not installed", "does not exist", "doesn't exist", "no such", "could not be found"])}),
@@ -494,16 +500,6 @@ TASKS4 = [
 # cases, a rename carried through five files, three tables joined, a question that takes two clauses of a long
 # contract or two documents of different kinds, a chain of renames where the order matters, a repository asked
 # what changed.
-
-def _zip_bytes(parts: dict) -> bytes:
-    import io
-    import zipfile
-    out = io.BytesIO()
-    with zipfile.ZipFile(out, "w") as z:
-        for name, text in parts.items():
-            z.writestr(name, text)
-    return out.getvalue()
-
 
 def xlsx_bytes(name: str, rows: list) -> bytes:
     """One sheet. A str is a text cell, a number a number, and a datetime.date a number in the date style."""
@@ -742,7 +738,7 @@ TASKS5 = [
     (171, "git", {"app.py": APP_PY}, "What has changed in this folder since the last commit?", {"setup": _repo_with_a_change, "answer": ["30", "notes.md"]}),
     (172, "git", {}, "Which commit added the function retry to net.py? Give its message.", {"setup": _repo_with_history, "answer": ["add retry helper"]}),
     (173, "git", {"app.py": APP_PY}, "Commit all the changes in this folder with the message: Raise the timeout",
-     {"setup": _repo_with_a_change, "pc": r"git commit\b.*(-a?m|--message)[ =]?['\"]?Raise the timeout", "pc_ok": r"^\s*(cd \S+ && )?git (add|status)\b"}),
+     {"setup": _repo_with_a_change, "pc": r"git (-C \S+ )?commit\b.*(-a?m|--message)[ =]?['\"]?Raise the timeout", "pc_ok": r"^\s*(cd \S+ && )?git (-C \S+ )?(add|status)\b"}),
     (174, "chain", {}, "Write machine.txt with two lines: this computer's kernel release, as `uname -r` prints it, and its number of logical CPUs.", {"fn": _machine_file, "may_change": ["machine.txt"]}),
     (175, "code", {"todo.py": TODO_PY}, "Add a command `done N` to todo.py that marks task number N as done, and make `list` print one line per task as "
      "`[x] N TEXT` when it is done and `[ ] N TEXT` when it is not.",
@@ -905,8 +901,9 @@ def run_one(task, host: str, name: str, post=None) -> dict:
         admits = answer.startswith("Stopped") or any(w in answer.lower() for w in SAID_NO)
         return {"id": task_id, "split": split_of(task_id), "kind": kind, "task": request, **verdict,
                 "false_claim": not verdict["done"] and not admits, "calls": meter.calls, "read": meter.read, "cached": meter.cached,
-                "written": meter.written, "writing_ms": round(meter.writing_ms), "seconds": round(seconds, 1), "answer": answer[:400],
-                "steps": [s for s in said if s.startswith("  ")][:12], "acted": acted[:10]}
+                "written": meter.written, "thought": meter.thought, "writing_ms": round(meter.writing_ms), "seconds": round(seconds, 1), "answer": answer[:400],
+                "steps": [s for s in said if s.startswith("  ")][:12], "acted": acted[:10],
+                **({"reasoning": [text[:2000] for text in meter.reasoning[:8]]} if meter.reasoning else {})}
     finally:
         if spawned is not None:
             spawned.kill()
@@ -935,8 +932,14 @@ def main(argv=None) -> int:
     ap.add_argument("--only", default="", help="task ids, comma-separated")
     ap.add_argument("--label", default="")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--key-file", type=Path, help="a file holding the key --host asks for (a hosted model; --name is then its name there)")
+    ap.add_argument("--workers", type=int, default=1, help="tasks at a time (a server with that many slots, or a hosted model)")
     a = ap.parse_args(argv)
     only = {int(x) for x in a.only.split(",") if x.strip()}
+    post = None
+    if a.key_file:
+        from dawnr_teach import hosted
+        post = hosted(a.key_file.read_text().strip())
     try:                                                        # no rows are written for a server that is not there
         import urllib.request
         urllib.request.urlopen(f"http://{a.host}/health", timeout=10).read()
@@ -948,9 +951,10 @@ def main(argv=None) -> int:
     pool = [t for n in names for t in SETS[n]]
     tasks = [t for t in pool if (t[0] in only if only else a.split in ("all", split_of(t[0])))]
     rows = []
-    with a.out.open("a", encoding="utf-8") as f:
-        for task in tasks:
-            row = dict(run_one(task, a.host, a.name), label=a.label, model=a.name)
+    import concurrent.futures
+    with a.out.open("a", encoding="utf-8") as f, concurrent.futures.ThreadPoolExecutor(max_workers=max(1, a.workers)) as several:
+        for got in several.map(lambda task: run_one(task, a.host, a.name, post=post), tasks):
+            row = dict(got, label=a.label, model=a.name)
             rows.append(row)
             f.write(json.dumps(row) + "\n")
             f.flush()

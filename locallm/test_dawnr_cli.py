@@ -603,3 +603,88 @@ def test_online_a_search_needs_no_account_each_call_is_asked_for_and_a_files_tex
     offline = cli.build_agent(cli.default_config(tmp_path / "work"))[0]
     with offline:
         assert "web_search" not in offline.visible_names()
+
+
+def a_dry_run_of(line):
+    step = type("Step", (), {"tool": "sh", "arguments": {"command": line}})()
+    return type("Dry", (), {"views": [type("View", (), {"step": step, "preview": type("Preview", (), {"writes": {}})()})()]})()
+
+
+def test_a_lost_file_that_a_later_step_moves_on_is_a_mistake_in_the_order_and_a_plain_loss_is_the_requests_to_decide(monkeypatch):
+    chain = a_dry_run_of("cd . && mv a.txt b.txt && mv b.txt c.txt && mv c.txt d.txt")
+    assert cli.reused(chain, ["here/b.txt", "here/c.txt"]) == ["here/b.txt", "here/c.txt"]
+    assert cli.reused(a_dry_run_of("cp left.md right.md && cp right.md left.md"), ["here/right.md"]) == ["here/right.md"]
+    # the oldest log goes and is not named again; drafts are removed; a file replaced and then only read
+    assert cli.reused(a_dry_run_of("mv app.log.1 app.log.2 && mv app.log app.log.1 && touch app.log"), ["here/app.log.2"]) == []
+    assert cli.reused(a_dry_run_of("rm draft1.txt draft2.txt"), ["here/draft1.txt", "here/draft2.txt"]) == []
+    assert cli.reused(a_dry_run_of("cp new.cfg app.cfg && cat app.cfg"), ["here/app.cfg"]) == []
+    # what the model hears: the mistake is called one and given its way out, whatever words the request has ...
+    monkeypatch.setattr(cli, "losses", lambda agent, dry: ["here/b.txt", "here/c.txt"])
+    heard = cli.second_look(None, chain, "Remove the old drafts, then rename the files as map.csv says.")
+    assert heard.startswith("Nothing has run: the steps are in an order that destroys what here/b.txt, here/c.txt hold now and then uses them.")
+    assert "start with the move whose new name is free" in heard and "send exactly" not in heard and "held back" not in heard
+    # ... a plain loss is put both ways, and with a word for removing in the request nothing is said at all
+    monkeypatch.setattr(cli, "losses", lambda agent, dry: ["here/draft.txt"])
+    plain = a_dry_run_of("rm draft.txt")
+    heard = cli.second_look(None, plain, "Keep only final.txt; the draft is not needed any more.")
+    assert heard.startswith("Nothing has run yet. This plan would destroy what here/draft.txt holds now: it would be removed or written over")
+    assert "the plan is right: send exactly the same plan again" in heard and "send a plan that keeps them" in heard
+    assert cli.second_look(None, plain, "Delete draft.txt.") == ""
+
+
+def test_a_turn_is_taken_with_reasoning_on_only_where_the_front_door_says_so(tmp_path):
+    def reasoned(body):
+        return bool((body.get("chat_template_kwargs") or {}).get("enable_thinking"))
+    for name in "abcd":
+        (tmp_path / name).mkdir()
+    missing, there = ("fs_read", {"path": "here/missing.txt"}), ("fs_read", {"path": "here/notes.txt"})
+    # off (the default): a step that failed is followed by an ordinary turn
+    model = Model(turn(missing), turn(text="It is not there."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "a", model)
+    with harness:
+        cli.run_task(agent, planner, meter, "What does missing.txt say?", [], said.append)
+    assert [reasoned(b) for b in model.bodies] == [False, False] and meter.thought == 0
+    # "stuck": the turn after a step that failed is reasoned, with the budget and the family's closing sentence and
+    # room for both; the turn after a step that worked is not
+    model = Model(turn(there), turn(missing), turn(text="The second is not there."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "b", model)
+    (work / "notes.txt").write_text("one\n")
+    planner.think, planner.think_budget = "stuck", 500
+    with harness:
+        cli.run_task(agent, planner, meter, "What do notes.txt and missing.txt say?", [], said.append)
+    assert [reasoned(b) for b in model.bodies] == [False, False, True] and meter.thought == 1 and "1 reasoned" in meter.line()
+    last = model.bodies[-1]
+    assert last["reasoning_budget_tokens"] == 500 and last["reasoning_budget_message"] == cli.THINK_END and last["max_tokens"] == cli.MAX_TOKENS + 500
+    # "answer": a task that changed something has its answering turn taken once more, reasoned, from the same place;
+    # what comes back stands, and may be a call
+    model = Model(turn(("fs_write", {"path": "here/new.txt", "content": "x\n"})), turn(text="Written."), turn(there), turn(text="Written, and the notes say one."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "c", model, answers=["y"])
+    (work / "notes.txt").write_text("one\n")
+    planner.think = "answer"
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Write new.txt.", [], said.append)
+    assert answer == "Written, and the notes say one." and [reasoned(b) for b in model.bodies] == [False, False, True, False]
+    assert model.bodies[2]["messages"] == model.bodies[1]["messages"]                  # the same question, not the first answer handed back
+    # a question that ran and changed nothing is answered as it is
+    model = Model(turn(there), turn(text="One."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path / "d", model)
+    (work / "notes.txt").write_text("one\n")
+    planner.think = "answer"
+    with harness:
+        assert cli.run_task(agent, planner, meter, "What do the notes say?", [], said.append) == "One."
+    assert [reasoned(b) for b in model.bodies] == [False, False]
+
+
+def test_a_command_that_ends_with_an_error_counts_as_stuck_and_one_that_works_does_not(tmp_path):
+    (tmp_path / "work").mkdir()
+    harness, agent = cli.build_agent(cli.default_config(tmp_path / "work", state=tmp_path / "state"),
+                                     plan_approver=cli.plan_approver(lambda prompt: "y", lambda *_: None, yes=True))
+    if agent.shell is None:
+        harness.close()
+        pytest.skip("no sandbox here")
+    model = Model(turn(("sh", {"command": "true"})), turn(("sh", {"command": "python3 -c 'raise SystemExit(3)'"})), turn(text="It ends with 3."))
+    meter = cli.Meter(model)
+    planner = cli.Planner(harness, agent, "nowhere:1", "base", post=meter, look_first=False, think="stuck")
+    with harness:
+        cli.run_task(agent, planner, meter, "Run the two.", [], lambda *_: None)
+    assert [bool(b.get("chat_template_kwargs")) for b in model.bodies] == [False, False, True]

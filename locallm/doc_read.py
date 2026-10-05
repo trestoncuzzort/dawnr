@@ -7,12 +7,18 @@ why it cannot be read (2026-10-05).
 Text in any encoding that can be proved, saved web pages, Word documents and EPUB books are read by
 locallm/ingest.py (read_any: it either decodes a file properly or refuses in a sentence; the standard library
 only). A PDF is read with poppler's `pdftotext` when the machine has it: a separate program, in reading order,
-UTF-8, a form feed between pages (pdftotext(1)), so a quote can be shown with its page. A PDF with no text layer
-(a scan) and a machine without pdftotext are each refused with what to do. Layout models and OCR (Docling,
-arXiv:2408.09869) are what a scan or a table needs and are not carried here. Research receipt 30c2874d17c6.
+UTF-8, a form feed between pages (pdftotext(1)), so a quote can be shown with its page. A machine without it (a
+fresh Ubuntu under Windows has none: the reading of 2026-10-05 on an 8 GB laptop refused both of its PDF tasks) reads
+the PDF with PDFium, the engine of Chrome, through pypdfium2 (BSD-3-Clause or Apache-2.0, no dependencies), which
+install.sh unpacks into dawnr's own folder; poppler is GPL and cannot be shipped. A PDF with no text layer (a scan)
+and a machine with neither reader are each refused with what to do. Layout models and OCR (Docling,
+arXiv:2408.09869) are what a scan or a table needs and are not carried here. Research receipts 30c2874d17c6 and
+a691ca890a51.
 
-Reading a PDF runs pdftotext on a file somebody else wrote, with a time limit and nothing else; that is the risk of
-opening the file in a viewer built on the same library, and no more.
+Reading a PDF runs pdftotext, or PDFium in a child process of its own, on a file somebody else wrote, with a time
+limit and nothing else; that is the risk of opening the file in a viewer built on the same library, and no more.
+pdftotext stays the first reader where both are there: every published reading used it, and the two have not been
+compared on the quoting panel yet.
 
 Spreadsheets, slides, OpenDocument files and saved emails (2026-10-05) are read here with the standard library
 only, each the way its own format says:
@@ -38,6 +44,7 @@ from __future__ import annotations
 import datetime
 import email
 import email.policy
+import os
 import re
 import shutil
 import subprocess
@@ -59,17 +66,48 @@ class Unreadable(Exception):
     """The document cannot be read as text; the message says why and what to do."""
 
 
+# PDFium in a child: a page's text by get_text_bounded(errors="strict") (the other call is UCS-2 only, and both
+# default to dropping what they cannot decode, which ingest.py bans), pages joined by a form feed as pdftotext does
+PDFIUM = r"""
+import sys
+import pypdfium2
+pdf = pypdfium2.PdfDocument(sys.argv[1])
+pages = []
+for i in range(len(pdf)):
+    text = pdf[i].get_textpage().get_text_bounded(errors="strict")
+    pages.append(text.replace("\f", " ").replace("\r\n", "\n").replace("\r", "\n"))
+sys.stdout.buffer.write("\f".join(pages).encode("utf-8"))
+"""
+
+
+def pylib() -> str:
+    """Where install.sh unpacks the Python packages dawnr carries itself (today: pypdfium2)."""
+    return str(Path(os.environ.get("DAWNR_HOME") or Path.home() / ".local" / "share" / "dawnr") / "pylib")
+
+
+def _run(argv: list, path: Path, who: str, env: dict | None = None) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(argv, capture_output=True, timeout=PDF_SECONDS, stdin=subprocess.DEVNULL, env=env)
+    except subprocess.TimeoutExpired:
+        raise Unreadable(f"“{path.name}” took {who} more than {PDF_SECONDS} s to read") from None
+
+
 def _pdf(path: Path) -> tuple[list[tuple[int | None, str]], str]:
     tool = shutil.which("pdftotext")
-    if tool is None:
-        raise Unreadable(f"“{path.name}” is a PDF, and this machine has no pdftotext to read it with. Install poppler "
-                         f"(Linux: `sudo apt install poppler-utils`; macOS: `brew install poppler`), or save the document as text")
-    try:
-        p = subprocess.run([tool, "-enc", "UTF-8", "-q", str(path), "-"], capture_output=True, timeout=PDF_SECONDS, stdin=subprocess.DEVNULL)
-    except subprocess.TimeoutExpired:
-        raise Unreadable(f"“{path.name}” took pdftotext more than {PDF_SECONDS} s to read") from None
-    if p.returncode != 0:
-        raise Unreadable(f"pdftotext could not read “{path.name}” ({p.stderr.decode('utf-8', 'replace').strip()[:160] or 'no message'})")
+    if tool is not None:
+        p = _run([tool, "-enc", "UTF-8", "-q", str(path), "-"], path, "pdftotext")
+        if p.returncode != 0:
+            raise Unreadable(f"pdftotext could not read “{path.name}” ({p.stderr.decode('utf-8', 'replace').strip()[:160] or 'no message'})")
+    else:
+        env = dict(os.environ, PYTHONPATH=os.pathsep.join(x for x in (pylib(), os.environ.get("PYTHONPATH")) if x))
+        p = _run([sys.executable, "-c", PDFIUM, str(path)], path, "the PDF reader", env)
+        said = p.stderr.decode("utf-8", "replace").strip()
+        if p.returncode != 0 and "No module named 'pypdfium2'" in said:
+            raise Unreadable(f"“{path.name}” is a PDF, and this machine has nothing to read it with. Run dawnr's install.sh again "
+                             f"(it fetches a PDF reader), or install poppler (Linux: `sudo apt install poppler-utils`; macOS: "
+                             f"`brew install poppler`), or save the document as text")
+        if p.returncode != 0:
+            raise Unreadable(f"the PDF reader could not read “{path.name}” ({(said.splitlines() or ['no message'])[-1][:160]})")
     pages = [(n, text) for n, text in enumerate(p.stdout.decode("utf-8", "replace").split("\f"), 1) if text.strip()]
     if sum(len("".join(text.split())) for _n, text in pages) < MIN_PDF_TEXT:
         raise Unreadable(f"“{path.name}” is a PDF with no text in it, most likely a scan; reading one needs character "

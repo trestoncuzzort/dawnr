@@ -337,6 +337,9 @@ case $cmd in
       [ -s "$f" ] && echo "model: $(basename "$f") ($(du -Lh "$f" | cut -f1))" || echo "model: $(basename "$f") MISSING"
     done
     if [ -n "${T_DAFNY:-}" ] && ! out=$("$T_DAFNY" --version 2>&1); then echo "dafny: CANNOT RUN: ${out%%$'\n'*}"; fi
+    if command -v pdftotext >/dev/null; then echo "PDFs: read with pdftotext"
+    elif PYTHONPATH="$DAWNR_HOME/pylib" "$DAWNR_PYTHON" -c 'import pypdfium2; pypdfium2.PdfDocument.new()' >/dev/null 2>&1; then echo "PDFs: read with PDFium (dawnr's own copy)"
+    else echo "PDFs: NO READER (run install.sh again, or install poppler)"; fi
     if why=$(sandbox_check); then
       [ "$(uname -s)" = Linux ] && echo "sandbox: bubblewrap, runs" || echo "sandbox: macOS Seatbelt (sandbox-exec), runs"
     else echo "sandbox: CANNOT RUN: $why"; fi

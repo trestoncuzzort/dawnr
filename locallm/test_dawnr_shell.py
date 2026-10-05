@@ -258,9 +258,10 @@ def test_yes_does_not_answer_for_a_plan_that_loses_a_files_contents(tmp_path):
         # the model's wrong swap: it hears what the plan would lose before anybody is asked, and sends a right one
         cli.run_task(agent, planner, meter, "Swap b.txt and c.txt.", [], said.append)
         heard, again = bodies[3]["messages"][-1]["content"], bodies[4]["messages"][-1]["content"]
-        assert heard.removeprefix(cli.FROM_DAWNR).startswith("After this, what here/b.txt holds now would be in no file: removed, or written over with a copy of another file.")
-        assert "Nothing has run." in heard and "send exactly this again" in heard
-        assert again.removeprefix(cli.FROM_DAWNR).startswith("After this, what here/b.txt holds now would be in no file")       # a copy over it loses it as well
+        # an order that destroys a file and then uses it is called a mistake, with the way out, and no "send it again"
+        assert heard.removeprefix(cli.FROM_DAWNR).startswith("Nothing has run: the steps are in an order that destroys what here/b.txt holds now and then uses it.")
+        assert "each file is moved away before another takes its name" in heard and "send exactly" not in heard
+        assert again.removeprefix(cli.FROM_DAWNR).startswith("Nothing has run: the steps are in an order that destroys what here/b.txt holds now")   # a copy over it loses it as well
         assert asked == [] and (work / "b.txt").read_text() == "alpha\n" and (work / "c.txt").read_text() == "beta\n" and sorted(os.listdir(work)) == ["b.txt", "c.txt"]
         # sent again as it was, it is the person's to answer, and --yes does not answer for them
         cli.run_task(agent, planner, meter, "Swap b.txt and c.txt.", [], said.append)
@@ -321,3 +322,35 @@ def test_a_repository_is_read_in_the_sandbox_and_changed_only_on_itself_through_
             r = harness.call("pc", {"command": line})
             assert r.is_error and "throws away work that is in no commit" in r.text and line in r.text, line
         assert harness.call("pc", {"command": "git push"}).is_error and len(asked) == 1 and (work / "b.py").exists()
+
+
+def test_a_loop_of_moves_that_loses_contents_is_called_an_order_mistake_and_the_right_order_runs(tmp_path):
+    import json
+
+    def turn(command):
+        return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+            {"id": "c", "type": "function", "function": {"name": "sh", "arguments": json.dumps({"command": command})}}]}}]}
+    upwards = 'for n in 2 3 4; do mv "part-0$n.txt" "part-0$((n + 1)).txt"; done'
+    downwards = 'for n in 4 3 2; do mv "part-0$n.txt" "part-0$((n + 1)).txt"; done'
+    replies = [turn(upwards), turn(downwards), {"choices": [{"message": {"content": "Made room."}}]}]
+    bodies = []
+    work = tmp_path / "work"
+    work.mkdir()
+    for n in (1, 2, 3, 4):
+        (work / f"part-0{n}.txt").write_text(f"part {n}\n")
+    said, asked = [], []
+    approve = cli.plan_approver(lambda prompt: asked.append(prompt) or "n", said.append, yes=True)
+    harness, agent = cli.build_agent(cli.default_config(work, state=tmp_path / "state"), plan_approver=approve)
+    if agent.shell is None:
+        harness.close()
+        pytest.skip("no overlay sandbox here")
+    approve.agent = agent
+    with harness:
+        meter = cli.Meter(lambda url, body, timeout=0: bodies.append(body) or replies.pop(0))
+        planner = cli.Planner(harness, agent, "x:1", "base", post=meter, look_first=False)
+        cli.run_task(agent, planner, meter, "A new part 2 is coming: rename part-02.txt and every later one so that each number goes up by one.", [], said.append)
+    heard = bodies[1]["messages"][-1]["content"].removeprefix(cli.FROM_DAWNR)
+    # no word of the line says rm, and two files' contents would be gone: written over by a move, then moved on
+    assert heard.startswith("Nothing has run: the steps are in an order that destroys what here/part-03.txt, here/part-04.txt hold now and then uses them.")
+    assert asked == [] and sorted(p.name for p in work.iterdir()) == ["part-01.txt", "part-03.txt", "part-04.txt", "part-05.txt"]
+    assert [(work / f"part-0{n}.txt").read_text() for n in (3, 4, 5)] == ["part 2\n", "part 3\n", "part 4\n"]
