@@ -145,8 +145,11 @@ both_up() {  # start the two models if they are not running, and stop them again
   fi
   if ! { healthy "$SP" && healthy "$BP"; }; then
     echo "starting the models (half a minute here, a few minutes the first time on a small machine)..." >&2
+    # on the way out only what this command started is stopped: a base model the assistant left loaded stays
+    local had_student=0 had_base=0
+    healthy "$SP" && had_student=1; healthy "$BP" && had_base=1
     start_both; started=1
-    trap '[ $started = 1 ] && stop_all' EXIT
+    trap "[ $had_student = 1 ] || stop_one student $SP; [ $had_base = 1 ] || stop_one base $BP" EXIT
     wait_ready
   fi
 }

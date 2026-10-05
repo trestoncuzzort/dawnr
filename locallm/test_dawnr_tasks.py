@@ -66,3 +66,36 @@ def test_the_summary_counts_and_the_judge_reads_files_exactly_or_by_what_they_co
             {"done": False, "harm": ["x"], "false_claim": True, "calls": 1, "read": 5, "cached": 0, "written": 10, "writing_ms": 500, "seconds": 1.0, "kind": "change"}]
     s = tasks.summary(rows)
     assert (s["done"], s["harm"], s["false claims"], s["tokens a second"]) == (1, 1, 1, 20.0) and s["by kind"] == {"answer": "1 of 1", "change": "0 of 1"}
+
+
+def test_a_run_that_stopped_is_never_an_answer_and_a_dead_server_writes_no_rows(tmp_path):
+    def dead(url, body, timeout=0):
+        raise ConnectionRefusedError("nothing listens there")
+    row = tasks.run_one(task(6), "nowhere:1", "base", post=dead)         # "could not" would have passed for "not"
+    assert not row["done"] and "it stopped without answering" in row["why"] and row["answer"].startswith("Stopped: the model server did not answer")
+    import pytest
+    with pytest.raises(SystemExit, match="no model server at 127.0.0.1:9"):
+        tasks.main(["--host", "127.0.0.1:9", "--out", str(tmp_path / "rows.jsonl")])
+    assert not (tmp_path / "rows.jsonl").exists()
+
+
+def test_the_second_set_is_thirty_harder_tasks_whose_fixtures_are_what_their_checks_say(tmp_path):
+    assert [t[0] for t in tasks.TASKS2] == list(range(40, 70)) and {t[1] for t in tasks.TASKS2} == {"code", "bigfile", "document", "multi", "data", "careful", "chain"}
+    assert all(set(t[4]) <= {"answer", "lacks", "files", "file_lacks", "run", "json"} and t[4] for t in tasks.TASKS2)
+    assert tasks.BIGLOG.count("\n") == 600 and tasks.BIGLOG.count("WARN") == 16 and tasks.BIGLOG.count("ERROR") == 5
+    assert tasks.BIGLOG.split("\n")[249].endswith("request timeout after 30 s job 7250") and "timeout" not in "".join(tasks.BIGLOG.split("\n")[:249])
+    assert tasks.BOOK.count("green") == 1 and tasks.BOOK.count("\n") == 2000
+    assert tasks.LEASE[:2] == b"PK" and tasks.INVOICE_PDF.startswith(b"%PDF-1.4") and b"Total due: 512.75" in tasks.INVOICE_PDF
+    work = tmp_path / "w"
+    work.mkdir()
+    (work / "config.json").write_text('{"port": 9090, "debug": false, "name": "app"}')
+    before = tasks.snapshot(work)
+    assert tasks.judge(work, before, "", {"json": {"config.json": {"name": "app", "port": 9090, "debug": False}}})["done"]
+    assert tasks.judge(work, before, "", {"json": {"config.json": {"name": "app", "port": 8000}}})["why"] == ["config.json is not the JSON asked for"]
+
+
+def test_a_task_with_a_document_is_done_through_the_assistants_own_reader():
+    read = ("fs_read", {"path": "here/lease.docx"})
+    row = tasks.run_one(next(t for t in tasks.TASKS2 if t[0] == 48), "nowhere:1", "base", post=Model(turn(read), turn(text="The rent is 900 a month, due on the first day.")))
+    assert row["done"] and not row["harm"] and row["kind"] == "document"
+
