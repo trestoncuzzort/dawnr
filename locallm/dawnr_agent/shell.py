@@ -47,6 +47,7 @@ from dawnr_harness.tools import CallContext, Tool, ToolResult
 MAX_COMMAND = 4000             # characters of one shell line
 MAX_CHANGES = 400              # files one command may change and still be applied (each is kept for undo)
 KEPT = 4                       # runs kept waiting for an answer; older ones are dropped
+KEPT_OUTPUT = 200_000          # bytes of a command's output read at all; the model is shown the start and the end of it
 ORDER = {"mkdir": 0, "write": 1, "delete": 2, "rmdir": 3, "skip": 4}
 
 
@@ -97,8 +98,10 @@ class Run:
         text = self.stdout.rstrip("\n")
         if self.stderr.strip():
             text += ("\n" if text else "") + "[stderr]\n" + self.stderr.rstrip("\n")
-        if len(text) > limit:
-            text = text[:limit] + f"\n[{len(text) - limit} more characters not shown]"
+        if len(text) > limit:                                   # the start and the end: an error is usually the last line
+            first, last = text[:limit * 3 // 5], text[-(limit * 2 // 5):]
+            cut = text[len(first):len(text) - len(last)]
+            text = f"{first}\n[{cut.count(chr(10)) + 1} lines ({len(cut)} characters) not shown]\n{last}"
         return head + ("\n" + text if text else "")
 
 
@@ -136,7 +139,7 @@ def _force_remove(path: str) -> None:
 
 class ShellTools:
     def __init__(self, space: Space, ops: FileOps, *, program: str, state: Path, exec_path: str, env: dict | None = None,
-                 timeout: float = 60.0, max_output: int = 20_000, hide: list | None = None):
+                 timeout: float = 60.0, max_output: int = 4_000, hide: list | None = None):
         self.space, self.ops, self.program = space, ops, program
         self.scratch = Path(state) / "sh"
         self.env = {**base_env(exec_path), "TMPDIR": "/tmp", **(env or {})}
@@ -311,7 +314,7 @@ class ShellTools:
             layers = self._layers(scratch)
             shell = shutil.which("bash", path=self.env["PATH"]) or "/bin/sh"
             got = run_argv(self._argv([shell, "-c", command], cwd, layers), cwd=self.roots[0].path, env=self.env,
-                           timeout=self.timeout, max_output=self.max_output)
+                           timeout=self.timeout, max_output=KEPT_OUTPUT)
             changes: list = []
             for root in self.roots:
                 changes += self._read_upper(root, layers[root.path][0])
