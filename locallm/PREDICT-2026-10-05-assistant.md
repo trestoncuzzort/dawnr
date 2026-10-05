@@ -572,3 +572,120 @@ either the machine's (a program the bare Ubuntu image lacks, a fact about the co
 way under WSL) or the arithmetic's (another card, another order of sums, another token at a close call); which
 one is said per task. G3 fails: published with the case. G4 or G5 fails: said with the numbers, and the settings
 that cost the speed are looked for before anything else is built.
+
+## Outcome of G1 to G5, 2026-10-05 21:23Z (commit 693edaeb, the laptop's 8 GB card)
+
+| | bar | read |
+|---|---|---:|
+| G1, sets one to four, of 135 | at least 125 | **117** |
+| G2, the fifth set, of 26 | at least 16 | **18** |
+| G3, tasks with a file touched without reason or a line let through unasked | at most 1 | **2** |
+| G4, tokens a second written | at least 60 | **64.9** |
+| G5, half the tasks under 20 s; the whole run under 90 minutes | | **2.9 s; 12.5 minutes** |
+
+G1 and G3 fail; G2, G4 and G5 hold. The whole 161 took 602 model calls, 1.59 million tokens read (1.41 million of
+them from the server's cache), 34,888 written and 728 seconds of the model's time: an ordinary laptop does a task
+of this kind in about three seconds.
+
+Twenty-one tasks came out differently from the 48 GB card's reading, 17 not done here that were done there and 4
+the other way. Read one by one, as registered:
+
+- **The machine's, nine.** Seven of the ten tasks that act on a desktop (set the volume, mute, lock the screen,
+  open a PDF, send a notification, turn Wi-Fi off, empty the trash): the lines the model wrote are a Linux
+  desktop's (`wpctl`, `loginctl`, `xdg-open`, `notify-send`, `nmcli`, `gio`), the bare Ubuntu image under Windows
+  has none of those programs, and the measurement answers "command not found" as that machine would. Under WSL the
+  desktop is Windows, and dawnr has no lines for it yet: on this machine it cannot do what the README says it
+  does on a desktop. And the two PDF tasks: the image has no `pdftotext`. The model said so, tried `sudo apt install
+  poppler-utils`, was refused that, and handed the line to the person, which is the right behaviour and leaves a
+  person without their answer.
+- **The judge's, three** (two of them G3's whole count). The time zone was answered `America/Los_Angeles` and
+  refused for lacking "Los Angeles". The commit was sent as `git -C FOLDER commit -m "Raise the timeout"`, the
+  right line, which the pattern for a commit did not take and so counted as a line nobody asked for. The
+  notification, with no `notify-send` on the machine, was sent through `gdbus` to the desktop's own notification
+  service: a right way to do it, counted as a line nobody asked for. All three judges are corrected; the registered
+  counts stand.
+- **The arithmetic's, six against and four for.** The same file, the same settings and temperature 0 on another
+  card give another token at a close call, and the task goes another way: a count taken over all lines instead of
+  the ERROR ones, an index written without its dashes, a third file edited that was not a Python file, a to-do
+  program run once instead of three times; and, the other way, the cache test and the whitespace task done here
+  that the card missed. No file was lost in any of them.
+
+On the card's footing (the programs there, the three judges right) this reading is 131 of 135 and 19 of 26. What
+it is on the machine as it stands is 117 and 18, and the difference is the product's to close, not the model's:
+
+- **PDFs without poppler.** `doc_read` now reads a PDF with PDFium (pypdfium2, BSD-3-Clause or Apache-2.0, a
+  3.8 MB wheel with no dependencies) where a machine has no `pdftotext`; `install.sh` fetches the platform's wheel
+  by its SHA-256 and unpacks it without pip. On the three PDFs of the task sets the two readers give the same
+  text; on ten papers and a tax form, the same pages, word counts within 2%, 96% of the vocabulary in common and
+  93% agreement in word order at the median (two-column pages are read in another order), 0.11 s a document
+  against 0.07. `pdftotext` stays the first reader where it is installed: the published readings used it.
+- **A desktop under Windows.** Not built yet: the lines for Windows through WSL's interop (`explorer.exe`,
+  `powershell.exe`, `clip.exe`) are the next thing the `recipes` table needs.
+
+What a single reading is worth, learned here: ten tasks in 161 changed hands between two machines for no reason
+but the arithmetic. A difference of two or three tasks between two builds on one run of these sets is not a
+finding; the factory's fresh tasks, in the hundreds, are what a comparison is read on from now.
+
+## After G (2026-10-05 22:30Z; development, no prediction)
+
+**A warning the model misread.** The fifth set's chain of renames (`mv a.txt b.txt && mv b.txt c.txt && mv c.txt
+d.txt`) was sent back by the second look and sent again unchanged, by the 4B and by larger ones. With the 4B's
+reasoning switched on for that one turn (below), what it made of the warning could be read: "the previous command
+didn't execute ... let me try again". The sentence "Nothing has run. If that is what was asked for, send exactly
+this again" had been taken for a failed run. Seven small cases were then written (three renames that must keep
+every file, a swap by `cp`, and three where losing the contents is what was asked: drafts not needed, a log
+rotation whose oldest file goes, a build's leftovers): under the old wording the 4B got none of the seven, and in
+the three where the loss was asked for it answered that the files had been removed with nothing run. The warning
+is now two, told apart by what the dry run shows and not by the model:
+
+- a file destroyed and then used again by a later move or copy of the same line, or a line that only moves and
+  still leaves contents in no file (a loop of `mv` upwards): that is a mistake in the order whatever the request
+  says, it is called one, and the way out is given (each file moved away before another takes its name, or a spare
+  name);
+- any other loss, when the request has no word for removing: both readings are put, the plan is right if the
+  contents are meant to go, a plan that keeps them otherwise.
+
+Seven of seven with the 4B, no reasoning, four to five seconds each on a CPU. In the loop the chain task is done,
+and the 35B, which had sent a destroying loop twice for "make room for a new chapter 2", does four of four.
+
+**Reasoning, a turn at a time.** Every reading so far ran with the driver's reasoning off. The family's own report
+gives the 4B 54.2 against 21.3 on fresh coding problems with it on (arXiv:2505.09388, tables 17 and 18), and the
+server takes it per request with a budget. Tried on nine tasks of the sets (the 4B's seven misses on the longer
+work, a swap and a rotation; the laptop's card; all seen, so development only):
+
+| reasoning | done of 9 | model calls | tokens written | seconds |
+|---|---:|---:|---:|---:|
+| off | 4 | 58 | 6,806 | 119 |
+| on for the turn after a failed run or a plan sent back (budget 800) | 4 | 64 | 13,399 | 251 |
+| that, and the answering turn taken once more with it on | 4 | 63 | 9,703 | 188 |
+| on every turn, budget 3,000 (five tasks) | 1 of 5 | | | |
+
+Nothing gained for twice the tokens; the switch stays in the front door, off (`DAWNR_THINK`). What the reasoning
+is good for is reading: it shows what the model believed. On the count per weekday it had the right total ("5
+dates, totaling 45 visits on Wednesday") and answered with the per-day figure; on the option it wrote `HELLO
+World` for "the greeting in capitals", saw it printed and called it verified; on the CSV it noticed its columns
+were swapped and decided that was correct. Those are the model's, and a turn of thinking does not mend them.
+
+**Other drivers through the same front door.** Four open models hosted on Bedrock (flex tier, through the capped
+proxy, a second or so a call), all 161 tasks, six at a time; and the local ones on one 48 GB card earlier today:
+
+| driver | licence | done of 161 | tasks with harm counted | cost of the run |
+|---|---|---:|---:|---:|
+| GLM-5 (hosted) | MIT | 159 | 1 | $0.6 |
+| Qwen3.6-35B-A3B (local, 22 GB) | Apache-2.0 | 158 | 0 | |
+| Qwen3-Coder-Next (hosted) | Apache-2.0 | 157 | 2 | $0.4 |
+| Qwen3.5-27B (local, 17 GB) | Apache-2.0 | 157 | 0 | |
+| Qwen3.5-9B (local) | Apache-2.0 | 152 | 1 | |
+| Qwen3.5-4B (local, 2.8 GB; the default) | Apache-2.0 | 148 | 0 | |
+| DeepSeek-V3.2 (hosted) | MIT | 148 | 4 | $0.6 |
+| Qwen3-235B-2507 (hosted) | Apache-2.0 | 141 | 5 | $0.2 |
+
+The largest model is the worst of the eight, and the 4B on a laptop ties a hosted model many times its size: size
+is not what this front door rewards, a recent model trained on tool use is. The two best hosted ones are the teachers of the
+run below; dawnr itself stays offline.
+
+**A CPU build that writes nonsense in a batch.** llama.cpp b11342's CPU build, serving the 35B (3B active per
+token) to several conversations at once, writes garbage ("3333...", unrelated Chinese) the moment two share a
+batch, and is right again alone. One conversation a server, several servers each on its own cores, is the way
+round; `dawnr_teach.py --host A,B,C` gives each worker its own server. The product serves one conversation at a
+time and is not touched by it.

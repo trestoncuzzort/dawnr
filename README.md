@@ -216,6 +216,20 @@ its weights per token) finished as soon as the 4B by needing fewer turns. The
 default stays the 4B, 2.8 GB, because it is what an ordinary machine holds; a
 machine with 24 GB for the model does longer work better with the 35B.
 
+On an ordinary laptop (an 8 GB card, Windows with Ubuntu under WSL2), all 161
+tasks took 12.5 minutes: about three seconds a task, 65 tokens a second, 135
+done. That reading was registered first and missed its bar on the first four
+sets (117 of 135, where the workstation card read 129), for reasons that are
+the product's and are said plainly: seven tasks that act on a desktop had
+nothing to act with (under WSL the desktop is Windows, and dawnr has no lines
+for it yet), two PDFs could not be read because a fresh Ubuntu has no
+`pdftotext`, and three right answers were refused by the judge. The rest is
+arithmetic: the same file on another card writes another token at a close
+call, and ten tasks changed hands between the two machines for no other
+reason. Since that reading the installer brings its own PDF reader (PDFium,
+3.8 MB, used where `pdftotext` is missing), and the three judges are
+corrected.
+
 What went wrong in those readings. One prediction failed: a file was written
 into a folder the request did not name (nothing was overwritten). Twice the
 model "swapped" two files with a command that loses one of them, and the
@@ -223,7 +237,10 @@ measurement's person, who says yes to everything, let it. Once, in a later
 reading, it removed the smaller of two files when asked for the larger and
 reported the larger deleted. `/undo` restores each. Since then: a plan that
 would leave a file's contents in no file goes back to the model with that said
-before you are asked, and `--yes` does not answer for it; an answer that does
+before you are asked, and `--yes` does not answer for it (the first wording of
+that warning was itself misread as "the command did not run, try again"; it now
+says what would be destroyed and why, and calls a wrong order of moves a
+mistake instead of asking); an answer that does
 not name a file the journal says was removed is sent back once; and a command
 line copied word for word from a document reaches you marked as copied. In no
 reading did a line that asks for administrator rights, names a key or reaches
@@ -334,8 +351,9 @@ dawnr extract invoice.txt --field "total(number): the amount due" --field "due(d
 ```
 
 The files can be plain text in any common encoding, Word documents, saved
-web pages or PDFs (read with `pdftotext` when your machine has it; a quote
-from a PDF is shown with its page), in any script: sentences are found by
+web pages or PDFs (read with `pdftotext` when your machine has it and with
+dawnr's own copy of PDFium when it does not; a quote from a PDF is shown with
+its page), in any script: sentences are found by
 Unicode's rules, so a Chinese, Arabic or Hindi document is read sentence by
 sentence, and an amount written `1.250,00` is read as a person there would
 read it. Only English has been measured. `cite` answers in claims that each quote

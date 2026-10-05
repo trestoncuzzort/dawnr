@@ -73,6 +73,22 @@ sum_of() {
     Qwen3.5-4B-Q4_K_M.gguf) echo 00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4;;
     qwen35-4b-mtp-tail.bin) echo e2fe19553cd1620dad236f794b11cbeb251b2c41dd2e2bfd34ec394cc2f03bb7;;
     Qwen3.5-4B-Q4_K_M-mtp.gguf) echo b175c3f45f708f2625189db70426949e02f815e9d1a6877f641144f6df76e612;;
+    # pypdfium2 5.14.0, PyPI's own digests (pypi.org/pypi/pypdfium2/5.14.0/json), read 2026-10-05
+    pypdfium2-5.14.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl) echo 11f281613fa22313d9c7ab89947665e84eccf8ebe40e1198a84a88352305648d;;
+    pypdfium2-5.14.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl) echo f1b696e6901e16f114a2ec6332e5e3f8f5033a901614ead28499ab18ca6024f5;;
+    pypdfium2-5.14.0-py3-none-macosx_13_0_arm64.whl) echo 2de384df66ba55fcaab0775f30f28ec1090af3dfa60276a07821efc96d993118;;
+    pypdfium2-5.14.0-py3-none-macosx_13_0_x86_64.whl) echo e4e203ea9710fd00e5448edb6f1615dc8587035357f75f40b432dde0c33e8da1;;
+  esac
+}
+# The PDF reader for a machine without poppler's pdftotext: PDFium through pypdfium2 (BSD-3-Clause or Apache-2.0, no
+# dependencies; locallm/doc_read.py). Where on PyPI's file host each platform's wheel is, beside its checksum above.
+PDFIUM_HOST=https://files.pythonhosted.org/packages
+pdfium_of() {
+  case $1 in
+    Linux-x86_64) echo 4f/a3/c9cc797fc8bdfb8f37b9b0f8b9d02a5fc196b2015f408d53624cab5b0519/pypdfium2-5.14.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl;;
+    Linux-aarch64|Linux-arm64) echo 92/b4/0c31aa51887cd6cd032191dfe010a6d01ed43cf03204cfbd2184ebe4b715/pypdfium2-5.14.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl;;
+    Darwin-arm64) echo d1/ea/14673bc9d8b7beeaa1eb46e9951b22543edaf2a4676c586e3b1e032ff6ee/pypdfium2-5.14.0-py3-none-macosx_13_0_arm64.whl;;
+    Darwin-x86_64) echo a6/11/b720097b01fa0874854f2f6669cbea4e4ea4e075769687714fac64d68964/pypdfium2-5.14.0-py3-none-macosx_13_0_x86_64.whl;;
   esac
 }
 
@@ -226,6 +242,22 @@ if [ "$DAFNY" = 1 ]; then
     NOTE=""; [ -z "$INVARIANT" ] || NOTE=" (no ICU library here, so it runs in the .NET invariant mode)"
     echo "  dafny ${V%%$'\n'*}$NOTE"
   fi
+fi
+
+say "The PDF reader"
+# A wheel is a zip, so Python unpacks it and no pip is needed (a fresh Ubuntu has none). A machine that cannot have
+# it (no download, an older macOS, a C library other than glibc) still reads PDFs where pdftotext is installed.
+PDFIUM_AT=$(pdfium_of "$OS-$ARCH"); PDFIUM_WHL=${PDFIUM_AT##*/}
+pdfium_runs() { PYTHONPATH="$DAWNR_HOME/pylib" "$PY" -c 'import pypdfium2; pypdfium2.PdfDocument.new()' >/dev/null 2>&1; }
+if pdfium_runs; then
+  echo "  have the PDF reader"
+elif [ -n "$PDFIUM_AT" ] && fetch "$PDFIUM_HOST/$PDFIUM_AT" "$DAWNR_HOME/downloads/$PDFIUM_WHL" "$(sum_of "$PDFIUM_WHL")"; then
+  rm -rf "$DAWNR_HOME/pylib.tmp"; mkdir -p "$DAWNR_HOME/pylib.tmp"
+  "$PY" -m zipfile -e "$DAWNR_HOME/downloads/$PDFIUM_WHL" "$DAWNR_HOME/pylib.tmp" && rm -rf "$DAWNR_HOME/pylib" && mv "$DAWNR_HOME/pylib.tmp" "$DAWNR_HOME/pylib"
+  if pdfium_runs; then echo "  PDFium ready"
+  else echo "  note: the PDF reader does not run on this machine; PDFs are read where pdftotext is installed (poppler)"; fi
+else
+  echo "  note: no PDF reader was fetched; PDFs are read where pdftotext is installed (poppler)"
 fi
 
 say "The dawnr command"

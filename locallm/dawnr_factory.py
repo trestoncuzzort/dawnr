@@ -326,9 +326,11 @@ def selfcheck(task: dict, tmp: Path, shell_for=None) -> list:
         else:
             (work / rel).parent.mkdir(parents=True, exist_ok=True)
             (work / rel).write_bytes(text if isinstance(text, bytes) else text.encode("utf-8"))
-    for parent in sorted({p.parent for p in work.rglob("*")}, key=lambda p: -len(p.parts)):     # folders a move left empty
-        if parent != work and parent.is_dir() and not any(parent.iterdir()) and task["solution"].get("prune", True):
-            parent.rmdir()
+    # folders a move left empty, deepest first. (The first version looked only at the parents of what was still on
+    # disk, and an emptied folder is nothing's parent: no folder was ever removed.)
+    for folder in sorted((p for p in work.rglob("*") if p.is_dir() and not p.is_symlink()), key=lambda p: -len(p.parts)):
+        if not any(folder.iterdir()) and task["solution"].get("prune", True):
+            folder.rmdir()
     if shell is not None:
         from dawnr_agent.shell import _force_remove
         for run in list(shell.runs.values()):

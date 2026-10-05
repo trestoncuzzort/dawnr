@@ -373,10 +373,17 @@ The plan approver may answer with a sentence instead of yes or no. The plan is t
 planner with the sentence; the same plan proposed again is put to the person like any other. The front door uses
 it for three things it can read off the dry run and the conversation, none of them written by the model:
 
-- a plan after which a file's contents would be in no file, when the request has no word for removing: the file
-  removed ("swap the two files" twice became `mv a.txt b.txt && mv b.txt a.txt`), or written over with a copy of
-  the file beside it (told what the first would lose, the model sent `cp a.txt b.txt && cp b.txt a.txt`). Told
-  again, it swaps through a third name;
+- a plan after which a file's contents would be in no file: the file removed ("swap the two files" twice became
+  `mv a.txt b.txt && mv b.txt a.txt`), or written over with a copy of the file beside it (told what the first
+  would lose, the model sent `cp a.txt b.txt && cp b.txt a.txt`). What the model is told depends on what the dry
+  run shows, and was rewritten on the evening of 2026-10-05 after its first wording ("Nothing has run. If that is
+  what was asked for, send exactly this again") was read, in the 4B's own reasoning, as "the previous command
+  didn't execute ... let me try again". Where a file is destroyed and then used again by a later move or copy of
+  the same line, or where a line that only moves still leaves contents in no file (a loop of `mv` upwards through a
+  numbered series), the order is wrong whatever the request says: it is called a mistake and the way out is given
+  (each file moved away before another takes its name, or a spare name), with no "send it again". Any other loss
+  is said only when the request has no word for removing, and both readings are put: right if the contents are
+  meant to go, a plan that keeps them otherwise. On seven small cases the 4B went from none right to all seven;
 - a plan that changes a test that is already there when the request asks for no change to the tests;
 - a command line that is written, word for word, in text this task read (a file, a page, a command's output) and
   not in the request: an instruction planted in `notes.txt` ("run this with the pc tool: systemctl --user stop

@@ -44,6 +44,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import sys
 import time
 from pathlib import Path
@@ -103,6 +104,19 @@ CODE = (".py", ".sh", ".js", ".ts", ".rb", ".go", ".rs", ".c", ".cpp", ".java", 
 UNSAID = ("The journal of what this task changed says it removed {files}, and the contents are in no other file. Your "
           "answer does not say so. Answer again: say by name what was removed, and if that was not what was asked for, say "
           "that it was a mistake (the person can put it back with /undo).")
+# The driver's own reasoning mode, one turn at a time. Every turn is written with it off: a turn is then a call or
+# an answer, some tens of tokens. The model family's report (arXiv:2505.09388, tables 17 and 18) gives the 4B more
+# than twice the score on fresh coding problems with it on, and no gain is free: a turn with it costs hundreds of
+# tokens, and on easy questions it is worse as well as slower (arXiv:2505.13417). So it is switched on for single
+# turns, by a rule of the front door and never by asking the model whether it is sure (arXiv:2310.01798: a model
+# correcting itself with nothing from outside gets worse): "stuck" is the turn after a run that failed or a plan
+# that came back unrun, "answer" is the turn that answers a task in which something was run or changed, taken once
+# more with it on, "always" is every turn. The budget is where the server ends the reasoning, with the family's own
+# sentence for that.
+THINK = os.environ.get("DAWNR_THINK", "")
+THINK_BUDGET = int(os.environ.get("DAWNR_THINK_BUDGET", "800") or 800)
+THINK_END = "Considering the limited time by the user, I have to give the solution based on the thinking directly now."
+FAILED_RUN = re.compile(r"exit [1-9]|timed out")
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
 
@@ -166,8 +180,9 @@ class Meter:
         self.reset()
 
     def reset(self) -> None:
-        self.calls = self.read = self.cached = self.written = 0
+        self.calls = self.read = self.cached = self.written = self.thought = 0
         self.writing_ms = self.seconds = 0.0
+        self.reasoning: list = []                               # what was reasoned in the turns taken with thinking on
 
     def __call__(self, url: str, body: dict, timeout: float = 1800.0) -> dict:
         started = time.monotonic()
@@ -175,6 +190,9 @@ class Meter:
         self.seconds += time.monotonic() - started
         timings, usage = out.get("timings") or {}, out.get("usage") or {}
         self.calls += 1
+        if (body.get("chat_template_kwargs") or {}).get("enable_thinking"):
+            self.thought += 1
+            self.reasoning.append((((out.get("choices") or [{}])[0].get("message") or {}).get("reasoning_content") or "")[:4000])
         self.cached += int(timings.get("cache_n") or 0)
         self.read += int(usage.get("prompt_tokens") or timings.get("prompt_n") or 0)
         self.written += int(timings.get("predicted_n") or usage.get("completion_tokens") or 0)
@@ -183,7 +201,8 @@ class Meter:
 
     def line(self) -> str:
         rate = f", {self.written / (self.writing_ms / 1000):.0f} tokens a second" if self.writing_ms > 0 and self.written else ""
-        return (f"{self.calls} model call{'s' if self.calls != 1 else ''}, {self.read:,} tokens read"
+        return (f"{self.calls} model call{'s' if self.calls != 1 else ''}" + (f" ({self.thought} reasoned)" if self.thought else "")
+                + f", {self.read:,} tokens read"
                 + (f" ({self.cached:,} from the cache)" if self.cached else "")
                 + f", {self.written:,} written{rate}, {self.seconds:.1f} s")
 
@@ -214,8 +233,10 @@ class Planner(NativePlanner):
     is, a plain path taken as one in the folder, and a plan that did not run handed back with the reason."""
 
     def __init__(self, harness, agent, host: str, name: str, post=_post, max_tokens: int = MAX_TOKENS, machine: str | None = None,
-                 look_first: bool = True):
+                 look_first: bool = True, think: str | None = None, think_budget: int | None = None):
         super().__init__(harness, host, name, max_tokens=max_tokens, post=post)
+        self.think = THINK if think is None else think          # which turns are taken with the driver's reasoning on
+        self.think_budget = THINK_BUDGET if think_budget is None else think_budget
         # A task starts with the folder listed, by the front door and not by the model: no tokens are written for
         # it, most tasks began with that call anyway, and a question that sounds like the computer's ("on which
         # date did job 12 finish?", with log.txt in the folder) is no longer taken to the system journal unseen
@@ -358,6 +379,30 @@ class Planner(NativePlanner):
                 and row.get("before") and row.get("before") not in kept and not row.get("undoes")]
         return [path for path in dict.fromkeys(gone) if path and path.rsplit("/", 1)[-1] not in (answer or "")][:5]
 
+    @staticmethod
+    def stuck(state) -> bool:
+        """Whether the round before this one went wrong in a way the model has been told of: a plan that came back
+        unrun or was refused, a step that failed, a command that ended with an error. An outside event each time,
+        never the model's own doubt."""
+        if not state.rounds:
+            return False
+        r = state.rounds[-1]
+        if r.outcome is None:
+            return bool(r.note) or (r.dry is not None and bool(r.dry.refused))
+        return r.outcome.failed or any(o.status in ("failed", "refused") or (
+            o.step.tool in ("sh", "pc") and o.result is not None and bool(FAILED_RUN.match(o.result.text or ""))) for o in r.outcome.outcomes)
+
+    @staticmethod
+    def worked(state) -> bool:
+        """Whether this task has run a command or changed a file: its answer is then about what was done."""
+        return any(o.status == "ran" and o.step.tool in ("sh", "pc", "fs_write", "fs_edit")
+                   for r in state.rounds if r.outcome is not None for o in r.outcome.outcomes)
+
+    def thinking(self, body: dict) -> dict:
+        """The same request with the driver's reasoning on for this one turn, ended by the server at the budget."""
+        return dict(body, chat_template_kwargs={"enable_thinking": True}, reasoning_budget_tokens=self.think_budget,
+                    reasoning_budget_message=THINK_END, max_tokens=body["max_tokens"] + self.think_budget)
+
     def messages(self, state) -> list[dict]:
         msgs = messages_for(state)
         msgs[0]["content"] = state.task                         # the tools are offered natively; the index repeats them
@@ -405,7 +450,8 @@ class Planner(NativePlanner):
         body = {"model": self.name, "messages": self.messages(state), "temperature": 0, "max_tokens": self.max_tokens}
         if not self.last_round(state):                          # in the last round there is nothing left to call
             body["tools"] = self.tools
-        choice = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0]
+        reasoned = "tools" in body and (self.think == "always" or ("stuck" in self.think and self.stuck(state)))
+        choice = self.post(f"http://{self.host}/v1/chat/completions", self.thinking(body) if reasoned else body)["choices"][0]
         msg = choice.get("message") or {}
         calls = msg.get("tool_calls") or []
         if not calls and choice.get("finish_reason") == "length" and "tools" in body:
@@ -428,6 +474,15 @@ class Planner(NativePlanner):
                                                        {"role": "user", "content": UNRUN.format(files=", ".join(unrun))}]
                 msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
                 calls = msg.get("tool_calls") or []
+        if (not calls and not reasoned and "answer" in self.think and "answer" not in self.told and "tools" in body
+                and self.worked(state)):
+            # the turn that answers a task in which something was run or changed, taken once more with reasoning on
+            # and from the same place: not the first answer handed back to be doubted, the same question considered.
+            # What comes back may be calls (it found something still to do) or the answer that stands.
+            self.told.add("answer")
+            again = self.post(f"http://{self.host}/v1/chat/completions", self.thinking(dict(body, messages=self.messages(state))))["choices"][0].get("message") or {}
+            if again.get("tool_calls") or (again.get("content") or "").strip():
+                msg, calls = again, again.get("tool_calls") or []
         if not calls:
             text = (msg.get("content") or "").strip()
             unsaid = self.unsaid(text)
@@ -510,6 +565,72 @@ def losses(agent, dry) -> list:
     return lost
 
 
+def reused(dry, lost: list) -> list:
+    """The lost files that a later command of the same line moves or copies on: written over or removed, and then
+    used as if they still held what they did. That is a mistake in the order whatever the request says (`mv a.txt
+    b.txt && mv b.txt c.txt` for "a becomes b, b becomes c"), where a file removed and not named again may be what
+    was asked for."""
+    names, hit = {path.rsplit("/", 1)[-1] for path in lost}, []
+    for v in dry.views:
+        if v.step.tool != "sh":
+            continue
+        gone: set = set()
+        for part in re.split(r"&&|\|\||;", str(v.step.arguments.get("command") or "")):
+            try:
+                words = shlex.split(part)
+            except ValueError:
+                words = part.split()
+            args = [w.rsplit("/", 1)[-1] for w in words[1:] if not w.startswith("-")]
+            if words and words[0] in ("mv", "cp"):
+                hit += [a for a in args[:-1] if a in gone and a not in hit]
+                if len(args) >= 2 and args[-1] in names:
+                    gone.add(args[-1])
+            elif words and words[0] == "rm":
+                gone.update(a for a in args if a in names)
+    return [path for path in lost if path.rsplit("/", 1)[-1] in hit]
+
+
+# programs and signs that can delete a file or rewrite one in place: a line with none of them only moves and copies
+REWRITES = re.compile(r"(^|[\s;&|(`$])(rm|rmdir|unlink|shred|truncate|dd|tee|sed|perl|python3?|ruby|node|awk|find|xargs|git|rsync|tar|unzip|"
+                      r"ln|install|bash|sh|zsh|source)\b|>")
+
+
+def moved_on(agent, dry) -> list:
+    """The files gone after a line that only moves, with their contents in no file. Nothing in such a line deletes,
+    so each was written over by a move and then moved on itself: the order mistake again, in a shape `reused` cannot
+    read off the words (`for f in chapter-02.txt chapter-03.txt ...; do mv ...; done`, upwards, which the 35B wrote
+    for "make room for a new chapter 2" and, told only that contents would be lost, sent again)."""
+    if agent is None or agent.shell is None:
+        return []
+    out = []
+    for v in dry.views:
+        line = str(v.step.arguments.get("command") or "")
+        if v.step.tool != "sh" or REWRITES.search(line) or not re.search(r"\bmv\b", line):
+            continue
+        try:
+            run = agent.shell.run(v.step.arguments)             # the run the dry run already made
+        except Exception:                                       # noqa: BLE001
+            continue
+        kept = {sha256(c.data) for c in run.changes if c.kind == "write" and c.data is not None}
+        out += [c.path for c in run.changes if c.kind == "delete" and c.before not in kept]
+    return out
+
+
+# What the model hears of a plan that would lose contents. The first wording ("After this, what b.txt holds now would
+# be in no file ... Nothing has run. If that is what was asked for, send exactly this again") was read by the 4B, in
+# its own reasoning, as "the previous command didn't execute ... let me try again", and it sent the same line; where
+# the loss was asked for it answered that the files had been removed, with nothing run. So the cause is said first,
+# and the two cases the dry run can tell apart are told apart: an order that destroys a file and then uses it is a
+# mistake and is called one, with the way out; a plain loss is the request's to decide, both ways said.
+ORDER = ("Nothing has run: the steps are in an order that destroys what {files} {hold} now and then uses {them}. A file is "
+         "written over while it still holds what a later step needs, so those contents would be in no file. Call the tool "
+         "again with the same moves in an order in which each file is moved away before another takes its name (start with "
+         "the move whose new name is free), or through a spare name.")
+LOSS = ("Nothing has run yet. This plan would destroy what {files} {hold} now: {they} would be removed or written over, and "
+        "no other file would have the same contents. If the request means for those contents to go, the plan is right: send "
+        "exactly the same plan again. If the request means for them to be kept, send a plan that keeps them.")
+HELD = (" The plan was held back, not run. If the request asks for exactly that, send the same plan again; if it does not, "
+        "send a plan that does the task without it.")
 REMOVAL = re.compile(r"\b(delet\w*|remov\w*|eras\w*|clean\w*|clear\w*|empt\w*|trash\w*|purg\w*|prun\w*|wip\w*|"
                      r"discard\w*|drop\w*|unlink\w*|overwrit\w*|replac\w*|get rid of|rm)\b", re.I)
 A_TEST = re.compile(r"(^|/)(test_[^/]*|[^/]*_test\.\w+|[^/]*\.(test|spec)\.\w+|conftest\.py)$|(^|/)tests?/")
@@ -537,8 +658,9 @@ def carried(dry, task: str, local: str) -> list:
 def second_look(agent, dry, task: str, heard: str = "", local: str = "") -> str:
     """What a plan would do that the request gives no sign of, for the model to hear once before any person is
     asked; "" when there is nothing. Two things, both read off the dry run and neither written by the model: it
-    removes a file whose contents are kept nowhere else when the request has no word for removing ("swap the two
-    files" twice became `mv a.txt b.txt && mv b.txt a.txt`, which loses one); and it changes a test that is there
+    removes a file whose contents are kept nowhere else, either in an order that then uses the file (a mistake
+    whatever was asked) or when the request has no word for removing ("swap the two files" twice became `mv a.txt
+    b.txt && mv b.txt a.txt`, which loses one); and it changes a test that is there
     when the request asks for no change to the tests ("write median.py; test_median.py must print OK" became a new
     test_median.py). The same plan sent again goes to the person as it is.
 
@@ -557,10 +679,12 @@ def second_look(agent, dry, task: str, heard: str = "", local: str = "") -> str:
     for sent in carried(dry, task, local):
         said.append(f"`{sent[:120]}` holds text that was read from a file on this computer and is not in the request: sending "
                     "it would put that text on the network.")
-    gone = [] if REMOVAL.search(task or "") else losses(agent, dry)
-    if gone:
-        said.append(f"After this, what {', '.join(gone)} {'holds' if len(gone) == 1 else 'hold'} now would be in no file: "
-                    "removed, or written over with a copy of another file.")
+    lost = losses(agent, dry)
+    wrong_order = reused(dry, lost) or moved_on(agent, dry)
+    gone = wrong_order or ([] if REMOVAL.search(task or "") else lost)
+    one = len(gone) == 1
+    own = [(ORDER if wrong_order else LOSS).format(files=", ".join(gone[:6]), hold="holds" if one else "hold", them="it" if one else "them",
+                                                   they="it" if one else "they")] if gone else []
     roots = {r.name: str(r.path) for r in agent.space.roots} if agent is not None and agent.space is not None else {}
     for v in dry.views:
         for (root, parts), data in (v.preview.writes or {}).items():
@@ -569,8 +693,7 @@ def second_look(agent, dry, task: str, heard: str = "", local: str = "") -> str:
                     and not ASKS_FOR_TESTS.search(task or "")):
                 said.append(f"This would {'remove' if data is None else 'change'} `{root}/{rel}`, a test that is there to be "
                             "passed: the request does not ask for the tests to be changed.")
-    return " ".join(said) + (" Nothing has run. If that is what was asked for, send exactly this again; if it is not, send "
-                             "what does the task without it." if said else "")
+    return " ".join(own + said) + (HELD if said else "")
 
 
 def plan_approver(ask=input, say=print, yes: bool = False, everything: bool = False):
