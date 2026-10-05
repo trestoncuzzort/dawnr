@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -162,7 +163,14 @@ class Planner(NativePlanner):
             text = text[2:]
         if text in (".", ""):
             return self.roots[0]
-        return text if text.split("/")[0] in self.roots or text.startswith("/") else f"{self.roots[0]}/{text}"
+        parts = text.split("/")
+        # `here/here/a.txt`, seen from the 4B: the folder's name twice. It is the folder's, unless a folder inside
+        # it really has that name
+        while len(parts) > 1 and parts[0] in self.roots and parts[1] == parts[0] and not os.path.lexists(
+                os.path.join(self.paths[parts[0]], parts[0])):
+            parts = parts[1:]
+        text = "/".join(parts)
+        return text if parts[0] in self.roots or text.startswith("/") else f"{self.roots[0]}/{text}"
 
     def messages(self, state) -> list[dict]:
         msgs = messages_for(state)

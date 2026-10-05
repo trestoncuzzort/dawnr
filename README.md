@@ -232,7 +232,11 @@ parameters (`int`, `bool`, `str`, and lists and tuples of them such as
 `list[int]` or `list[tuple[str, int]]`) or give examples with `--test`. What you get is a proved
 twin and the specification to read; that the twin and your Python are the
 same function is tested, not proved, and the output says so. On a desktop
-CPU a ten-line function took one and a half to four and a half minutes.
+CPU a ten-line function took one and a half to four and a half minutes. It is
+not an easier way in than a question: on 111 held-out functions in one run it
+found a proved twin for 9, where `dawnr ask` showed an answer for 7 of the same
+questions ([the record](t/PREDICT-2026-10-05-verify-python.md)). What it adds
+is the comparison with the function you already have.
 
 And for documents rather than code, two commands answer only from your own
 files:

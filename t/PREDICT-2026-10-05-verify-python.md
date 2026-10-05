@@ -131,3 +131,20 @@ What each outcome changes:
 - V5 fails: read the questions `ask` answers and the first route does not, by hand, before changing anything.
 - V6 fails: the specification route is removed (it costs up to twelve model calls a function).
 
+## Outcome of V4 to V6, 2026-10-05 (one run, one lab card, Dafny alone, commit f4d6cef7)
+
+`verify` found a proved twin for **9 of the 111** functions: 8 by asking for whole answers first, 1 (problem 206)
+by the specification route. `ask`, in the same run on the same questions, showed an answer for **7**, all 7 right
+by the reference on drawn inputs. Six problems are in both; `verify` alone reached 106, 206 and 828, `ask` alone
+424.
+
+- **V4 holds on the comparison and fails on the count.** 9 is at least `ask`'s 7, and it is not the 10 that was
+  also asked for. By the rule written beforehand that is a fail.
+- **V5 holds.** The first route alone found 8, against `ask`'s 7.
+- **V6 holds.** One twin came from the specification route, so it stays.
+
+What it changes, as registered for a failing V4: the README does not call `verify` the easier way in. It gives the
+two counts and says what `verify` adds, which is the comparison with the function you already have. Of the 102
+refusals, 88 were for want of a specification that held at the function's own answers and pinned them down, and
+14 for want of a proved body: the same two places `ask` stops.
+

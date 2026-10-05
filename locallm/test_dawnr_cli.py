@@ -132,6 +132,10 @@ def test_a_plain_path_is_one_in_the_folder_and_a_refused_plan_goes_back_with_its
     with harness:
         assert planner.path("notes/a.md") == "here/notes/a.md" and planner.path(str(work / "a.md")) == "here/a.md"
         assert planner.path(".") == "here" and planner.path("here/x") == "here/x" and planner.path(str(work)) == "here"
+        assert planner.path("here/here/a.md") == "here/a.md" and planner.path("here/here") == "here"      # the name said twice
+        (work / "here").mkdir()
+        assert planner.path("here/here/a.md") == "here/here/a.md"                                         # unless it is real
+        (work / "here").rmdir()
         cli.run_task(agent, planner, meter, "Make a to-do list.", [], said.append)
         assert (work / "todo.txt").read_text() == "milk\n" and "[Changed: write here/todo.txt.]" in said
         answer = cli.run_task(agent, planner, meter, "Write to /etc.", [], said.append)
