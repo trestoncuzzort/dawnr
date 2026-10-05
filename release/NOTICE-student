@@ -25,11 +25,19 @@ Verified programs whose specifications the training rows use
   https://github.com/fraunhoferfokus/acsl-by-example
   Verus (examples from its repository). Copyright (c) 2021 The Verus Contributors. MIT License.
   https://github.com/verus-lang/verus
+  Verus-Bench (verus-proof-synthesis), carried by vericoding. Copyright (c) 2024 Microsoft. MIT License.
+  https://github.com/microsoft/verus-proof-synthesis
 
-Rows built from dafny-synthesis programs (GPL-3.0 at their source) are not in this model's training data.
+MBPP-DFY (dafny-synthesis), Mondego. GNU General Public License v3.0.
+  https://github.com/Mondego/dafny-synthesis
+  Corrected 2026-10-05. This notice first said that rows built from dafny-synthesis programs are not in this model's
+  training data. The rows named dafny-synthesis were removed; 48 of the 3,835 training rows are specification-given
+  rows and memory conversations built from the same programs under the vericoding benchmark's names: 36 by
+  DafnyBench's copy and 12 by Verus-Bench's translation. The audit that found them is
+  t/DECONTAMINATION-2026-10-05.md in the dawnr repository.
 The memory conversations in its training data were written by this project.
 
-The MIT License, under which HumanEval, APPS, vericoding, Clover, ACSL by Example and Verus are published, with each one's
+The MIT License, under which HumanEval, APPS, vericoding, Clover, ACSL by Example, Verus and Verus-Bench are published, with each one's
 copyright line above:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

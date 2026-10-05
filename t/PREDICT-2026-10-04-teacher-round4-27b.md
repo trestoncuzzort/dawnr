@@ -1,5 +1,9 @@
 # A teacher round on our own cards: the prompted Qwen3.5-27B over every training prompt; registered before any sample
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 Registered 2026-10-04 17:17Z. Section 3's curve measured the prompted Qwen3.5-27B (Apache-2.0) on the clean 200 at 43
 problems proved by at least one kernel and 29 by all seven with 17 answers a problem (`t/PREDICT-2026-10-04-size-curve.md`):
 the strongest model measured on our own hardware, served by vLLM 0.29 on one of the lab's 48 GB cards (fp8 weights)

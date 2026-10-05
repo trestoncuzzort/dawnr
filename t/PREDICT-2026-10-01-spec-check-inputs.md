@@ -1,5 +1,9 @@
 # The specification check drew every input from the first example: repair and re-measurement, registered 2026-10-01 10:31Z
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 ## What was found
 
 The specification-repair baseline (`t/PREDICT-2026-10-01-spec-repair.md`) produced one answer

@@ -1,5 +1,9 @@
 # The gate without a reference: what it passes, and how often that is right. Registered 2026-10-01 08:37Z
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 ## What was found, and why it matters more than any count
 
 The provers say a program meets its specification. They do not say the specification is what

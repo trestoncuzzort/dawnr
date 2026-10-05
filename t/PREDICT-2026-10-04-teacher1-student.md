@@ -1,5 +1,9 @@
 # The student on v3's rows plus the Bedrock teacher's documents, three seeds: registered before any of it trains
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 Registered 2026-10-04 01:26Z (commit 3da752b6), while the teacher round's documents are still being graded
 (`t/PREDICT-2026-10-03-teacher-round-bedrock.md`). RL left every unseen measurement where it was
 (`t/PREDICT-2026-10-01-rl-on-the-student.md`, outcome), and every measurement since 2026-09-30 says the student

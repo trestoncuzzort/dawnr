@@ -1,5 +1,9 @@
 # Several answers a problem, and a second try after the gate's message: registered 2026-10-01 04:28Z
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 ## Why, and what it stands on
 
 One greedy answer per problem is the hardest way to use a model behind a gate. The gate makes

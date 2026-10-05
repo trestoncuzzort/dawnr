@@ -4,6 +4,27 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **"Held-out problems no training row touches" was checked by name, and 18 of the 200 were in the rows
+  (2026-10-05).** `student-v5` was published at 03:58Z with "26 of 200 held-out problems, 16 by all seven provers"
+  at the top of the README. Forty minutes later, building the next round's rows, the vericoding benchmark's own
+  record of where each task came from showed that `vericoding_dd0736__replaceChars`, a row every fine-tuned model
+  here had trained on, is MBPP-DFY's program for MBPP 474, a held-out problem. The gates matched the names `mbpp_N`
+  and `dafny_synthesis_task_id_N`; the same programs arrive under a second benchmark's names, twice (DafnyBench's
+  copy and Verus-Bench's translation). Two of them the lift had refused as twins, and a rechecked copy of each came
+  back through a set the screen never ran on. Reading every training row instead of every route
+  (`t/heldout_audit.py`: the benchmark's record, and every program in every row run against every held-out
+  problem's tests and 100 drawn inputs) finds 18 of the 200: six are the problem itself, five the same function
+  from elsewhere, seven coincidences the rule removes all the same. On the other 182 the published model proves
+  **18, 12 by all seven**, not 26 and 16; Phi-4-mini under the grammar proves 7 and 5, not 9 and 7; the prompted 27B
+  33 and 23, not 43 and 29. All 24 rows of the scoreboard reproduce from their saved answers and are restated. What
+  survives: every seed of the published recipe is above Phi at both levels, double Phi is met by two seeds of
+  three, and fine-tuning adds 9 problems to its own base model (it read 11). Five of the 100 dev problems leave the
+  same way. The same reading shows 19 of the 33 "held-out specifications" have a program of the same behaviour in
+  the rows under another name (the model proves 10 of the other 14), and that 61 of the published model's 5,095
+  rows, and 48 of `student-v1`'s 3,835, descend from GPL-3.0 programs the release notes said were left out. The
+  README, the scoreboard, both model cards and both notices are corrected; a row build now fails when a row matches
+  a problem still in a panel ([the audit, the 18, every row restated](t/DECONTAMINATION-2026-10-05.md)).
+
 - **The specification check drew every input from the problem's first example (2026-10-01).**
   A lookup table for "the nth Bell number", wrong for every n from 11 to 55, was proved by five
   provers and read "agrees with the reference on 100 draws": the tests are at n = 2, 10 and 56,

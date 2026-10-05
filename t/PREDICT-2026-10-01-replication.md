@@ -1,5 +1,9 @@
 # Two more seeds of the recipe that went to the clean 200, and the reference under the grammar: registered 2026-10-01 15:40Z
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 At 14:46Z the 4B on v5 with the Python first was proved on 18 of the clean 200 on complete specifications by
 at least one kernel and on 5 by all seven; Phi-4-mini, given the same 17 answers a problem, on 3 and 2
 (`t/PREDICT-2026-10-01-several-answers.md`). `AMBITION.md` section 1 asks two more things before that

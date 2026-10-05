@@ -1,5 +1,9 @@
 # The shipped recipe on the clean 200, three seeds: registered 2026-10-03 21:41Z, before any of it trains
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 ## Why
 
 Goal 1 (AMBITION.md section 1) has only ever been measured on the 4B on v5, whose rows hold 44 GPL-derived rows

@@ -1,5 +1,9 @@
 # The reference solutions repaired by MBPP+: registered 2026-10-02 07:31Z, before any set is re-scored
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 ## What was found
 
 The gate without a reference, run on the three seeds' held-out answers, shows 56 problems and 44 are right by the

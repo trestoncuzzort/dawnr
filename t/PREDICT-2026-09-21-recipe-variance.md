@@ -1,5 +1,9 @@
 # How much of a locallm score is the recipe, and how much is the draw? Registered before training
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 **Written 2026-09-21, before any of these five models exists.**
 
 ## Why this has to be measured before anything else is optimized

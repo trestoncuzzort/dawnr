@@ -7,8 +7,11 @@ dawnr is research software. Read this before relying on anything it does.
 - **Research and education use only.** See [LICENSE](LICENSE). Third-party material keeps its own licence
   ([NOTICE](NOTICE)); the problem corpora's licences are documented under `nl/`.
 - **The published model is dawnr v5** (released as `student-v5`; dawnr is the models' name from now on). It (Apache-2.0) is the 4B trained on v3's rows plus 1,068 rows from
-  documents the provers admitted since, some written by two openly licensed teacher models on Amazon Bedrock, none from
-  GPL-licensed programs. At 8 bits it proves 27 of 33 held-out given specifications by all seven provers (v1 26). Where every training row comes from, and under what licence, is in
+  documents the provers admitted since, some written by two openly licensed teacher models on Amazon Bedrock. **Corrected
+  2026-10-05:** it was published as holding no row from GPL-licensed programs, and 61 of its 5,095 rows descend from
+  MBPP-DFY (GPL-3.0 at the source) under a second benchmark's names; `student-v1` holds 48 of 3,835
+  ([the audit](t/DECONTAMINATION-2026-10-05.md)). The next release is trained without them. At 8 bits it proves 27 of 33 held-out given specifications by all seven provers (v1 26); 19 of those 33 have a
+  program of the same behaviour in the training rows under another name, and on the 14 that do not it proves 10. Where every training row comes from, and under what licence, is in
   [internal/RELEASE-PROVENANCE-2026-10-01.md](internal/RELEASE-PROVENANCE-2026-10-01.md) and
   [release/NOTICE-student-v5](release/NOTICE-student-v5).
 - **A proof is only as good as its specification.** dawnr checks the specification against the problem's own
@@ -47,49 +50,56 @@ dawnr is research software. Read this before relying on anything it does.
   per-program way). `./install.sh` and `dawnr doctor` detect this and print the command; on GitHub's Ubuntu 24.04
   runner the sandbox's tests fail before it and pass after it. WSL2's Ubuntu needs no such step: its kernel
   has no such restriction, and the sandbox ran there as installed.
-- **It does not yet solve most problems.** On held-out problems the student is proved correct on 15 to 18 of
-  200. It refuses the rest rather than guessing, which is the design, but it means most questions get a refusal.
+- **It does not yet solve most problems.** On held-out problems the published model is proved correct on 18 of
+  182, one in ten. It refuses the rest rather than guessing, which is the design, but it means most questions get a
+  refusal.
 
 ## Where it stands (2026-10-02)
 
 ### The main result
 
-On 200 held-out problems that no training data touches, the fine-tuned 4B
-student is proved correct far more often than a prompted model about the same
+On 182 held-out problems that no training row touches, the fine-tuned 4B
+is proved correct more often than a prompted model about the same
 size given the same budget. A problem counts only when its program passes its
 tests, a prover verifies it, and its specification agrees with the problem's
 reference solution and rejects most wrong answers.
 
-| on the clean 200 | proved by at least one prover | proved by all seven |
+**Corrected 2026-10-05.** Every row below was published on 200 problems. An audit of the training rows found 18
+of the 200 in them under other names (six are the problem itself, by way of a second benchmark; the rest are
+programs that behave as the problem's solution does), so the panel is the other 182 and every row is counted again
+on it, the prompted models too. The number first published is in brackets
+([the audit, and how the rows got in](t/DECONTAMINATION-2026-10-05.md)).
+
+| on the clean 182 (on the 200, as first published) | proved by at least one prover | proved by all seven |
 |---|---:|---:|
-| the student on v5's rows, training seed 1 | 18 | 7 |
-| the student on v5's rows, training seed 2 | 18 | 8 |
-| the student on v5's rows, training seed 3 | 15 | 7 |
-| v3's rows (no GPL rows), training seed 1 | 17 | 10 |
-| v3's rows, training seed 2 | 16 | 8 |
-| v3's rows, training seed 3 | 17 | 8 |
-| v3's rows plus 182 rows from a teacher's proved documents, training seed 3 | 21 | 12 |
-| the same, training seed 1 | 19 | 8 |
-| the same, training seed 2 | 13 | 7 |
-| v3's rows plus 598 rows from every document admitted since (teachers and the specification round), seed 1 | 23 | 13 |
-| the same, seed 3 | 27 | 13 |
-| the same, seed 2 | 24 | 15 |
-| teacher2's rows (GPL-free) plus round 3's 129 APPS documents, seed 2 | 27 | 15 |
-| the same, seed 3 | 23 | 13 |
-| the same, seed 1 | 26 | 16 |
-| Qwen3.5-4B, the student's own starting weights, prompted, the same 17 answers a problem | 15 | 8 |
-| Qwen3.5-9B, prompted, the same 17 answers a problem | 18 | 7 |
-| Qwen3.5-2B, prompted, the same 17 answers a problem | 4 | 3 |
-| a Qwen3.5-2B student on the release-v4 candidate's rows, seed 1 | 8 | 6 |
-| Qwen3.5-0.8B, prompted, the same 17 answers a problem | 1 | 1 |
-| Qwen3.5-27B (fp8), prompted, the same 17 answers a problem | 43 | 29 |
-| Phi-4-mini, prompted, the same 17 answers a problem | 3 | 3 |
-| Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 9 | 7 |
+| the 4B on v5's rows, training seed 1 | 13 (18) | 5 (7) |
+| the 4B on v5's rows, training seed 2 | 13 (18) | 5 (8) |
+| the 4B on v5's rows, training seed 3 | 9 (15) | 6 (7) |
+| v3's rows, training seed 1 | 12 (17) | 7 (10) |
+| v3's rows, training seed 2 | 10 (16) | 4 (8) |
+| v3's rows, training seed 3 | 11 (17) | 4 (8) |
+| v3's rows plus 182 rows from a teacher's proved documents, training seed 3 | 15 (21) | 9 (12) |
+| the same, training seed 1 | 15 (19) | 5 (8) |
+| the same, training seed 2 | 9 (13) | 5 (7) |
+| v3's rows plus 598 rows from every document admitted since (teachers and the specification round), seed 1 | 16 (23) | 10 (13) |
+| the same, seed 3 | 19 (27) | 10 (13) |
+| the same, seed 2 | 17 (24) | 10 (15) |
+| those rows without the 46 a name filter removed, plus round 3's 129 APPS documents, seed 2 | 18 (27) | 10 (15) |
+| the same, seed 3 | 14 (23) | 8 (13) |
+| the same, seed 1: **dawnr v5**, the published model | 18 (26) | 12 (16) |
+| Qwen3.5-4B, dawnr's own starting weights, prompted, the same 17 answers a problem | 9 (15) | 6 (8) |
+| Qwen3.5-9B, prompted, the same 17 answers a problem | 15 (18) | 6 (7) |
+| Qwen3.5-2B, prompted, the same 17 answers a problem | 2 (4) | 2 (3) |
+| a Qwen3.5-2B fine-tuned on the release-v4 candidate's rows, seed 1 | 4 (8) | 3 (6) |
+| Qwen3.5-0.8B, prompted, the same 17 answers a problem | 1 (1) | 1 (1) |
+| Qwen3.5-27B (fp8), prompted, the same 17 answers a problem | 33 (43) | 23 (29) |
+| Phi-4-mini, prompted, the same 17 answers a problem | 2 (3) | 2 (3) |
+| Phi-4-mini decoding under t's grammar, the same 17 answers a problem | 7 (9) | 5 (7) |
 | every model trained here from scratch | 0 | 0 |
 
-v3's rows were not released: their first seed missed the release gate on the 33 given specifications by two (25 of 33 by all seven, against 27; [v3](t/PREDICT-2026-10-02-release-v3.md)), so the published model is still `student-v1`. Every row is counted the same way: each program's specification checked against the problem's reference (EvalPlus's corrected MBPP+ solution where it keeps the problem's tests) on 1,000 drawn inputs, and every set's answers normalised alike ([correction](t/PREDICT-2026-10-01-replication.md)).
+v3's rows were not released: their first seed missed the release gate on the 33 given specifications by two (25 of 33 by all seven, against 27; [v3](t/PREDICT-2026-10-02-release-v3.md)); `student-v5`, published 2026-10-05, is the last row of the fine-tuned block. Every row is counted the same way: each program's specification checked against the problem's reference (EvalPlus's corrected MBPP+ solution where it keeps the problem's tests) on 1,000 drawn inputs, and every set's answers normalised alike ([correction](t/PREDICT-2026-10-01-replication.md)).
 
-This is not the win the project set itself. Given every advantage, decoding under t's grammar so it cannot write unparseable output, Phi-4-mini proves 9 at one prover and 7 at all seven; the student about doubles it at one prover and is level at all seven, where the written bar asks for double ([outcome](t/PREDICT-2026-10-01-replication.md)).
+This is not yet the win the project set itself. Given every advantage, decoding under t's grammar so it cannot write unparseable output, Phi-4-mini proves 7 at one prover and 5 at all seven on the 182. Every training seed of the published recipe is above both (18 and 12, 18 and 10, 14 and 8); the written bar asks for double on every seed, 14 and 10, and the third seed has 8 by all seven. The same 4B before any fine-tuning proves 9 and 6, so the rows the provers admitted add 9 problems and 6 by all seven to the published model, and much of the lead over Phi is the base model.
 
 Without a reference solution, the gate can still tell most right answers from
 wrong ones. It checks the specification against a tested Python solution
@@ -129,10 +139,13 @@ successes in [CORRECTIONS.md](CORRECTIONS.md) and [LIMITS.md](LIMITS.md).
 
 ## How progress is measured
 
-- **The clean 200.** Held-out problems that no training document answers,
-  after an audit found earlier leaks through same-task training data
-  ([t/DECONTAMINATION-2026-09-21.md](t/DECONTAMINATION-2026-09-21.md)). They
-  are used once per system.
+- **The clean 182.** Held-out problems that no training row answers, after two
+  audits: the first found same-task training documents and left 200 of 232
+  ([t/DECONTAMINATION-2026-09-21.md](t/DECONTAMINATION-2026-09-21.md)); the
+  second read the training rows themselves and found 18 more under other names
+  ([t/DECONTAMINATION-2026-10-05.md](t/DECONTAMINATION-2026-10-05.md)). A row
+  build now fails if a row matches a problem still in the panel
+  (`t/heldout_audit.py`). They are used once per system.
 - **Pre-registration.** Each prediction and decision rule is committed before
   its run, and its outcome is written into the same file.
 - **Seeds.** A result that appears at one training seed is not a result.
