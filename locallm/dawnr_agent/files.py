@@ -564,7 +564,8 @@ def _session_id(ctx: CallContext) -> str:
     return ctx.session.id if ctx is not None and ctx.session is not None else ""
 
 
-DOCUMENT_SUFFIXES = (".pdf", ".docx", ".epub", ".html", ".htm")     # read as documents when a front end gives a reader
+# read as documents when a front end gives a reader (locallm/doc_read.py)
+DOCUMENT_SUFFIXES = (".pdf", ".docx", ".epub", ".html", ".htm", ".xlsx", ".xlsm", ".pptx", ".odt", ".ods", ".odp", ".eml")
 DOCUMENT_BYTES = 64 * 1024 * 1024
 
 

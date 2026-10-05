@@ -2899,3 +2899,38 @@ is queued, and the ones running are read as they finish.
   runs at the 4B's speed class and needs 32 GB); the sandbox tests on five distributions in containers; search
   without an account for `--online`; scanned pages; tasks the 4B fails, since both sets are near their ceiling.
 
+## The assistant, evening of 2026-10-05: the computer looked at, and what four task sets showed
+
+- **Two more task sets** (`locallm/dawnr_tasks.py`): a third of 22 meant to be past the 4B (code against a given
+  test, joins, questions that need a program) and a fourth of 43 about the computer itself, judged against the
+  machine, by the `pc` line let through (recorded, never run), and on described machines of five distributions.
+  135 tasks now, dev and test halves by id.
+- **Registered readings** (`PREDICT-2026-10-05-assistant.md`): C on three test halves, 41 of 46, **C2 fails** (a
+  file created in a folder the request did not name); D, the fourth set's test half 21 of 21 with no unasked line,
+  all seven predictions holding. Every task has now been seen once.
+- **`sysinfo`**: a line that can only look at the live machine runs unasked (the Codex CLI's
+  is_known_safe_command, with a list of what shows a computer's state and files read only where no secret is).
+  **`pc`** hands over package installs with sudo in front, never names a secret, opens no address offline.
+- **The lines for common jobs** (`recipes.py`): read from each program's help or source, given for the desktop
+  and programs the machine has; a 4B invented a qdbus call for dark mode on Plasma without it.
+- **Rules that came from reading misses**: a plan repeated after a change is not a repeat; a tool's own cache is
+  not a change; a hidden place says it is hidden (an empty `~/.ssh` had been reported as "you have no keys"); each
+  line goes to the tool it belongs to; the folder is listed before the model writes anything (441 model calls to
+  399 on the 135); an edit of an unread file becomes a read; an edit that misses is matched by indentation or
+  shown the closest lines (aider); a second look before anybody is asked, for a lost file, a changed test and a
+  line copied from a document; the answer held against the journal.
+- **One rule tried and removed** the same day (a named file created in another folder): right once, wrong three
+  times in one task. A second look has to be right nearly always.
+- **The measurement had run a `pc` line for real** (`mount -o remount,rw /`, which failed as a non-root user and
+  changed nothing); it records them now. **The judge was wrong four ways against the model**, corrected, no
+  registered reading affected.
+- **Documents**: spreadsheets (.xlsx, dates by openpyxl's rule), slides, OpenDocument text, sheets and slides,
+  and saved emails, standard library only, checked against what LibreOffice itself writes.
+- **Where the 4B stops** (all 135 on the 48 GB card, twice, the same six): two shell one-liners written with a
+  mistake and repeated unchanged, the wrong file removed (now admitted), a rotation's direction, a line placed
+  one function too low, a hand-over without sudo. These are the readings a larger driver is for.
+- **Proof route, read as it finished**: the v6 release gate did not pass (the old 33 by all seven read 20 where
+  R1 needs 26; the clean 182 read 18 and 11), so `student-v5` stays the published model. Round-4 seeds 2 and 3
+  have answered; their grading against U1 to U3 is owed, as are the readings of the 9B run (N1 to N5).
+- **Next:** the 35B (3B active) and the 27B as drivers on the same 135, on the lab card; a fifth set made of what
+  the 4B misses; search without an account for `--online`; scanned pages; git through the assistant.

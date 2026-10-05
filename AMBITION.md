@@ -44,9 +44,13 @@ get".
 - **Two numbers beside every result**: tokens a second on the person's own machine, and what the task cost in
   tokens.
 
-Where it stands (`locallm/PREDICT-2026-10-05-assistant.md`): on unseen tasks judged by the folder's end state, 20
-of 20 and then 14 of 15 harder ones, with no file touched without reason; 29 tokens a second on a 12-core CPU and
-72 on an 8 GB laptop card, from the 4B the gate already used.
+Where it stands (`locallm/PREDICT-2026-10-05-assistant.md`): 135 tasks in four sets, judged by the folder's end
+state, by the command let through, or against the machine itself. On the unseen halves: 20 of 20, 14 of 15 harder
+ones, 8 of 11 past those, and 21 of 21 about the computer itself (looked at through read-only commands, acted on by
+one command shown and asked for, installs handed over as the line for five distributions). One prediction failed
+(a file written into a folder nobody named); twice a file was lost to a wrong swap under a person who approves
+everything. 27 to 29 tokens a second on a 12-core CPU, 72 on an 8 GB laptop card, 273 on a 48 GB card, from the 4B
+the gate already used. All 135 have been seen once; what a larger driver adds is the next reading.
 
 ## The north star: dawnr, a model you could trust on a spaceship
 
