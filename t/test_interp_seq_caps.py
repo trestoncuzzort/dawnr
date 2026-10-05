@@ -100,6 +100,26 @@ class EvaluationClock(unittest.TestCase):
         self.assertIn("correctness", got, got)
         self.assertEqual(got["correctness"], 0.0)
 
+    def test_a_slow_specification_is_unscorable(self):
+        task = {"name": "f", "params": [{"name": "n", "type": "int"}], "returns": [{"name": "r", "type": "int"}],
+                "requires": [], "ensures": [{"op": "==", "args": [{"var": "r"}, {"var": "n"}]}], "body": []}
+        real_ev, old_e, old_s = interp.ev, spec_quality.EVAL_SECONDS, spec_quality.SPEC_SECONDS
+
+        def slow(*a, **k):
+            while True:
+                pass
+        try:
+            spec_quality.EVAL_SECONDS, spec_quality.SPEC_SECONDS = 0.2, 0.5
+            interp.ev = slow
+            entry = {"points": [{"args": [["int", v]], "expected": ["int", v]} for v in range(20)]}
+            t0 = time.monotonic()
+            got = spec_quality.scores(task, entry)
+            took = time.monotonic() - t0
+        finally:
+            interp.ev, spec_quality.EVAL_SECONDS, spec_quality.SPEC_SECONDS = real_ev, old_e, old_s
+        self.assertIn("unscorable", got, got)
+        self.assertLess(took, 3, "the specification's clock bounds all of its evaluations together")
+
 
 if __name__ == "__main__":
     unittest.main()

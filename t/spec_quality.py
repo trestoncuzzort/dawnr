@@ -29,6 +29,7 @@ import json
 import signal
 import sys
 import threading
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -41,11 +42,15 @@ import spec_check                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 
 MIN_CORRECTNESS, MIN_COMPLETENESS = 0.8, 0.6                    # SAFE's thresholds
-# One evaluation's wall clock (2026-10-04). The interpreter bounds steps (MAX_STEPS) and sizes (MAX_BITS, MAX_SEQ),
-# not time, and teacher3 seed 1's specification stage ran 77 minutes on one problem before the kernel killed it.
-# A Python signal handler runs at the next bytecode of the main thread (docs.python.org/3/library/signal.html),
-# so with every sequence operation capped the timer can interrupt between steps. Off the main thread, no limit.
-EVAL_SECONDS = 60
+# Wall clocks (2026-10-04). The interpreter bounds steps (MAX_STEPS) and sizes (MAX_BITS, MAX_SEQ), not time, and
+# teacher3 seed 1's specification stage ran 77 minutes on one problem before the kernel killed it. A Python signal
+# handler runs at the next bytecode of the main thread (docs.python.org/3/library/signal.html), so with every
+# sequence operation capped the timer can interrupt between steps. Off the main thread, no limit. EVAL_SECONDS bounds
+# one evaluation (a normal one takes milliseconds); SPEC_SECONDS bounds one specification's whole scoring, past which it
+# is unscorable: with only the first, one slow specification was evaluated on every test and every mutant at up to
+# 60 s each and ran 25 minutes without an answer (seed 1's second run).
+EVAL_SECONDS = 10
+SPEC_SECONDS = 120
 
 
 class Overtime(Exception):
@@ -80,15 +85,21 @@ def scores(task: dict, entry: dict) -> dict:
         return {"unscorable": f"{type(e).__name__}: {e}"[:120]}
     ret = task["returns"][0]["name"]
     held = tests = rejected = mutants = 0
+    t_end = time.monotonic() + SPEC_SECONDS
+
+    def clock() -> float:
+        return min(EVAL_SECONDS, t_end - time.monotonic())
     for point in entry["points"]:
         env, refusal = se.bind_point(task, point)
         if refusal is not None:
             return {"unscorable": refusal["why"]}
         kind, value = se.expected_value(task, point)
         env[ret] = se._as_interp_value(kind, value)
+        if clock() <= 0:
+            return {"unscorable": f"scoring over {SPEC_SECONDS} s"}
         st = interp.St()
         try:
-            with time_limit(EVAL_SECONDS):
+            with time_limit(clock()):
                 if not all(interp.ev(c, env, funs, st) for c in task.get("requires", [])):
                     continue                                    # outside the precondition: says nothing
                 ok = all(interp.ev(e, env, funs, st) is True for e in task.get("ensures", []))
@@ -101,9 +112,11 @@ def scores(task: dict, entry: dict) -> dict:
         for wrong in spec_check.mutations(env[ret]):
             probe = dict(env)
             probe[ret] = wrong
+            if clock() <= 0:
+                return {"unscorable": f"scoring over {SPEC_SECONDS} s"}
             st2 = interp.St()
             try:
-                with time_limit(EVAL_SECONDS):
+                with time_limit(clock()):
                     accepts = all(interp.ev(e, probe, funs, st2) is True for e in task.get("ensures", []))
             except Exception:                                   # noqa: BLE001  (undefined on a wrong answer rejects it)
                 accepts = False
