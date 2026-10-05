@@ -919,6 +919,15 @@ def build_prompt(entry: dict, version: str = "v1") -> list[dict]:
             {"role": "user", "content": user}]
 
 
+def with_reference(messages: list[dict], version: str = "v5") -> list[dict]:
+    """The same question for a writer that has never seen `t`: the language's reference and worked examples (prompt
+    v5's system text, the one every prompted baseline is measured with) put before the question's own instruction."""
+    reference = GRAMMAR_V5 + "\nExamples of complete t tasks:\n\n" + fewshot_text(version)
+    own = [m["content"] for m in messages if m["role"] == "system"]
+    return ([{"role": "system", "content": reference + ("\n\n" + own[0] if own else "")}]
+            + [m for m in messages if m["role"] != "system"])
+
+
 # -------------------------------------------------------------- generate --
 
 def llama_gbnf(grammar: str) -> str:

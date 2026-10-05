@@ -213,6 +213,23 @@ times, and shows an answer only when every working it could compute gives
 the same number. The working is printed, because it is the reading of your
 question that was computed.
 
+The model that comes with dawnr is small, and most questions are refused
+because it cannot write a program the provers accept. The writing does not
+have to be done by that model. Whatever writes the program is never
+trusted; the tests, the independently written solution, the provers and the
+certificate are what decide, and those stay on your machine. So if you have
+a larger model behind any OpenAI-compatible address (your own server, or a
+hosted one), point dawnr at it:
+
+```bash
+export DAWNR_WRITER_URL=https://your-host/v1 DAWNR_WRITER_MODEL=its-name DAWNR_WRITER_KEY=...
+dawnr ask "..." --test "..."
+```
+
+`ask`, `spec`, `prove` and `verify` then send what you ask to that address
+to be written, and say so each time; everything it returns goes through the
+same gate. Without those variables nothing leaves your machine.
+
 If you would rather not use a terminal, `dawnr serve api` starts the models
 and prints a link. The page behind it has everything above (ask, check a
 function you have, prove a specification, answer from your files, numbers,

@@ -238,7 +238,7 @@ def test_prove_writes_the_certificate_and_check_reads_it_back(tmp_path, monkeypa
     spec, out = tmp_path / "total.t", tmp_path / "total.cert.json"
     spec.write_text(SPEC, encoding="utf-8")
     real = prove.prove
-    monkeypatch.setattr(prove, "prove", lambda s, student, answers, jobs=2, tests=None:
+    monkeypatch.setattr(prove, "prove", lambda s, student, answers, max_new=1024, jobs=2, tests=None:
                         real(s, student, answers, prover=prover(lambda t: ALL), jobs=jobs, tests=tests))
     assert prove.main(["prove", "--student", "unused:1", "--spec", str(spec), "--certificate", str(out),
                        "--test", TESTS[0]]) == 0

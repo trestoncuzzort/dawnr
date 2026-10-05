@@ -366,6 +366,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--answers", type=int, default=5)
     p.add_argument("--test", action="append", default=[], help="your own example, an `assert f(arguments) == value` line; repeat")
     p.add_argument("--jobs", type=int, default=2, help="provers at once")
+    p.add_argument("--reference", action="store_true",
+                   help="the writer has never seen t: put the language's reference before the question")
+    p.add_argument("--max-new", type=int, default=1024, help="tokens an answer may take")
     p.add_argument("--save-python", type=Path, metavar="FILE")
     p.add_argument("--save-t", type=Path, metavar="FILE", help="write the proved t program here")
     p.add_argument("--certificate", type=Path, metavar="FILE",
@@ -380,6 +383,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--test", action="append", default=[], help="an `assert f(arguments) == value` line; repeat")
     s.add_argument("--prompt", choices=se.PROMPT_VERSIONS, default="s2")
     s.add_argument("--answers", type=int, default=5)
+    s.add_argument("--reference", action="store_true", help="the writer has never seen t: ask with the language's reference (prompt v5)")
+    s.add_argument("--max-new", type=int, default=1024, help="tokens an answer may take")
     s.add_argument("--save", type=Path, metavar="FILE", help="write a specification here, body empty, for `prove`")
     s.add_argument("--pick", type=int, default=1, help="which specification --save writes (1 is the first shown)")
     s.add_argument("--json", type=Path)
@@ -393,7 +398,9 @@ def main(argv: list[str] | None = None) -> int:
         except Refused as refused:
             raise SystemExit(f"prove: {refused}")
         student = None if spec.get("body") else python_beside.api_decode("openai", [a.student], a.student_name)
-        r = prove(spec, student, a.answers, jobs=a.jobs, tests=tests)
+        if student and a.reference:
+            student = python_beside.referenced(student)
+        r = prove(spec, student, a.answers, max_new=a.max_new, jobs=a.jobs, tests=tests)
         print(render_proof(r))
         if a.json:
             a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")
@@ -422,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as error:
         raise SystemExit(f"spec: {error}")
     r = propose(entry, python_beside.api_decode("openai", [a.student], a.student_name),
-                python_beside.api_decode("openai", [a.python], a.python_name), a.prompt, a.answers)
+                python_beside.api_decode("openai", [a.python], a.python_name), "v5" if a.reference else a.prompt, a.answers, a.max_new)
     print(render_specs(r))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")

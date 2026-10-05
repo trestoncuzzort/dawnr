@@ -101,26 +101,28 @@ def _files(body: dict, job: Path) -> list[str]:
     return out
 
 
-def command(kind: str, body: dict, job: Path, student: str, base: str) -> list[str]:
+def command(kind: str, body: dict, job: Path, student: str, base: str, writer: str | None = None) -> list[str]:
     """The terminal's own command for the job, its inputs written under the job's directory. Bad when the request
-    does not hold what that command needs."""
+    does not hold what that command needs. `writer` names a model, at `student`'s address, that is not the installed
+    one: it is asked with the language's reference and given room to reason."""
     py, result, cert = sys.executable, str(job / "result.json"), str(job / "certificate.json")
+    wrote = ["--student-name", writer, "--reference", "--max-new", "3072"] if writer else []
     tests = [x for t in (_tests(body) if kind in ("ask", "prove", "verify") else []) for x in ("--test", t)]
     if kind == "ask":
         if not tests:
             raise Bad("`tests` must hold at least one `assert f(arguments) == value` line")
-        return [py, "t/answer.py", "--student", student, "--python", base, "--consistency", "5",
+        return [py, "t/answer.py", "--student", student, *wrote, "--python", base, "--consistency", "5",
                 "--text", _text(body, "question", 4000), *tests, "--json", result, "--certificate", cert]
     if kind == "prove":
         (job / "spec.t").write_text(_text(body, "specification", 20000), encoding="utf-8")
-        return [py, "t/prove.py", "prove", "--student", student, "--spec", str(job / "spec.t"), *tests,
+        return [py, "t/prove.py", "prove", "--student", student, *wrote, "--spec", str(job / "spec.t"), *tests,
                 "--json", result, "--certificate", cert]
     if kind == "verify":
         (job / "function.py").write_text(_text(body, "python", 20000), encoding="utf-8")
         fn = _text(body, "function", 80, required=False)
         if fn and not fn.isidentifier():
             raise Bad("`function` must be a Python name")
-        return [py, "t/verify_py.py", "--student", student, "--file", str(job / "function.py"), *(["--fn", fn] if fn else []),
+        return [py, "t/verify_py.py", "--student", student, *wrote, "--file", str(job / "function.py"), *(["--fn", fn] if fn else []),
                 *tests, "--json", result, "--certificate", cert]
     if kind == "extract":
         fields = body.get("fields")
@@ -154,8 +156,8 @@ _OUTCOME = {"check": {0: "reproduced", 1: "failed", 2: "undecided here"}, "ask":
 class Jobs:
     """The queue and its one worker: the models answer one request at a time, so jobs run one after another."""
 
-    def __init__(self, home: Path, student: str, base: str, seconds: float = 1800.0, build=command):
-        self.home, self.student, self.base, self.seconds, self.build = home, student, base, seconds, build
+    def __init__(self, home: Path, student: str, base: str, seconds: float = 1800.0, build=command, writer: str | None = None):
+        self.home, self.student, self.base, self.seconds, self.build, self.writer = home, student, base, seconds, build, writer
         self.dir = home / "jobs"
         self.dir.mkdir(parents=True, exist_ok=True)
         self.jobs: dict[str, dict] = {}
@@ -179,7 +181,7 @@ class Jobs:
             job_dir = self.dir / jid
             job_dir.mkdir()
             try:
-                argv = self.build(kind, body, job_dir, self.student, self.base)
+                argv = self.build(kind, body, job_dir, self.student, self.base, *([self.writer] if self.writer else []))
             except Bad:
                 shutil.rmtree(job_dir, ignore_errors=True)
                 raise
@@ -301,7 +303,8 @@ def health(jobs: Jobs) -> dict:
         waiting = sum(1 for j in jobs.jobs.values() if j["state"] == "queued")
         running = sum(1 for j in jobs.jobs.values() if j["state"] == "running")
     return {"provers": {name: version for name, version in cols if not str(version).startswith("ABSENT")},
-            "student": _up(jobs.student), "base": _up(jobs.base), "queued": waiting, "running": running, "kinds": list(KINDS)}
+            "student": True if jobs.writer else _up(jobs.student), "base": _up(jobs.base), "queued": waiting, "running": running,
+            "kinds": list(KINDS), **({"writer": f"{jobs.writer} at {jobs.student.split('://')[-1]}"} if jobs.writer else {})}
 
 
 def make_handler(jobs: Jobs, token: str, port: int, page: bytes):
@@ -404,10 +407,11 @@ def make_handler(jobs: Jobs, token: str, port: int, page: bytes):
     return Handler
 
 
-def serve(home: Path, student: str, base: str, port: int, seconds: float = 1800.0, token: str | None = None):
+def serve(home: Path, student: str, base: str, port: int, seconds: float = 1800.0, token: str | None = None,
+          writer: str | None = None):
     """(the server, its token). The caller runs `server.serve_forever()`."""
     token = token or secrets.token_urlsafe(32)
-    jobs = Jobs(home, student, base, seconds)
+    jobs = Jobs(home, student, base, seconds, writer=writer)
     server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(jobs, token, port, (HERE / "ui.html").read_bytes()))
     if port == 0:                                               # the system picked one: the Host check must know it
         port = server.server_address[1]
@@ -420,13 +424,14 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--student", required=True, help="host:port of the server holding the model that writes t")
     ap.add_argument("--base", required=True, help="host:port of the server holding the base model")
+    ap.add_argument("--writer", help="--student is another model's address (a base URL); this is its name there")
     ap.add_argument("--port", type=int, default=8713)
     ap.add_argument("--home", type=Path, default=Path(os.environ.get("DAWNR_HOME") or Path.home() / ".local/share/dawnr"),
                     help="where jobs and the token are kept")
     ap.add_argument("--seconds", type=float, default=1800.0, help="the longest a job may run")
     a = ap.parse_args(argv)
     a.home.mkdir(parents=True, exist_ok=True)
-    server, token = serve(a.home, a.student, a.base, a.port, a.seconds)
+    server, token = serve(a.home, a.student, a.base, a.port, a.seconds, writer=a.writer)
     token_file = a.home / "run" / "api.token"
     token_file.parent.mkdir(parents=True, exist_ok=True)
     token_file.touch(mode=0o600, exist_ok=True)

@@ -241,7 +241,8 @@ else api("/v1/health").then(r => r.ok ? r.json() : null).then(h => {
   if (!h) { $("notoken").style.display = "block"; $("run").disabled = true; return; }
   const provers = Object.keys(h.provers);
   $("health").textContent = "Provers on this machine: " + (provers.length ? provers.join(", ") : "none found") + ". Models: "
-    + (h.student && h.base ? "running" : "not running (start them with `dawnr serve api`)") + ".";
+    + (h.student && h.base ? "running" : "not running (start them with `dawnr serve api`)") + "."
+    + (h.writer ? " Programs are written by " + h.writer + ": what you ask for a function is sent there, and what comes back is checked here." : "");
 });
 </script>
 </body>

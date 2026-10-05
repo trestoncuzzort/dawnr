@@ -168,7 +168,7 @@ def test_the_command_writes_the_twin_its_python_and_a_certificate_that_replays(t
     source = tmp_path / "double.py"
     source.write_text(DOUBLE, encoding="utf-8")
     real = verify_py.verify
-    monkeypatch.setattr(verify_py, "verify", lambda entry, f, model, specs, answers, jobs=2:
+    monkeypatch.setattr(verify_py, "verify", lambda entry, f, model, specs, answers, max_new=1024, jobs=2:
                         real(entry, f, student(SPEC, BODY), 1, 1, prover=prover(lambda task: ALL)))
     monkeypatch.setattr(verify_py.python_beside, "api_decode", lambda *a, **k: None)
     out_t, out_py, out_c = tmp_path / "double.t", tmp_path / "proved.py", tmp_path / "double.cert.json"

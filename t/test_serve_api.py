@@ -178,6 +178,23 @@ def test_each_kind_becomes_the_terminals_own_command_with_its_inputs_inside_the_
     assert argv[1:3] == ["t/certificate.py", "check"] and argv[-2:] == ["--kernels", "dafny"] and json.loads((d / "given.cert.json").read_text()) == {"_type": "x"}
 
 
+def test_with_another_writer_the_jobs_that_write_t_ask_it_with_the_reference_and_the_rest_are_unchanged(tmp_path):
+    def build(kind, body):
+        d = tmp_path / f"{kind}-w"
+        d.mkdir()
+        return serve_api.command(kind, body, d, "https://writer.example/v1", "b:2", "big-model")
+    wrote = ["--student", "https://writer.example/v1", "--student-name", "big-model", "--reference", "--max-new", "3072"]
+    for kind, body in (("ask", {"question": "Double.", "tests": ["assert double(3) == 6"]}),
+                       ("prove", {"specification": "t 1\ntask f(n: int) returns (r: int)\n  ensures r == n\n{\n}\n"}),
+                       ("verify", {"python": "def f(n: int):\n    return n\n"})):
+        argv = build(kind, body)
+        i = argv.index("--student")
+        assert argv[i:i + 7] == wrote, argv
+    assert "--reference" not in build("calc", {"question": "2 + 2?"})
+    jobs = serve_api.Jobs(tmp_path / "home", "https://writer.example/v1", "127.0.0.1:1", writer="big-model")
+    assert jobs.writer == "big-model"
+
+
 @pytest.mark.parametrize("kind, body, why", [
     ("ask", {"question": "Double."}, "`tests` must hold at least one"),
     ("ask", {"question": "", "tests": ["assert f(1) == 1"]}, "`question` must be a non-empty string"),

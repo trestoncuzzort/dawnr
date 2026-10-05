@@ -286,6 +286,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--consistency", type=int, default=0,
                     help="further Python solutions sampled at 0.8 that must not find the specification false (0: off)")
     ap.add_argument("--jobs", type=int, default=2, help="provers at once")
+    ap.add_argument("--reference", action="store_true",
+                    help="the writer has never seen t: ask with the language's reference in the prompt (prompt v5)")
+    ap.add_argument("--max-new", type=int, default=1024, help="tokens an answer may take (a model that reasons first needs more)")
     ap.add_argument("--json", type=Path)
     ap.add_argument("--save-python", type=Path, metavar="FILE",
                     help="write the shown answer's Python function here (only when it was checked against the proof)")
@@ -297,7 +300,8 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as e:
         raise SystemExit(f"answer: {e}")
     r = answer(entry, python_beside.api_decode("openai", [a.student], a.student_name),
-               python_beside.api_decode("openai", [a.python], a.python_name), a.prompt, a.answers, jobs=a.jobs, consistency=a.consistency)
+               python_beside.api_decode("openai", [a.python], a.python_name), "v5" if a.reference else a.prompt, a.answers,
+               max_new=a.max_new, jobs=a.jobs, consistency=a.consistency)
     print(render(r))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")

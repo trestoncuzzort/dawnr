@@ -10,6 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import answer                                                   # noqa: E402
 import py_sandbox                                               # noqa: E402
 import spec_check                                               # noqa: E402
 import spec_gate                                                # noqa: E402
@@ -133,3 +134,71 @@ def test_judge_all_ignores_an_extra_solution_s_weak_check_and_passes_when_all_ag
     assert out["passes"] is True and out["solutions_agreeing"] == 3
     monkeypatch.setattr(spec_gate, "judge", lambda *a, **k: {"passes": False, "why": "weak specification"})
     assert spec_gate.judge_all({}, {}, "a", ["b"])["why"] == "weak specification"   # the primary check decides first
+
+
+# ---- 2026-10-05: inputs larger than the examples (spec_check.draw_beyond, spec_gate.beyond_reason) ----
+# Found the first time a larger model wrote the specification: every case spelled out up to the size the ordinary
+# draws reach, and nothing said after it. QuickCheck grows its sizes (maxSize 100); EvalPlus, arXiv:2305.01210.
+
+COUNT_ENTRY = answer.entry_of("How many of the numbers are even.",
+                              ["assert count_even([1, 2, 3]) == 1", "assert count_even([]) == 0", "assert count_even([-1, 5, 0, 4]) == 2"])
+COUNT_PYTHON = "def count_even(xs):\n    return sum(1 for x in xs if x % 2 == 0)\n"
+
+
+def _even(i):
+    return f"(if s[{i}] % 2 == 0 then 1 else 0)"
+
+
+def _spelled_out(upto, tail):
+    cases = "".join(f"if len(s) == {n} then {' + '.join(_even(i) for i in range(n)) or '0'} else " for n in range(upto + 1))
+    return surface.parse(f"t 1\ntask count_even(s: seq) returns (r: int)\n  ensures r == ({cases}{tail})\n{{\n  r := 0;\n}}\n")
+
+
+RECURSIVE = surface.parse("""t 1
+task count_even(s: seq) returns (r: int)
+  ensures r == evens(s, len(s))
+spec fun evens(s: seq, n: int): int
+  decreases n
+= if n <= 0 then 0 else evens(s, n - 1) + (if n <= len(s) and s[n - 1] % 2 == 0 then 1 else 0)
+{
+  r := 0;
+}
+""")
+
+
+def test_the_larger_draws_reach_past_anything_the_ordinary_ones_make_and_keep_the_examples_style():
+    rnd = random.Random(3)
+    ordinary = max(len(spec_check.draw("seq", rnd, [1, 2, 3, 4])) for _ in range(400))
+    larger = [len(spec_check.draw_beyond("seq", rnd, [1, 2, 3, 4], share=1.0)) for _ in range(400)]
+    assert ordinary == 6 and min(larger) == 7 and max(larger) >= 28
+    ints = [spec_check.draw_beyond("int", rnd, 10, share=1.0) for _ in range(400)]
+    assert min(ints) > 20 and max(ints) > 100 and all(x < 0 for x in (spec_check.draw_beyond("int", rnd, -5, share=1.0) for _ in range(50)))
+    assert all(v == sorted(v) for v in (spec_check.draw_beyond("seq", rnd, [1, 3, 9], share=1.0) for _ in range(100)))
+    one, several = spec_check.beyond_drawer(1), spec_check.beyond_drawer(2)
+    assert all(len(one("seq", rnd, [1, 2])) > 4 for _ in range(100))
+    assert any(len(several("seq", rnd, [1, 2])) <= 4 for _ in range(100))          # some stay ordinary, for joint preconditions
+
+
+def test_a_specification_spelled_out_only_up_to_the_examples_size_passed_before_and_is_refused_now():
+    enumerated = _spelled_out(6, "r")
+    before = spec_gate.judge(enumerated, COUNT_ENTRY, COUNT_PYTHON, beyond=0)
+    assert before["passes"] and before["agreement"]["completeness"] == 1.0          # what the gate saw until 2026-10-05
+    now = spec_gate.judge(enumerated, COUNT_ENTRY, COUNT_PYTHON)
+    assert not now["passes"] and now["why"] == "the specification says too little about inputs larger than the examples"
+    assert now["larger"]["completeness"] < 0.6 and len(now["larger"]["weak_witness"]["args"][0]) > 6
+
+
+def test_one_false_past_the_examples_or_whose_requires_stops_there_is_refused_too_and_an_honest_one_passes():
+    false_after = spec_gate.judge(_spelled_out(6, "0"), COUNT_ENTRY, COUNT_PYTHON)
+    assert not false_after["passes"] and false_after["why"] == "the specification is false at the Python's answer on an input larger than the examples"
+    narrow = surface.parse(surface.print_task(_spelled_out(6, "r")).replace("  ensures r ==", "  requires len(s) <= 6\n  ensures r =="))
+    stopped = spec_gate.judge(narrow, COUNT_ENTRY, COUNT_PYTHON)
+    assert not stopped["passes"] and stopped["why"] == "the requires excludes most inputs larger than the examples"
+    honest = spec_gate.judge(RECURSIVE, COUNT_ENTRY, COUNT_PYTHON)
+    assert honest["passes"] and honest["larger"]["completeness"] == 1.0 and honest["larger"]["draws"] == spec_gate.BEYOND_DRAWS
+
+
+def test_too_few_larger_inputs_judged_leaves_it_unmeasured_not_refused():
+    assert spec_gate.beyond_reason({"status": "agrees", "draws": 3, "mutants_rejected": 0, "mutants_accepted": 9, "completeness": 0.0}) is None
+    assert spec_gate.beyond_reason({"status": "no valid draws"}) is None
+    assert spec_gate.beyond_reason({"status": "agrees", "draws": 30, "mutants_rejected": 90, "mutants_accepted": 10, "completeness": 0.9}) is None

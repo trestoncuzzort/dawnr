@@ -60,6 +60,12 @@ MIN_COMPLETENESS = 0.6
 # is measured (t/PREDICT-2026-10-01-gate-without-reference.md).
 MIN_DOMAIN = 0.5
 DRAWS = 100
+# 2026-10-05: the same three demands on inputs larger than the question's examples (spec_check.draw_beyond). A
+# specification that spells out the cases up to the size the ordinary draws reach and says nothing after them passed
+# every one of those draws; found the first time a larger model wrote the specification. The larger draws count once
+# at least MIN_BEYOND of them fall inside the `requires`; a Python that answers none of them leaves it unmeasured.
+BEYOND_DRAWS = 60
+MIN_BEYOND = 5
 
 
 def python_oracle(session: py_sandbox.Session):
@@ -109,23 +115,51 @@ def reason(result: dict) -> str:
     return str(result.get("status") or "not checked")
 
 
-def judge(task: dict, entry: dict, code: str | None, seed: int = 1, n: int = DRAWS) -> dict:
+_KEEP = ("status", "draws", "outside_requires", "completeness", "mutants_rejected", "mutants_accepted", "skipped", "args",
+         "reference_said", "ensures", "weak_witness")
+
+
+def beyond_reason(larger: dict) -> str | None:
+    """Why a specification that stands on inputs the size of the examples does not stand on larger ones; None when
+    it does, or when too few larger inputs could be judged to say."""
+    if larger.get("status") == "disagrees":
+        return "the specification is false at the Python's answer on an input larger than the examples"
+    if larger.get("status") != "agrees":
+        return None
+    inside, outside = larger.get("draws", 0), larger.get("outside_requires", 0)
+    if inside + outside >= MIN_BEYOND and inside / (inside + outside) < MIN_DOMAIN:
+        return "the requires excludes most inputs larger than the examples"
+    if inside >= MIN_BEYOND and spec_check.complete(larger, MIN_COMPLETENESS) is False:
+        return "the specification says too little about inputs larger than the examples"
+    return None
+
+
+def judge(task: dict, entry: dict, code: str | None, seed: int = 1, n: int = DRAWS, beyond: int = BEYOND_DRAWS) -> dict:
     """One answer: {"passes", "why", the check's result, the reported scores}. `code` is the
-    model's own Python for the question, already known to pass the question's tests, or None."""
+    model's own Python for the question, already known to pass the question's tests, or None.
+    A specification that passes is then held to the same demands on `beyond` larger inputs (0: not asked)."""
     out = {"tests": spec_quality.scores(task, entry), "exploit": spec_check.exploit(task, entry).get("exploited_by")}
     if code is None:
         return dict(out, passes=False, why="no test-passing Python beside it")
+    larger = None
     try:
         with py_sandbox.Session(code, entry["fn"]) as session:
-            result = spec_check.check_task(task, entry, n, random.Random(seed), oracle=python_oracle(session))
+            oracle = python_oracle(session)
+            result = spec_check.check_task(task, entry, n, random.Random(seed), oracle=oracle)
+            if beyond and passes(result):
+                larger = spec_check.check_task(task, entry, beyond, random.Random(seed + 1000), oracle=oracle,
+                                               drawer=spec_check.beyond_drawer(len(task["params"])))
     except py_sandbox.LoadError as e:
         return dict(out, passes=False, why=f"the Python does not load: {e}"[:160])
     except Exception as e:                                      # noqa: BLE001
         return dict(out, passes=False, why=f"the check raised {type(e).__name__}: {e}"[:160])
-    keep = {k: result[k] for k in ("status", "draws", "outside_requires", "completeness", "mutants_rejected",
-                                   "mutants_accepted", "skipped", "args", "reference_said", "ensures",
-                                   "weak_witness") if k in result}
-    return dict(out, passes=passes(result), why=reason(result), agreement=keep)
+    out = dict(out, passes=passes(result), why=reason(result), agreement={k: result[k] for k in _KEEP if k in result})
+    if larger is not None:
+        out["larger"] = {k: larger[k] for k in _KEEP if k in larger}
+        why = beyond_reason(larger)
+        if why:
+            out.update(passes=False, why=why)
+    return out
 
 
 def judge_all(task: dict, entry: dict, code: str | None, others: list[str], seed: int = 1, n: int = DRAWS) -> dict:
