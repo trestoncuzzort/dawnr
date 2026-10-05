@@ -44,13 +44,16 @@ get".
 - **Two numbers beside every result**: tokens a second on the person's own machine, and what the task cost in
   tokens.
 
-Where it stands (`locallm/PREDICT-2026-10-05-assistant.md`): 135 tasks in four sets, judged by the folder's end
-state, by the command let through, or against the machine itself. On the unseen halves: 20 of 20, 14 of 15 harder
-ones, 8 of 11 past those, and 21 of 21 about the computer itself (looked at through read-only commands, acted on by
-one command shown and asked for, installs handed over as the line for five distributions). One prediction failed
-(a file written into a folder nobody named); twice a file was lost to a wrong swap under a person who approves
-everything. 27 to 29 tokens a second on a 12-core CPU, 72 on an 8 GB laptop card, 273 on a 48 GB card, from the 4B
-the gate already used. All 135 have been seen once; what a larger driver adds is the next reading.
+Where it stands (`locallm/PREDICT-2026-10-05-assistant.md`, evening of 2026-10-05): 161 tasks in five sets and
+18 more for a Windows desktop under WSL, judged by the folder's end state, by the command let through, or against
+the machine itself. The 4B driver (2.8 GB) does 148 of the 161 on a workstation card and 141 on an 8 GB laptop
+card, where all 161 take 12.5 minutes at 65 tokens a second; the 35B with 3B active per token does 158 and two
+hosted open models 159 and 157 through the same front door. What the 4B misses on longer work is the model's, so
+it is being taught: 66 families of practice tasks with judges of their own, two hosted teachers' judged work
+(1,400 conversations), a QLoRA on the laptop's card overnight, with predictions registered first (F) against the
+untaught model's 413 of 530 on fresh tasks of taught families and 88 of 130 on held-out ones. Found and fixed the
+same day: a warning the model read as "try again", PDFs unreadable without poppler (PDFium shipped), and a Windows
+desktop it had no lines for (16 of 18 now).
 
 ## The north star: dawnr, a model you could trust on a spaceship
 

@@ -221,14 +221,30 @@ tasks took 12.5 minutes: about three seconds a task, 65 tokens a second, 135
 done. That reading was registered first and missed its bar on the first four
 sets (117 of 135, where the workstation card read 129), for reasons that are
 the product's and are said plainly: seven tasks that act on a desktop had
-nothing to act with (under WSL the desktop is Windows, and dawnr has no lines
-for it yet), two PDFs could not be read because a fresh Ubuntu has no
+nothing to act with (under WSL the desktop is Windows, and dawnr had no lines
+for it), two PDFs could not be read because a fresh Ubuntu has no
 `pdftotext`, and three right answers were refused by the judge. The rest is
 arithmetic: the same file on another card writes another token at a close
 call, and ten tasks changed hands between the two machines for no other
 reason. Since that reading the installer brings its own PDF reader (PDFium,
-3.8 MB, used where `pdftotext` is missing), and the three judges are
-corrected.
+3.8 MB, used where `pdftotext` is missing), the three judges are corrected,
+and the same machine read 141 of the 161.
+
+Under WSL the desktop is Windows, and dawnr now treats it as one: it says so
+in what the model is told about the computer, gives it Windows's own lines
+(open a file with Explorer, lock the screen, empty the recycle bin, mute, the
+clipboard, shut down, close a program, send a notification, and what to call
+to find out the battery, the version, the programs running, the Wi-Fi network,
+free space, the computer's name, the time zone, dark mode), each read from
+Microsoft's documentation, runs the read-only ones unasked (`tasklist.exe`,
+`tzutil.exe /g`, PowerShell `Get-*` lines in the shape the Codex CLI allows,
+with no file readers), hands `runas` over like `sudo`, refuses `diskpart` and
+a sweep of `C:\Windows`, and treats `key=clear` and browsers' password stores
+as secrets. A sixth task set asks a real Windows laptop eight questions and
+nine acts and one refusal: registered first, it read 2 of 8 questions and 9 of
+9 acts (the table said how to do things and not how to look); with the
+looking lines added it reads 16 of 18
+([H in the registrations](locallm/PREDICT-2026-10-05-assistant.md)).
 
 What went wrong in those readings. One prediction failed: a file was written
 into a folder the request did not name (nothing was overwritten). Twice the

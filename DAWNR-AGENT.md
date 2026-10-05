@@ -338,6 +338,27 @@ with them:
 - **What a result says.** A command that printed nothing answers "exit 0: it ran and printed nothing"; "exit 0"
   alone was taken for nothing having happened, and the same line was sent again until the loop stopped.
 
+### A Windows desktop, from Ubuntu under WSL (2026-10-05, night)
+
+Under WSL the desktop is Windows, and Windows's programs are reachable by their `.exe` names (Microsoft's
+interop: they run with the WSL process's rights, as the active Windows user, and take Windows paths). dawnr
+treats such a machine as a Windows desktop (`system.under_windows`: the kernel says `microsoft` and `explorer.exe`
+is on the PATH): the sentence about the computer says so and how to call them; `recipes.py` gives the lines for
+the common jobs and for finding things out, each from Microsoft's own pages (receipt f69fc63e80f2); a command word
+that names no program here but one with `.exe` gets the suffix (the 4B drops it as often as not); a line that
+calls a Windows program goes to `pc` or `sysinfo`, never into the sandbox, which cannot reach interop. The look
+tier takes PowerShell in the Codex CLI's shape (`windows_safe_commands.rs`: a few switches, one `-Command` script,
+pipeline segments, no variable, call, block or redirection, and a first word on a short list), with a list of what
+shows the computer's state and none of the file readers; `tasklist.exe`, `systeminfo.exe`, `ipconfig.exe /all`,
+`tzutil.exe /g`, `reg.exe query` of six keys, `netsh.exe wlan show` and `findstr.exe` as a filter run unasked.
+`runas`, `-Verb RunAs` and `sudo.exe` are handed over like `sudo`; `diskpart`, `format`, `bcdedit` and a recursive
+removal of `C:\Windows` or `C:\Users` are refused outright; `Invoke-WebRequest`, `curl.exe`, `ping.exe` are the
+network; `key=clear`, browsers' password stores and the credential folder are secrets; PowerShell's file readers
+are pointed to the file tools. Measured on a real laptop (the sixth task set, H in the registrations): 9 of 9 acts
+recorded as the right line at once; the questions went from 2 of 8 to 7 of 8 once the table also said how to look.
+Not done: dark mode (no documented command; apps read the registry value only when told it changed), a volume
+set to a number (Windows has no command for it), and anything the sandbox would need from the Windows side.
+
 ## 5. Plans, the dry run and approval
 
 A plan is `{"goal": "...", "steps": [{"tool": ..., "arguments": {...}, "why": ...}]}`,
