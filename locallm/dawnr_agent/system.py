@@ -358,9 +358,31 @@ def look(command: str) -> str | None:
 
 # the system's package managers, told to change what is installed: that takes an administrator whether or not the
 # line says sudo, so it is handed over like a line that does
-MANAGERS = re.compile(r"^\s*(apt|apt-get|dnf|yum|zypper|pacman|apk|dpkg|rpm|snap)\s+(\S+\s+)*?(install|remove|erase|purge|"
-                      r"autoremove|upgrade|update|dist-upgrade|full-upgrade|dup|up|in|rm|add|del|downgrade|reinstall|refresh|"
-                      r"-S[a-z]*|-R[a-z]*|-U[a-z]*|-i|--install|-e|--erase|-r|--remove|-P|--purge)(\s|$)")
+_INSTALLS = ("install", "remove", "erase", "purge", "autoremove", "upgrade", "update", "dist-upgrade", "full-upgrade", "dup", "up",
+             "in", "rm", "add", "del", "downgrade", "reinstall", "refresh")
+_INSTALL_FLAGS = {"pacman": r"^-[SRU][a-z]*$", "dpkg": r"^(-i|--install|-r|--remove|-P|--purge)$",
+                  "rpm": r"^(-[iUe][a-zA-Z]*|--install|--upgrade|--erase)$"}
+
+
+class _Managers:
+    """`.match(line)`: true when a command of the line is a package manager changing what is installed. Each command
+    is judged by its own first words (`apt list --installed | grep -i x` holds an "-i", and is a look)."""
+
+    @staticmethod
+    def match(command: str) -> bool:
+        for part in re.split(r"&&|\|\||[;|\n]", command or ""):
+            words = part.split()
+            if not words or words[0] not in ("apt", "apt-get", "dnf", "yum", "zypper", "pacman", "apk", "dpkg", "rpm", "snap"):
+                continue
+            if words[0] in _INSTALL_FLAGS:
+                if any(re.match(_INSTALL_FLAGS[words[0]], w) for w in words[1:]):
+                    return True
+            elif next((w for w in words[1:] if not w.startswith("-")), "") in _INSTALLS:
+                return True
+        return False
+
+
+MANAGERS = _Managers
 
 
 # ---------------------------------------------------------------------- git --

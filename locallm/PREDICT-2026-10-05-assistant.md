@@ -435,7 +435,7 @@ desktop). All four are the same family at 4 bits; only the 4B has its prediction
 |---|---:|---:|---:|---:|---:|---:|
 | 4B, drafting | 2.8 GB | 129 | 0 | 1 | 270 | 138 |
 | 9B | 5.6 GB | 132 | 2 | 3 | 122 | 187 |
-| 27B | 16.7 GB | 131 | 2 | 2 | 43 | 536 |
+| 27B (a second reading, after the judge's corrections named below) | 16.7 GB | 132 | 1 | 2 | 41 | 541 |
 | 35B, 3B active per token | 22.1 GB | 133 | 3 | 0 | 162 | 193 |
 
 Three to four tasks separate the smallest from the largest, on sets where one reading moves by a task or two;
@@ -448,3 +448,49 @@ the 4B had in C. The 27B and the 35B look before they act more than the 4B does 
 `/etc/os-release` say), which on a described machine showed them the real one through `sh`; described-machine
 tasks are now run without `sh`, and "start my user service" accepts "there is no such unit" on a machine where
 that is true. These sets do not show what a larger driver is for; a fifth, made of longer work, has to.
+
+## A fifth set, of longer work, and two drivers on it: registered 2026-10-05 19:44Z
+
+`--set 5` is 26 tasks (ids 150 to 175, dev even, test odd) in which a task is several steps that depend on each
+other: three mistakes in three files behind one failing test; a function written to a dozen test cases (merging
+intervals, parsing `1h30m`, a least-recently-used cache); a rename carried through five files; an option added to
+a script; three tables joined; the slowest endpoints of a log of requests; a spreadsheet's total and a bill worked
+out from an email and a sheet of rates; two clauses of a 260-line contract; the second of three outages in 3,000
+lines; a chain of renames where the order matters; duplicates across folders; a repository asked what changed and
+which commit added a function. Every task is solved once by hand in `test_dawnr_tasks.py` and judged done, and
+judged not done as it starts.
+
+**The dev half, first reading (13 tasks, one 48 GB card): the 4B 8, the 9B 8, the 35B 11.** What it showed that
+was the interface's, each changed before this registration:
+
+- All three sizes wrote `--upper` so that `greet.py --upper ana` printed `HELLO --UPPER`, none ran it that way,
+  and all three said done. Code changed and nothing run after the last change now sends the answer back once,
+  with the tools still offered. (The 35B then finds and fixes it. The 4B and the 9B run it, see `--UPPER`, and
+  report that it prints `--UPPER` as the option working: the report is true now, and the code is still wrong.)
+- The 9B and the 35B went looking for a spreadsheet library (`import openpyxl`, `pip install`, then LibreOffice
+  inside the sandbox, which left a `budget.csv` behind) where `fs_read` reads the file. Its description said "a
+  text file"; it now names the kinds it reads.
+- `pc apt list --installed 2>/dev/null | grep -i openpyxl` was refused as changing what is installed: the rule had
+  found an "-i" further down the line. Each command of a line is now judged by its own first words.
+- Asked which commit added a function, the 4B answered that the commit's message was "plan 080f7fdc9a4feca4 was
+  already proposed; the loop stops rather than repeat it": the loop's own stop note, shown to it where the
+  command's output would have been. What the loop says in a result's place now begins "[From dawnr itself, not
+  output of the call:]".
+
+Second reading of the dev half after these: the 4B 9, the 9B 10, the 35B 12, nothing touched or let through
+without reason by any. What is still missed is the model's: the 4B and the 9B do not get `parse("1h1h")` to raise
+in eighteen rounds, strip whitespace with `fs_edit` and miss lines (the 4B also edits the file it was told to
+leave), and the 4B lower-cases and deduplicates a CSV wrongly; the 35B's one miss is that CSV's sort order.
+
+Predictions for the test half (13 tasks, none of them run), both drivers on the one 48 GB card at this commit:
+
+- **E1.** The 4B does at least 6 of the 13.
+- **E2.** The 35B (3B active per token) does at least 9.
+- **E3.** The 35B does at least 2 more than the 4B.
+- **E4.** Neither touches a file without reason or lets a line through unasked in more than one task.
+- **E5.** The 4B writes at least 200 tokens a second and the 35B at least 120.
+
+E1 fails: this set is past the 4B by more than its dev half says, and is kept. E2 or E3 fails: the larger driver
+does not buy what the dev half suggested, and the size table above (four tasks in 135) is the truer picture; the
+default stays the 4B either way, since nothing on the desktop can hold the 35B. E4 fails: each case is published.
+E5 fails: said with the numbers.

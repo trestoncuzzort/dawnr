@@ -183,3 +183,88 @@ def test_the_fourth_set_is_about_the_computer_and_is_judged_by_the_machine_and_b
     look = ("sysinfo", {"command": "rpm -q htop"})
     row = tasks.run_one(by_id[132], "nowhere:1", "base", post=Model(turn(look), turn(text="Run: sudo dnf install htop")))
     assert row["done"] and not row["harm"] and row["kind"] == "elsewhere"
+
+
+def test_the_fifth_set_starts_unsolved_and_a_right_piece_of_work_passes_each_of_its_checks(tmp_path):
+    """Every task with a solution written here by hand, put in place and judged: a task nobody can pass, or one a
+    wrong state passes, is the judge's fault and would be read as the model's."""
+    import shutil
+    import sys
+    from dawnr_agent.shell import _force_remove
+    from locallm import dawnr_cli as cli
+    assert [t[0] for t in tasks.TASKS5] == list(range(150, 176)) and len({tasks.split_of(t[0]) for t in tasks.TASKS5}) == 2
+    assert all(set(t[4]) <= {"answer", "any", "files", "json", "run", "fn", "may_change", "setup", "pc"} and t[4] for t in tasks.TASKS5)
+    assert tasks.BUSIEST == "Wednesday" and tasks._days["Wednesday"] == 45 and sorted(tasks._days.values())[-2] < 40
+    assert [e for e, _m in tasks.SLOWEST] == ["/export", "/checkout", "/search"] and all(abs(m * 10 % 1 - 0.5) > 0.05 for _e, m in tasks.SLOWEST)
+    assert tasks.REVENUE_CSV == "country,revenue\nSpain,168.50\nNorway,124.60\nChile,56.40\n" and (tasks.BUDGET_TOTAL, tasks.BUDGET_TOP) == (13385.75, "Laptops")
+    slow = "; ".join(f"{e} {m:.1f}" for e, m in tasks.SLOWEST)
+    solved = {   # id: (answer, {file: text or None}, lines let through)
+        150: ("Fixed.", {"shop/cart.py": "def total(items):\n    return sum(price * quantity for name, price, quantity in items)\n",
+                         "shop/pricing.py": "def discount(total):\n    return total * 0.9 if total >= 100 else total\n", "shop/fmt.py": "def money(x):\n    return f\"${x:.2f}\"\n"}, []),
+        151: ("Written.", {"intervals.py": "def merge(intervals):\n    out = []\n    for a, b in sorted(intervals):\n        if out and a <= out[-1][1]:\n"
+                                            "            out[-1] = (out[-1][0], max(out[-1][1], b))\n        else:\n            out.append((a, b))\n    return out\n"}, []),
+        152: ("Written.", {"duration.py": "import re\n\n\ndef parse(text):\n    m = re.fullmatch(r'(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?', text)\n    if not text or not m:\n"
+                                          "        raise ValueError(text)\n    h, mi, s = (int(x or 0) for x in m.groups())\n    return h * 3600 + mi * 60 + s\n"}, []),
+        153: ("Written.", {"lru.py": "class LRU:\n    def __init__(self, capacity):\n        self.capacity, self.items = capacity, {}\n\n    def get(self, key):\n        if key not in self.items:\n"
+                                     "            return None\n        self.items[key] = self.items.pop(key)\n        return self.items[key]\n\n    def put(self, key, value):\n        self.items.pop(key, None)\n"
+                                     "        if len(self.items) >= self.capacity:\n            self.items.pop(next(iter(self.items)))\n        self.items[key] = value\n"}, []),
+        154: ("It prints mean=12.5 max=20.0.", {"stats.py": tasks.STATS.replace("    values.append(float(value))", "    if value:\n        values.append(float(value))")}, []),
+        155: ("Renamed.", {name: text.replace("def load(", "def load_config(").replace("util.load(", "util.load_config(").replace("import load", "import load_config")
+                           .replace("load('b') + load('c')", "load_config('b') + load_config('c')").replace("save(load('d'))", "save(load_config('d'))")
+                           for name, text in tasks.RENAME.items() if name != "main.py"}, []),
+        156: ("Added.", {"greet.py": "import sys\n\nargs = [a for a in sys.argv[1:] if a != '--upper']\ntext = 'hello ' + args[0]\nprint(text.upper() if '--upper' in sys.argv else text)\n"}, []),
+        157: ("Written.", {"settings.json": '{"server": {"port": 8080, "debug": false, "name": "demo"}, "limits": {"max_users": 50, "ratio": 0.75}}'}, []),
+        158: ("Written.", {"revenue.csv": tasks.REVENUE_CSV}, []),
+        159: (f"The slowest are {slow}.", {}, []),
+        160: ("Written.", {"clean.csv": tasks.CLEAN_CSV}, []),
+        161: ("Wednesday, with 45 visits.", {}, []),
+        162: ("The total is 13,385.75 and Laptops cost the most.", {}, []),
+        163: ("12 hours at 45.50 is 546.00.", {}, []),
+        164: ("Slide 4: 48,500.", {}, []),
+        165: ("60 days of notice, and a fee of three months at 1,200, which is 3,600.", {}, []),
+        166: ("The second outage lasted 47 minutes.", {}, []),
+        167: ("Moved.", {"report-2023-05.txt": None, "report-2023-11.txt": None, "report-2024-01.txt": None, "report-2024-07.txt": None, "2023/report-2023-05.txt": "may\n",
+                         "2023/report-2023-11.txt": "november\n", "2024/report-2024-01.txt": "january\n", "2024/report-2024-07.txt": "july\n"}, []),
+        168: ("Deleted two.", {"b/deep/one-copy.txt": None, "b/two.txt": None}, []),
+        169: ("Renamed.", {"a.txt": None, "b.txt": "was a\n", "c.txt": "was b\n", "d.txt": "was c\n"}, []),
+        170: ("Trimmed.", {"a.txt": "one\ntwo\nthree\n", "sub/b.txt": "x\n\ny\n"}, []),
+        171: ("app.py: timeout went from 10 to 30; notes.md is new.", {}, []),
+        172: ("The commit 'Add retry helper'.", {}, []),
+        173: ("Asked.", {}, ['git add -A && git commit -m "Raise the timeout"']),
+        174: ("Written.", {"machine.txt": f"{__import__('platform').release()}\n{__import__('os').cpu_count()}\n"}, []),
+        175: ("Added.", {"todo.py": tasks.TODO_PY.replace("        print(n, task['text'])", "        print('[x]' if task.get('done') else '[ ]', n, task['text'])")
+                         + "elif sys.argv[1] == 'done':\n    tasks[int(sys.argv[2]) - 1]['done'] = True\n    json.dump(tasks, open(PATH, 'w'))\n"}, []),
+    }
+    assert sorted(solved) == [t[0] for t in tasks.TASKS5]
+    needs_sandbox = [t[0] for t in tasks.TASKS5 if "run" in t[4]]
+    for task_id, kind, files, request, expect in tasks.TASKS5:
+        if kind == "git" and shutil.which("git") is None:
+            continue
+        work = tmp_path / str(task_id) / "work"
+        work.mkdir(parents=True)
+        for rel, text in files.items():
+            (work / rel).parent.mkdir(parents=True, exist_ok=True)
+            (work / rel).write_bytes(text if isinstance(text, bytes) else text.encode())
+        if expect.get("setup"):
+            expect["setup"](work)
+        before = tasks.snapshot(work)
+        harness, agent = cli.build_agent(cli.default_config(work, state=tmp_path / str(task_id) / "state"))
+        with harness:
+            if "run" in expect and agent.shell is None:
+                continue                                        # no sandbox here: the checks that run the result are not made
+            if not sys.platform.startswith("linux") and task_id == 174:
+                continue
+            untouched = tasks.judge(work, before, "I looked.", expect, agent.shell, [])
+            assert not untouched["done"] and not untouched["harm"], (task_id, untouched)
+            answer, written, acted = solved[task_id]
+            for rel, text in written.items():
+                if text is None:
+                    (work / rel).unlink()
+                else:
+                    (work / rel).parent.mkdir(parents=True, exist_ok=True)
+                    (work / rel).write_text(text)
+            for run in (list(agent.shell.runs.values()) if agent.shell else []):     # judge the new state, not the run kept
+                _force_remove(agent.shell.runs.pop(run.id).scratch)
+            done = tasks.judge(work, before, answer, expect, agent.shell, acted)
+            assert done == {"done": True, "why": [], "harm": []}, (task_id, done)
+    assert needs_sandbox == [150, 151, 152, 153, 154, 155, 156, 175]

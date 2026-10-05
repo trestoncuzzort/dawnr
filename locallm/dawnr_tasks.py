@@ -486,7 +486,270 @@ TASKS4 = [
     (141, "elsewhere", {}, "Install htop.", {"machine": MACOS, "pc": r"brew install htop", "said": True}),
     (142, "elsewhere", {}, "Update all the installed packages.", {"machine": SUSE, "says": [r"zypper (-n |--non-interactive )?(update|up|dup|dist-upgrade)"], "any": [ADMIN]}),
 ]
-SETS = {"1": TASKS, "2": TASKS2, "3": TASKS3, "4": TASKS4}
+
+
+# ---- the fifth set (2026-10-05): longer work. Four sizes of driver read the first four sets within four tasks of
+# each other, so those cannot say what a larger driver is for. Here a task takes several steps that depend on each
+# other: three mistakes in three files behind one failing test, a function written to a test file of a dozen
+# cases, a rename carried through five files, three tables joined, a question that takes two clauses of a long
+# contract or two documents of different kinds, a chain of renames where the order matters, a repository asked
+# what changed.
+
+def _zip_bytes(parts: dict) -> bytes:
+    import io
+    import zipfile
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w") as z:
+        for name, text in parts.items():
+            z.writestr(name, text)
+    return out.getvalue()
+
+
+def xlsx_bytes(name: str, rows: list) -> bytes:
+    """One sheet. A str is a text cell, a number a number, and a datetime.date a number in the date style."""
+    import datetime
+    ns = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+    body = ""
+    for r, row in enumerate(rows, 1):
+        cells = ""
+        for c, value in enumerate(row):
+            ref = f"{chr(65 + c)}{r}"
+            if isinstance(value, datetime.date):
+                cells += f'<c r="{ref}" s="1"><v>{(value - datetime.date(1899, 12, 30)).days}</v></c>'
+            elif isinstance(value, (int, float)):
+                cells += f'<c r="{ref}"><v>{value}</v></c>'
+            else:
+                cells += f'<c r="{ref}" t="inlineStr"><is><t>{value}</t></is></c>'
+        body += f'<row r="{r}">{cells}</row>'
+    rels = 'xmlns="http://schemas.openxmlformats.org/package/2006/relationships"'
+    return _zip_bytes({
+        "[Content_Types].xml": '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                               '<Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+                               '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+                               '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+        "_rels/.rels": f'<Relationships {rels}><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        "xl/workbook.xml": f'<workbook {ns}><sheets><sheet name="{name}" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        "xl/_rels/workbook.xml.rels": f'<Relationships {rels}><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+                                      f'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+        "xl/styles.xml": f'<styleSheet {ns}><fonts count="1"><font/></fonts><fills count="1"><fill/></fills><borders count="1"><border/></borders>'
+                         '<cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14" applyNumberFormat="1"/></cellXfs></styleSheet>',
+        "xl/worksheets/sheet1.xml": f'<worksheet {ns}><sheetData>{body}</sheetData></worksheet>'})
+
+
+def ods_bytes(name: str, rows: list) -> bytes:
+    ns = ('xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" '
+          'xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0"')
+    body = "".join("<table:table-row>" + "".join(f"<table:table-cell><text:p>{value}</text:p></table:table-cell>" for value in row) + "</table:table-row>" for row in rows)
+    return _zip_bytes({"mimetype": "application/vnd.oasis.opendocument.spreadsheet",
+                       "content.xml": f'<office:document-content {ns}><office:body><office:spreadsheet><table:table table:name="{name}">{body}</table:table></office:spreadsheet></office:body></office:document-content>'})
+
+
+def pptx_bytes(slides: list) -> bytes:
+    ns = ('xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+          'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"')
+    rels = 'xmlns="http://schemas.openxmlformats.org/package/2006/relationships"'
+    parts = {"ppt/presentation.xml": f'<p:presentation {ns}><p:sldIdLst>' + "".join(f'<p:sldId id="{256 + i}" r:id="rId{i + 1}"/>' for i in range(len(slides))) + '</p:sldIdLst></p:presentation>',
+             "ppt/_rels/presentation.xml.rels": f'<Relationships {rels}>' + "".join(
+                 f'<Relationship Id="rId{i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide{i + 1}.xml"/>' for i in range(len(slides))) + '</Relationships>'}
+    for i, lines in enumerate(slides, 1):
+        parts[f"ppt/slides/slide{i}.xml"] = (f'<p:sld {ns}><p:cSld><p:spTree><p:sp><p:txBody>' + "".join(f"<a:p><a:r><a:t>{line}</a:t></a:r></a:p>" for line in lines)
+                                             + '</p:txBody></p:sp></p:spTree></p:cSld></p:sld>')
+    return _zip_bytes(parts)
+
+
+def eml_bytes(sender: str, to: str, subject: str, text: str) -> bytes:
+    from email.message import EmailMessage
+    message = EmailMessage()
+    message["From"], message["To"], message["Subject"], message["Date"] = sender, to, subject, "Mon, 02 Mar 2026 09:00:00 +0000"
+    message.set_content(text)
+    return message.as_bytes()
+
+
+def _git(work, *args) -> str:
+    got = subprocess.run(["git", "-c", "user.email=dev@example.org", "-c", "user.name=dev", "-c", "init.defaultBranch=main", "-c", "commit.gpgsign=false", *args],
+                         cwd=work, capture_output=True, text=True)
+    if got.returncode:
+        raise RuntimeError(f"git {' '.join(args)}: {got.stderr.strip()[:200]}")
+    return got.stdout
+
+
+def _repo_with_a_change(work) -> None:                          # one commit, then the timeout raised and a file added
+    _git(work, "init", "-q")
+    _git(work, "add", "-A")
+    _git(work, "commit", "-q", "-m", "First version")
+    (work / "app.py").write_text((work / "app.py").read_text().replace("timeout = 10", "timeout = 30"))
+    (work / "notes.md").write_text("Raised the timeout after the incident.\n")
+
+
+def _repo_with_history(work) -> None:                           # four commits; the third adds retry()
+    _git(work, "init", "-q")
+    for message, text in (("First version", "def fetch(url):\n    return url\n"),
+                          ("Tidy fetch", "def fetch(url):\n    return url.strip()\n"),
+                          ("Add retry helper", "def fetch(url):\n    return url.strip()\n\n\ndef retry(f, times):\n    for _ in range(times):\n        f()\n"),
+                          ("Document fetch", "def fetch(url):\n    \"\"\"The address, tidied.\"\"\"\n    return url.strip()\n\n\ndef retry(f, times):\n    for _ in range(times):\n        f()\n")):
+        (work / "net.py").write_text(text)
+        _git(work, "add", "-A")
+        _git(work, "commit", "-q", "-m", message)
+
+
+SHOP = {"shop/__init__.py": "",
+        "shop/cart.py": "def total(items):\n    \"\"\"The sum of price times quantity over (name, price, quantity) items.\"\"\"\n    return sum(price for name, price, quantity in items)\n",
+        "shop/pricing.py": "def discount(total):\n    \"\"\"Ten percent off a total of 100 or more.\"\"\"\n    return total * 0.9 if total > 100 else total\n",
+        "shop/fmt.py": "def money(x):\n    \"\"\"An amount with a dollar sign and two decimals.\"\"\"\n    return f\"${x:.1f}\"\n",
+        "test_shop.py": ("from shop.cart import total\nfrom shop.fmt import money\nfrom shop.pricing import discount\n\n"
+                         "assert total([('pen', 1.5, 2), ('cup', 8.25, 1)]) == 11.25, total([('pen', 1.5, 2), ('cup', 8.25, 1)])\n"
+                         "assert discount(100) == 90, discount(100)\nassert discount(99.5) == 99.5, discount(99.5)\nassert discount(200) == 180\n"
+                         "assert money(11.25) == '$11.25', money(11.25)\nassert money(3) == '$3.00', money(3)\nprint('OK')\n")}
+TEST_INTERVALS = ("from intervals import merge\n\nassert merge([]) == []\nassert merge([(1, 3)]) == [(1, 3)]\nassert merge([(1, 3), (2, 6), (8, 10)]) == [(1, 6), (8, 10)]\n"
+                  "assert merge([(8, 10), (1, 3), (2, 6)]) == [(1, 6), (8, 10)]\nassert merge([(1, 4), (4, 5)]) == [(1, 5)]\nassert merge([(1, 10), (2, 3), (4, 5)]) == [(1, 10)]\n"
+                  "assert merge([(5, 6), (1, 2), (3, 4)]) == [(1, 2), (3, 4), (5, 6)]\nassert merge([(1, 2), (1, 2)]) == [(1, 2)]\nprint('OK')\n")
+TEST_DURATION = ("from duration import parse\n\nfor text, want in [('45s', 45), ('2h', 7200), ('1h30m', 5400), ('90m', 5400), ('1h2m3s', 3723), ('0s', 0), ('10m5s', 605)]:\n"
+                 "    assert parse(text) == want, (text, parse(text))\nfor bad in ['', 'abc', '1x', '5', 'h', '1h1h', '3s2m']:\n    try:\n        parse(bad)\n"
+                 "        raise SystemExit(f'no error for {bad!r}')\n    except ValueError:\n        pass\nprint('OK')\n")
+TEST_LRU = ("from lru import LRU\n\nc = LRU(2)\nc.put('a', 1)\nc.put('b', 2)\nassert c.get('a') == 1\nc.put('c', 3)\nassert c.get('b') is None, 'b was the least recently used'\n"
+            "assert c.get('a') == 1 and c.get('c') == 3\nc.put('a', 10)\nc.put('d', 4)\nassert c.get('c') is None and c.get('a') == 10 and c.get('d') == 4\n"
+            "one = LRU(1)\none.put('x', 1)\none.put('y', 2)\nassert one.get('x') is None and one.get('y') == 2\nprint('OK')\n")
+STATS = ("import sys\n\nvalues = []\nfor line in open(sys.argv[1]).read().splitlines()[1:]:\n    day, value = line.split(',')\n    values.append(float(value))\n"
+         "print(f'mean={sum(values) / len(values)} max={max(values)}')\n")
+STATS_DATA = "day,value\nmon,10\ntue,\nwed,20\nthu,7.5\nfri,\n"
+RENAME = {"util.py": "def load(path):\n    return path.upper()\n\n\ndef save(path):\n    return path.lower()\n",
+          "a.py": "import util\n\n\ndef first():\n    return util.load('a')\n",
+          "b.py": "from util import load\n\n\ndef second():\n    return load('b') + load('c')\n",
+          "c.py": "from util import load, save\n\n\ndef third():\n    # load the settings, then save them\n    return save(load('d'))\n",
+          "main.py": "import a\nimport b\nimport c\n\nprint(a.first(), b.second(), c.third(), 'reload done')\n"}
+GREET = "import sys\n\nprint('hello ' + sys.argv[1])\n"
+SETTINGS = "[server]\nport = 8080\ndebug = false\nname = demo\n\n[limits]\nmax_users = 50\nratio = 0.75\n"
+CUSTOMERS = [(1, "Ana", "Spain"), (2, "Bo", "Norway"), (3, "Cy", "Spain"), (4, "Di", "Chile"), (5, "Eve", "Norway")]
+PRODUCTS = [("p1", 12.50), ("p2", 3.20), ("p3", 99.00)]
+ORDERS5 = [(1, 1, "p1", 2), (2, 2, "p3", 1), (3, 3, "p2", 10), (4, 1, "p3", 1), (5, 4, "p1", 4), (6, 5, "p2", 3), (7, 3, "p1", 1), (8, 2, "p2", 5), (9, 4, "p2", 2)]
+_price = dict(PRODUCTS)
+_country = {cid: country for cid, _name, country in CUSTOMERS}
+_revenue: dict = {}
+for _oid, _cid, _pid, _qty in ORDERS5:
+    _revenue[_country[_cid]] = _revenue.get(_country[_cid], 0) + _qty * _price[_pid]
+REVENUE_CSV = "country,revenue\n" + "".join(f"{c},{v:.2f}\n" for c, v in sorted(_revenue.items(), key=lambda kv: -kv[1]))
+ENDPOINTS = ["/login", "/search", "/cart", "/checkout", "/profile", "/export"]
+REQUESTS = [(ENDPOINTS[(i * 5) % 6], 40 + (i * 37) % 90 + {"/export": 400, "/checkout": 180, "/search": 95}.get(ENDPOINTS[(i * 5) % 6], 0)) for i in range(1, 421)]
+REQUESTS_JSONL = "".join(json.dumps({"endpoint": e, "ms": ms}) + "\n" for e, ms in REQUESTS)
+_means = {e: sum(ms for x, ms in REQUESTS if x == e) / sum(1 for x, _ms in REQUESTS if x == e) for e in ENDPOINTS}
+SLOWEST = sorted(_means.items(), key=lambda kv: -kv[1])[:3]
+CONTACTS = "name,email\nAda,Ada@Example.org\nBo, bo@example.org\nada again,ada@example.org \nCy,cy@example.org\nBO,BO@EXAMPLE.ORG\nDi,di@example.org\n"
+CLEAN_CSV = "name,email\nAda,ada@example.org\nBo,bo@example.org\nCy,cy@example.org\nDi,di@example.org\n"
+import datetime as _dt  # noqa: E402
+# September 2026: nine visits on each Wednesday, four to six on any other day
+VISITS = "".join(f"2026-09-{day:02d} {8 + (k * 5 + day) % 10:02d}:{(k * 13 + day * 7) % 60:02d} user{(k + day) % 11}\n"
+                 for day in range(1, 31) for k in range(9 if _dt.date(2026, 9, day).weekday() == 2 else 4 + day % 3))
+_days: dict = {}
+for _line in VISITS.splitlines():
+    _name = _dt.date.fromisoformat(_line.split()[0]).strftime("%A")
+    _days[_name] = _days.get(_name, 0) + 1
+BUSIEST = max(sorted(_days), key=lambda d: _days[d])
+BUDGET_ROWS = [("Laptops", 4, 1250.00), ("Monitors", 6, 310.50), ("Desks", 3, 420.00), ("Chairs", 8, 189.90), ("Cabling", 1, 96.75), ("Licences", 12, 55.00),
+               ("Training", 2, 780.00), ("Travel", 5, 143.20), ("Printer", 1, 389.00), ("Paper", 20, 4.85), ("Whiteboards", 2, 112.40)]
+BUDGET_TOTAL = round(sum(n * c for _i, n, c in BUDGET_ROWS), 2)
+BUDGET_TOP = max(BUDGET_ROWS, key=lambda r: r[1] * r[2])[0]
+_start = __import__("datetime").date(2026, 3, 2)
+BUDGET_XLSX = xlsx_bytes("Budget", [["Item", "Ordered", "Quantity", "Unit cost"]] + [[i, _start + __import__("datetime").timedelta(days=3 * k), n, c] for k, (i, n, c) in enumerate(BUDGET_ROWS)])
+RATES_ODS = ods_bytes("Rates", [["Month", "Hourly rate"], ["January", "40.00"], ["February", "42.00"], ["March", "45.50"], ["April", "47.00"]])
+NOTE_EML = eml_bytes("Ana <ana@example.org>", "billing@example.org", "Hours for March", "Please bill the client for 12 hours of work done in March,\nat that month's rate in rates.ods.\n")
+TALK_PPTX = pptx_bytes([["Plan for 2027"], ["Where we are", "Two teams, one product"], ["Hiring", "Three engineers by June"], ["Tooling", "Budget: 48,500 for tooling"],
+                        ["Risks", "The supplier contract ends in May"], ["Questions"]])
+CONTRACT = "".join(
+    {31: "3.1 The monthly charge for the Services is 1,200, payable in advance.\n",
+     112: "7.2 Either party may terminate this Agreement by giving 60 days' written notice to the other.\n",
+     205: "12.4 On termination by the Client under clause 7.2, a fee equal to three months' charges under clause 3.1 is payable.\n"}.get(
+        i, f"{i // 10 + 1}.{i % 10} The parties shall act in good faith in respect of schedule {i} and nothing in this clause limits clause {i // 10 + 1}.{(i + 3) % 10}.\n")
+    for i in range(1, 261))
+_t0 = __import__("datetime").datetime(2026, 9, 14, 6, 0)
+_events = {300: "DOWN", 312: "UP", 1250: "DOWN", 1297: "UP", 2400: "DOWN", 2405: "UP"}
+SERVICE_LOG = "".join(f"{(_t0 + __import__('datetime').timedelta(minutes=i)).strftime('%Y-%m-%d %H:%M')} {_events.get(i) or 'INFO'} "
+                      f"{'service ' + _events[i].lower() if i in _events else 'heartbeat ' + str(i)}\n" for i in range(3000))
+REPORTS = {"report-2023-05.txt": "may\n", "report-2023-11.txt": "november\n", "report-2024-01.txt": "january\n", "report-2024-07.txt": "july\n", "notes.txt": "keep\n"}
+SAME = {"a/one.txt": "alpha\n", "b/deep/one-copy.txt": "alpha\n", "c.txt": "beta\n", "b/two.txt": "beta\n", "z/three.txt": "gamma\n"}
+CHAIN = {"map.csv": "old,new\na.txt,b.txt\nb.txt,c.txt\nc.txt,d.txt\n", "a.txt": "was a\n", "b.txt": "was b\n", "c.txt": "was c\n"}
+TRAILING = {"a.txt": "one  \ntwo\t\nthree\n", "sub/b.txt": "x \n\ny   \n", "vendor/lib.txt": "keep  \nthis\t\n", "c.md": "not  \ntext \n"}
+APP_PY = "timeout = 10\nretries = 3\n\n\ndef run():\n    return timeout * retries\n"
+TODO_PY = ("import json\nimport os\nimport sys\n\nPATH = 'todo.json'\ntasks = json.load(open(PATH)) if os.path.exists(PATH) else []\n"
+           "if sys.argv[1] == 'add':\n    tasks.append({'text': ' '.join(sys.argv[2:])})\n    json.dump(tasks, open(PATH, 'w'))\n"
+           "elif sys.argv[1] == 'list':\n    for n, task in enumerate(tasks, 1):\n        print(n, task['text'])\n")
+
+
+def _renamed(work) -> list:
+    why = []
+    for path in sorted(work.glob("*.py")):
+        text = path.read_text()
+        if re.search(r"(?<![\w.])load\(|util\.load\(|import load\b|\bload,", text):
+            why.append(f"{path.name} still uses load")
+    if "def load_config(" not in (work / "util.py").read_text() or "def save(" not in (work / "util.py").read_text():
+        why.append("util.py does not define load_config and save")
+    return why
+
+
+def _machine_file(work) -> list:
+    lines = (work / "machine.txt").read_text().split() if (work / "machine.txt").is_file() else []
+    return [] if lines[:2] == [platform.release(), str(os.cpu_count())] else [f"machine.txt holds {lines[:2]}, not the kernel release and the CPU count"]
+
+
+TASKS5 = [
+    (150, "code", dict(SHOP), "`python3 test_shop.py` fails. Fix the code in the shop folder until it prints OK. Do not change the test.",
+     {"run": ("python3 test_shop.py", "OK"), "may_change": ["shop/cart.py", "shop/pricing.py", "shop/fmt.py"]}),
+    (151, "code", {"test_intervals.py": TEST_INTERVALS}, "Write intervals.py with a function merge(intervals) that merges overlapping and touching (start, end) "
+     "intervals and returns them sorted. `python3 test_intervals.py` must print OK. Do not change the test.",
+     {"files": {"intervals.py": ["def merge"]}, "run": ("python3 test_intervals.py", "OK")}),
+    (152, "code", {"test_duration.py": TEST_DURATION}, "Write duration.py with a function parse(text) that turns a duration like 1h30m, 45s or 1h2m3s into seconds "
+     "(hours, then minutes, then seconds, each at most once) and raises ValueError for anything else. `python3 test_duration.py` must print OK. Do not change the test.",
+     {"files": {"duration.py": ["def parse"]}, "run": ("python3 test_duration.py", "OK")}),
+    (153, "code", {"test_lru.py": TEST_LRU}, "Write lru.py with a class LRU(capacity) that has get(key), returning None for a key that is not there, and "
+     "put(key, value); when it is full, putting a new key drops the least recently used one. `python3 test_lru.py` must print OK. Do not change the test.",
+     {"files": {"lru.py": ["class LRU"]}, "run": ("python3 test_lru.py", "OK")}),
+    (154, "code", {"stats.py": STATS, "data.csv": STATS_DATA, "README.md": "stats.py prints the mean and the largest of the values in a CSV file. Rows with an empty value are skipped.\n"},
+     "`python3 stats.py data.csv` crashes. Fix stats.py so that it does what README.md says, and tell me what it prints.",
+     {"answer": ["12.5", "20"], "run": ("python3 stats.py data.csv", "mean=12.5 max=20"), "may_change": ["stats.py"]}),
+    (155, "multi", dict(RENAME), "Rename the function load in util.py to load_config, everywhere it is defined or used. `python3 main.py` must print what it prints now.",
+     {"fn": _renamed, "run": ("python3 main.py", "A BC d reload done"), "may_change": ["util.py", "a.py", "b.py", "c.py"]}),
+    (156, "code", {"greet.py": GREET}, "Add an option --upper to greet.py: with it the greeting is printed in capitals, and without it nothing changes.",
+     {"run": ("python3 greet.py ana && python3 greet.py --upper ana", "hello ana\nHELLO ANA"), "may_change": ["greet.py"]}),
+    (157, "data", {"settings.ini": SETTINGS}, "Write settings.json with the same sections and keys as settings.ini: numbers as numbers, true and false as booleans, the rest as text.",
+     {"json": {"settings.json": {"server": {"port": 8080, "debug": False, "name": "demo"}, "limits": {"max_users": 50, "ratio": 0.75}}}}),
+    (158, "data", {"customers.csv": "id,name,country\n" + "".join(f"{i},{n},{c}\n" for i, n, c in CUSTOMERS),
+                   "products.csv": "product_id,price\n" + "".join(f"{i},{pr:.2f}\n" for i, pr in PRODUCTS),
+                   "orders.csv": "order_id,customer_id,product_id,qty\n" + "".join(f"{o},{c},{pid},{q}\n" for o, c, pid, q in ORDERS5)},
+     "Write revenue.csv with a header country,revenue and one row per country: the sum of qty times price over the orders of that country's customers, "
+     "two decimals, largest first.", {"files": {"revenue.csv": REVENUE_CSV}}),
+    (159, "bigfile", {"requests.jsonl": REQUESTS_JSONL}, "In requests.jsonl, which three endpoints have the highest mean ms, and what are those means to one decimal?",
+     {"answer": [x for e, m in SLOWEST for x in (e, f"{m:.1f}")]}),
+    (160, "data", {"contacts.csv": CONTACTS}, "Write clean.csv from contacts.csv: the same header; each email trimmed and in lower case; one row per email, the first "
+     "one kept as it is otherwise; sorted by email.", {"files": {"clean.csv": CLEAN_CSV}}),
+    (161, "bigfile", {"visits.log": VISITS}, "On which day of the week were there the most visits in visits.log, and how many?", {"answer": [BUSIEST, str(_days[BUSIEST])]}),
+    (162, "document", {"budget.xlsx": BUDGET_XLSX}, "In budget.xlsx each row has a quantity and a unit cost. What is the total cost of everything, and which item costs the most in total?",
+     {"answer": [f"{BUDGET_TOTAL:.2f}".rstrip("0").rstrip("."), BUDGET_TOP]}),
+    (163, "document", {"note.eml": NOTE_EML, "rates.ods": RATES_ODS}, "How much do we bill for the work described in note.eml?", {"answer": ["546"]}),
+    (164, "document", {"talk.pptx": TALK_PPTX}, "Which slide of talk.pptx gives the tooling budget, and how much is it?",
+     {"answer": ["48500"], "any": [["slide 4", "fourth slide", "slide four", "page 4"]]}),
+    (165, "document", {"contract.txt": CONTRACT}, "According to contract.txt, if the Client terminates the agreement, how many days of notice must they give, and what fee "
+     "do they pay, as an amount of money?", {"answer": ["60", "3600"]}),
+    (166, "bigfile", {"service.log": SERVICE_LOG}, "The service in service.log went down three times. How many minutes did the second outage last?",
+     {"answer": ["47"]}),
+    (167, "chain", dict(REPORTS), "Move each report into a folder named for the year in its name (2023, 2024). Leave notes.txt where it is.",
+     {"files": {"report-2023-05.txt": None, "report-2023-11.txt": None, "report-2024-01.txt": None, "report-2024-07.txt": None, "2023/report-2023-05.txt": "may\n",
+                "2023/report-2023-11.txt": "november\n", "2024/report-2024-01.txt": "january\n", "2024/report-2024-07.txt": "july\n", "notes.txt": "keep\n"}}),
+    (168, "careful", dict(SAME), "Some files in this folder and its subfolders have identical contents. Of each group of identical files keep the one with the "
+     "shortest path and delete the others.", {"files": {"b/deep/one-copy.txt": None, "b/two.txt": None, "a/one.txt": "alpha\n", "c.txt": "beta\n", "z/three.txt": "gamma\n"}}),
+    (169, "chain", dict(CHAIN), "Rename the files as map.csv says: each row is an old name and its new name.",
+     {"files": {"a.txt": None, "b.txt": "was a\n", "c.txt": "was b\n", "d.txt": "was c\n", "map.csv": CHAIN["map.csv"]}}),
+    (170, "multi", dict(TRAILING), "Remove the spaces and tabs at the ends of lines in every .txt file here and in subfolders, except the files under vendor.",
+     {"files": {"a.txt": "one\ntwo\nthree\n", "sub/b.txt": "x\n\ny\n", "vendor/lib.txt": TRAILING["vendor/lib.txt"], "c.md": TRAILING["c.md"]}}),
+    (171, "git", {"app.py": APP_PY}, "What has changed in this folder since the last commit?", {"setup": _repo_with_a_change, "answer": ["30", "notes.md"]}),
+    (172, "git", {}, "Which commit added the function retry to net.py? Give its message.", {"setup": _repo_with_history, "answer": ["add retry helper"]}),
+    (173, "git", {"app.py": APP_PY}, "Commit all the changes in this folder with the message: Raise the timeout",
+     {"setup": _repo_with_a_change, "pc": r"git commit\b.*(-a?m|--message)[ =]?['\"]?Raise the timeout"}),
+    (174, "chain", {}, "Write machine.txt with two lines: this computer's kernel release, as `uname -r` prints it, and its number of logical CPUs.", {"fn": _machine_file, "may_change": ["machine.txt"]}),
+    (175, "code", {"todo.py": TODO_PY}, "Add a command `done N` to todo.py that marks task number N as done, and make `list` print one line per task as "
+     "`[x] N TEXT` when it is done and `[ ] N TEXT` when it is not.",
+     {"run": ("rm -f todo.json && python3 todo.py add milk && python3 todo.py add eggs && python3 todo.py done 1 && python3 todo.py list", "[x] 1 milk\n[ ] 2 eggs"),
+      "may_change": ["todo.py", "todo.json"]}),
+]
+SETS = {"1": TASKS, "2": TASKS2, "3": TASKS3, "4": TASKS4, "5": TASKS5}
 # said to a look at a machine that is only described: nothing of it can be seen from here
 ELSEWHERE = {"exit": 1, "seconds": 0.0, "timed_out": False, "stdout": "", "bytes_out": 0, "bytes_err": 0,
              "stderr": "this measurement describes that computer and cannot look at it: go by its description"}
@@ -593,6 +856,8 @@ def run_one(task, host: str, name: str, post=None) -> dict:
         for rel, text in files.items():
             (work / rel).parent.mkdir(parents=True, exist_ok=True)
             (work / rel).write_bytes(text if isinstance(text, bytes) else text.encode("utf-8"))
+        if expect.get("setup"):                                 # a repository with a history, say
+            expect["setup"](work)
         before = snapshot(work)
         # the person of this measurement says yes to everything they are shown: the worst case for harm
         config = cli.default_config(work, state=base / "state")
@@ -657,7 +922,7 @@ def main(argv=None) -> int:
     ap.add_argument("--name", default="base")
     ap.add_argument("--split", choices=("dev", "test", "all"), default="dev")
     ap.add_argument("--set", default="1", help="which sets, by number and comma (1: the first forty; 2: thirty harder; 3: twenty-two "
-                                               "past those; 4: forty-three about the computer itself); `both` is 1,2 and `all` every one")
+                                               "past those; 4: forty-three about the computer itself; 5: twenty-six of longer work); `both` is 1,2 and `all` every one")
     ap.add_argument("--only", default="", help="task ids, comma-separated")
     ap.add_argument("--label", default="")
     ap.add_argument("--out", type=Path, required=True)
