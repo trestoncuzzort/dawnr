@@ -234,6 +234,22 @@ dawnr ask "..." --test "..."
 to be written, and say so each time; everything it returns goes through the
 same gate. Without those variables nothing leaves your machine.
 
+If you already use an AI assistant that speaks the Model Context Protocol
+(Claude Code, Claude Desktop, Cursor and others), dawnr can be its checker,
+with no dawnr model involved:
+
+```bash
+claude mcp add dawnr -- dawnr mcp
+```
+
+The assistant then has five tools: the `t` language on one page, `prove` (a
+program it wrote goes through the same gate and comes back with a
+certificate, or with the check that stopped it), `check_certificate`,
+`compute` (its arithmetic computed exactly, and used only if separate
+workings agree on your question's own numbers) and `check_quotes` (is each
+quoted sentence in your text word for word). Its model is the writer and is
+trusted exactly as far as dawnr's own: not at all.
+
 If you would rather not use a terminal, `dawnr serve api` starts the models
 and prints a link. The page behind it has everything above (ask, check a
 function you have, prove a specification, answer from your files, numbers,

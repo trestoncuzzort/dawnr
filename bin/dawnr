@@ -12,6 +12,7 @@
 #   dawnr doctor          what is installed and what each part found
 #   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
 #   dawnr serve api       all of the above as a page in your browser and a local HTTP API (this machine only)
+#   dawnr mcp             the checks as tools for the assistant you already use (Model Context Protocol, stdio)
 #
 # Installed by install.sh. From a specification the gate is t/prove.py: a body counts only if it keeps the specification
 # and is proved. From a question it is t/answer.py: the model answers, the answers that pass the tests are checked
@@ -192,6 +193,12 @@ case $cmd in
     base_up
     cd "$DAWNR_REPO" && "$DAWNR_PYTHON" locallm/calc.py --host "127.0.0.1:$BP" ${ARGS[@]+"${ARGS[@]}"} "$QUESTION"
     ;;
+  mcp)
+    # dawnr's checks as Model Context Protocol tools on stdio, for an assistant that is not dawnr's (t/mcp_gate.py):
+    # no model runs, and nothing but protocol messages may go to stdout
+    cd "$DAWNR_REPO"
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} exec "$DAWNR_PYTHON" t/mcp_gate.py
+    ;;
   check)
     # a certificate replayed: the tests, the provers on this machine, the Python and the measurements, with no model
     # (t/certificate.py); exit 0 reproduced, 1 failed, 2 nothing here could decide
@@ -265,5 +272,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,18p' "$0";;
+  *) sed -n '2,19p' "$0";;
 esac
