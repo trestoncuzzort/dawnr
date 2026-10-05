@@ -90,3 +90,45 @@ for both roles); if it does not, the larger model's lead on the scoreboard does 
 card and the installer stays as it is. Either way the result is the 4-bit model's, through this gate; it says
 nothing new about fp8 with seven provers.
 
+## Outcome of W4 and W5, 2026-10-05 11:33Z
+
+Both batches asked all 111 (`~/scratch/wider/score.py`; the reference was read only to score).
+
+| | asked | shown | of those, agree with the reference with a complete specification | Python handed back | median time a question |
+|---|---|---|---|---|---|
+| W4: the published model (4B, Q8_0, the desktop's CPU) | 111 | 12 | 11 | 11 | 157 s |
+| W5: Qwen3.5-27B prompted (Q4_K_M, a lab card, the desktop's Dafny) | 111 | 16 | 15 | 15 | 143 s |
+
+- **W4: holds.** 12 shown (the bar was 5) and 11 of 12 agree (92%; the bar was 70%).
+- **W5: fails on one clause.** 16 shown (the bar of 12 is met) and 15 of 16 agree (94%), but 16 is not twice 12.
+  By the rule above the installer stays as it is: at four bits, through this gate and with Dafny alone, six times
+  the parameters buy four more answers in 111.
+
+**The one answer in each batch that does not agree is the same problem, and the reference is the odd one.**
+Problem 889 asks for "a function to reverse each list in a given list of lists". Both models' shown programs
+reverse each list and prove it. The benchmark's reference sorts each list in descending order, which is the same
+thing only on the tests' already ascending rows. It is counted as a miss in the table because the scorer is the
+registered one; `dawnr verify`, given that reference as the function and those words as its docstring, refuses it
+and says why (`t/PREDICT-2026-10-05-verify-python.md`, outcome).
+
+**The gate has changed since these batches began.** Both started before specifications were also held to inputs
+larger than the examples (`t/LARGER-INPUTS-2026-10-05.md`). Re-judged with the gate as it stands, from what each
+run recorded and without asking a model again, one shown answer in each is no longer shown (problem 196, the
+specification says too little about larger inputs): **11 for the published model and 15 for the 27B.** No answer
+that agrees with its reference under the larger reading is lost.
+
+**Where the refused questions stop** (each question counted once, at the furthest stage any of its answers reached):
+
+| | no answer parses, is well formed and passes the tests | a test-passing answer, no specification that could be supported | a supported specification, no proof | read more than one way | shown |
+|---|---|---|---|---|---|
+| W4, published 4B | 77 | 13 | 7 | 2 | 12 |
+| W5, prompted 27B | 54 | 30 | 9 | 2 | 16 |
+
+For the published model the wall is the first column: 77 of 99 refused questions never get a program that runs
+its own tests (of its refused answers 185 do not parse, 122 are not well formed, 125 fail a test). The 27B, which
+has never been trained on `t`, gets past that more often (267 of its answers still do not parse) and then stops
+at the specification: 30 questions have a test-passing program and no specification the gate could support.
+An exploratory run on the dev panel the same day (`~/scratch/measure/diag_parse.py`, not registered) held the
+published model's decoding to `t`'s grammar: unparseable answers fell from 31 to 12 of 120 and the problems with a
+test-passing answer stayed at 7 of 40, so for the trained model parsing is a symptom and not the lever.
+
