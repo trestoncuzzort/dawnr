@@ -209,8 +209,8 @@ def _reads(flags: str, values: str = ""):
 
 def _grep(args) -> bool:
     """A pattern, plain options, and files only from where nothing secret is kept (none: it filters a pipe)."""
-    flags = re.compile(r"^-[inovEFcwxhHqsABCm0-9]+$|^--(ignore-case|invert-match|count|only-matching|line-number|"
-                       r"extended-regexp|fixed-strings|word-regexp|colou?r=\w+|max-count=\d+|no-filename|with-filename)$")
+    flags = re.compile(r"^-[inovEFPcwxhHqsABCm0-9]+$|^--(ignore-case|invert-match|count|only-matching|line-number|"
+                       r"extended-regexp|fixed-strings|perl-regexp|word-regexp|colou?r=\w+|max-count=\d+|no-filename|with-filename)$")
     operands, previous = [], ""
     for a in args:
         if a.startswith("-") and len(a) > 1:
@@ -317,7 +317,9 @@ LOOK = {
     "column": _reads(r"^-[tx]+$", values="-s"),
 }
 LOOK["pip3"] = LOOK["pip"]
-for _name in ("python3", "python", "git", "node", "npm", "gcc", "g++", "cc", "clang", "make", "cmake", "java", "javac", "go",
+for _name in ("apt", "dpkg", "rpm", "pacman", "apk", "flatpak", "snap", "brew"):       # ... and any of them asked its version
+    LOOK[_name] = (lambda rule: lambda a: _version(a) or rule(a))(LOOK[_name])
+for _name in ("dnf", "yum", "zypper", "apt-get", "python3", "python", "git", "node", "npm", "gcc", "g++", "cc", "clang", "make", "cmake", "java", "javac", "go",
               "rustc", "cargo", "docker", "podman", "bash", "zsh", "fish", "ffmpeg", "curl", "wget", "code", "firefox",
               "chromium", "chromium-browser", "google-chrome", "libreoffice", "soffice", "vim", "nvim", "emacs", "nano",
               "tmux", "ssh", "openssl", "perl", "ruby", "php", "R", "julia", "dotnet", "gnome-shell", "plasmashell"):
@@ -361,8 +363,63 @@ MANAGERS = re.compile(r"^\s*(apt|apt-get|dnf|yum|zypper|pacman|apk|dpkg|rpm|snap
                       r"-S[a-z]*|-R[a-z]*|-U[a-z]*|-i|--install|-e|--erase|-r|--remove|-P|--purge)(\s|$)")
 
 
+# ---------------------------------------------------------------------- git --
+# A repository is read inside the sandbox like any other files (`sh`). What changes it (a commit, a branch, a stash)
+# cannot be carried out of a sandbox, since `.git` is never written by the journal; those lines are `pc`'s, shown and
+# asked for, and git's own reflog is what undoes them. Two kinds are not run at all and are handed to the person:
+# what reaches a remote while offline, and what discards work that is in no commit.
+
+GIT_READS = ("status", "diff", "log", "show", "blame", "grep", "ls-files", "ls-tree", "rev-parse", "rev-list", "describe",
+             "shortlog", "reflog", "cat-file", "merge-base", "name-rev", "whatchanged", "count-objects", "help", "version")
+GIT_REMOTE = ("push", "pull", "fetch", "clone", "ls-remote")
+GIT_DISCARDS = re.compile(r"^(reset\b.*--hard|clean\b.*(-[a-zA-Z]*f|--force)|checkout\b.*(\s--(\s|$)|\s\.(\s|$))|restore\b(?!.*--staged)|"
+                          r"stash\s+(drop|clear)|branch\b.*\s-D\b|push\b.*(--force\b|\s-f\b|--force-with-lease)|filter-branch|"
+                          r"reflog\s+expire|gc\b.*--prune|rebase\b|update-ref\b.*-d)")
+
+
+def git_kind(command: str) -> str | None:
+    """What a line's git commands do at most: "read", "write", "remote" (reaches another machine) or "discard"
+    (throws away work that is in no commit, or rewrites what is). None for a line with no git command in it."""
+    worst, order = None, ("read", "write", "remote", "discard")
+    for part in re.split(r"&&|\|\||[;|\n]", command or ""):
+        words = part.split()
+        if not words or words[0] != "git":
+            continue
+        rest, skip = [], False
+        for w in words[1:]:                                     # past git's own options to the command
+            if skip:
+                skip = False
+            elif not rest and w in ("-C", "-c", "--git-dir", "--work-tree", "--namespace"):
+                skip = True
+            elif not rest and w.startswith("-"):
+                continue
+            else:
+                rest.append(w)
+        sub, tail = (rest[0] if rest else "help"), " ".join(rest)
+        if GIT_DISCARDS.match(tail):
+            kind = "discard"
+        elif sub in GIT_REMOTE or tail.startswith(("remote update", "submodule update")):
+            kind = "remote"
+        elif sub in GIT_READS or tail in ("branch", "tag", "remote", "stash list", "remote -v", "branch -a", "branch -v", "branch -vv",
+                                           "branch --list", "tag -l", "tag --list") or tail.startswith(("config --get", "config --list", "config -l", "stash show")):
+            kind = "read"
+        else:
+            kind = "write"
+        worst = kind if worst is None or order.index(kind) > order.index(worst) else worst
+    return worst
+
+
 def refusal(command: str, offline: bool = False) -> str | None:
     """Why a line is not run from here and what to do instead, or None."""
+    git = git_kind(command)
+    if git == "discard":
+        return ("it throws away work that is in no commit, or rewrites what is, and nothing here can put that back. "
+                f"dawnr does not run it; the person can, exactly as written: {command}")
+    if git == "remote" and offline:
+        return ("the network is off in this session, and it reaches another machine. Only the person can turn the network "
+                "on, by starting dawnr again with --online. Tell them that")
+    if git == "read":
+        return "that only reads the repository: `sh` does that, with the same line"
     if offline and NETWORK.search(command):
         return ("the network is off in this session, and nothing here can turn it on: only the person can, by starting "
                 "dawnr again with --online. Tell them that")

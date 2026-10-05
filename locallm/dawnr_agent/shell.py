@@ -51,7 +51,7 @@ from .commands import HIDE_UNDER_HOME, base_env, run_argv
 from .system import SECRET
 from .files import FileOps, Preview
 from .journal import sha256
-from .paths import PathRefused, Space, Target
+from .paths import DEFAULT_SECRETS, PathRefused, Space, Target
 from dawnr_harness.tools import CallContext, Tool, ToolResult
 
 MAX_COMMAND = 4000             # characters of one shell line
@@ -73,6 +73,9 @@ LIVE = re.compile(r"(?:^|[;&|]\s*)(ps|pgrep|pidof|top|htop|ip|ss|nmcli|iwgetid|s
 # what a command sees in the place of a folder or a file that is hidden from it: not an empty one. An empty `~/.ssh`
 # was reported to the person as "there are no SSH private keys in your ~/.ssh directory"
 HIDDEN_FOLDER = "This folder is hidden from every command dawnr runs. It is not empty on the computer: what is in it is not shown.\n"
+# In a repository a secret file's text is also in .git, under no name: `git diff` and `git log -p` would print it.
+# Inside the sandbox git is told these names are binary, so it says that they differ and not how
+GIT_ATTRIBUTES = "".join(f"{name} binary\n{name}/** binary\n" for name in sorted(DEFAULT_SECRETS))
 HIDDEN_FILE = "# hidden by dawnr: this file is on the computer, and its contents are not shown to any command\n"
 # said after the output of a command that ran into the sandbox's walls, so that they are not taken for the computer's
 NOTES = [(re.compile(r"Read-only file system"),
@@ -117,6 +120,7 @@ class Run:
     scratch: str = ""
     shown: bool = False        # its changes were put to the harness as the reason to ask
     applied: bool = False
+    refused: str = ""          # why none of its changes can be made real (it changed the repository itself)
 
     @property
     def real(self) -> list:
@@ -208,6 +212,7 @@ class ShellTools:
         self.timeout, self.max_output = timeout, max_output
         self.elsewhere = ""                                     # where a look at the running computer is sent, if anywhere
         self.markers = Path(state) / "sh-hidden"                # what stands in a hidden folder's and a hidden file's place
+        self.env.update(GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="core.attributesFile", GIT_CONFIG_VALUE_0="/run/dawnr-gitattributes")
         home = os.path.expanduser("~")
         self.hide = [p for p in (hide if hide is not None else [os.path.join(home, h) for h in HIDE_UNDER_HOME])
                      if os.path.lexists(p)]
@@ -242,6 +247,7 @@ class ShellTools:
         if not file.is_file():
             folder.mkdir(parents=True, exist_ok=True)
             (folder / "hidden-by-dawnr").write_text(HIDDEN_FOLDER)
+            (self.markers / "gitattributes").write_text(GIT_ATTRIBUTES)
             file.write_text(HIDDEN_FILE)
         return str(folder), str(file)
 
@@ -249,6 +255,7 @@ class ShellTools:
         a = [self.program, "--die-with-parent", "--new-session", "--unshare-all",
              "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--tmpfs", "/tmp", "--tmpfs", "/run"]
         no_folder, no_file = self._markers()
+        a += ["--ro-bind", str(self.markers / "gitattributes"), "/run/dawnr-gitattributes"]
         for h in self.hide:
             if os.path.isdir(h) and not os.path.islink(h):
                 a += ["--ro-bind", no_folder, h]
@@ -265,7 +272,8 @@ class ShellTools:
             if not any(path.startswith(root.rstrip("/") + "/") for root in copied):
                 a += ["--ro-bind", no_folder if path in dirs else no_file, path]
         for r in self.roots:                                    # the file tools call the folder by its name: so may a command
-            if r.path in layers and not os.path.lexists(os.path.join(r.path, r.name)):
+            if (r.path in layers and not os.path.lexists(os.path.join(r.path, r.name))      # (not in a repository, where
+                    and not os.path.lexists(os.path.join(r.path, ".git"))):                 # git would report the link)
                 a += ["--symlink", ".", os.path.join(r.path, r.name)]
         return a + ["--chdir", cwd, "--"] + command
 
@@ -276,9 +284,12 @@ class ShellTools:
         secret = set(files) | set(dirs)
         count = size = 0
         for at, dnames, fnames in os.walk(root.path):
-            dnames[:] = [d for d in dnames if os.path.join(at, d) not in secret]
             target = to / os.path.relpath(at, root.path)
             target.mkdir(parents=True, exist_ok=True)
+            for d in [d for d in dnames if os.path.join(at, d) in secret]:      # its place is kept, and says it is hidden
+                (target / d).mkdir(exist_ok=True)
+                (target / d / "hidden-by-dawnr").write_text(HIDDEN_FOLDER)
+            dnames[:] = [d for d in dnames if os.path.join(at, d) not in secret]
             for d in list(dnames):
                 if os.path.islink(os.path.join(at, d)):
                     os.symlink(os.readlink(os.path.join(at, d)), target / d)
@@ -286,6 +297,7 @@ class ShellTools:
             for name in fnames:
                 path = os.path.join(at, name)
                 if path in secret:
+                    (target / name).write_text(HIDDEN_FILE)
                     continue
                 st = os.lstat(path)
                 count += 1
@@ -444,10 +456,13 @@ class ShellTools:
         for at, dnames, fnames in os.walk(copy):
             rel_dir = os.path.relpath(at, copy)
             rel_dir = "" if rel_dir == "." else rel_dir
+            dnames[:] = [d for d in dnames if self._real(root, f"{rel_dir}/{d}" if rel_dir else d) not in secret]
             for name in sorted(dnames) + sorted(fnames):
                 path = os.path.join(at, name)
                 rel = f"{rel_dir}/{name}" if rel_dir else name
                 display, real = f"{root.name}/{rel}", self._real(root, rel)
+                if real in secret:
+                    continue                                    # a secret's place in the copy is not the secret, changed
                 st = os.lstat(path)
                 if stat.S_ISLNK(st.st_mode):
                     if rel == root.name and os.readlink(path) == ".":
@@ -471,13 +486,14 @@ class ShellTools:
                         continue
                     with open(path, "rb") as f:
                         data = f.read()
+                    try:                                        # as it was: not a change, whatever the file (a protected
+                        was = os.lstat(real)                    # one, which _checked would list as "not applied", too)
+                        if (stat.S_ISREG(was.st_mode) and was.st_size == len(data) and stat.S_IMODE(was.st_mode) == stat.S_IMODE(st.st_mode)
+                                and Path(real).read_bytes() == data):
+                            continue
+                    except OSError:
+                        pass
                     change = self._checked(Change("write", display, data=data, mode=stat.S_IMODE(st.st_mode)))
-                    if change.kind == "write" and change.before == sha256(data):
-                        try:
-                            if stat.S_IMODE(os.lstat(real).st_mode) == change.mode:
-                                continue
-                        except OSError:
-                            pass
                     out.append(change)
                 else:
                     out.append(Change("skip", display, why="it is not a regular file"))
@@ -541,8 +557,21 @@ class ShellTools:
             changes: list = []
             for root in self.roots:
                 changes += (self._read_copy if self.mode == "copy" else self._read_upper)(root, layers[root.path][0])
+            # A repository's own folder is never written by the journal. `git status` refreshes .git/index there and
+            # means nothing by it: that is dropped. Anything else in .git (a commit's objects, a branch, a stash) cannot
+            # be carried out of the sandbox, and carrying out the rest without it would leave the two disagreeing (a
+            # stash that reverted the files and was not kept): none of such a run is made real
+            in_git = [c for c in changes if ".git" in c.path.split("/")[1:]]
+            refused = ""
+            if in_git and all(c.path.endswith("/.git/index") for c in in_git):
+                changes = [c for c in changes if c not in in_git]
+            elif in_git:
+                refused = ("sh: this command changes the repository itself (the .git folder), and that cannot be carried out "
+                           "of the sandbox it ran in; nothing it did was kept. "
+                           + ("To stage, commit, switch branch or stash, call `pc` with the git line: it is shown to the person "
+                              "and runs on the repository itself." if "`pc`" in self.elsewhere else "It is not done from here."))
             run = Run(key, command, shown, got["exit"], got["seconds"], got["timed_out"], got["stdout"], got["stderr"],
-                      changes, str(scratch))
+                      changes, str(scratch), refused=refused)
             self.runs[key] = run
             for old in list(self.runs)[:-KEPT]:
                 _force_remove(self.runs.pop(old).scratch)
@@ -554,6 +583,8 @@ class ShellTools:
             run = self.run(args)
         except PathRefused as e:
             return "deny", str(e)
+        if run.refused:
+            return "deny", run.refused
         if not run.changes:
             return "allow", f"the command changed nothing (it ran over {'a copy' if self.mode == 'copy' else 'an overlay'}, in a sandbox with no network)"
         if len(run.real) > MAX_CHANGES:
@@ -569,6 +600,8 @@ class ShellTools:
             run = self.run(args)
         except PathRefused as e:
             return Preview(error=str(e))
+        if run.refused:
+            return Preview(error=run.refused)
         detail = [f"$ {run.command}    (in {run.cwd}; {run.output(400).splitlines()[0]})"] + ["  " + c.line() for c in run.changes]
         writes = {}
         for c in run.real:
@@ -611,6 +644,8 @@ class ShellTools:
     def sh(self, args: dict, ctx: CallContext) -> ToolResult:
         try:
             run = self.run(args)
+            if run.refused:
+                return ToolResult("refused: " + run.refused, is_error=True)
             text = run.output(self.max_output)
             text += "".join("\n" + note for pattern, note in NOTES if pattern.search(text))
             if run.changes and not run.shown:                   # nobody was shown these: they stay where they are

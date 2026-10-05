@@ -285,6 +285,19 @@ what to do instead:
 - offline, anything that reaches the network, and any line with an address in it: a page opened for the person
   is also a way to send something out.
 
+**Git.** A repository is read inside the sandbox like any other files: `git status`, `diff`, `log`, `show` and
+the like run through `sh`, unasked (the index refresh that `git status` makes in the sandbox means nothing and is
+dropped). What changes the repository (stage, commit, branch, stash, tag) cannot be carried out of a sandbox,
+since the journal never writes `.git`; before this was a rule, `git commit` through `sh` was offered to the person
+as "it would change 5: new folder .git/objects/40 ..." with the objects themselves "not applied", and `git stash`
+as a change that would have reverted the working files and kept no stash. Now a sandboxed run that changed `.git`
+is refused whole, and the front door sends such lines to `pc`, where they are asked for and run on the repository
+itself; git's own reflog is what undoes them. Two kinds are never run and are handed to the person: what discards
+work that is in no commit or rewrites history (`reset --hard`, `clean -f`, `checkout -- .`, `restore`, `rebase`,
+`push --force`, `branch -D`), and, offline, what reaches a remote. Inside the sandbox git is also told that the
+secret names are binary files, so `git diff` and `git log -p` say that a `.env` differs and not how: a secret's
+text is in `.git` under no name, and would otherwise be printed from there.
+
 What it does is not journaled and not undone, and the question to the person says so. What `pc` cannot promise:
 it shows a command line, not what a script named on it contains, and a desktop session will start anything for
 the person who asks it to. The person's yes is the check here, not a sandbox. `locallm/dawnr_tasks.py`, which says
