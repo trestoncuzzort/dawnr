@@ -124,3 +124,60 @@ def test_a_reply_that_never_came_is_named_as_that():
     r = answer.answer(ENTRY, student("", RIGHT), python(), answers=2, prover=prover(lambda t: ALL))
     assert r["refused"][0] == "answer 1: no reply from the model (it did not answer in time, or the request failed)"
     assert r["shown"] is not None
+
+
+# ---- 2026-10-05: the shown answer handed back as Python, checked against the proved program (t/to_python.py) ----
+
+def shown(**kw):
+    return answer.answer(ENTRY, student(RIGHT), python(), answers=1, prover=prover(lambda t: dict(ALL)), **kw)
+
+
+def test_the_shown_answer_comes_back_as_python_under_the_questions_name_checked_against_the_proved_program():
+    r = shown()
+    py = r["shown"]["python"]
+    assert py["source"].startswith("def double(n):") and py["inputs"] > len(ENTRY["points"])
+    scope = {}
+    exec(py["source"], scope)                                   # noqa: S102 -- the translator's own output
+    assert scope["double"](21) == 42
+    text = answer.render(r)
+    assert "The same function in Python" in text and "tested against it, not proved" in text
+
+
+def test_a_translation_that_disagrees_is_not_shown_and_the_proved_answer_still_is(monkeypatch):
+    monkeypatch.setattr(answer.to_python, "check", lambda *a, **k: {"agrees": False, "inputs": 12, "why": "differs"})
+    r = shown()
+    assert r["shown"]["proved by"] == 7 and r["shown"]["python"]["source"] is None
+    text = answer.render(r)
+    assert "No Python version is shown" in text and "def double" not in text
+
+
+def test_what_the_translation_does_not_write_is_said_by_name(monkeypatch):
+    def refuse(*a, **k):
+        raise answer.to_python.Unsupported("datatypes")
+    monkeypatch.setattr(answer.to_python, "translate", refuse)
+    r = shown()
+    assert r["shown"]["proved by"] == 7 and "datatypes" in r["shown"]["python"]["why"]
+
+
+def test_a_fault_in_the_translator_costs_the_python_and_not_the_answer(monkeypatch):
+    monkeypatch.setattr(answer.to_python, "translate", lambda *a, **k: 1 / 0)
+    r = shown()
+    assert r["shown"]["proved by"] == 7 and r["shown"]["python"]["source"] is None
+    assert "ZeroDivisionError" in r["shown"]["python"]["why"]
+
+
+def test_save_python_writes_the_checked_function_and_nothing_when_there_is_none(tmp_path, monkeypatch, capsys):
+    result = shown()
+    monkeypatch.setattr(answer, "answer", lambda *a, **k: result)
+    monkeypatch.setattr(answer.python_beside, "api_decode", lambda *a, **k: None)
+    out = tmp_path / "double.py"
+    argv = ["--student", "h:1", "--python", "h:2", "--text", "Double a number.", "--test", "assert double(3) == 6",
+            "--save-python", str(out)]
+    assert answer.main(argv) == 0
+    scope = {}
+    exec(out.read_text(), scope)                                # noqa: S102
+    assert scope["double"](4) == 8
+    out.unlink()
+    result["shown"]["python"] = {"source": None, "why": "it uses datatypes"}
+    assert answer.main(argv) == 0 and not out.exists()
+    assert "Nothing written" in capsys.readouterr().err
