@@ -16,8 +16,10 @@ what the assistant can do at all, and when it must ask.
                or with --read-only, it changes nothing
   reading      files in that folder and in each --root, never a key or a password, never through a link out;
                a PDF, a Word file, an EPUB or a saved web page is read as its text, page by page
-  changing     a write or an edit is shown first, as a plan with its dry run, and asked for once (--yes: shown,
-               not asked); each is journaled with the bytes it replaced, and /undo puts them back
+  changing     a write or an edit is shown first, as a plan with its dry run, and asked for once; each is
+               journaled with the bytes it replaced, and /undo puts them back. --yes answers for the person
+               where nothing is lost: a plan that removes a file whose contents are kept nowhere else is asked
+               for all the same
   commands     any shell line, run for real over an overlay of the folder, inside bubblewrap with no network
                (locallm/dawnr_agent/shell.py): one that changed nothing was a read; one that changed something is
                asked for with what it changed, and applied through the journal. Where that sandbox does not work,
@@ -53,6 +55,7 @@ import doc_read  # noqa: E402
 from agent_eval_native import NativePlanner, _post, messages_for  # noqa: E402
 from dawnr_agent import AgentLoop, Finish  # noqa: E402
 from dawnr_agent import build_agent as _build_agent  # noqa: E402
+from dawnr_agent.journal import sha256  # noqa: E402
 from dawnr_agent.system import facts  # noqa: E402
 
 MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
@@ -246,24 +249,52 @@ class Planner(NativePlanner):
         return {"steps": steps}
 
 
-def plan_approver(ask=input, say=print, yes: bool = False):
-    """A plan in which nothing changes anything runs unasked; any other is shown whole and asked for once."""
+def losses(agent, dry) -> list:
+    """The files a plan would remove whose contents it keeps nowhere else. A rename or a move removes a name and the
+    same bytes appear under another; `mv a.txt b.txt && mv b.txt a.txt`, which the 4B wrote for "swap the two",
+    removes b.txt and its contents with it."""
+    if agent is None or agent.shell is None:
+        return []
+    lost = []
+    for v in dry.views:
+        if v.step.tool != "sh":
+            continue
+        try:
+            run = agent.shell.run(v.step.arguments)             # the run the dry run already made
+        except Exception:                                       # noqa: BLE001
+            continue
+        kept = {sha256(c.data) for c in run.changes if c.kind == "write" and c.data is not None}
+        lost += [c.path for c in run.changes if c.kind == "delete" and c.before not in kept]
+    return lost
+
+
+def plan_approver(ask=input, say=print, yes: bool = False, everything: bool = False):
+    """A plan in which nothing changes anything runs unasked; any other is shown whole and asked for once. `yes`
+    answers for the person where nothing is lost: not for `pc`, which cannot be undone, and not for a plan that
+    removes a file whose contents are kept nowhere else. `everything` is the measurement's person, who says yes
+    to all that is shown. The agent is given after it is built (`approve.agent = agent`)."""
     def approve(dry) -> bool:
         if all(v.decision == "allow" for v in dry.views):
             return True
         say(dry.render(for_person=True))
-        if yes and not any(v.step.tool == "pc" for v in dry.views):     # what cannot be undone is asked, always
+        gone = losses(approve.agent, dry)
+        if gone:
+            say("This removes " + ", ".join(gone) + f" and {'its' if len(gone) == 1 else 'their'} contents are kept in no other "
+                "file (/undo can put them back).")
+        if everything or (yes and not gone and not any(v.step.tool == "pc" for v in dry.views)):
             return True
         try:
             return ask("Run this plan? [y/N] ").strip().lower() in ("y", "yes")
         except EOFError:
             return False
+    approve.agent = None
     return approve
 
 
 def _step_line(step, outcome) -> str:
     args = step.arguments
-    what = args.get("path") or " ".join(str(a) for a in args.get("argv") or []) or args.get("query") or args.get("url") or ""
+    what = (args.get("command") or args.get("path") or " ".join(str(a) for a in args.get("argv") or []) or args.get("query")
+            or args.get("url") or "")
     status = "not run" if outcome is None else outcome.status + (f": {outcome.note}" if outcome.note else "")
     return f"  {step.tool} {str(what)[:80]}".rstrip() + f"  [{status[:100]}]"
 
@@ -417,7 +448,9 @@ def main(argv=None) -> int:
     if not task and not sys.stdin.isatty():
         ap.error("no task was given and this is not a terminal")
     config = default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
-    harness, agent = build_agent(config, plan_approver=plan_approver(yes=a.yes))
+    approve = plan_approver(yes=a.yes)
+    harness, agent = build_agent(config, plan_approver=approve)
+    approve.agent = agent
     with harness:
         for problem in harness.problems:                        # what is switched off here; the scan's own limits are in `roots`
             if "secret scan stopped" not in problem:

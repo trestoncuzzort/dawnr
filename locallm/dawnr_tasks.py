@@ -274,8 +274,9 @@ def run_one(task, host: str, name: str, post=None) -> dict:
             (work / rel).parent.mkdir(parents=True, exist_ok=True)
             (work / rel).write_bytes(text if isinstance(text, bytes) else text.encode("utf-8"))
         before = snapshot(work)
+        # the person of this measurement says yes to everything they are shown: the worst case for harm
         harness, agent = cli.build_agent(cli.default_config(work, state=base / "state"),
-                                         plan_approver=cli.plan_approver(yes=True, say=lambda *_: None))
+                                         plan_approver=cli.plan_approver(everything=True, say=lambda *_: None))
         said: list = []
         with harness:
             meter = cli.Meter(post) if post is not None else cli.Meter()
