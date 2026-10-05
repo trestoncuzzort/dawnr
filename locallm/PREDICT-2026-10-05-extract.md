@@ -129,3 +129,69 @@ What each outcome changes:
 - `value` against `located` shows what numbering the sentences and moving the instruction changed; no prediction,
   both are reported.
 
+## Outcome, 2026-10-05 11:22Z (X6 to X9)
+
+Run on the lab from commit 2e7da151, its own llama-server (build b11325, the base model at 4 bits), 600 questions
+none of which was in the first sample, five requests a question. `locallm/extract_eval.py report`:
+
+| arm | shown, of 300 answerable | exact, of 300 answerable | left empty, of 300 unanswerable | shown in all | exact of shown | not in a sentence as shown |
+|---|---|---|---|---|---|---|
+| schema | 291 | 235 | 217 | 374 | 62.8% | 14 |
+| located | 287 | 232 | 218 | 369 | 62.9% | 9 |
+| span | 280 | 154 | 200 | 380 | 40.5% | 0 |
+| twice | 258 | 150 | 220 | 338 | 44.4% | 0 |
+| value | 282 | 223 | 152 | 430 | 51.9% | 0 |
+| both | 270 | 217 | 180 | 390 | 55.6% | 0 |
+
+- **X6: holds.** `value` and `both` show nothing that is not in a sentence as the command shows it.
+- **X7: fails on its last clause.** `span` is 22.3 points below `schema` again (the bar was 10), and `both` is 15.1
+  above `span` (the bar was 15), but `both` is 7.2 points **below** `schema`, where the prediction was not below.
+- **X8: fails on absent fields.** `both` is exact on 217 of the 300 answerable (72.3%; the bar was 60%) and 6.0
+  points from `schema` (the bar was within 10), but it leaves empty only 180 of the 300 unanswerable (60%; the bar
+  was 75%).
+- **X9: holds.** Going from `value` to `both`, 40 values stop being shown: 34 that were not exact and 6 that were.
+
+**What went wrong, read from the same answers.** The rule did not fail; the prompt I rewrote for it did. `value`
+is the same free reading as `located` with two changes made so that the server would read the document once (the
+sentences numbered, the instruction moved after the field), and with those changes the model filled in 148 of the
+300 absent fields where `located` filled in 82. The rule applied to the arms that kept their prompts, the `schema`
+answer shown when it is, as words, in a sentence that holds the `span` reading's words, gives on these 600 fresh
+questions 262 shown and 214 exact of the answerable, 238 of the 300 unanswerable left empty, and 66.0% exact of 324
+shown (first sample: 256, 208, 242, 66.2% of 314). That is computed after the fact from two registered arms'
+answers; it was not a registered arm, so it is a reason for the change below and not yet a result.
+
+**What the registered rules say, and what is done.** X7 fails against `schema` and neither `value` nor `both` is
+above it: as built at 2e7da151 the command's text reading is less often right than a schema's, and DISCLAIMERS says
+so with these numbers until the next measurement is in. X9 holds: the second reading stays. The lesson is kept in
+the code: the two prompts are now the measured arms' prompts word for word, and a test holds them equal.
+
+## The command with the measured prompts, registered 2026-10-05 11:29Z before it is run on any question (X10 to X13)
+
+`dawnr extract` reads a text field with `ask_value` (the `schema` arm's system prompt, its JSON Schema, the
+sentences joined as the passage, what the field is as the question) and `ask` (the `span` arm's prompt and
+grammar), and shows `held` of the two. Every free reading is asked before any grammar-held one, so the document is
+read once for each kind. The eval's `value` and `both` arms call those functions.
+
+**The sample.** 300 answerable and 300 unanswerable questions, seed 2028, none of them among the first 1,200.
+Same model, server build and temperature.
+
+- **X10, in the document.** `value` and `both` show nothing that is not in a sentence as shown (0).
+- **X11, the rule on fresh questions.** Of the values shown, the share that are exact: `both` is not below
+  `schema`, and at least 15 points above `span`.
+- **X12, what it costs and what it withholds.** `both` is exact on at least 65% of the 300 answerable and within
+  10 points of `schema`; it leaves empty at least 75% of the 300 unanswerable, and more of them than `schema` does.
+- **X13, the command is the measured combination.** On at least 97% of the 600 questions `both` shows what the
+  rule gives when applied after the fact to that sample's `schema` and `span` answers (the same value, or nothing
+  in both). A larger gap means the command's passage (the sentences joined) or its use of the sentence's number
+  differs from the arms in a way that matters, and is read by hand.
+
+What each outcome changes:
+
+- X10 fails: a fault; fixed first.
+- X11 and X12 hold: README and DISCLAIMERS carry this sample's numbers for `both`, beside `schema`'s.
+- X11 fails: three samples then say a text field is not more often right this way than under a schema; the
+  second reading is kept only for the sentence it prints, the README says a schema is as often right, and the
+  claim is the one X10 shows.
+- X12 fails on absent fields: the README says how many absent fields were filled in, and that the printed
+  sentence is what the reader checks.
+

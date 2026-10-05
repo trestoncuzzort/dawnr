@@ -20,14 +20,16 @@ What this does not check is that the span is the right one for the field: the se
 so that a glance settles it, and how often the span is right, and how often a field that is not in the document is
 left empty, is measured on SQuAD 2.0 (arXiv:1806.03822; locallm/PREDICT-2026-10-05-extract.md).
 
-Measured the day it was written, and changed by it (X1 to X5 of that file; 300 answerable and 300 unanswerable
-questions). Held to a run of a sentence's words, the model quoted the whole sentence where two words were the
-value: 165 of the 300 answerable exact, against 227 when it wrote a short answer freely under a JSON Schema, and
-225 when that free answer was kept only if it is in the paragraph word for word (LangExtract's rule). So a text
-field is now read twice. Once freely, under a schema, for the value: the fewest exact words. Once under the grammar
-above, for the sentence. The value is shown only when its words are in the document as words and inside the
-sentence the second reading named (`held`). That rule was found on the first sample's answers, so its own numbers
-are a second registration on questions it has not seen (X6 to X9, same file). A number or a date keeps the grammar
+Measured the day it was written, and changed by it twice (X1 to X9 of that file; two samples of 300 answerable
+and 300 unanswerable questions). Held to a run of a sentence's words, the model quoted the whole sentence where two
+words were the value: 165 and 154 of 300 answerable exact, against 227 and 235 when it wrote a short answer freely
+under a JSON Schema. So a text field is read twice. Once freely, under a schema, for the value. Once under the
+grammar above, for the sentence. The value is shown only when its words are in the document as words and inside
+the sentence the second reading named (`held`). The first build of that rule also rearranged both prompts so that
+the server would read the document once, and the rearranged free reading filled in 148 of 300 absent fields where
+the measured one filled in 83; the prompts are therefore the measured ones again, word for word (`VALUE_SYSTEM` and
+`value_messages` are the schema arm's, `SYSTEM` and `messages` the span arm's), the document is read once for each
+kind of reading, and the rule's numbers are a third registration (X10 to X13). A number or a date keeps the grammar
 of typed runs, which are short by construction.
 
 A short document is read whole, so the model reads it once for all fields; a long one is cut to the passages BM25
@@ -46,13 +48,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from locallm import cite_docs, doc_read, rag_cite, rag_rgb  # noqa: E402
 
 NONE = "NONE"
-# One system line and the document first for both readings, the instruction last: the server reads the document once.
-SYSTEM = "You fill in fields from the numbered sentences of a document, using only what the sentences state."
-HOW_SPAN = ("Reply with the number of the sentence that states the field's value, then the exact words of that sentence "
-            "that are the value and nothing more, like `S3: 4417`. If no sentence states it, reply " + NONE + ".")
-HOW_VALUE = ("Reply with JSON: {\"value\": the exact words from the document that are the field's value, as few words as "
-             "state it, or null if no sentence states it}.")
-VALUE_SCHEMA = {"type": "object", "properties": {"value": {"type": ["string", "null"]}}, "required": ["value"]}
+SYSTEM = ("You fill in one field from the numbered sentences of a document. Reply with the number of the sentence that "
+          "states the field's value, then the exact words of that sentence that are the value and nothing more, like "
+          "`S3: 4417`. If no sentence states it, reply " + NONE + ".")
+# the free reading's prompt and schema, word for word what was measured as the `schema` arm (locallm/extract_eval.py)
+VALUE_SYSTEM = ("You answer a question from a passage. Reply with JSON: {\"answer\": the exact phrase from the passage "
+                "that answers the question, or null if the passage does not state the answer}.")
+VALUE_SCHEMA = {"type": "object", "properties": {"answer": {"type": ["string", "null"]}}, "required": ["answer"]}
 WHOLE = 40                     # a document of at most this many sentences is read whole
 PIECE = re.compile(r"\w+(?:[.,'’:/-]\w+)*|[^\w\s]")
 REPLY = re.compile(r"S(\d+): (.+)", re.S)
@@ -126,10 +128,16 @@ def grammar(sentences: list[str], kind: str = "text") -> str:
     return "\n".join([f'root ::= "{NONE}"' + "".join(f" | {p}" for p in picks)] + lines) + "\n"
 
 
-def messages(field: dict, sentences: list[str], how: str = HOW_SPAN) -> list[dict]:
+def messages(field: dict, sentences: list[str]) -> list[dict]:
     body = "\n".join(f"S{n}: {s}" for n, s in enumerate(sentences, 1))
     return [{"role": "system", "content": SYSTEM},
-            {"role": "user", "content": f"{body}\n\nField: {field['name']}: {field['description']}\n\n{how}"}]
+            {"role": "user", "content": f"{body}\n\nField: {field['name']}: {field['description']}"}]
+
+
+def value_messages(field: dict, sentences: list[str]) -> list[dict]:
+    """The free reading's prompt: the sentences as one passage, and what the field is as the question."""
+    return [{"role": "system", "content": VALUE_SYSTEM},
+            {"role": "user", "content": f"Passage:\n{' '.join(sentences)}\n\nQuestion:\n{field['description']}"}]
 
 
 def parse(reply: str, sentences: list[str]) -> tuple[int, str] | None:
@@ -211,11 +219,11 @@ def ask(host: str, field: dict, texts: list[str], post=rag_rgb._post) -> str:
 def ask_value(host: str, field: dict, texts: list[str], post=rag_rgb._post) -> str | None:
     """The free reading: the value in as few words as state it, held only to a JSON Schema; None for null or a reply
     that is not that JSON."""
-    body = {"messages": messages(field, texts, HOW_VALUE), "temperature": 0, "max_tokens": 120,
+    body = {"messages": value_messages(field, texts), "temperature": 0, "max_tokens": 120,
             "response_format": {"type": "json_schema", "json_schema": {"schema": VALUE_SCHEMA}}}
     reply = post(f"http://{host}/v1/chat/completions", body)["choices"][0]["message"]["content"] or ""
     try:
-        value = json.loads(reply).get("value")
+        value = json.loads(reply).get("answer")
     except (ValueError, AttributeError):
         return None
     return " ".join(value.split()) if isinstance(value, str) and value.strip() else None
@@ -242,33 +250,30 @@ def held(value: str | None, named: tuple[int, str] | None, texts: list[str]) -> 
     return named[0], value
 
 
-def read_text_field(host: str, field: dict, texts: list[str], post=rag_rgb._post) -> tuple[int, str] | str:
-    """`held` over the two readings; the second is asked only when the first gave words that are in the document."""
-    value = ask_value(host, field, texts, post)
-    found = value is not None and any(stated_in(value, s) for s in texts)
-    return held(value, parse(ask(host, field, texts, post), texts) if found else None, texts)
-
-
 def extract(host: str, fields: list[dict], sentences: list[dict], post=rag_rgb._post) -> list[dict]:
-    """One row a field: {"name", "kind", "value", "words", "sentence", "file", "n"} or {"name", "kind", "value": None, "why"}."""
+    """One row a field: {"name", "kind", "value", "words", "sentence", "file", "n"} or {"name", "kind", "value": None, "why"}.
+    Every text field's free reading is asked first and the grammar-held readings after, so that the server, which
+    keeps the prompt it last read, reads the document once for each kind of reading and not once a field."""
+    shown = [candidates(sentences, field) for field in fields]
+    texts = [[s["text"] for s in ss] for ss in shown]
+    free = {i: ask_value(host, field, texts[i], post) for i, field in enumerate(fields) if field["kind"] == "text" and shown[i]}
     rows = []
-    for field in fields:
-        shown = candidates(sentences, field)
+    for i, field in enumerate(fields):
         row = {"name": field["name"], "kind": field["kind"], "value": None}
-        if not shown:
+        if not shown[i]:
             rows.append(dict(row, why="no passage shares a word with the field"))
             continue
-        texts = [s["text"] for s in shown]
         if field["kind"] == "text":
-            found = read_text_field(host, field, texts, post)
+            asked = free[i] is not None and any(stated_in(free[i], s) for s in texts[i])   # else `held` needs no second reading
+            found = held(free[i], parse(ask(host, field, texts[i], post), texts[i]) if asked else None, texts[i])
         else:
-            found = parse(ask(host, field, texts, post), texts) or "no sentence shown states it"
+            found = parse(ask(host, field, texts[i], post), texts[i]) or "no sentence shown states it"
         if isinstance(found, str):
             rows.append(dict(row, why=found))
             continue
         n, words = found
         value, why = typed(field["kind"], words)
-        source = shown[n - 1]
+        source = shown[i][n - 1]
         row.update(words=words, sentence=source["text"], file=source["file"], n=source["n"], **({"page": source["page"]} if "page" in source else {}))
         rows.append(dict(row, value=value) if why is None else dict(row, why=why))
     return rows
