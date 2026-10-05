@@ -47,6 +47,7 @@ import mbpp_dfy                                                 # noqa: E402
 import proof_repair                                             # noqa: E402
 import python_beside                                            # noqa: E402
 import score_levels                                             # noqa: E402
+import spec_check                                               # noqa: E402
 import spec_experiment as se                                    # noqa: E402
 import spec_first                                               # noqa: E402
 import spec_gate                                                # noqa: E402
@@ -156,11 +157,12 @@ def python_of(task: dict, entry: dict) -> dict:
     if not report.get("agrees"):
         return {"source": None, "inputs": report.get("inputs", 0),
                 "why": "its Python translation did not answer every input as the proved program does"}
-    return {"source": source, "inputs": report["inputs"]}
+    return {"source": source, "function": fn, "inputs": report["inputs"], "refused": report.get("refused", 0)}
 
 
-def prove(tasks: list[dict], jobs: int = 2, timeout: float = 1800.0) -> dict[str, dict]:
-    """name -> the seven kernels' cells for it (t/run_par.py: each program and its sabotaged twin)."""
+def prove(tasks: list[dict], jobs: int = 2, timeout: float = 1800.0, kernels: str = "") -> dict[str, dict]:
+    """name -> the seven kernels' cells for it (t/run_par.py: each program and its sabotaged twin). `kernels`, a
+    comma-separated list, asks only those; the others read as not installed."""
     with tempfile.TemporaryDirectory(prefix="t-answer-") as tmp:
         d = Path(tmp)
         (d / "tasks").mkdir()
@@ -168,9 +170,12 @@ def prove(tasks: list[dict], jobs: int = 2, timeout: float = 1800.0) -> dict[str
             (d / "tasks" / f"{task['name']}.json").write_text(json.dumps(task), encoding="utf-8")
         env = dict(os.environ, T_SPARK_JOBS="1", CUDA_VISIBLE_DEVICES="")
         subprocess.run([sys.executable, str(HERE / "run_par.py"), "--tasks", str(d / "tasks"), "--out", str(d / "out"),
-                        "--table", str(d / "table.md"), "--jobs", str(jobs), "--no-cache"],
+                        "--table", str(d / "table.md"), "--jobs", str(jobs), "--no-cache"]
+                       + (["--kernels", kernels] if kernels else []),
                        capture_output=True, text=True, timeout=timeout, env=env)
         _cols, cells = se.parse_kernel_table(d / "table.md")
+    if kernels:
+        cells = {name: {**{k: "\u2014" for k in spec_check.KERNELS}, **row} for name, row in cells.items()}
     return cells
 
 
@@ -218,7 +223,7 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
             best_task = c["task"]
             best = {"answer": c["n"], "program": c["text"], "proved by": proved,
                     "provers": sorted(k for k, cell in row.items() if cell == score_levels.VERIFIED),
-                    "undecided": sorted(k for k, cell in row.items() if cell != score_levels.VERIFIED),
+                    "undecided": sorted(k for k, cell in row.items() if cell != score_levels.VERIFIED), "cells": dict(row),
                     "specification": [l.strip() for l in c["text"].splitlines() if l.strip().startswith(("requires ", "ensures "))],
                     "behind the specification": {"tests passed": len(entry["points"]), "agrees with the Python on": a.get("draws"),
                                                  "drawn inputs outside its requires": a.get("outside_requires", 0),
@@ -229,6 +234,12 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
     else:
         best["python"] = python_of(best_task, entry)
     return out
+
+
+def _refusing(py: dict) -> str:
+    """What the shown Python does outside the proved program's `requires`, when the check drew such inputs."""
+    n = py.get("refused") or 0
+    return f", and refused the {n} drawn outside its `requires`" if n else ""
 
 
 def render(r: dict) -> str:
@@ -247,8 +258,8 @@ def render(r: dict) -> str:
         py = s.get("python") or {}
         if py.get("source"):
             lines += ["", f"The same function in Python. It is translated from the proved program and gave the same answer on "
-                          f"{py['inputs']} inputs, the question's tests among them; the proof is of the t program above, "
-                          f"and the Python is tested against it, not proved.", "", py["source"].rstrip()]
+                          f"{py['inputs']} inputs, the question's tests among them{_refusing(py)}; the proof is of the t "
+                          f"program above, and the Python is tested against it, not proved.", "", py["source"].rstrip()]
         elif py:
             lines += ["", f"No Python version is shown: {py['why']}."]
     if r["refused"]:
@@ -278,6 +289,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", type=Path)
     ap.add_argument("--save-python", type=Path, metavar="FILE",
                     help="write the shown answer's Python function here (only when it was checked against the proof)")
+    ap.add_argument("--certificate", type=Path, metavar="FILE",
+                    help="write the shown answer's certificate here, for `dawnr check` to replay without the model")
     a = ap.parse_args(argv)
     try:
         entry = entry_of(a.text, a.test)
@@ -295,6 +308,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\nPython written to {a.save_python}")
         else:
             print(f"\nNothing written to {a.save_python}: there is no checked Python for this question.", file=sys.stderr)
+    if a.certificate:
+        import certificate
+        made = certificate.from_answer(r)
+        if made:
+            certificate.write(a.certificate, made)
+            print(f"\nCertificate written to {a.certificate}; `dawnr check` replays it on any machine, without the model.")
+        else:
+            print(f"\nNothing written to {a.certificate}: no answer was shown.", file=sys.stderr)
     return 0 if r["shown"] else 1
 
 

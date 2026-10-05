@@ -4,6 +4,7 @@
 #   dawnr prove SPEC.t    a specification you wrote: the model writes the body, the provers decide [--test ...] [--save-python FILE]
 #   dawnr spec "QUESTION" --test "assert f(x) == y" [--save SPEC.t]    specifications to read and pick from
 #   dawnr ask "Write a function that doubles a number." --test "assert double(3) == 6" [--test ...] [--save-python FILE]
+#   dawnr check FILE      replay a certificate (ask or prove with --certificate FILE wrote it): no model, this machine's provers
 #   dawnr doctor          what is installed and what each part found
 #   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
 #
@@ -77,7 +78,7 @@ own_paths() {
   ARGS=()
   while [ $# -gt 0 ]; do
     case $1 in
-      --save-python|--save-t|--save|--json) [ $# -ge 2 ] || { echo "dawnr: $1 needs a file name" >&2; exit 2; }
+      --save-python|--save-t|--save|--json|--certificate|--spec) [ $# -ge 2 ] || { echo "dawnr: $1 needs a file name" >&2; exit 2; }
         ARGS+=("$1" "$(abspath "$2")"); shift 2;;
       *) ARGS+=("$1"); shift;;
     esac
@@ -97,7 +98,7 @@ both_up() {  # start the two models if they are not running, and stop them again
 cmd=${1:-help}; shift || true
 case $cmd in
   prove)
-    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr prove SPEC.t [--test "assert f(x) == y" ...] [--answers N] [--save-python FILE] [--save-t FILE]' >&2; exit 2; }
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr prove SPEC.t [--test "assert f(x) == y" ...] [--answers N] [--save-python FILE] [--save-t FILE] [--certificate FILE]' >&2; exit 2; }
     [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
     SPEC=$(abspath "$1"); shift
     own_paths "$@"
@@ -122,7 +123,7 @@ case $cmd in
     "$DAWNR_PYTHON" t/prove.py spec --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" --text "$QUESTION" ${ARGS[@]+"${ARGS[@]}"}
     ;;
   ask)
-    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr ask "QUESTION" --test "assert f(x) == y" [--test ...]' >&2; exit 2; }
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr ask "QUESTION" --test "assert f(x) == y" [--test ...] [--save-python FILE] [--certificate FILE]' >&2; exit 2; }
     QUESTION=$1; shift
     own_paths "$@"
     why=$(sandbox_check) || { echo "dawnr: model-written Python only runs in a sandbox, and $why" >&2; exit 1; }
@@ -132,6 +133,16 @@ case $cmd in
     # (t/PREDICT-2026-10-02-ambiguity.md: 80% -> 87% of shown answers right); a later --consistency overrides it
     T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/answer.py --student "127.0.0.1:$SP" --python "127.0.0.1:$BP" \
       --consistency 5 --text "$QUESTION" ${ARGS[@]+"${ARGS[@]}"}
+    ;;
+  check)
+    # a certificate replayed: the tests, the provers on this machine, the Python and the measurements, with no model
+    # (t/certificate.py); exit 0 reproduced, 1 failed, 2 nothing here could decide
+    [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr check CERTIFICATE.json [--spec SPEC.t] [--json REPORT.json]' >&2; exit 2; }
+    [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
+    CERT=$(abspath "$1"); shift
+    own_paths "$@"
+    cd "$DAWNR_REPO"
+    T_MIN_KERNELS=${T_MIN_KERNELS:-1} "$DAWNR_PYTHON" t/certificate.py check "$CERT" ${ARGS[@]+"${ARGS[@]}"}
     ;;
   cite)
     # an answer from the person's own files, every claim quoting one of their sentences word for word, or a plain
@@ -177,5 +188,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,12p' "$0";;
+  *) sed -n '2,13p' "$0";;
 esac

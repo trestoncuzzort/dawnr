@@ -269,3 +269,72 @@ def test_check_passes_the_questions_own_tuple_test():
     source, fn = to_python.translate(task, tests, "tuple_modulo")
     report = to_python.check(task, source, fn, tests)
     assert report["agrees"], report
+
+
+# ---- the proved domain: the Python refuses what the proof does not cover (2026-10-05) ----
+
+HEAD = """
+t 1
+task head(s: seq, k: int) returns (r: int)
+  requires 0 <= k and k < len(s)
+  requires s[k] >= 0
+  ensures r == s[k]
+{
+  r := s[k];
+}
+"""
+
+
+def test_outside_the_requires_the_python_raises_and_names_the_clause():
+    source, fn = to_python.translate(parse(HEAD), ["assert head([4, 5], 1) == 5"])
+    assert run(source, fn, [4, 5], 1) == 5
+    for s, k in (([4, 5], 2), ([4, 5], -1), ([], 0), ([4, -5], 1)):
+        with pytest.raises(ValueError, match=r"head: this input is outside what was proved \(requires 0 <= k"):
+            run(source, fn, s, k)
+    assert "Outside its `requires` it raises ValueError" in source
+
+
+def test_a_requires_with_no_value_at_an_input_admits_nothing_instead_of_reading_pythons_negative_index():
+    # s[k] at k = -1 is the last element in Python and undefined in t; written first, it must not let the input in
+    task = parse(HEAD.replace("  requires 0 <= k and k < len(s)\n  requires s[k] >= 0\n",
+                              "  requires s[k] >= 0 and 0 <= k and k < len(s)\n"))
+    source, fn = to_python.translate(task, [])
+    with pytest.raises(ValueError):
+        run(source, fn, [1, 2, 3], -1)
+    with pytest.raises(ValueError):
+        run(source, fn, [1, 2, 3], 7)
+
+
+def test_an_argument_of_another_type_is_refused_before_anything_runs():
+    source, fn = to_python.translate(parse(HEAD), ["assert head([4, 5], 1) == 5"])
+    for s, k, word in (("45", 1, "`s` must be a list of integers"), ([4.0, 5.0], 1, "`s` must be a list of integers"),
+                       ([4, 5], 1.0, "`k` must be an integer"), ([4, 5], True, "`k` must be an integer"),
+                       ([[4], [5]], 1, "`s` must be a list of integers")):
+        with pytest.raises(TypeError, match=word):
+            run(source, fn, s, k)
+    assert run(source, fn, (4, 5), 0) == 4                      # a tuple is a sequence here, as the tests may write one
+
+
+def test_strings_sets_and_nested_lists_are_each_held_to_their_own_writing():
+    source, fn = to_python.translate(parse(REVERSE), ['assert rev("abc") == "cba"'], "rev")
+    assert run(source, fn, "abc") == "cba"
+    with pytest.raises(TypeError, match="must be a string"):
+        run(source, fn, [97, 98, 99])
+    rows = parse("t 1\ntask count_rows(m: seq<seq>) returns (r: int)\n  ensures r == len(m)\n{\n  r := len(m);\n}\n")
+    source, fn = to_python.translate(rows, ["assert count_rows([[1, 2], [3]]) == 2"])
+    assert run(source, fn, [[1, 2], [3]]) == 2 and run(source, fn, []) == 0
+    with pytest.raises(TypeError, match="`m` must be a list of lists of integers"):
+        run(source, fn, [1, 2])
+
+
+@needs_sandbox
+def test_check_holds_the_guard_to_the_interpreter_on_inputs_the_requires_excludes():
+    task = parse(HEAD)
+    source, fn = to_python.translate(task, ["assert head([4, 5], 1) == 5"])
+    report = to_python.check(task, source, fn, ["assert head([4, 5], 1) == 5"])
+    assert report["agrees"] and report["refused"] >= 10, report
+    # a hand-back that answers outside the proved domain is not shown
+    unguarded = source.replace("    if not _t_requires(s, k):\n", "    if False:\n")
+    assert unguarded != source
+    report = to_python.check(task, unguarded, fn, ["assert head([4, 5], 1) == 5"])
+    assert not report["agrees"], report
