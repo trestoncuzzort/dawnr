@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# dawnr: one question through the whole gate, offline, on this machine.
+# dawnr: an assistant on this machine, offline, and every check behind it as a command of its own.
 #
+#   dawnr                 the assistant, in the folder you are in: it reads your files, changes them only as a plan
+#                         you were shown, and runs a few commands in a sandbox [--read-only] [--root DIR] [--online] [--yes]
+#   dawnr do "TASK"       one task for the assistant, then back to the shell (the same options)
 #   dawnr prove SPEC.t    a specification you wrote: the model writes the body, the provers decide [--test ...] [--save-python FILE]
 #   dawnr spec "QUESTION" --test "assert f(x) == y" [--save SPEC.t]    specifications to read and pick from
 #   dawnr ask "Write a function that doubles a number." --test "assert double(3) == 6" [--test ...] [--save-python FILE]
@@ -26,6 +29,8 @@ set -a; . "$ENVF"; set +a
 CORES=$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 THREADS=${DAWNR_THREADS:-$(( CORES > 2 ? CORES / 2 : 1 ))}
 SP=${DAWNR_STUDENT_PORT:-8711}; BP=${DAWNR_BASE_PORT:-8712}
+# the base model's window: the assistant's tools, the files it reads and its plans share it (4,096 held three steps)
+BASE_CTX=${DAWNR_BASE_CTX:-16384}
 RUN=$DAWNR_HOME/run; mkdir -p "$RUN"
 
 healthy() { curl -s -m 2 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '"ok"'; }
@@ -53,17 +58,17 @@ start_both() {  # the student, then the base: on a GPU build the base waits for 
   if [ "${DAWNR_BUILD:-cpu}" != cpu ]; then
     for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$SP" && break; sleep 1; done
   fi
-  start_one base "$BASE_GGUF" "$BP"
+  start_one base "$BASE_GGUF" "$BP" "$BASE_CTX"
 }
 
-start_one() {  # name gguf port
+start_one() {  # name gguf port [context]
   healthy "$3" && return 0
   [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
   # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only)
   LD_LIBRARY_PATH="$(dirname "$LLAMA_SERVER"):${LD_LIBRARY_PATH:-}" \
   nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$THREADS" --threads-batch "$THREADS" \
     ${DAWNR_GPU_LAYERS:+--n-gpu-layers "$DAWNR_GPU_LAYERS"} \
-    --ctx-size 4096 --parallel 1 --reasoning off --cache-ram 256 --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
+    --ctx-size "${4:-4096}" --parallel 1 --reasoning off --cache-ram 256 --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
   echo $! > "$RUN/$1.pid"
 }
 
@@ -135,15 +140,27 @@ base_up() {  # only the base model, for what is answered from the person's files
   started=0
   if ! healthy "$BP"; then
     echo "starting the base model..." >&2
-    start_one base "$BASE_GGUF" "$BP"; started=1
+    start_one base "$BASE_GGUF" "$BP" "$BASE_CTX"; started=1
     trap '[ $started = 1 ] && stop_all' EXIT
     for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$BP" && break; sleep 1; done
     healthy "$BP" || { echo "dawnr: the base model did not come up; see $RUN/base.log" >&2; exit 1; }
   fi
 }
 
-cmd=${1:-help}; shift || true
+# no command, in a terminal: the assistant. Its own options may come first (`dawnr --read-only`).
+case ${1:-} in
+  "") [ -t 0 ] && cmd=assistant || cmd=help;;
+  --read-only|--root|--online|--yes) cmd=assistant;;
+  *) cmd=$1; shift;;
+esac
 case $cmd in
+  assistant|do)
+    # locallm/dawnr_cli.py over the agent and the harness (DAWNR-AGENT.md). It works in the caller's folder, so
+    # nothing here changes directory; only the base model runs
+    [ "$cmd" = assistant ] || [ $# -ge 1 ] || { echo 'usage: dawnr do "TASK" [--read-only] [--root DIR] [--online] [--yes]' >&2; exit 2; }
+    base_up
+    "$DAWNR_PYTHON" "$DAWNR_REPO/locallm/dawnr_cli.py" --host "127.0.0.1:$BP" --cwd "$PWD" "$@"
+    ;;
   prove)
     [ $# -ge 1 ] && [ "${1#--}" = "$1" ] || { echo 'usage: dawnr prove SPEC.t [--test "assert f(x) == y" ...] [--answers N] [--save-python FILE] [--save-t FILE] [--certificate FILE]' >&2; exit 2; }
     [ -f "$1" ] || { echo "dawnr: no such file: $1" >&2; exit 2; }
@@ -291,5 +308,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,21p' "$0";;
+  *) sed -n '2,24p' "$0";;
 esac

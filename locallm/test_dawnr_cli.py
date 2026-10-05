@@ -1,0 +1,169 @@
+"""dawnr_cli.py: the assistant's front door. A scripted model stands in for the server; the loop, the tools and the
+journal are the real ones (locallm/dawnr_agent), in a folder of their own."""
+import json
+from pathlib import Path
+
+import pytest
+
+from locallm import dawnr_cli as cli
+
+
+def turn(*calls, text=""):
+    """One reply of the model server: tool calls (name, arguments), or an answer."""
+    message = {"role": "assistant", "content": text}
+    if calls:
+        message["tool_calls"] = [{"id": f"c{i}", "type": "function", "function": {"name": n, "arguments": json.dumps(a)}}
+                                 for i, (n, a) in enumerate(calls)]
+    return {"choices": [{"message": message}], "usage": {"prompt_tokens": 900, "completion_tokens": 40},
+            "timings": {"cache_n": 800, "prompt_n": 100, "predicted_n": 40, "predicted_ms": 1000.0}}
+
+
+class Model:
+    def __init__(self, *replies):
+        self.replies, self.bodies = list(replies), []
+
+    def __call__(self, url, body, timeout=1800.0):
+        self.bodies.append(body)
+        return self.replies.pop(0)
+
+
+def session(tmp_path, model, *, answers=(), yes=False, **config):
+    work = tmp_path / "work"
+    work.mkdir(exist_ok=True)
+    said, asked, queue = [], [], list(answers)
+
+    def ask(prompt):
+        asked.append(prompt)
+        if not queue:
+            raise EOFError
+        return queue.pop(0)
+    cfg = cli.default_config(work, state=tmp_path / "state", **config)
+    cfg["agent"].pop("sandbox", None)                           # the sandbox has its own tests; no command is run here
+    cfg["agent"].pop("commands", None)
+    cfg["permissions"].pop("run_command", None)
+    harness, agent = cli.build_agent(cfg, plan_approver=cli.plan_approver(ask, said.append, yes))
+    meter = cli.Meter(model)
+    planner = cli.Planner(harness, agent, "nowhere:1", "base", post=meter)
+    return work, harness, agent, planner, meter, said, asked, ask
+
+
+def test_the_folder_it_starts_in_is_the_one_it_may_change_and_the_home_folder_is_not(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    (tmp_path / "home" / "project").mkdir(parents=True)
+    here = cli.default_config(tmp_path / "home" / "project", roots=("~/project", str(tmp_path)))
+    assert here["agent"]["roots"][0] == {"name": "here", "path": str(tmp_path / "home" / "project"), "mode": "write"}
+    assert [r["name"] for r in here["agent"]["roots"][1:]] == ["project", tmp_path.name] and all("mode" not in r for r in here["agent"]["roots"][1:])
+    assert here["offline"] is True and here["permissions"]["fs_write"] == "ask" and here["agent"]["sandbox"] == "bwrap"
+    assert all(rule["network"] is False for rule in here["agent"]["commands"])
+    home = cli.default_config(tmp_path / "home")
+    assert "mode" not in home["agent"]["roots"][0] and home["permissions"]["fs_write"] == "deny" and "commands" not in home["agent"]
+    asked_not_to = cli.default_config(tmp_path / "home" / "project", read_only=True, online=True)
+    assert asked_not_to["permissions"]["fs_edit"] == "deny" and asked_not_to["offline"] is False
+
+
+def test_reading_runs_unasked_and_the_task_ends_with_what_it_cost(tmp_path):
+    model = Model(turn(("fs_read", {"path": "here/notes.md"})), turn(text="The meeting moved to Thursday."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "notes.md").write_text("The planning meeting moved to Thursday at 10.\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "What do my notes say?", [], said.append)
+    assert answer == "The meeting moved to Thursday." and asked == []
+    assert said[0].startswith("  fs_read here/notes.md") and "[ran" in said[0] and said[-3] == answer
+    assert said[-2] == "[Nothing was changed.]"
+    assert said[-1] == "[2 model calls, 1,800 tokens read (1,600 from the cache), 80 written, 40 tokens a second, 0.0 s]"
+    first = model.bodies[0]["messages"]
+    assert first[0] == {"role": "system", "content": cli.SYSTEM} and first[1] == {"role": "user", "content": "What do my notes say?"}
+    assert model.bodies[0]["cache_prompt"] is True and model.bodies[0]["max_tokens"] == cli.MAX_TOKENS
+    assert "fs_read" in [t["function"]["name"] for t in model.bodies[0]["tools"]] and "t" not in [t["function"]["name"] for t in model.bodies[0]["tools"]]
+
+
+def test_a_change_is_shown_and_asked_for_once_and_no_means_nothing_ran(tmp_path):
+    write = ("fs_write", {"path": "here/todo.txt", "content": "buy milk\n"})
+    model = Model(turn(write), turn(write), turn(text="Written."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model, answers=["n", "y"])
+    with harness:
+        refused = cli.run_task(agent, planner, meter, "Make a to-do list.", [], said.append)
+        assert refused == "Stopped: the plan was not approved, so nothing ran." and not (work / "todo.txt").exists()
+        assert asked == ["Run this plan? [y/N] "] and any("fs_write" in line and "plan " in line for line in said)
+        assert "[Nothing was changed. The last plan did not run in full, whatever is said above.]" in said
+        done = cli.run_task(agent, planner, meter, "Make a to-do list.", [], said.append)
+        assert done == "Written." and (work / "todo.txt").read_text() == "buy milk\n" and len(asked) == 2
+        assert "[Changed: write here/todo.txt.]" in said
+        # what was changed can be listed and put back
+        assert len(cli.changes(agent)) == 1 and "here/todo.txt" in cli.changes(agent)[0]
+        cli.undo(agent)
+        assert not (work / "todo.txt").exists() and cli.undo(agent) == "nothing to undo"
+
+
+def test_with_yes_the_plan_is_still_shown_and_with_read_only_the_write_tools_are_not_offered(tmp_path):
+    write = ("fs_write", {"path": "here/a.txt", "content": "a\n"})
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, Model(turn(write), turn(text="Done.")), yes=True)
+    with harness:
+        assert cli.run_task(agent, planner, meter, "Write a.", [], said.append) == "Done." and (work / "a.txt").exists()
+    assert asked == [] and any(line.startswith("plan ") for line in said)
+    model = Model(turn(text="I can only read here."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model, read_only=True)
+    with harness:
+        cli.run_task(agent, planner, meter, "Write a.", [], said.append)
+    offered = [t["function"]["name"] for t in model.bodies[0]["tools"]]
+    assert "fs_read" in offered and "fs_write" not in offered and "fs_edit" not in offered
+
+
+def test_the_session_hands_back_a_little_of_what_came_before_and_the_prompt_obeys_its_own_commands(tmp_path):
+    assert cli.with_history("And Friday?", []) == "And Friday?"
+    later = cli.with_history("And Friday?", [(f"q{i}", "a" * 900) for i in range(5)])
+    assert later.endswith("Now: And Friday?") and later.count("- asked:") == cli.HISTORY and "a" * 401 not in later
+    model = Model(turn(text="Thursday."), turn(text="Nothing on Friday."))
+    work, harness, agent, planner, meter, said, asked, ask = session(tmp_path, model, answers=["", "When is the meeting?", "/changes", "/undo", "And Friday?", "/quit"])
+    with harness:
+        assert cli.repl(agent, planner, meter, ask, said.append) == 0
+    assert said[0] == cli.HELP and "Thursday." in said and "nothing was changed" in said and "nothing to undo" in said
+    second = model.bodies[1]["messages"][1]["content"]
+    assert "Earlier in this session:\n- asked: When is the meeting?\n  answered: Thursday." in second and second.endswith("Now: And Friday?")
+
+
+def test_a_plain_path_is_one_in_the_folder_and_a_refused_plan_goes_back_with_its_reason(tmp_path):
+    # the model writes `todo.txt` and an absolute path; both are the folder's. Then a write outside every root is
+    # refused, the reason is handed back in the tool's place, and the model's "done" is contradicted by the journal
+    outside = ("fs_write", {"path": "/etc/dawnr-test.txt", "content": "x\n"})
+    model = Model(turn(("fs_write", {"path": "./todo.txt", "content": "milk\n"})), turn(text="Created."),
+                  turn(outside), turn(text="The file has been created."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model, yes=True)
+    with harness:
+        assert planner.path("notes/a.md") == "here/notes/a.md" and planner.path(str(work / "a.md")) == "here/a.md"
+        assert planner.path(".") == "here" and planner.path("here/x") == "here/x" and planner.path(str(work)) == "here"
+        cli.run_task(agent, planner, meter, "Make a to-do list.", [], said.append)
+        assert (work / "todo.txt").read_text() == "milk\n" and "[Changed: write here/todo.txt.]" in said
+        answer = cli.run_task(agent, planner, meter, "Write to /etc.", [], said.append)
+    assert answer == "The file has been created." and not Path("/etc/dawnr-test.txt").exists()
+    assert said[-2] == "[Nothing was changed. The last plan did not run in full, whatever is said above.]"
+    back = model.bodies[-1]["messages"][-1]
+    assert back["role"] == "tool" and back["content"].startswith("Nothing ran. plan ") and "Correct the call" in back["content"]
+
+
+def test_a_task_that_does_not_finish_says_why(tmp_path):
+    read = ("fs_read", {"path": "here/missing.txt"})
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, Model(turn(read), turn(read)))
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "Read it.", [], said.append)
+    assert answer.startswith("Stopped: ") and answer in said
+
+
+def test_in_its_last_round_it_is_asked_to_answer_and_given_nothing_to_call(tmp_path):
+    looks = [turn(("fs_search", {"query": f"phone {i}"})) for i in range(5)]
+    model = Model(*looks, turn(text="The phone number is not in the files."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
+    (work / "invoice.txt").write_text("Harbor Cafe\nTotal due: 194.40\n")
+    with harness:
+        answer = cli.run_task(agent, planner, meter, "What is Harbor Cafe's phone number?", [], said.append)
+    assert answer == "The phone number is not in the files." and len(model.bodies) == 6
+    assert all("tools" in body for body in model.bodies[:5]) and "tools" not in model.bodies[5]
+    assert model.bodies[5]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
+    assert model.bodies[4]["messages"][-1]["role"] == "tool"
+
+
+def test_without_a_task_and_without_a_terminal_it_refuses_to_start(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: False, raising=False)
+    with pytest.raises(SystemExit):
+        cli.main(["--host", "nowhere:1", "--cwd", str(tmp_path)])
+    assert "no task was given" in capsys.readouterr().err

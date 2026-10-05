@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+"""dawnr_cli.py: dawnr as an assistant in a terminal, in the folder it is started in (2026-10-05).
+
+    dawnr                      the assistant, here: type what you want done
+    dawnr do "TASK"            one task, then back to the shell
+    python3 locallm/dawnr_cli.py --host 127.0.0.1:8712 [--cwd DIR] [--read-only] [--root DIR ...] [--online] [--yes] [TASK]
+
+Nothing here decides what may be touched. The loop, the tools, the journal, the sandbox and every rule are
+locallm/dawnr_agent and locallm/dawnr_harness (DAWNR-AGENT.md, DAWNR-HARNESS.md), which until now needed a
+configuration written by hand; this file is their front door with nothing to configure.
+
+The defaults are the two layers of the Codex CLI (developers.openai.com/codex/sandbox.md, receipt b24da17bccfd):
+what the assistant can do at all, and when it must ask.
+
+  here         the folder dawnr is started in is the one place it may change. Started in the home folder itself,
+               or with --read-only, it changes nothing
+  reading      files in that folder and in each --root, never a key or a password, never through a link out
+  changing     a write or an edit is shown first, as a plan with its dry run, and asked for once (--yes: shown,
+               not asked); each is journaled with the bytes it replaced, and /undo puts them back
+  commands     a short list of shapes, inside bubblewrap: no network, nothing writable but this folder. Where
+               bubblewrap does not work, no command runs
+  the network  off, unless --online
+  the model    proposes; it never approves. What it read from a file or a page is data: after it, anything that
+               changes something is asked for whatever the plan said before
+
+What was done is never taken from the model's words. A first trial (2026-10-05) had the model answer "the file
+has been created" after a write that was refused; so each task ends with the journal's own account of what
+changed, a plan that did not run is said to have not run, and the reason goes back to the model so that it can
+try again. It then ends with what it cost: model calls, tokens read (and how many of those the server had
+cached), tokens written and tokens a second, so that a change that makes the assistant slower or wordier shows.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / "t"))
+
+from agent_eval_native import NativePlanner, _post, messages_for  # noqa: E402
+from dawnr_agent import AgentLoop, Finish, build_agent  # noqa: E402
+
+MAX_TOKENS = 1500              # one turn of the model: a plan, or an answer; a file it writes has to fit in it
+HISTORY = 3                    # earlier tasks of the session handed back, each cut short
+# said once, ahead of the first task; it does not change within a session, so the server reads it once and reuses it
+SYSTEM = ("You are dawnr, an assistant working on this person's computer, offline. The folder you work in is called "
+          "`here`, and a path is written `here/notes.md`. Look before you answer: list, search or read the files, and "
+          "answer only from what you read; if it is not there, say so. To change a file, call a tool. Never say a "
+          "thing was done unless a tool result says it ran.")
+# the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
+LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
+# argv shapes that run without the person writing a rule; every one inside the sandbox, none with the network
+COMMANDS = [
+    {"argv": ["git", "status", "--short"], "permission": "allow", "network": False, "writes": False},
+    {"argv": ["git", "diff", "--stat"], "permission": "allow", "network": False, "writes": False},
+    {"argv": ["git", "log", "--oneline", "-n", "{int}"], "permission": "allow", "network": False, "writes": False},
+    {"argv": ["python3", "{path}"], "permission": "ask", "network": False},
+    {"argv": ["python3", "-m", "pytest", "-q", "--", "{path}..."], "permission": "ask", "network": False},
+]
+
+
+def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), online: bool = False,
+                   state: Path | None = None) -> dict:
+    """The harness configuration for a session started in `cwd`."""
+    cwd, home = cwd.resolve(), Path.home().resolve()
+    writable = not read_only and cwd not in (home, Path(cwd.anchor))
+    listed, names = [{"name": "here", "path": str(cwd), **({"mode": "write"} if writable else {})}], {"here"}
+    for extra in roots:
+        path = Path(extra).expanduser().resolve()
+        name = path.name or "root"
+        while name in names:
+            name += "-2"
+        names.add(name)
+        listed.append({"name": name, "path": str(path)})
+    agent = {"roots": listed, "budget": {"max_steps": 12, "max_rounds": 6, "max_failures": 2}}
+    if state is not None:
+        agent["state"] = str(state)
+    permissions = {"t": "deny"}                                 # proving is `dawnr ask` and `dawnr prove`
+    if writable:
+        agent.update(sandbox="bwrap", commands=COMMANDS)
+        permissions.update(fs_write="ask", fs_edit="ask", fs_undo="ask", run_command="allow")
+    else:
+        permissions.update(fs_write="deny", fs_edit="deny", fs_undo="deny")
+    return {"offline": not online, "permissions": permissions, "agent": agent}
+
+
+class Meter:
+    """The model server's own counts, added up over a task (llama.cpp's `timings`, else the API's `usage`)."""
+
+    def __init__(self, post=_post):
+        self.post = post
+        self.reset()
+
+    def reset(self) -> None:
+        self.calls = self.read = self.cached = self.written = 0
+        self.writing_ms = self.seconds = 0.0
+
+    def __call__(self, url: str, body: dict, timeout: float = 1800.0) -> dict:
+        started = time.monotonic()
+        out = self.post(url, dict(body, cache_prompt=True), timeout)
+        self.seconds += time.monotonic() - started
+        timings, usage = out.get("timings") or {}, out.get("usage") or {}
+        self.calls += 1
+        self.cached += int(timings.get("cache_n") or 0)
+        self.read += int(usage.get("prompt_tokens") or timings.get("prompt_n") or 0)
+        self.written += int(timings.get("predicted_n") or usage.get("completion_tokens") or 0)
+        self.writing_ms += float(timings.get("predicted_ms") or 0.0)
+        return out
+
+    def line(self) -> str:
+        rate = f", {self.written / (self.writing_ms / 1000):.0f} tokens a second" if self.writing_ms > 0 and self.written else ""
+        return (f"{self.calls} model call{'s' if self.calls != 1 else ''}, {self.read:,} tokens read"
+                + (f" ({self.cached:,} from the cache)" if self.cached else "")
+                + f", {self.written:,} written{rate}, {self.seconds:.1f} s")
+
+
+class Planner(NativePlanner):
+    """The model through native tool calls (locallm/agent_eval_native.py), as the front door needs it: told where it
+    is, a plain path taken as one in the folder, and a plan that did not run handed back with the reason."""
+
+    def __init__(self, harness, agent, host: str, name: str, post=_post, max_tokens: int = MAX_TOKENS):
+        super().__init__(harness, host, name, max_tokens=max_tokens, post=post)
+        self.roots = [root.name for root in agent.space.roots]
+        self.paths = {root.name: str(root.path) for root in agent.space.roots}
+
+    def path(self, value):
+        """A path as the file tools write it: `todo.txt` and `./todo.txt` are in the folder, and an absolute path
+        inside a root is that root's."""
+        if not isinstance(value, str) or not value.strip():
+            return value
+        text = value.strip()
+        for name, real in self.paths.items():
+            if text == real or text.startswith(real.rstrip("/") + "/"):
+                return (name + "/" + text[len(real):].lstrip("/")).rstrip("/")
+        while text.startswith("./"):
+            text = text[2:]
+        if text in (".", ""):
+            return self.roots[0]
+        return text if text.split("/")[0] in self.roots or text.startswith("/") else f"{self.roots[0]}/{text}"
+
+    def messages(self, state) -> list[dict]:
+        msgs = messages_for(state)
+        msgs[0]["content"] = state.task                         # the tools are offered natively; the index repeats them
+        at = 1                                                  # messages_for: a plan is its calls then one message a step
+        for r in state.rounds:
+            if r.plan is None:
+                at += 1 + (1 if r.note else 0)
+                continue
+            last = at + len(r.plan.steps)
+            if r.dry is not None and r.dry.refused and last < len(msgs):     # nothing of it ran: say why, in the tool's place
+                msgs[last]["content"] = ("Nothing ran. " + r.dry.render(for_person=False)
+                                         + "\nCorrect the call and send the plan again, or say that it cannot be done.")
+            at = last + 1
+        if self.last_round(state):
+            msgs.append({"role": "user", "content": LAST_ROUND})
+        return [{"role": "system", "content": SYSTEM}] + msgs
+
+    @staticmethod
+    def last_round(state) -> bool:
+        budget = getattr(state, "budget", None)
+        return budget is not None and len(state.rounds) >= budget.max_rounds - 1
+
+    def __call__(self, state):
+        body = {"model": self.name, "messages": self.messages(state), "temperature": 0, "max_tokens": self.max_tokens}
+        if not self.last_round(state):                          # in the last round there is nothing left to call
+            body["tools"] = self.tools
+        msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            return Finish((msg.get("content") or "").strip())
+        steps = []
+        for c in calls:
+            fn = c.get("function") or {}
+            args = fn.get("arguments", "{}")
+            try:
+                args = json.loads(args) if isinstance(args, str) else args
+            except ValueError:
+                args = {"_unparsed": args}
+            args = args if isinstance(args, dict) else {}
+            for key in ("path", "cwd"):
+                if key in args:
+                    args[key] = self.path(args[key])
+            steps.append({"tool": fn.get("name", ""), "arguments": args})
+        self.proposed.append(steps)
+        return {"steps": steps}
+
+
+def plan_approver(ask=input, say=print, yes: bool = False):
+    """A plan in which nothing changes anything runs unasked; any other is shown whole and asked for once."""
+    def approve(dry) -> bool:
+        if all(v.decision == "allow" for v in dry.views):
+            return True
+        say(dry.render(for_person=True))
+        if yes:
+            return True
+        try:
+            return ask("Run this plan? [y/N] ").strip().lower() in ("y", "yes")
+        except EOFError:
+            return False
+    return approve
+
+
+def _step_line(step, outcome) -> str:
+    args = step.arguments
+    what = args.get("path") or " ".join(str(a) for a in args.get("argv") or []) or args.get("query") or args.get("url") or ""
+    status = "not run" if outcome is None else outcome.status + (f": {outcome.note}" if outcome.note else "")
+    return f"  {step.tool} {str(what)[:80]}".rstrip() + f"  [{status[:100]}]"
+
+
+class Narrator:
+    """The planner, with each finished round's steps said as the next one starts."""
+
+    def __init__(self, planner, say=print):
+        self.planner, self.say, self.said = planner, say, 0
+
+    def tell(self, rounds: list) -> None:
+        for r in rounds[self.said:]:
+            if r.plan is not None:
+                outcomes = list(r.outcome.outcomes) if r.outcome is not None else []
+                for i, step in enumerate(r.plan.steps):
+                    self.say(_step_line(step, outcomes[i] if i < len(outcomes) else None))
+            if r.note:
+                self.say(f"  ({r.note})")
+        self.said = len(rounds)
+
+    def __call__(self, state):
+        self.tell(state.rounds)
+        return self.planner(state)
+
+
+STOPPED = {"rounds": "it used all its rounds without finishing", "refused": "the plan was not approved, so nothing ran",
+           "failures": "its steps kept failing", "no progress": "it proposed the same plan twice",
+           "budget": "it used all its steps", "time": "it ran out of time", "planner": "the model's reply could not be read as a plan",
+           "dry run": "this was a dry run"}
+
+
+def with_history(task: str, history: list) -> str:
+    if not history:
+        return task
+    past = "\n".join(f"- asked: {q[:200]}\n  answered: {a[:400]}" for q, a in history[-HISTORY:])
+    return f"Earlier in this session:\n{past}\n\nNow: {task}"
+
+
+def _journal(agent) -> list:
+    return agent.ops.journal.entries() if agent.ops else []
+
+
+def done(agent, before: int, rounds: list) -> str:
+    """What the task changed, from the journal and the plans' outcomes, never from the answer."""
+    made = _journal(agent)[before:]
+    lines = [f"{row.get('action')} {row.get('path')}" + (f" (undoes {row['undoes']})" if row.get("undoes") else "") for row in made]
+    last = next((r for r in reversed(rounds) if r.plan is not None), None)
+    unrun = last is not None and (last.outcome is None or any(o.status != "ran" for o in last.outcome.outcomes))
+    said = "Changed: " + "; ".join(lines) + "." if lines else "Nothing was changed."
+    return said + (" The last plan did not run in full, whatever is said above." if unrun else "")
+
+
+def run_task(agent, planner, meter: Meter, task: str, history: list, say=print) -> str:
+    """One task through the loop; what was answered (or why it stopped) is said and returned."""
+    meter.reset()
+    before = len(_journal(agent))
+    narrator = Narrator(planner, say)
+    result = AgentLoop(agent, narrator).run(with_history(task, history), context=task)
+    narrator.tell(result.rounds)
+    answer = result.answer if result.stop == "done" and result.answer else f"Stopped: {STOPPED.get(result.stop, result.stop)}."
+    say(answer)
+    say(f"[{done(agent, before, result.rounds)}]")
+    say(f"[{meter.line()}]")
+    history.append((task, answer))
+    return answer
+
+
+def changes(agent, n: int = 10) -> list[str]:
+    rows = agent.ops.journal.entries() if agent.ops else []
+    return [f"{row['id']} {row.get('action')} {row.get('path')}" + (f" (undoes {row['undoes']})" if row.get("undoes") else "")
+            for row in rows[-n:]]
+
+
+def undo(agent, change: str | None = None) -> str:
+    """Put back one journaled change: the one named, else the newest that is not itself an undo."""
+    rows = agent.ops.journal.entries() if agent.ops else []
+    if change is None:
+        undone = {row.get("undoes") for row in rows}
+        last = next((row for row in reversed(rows) if not row.get("undoes") and row["id"] not in undone), None)
+        if last is None:
+            return "nothing to undo"
+        change = last["id"]
+    try:
+        return str(agent.files.undo(change, session="person"))
+    except Exception as e:                                      # noqa: BLE001 -- said, never raised at the person
+        return f"not undone: {e}"
+
+
+HELP = ("Type what you want done. /changes lists what was changed, /undo puts the last change back (or /undo ID), "
+        "/quit leaves.")
+
+
+def repl(agent, planner, meter: Meter, ask=input, say=print) -> int:
+    history: list = []
+    say(HELP)
+    while True:
+        try:
+            line = ask("dawnr> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            say("")
+            return 0
+        if not line:
+            continue
+        if line in ("/quit", "/exit", "/q"):
+            return 0
+        if line in ("/help", "/?"):
+            say(HELP)
+        elif line == "/changes":
+            say("\n".join(changes(agent)) or "nothing was changed")
+        elif line.split()[0] == "/undo":
+            say(undo(agent, line.split()[1] if len(line.split()) > 1 else None))
+        else:
+            try:
+                run_task(agent, planner, meter, line, history, say)
+            except KeyboardInterrupt:
+                say("\nstopped")
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("task", nargs="*", help="one task; none opens the assistant")
+    ap.add_argument("--host", required=True, help="host:port of the model server (OpenAI-style, with tool calls)")
+    ap.add_argument("--name", default="base")
+    ap.add_argument("--cwd", type=Path, default=Path.cwd(), help="the folder it works in")
+    ap.add_argument("--read-only", action="store_true", help="change nothing: no write, no edit, no command")
+    ap.add_argument("--root", action="append", default=[], metavar="DIR", help="one more folder it may read (repeatable)")
+    ap.add_argument("--online", action="store_true", help="let it use the web tools this session")
+    ap.add_argument("--yes", action="store_true", help="show each plan that changes something, and run it without asking")
+    ap.add_argument("--state", type=Path, default=None, help="where the journal is kept (default: dawnr's own state folder)")
+    a = ap.parse_args(argv)
+    task = " ".join(a.task).strip()
+    if not task and not sys.stdin.isatty():
+        ap.error("no task was given and this is not a terminal")
+    config = default_config(a.cwd, read_only=a.read_only, roots=tuple(a.root), online=a.online, state=a.state)
+    harness, agent = build_agent(config, plan_approver=plan_approver(yes=a.yes))
+    with harness:
+        for problem in harness.problems:                        # what is switched off here; the scan's own limits are in `roots`
+            if "secret scan stopped" not in problem:
+                print(f"dawnr: {problem}", file=sys.stderr)
+        root = agent.space.roots[0]
+        print(f"dawnr in {root.path} ({'may change files here' if root.mode == 'write' else 'reads only'}; "
+              f"{'online' if not harness.policy.offline else 'offline'})", file=sys.stderr)
+        meter = Meter()
+        planner = Planner(harness, agent, a.host, a.name, post=meter)
+        if task:
+            run_task(agent, planner, meter, task, [])
+            return 0
+        return repl(agent, planner, meter)
+
+
+if __name__ == "__main__":                                      # pragma: no cover
+    raise SystemExit(main())

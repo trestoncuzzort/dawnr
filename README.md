@@ -131,8 +131,29 @@ A fresh Ubuntu (WSL's included) first needs
 before downloading anything and prints the line with what is missing. The installer itself
 needs no administrator rights. It downloads the model server,
 the two models and the first prover into `~/.local/share/dawnr`, checks each
-download against its published checksum, and adds a `dawnr` command. Then,
-starting from a specification:
+download against its published checksum, and adds a `dawnr` command. Then, in
+any folder:
+
+```bash
+cd ~/notes
+dawnr
+```
+
+`dawnr` on its own opens an assistant in that folder, on the base model, with
+nothing to configure. It reads the files there (and in any folder you name with
+`--root`), and the folder you start it in is the only place it may change. A
+write or an edit is shown first, as a plan with the exact difference, and asked
+for once; every change is journaled with what it replaced, so `/undo` puts it
+back. The few commands it may run (`git status`, `python3 FILE`, `pytest`) run
+in a sandbox with no network and nothing writable but that folder, and the
+network is off unless you say `--online`. `dawnr do "TASK"` does one task and
+returns. Each task ends with two lines the model did not write: what the
+journal says was changed, and what the task cost in model calls, tokens and
+tokens a second. This front door is new (2026-10-05): it was tried by hand on
+five tasks and is not yet measured on a task set; the containment and the
+sandbox behind it are measured in [DAWNR-AGENT.md](DAWNR-AGENT.md).
+
+And for a program you want proved, starting from a specification:
 
 ```bash
 dawnr spec "Write a function that returns the largest element of a non-empty list." \
