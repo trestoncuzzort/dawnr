@@ -796,8 +796,9 @@ model was asked anything. `t/mbpp_dfy.py parse_assertion` gained `tuples` (a tup
 and `nested_ints` (a list of int lists is `seq<seq>`), both off by default: every pool to v5 reads as before, byte
 for byte, and the additions are pool v7 (`spec_experiment.wider_pool`, 145 problems, none in any split). A person's
 question is read with both (`answer.entry_of`), and the Python handed back keeps the tests' own writing, tuple or
-list at each depth (`to_python`). 796 of 974 read, from 651. 31 of the 145 were already matched by a training row
-and 114 are a held-out panel from their first day (`heldout_audit.wider_clean`). Registration and what is measured
+list at each depth (`to_python`). 796 of 974 read, from 651. 31 of the 145 were already matched by a training row,
+three more cannot be asked faithfully (their own reference fails its own tests once a one-letter string is read as a
+character), and 111 are a held-out panel from their first day (`heldout_audit.wider_clean`). Registration and what is measured
 on it: `PREDICT-2026-10-05-wider-reader.md`. Not done, each a language change with every lowering behind it: a
 mixed tuple (a record at the boundary), a finite map (34 problems stop at a dictionary), reals (61).
 

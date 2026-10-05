@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "about": "The MBPP problems only the wider reader reads (t/spec_experiment.py wider_pool) that the training rows of 2026-10-05 already matched, by t/heldout_audit.py's lineage and twin readings. They never enter the wider panel; the rest are held out from their first day. t/PREDICT-2026-10-05-wider-reader.md",
+ "about": "The MBPP problems only the wider reader reads (t/spec_experiment.py wider_pool) that the training rows of 2026-10-05 already matched, by t/heldout_audit.py's lineage and twin readings. They never enter the wider panel; the rest are held out from their first day. t/PREDICT-2026-10-05-wider-reader.md unfaithful_ids are the problems whose own reference does not reproduce its own tests once those are read the reader's way (a one-letter string as a character among numbers, tests of two shapes): the instrument cannot ask their question, so they are in no panel either.",
  "rule": "a training row is flagged for a gated problem (held-out or dev) when it names that problem's own formalisation (lineage), or holds a t program, in its answer or its prompt, that passes at least one of the problem's test points, fails none, and on 100 drawn inputs answers fewer than 10% of the inputs both answer differently from the problem's reference (twin; t/twin_draws.py), the problem's length argument left out where it has one",
  "audited": [
   {
@@ -373,5 +373,17 @@
     "vericoding_dj0137__arrayConcat"
    ]
   }
+ },
+ "unfaithful_ids": [
+  143,
+  222,
+  398,
+  712
+ ],
+ "unfaithful": {
+  "143": "the reference gives no answer to its own test, read the reader's way (a list shape for a scalar)",
+  "222": "the reference answers its own test differently once the test is read the reader's way",
+  "398": "the reference answers its own test differently once the test is read the reader's way",
+  "712": "the reference gives no answer to its own test, read the reader's way (a list shape for a scalar)"
  }
 }
