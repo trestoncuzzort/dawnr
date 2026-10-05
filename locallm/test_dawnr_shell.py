@@ -96,6 +96,30 @@ def test_the_command_cannot_reach_the_network_write_outside_the_folder_or_read_a
         shutil.rmtree(base, ignore_errors=True)
 
 
+def test_what_a_tool_writes_into_its_own_cache_is_not_a_change_and_removing_a_cache_still_is(tmp_path):
+    work, harness, agent, asked = agent_in(tmp_path, **{"mod.py": "def f():\n    return 1\n", "t.py": "from mod import f\nprint('OK', f())\n"})
+    with harness:
+        r = harness.call("sh", {"command": "python3 t.py"})        # python writes __pycache__/mod.*.pyc as it imports
+        assert r.text.startswith("exit 0\nOK 1") and asked == [] and sorted(os.listdir(work)) == ["mod.py", "t.py"]
+        (work / "__pycache__").mkdir()
+        (work / "__pycache__" / "old.pyc").write_bytes(b"x")
+        r = harness.call("sh", {"command": "rm -r __pycache__ && echo kept > notes.txt"})
+    assert len(asked) == 1 and "remove here/__pycache__/old.pyc" in asked[0] and "create here/notes.txt" in asked[0], asked
+    assert sorted(os.listdir(work)) == ["mod.py", "notes.txt", "t.py"]
+
+
+def test_a_command_about_the_running_computer_is_sent_to_sysinfo_and_the_sandboxs_walls_are_named(tmp_path):
+    work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
+    with harness:
+        assert harness.call("sh", {"command": "ps aux | grep firefox"}).text.startswith("exit ")      # nowhere else to look: it runs
+        agent.shell.elsewhere = "To look at the computer call `sysinfo` with this line."
+        r = harness.call("sh", {"command": "ps aux | grep firefox"})
+        assert r.is_error and "`ps` reports on the running computer" in r.text and r.text.endswith("call `sysinfo` with this line.")
+        assert not harness.call("sh", {"command": "python3 - << 'EOF'\ntop = 1; ps = 2\nprint(top + ps)\nEOF"}).is_error
+        r = harness.call("sh", {"command": "touch /etc/dawnr-test-file"})
+        assert "Read-only file system" in r.text and "Only the folder can be changed from here" in r.text and asked == []
+
+
 def test_long_output_comes_back_as_its_start_and_its_end_with_what_was_left_out_counted(tmp_path):
     work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
     with harness:
@@ -178,6 +202,16 @@ def test_in_a_plan_the_dry_run_is_the_run_and_a_command_after_another_change_is_
         later = agent.preview("sh", {"command": "cat a.txt"}, {("here", ("a.txt",)): b"x"})
         assert later.error and "a plan of its own" in later.error
         assert agent.preview("sh", {"command": ""}, {}).error and agent.shell.decide({"command": "true"})[0] == "allow"
+
+
+def test_a_command_may_come_again_after_something_changed_but_not_the_changing_one_straight_after_itself(tmp_path):
+    from dawnr_agent import AgentLoop, Budget, ScriptedPlanner
+    work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
+    more = {"steps": [{"tool": "sh", "arguments": {"command": "echo x >> a.txt"}}]}
+    look = {"steps": [{"tool": "sh", "arguments": {"command": "cat a.txt"}}]}
+    with harness:
+        res = AgentLoop(agent, ScriptedPlanner([look, more, look, more, more, more, look]), budget=Budget(max_rounds=10)).run("x")
+    assert (res.stop, len(res.rounds), res.steps_run) == ("no progress", 6, 4) and (work / "a.txt").read_text() == "one\nx\nx\n"
 
 
 def test_yes_does_not_answer_for_a_plan_that_loses_a_files_contents(tmp_path):

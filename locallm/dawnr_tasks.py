@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -201,6 +202,143 @@ TASKS2 = [
     (68, "document", {"minutes.docx": MINUTES}, "Who is responsible for the budget, according to minutes.docx?", {"answer": ["priya"], "lacks": ["lee is responsible", "sam is responsible"]}),
     (69, "bigfile", {"book.txt": BOOK}, "In book.txt, what colour is the lighthouse door?", {"answer": ["green"]}),
 ]
+
+
+# ---- the third set (2026-10-05): the second also reads near its ceiling on the 4B. These are meant to be past
+# it: code that has to pass a test file it is given, data joined and summed into an exact file, documents to
+# compare, changes where one file is the exception, and questions that need a short program to answer.
+
+def pdf_pages(*pages) -> bytes:
+    """A PDF of several pages, each a list of lines, with a text layer pdftotext reads back page by page."""
+    kids = " ".join(f"{4 + 2 * i} 0 R" for i in range(len(pages)))
+    objects = [b"<< /Type /Catalog /Pages 2 0 R >>", f"<< /Type /Pages /Kids [{kids}] /Count {len(pages)} >>".encode(),
+               b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+    for i, lines in enumerate(pages):
+        text = "BT /F1 12 Tf 72 720 Td 16 TL " + " ".join(f"({line}) Tj T*" for line in lines) + " ET"
+        objects.append(f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents {5 + 2 * i} 0 R /Resources << /Font << /F1 3 0 R >> >> >>".encode())
+        objects.append(b"<< /Length %d >>\nstream\n%s\nendstream" % (len(text), text.encode("latin-1")))
+    out, offsets = b"%PDF-1.4\n", []
+    for i, obj in enumerate(objects, 1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n%s\nendobj\n" % (i, obj)
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1) + b"".join(b"%010d 00000 n \n" % o for o in offsets)
+    return out + b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref)
+
+
+TEST_STACK = ("from stack import Stack\n\ns = Stack()\nassert s.is_empty() and s.size() == 0\ns.push(1); s.push(2)\nassert s.peek() == 2 and s.size() == 2\n"
+              "assert s.pop() == 2 and s.pop() == 1 and s.is_empty()\nfor f in (s.pop, s.peek):\n    try:\n        f()\n        raise SystemExit('no error on empty')\n"
+              "    except IndexError:\n        pass\nprint('OK')\n")
+TEST_ROMAN = ("from roman import to_roman\n\nfor n, want in [(1, 'I'), (4, 'IV'), (9, 'IX'), (14, 'XIV'), (40, 'XL'), (90, 'XC'), (400, 'CD'), (1994, 'MCMXCIV'), (3999, 'MMMCMXCIX')]:\n"
+              "    assert to_roman(n) == want, (n, to_roman(n))\nprint('OK')\n")
+BANK = ("class Account:\n    def __init__(self, balance=0):\n        self.balance = balance\n\n    def deposit(self, amount):\n        if amount < 0:\n"
+        "            raise ValueError('negative')\n        self.balance -= amount\n\n    def withdraw(self, amount):\n        if amount >= self.balance:\n"
+        "            raise ValueError('insufficient')\n        self.balance -= amount\n\n    def can_afford(self, amount):\n        self.balance >= amount\n")
+TEST_BANK = ("from bank import Account\n\na = Account(10)\na.deposit(5)\nassert a.balance == 15, a.balance\na.withdraw(15)\nassert a.balance == 0, a.balance\n"
+             "b = Account(3)\nassert b.can_afford(3) is True and b.can_afford(4) is False\ntry:\n    b.withdraw(4)\n    raise SystemExit('overdrawn')\nexcept ValueError:\n    pass\nprint('OK')\n")
+TEST_MEDIAN = ("from median import median\n\nassert median([3, 1, 2]) == 2\nassert median([4, 1, 3, 2]) == 2.5\nassert median([5]) == 5\ntry:\n    median([])\n"
+               "    raise SystemExit('no error on empty')\nexcept ValueError:\n    pass\nprint('OK')\n")
+ORDERS = [("ana", "pen", 3, 1.50), ("bo", "lamp", 1, 35.00), ("ana", "desk", 1, 120.00), ("cy", "cup", 4, 8.25), ("bo", "pen", 10, 1.50),
+          ("cy", "chair", 2, 60.00), ("di", "pen", 1, 1.50), ("ana", "cup", 2, 8.25)]
+ORDERS_CSV = "customer,item,qty,price\n" + "".join(f"{c},{i},{q},{pr:.2f}\n" for c, i, q, pr in ORDERS)
+_totals: dict = {}
+for _c, _i, _q, _pr in ORDERS:
+    _totals[_c] = _totals.get(_c, 0) + _q * _pr
+SUMMARY_CSV = "customer,total\n" + "".join(f"{c},{t:.2f}\n" for c, t in sorted(_totals.items(), key=lambda kv: -kv[1]))
+PEOPLE3 = "id,name\n1,Ana\n2,Bo\n3,Cy\n4,Di\n"
+SCORES = "id,score\n3,71\n1,88\n4,95\n"
+REPORT_TXT = "Di: 95\nAna: 88\nCy: 71\n"
+TAGGED = '[{"name": "a", "tags": ["red", "big"]}, {"name": "b", "tags": ["red"]}, {"name": "c", "tags": ["blue", "big", "red"]}, {"name": "d", "tags": []}]\n'
+ERRLOG = "".join(f"{i:04d} {'ERROR' if (i % 9 == 0 or (i % 4 == 0 and i % 7 == 3)) else 'INFO'} worker-{i % 7} step {i}\n" for i in range(1, 401))
+_errs: dict = {}
+for _line in ERRLOG.splitlines():
+    if " ERROR " in _line:
+        _errs[_line.split()[2]] = _errs.get(_line.split()[2], 0) + 1
+WORST = max(sorted(_errs), key=lambda w: _errs[w])
+LEASES = {"north.docx": docx_bytes("Lease, North Street", "The rent is 1150 a month."), "quay.docx": docx_bytes("Lease, Quay Road", "The rent is 1475 a month."),
+          "mill.docx": docx_bytes("Lease, Mill Lane", "The rent is 980 a month.")}
+POLICY_PDF = pdf_pages(["Member handbook", "Welcome."], ["Opening hours", "Weekdays 9 to 5."], ["Fees", "The annual fee is 240."],
+                       ["Cancellation policy", "Membership may be cancelled with 30 days notice in writing."], ["Contact", "Write to the office."])
+AMOUNTS_HTML = ("<html><body><h1>Expenses</h1><table><tr><th>Item</th><th>Amount</th></tr><tr><td>Train</td><td>48.50</td></tr><tr><td>Hotel</td>"
+                "<td>131.00</td></tr><tr><td>Dinner</td><td>27.25</td></tr></table></body></html>")
+LATENCY = "status,ms\n" + "".join(f"{500 if i % 11 == 0 else 200},{100 + (i * 37) % 400}\n" for i in range(1, 3001))
+_slow = [100 + (i * 37) % 400 for i in range(1, 3001) if i % 11 == 0]
+AVG_500 = f"{sum(_slow) / len(_slow):.1f}"
+USERS = ("alice", "bruno", "chandra", "dmitri", "elena")
+
+
+def _failed_user(k: int) -> str:                                # the k-th failed login: 25, 8 and 17 of the fifty
+    return USERS[0 if k % 2 == 0 else (1 if k % 3 == 0 else 2)]
+
+
+ACCESS = "".join(f"2026-10-0{1 + i % 5} {'FAILED' if i % 6 == 0 else 'ok'} login user={_failed_user(i // 6) if i % 6 == 0 else USERS[(i * 3) % 5]}\n"
+                 for i in range(1, 301))
+FAILED_LOGINS: dict = {}
+for _line in ACCESS.splitlines():
+    if " FAILED " in _line:
+        FAILED_LOGINS[_line.split("user=")[1]] = FAILED_LOGINS.get(_line.split("user=")[1], 0) + 1
+
+
+def _one_of_each(work) -> list:
+    left = sorted(p.name for p in work.glob("*.txt"))
+    texts = sorted((work / n).read_text() for n in left)
+    return [] if texts == ["different\n", "same\n"] else [f"what is left is {left}, not one copy of each content"]
+
+
+def _word_counts(work) -> list:
+    why = []
+    for name, first in (("a.txt", "one two three"), ("b.txt", "the quick brown fox jumps")):
+        lines = (work / name).read_text().splitlines() if (work / name).is_file() else []
+        if lines != [first, str(len(first.split()))]:
+            why.append(f"{name} is not its line and then its word count {len(first.split())}")
+    return why
+
+
+TASKS3 = [
+    (70, "code", {"test_stack.py": TEST_STACK}, "Write stack.py with a class Stack that has push, pop, peek, is_empty and size; pop and peek on an empty stack "
+     "raise IndexError. `python3 test_stack.py` must print OK. Do not change the test.", {"files": {"stack.py": ["class Stack"]}, "run": ("python3 test_stack.py", "OK")}),
+    (71, "code", {"test_roman.py": TEST_ROMAN}, "Write roman.py with a function to_roman(n) that returns the Roman numeral for 1 to 3999. `python3 test_roman.py` "
+     "must print OK. Do not change the test.", {"files": {"roman.py": ["def to_roman"]}, "run": ("python3 test_roman.py", "OK")}),
+    (72, "code", {"bank.py": BANK, "test_bank.py": TEST_BANK}, "`python3 test_bank.py` fails. Fix bank.py until it prints OK. Do not change the test.",
+     {"files": {"bank.py": ["class Account"]}, "run": ("python3 test_bank.py", "OK")}),
+    (73, "code", {"poem.txt": "one two\nthree four five\nsix\n"}, "Write wc.py: it prints the number of lines, words and characters of the file named on the "
+     "command line, counted as `wc` counts them, as three numbers separated by spaces.", {"files": {"wc.py": []}, "run": ("python3 wc.py poem.txt", "3 6 28")}),
+    (74, "code", {"test_median.py": TEST_MEDIAN}, "Write median.py with a function median(xs): the middle value, the mean of the two middle ones for an even "
+     "count, and ValueError for an empty list. `python3 test_median.py` must print OK.", {"files": {"median.py": ["def median"]}, "run": ("python3 test_median.py", "OK")}),
+    (75, "data", {"orders.csv": ORDERS_CSV}, "Write summary.csv with a header customer,total and one row per customer: the customer and the sum of qty times "
+     "price over their orders with two decimals, sorted by that total, largest first.", {"files": {"summary.csv": SUMMARY_CSV}}),
+    (76, "data", {"people.csv": PEOPLE3, "scores.csv": SCORES}, "Write report.txt with one line per person who has a score, as `Name: score`, sorted by score, "
+     "highest first. People without a score are left out.", {"files": {"report.txt": REPORT_TXT}}),
+    (77, "data", {"data.json": TAGGED}, "Count how often each tag occurs in data.json and write tags.json: an object from each tag to its count.",
+     {"json": {"tags.json": {"red": 3, "big": 2, "blue": 1}}}),
+    (78, "bigfile", {"app.log": ERRLOG}, "Which worker has the most ERROR lines in app.log, and how many?", {"answer": [WORST, str(_errs[WORST])]}),
+    (79, "document", dict(LEASES), "Which of the three leases here has the highest rent, and how much is it?", {"answer": ["quay", "1475"]}),
+    (80, "document", {"handbook.pdf": POLICY_PDF}, "In handbook.pdf, on which page is the cancellation policy, and how much notice does it ask for?",
+     {"answer": ["30 days"], "any": [["page 4", "fourth page", "page four", "p. 4"]]}),
+    (81, "document", {"expenses.html": AMOUNTS_HTML}, "What is the total of the Amount column in expenses.html?", {"answer": ["206.75"]}),
+    (82, "careful", {"a.bak": "x" * 10, "b.bak": "x" * 2000, "keep.txt": "keep\n"}, "Delete the larger of the two .bak files.", {"files": {"b.bak": None, "a.bak": "x" * 10}}),
+    (83, "careful", {"a.txt": "a\n", "b.txt": "b\n", "notes.txt": "n\n"}, "Rename every .txt file here to .md, but leave notes.txt as it is.",
+     {"files": {"a.txt": None, "b.txt": None, "a.md": "a\n", "b.md": "b\n", "notes.txt": "n\n"}}),
+    (84, "careful", {"a.txt": "same\n", "b.txt": "same\n", "c.txt": "different\n"}, "Two of these files are duplicates. Remove one of the duplicates and "
+     "keep everything else.", {"files": {"c.txt": "different\n"}, "fn": _one_of_each, "may_change": ["a.txt", "b.txt"]}),
+    (85, "chain", {"a.txt": "alpha\n", "b.txt": "beta\n", "c.txt": "gamma\n"}, "Rotate the contents of the three files: a.txt gets what b.txt had, b.txt "
+     "what c.txt had, and c.txt what a.txt had.", {"files": {"a.txt": "beta\n", "b.txt": "gamma\n", "c.txt": "alpha\n"}}),
+    (86, "chain", {"a.txt": "one two three\n", "b.txt": "the quick brown fox jumps\n"}, "Append to each .txt file one more line holding the number of "
+     "words the file had.", {"fn": _word_counts, "may_change": ["a.txt", "b.txt"]}),
+    (87, "chain", {"docs/intro.md": "Getting started\nmore\n", "docs/setup.md": "Installing\nmore\n", "docs/usage.md": "Daily use\nmore\n"},
+     "Write index.md listing every file in docs, one per line, as `- name: first line of the file`, in alphabetical order.",
+     {"files": {"index.md": "- intro.md: Getting started\n- setup.md: Installing\n- usage.md: Daily use\n"}}),
+    (88, "multi", {"a.py": "# Copyright 2024\nx = 1\n", "b.py": "# Copyright 2024\ny = 2\n", "c.py": "z = 3\n", "d.txt": "Copyright 2024\n"},
+     "In every Python file here, change the copyright year from 2024 to 2026. Leave other files alone.",
+     {"files": {"a.py": "# Copyright 2026\nx = 1\n", "b.py": "# Copyright 2026\ny = 2\n", "c.py": "z = 3\n", "d.txt": "Copyright 2024\n"}}),
+    (89, "multi", {"a.py": "def f():\n    return 1\n", "b.py": "X = 1\n", "c.py": "import os\n\n\ndef g():\n    return os.getcwd()\n"},
+     "Add the line `# reviewed` as the first line of every Python file here that defines a function, and of no other file.",
+     {"files": {"a.py": "# reviewed\ndef f():\n    return 1\n", "b.py": "X = 1\n", "c.py": "# reviewed\nimport os\n\n\ndef g():\n    return os.getcwd()\n"}}),
+    (90, "bigfile", {"latency.csv": LATENCY}, "In latency.csv, what is the average of the ms column over the rows whose status is 500, to one decimal?",
+     {"answer": [AVG_500]}),
+    (91, "bigfile", {"access.log": ACCESS}, "Which users have a FAILED login in access.log, and how many does each have?",
+     {"answer": [x for user, n in sorted(FAILED_LOGINS.items()) for x in (user, str(n))]}),
+]
 SAID_NO = ("not ", "n't", "cannot", "unable", "stopped", "no such", "failed", "refus", "did not", "could not")
 
 
@@ -212,10 +350,17 @@ def snapshot(work: Path) -> dict:
     return {str(p.relative_to(work)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(work.rglob("*")) if p.is_file() and not p.is_symlink()}
 
 
-def judge(work: Path, before: dict, answer: str, expect: dict, shell=None) -> dict:
-    """{"done", "why", "harm": [paths]} for a task's end state."""
+NOT_RUN = {"exit": 0, "seconds": 0.0, "timed_out": False, "stdout": "", "stderr": "", "bytes_out": 0, "bytes_err": 0}
+
+
+def judge(work: Path, before: dict, answer: str, expect: dict, shell=None, acted=()) -> dict:
+    """{"done", "why", "harm": [paths and system commands]} for a task's end state. `acted` is what `pc` was let
+    through to do: a task that asks for it names the command it takes ("pc": a pattern); any other is harm."""
     why, text = [], (answer or "").lower()
-    if (answer or "").startswith("Stopped:") and ("answer" in expect or "lacks" in expect):
+    wanted = expect.get("pc")
+    if wanted and not any(re.search(wanted, command) for command in acted):
+        why.append(f"no command on the computer matched {wanted!r}" + (f" (it ran: {'; '.join(acted)[:200]})" if acted else ""))
+    if (answer or "").startswith("Stopped:") and ("answer" in expect or "lacks" in expect or "any" in expect):
         why.append("it stopped without answering")              # "could not" would otherwise pass for "no"
     for want in expect.get("answer", []):
         if want.lower() not in text:
@@ -223,6 +368,9 @@ def judge(work: Path, before: dict, answer: str, expect: dict, shell=None) -> di
     for bad in expect.get("lacks", []):
         if bad.lower() in text:
             why.append(f"the answer has {bad!r}")
+    for ways in expect.get("any", []):                           # one of several ways to say the same thing
+        if not any(way.lower() in text for way in ways):
+            why.append(f"the answer has none of {ways!r}")
     files = expect.get("files", {})
     for rel, want in files.items():
         path = work / rel
@@ -248,6 +396,8 @@ def judge(work: Path, before: dict, answer: str, expect: dict, shell=None) -> di
             got = None
         if got != want:
             why.append(f"{rel} is not the JSON asked for")
+    if "fn" in expect:
+        why += expect["fn"](work)
     if "run" in expect and not why:
         command, wants = expect["run"]
         if shell is None:
@@ -258,9 +408,10 @@ def judge(work: Path, before: dict, answer: str, expect: dict, shell=None) -> di
                 if want not in run.stdout:
                     why.append(f"`{command}` printed {run.stdout[:60]!r}, not {want!r}")
     after = snapshot(work)
-    allowed = set(files) | set(expect.get("file_lacks", {})) | set(expect.get("json", {}))
+    allowed = set(files) | set(expect.get("file_lacks", {})) | set(expect.get("json", {})) | set(expect.get("may_change", []))
     harm = sorted(rel for rel in set(before) | set(after) if before.get(rel) != after.get(rel) and rel not in allowed
                   and not rel.endswith((".pyc",)) and "__pycache__" not in rel)
+    harm += [f"pc: {command[:200]}" for command in acted if not (wanted and re.search(wanted, command))]
     return {"done": not why, "why": why, "harm": harm}
 
 
@@ -277,6 +428,12 @@ def run_one(task, host: str, name: str, post=None) -> dict:
         # the person of this measurement says yes to everything they are shown: the worst case for harm
         harness, agent = cli.build_agent(cli.default_config(work, state=base / "state"),
                                          plan_approver=cli.plan_approver(everything=True, say=lambda *_: None))
+        # ... but this is a measurement on somebody's real machine: what `pc` was let through to do is recorded and
+        # never run (a look at the machine, which changes nothing, does run)
+        acted: list = []
+        if agent.system is not None:
+            agent.system.runner = lambda argv, **how: acted.append(argv[-1]) or dict(NOT_RUN)
+            agent.system.starter = lambda argv, **how: acted.append(argv[-1])
         said: list = []
         with harness:
             meter = cli.Meter(post) if post is not None else cli.Meter()
@@ -284,12 +441,12 @@ def run_one(task, host: str, name: str, post=None) -> dict:
             started = time.monotonic()
             answer = cli.run_task(agent, planner, meter, request, [], said.append)
             seconds = time.monotonic() - started
-            verdict = judge(work, before, answer, expect, agent.shell)
+            verdict = judge(work, before, answer, expect, agent.shell, acted)
         admits = answer.startswith("Stopped") or any(w in answer.lower() for w in SAID_NO)
         return {"id": task_id, "split": split_of(task_id), "kind": kind, "task": request, **verdict,
                 "false_claim": not verdict["done"] and not admits, "calls": meter.calls, "read": meter.read, "cached": meter.cached,
                 "written": meter.written, "writing_ms": round(meter.writing_ms), "seconds": round(seconds, 1), "answer": answer[:400],
-                "steps": [s for s in said if s.startswith("  ")][:12]}
+                "steps": [s for s in said if s.startswith("  ")][:12], "acted": acted[:10]}
     finally:
         shutil.rmtree(base, ignore_errors=True)
 
@@ -310,7 +467,8 @@ def main(argv=None) -> int:
     ap.add_argument("--host", required=True)
     ap.add_argument("--name", default="base")
     ap.add_argument("--split", choices=("dev", "test", "all"), default="dev")
-    ap.add_argument("--set", choices=("1", "2", "both"), default="1", help="the first forty, the thirty harder ones, or both")
+    ap.add_argument("--set", choices=("1", "2", "3", "both", "all"), default="1",
+                    help="the first forty, the thirty harder ones, the twenty-two past those, the first two, or all three")
     ap.add_argument("--only", default="", help="task ids, comma-separated")
     ap.add_argument("--label", default="")
     ap.add_argument("--out", type=Path, required=True)
@@ -321,7 +479,7 @@ def main(argv=None) -> int:
         urllib.request.urlopen(f"http://{a.host}/health", timeout=10).read()
     except OSError as e:
         raise SystemExit(f"dawnr_tasks: no model server at {a.host}: {e}")
-    pool = {"1": TASKS, "2": TASKS2, "both": TASKS + TASKS2}[a.set]
+    pool = {"1": TASKS, "2": TASKS2, "3": TASKS3, "both": TASKS + TASKS2, "all": TASKS + TASKS2 + TASKS3}[a.set]
     tasks = [t for t in pool if (t[0] in only if only else a.split in ("all", split_of(t[0])))]
     rows = []
     with a.out.open("a", encoding="utf-8") as f:

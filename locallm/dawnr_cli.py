@@ -65,10 +65,14 @@ HISTORY = 3                    # earlier tasks of the session handed back, each 
 SYSTEM = ("You are dawnr, an assistant working on this person's computer, offline. The folder you work in is called "
           "`here`, and every path starts with `here/`. Look before you answer: list, search or read the files, and "
           "answer only from what you read; if it is not there, say so. To rename, move, copy or delete files, to make "
-          "folders, to count, sort or compare, or to run a program, call `sh` with the shell command. To change text "
-          "inside a file call fs_edit, and to create a file with text call fs_write; neither can rename or delete. "
-          "Never say a thing was done unless a tool result says it ran.")
-# added when `pc` is offered, with one sentence about the machine (dawnr_agent/system.py, facts)
+          "folders, or to run a program, call `sh` with the shell command. Whatever has to be counted, added up, "
+          "sorted, compared or matched between files, work out with a command or a short program in `sh`, not in your "
+          "head. To change text inside a file call fs_edit, and to create a file with text call fs_write; neither can "
+          "rename or delete. Never say a thing was done unless a tool result says it ran.")
+# added when `sysinfo` and `pc` are offered, with one sentence about the machine (dawnr_agent/system.py, facts)
+LOOKING = ("A question about the computer itself as it is now (what is running, memory and disk space, the network, "
+           "services, sound, a setting, what is installed) is answered by calling `sysinfo` with the command that shows "
+           "it, and from what that prints, never from memory.")
 ON_THE_COMPUTER = ("To open a program, a file or a web page, or to change a setting or a service on the computer itself, "
                    "call `pc` with one command; the person is asked each time. It is not for files and never uses sudo.")
 # An answer of "I cannot" given in the first turn, before anything was looked at (seen on one machine of three for
@@ -76,6 +80,11 @@ ON_THE_COMPUTER = ("To open a program, a file or a web page, or to change a sett
 UNLOOKED = re.compile(r"\b(cannot|can't|can not|unable|do not have|don't have|no access|please provide|not able)\b", re.I)
 LOOK_FIRST = "You have not looked yet. List the folder or search it, then answer from what you find."
 UNFINISHED = "Stopped: it ran out of rounds before it finished. What was changed is what the line below says."
+# a task the loop stopped (its steps kept failing, or it went round): the model is asked once, with nothing to call,
+# for its own account, and the journal's line follows it whatever it says
+ACCOUNT = ("The work was stopped here: {why}. Do not call anything. Say in a sentence or two what was done and what was "
+           "not, and why. If it cannot be done from here, say that plainly.")
+ACCOUNTED = ("failures", "no progress", "budget")
 # the last round of a task: a question the files do not answer otherwise ends in one more search and no answer at all
 LAST_ROUND = "Answer now from what you have read. If what was asked is not in the files, say that it is not there."
 
@@ -93,7 +102,8 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
             name += "-2"
         names.add(name)
         listed.append({"name": name, "path": str(path)})
-    agent = {"roots": listed, "budget": {"max_steps": 30, "max_rounds": 12, "max_failures": 2}}
+    # a bug fixed is three rounds (edit, run the test, read what it says): twelve rounds ran out on the third bug
+    agent = {"roots": listed, "budget": {"max_steps": 40, "max_rounds": 18, "max_failures": 2}}
     if state is not None:
         agent["state"] = str(state)
     # Left out of what the model is offered, each some hundreds of tokens read on every first call: `t` (proving is
@@ -104,6 +114,7 @@ def default_config(cwd: Path, *, read_only: bool = False, roots: tuple = (), onl
         permissions.update(fs_write="ask", fs_edit="ask")
     else:
         permissions.update(fs_write="deny", fs_edit="deny")
+    agent["sysinfo"], agent["processes"] = True, False        # `sysinfo`: the computer's state, read-only, unasked
     if not read_only:
         agent["system"] = True                                  # `pc`: the computer itself, asked every time
     return {"offline": not online, "permissions": permissions, "agent": agent}
@@ -178,7 +189,9 @@ class Planner(NativePlanner):
         super().__init__(harness, host, name, max_tokens=max_tokens, post=post)
         self.roots = [root.name for root in agent.space.roots]
         self.paths = {root.name: str(root.path) for root in agent.space.roots}
-        self.system = SYSTEM + (" " + ON_THE_COMPUTER + " " + facts() if agent.system is not None else "")
+        self.system = SYSTEM
+        if agent.system is not None:
+            self.system += " " + LOOKING + (" " + ON_THE_COMPUTER if agent.system.act else "") + " " + facts()
 
     def path(self, value):
         """A path as the file tools write it: `todo.txt` and `./todo.txt` are in the folder, and an absolute path
@@ -215,8 +228,10 @@ class Planner(NativePlanner):
                 if step.tool == "fs_list" and at + 1 + i < len(msgs):
                     msgs[at + 1 + i]["content"] = listing(msgs[at + 1 + i]["content"], str(step.arguments.get("path") or "").rstrip("/"))
             if r.dry is not None and r.dry.refused and last < len(msgs):     # nothing of it ran: say why, in the tool's place
-                msgs[last]["content"] = ("Nothing ran. " + r.dry.render(for_person=False)
+                msgs[last]["content"] = ("Nothing ran. " + r.dry.render(for_person=False, quoted=True)
                                          + "\nCorrect the call and send the plan again, or say that it cannot be done.")
+            elif r.outcome is None and r.note and last < len(msgs):          # a repeat, sent back: only the reason
+                msgs[last]["content"] = r.note
             at = last + 1
         if self.last_round(state):
             msgs.append({"role": "user", "content": LAST_ROUND})
@@ -226,6 +241,17 @@ class Planner(NativePlanner):
     def last_round(state) -> bool:
         budget = getattr(state, "budget", None)
         return budget is not None and len(state.rounds) >= budget.max_rounds - 1
+
+    def account(self, result, why: str) -> str:
+        """The model's own words on a task the loop stopped, or "" when it has none. Nothing is offered to call."""
+        body = {"model": self.name, "temperature": 0, "max_tokens": 300,
+                "messages": self.messages(result) + [{"role": "user", "content": ACCOUNT.format(why=why)}]}
+        try:
+            msg = self.post(f"http://{self.host}/v1/chat/completions", body)["choices"][0].get("message") or {}
+        except Exception:                                       # noqa: BLE001  (no account is not an error of the task)
+            return ""
+        text = (msg.get("content") or "").strip()
+        return "" if msg.get("tool_calls") or "<tool_call>" in text or "<function=" in text else text
 
     def __call__(self, state):
         body = {"model": self.name, "messages": self.messages(state), "temperature": 0, "max_tokens": self.max_tokens}
@@ -334,7 +360,7 @@ class Narrator:
 
 
 STOPPED = {"rounds": "it used all its rounds without finishing", "refused": "the plan was not approved, so nothing ran",
-           "failures": "its steps kept failing", "no progress": "it proposed the same plan twice",
+           "failures": "its steps kept failing", "no progress": "it kept proposing what it had already run",
            "budget": "it used all its steps", "time": "it ran out of time", "planner": "the model's reply could not be read as a plan",
            "dry run": "this was a dry run"}
 
@@ -378,6 +404,9 @@ def run_task(agent, planner, meter: Meter, task: str, history: list, say=print) 
     answer = result.answer if result.stop == "done" and result.answer else f"Stopped: {STOPPED.get(result.stop, result.stop)}."
     if result.stop == "planner" and result.rounds and "Error" in (result.rounds[-1].note or ""):
         answer = f"Stopped: the model server did not answer ({result.rounds[-1].note.split(': ', 1)[-1][:120]})."
+    if result.stop in ACCOUNTED and hasattr(planner, "account"):
+        told = planner.account(result, STOPPED[result.stop])
+        answer = f"{told}\n(It stopped there: {STOPPED[result.stop]}.)" if told else answer
     say(answer)
     say(f"[{done(agent, before, result.rounds)}]")
     say(f"[{meter.line()}]")

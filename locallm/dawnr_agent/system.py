@@ -1,9 +1,17 @@
-"""dawnr_agent/system.py: the computer itself, outside the folder: one command at a time, shown exactly, asked for
-every time (2026-10-05).
+"""dawnr_agent/system.py: the computer itself, outside the folder: looked at freely, changed one command at a time,
+shown exactly and asked for every time (2026-10-05).
 
-`sh` (shell.py) cannot open a program, change a setting, start a service or reach a package manager: it runs over a
-copy, in a sandbox, and what it does there is not there afterwards. `pc` is for those. It runs the command for real,
-as the person, on the machine, and so everything that makes `sh` safe is replaced by rules:
+`sh` (shell.py) runs in a sandbox with its own processes and no network or desktop session: it cannot say what is
+running, whether the network is up or what a setting is, and it cannot open a program, change a setting or start a
+service. Two tools are for those, and both run as the person, on the machine.
+
+`sysinfo` answers questions about the live machine: what is running, memory and disk, the network, services, sound,
+settings, what is installed. It runs without asking, and so takes only a line that cannot change anything (`look`
+below): read-only programs used in a read-only way, joined by pipes. Files are not its business; `sh` reads those,
+where the secret ones are hidden. (The tool was first named `look`; the 4B then answered "What is the door code?"
+by looking over the computer instead of the folder's three files.)
+
+`pc` does things, and everything that makes `sh` safe is replaced by rules:
 
   asked, always   every call is put to the person with the exact line and one sentence of why; nothing here is ever
                   approved ahead of time (the front door's --yes does not cover it), and a session with no terminal
@@ -24,8 +32,10 @@ commands by: `apt` on one machine is `dnf`, `pacman` or `zypper` on the next.
 """
 from __future__ import annotations
 
+import glob
 import os
 import re
+import shlex
 import shutil
 import subprocess
 
@@ -38,6 +48,8 @@ PRIVILEGED = re.compile(r"(^|[;&|]\s*|\$\(\s*|`\s*)(sudo|pkexec|doas|su)\b")
 FORBIDDEN = [
     (re.compile(r"(^|[;&|(`]\s*)(rm|rmdir|shred|truncate|mv|dd|mkfs(\.\w+)?|wipefs|fdisk|parted|chmod|chown)\b"),
      "changing, moving or removing files is `sh`'s job: there it is shown first and can be undone"),
+    (re.compile(r"(^|[;&|(`]\s*)(mount|umount|swapon|swapoff|losetup|cryptsetup|modprobe|insmod|rmmod)\b"),
+     "what is mounted or loaded into the kernel is not changed from here"),
     (re.compile(r"\b(curl|wget)\b[^|;&]*\|\s*(ba|z|da)?sh\b"), "a download is never piped into a shell"),
     (re.compile(r":\(\)\s*\{"), "that is a fork bomb"),
     (re.compile(r">\s*/(dev|etc|boot|usr|bin|sbin|lib|proc|sys)\b"), "writing into a system directory is not done from here"),
@@ -68,6 +80,253 @@ def facts() -> str:
     return "This computer: " + ", ".join(parts) + "."
 
 
+# ------------------------------------------------------------------ looking --
+# A line that only looks at the computer runs without asking. The shape is the Codex CLI's is_known_safe_command
+# (codex-rs/core/src/command_safety/is_safe_command.rs at rust-v0.50.0; receipt 15b82d3b3d27): plain commands, bare
+# words and quoted strings, joined by | && || ; and by nothing else, each a read-only program used in a read-only
+# way. Two things differ. The list is of what shows a computer's state, not a repository's; and where Codex lets
+# cat and grep open any file, here a file is opened only where no secret is kept. The line that runs is not the
+# model's text but the words read from it, each quoted again, so the shell expands and substitutes nothing.
+
+OPERATORS = ("|", "&&", "||", ";")
+NUMBER = re.compile(r"^[+-]?\d+$")
+READABLE = re.compile(r"^(/sys/|/proc/(?!\d|self\b|thread-self\b)|/usr/lib/os-release$|/etc/(os-release|lsb-release|hostname|"
+                      r"timezone|issue|machine-info|debian_version|fedora-release|redhat-release|arch-release|shells|hosts|"
+                      r"resolv\.conf|fstab|locale\.conf|vconsole\.conf)$)")
+
+
+def _words(command: str) -> list | None:
+    """[(word, is_operator)] for a line of plain commands, or None when it holds anything else: a redirection, a
+    substitution, a variable, a subshell, a background job, a comment, a backslash outside single quotes."""
+    out, word, quote, i = [], None, "", 0
+    while i < len(command):
+        c = command[i]
+        if quote:
+            if c == quote:
+                quote = ""
+            elif c in "\n\r" or (quote == '"' and c in "\\$`"):
+                return None
+            else:
+                word += c
+        elif c in "'\"":
+            quote, word = c, word or ""
+        elif c in " \t":
+            if word is not None:
+                out.append((word, False))
+                word = None
+        elif c in "|&;":
+            if word is not None:
+                out.append((word, False))
+                word = None
+            op = c + (c if c in "|&" and command[i + 1:i + 2] == c else "")
+            if op not in OPERATORS:
+                return None
+            out.append((op, True))
+            i += len(op) - 1
+        elif c in "`$<>(){}\\\n\r" or (c == "#" and word is None):
+            return None
+        else:
+            word = (word or "") + c
+        i += 1
+    if quote:
+        return None
+    return out + ([(word, False)] if word is not None else [])
+
+
+def _readable(path: str) -> bool:
+    return bool(READABLE.match(path)) and ".." not in path
+
+
+def _no(*bad, letters: str = ""):
+    """Any arguments but these; an option is matched up to its `=`, and a cluster of short ones by its letters."""
+    def rule(args):
+        return not any(a in bad or a.split("=", 1)[0] in bad or
+                       (letters and re.match(r"^-[A-Za-z0-9]", a) and any(ch in a for ch in letters)) for a in args)
+    return rule
+
+
+def _sub(*ok, bare: bool = True, bad=(), takes=()):
+    """Its first word that is not an option (or an option's value, for the options in `takes`) is one of `ok`; with
+    none it is allowed where `bare`; no word is one of `bad`."""
+    def rule(args):
+        first, skip = None, False
+        for a in args:
+            if a in bad or a.split("=", 1)[0] in bad:
+                return False
+            if skip:
+                skip = False
+            elif a in takes:
+                skip = True
+            elif not a.startswith("-") and first is None:
+                first = a
+        return bare if first is None else first in ok
+    return rule
+
+
+def _only(*ok):
+    return lambda args: all(a in ok or a.split("=", 1)[0] in ok for a in args)
+
+
+def _reads(flags: str, values: str = ""):
+    """Options matching `flags`, numbers, and files only from where nothing secret is kept. An option in `values`
+    takes the next word."""
+    ok = re.compile(flags)
+
+    def rule(args):
+        skip = False
+        for a in args:
+            if skip:
+                skip = False
+            elif a in values.split():
+                skip = True
+            elif a.startswith("-") and len(a) > 1:
+                if not ok.match(a):
+                    return False
+            elif not (NUMBER.match(a) or _readable(a)):
+                return False
+        return True
+    return rule
+
+
+def _grep(args) -> bool:
+    """A pattern, plain options, and files only from where nothing secret is kept (none: it filters a pipe)."""
+    flags = re.compile(r"^-[inovEFcwxhHqsABCm0-9]+$|^--(ignore-case|invert-match|count|only-matching|line-number|"
+                       r"extended-regexp|fixed-strings|word-regexp|colou?r=\w+|max-count=\d+|no-filename|with-filename)$")
+    operands, previous = [], ""
+    for a in args:
+        if a.startswith("-") and len(a) > 1:
+            if not flags.match(a):
+                return False
+        elif not (NUMBER.match(a) and re.match(r"^-[A-Za-z]*[ABCm]$", previous)):
+            operands.append(a)
+        previous = a
+    return bool(operands) and all(_readable(f) for f in operands[1:])
+
+
+def _top(args) -> bool:                                         # once, in batch mode: never the screen that waits
+    short = "".join(a[1:] for a in args if re.match(r"^-[A-Za-z]", a))
+    return "b" in short and "n" in short and not any(a.startswith("--") for a in args)
+
+
+def _version(args) -> bool:
+    return len(args) == 1 and args[0] in ("--version", "-V", "-version", "version")
+
+
+_SYSTEMD = dict(bad=("-H", "--host", "-M", "--machine", "--root", "--image"),
+                takes=("-t", "--type", "-p", "--property", "-n", "--lines", "-o", "--output", "--state"))
+_NMCLI_ACTS = ("up", "down", "add", "modify", "mod", "delete", "del", "edit", "connect", "disconnect", "on", "off", "set",
+               "reload", "load", "import", "export", "clone", "rescan", "hotspot", "reapply", "monitor", "permissions",
+               "logging", "hostname", "show-password", "migrate", "agent", "-s", "--show-secrets", "-a", "--ask")
+LOOK = {
+    # the machine
+    "df": _no(), "free": _no(), "uptime": _no(), "uname": _no(), "nproc": _no(), "arch": _no(), "lscpu": _no(),
+    "lsblk": _no(), "lsusb": _no(), "lspci": _no(), "lsmem": _no(), "lsmod": _no(), "lsb_release": _no(), "findmnt": _no(),
+    "getconf": _no(), "locale": _no(), "cal": _no(), "systemd-detect-virt": _no(),
+    "vmstat": lambda a: all(x.startswith("-") or NUMBER.match(x) for x in a),
+    "mount": lambda a: not a, "swapon": _only("--show", "-s", "--summary"),
+    "hostname": lambda a: all(x.startswith("-") for x in a) and _no("--file", "--boot", letters="Fb")(a),
+    "date": lambda a: all((x.startswith("+") or x.startswith("-")) and not x.startswith(("-s", "--set", "-f", "--file")) for x in a),
+    "sensors": _only("-A", "-u", "-j", "-f", "--fahrenheit", "--no-adapter"), "acpi": lambda a: all(x.startswith("-") for x in a),
+    "upower": _sub(bare=True, takes=("-i", "--show-info"), bad=("--monitor", "--monitor-detail", "-m")),
+    "nvidia-smi": lambda a: all(x in ("-L", "-q", "-x") or x.startswith(("--query-", "--format=", "--id=")) for x in a),
+    "glxinfo": _only("-B"), "vulkaninfo": _only("--summary"),
+    "systemd-analyze": _sub("time", "blame", "critical-chain"), "powerprofilesctl": _sub("get", "list"),
+    # who and what is running
+    "whoami": _no(), "id": _no(), "groups": _no(), "w": _no(), "who": _no(), "last": _no("-f", "--file"),
+    "ps": _no(), "pgrep": _no(), "pidof": _no(), "top": _top,
+    # the network, as it is (nothing here sends a packet)
+    "ip": _sub("a", "addr", "address", "l", "link", "r", "route", "n", "neigh", "neighbor", "neighbour", "rule", "maddr",
+               bad=("add", "del", "delete", "set", "flush", "change", "replace", "append", "prepend", "exec", "save",
+                    "restore", "monitor", "-b", "-batch", "-force", "-n", "-netns")),
+    "ss": _no("--kill", "--diag", letters="KD"), "iwgetid": _no(),
+    "nmcli": _sub("general", "g", "device", "d", "dev", "connection", "c", "con", "radio", "r", "networking", "n",
+                  bad=_NMCLI_ACTS, takes=("-f", "--fields", "-g", "--get-values", "-m", "--mode", "-c", "--colors",
+                                          "-e", "--escape", "-w", "--wait")),
+    "resolvectl": _sub("status", "statistics"), "rfkill": _sub("list"), "bluetoothctl": _sub("show", "devices", "paired-devices", "list", "info", bare=False),
+    # services and the session
+    "systemctl": _sub("status", "is-active", "is-enabled", "is-failed", "is-system-running", "list-units", "list-unit-files",
+                      "list-timers", "list-sockets", "list-jobs", "list-dependencies", "show", "cat", "get-default", **_SYSTEMD),
+    "journalctl": _no("-f", "--follow", "--rotate", "--flush", "--sync", "--relinquish-var", "--smart-relinquish-var",
+                      "--setup-keys", "--update-catalog", "--cursor-file", "--root", "--image", "--vacuum-size",
+                      "--vacuum-time", "--vacuum-files", "-M", "--machine", letters="fM"),
+    "loginctl": _sub("list-sessions", "list-users", "list-seats", "session-status", "user-status", "seat-status",
+                     "show-session", "show-user", "show-seat", **_SYSTEMD),
+    "timedatectl": _sub("status", "show", "list-timezones", "timesync-status", "show-timesync", **_SYSTEMD),
+    "hostnamectl": _sub("status", **_SYSTEMD), "localectl": _sub("status", "list-locales", "list-keymaps", **_SYSTEMD),
+    # the desktop: settings, sound, the screen
+    "gsettings": _sub("get", "list-schemas", "list-keys", "list-children", "list-recursively", "range", "describe",
+                      "writable", bare=False),
+    "dconf": _sub("read", "list", "dump", bare=False), "xdg-mime": _sub("query", bare=False),
+    "xdg-settings": lambda a: a[:1] in (["get"], ["check"], ["--list"]), "xdg-user-dir": _no(),
+    "xrandr": _only("-q", "--query", "--listmonitors", "--listactivemonitors", "--current", "--verbose", "--props", "--version"),
+    "pactl": _sub("info", "list", "stat", "get-default-sink", "get-default-source", "get-sink-volume", "get-sink-mute",
+                  "get-source-volume", "get-source-mute", bare=False, bad=("-s", "--server"), takes=("-f", "--format")),
+    "wpctl": _sub("status", "get-volume", "inspect", bare=False),
+    "amixer": _sub("get", "sget", "cget", "scontrols", "scontents", "controls", "contents", "info", takes=("-c", "-D")),
+    "playerctl": _sub("status", "metadata", takes=("-p", "--player", "-f", "--format"), bare=False),
+    "brightnessctl": _sub("get", "max", "info"),
+    # what is installed (each manager's local database: nothing here refreshes from a mirror)
+    "dpkg": lambda a: a[:1] != [] and a[0] in ("-l", "-s", "-L", "-S", "-p", "--list", "--status", "--listfiles", "--search",
+                                                "--get-selections", "--print-architecture", "--version")
+    and not any(x.startswith("-") for x in a[1:]),
+    "dpkg-query": _no("--admindir", "--root", "--load-avail"),
+    "apt": _sub("list", "show", "search", "policy", "depends", "rdepends", bare=False, bad=("-o", "--option", "-c", "--config-file")),
+    "apt-cache": _no("-o", "--option", "-c", "--config-file"), "apt-mark": _sub("showmanual", "showauto", "showhold", bare=False),
+    "rpm": lambda a: a[:1] != [] and bool(re.match(r"^(-q[ailfcdRp]*|--query)$", a[0]))
+    and all(not x.startswith("-") or x in ("-a", "-i", "-l", "-f", "-c", "-d", "-R", "--all", "--info", "--list", "--file",
+                                           "--requires", "--provides", "--whatprovides", "--whatrequires", "--last",
+                                           "--changelog") for x in a[1:]),
+    "pacman": lambda a: a[:1] != [] and bool(re.match(r"^-Q[a-z]*$", a[0])) and not any(x.startswith("-") for x in a[1:]),
+    "apk": _sub("info", "list", "version", "stats", bare=False), "flatpak": _sub("list", "info", "remotes", "history", "ps", bare=False),
+    "snap": _sub("list", "version", "services", "connections", "changes", bare=False),
+    "pip": _sub("list", "show", "freeze", "check", bare=False, bad=("-o", "--outdated", "-u", "--uptodate", "--index-url", "-i")),
+    "brew": _sub("list", "leaves", bare=False),
+    # where a program is, and saying something between two commands
+    "which": _no(), "whereis": _no(), "type": _no(), "command": lambda a: len(a) == 2 and a[0] in ("-v", "-V"),
+    "printenv": _no(), "echo": _no(), "true": _no(), "false": _no(),
+    # a file, only where nothing secret is kept; and the filters of a pipe
+    "cat": _reads(r"^-[nAbsETv]+$"), "grep": _grep, "tr": _no(),
+    "head": _reads(r"^-(\d+|[nc]-?\d*|q|v)$|^--(lines|bytes)=-?\d+$"), "tail": _reads(r"^-(\d+|[nc][+-]?\d*|q|v)$|^--(lines|bytes)=[+-]?\d+$"),
+    "wc": _reads(r"^-[lwcmL]+$|^--(lines|words|chars|bytes|max-line-length)$"),
+    "sort": _reads(r"^-[bdfgiMhnRrVkuzc0-9,.]+$|^--(numeric-sort|reverse|human-numeric-sort|unique|general-numeric-sort|"
+                   r"version-sort|ignore-case|key=[\w,.]+|field-separator=.)$", values="-t"),
+    "uniq": lambda a: all(re.match(r"^-[cdui]+$|^--count$", x) for x in a),
+    "cut": _reads(r"^-[dfcbs]\S*$|^--(delimiter|fields|characters|bytes|complement|only-delimited|output-delimiter)(=.*)?$", values="-d"),
+    "column": _reads(r"^-[tx]+$", values="-s"),
+}
+LOOK["pip3"] = LOOK["pip"]
+for _name in ("python3", "python", "git", "node", "npm", "gcc", "g++", "cc", "clang", "make", "cmake", "java", "javac", "go",
+              "rustc", "cargo", "docker", "podman", "bash", "zsh", "fish", "ffmpeg", "curl", "wget", "code", "firefox",
+              "chromium", "chromium-browser", "google-chrome", "libreoffice", "soffice", "vim", "nvim", "emacs", "nano",
+              "tmux", "ssh", "openssl", "perl", "ruby", "php", "R", "julia", "dotnet", "gnome-shell", "plasmashell"):
+    LOOK[_name] = _version
+# sent to `pc` or `sysinfo`, these are pointed to `sh`, which reads files with the secret ones hidden
+FILE_READERS = ("ls", "cat", "head", "tail", "less", "more", "find", "du", "stat", "tree", "file", "grep", "wc")
+
+
+def look(command: str) -> str | None:
+    """The line to run, when `command` only looks at the computer; None when it may do more or cannot be told.
+    What comes back is the words of the line quoted again, a pattern for a readable file replaced by its matches."""
+    words = _words(command) if isinstance(command, str) else None
+    if not words:
+        return None
+    out, argv = [], []
+    for word, operator in words + [(";", True)]:
+        if not operator:
+            argv.append(word)
+            continue
+        if not argv or "/" in argv[0] or argv[0] not in LOOK or not LOOK[argv[0]](argv[1:]):
+            return None                                         # also: nothing between two operators
+        for i, a in enumerate(argv):
+            found = sorted(glob.glob(a)) if i and any(ch in a for ch in "*?[") and _readable(a) else []
+            if any(not _readable(f) for f in found):
+                return None
+            out += [shlex.quote(f) for f in found] or [shlex.quote(a)]
+        out.append(word)
+        argv = []
+    return " ".join(out[:-1])
+
+
 def refusal(command: str, offline: bool = False) -> str | None:
     """Why a line is not run from here and what to do instead, or None."""
     if offline and NETWORK.search(command):
@@ -78,14 +337,47 @@ def refusal(command: str, offline: bool = False) -> str | None:
     for pattern, instead in FORBIDDEN:
         if pattern.search(command):
             return instead
+    if look(command) is not None:
+        return "that only looks, and needs nobody's yes: call `sysinfo` with it"
+    if re.match(r"\s*(%s)\b" % "|".join(FILE_READERS), command):
+        return "reading and listing files is done with fs_list, fs_read and fs_search, or with `sh`"
     return None
 
 
 class SystemTools:
     def __init__(self, *, timeout: float = 60.0, max_output: int = 4000, runner=run_argv, starter=subprocess.Popen,
-                 offline=lambda: True):
+                 reader=run_argv, offline=lambda: True, act: bool = True):
         self.timeout, self.max_output, self.runner, self.starter, self.offline = timeout, max_output, runner, starter, offline
+        self.reader, self.act = reader, act                     # `sysinfo` runs through `reader`; without `act` there is no `pc`
         self.env = {k: v for k, v in os.environ.items() if k in SESSION}
+
+    def _run(self, runner, line: str) -> ToolResult:
+        shell = shutil.which("bash") or "/bin/sh"
+        home = self.env.get("HOME") or os.path.expanduser("~")
+        got = runner([shell, "-c", line], cwd=home, env=self.env, timeout=self.timeout, max_output=self.max_output * 4)
+        text = got["stdout"].rstrip("\n") + (("\n[stderr]\n" + got["stderr"].rstrip("\n")) if got["stderr"].strip() else "")
+        if len(text) > self.max_output:
+            text = text[:self.max_output * 3 // 5] + "\n[...]\n" + text[-(self.max_output * 2 // 5):]
+        head = f"timed out after {got['seconds']:.0f} s" if got["timed_out"] else f"exit {got['exit']}"
+        return ToolResult(head + ("\n" + text if text else ""), is_error=bool(got["timed_out"] or got["exit"]), trust="untrusted")
+
+    def decide_sysinfo(self, args: dict) -> tuple[str, str]:
+        command = args.get("command")
+        if not isinstance(command, str) or not command.strip() or len(command) > MAX_COMMAND:
+            return "deny", f"sysinfo: give the command as one line of text, at most {MAX_COMMAND} characters"
+        if look(command) is not None:
+            return "allow", ""
+        if re.match(r"\s*(%s)\b" % "|".join(FILE_READERS), command):
+            return "deny", "sysinfo: reading and listing files is done with fs_list, fs_read and fs_search, or with `sh`"
+        return "deny", ("sysinfo: this is not a line that is known only to look (one read-only command, or several joined "
+                        "by | with no redirection, variable or substitution)."
+                        + (" To do something on the computer, call `pc` with it." if self.act else ""))
+
+    def sysinfo(self, args: dict, ctx: CallContext) -> ToolResult:
+        line = look(args.get("command"))
+        if line is None:
+            return ToolResult("refused: " + self.decide_sysinfo(args)[1], is_error=True)
+        return self._run(self.reader, line)
 
     def decide(self, args: dict) -> tuple[str, str]:
         command = args.get("command")
@@ -105,29 +397,33 @@ class SystemTools:
         if decision == "deny":
             return ToolResult(f"refused: {why}", is_error=True)
         command = args["command"]
-        shell = shutil.which("bash") or "/bin/sh"
-        home = self.env.get("HOME") or os.path.expanduser("~")
         if args.get("detach"):                                  # a program to leave running: a window, a player
             try:
-                self.starter([shell, "-c", command], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                             stderr=subprocess.DEVNULL, cwd=home, env=self.env, start_new_session=True)
+                self.starter([shutil.which("bash") or "/bin/sh", "-c", command], stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             cwd=self.env.get("HOME") or os.path.expanduser("~"), env=self.env, start_new_session=True)
             except OSError as e:
                 return ToolResult(f"it did not start: {e}", is_error=True)
             return ToolResult("started; it was left running and its output is not read")
-        got = self.runner([shell, "-c", command], cwd=home, env=self.env, timeout=self.timeout, max_output=self.max_output * 4)
-        text = got["stdout"].rstrip("\n") + (("\n[stderr]\n" + got["stderr"].rstrip("\n")) if got["stderr"].strip() else "")
-        if len(text) > self.max_output:
-            text = text[:self.max_output * 3 // 5] + "\n[...]\n" + text[-(self.max_output * 2 // 5):]
-        head = f"timed out after {got['seconds']:.0f} s" if got["timed_out"] else f"exit {got['exit']}"
-        return ToolResult(head + ("\n" + text if text else ""), is_error=bool(got["timed_out"] or got["exit"]), trust="untrusted")
+        return self._run(self.runner, command)
 
     def tools(self) -> list[Tool]:
+        line = {"type": "string", "minLength": 1, "maxLength": MAX_COMMAND}
+        looks = Tool("sysinfo", "The live state of this computer, not its files: what is running, memory and disk space, "
+                                "the network, services, sound, settings, what is installed. One read-only command, or "
+                                "several joined by | (df -h; ps aux --sort=-%mem | head; systemctl status cups; nmcli "
+                                "device status). It runs at once.",
+                     {"type": "object", "properties": {"command": line}, "required": ["command"], "additionalProperties": False},
+                     self.sysinfo, permission="allow", trust="untrusted", network=False, consequential=False,
+                     origin="agent", decide_call=self.decide_sysinfo)
+        if not self.act:
+            return [looks]
         schema = {"type": "object",
-                  "properties": {"command": {"type": "string", "minLength": 1, "maxLength": MAX_COMMAND},
-                                 "why": {"type": "string", "maxLength": 200},
+                  "properties": {"command": line, "why": {"type": "string", "maxLength": 200},
                                  "detach": {"type": "boolean", "description": "true for a program to leave running"}},
                   "required": ["command"], "additionalProperties": False}
-        return [Tool("pc", "Do something on the computer itself, outside the folder: open a file, a program or a web page, "
+        return [looks,
+                Tool("pc", "Do something on the computer itself, outside the folder: open a file, a program or a web page, "
                            "change a setting, start or stop a service. One command; the person is shown it and must say "
                            "yes. Not for files (use sh) and never with sudo.",
                      schema, self.pc, permission="ask", trust="untrusted", network=False, consequential=True,

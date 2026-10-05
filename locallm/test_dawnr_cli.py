@@ -41,6 +41,7 @@ def session(tmp_path, model, *, answers=(), yes=False, keep_system=False, **conf
     cfg["agent"].pop("shell", None)                             # the sandbox has its own tests; no command is run here
     if not keep_system:
         cfg["agent"].pop("system", None)
+        cfg["agent"].pop("sysinfo", None)
     harness, agent = cli.build_agent(cfg, plan_approver=cli.plan_approver(ask, said.append, yes))
     meter = cli.Meter(model)
     planner = cli.Planner(harness, agent, "nowhere:1", "base", post=meter)
@@ -158,7 +159,8 @@ def test_the_computer_itself_is_asked_for_every_time_whatever_yes_says_and_never
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model, answers=["y", "n"], yes=True, keep_system=True, online=True)
     agent.system.runner = runner
     with harness:
-        assert "pc" in harness.visible_names() and planner.system.startswith(cli.SYSTEM + " " + cli.ON_THE_COMPUTER + " This computer: ")
+        assert {"pc", "sysinfo"} <= set(harness.visible_names()) and "ps_list" not in harness.visible_names()
+        assert planner.system.startswith(cli.SYSTEM + " " + cli.LOOKING + " " + cli.ON_THE_COMPUTER + " This computer: ")
         assert cli.run_task(agent, planner, meter, "Open example.org.", [], said.append) == "Opened."
         assert asked == ["Run this plan? [y/N] "] and ran == ["xdg-open https://example.org"]      # --yes did not cover it
         shown = "\n".join(said)
@@ -170,8 +172,59 @@ def test_the_computer_itself_is_asked_for_every_time_whatever_yes_says_and_never
         assert len(asked) == 2 and len(ran) == 1 and any("which dawnr never takes" in line and "sudo apt install htop" in line for line in said)
         cli.run_task(agent, planner, meter, "Delete my documents.", [], said.append)
         assert len(ran) == 1 and any("`sh`'s job" in line for line in said)
-    offline = cli.default_config(tmp_path / "work")
-    assert offline["agent"]["system"] is True and "system" not in cli.default_config(tmp_path / "work", read_only=True)["agent"]
+    offline, looking = cli.default_config(tmp_path / "work"), cli.default_config(tmp_path / "work", read_only=True)
+    assert offline["agent"]["system"] is True and "system" not in looking["agent"] and looking["agent"]["sysinfo"] is True
+
+
+def test_a_look_at_the_computer_runs_unasked_and_only_a_line_that_cannot_change_anything_is_one(tmp_path):
+    from dawnr_agent import system
+    looks = ["df -h", "free -m", "ps aux --sort=-%mem | head -n 5", "ps aux | grep -i firefox | wc -l", "systemctl status cups",
+             "systemctl --user list-units --type=service", "systemctl is-active bluetooth && echo up", "nmcli device status",
+             "nmcli -t -f ACTIVE,SSID dev wifi", "ip -br addr", "ss -tlnp", "cat /etc/os-release", "cat /proc/meminfo | grep MemTotal",
+             "grep 'model name' /proc/cpuinfo | head -1", "gsettings get org.gnome.desktop.interface color-scheme", "dpkg -l 'python3*'",
+             "apt list --installed", "python3 --version", "uname -r; nproc", "journalctl -u ssh -n 20 --no-pager", "top -bn1 | head -15",
+             "wpctl get-volume @DEFAULT_AUDIO_SINK@", "lsblk -o NAME,SIZE,MOUNTPOINT", "date +%H:%M", "hostname", "command -v git",
+             "rpm -qa", "pacman -Qe", "timedatectl", "bluetoothctl show", "mount", "tr 'a-z' 'A-Z'"]
+    acts = ["rm -rf x", "df -h > out.txt", "df -h; rm x", "ps aux | xargs kill", "systemctl stop cups", "systemctl --host=x status",
+            "nmcli radio wifi off", "nmcli -s connection show x", "nmcli device wifi show-password", "ip link set eth0 down", "ip -batch f",
+            "ss -K dst 1.2.3.4", "cat ~/.ssh/id_rsa", "cat /etc/shadow", "cat /proc/1/environ", "cat /proc/self/environ", "cat /proc/*/environ",
+            "cat /sys/../etc/shadow", "grep x /home/someone/.env", "head -n 5 ~/notes", "gsettings set a b c", "dpkg -i x.deb", "apt install htop",
+            "apt list -o X=y", "python3 -c 'print(1)'", "python3 x.py", "journalctl -f", "journalctl -fu ssh", "journalctl --vacuum-time=1s",
+            "top", "date -s 12:00", "date 010112002026", "hostname newname", "echo $(id)", "echo `id`", "echo $HOME", "df &", "df | tee x",
+            "sudo df", "./df", "/bin/df", "df\nrm x", "mount -o remount,rw /", "sort -o /tmp/x /proc/loadavg", "uniq a b", "find / -delete",
+            "ls", "env rm x", "command rm x", "LANG=C df", "df -h # ok", "rpm --eval '%(id)'", "rpm -q --pipe sh bash", "pacman -Syu",
+            "pip install x", "pip list --outdated", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 40%", "pactl -s host info", "bluetoothctl",
+            "xrandr --output X --off", "echo a\\ b", "curl http://x", "ps aux || reboot", "true && systemctl poweroff", "", "|", "df |",
+            "| df", "df ;; df", "upower --monitor", "vulkaninfo --html", "nvidia-smi -pl 100", "amixer set Master 40%", "playerctl pause"]
+    assert [line for line in looks if system.look(line) is None] == [] and [line for line in acts if system.look(line) is not None] == []
+    # what runs is the words quoted again: the shell is left nothing to expand or substitute
+    assert system.look("ps aux | grep -i 'fire fox' | wc -l") == "ps aux | grep -i 'fire fox' | wc -l"
+    assert system.look("dpkg -l python3*") == "dpkg -l 'python3*'" and system.look("echo '$(id)' ; uname") == "echo '$(id)' ; uname"
+    (tmp_path / "sys").mkdir()
+    ran = []
+
+    def reader(argv, **how):
+        ran.append(argv[-1])
+        return {"exit": 0, "seconds": 0.1, "timed_out": False, "stdout": "Filesystem Size\n/dev/x 100G\n", "stderr": ""}
+    model = Model(turn(("sysinfo", {"command": "df -h | head -n 3"})), turn(text="The disk is 100G."),
+                  turn(("sysinfo", {"command": "rm -rf ~/x"})), turn(("sysinfo", {"command": "cat ~/.ssh/id_ed25519"})), turn(text="I could not."),
+                  turn(("pc", {"command": "df -h"})), turn(text="Sent to look."))
+    work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model, keep_system=True)
+    agent.system.reader = reader
+    agent.system.runner = lambda argv, **how: ran.append("ACTED " + argv[-1])
+    with harness:
+        assert cli.run_task(agent, planner, meter, "How big is my disk?", [], said.append) == "The disk is 100G."
+        assert asked == [] and ran == ["df -h | head -n 3"] and "[Nothing was changed.]" in said
+        answer = cli.run_task(agent, planner, meter, "Remove x and show my key.", [], said.append)
+        assert ran == ["df -h | head -n 3"] and asked == [] and any("not a line that is known only to look" in line for line in said)
+        assert any("fs_list, fs_read and fs_search" in line for line in said) and answer.startswith("I could not.") and "its steps kept failing" in answer
+        cli.run_task(agent, planner, meter, "Disk again.", [], said.append)
+        assert ran == ["df -h | head -n 3"] and asked == [] and any("that only looks" in line for line in said)
+    account = model.bodies[4]
+    assert "tools" not in account and account["messages"][-1]["content"].startswith("The work was stopped here: its steps kept failing.")
+    alone, _ = cli.build_agent(cli.default_config(tmp_path / "sys", read_only=True))
+    with alone:
+        assert "sysinfo" in alone.visible_names() and "pc" not in alone.visible_names() and "sh" not in alone.visible_names()
 
 
 def test_offline_the_computer_tool_runs_nothing_that_reaches_the_network():
@@ -184,8 +237,10 @@ def test_offline_the_computer_tool_runs_nothing_that_reaches_the_network():
     for line in ("rm x", "ls; mv a b", "chmod -R 777 /", "dd if=/dev/zero of=/dev/sda", "echo x > /etc/hosts", ":(){ :|:& };:"):
         assert system.refusal(line) is not None
     for line in ("xdg-open report.pdf", "gsettings set org.gnome.desktop.interface color-scheme prefer-dark", "systemctl --user restart pipewire",
-                 "notify-send done", "firefox", "nmcli radio wifi off", "echo summary"):
+                 "notify-send done", "firefox", "nmcli radio wifi off"):
         assert system.refusal(line) is None
+    assert "call `sysinfo`" in system.refusal("echo summary") and "fs_list, fs_read" in system.refusal("ls ~/Downloads")
+    assert "not changed from here" in system.refusal("mount -o remount,rw /")
     assert system.facts().startswith("This computer: ") and system.facts().endswith(".")
     tools = system.SystemTools(runner=lambda argv, **how: {"exit": 0, "seconds": 0, "timed_out": False, "stdout": "", "stderr": ""})
     assert tools.decide({"command": ""})[0] == "deny" and tools.decide({"command": "x" * 2000})[0] == "deny"
@@ -263,16 +318,17 @@ def test_a_task_that_does_not_finish_says_why(tmp_path):
 
 
 def test_in_its_last_round_it_is_asked_to_answer_and_given_nothing_to_call(tmp_path):
-    looks = [turn(("fs_search", {"query": f"phone {i}"})) for i in range(11)]
+    last = cli.default_config(tmp_path)["agent"]["budget"]["max_rounds"] - 1
+    looks = [turn(("fs_search", {"query": f"phone {i}"})) for i in range(last)]
     model = Model(*looks, turn(text="The phone number is not in the files."))
     work, harness, agent, planner, meter, said, asked, _ask = session(tmp_path, model)
     (work / "invoice.txt").write_text("Harbor Cafe\nTotal due: 194.40\n")
     with harness:
         answer = cli.run_task(agent, planner, meter, "What is Harbor Cafe's phone number?", [], said.append)
-    assert answer == "The phone number is not in the files." and len(model.bodies) == 12
-    assert all("tools" in body for body in model.bodies[:11]) and "tools" not in model.bodies[11]
-    assert model.bodies[11]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
-    assert model.bodies[10]["messages"][-1]["role"] == "tool"
+    assert answer == "The phone number is not in the files." and len(model.bodies) == last + 1
+    assert all("tools" in body for body in model.bodies[:last]) and "tools" not in model.bodies[last]
+    assert model.bodies[last]["messages"][-1] == {"role": "user", "content": cli.LAST_ROUND}
+    assert model.bodies[last - 1]["messages"][-1]["role"] == "tool"
     # a call written out as text in that last round is not an answer, and is not shown as one
     model = Model(*looks, turn(text="I will edit it. <tool_call> <function=fs_edit> ... </function> </tool_call>"))
     (tmp_path / "again").mkdir()

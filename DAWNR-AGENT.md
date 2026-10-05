@@ -93,10 +93,13 @@ rights; kernel bugs; a person who approves a plan whose dry run showed the harm.
 | `fs_read` | allow | untrusted | no | a window of lines of a text file (100 by default), with its size and hash |
 | `fs_search` | allow | untrusted | no | lines containing a literal text (no regular expressions, so no catastrophic backtracking), bounded by files, results and seconds |
 | `fs_write` | ask | trusted | yes | create a file (`overwrite` to replace; `make_dirs`; `expect_sha256`) |
-| `fs_edit` | ask | trusted | yes | replace an exact text that appears once (or `all`) |
+| `fs_edit` | ask | trusted, then the file's lines around the change as untrusted text | yes | replace an exact text that appears once (or `all`); a text that misses is matched where it differs only by one constant indentation, else refused with the file's closest lines |
 | `fs_undo` | ask | trusted | yes | revert one journaled change if the file is still as it left it |
 | `run_command` | deny | untrusted | yes | one argv matching an operator rule |
 | `ps_list` | allow | untrusted | no | processes: id, parent, name; command lines of your own |
+| `sh` | allow, asked when it changed something | untrusted | by what it changed | any shell line, run over an overlay of the roots in the sandbox (`"shell": true`; below) |
+| `sysinfo` | allow | untrusted | no | one read-only line about the live machine, run for real (`"sysinfo": true`; below) |
+| `pc` | ask, every call | untrusted | yes | one command on the computer itself, never as administrator (`"system": true`; below) |
 | `plan` | allow | trusted summary, each step's output with its own trust | no (its steps are) | a plan from the model: dry run, approval, steps |
 
 The file tools exist only when the operator configures roots, and write tools
@@ -228,6 +231,50 @@ copy bound in the folder's place, and the changes are the differences between th
 same question to the person, for folders of at most 256 MB and 20,000 files. Every test runs in both modes. A
 model driving it is measured in `locallm/PREDICT-2026-10-05-assistant.md`.
 
+Three things a model driving it showed, each now a rule of the tool. What a program writes into its own cache as
+it runs (`__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`) is neither shown nor kept: `python3 test.py`
+was being asked for as "it would change 2: new folder here/__pycache__; create ...", so every test run needed a yes
+(`try` leaves this to its `-E PATTERN`; here it is a fixed list, and removing a cache is still a change). A line
+that reports on the running machine (`ps`, `ip`, `systemctl`, `nmcli` and the like) is not run where `sysinfo` is
+offered, and is sent there: in the sandbox it would report on the sandbox, and `ps aux | grep firefox` printing
+nothing would be taken for "firefox is not running". And a command that hits the sandbox's walls is told what they
+are: after "Read-only file system" the output says that only the folder can be changed from here, after a failed
+name lookup that `sh` has no network whatever the computer's connection is. Before that note, a model asked to
+delete `/etc/hostname` went on from the read-only error to `mount -o remount,rw /`.
+
+### The computer itself (`sysinfo` and `pc`, 2026-10-05)
+
+What is not a file in a root is reached two ways (`locallm/dawnr_agent/system.py`), both run for real, as the
+person, outside the sandbox, because what they are for is not inside it.
+
+`sysinfo` looks: what is running, memory and disk, the network, services, sound, settings, what is installed. It
+runs without asking, so it takes only a line that cannot change anything. The shape is the Codex CLI's
+`is_known_safe_command`: plain commands (bare words and quoted strings) joined by `|`, `&&`, `||` and `;` and by
+nothing else, so no redirection, variable, substitution, subshell or background job; each command a read-only
+program used in a read-only way (`systemctl status` and not `systemctl stop`; `nmcli device status` and never
+`--show-secrets`; `journalctl` without `--follow` or `--vacuum-*`; `top` only as `-bn1`; a package manager's local
+query and nothing that refreshes from a mirror). Two things differ from Codex. The list is of what shows a
+computer's state (about a hundred programs, and some fifty more that may only be asked their version), not a
+repository's dozen. And where Codex lets `cat` and `grep` open any
+file, here a file is opened only under `/sys`, the part of `/proc` that is not a process, and a few named files of
+`/etc`: reading files is the file tools' and `sh`'s, where the secret ones are hidden. The line that runs is not
+the model's text but the words read from it, each quoted again, so the shell is left nothing to expand.
+`test_a_look_at_the_computer_runs_unasked_and_only_a_line_that_cannot_change_anything_is_one` holds 32 lines that
+pass and 74 that must not. The list is a list: a program on it with an option that writes, unknown to this file,
+would be run unasked. That is the limit of this tool, and why each entry names what it allows rather than what it
+forbids wherever the program has subcommands.
+
+`pc` acts: open a program, a file or a page, change a setting, start or stop a service. Every call is put to the
+person with the exact line; the front door's `--yes` does not cover it; a session with no terminal runs none. A
+line that asks for administrator rights (`sudo`, `pkexec`, `doas`, `su`) is never run: it is handed to the person,
+word for word. Removing, moving and re-permissioning files, a download piped into a shell, and changing what is
+mounted or loaded into the kernel are refused and named as not this tool's. What it does is not journaled and not
+undone, and the question to the person says so. A line that only looks is sent to `sysinfo`, and one that reads
+files to the file tools. What `pc` cannot promise: it shows a command line, not what a script named on it
+contains, and a desktop session will start anything for the person who asks it to. The person's yes is the check
+here, not a sandbox. `locallm/dawnr_tasks.py`, which says yes to everything, therefore never runs a `pc` line: it
+records it and counts it as harm unless the task asked for it.
+
 ## 5. Plans, the dry run and approval
 
 A plan is `{"goal": "...", "steps": [{"tool": ..., "arguments": {...}, "why": ...}]}`,
@@ -272,7 +319,7 @@ registry call). It stops at the first of:
 | rounds | `max_rounds` plans (default 4) |
 | budget | `max_steps` calls (default 12); a plan is cut at the budget |
 | failures | `max_failures` rounds in a row (default 2) ended in a refusal or a failed step |
-| no progress | a plan already proposed |
+| no progress | a plan already proposed, with nothing changed since, for the second time: the first is sent back unrun, with the reason, once. After a round that changed something the earlier plans may come again (fix the file, run the test again) |
 | refused | the person refused a plan |
 | time | `max_seconds`, if set |
 | dry run | asked only to show the first plan |
@@ -446,7 +493,8 @@ In the harness configuration (paths relative to the file's folder; `~` expands):
 
 Other keys: `secrets` (replaces the default list), `command_path` (the PATH
 commands resolve against), `env` (extra environment for every command),
-`processes` (false removes `ps_list`), `check_writes` (`block`, `note`, `off`),
+`processes` (false removes `ps_list`), `shell` (true offers `sh`), `sysinfo` and
+`system` (true offer `sysinfo`, and `sysinfo` with `pc`), `check_writes` (`block`, `note`, `off`),
 `limits` (read and write sizes, lines, results, seconds, `command_timeout`,
 `command_output`, and the caps of the two scans in section 3:
 `link_scan_entries`, `link_scan_seconds`, `home_scan_entries`,

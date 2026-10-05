@@ -64,6 +64,90 @@ class Preview:
     pin: dict | None = None                        # arguments the dry run adds so the run can tell nothing moved
     writes: dict | None = None                     # {(root, parts): bytes | None}: the file as the step leaves it
     error: str | None = None                       # the step would be refused, and why
+    quoted: str = ""                               # lines of a file shown with a refusal, to correct the call by:
+                                                   # untrusted text, and the conversation is tainted by it (plan.py)
+
+
+class EditMiss(PathRefused):
+    """An edit whose text is not in the file. `quoted` is the file's closest lines: untrusted text."""
+
+    def __init__(self, message: str, quoted: str = ""):
+        super().__init__(message)
+        self.quoted = quoted
+
+
+def _lines(text: str) -> list:
+    return (text if text.endswith("\n") else text + "\n").splitlines(keepends=True)
+
+
+def _loose_edit(text: str, old: str, new: str) -> str | None:
+    """`text` with the lines of `old` replaced by those of `new`, where `old` matches whole lines of it but for one
+    constant run of leading whitespace (the indentation left out, or part of it) and whitespace at line ends, or
+    but for a blank first line that is not in the file. None unless exactly one place matches. The ladder is aider's
+    (aider/coders/editblock_coder.py, replace_part_with_missing_leading_whitespace; Apache-2.0; receipt
+    ac8eee06f37d): a model gets the words right and the indentation wrong, and wrong the same way on every line."""
+    whole = text.splitlines(keepends=True)
+    for candidate in dict.fromkeys((old, old.lstrip("\n"))):
+        part, repl = _lines(candidate), _lines(new) if new else []
+        if not any(p.strip() for p in part):
+            continue
+        indents = [len(p) - len(p.lstrip()) for p in part + repl if p.strip()]
+        cut = min(indents)
+        part = [p[cut:] if p.strip() else p for p in part]
+        repl = [r[cut:] if r.strip() else r for r in repl]
+        places = []
+        for i in range(len(whole) - len(part) + 1):
+            added = set()
+            for w, p in zip(whole[i:i + len(part)], part):
+                if w.strip() != p.strip():
+                    break
+                if w.strip():
+                    w_in, p_in = w[:len(w) - len(w.lstrip())], p[:len(p) - len(p.lstrip())]
+                    if not w_in.endswith(p_in):
+                        break
+                    added.add(w_in[:len(w_in) - len(p_in)])
+            else:
+                if len(added) == 1:
+                    places.append((i, added.pop()))
+        if len(places) == 1:
+            i, add = places[0]
+            return "".join(whole[:i] + [add + r if r.strip() else r for r in repl] + whole[i + len(part):])
+        if places:
+            return None
+    return None
+
+
+def _closest(text: str, old: str, threshold: float = 0.6, context: int = 2, most: int = 3000) -> str:
+    """The lines of `text` most like `old`, or "" when nothing is like it (aider's find_similar_lines)."""
+    lines, want = text.splitlines(), old.strip("\n").splitlines() or [""]
+    if not lines or len(lines) > most:
+        return ""
+    best, at = 0.0, 0
+    for i in range(max(1, len(lines) - len(want) + 1)):
+        matcher = difflib.SequenceMatcher(None, "\n".join(lines[i:i + len(want)]), "\n".join(want), autojunk=False)
+        if matcher.real_quick_ratio() > best and matcher.quick_ratio() > best:
+            ratio = matcher.ratio()
+            if ratio > best:
+                best, at = ratio, i
+    if best < threshold:
+        return ""
+    first, last = max(0, at - context), min(len(lines), at + len(want) + context)
+    return f"lines {first + 1}-{last} of {len(lines)}:\n" + "\n".join(lines[first:last])
+
+
+def _around(old: bytes, new: bytes, context: int = 3, most: int = 24) -> str:
+    """The lines of `new` around where it differs from `old`: what an edit left, so the file need not be read again
+    to see it (SWE-agent's editor shows the edited window after every edit, arXiv:2405.15793 section 3)."""
+    head = next((i for i, (a, b) in enumerate(zip(old, new)) if a != b), min(len(old), len(new)))
+    tail = next((i for i, (a, b) in enumerate(zip(reversed(old[head:]), reversed(new[head:]))) if a != b),
+                min(len(old), len(new)) - head)
+    text = new.decode("utf-8", "replace")
+    lines = text.splitlines()
+    first = max(1, text.count("\n", 0, len(new[:head].decode("utf-8", "replace"))) + 1 - context)
+    last = min(len(lines), text.count("\n", 0, len(new[:len(new) - tail].decode("utf-8", "replace"))) + 1 + context)
+    shown = lines[first - 1:last]
+    cut = f"\n[{len(shown) - most} more changed lines not shown]" if len(shown) > most else ""
+    return f"lines {first}-{min(last, first + most - 1)} of {len(lines)} are now:\n" + "\n".join(shown[:most]) + cut
 
 
 def _clip(text: str, limit: int) -> str:
@@ -857,7 +941,15 @@ class FileTools:
             old, new = old.replace("\r\n", "\n").replace("\n", "\r\n"), new.replace("\r\n", "\n").replace("\n", "\r\n")
             count = text.count(old)
         if count == 0:
-            raise PathRefused(f"{target.display}: the text to replace was not found; not edited")
+            loose = _loose_edit(text, old, new)
+            if loose is not None:
+                return loose
+            closest = _closest(text, old)
+            raise EditMiss(f"{target.display}: the text to replace was not found; not edited."
+                           + (" The new text is already in the file: this edit may have been made before."
+                              if len(new.strip()) >= 12 and new.strip() in text else "")
+                           + (" The file's closest lines follow: copy the text to replace from them, exactly." if closest else ""),
+                           closest)
         if count > 1 and not args.get("all", False):
             raise PathRefused(f"{target.display}: the text to replace appears {count} times; give more of the "
                               f"surrounding text, or pass \"all\": true; not edited")
@@ -872,7 +964,10 @@ class FileTools:
         if expect is not None and not sha256(old_bytes).startswith(expect.lower()):
             raise PathRefused(f"{target.display} changed since it was read or planned (expected sha256 {expect}, "
                               f"now {sha256(old_bytes)[:HASH_SHOWN]}); not edited")
-        data = self._edited(target, old_bytes, args).encode("utf-8")
+        try:
+            data = self._edited(target, old_bytes, args).encode("utf-8")
+        except EditMiss as e:
+            return ToolResult(str(e), is_error=True, untrusted_notes=[e.quoted] if e.quoted else [])
         ok, note = self.ops.gate(target, data, ctx.context if ctx else "")
         if not ok:
             return ToolResult(f"not edited: {target.display}: {note}", is_error=True)
@@ -880,7 +975,7 @@ class FileTools:
                                session=_session_id(ctx))
         text = (f"edited {target.display}: {entry['bytes_before']} -> {len(data)} bytes; change {entry['id']} "
                 f"(fs_undo reverts it), sha256 {entry['after'][:HASH_SHOWN]}")
-        return ToolResult(text + (f"\n{note}" if note else ""))
+        return ToolResult(text + (f"\n{note}" if note else ""), untrusted_notes=[_around(old_bytes, data)])
 
     def undo(self, change: str, session: str = "") -> str:
         row = self.ops.journal.find(change)
@@ -980,7 +1075,7 @@ class FileTools:
                                detail=self._diff(target, now or b"", data),
                                writes={(target.root.name, tuple(target.parts)): data})
         except (PathRefused, JournalError) as e:
-            return Preview(error=str(e))
+            return Preview(error=str(e), quoted=getattr(e, "quoted", ""))
         return Preview(summary="no preview")
 
     def _preview_write(self, name: str, args: dict, overlay: dict, context: str) -> Preview:

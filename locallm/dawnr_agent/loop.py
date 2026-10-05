@@ -20,7 +20,11 @@ The stop rule, checked in this order, every round:
   budget       max_steps tool calls have run (a plan is cut at the budget;
                the calls past it do not run)
   failures     max_failures rounds in a row ended with a refusal or a failed step
-  no progress  the planner proposed a plan it had already proposed
+  no progress  the planner proposed a plan it had already proposed, with nothing changed since, for the second
+               time. The first time the plan is not run and the planner is told so, once: its result would be
+               the one it has. After a round that changed something (a file, or anything a consequential tool
+               did) the earlier plans may be proposed again: running the test again after a fix is not a
+               repeat. The plan that made the change, proposed again straight after it, is
   refused      the person refused a plan
   time         max_seconds of wall clock
   dry run      the loop was asked only to show the first plan
@@ -39,7 +43,7 @@ import re
 import time
 from dataclasses import dataclass, field
 
-from .plan import DryRun, Plan, PlanError, RunOutcome, canonical, execute, preview_plan
+from .plan import DryRun, Plan, PlanError, RunOutcome, canonical, execute, journal_mark, moved, preview_plan
 
 
 @dataclass
@@ -137,6 +141,12 @@ class LoopResult:
         return {"messages": [{"role": "user", "content": user}, {"role": "assistant", "content": parts}]}
 
 
+# a plan proposed again with nothing changed since: not run, and said once (OpenHands stops at the fourth identical
+# action and observation, openhands/controller/stuck.py; here the second is not run at all, and the third ends it)
+REPEATED = ("Not run: exactly this was already run, and nothing has changed since, so it would give the same result. "
+            "Send something different, or answer with what you have.")
+
+
 class AgentLoop:
     def __init__(self, agent, planner, *, budget: Budget | None = None, plan_approver=None, dry_run: bool = False):
         self.agent = agent
@@ -163,7 +173,9 @@ class AgentLoop:
         state = LoopState(task, self.harness.index(), self.budget)
         context = context or task
         started = time.monotonic()
-        seen: set = set()
+        seen: set = set()                                          # the plans proposed since anything last changed
+        just = ""                                                  # the plan that made that change, for one round
+        told = False                                               # a repeat has been sent back once already
         failures = asked = approvals = 0
         stop, answer = "", None
         while not stop:
@@ -191,7 +203,11 @@ class AgentLoop:
                 stop, answer = "done", proposal.answer
                 break
             dry = preview_plan(self.agent, self.harness, proposal, session, context)
-            if dry.digest in seen:
+            if dry.digest in seen or dry.digest == just:
+                if not told and not self.dry_run:
+                    told = True
+                    state.rounds.append(Round(plan=proposal, dry=dry, note=REPEATED))
+                    continue
                 state.rounds.append(Round(plan=proposal, dry=dry, note=f"plan {dry.digest} was already proposed; "
                                                                         "the loop stops rather than repeat it"))
                 stop = "no progress"
@@ -208,11 +224,13 @@ class AgentLoop:
                     approved = bool(self.plan_approver(dry))
                 except Exception:                                  # noqa: BLE001
                     approved = False
+            mark = journal_mark(self.agent)
             outcome = execute(self.harness, dry, approved=approved, session=session, context=context,
                               steps_left=state.steps_left)
             asked += outcome.approvals_asked
             state.steps_used += outcome.steps_run
             self.agent.record_plan(dry, outcome, session)
+            seen, just = (set(), dry.digest) if moved(self.agent, self.harness, outcome, mark) else (seen, "")
             state.rounds.append(Round(plan=proposal, dry=dry, outcome=outcome))
             if approved is False:
                 stop = "refused"
