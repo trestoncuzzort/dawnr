@@ -2,6 +2,15 @@
 
 **An assistant whose answers come with proof.**
 
+> **New, 5 October 2026: `student-v5`.** The model inside dawnr now proves **26 of 200 held-out programming
+> problems** with a specification checked against the problem's own solution, **16 of them by all seven provers**.
+> Phi-4-mini, given the same 17 tries a problem and its output forced into valid `t`, proves 9 and 7. Every training
+> seed of the recipe beats it at both levels, and given a specification the new model proves **27 of 33** held-out
+> ones by all seven provers, more than any earlier release. It is a small model (Qwen3.5-4B, fine-tuned here) that
+> runs offline on an ordinary CPU or an 8 GB laptop graphics card.
+> [The release](../../releases/tag/student-v5) · [how it was measured](t/PREDICT-2026-10-05-release-v5.md) ·
+> [every number, good and bad](DISCLAIMERS.md)
+
 dawnr writes programs together with a precise statement of what they do, then
 has seven independent mathematical provers check that the program does exactly
 that. If the provers agree, you get the answer and the evidence behind it. If
@@ -9,6 +18,28 @@ they do not, dawnr says so instead of guessing.
 
 It runs entirely on your own machine: no cloud, no account, no data leaving
 your computer.
+
+## What it has achieved
+
+On 200 programming problems no training row touches (from MBPP and HumanEval), a problem counts only when the
+program passes its tests, a prover verifies it, and its specification agrees with the problem's reference solution
+and rejects most wrong answers:
+
+| | proved by at least one prover | proved by all seven |
+|---|---:|---:|
+| **dawnr `student-v5`** (Qwen3.5-4B, fine-tuned here on proved answers) | **26** | **16** |
+| the same recipe, its two other training seeds | 27, 23 | 15, 13 |
+| the same 4B before any fine-tuning, prompted, 17 tries a problem | 15 | 8 |
+| Phi-4-mini (3.8B), output forced into valid `t`, 17 tries a problem | 9 | 7 |
+| Phi-4-mini, prompted, 17 tries a problem | 3 | 3 |
+| Qwen3.5-27B, six times larger, prompted, 17 tries a problem | 43 | 29 |
+
+Plainly: much of the lead over Phi comes from the base model, chosen by measurement among openly licensed ones;
+training on answers the provers admitted, some written by two openly licensed teacher models, adds 11 problems and 8
+by all seven for this release. Doubling Phi on every training seed, the bar set in [AMBITION.md](AMBITION.md), is met
+by two seeds of three, and a much larger model still does better. Every row links to its run in
+[DISCLAIMERS.md](DISCLAIMERS.md); the curve across model sizes is in
+[t/PREDICT-2026-10-04-size-curve.md](t/PREDICT-2026-10-04-size-curve.md).
 
 ## Why it is useful
 
