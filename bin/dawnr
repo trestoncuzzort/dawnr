@@ -177,5 +177,5 @@ for name, ver in cols:
     print(f"  {name}: {ver if not str(ver).startswith('ABSENT') else 'not installed'}")
 PY
     ;;
-  *) sed -n '2,11p' "$0";;
+  *) sed -n '2,12p' "$0";;
 esac
