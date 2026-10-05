@@ -43,3 +43,11 @@ seeds; they are a separate matter and stay in.)
   debugging rows' proofs; the next build keeps the debugging rows and drops the other three kinds, and is measured.
 - L2 fails: the habit is not coming from these rows; the specification stage of the route, not the data, is looked
   at next.
+
+## A note on the tree (2026-10-05 10:55Z, before any result)
+
+This registration names tree `bf23d4ee`. The lab's checkout is fast-forwarded by the grading scripts, and it was at
+`8836cdec` when this run started (its own log says so). Between the two commits the files the recipe runs
+(`t/student_sft.py`, `t/spec_first.py`, `t/score_spec_given.py` and what they import) differ by two
+well-formedness rules for set literals (`979e62f3`) and one added function nothing in the recipe calls. The same
+holds for the later stages of the three round-4 seeds, which were generated after the checkout had moved.
