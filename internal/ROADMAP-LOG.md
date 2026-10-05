@@ -2934,3 +2934,38 @@ is queued, and the ones running are read as they finish.
   have answered; their grading against U1 to U3 is owed, as are the readings of the 9B run (N1 to N5).
 - **Next:** the 35B (3B active) and the 27B as drivers on the same 135, on the lab card; a fifth set made of what
   the 4B misses; search without an account for `--online`; scanned pages; git through the assistant.
+
+## The assistant, night of 2026-10-05: the lab's cards closed, the laptop as the measure, teaching begun
+
+- **The lab's GPUs were closed to this account at 20:53Z** (my three servers stopped in one second, then a deny
+  entry for the account on every GPU device ten seconds later). Who and why are not visible. Nothing is tried to
+  get them back; the lab's CPU and 502 GB stay open and are used, by the operator's word, for what needs memory:
+  a CPU-only llama.cpp build in `/dev/shm/cpu`, eight single-conversation 4B servers as a measuring farm (the b11342
+  CPU build writes nonsense for the 35B when two conversations share a batch), and the merge and conversion of a
+  taught model.
+- **AWS:** the login renewed; the Free plan still refuses GPU instances; Bedrock through the capped proxy (cap raised
+  $60 to $90, spent $73 by midnight). On the 161 through the same front door: GLM-5 159, Qwen3-Coder-Next 157,
+  DeepSeek-V3.2 148, Qwen3-235B 141 (the local 35B 158, 4B 148). Size is not what the front door rewards.
+- **G** (registered): all 161 on the 8 GB laptop in 12.5 minutes at 65 tok/s, 135 done; G1 and G3 failed for the
+  product's reasons (no Linux desktop under WSL; no pdftotext; three judges wrong), ten tasks changed hands for the
+  arithmetic alone. Fixed: PDFium shipped by the installer (same text as pdftotext on the sets' PDFs; 96% vocabulary,
+  93% order on eleven real ones), three judges. Then 141 of 161 on the same machine.
+- **The lost-contents warning rewritten** after reading, in the 4B's own reasoning, that "send exactly this again"
+  was taken for a failed run: an order mistake (a file destroyed and then used, or a loop of mv that still loses
+  contents) is called one with the way out; a plain loss puts both readings. 0 of 7 to 7 of 7 small cases; the chain
+  task done; the 35B 4 of 4 on make-room tasks it had destroyed files on.
+- **Reasoning a turn at a time** (DAWNR_THINK): no gain on nine seen tasks for twice the tokens; off; kept in the
+  rows for reading what the model believed.
+- **Windows under WSL** (H, registered): the recipes table's Windows lines from Microsoft's pages, the read-only
+  tier in Codex's PowerShell shape, refusals; 2 of 8 questions and 9 of 9 acts on the laptop; the looking lines and
+  .exe completion added; 16 of 18 after.
+- **Teaching (F, registered):** 66 practice families (a capped workflow of 8 opus agents; 2640 of 2640 seeds pass
+  the self-check), 13 held out by SHA-256 of the name; GLM-5 and Coder-Next did 53 families x 40 seeds (1,990 and
+  1,880 kept); 1,400 rows of the shorter conversation per task; QLoRA rank 16 on the laptop's 8 GB card (the
+  embedding left in 16-bit was the whole fix; rows to 3,800 tokens after a 4,493-token row ran out of memory at
+  step 5), 176 steps, 3.8 min a step, done about 11:00Z 10-06. The untaught 4B on 660 fresh tasks: 413 of 530
+  taught, 88 of 130 held out, 40 with harm. Bars: F1 at least 456, F2 at least 85, F3 at most 40, F4 at most 6.30
+  calls a task done, F5 at least 138 and 21 on the laptop, F6 at least 57 tok/s.
+- **Next:** the taught model merged on the lab's CPU, converted, quantised, read on the farm (660) and the laptop
+  (161); the sixth set's two misses; a round of the 35B-class teacher on the families the student fails most;
+  scanned pages (OCR) and `web_fetch` passage selection still not built.
