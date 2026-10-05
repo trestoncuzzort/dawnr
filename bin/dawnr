@@ -62,18 +62,27 @@ start_both() {  # the student, then the base: on a GPU build the base waits for 
   if [ "${DAWNR_BUILD:-cpu}" != cpu ]; then
     for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$SP" && break; sleep 1; done
   fi
-  start_one base "$BASE_GGUF" "$BP" "$BASE_CTX"
+  start_one base "$BASE_GGUF" "$BP"                                # beside the student, the base keeps the small window
+}
+
+on_card() { [ "${DAWNR_BUILD:-cpu}" != cpu ] && [ "${DAWNR_GPU_LAYERS:-}" != 0 ]; }
+stop_one() {  # name port
+  if [ -f "$RUN/$1.pid" ]; then kill "$(cat "$RUN/$1.pid")" 2>/dev/null || true; fi
+  rm -f "$RUN/$1.pid" "$RUN/$1.ctx"
+  for _ in $(seq 1 20); do healthy "$2" || break; sleep 0.5; done
 }
 
 start_one() {  # name gguf port [context] [seconds idle before the model is unloaded]
   healthy "$3" && return 0
   [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
-  # The base model on a CPU drafts with its own prediction layer where the installer added it to the file
+  # The base model drafts with its own prediction layer where the installer added it to the file
   # (locallm/gguf_layer.py): the layer guesses the next tokens and the model checks them in one pass, so what is
-  # written is the model's own and comes sooner (16.8 to 29.4 tokens a second on the assistant's tasks, the same
-  # tasks done, 2026-10-05; DAWNR_DRAFT=0 turns it off). Not yet measured on a graphics card, so not used there.
+  # written is the model's own and comes sooner. Measured 2026-10-05 on the assistant's tasks, the same tasks done:
+  # 16.8 to 29.4 tokens a second on a 12-core CPU, 55 to 72 on a laptop's 8 GB card. On a card it takes 0.35 GB
+  # more, so there it is used when the base runs alone with the large window, and not beside the student, where
+  # the two models were measured to fill 7.6 of 8 GB. DAWNR_DRAFT=0 turns it off.
   local draft=()
-  if [ "$1" = base ] && [ "${DAWNR_DRAFT:-1}" != 0 ] && [ "${BASE_DRAFT:-}" = mtp ] && { [ "${DAWNR_BUILD:-cpu}" = cpu ] || [ "${DAWNR_GPU_LAYERS:-}" = 0 ]; }; then
+  if [ "$1" = base ] && [ "${DAWNR_DRAFT:-1}" != 0 ] && [ "${BASE_DRAFT:-}" = mtp ] && { ! on_card || [ "${4:-4096}" -gt 4096 ]; }; then
     draft=(--spec-type draft-mtp --spec-draft-n-max 3 --spec-draft-p-min 0.6)
   fi
   # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only)
@@ -81,7 +90,7 @@ start_one() {  # name gguf port [context] [seconds idle before the model is unlo
   nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$GEN_THREADS" --threads-batch "$THREADS" \
     ${DAWNR_GPU_LAYERS:+--n-gpu-layers "$DAWNR_GPU_LAYERS"} ${draft[@]+"${draft[@]}"} ${5:+--sleep-idle-seconds "$5"} \
     --ctx-size "${4:-4096}" --parallel 1 --reasoning off --cache-ram 256 --slot-save-path "$RUN" --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
-  echo $! > "$RUN/$1.pid"
+  echo $! > "$RUN/$1.pid"; echo "${4:-4096}" > "$RUN/$1.ctx"
 }
 
 wait_ready() {  # a first start on a small machine loads 7 GB and compiles its kernels: GitHub's 3-core Mac took over 3 minutes
@@ -103,6 +112,7 @@ wait_ready() {  # a first start on a small machine loads 7 GB and compiles its k
 stop_all() {
   for n in student base; do
     if [ -f "$RUN/$n.pid" ]; then kill "$(cat "$RUN/$n.pid")" 2>/dev/null || true; rm -f "$RUN/$n.pid"; fi
+    rm -f "$RUN/$n.ctx"
   done
 }
 
@@ -128,6 +138,11 @@ own_paths() {
 both_up() {  # start the two models if they are not running, and stop them again on the way out
   if [ -n "${DAWNR_WRITER_URL:-}" ]; then base_up; return 0; fi   # the writer is elsewhere: only the base runs here
   started=0
+  # the assistant leaves the base model loaded with its large window; on a card the student does not fit beside that
+  if on_card && ! healthy "$SP" && healthy "$BP" && [ "$(cat "$RUN/base.ctx" 2>/dev/null || echo 4096)" -gt 4096 ]; then
+    echo "reloading the base model with its small window, so that both models fit the card..." >&2
+    stop_one base "$BP"
+  fi
   if ! { healthy "$SP" && healthy "$BP"; }; then
     echo "starting the models (half a minute here, a few minutes the first time on a small machine)..." >&2
     start_both; started=1
@@ -172,6 +187,11 @@ case $cmd in
     [ "$cmd" = assistant ] || [ $# -ge 1 ] || { echo 'usage: dawnr do "TASK" [--read-only] [--root DIR] [--online] [--yes]' >&2; exit 2; }
     # The model stays loaded after the assistant leaves, so the next task starts at once, and unloads itself after
     # a quarter of an hour unused (DAWNR_IDLE seconds; `dawnr serve stop` unloads it now)
+    if healthy "$BP" && [ "$(cat "$RUN/base.ctx" 2>/dev/null || echo 4096)" -lt "$BASE_CTX" ]; then
+      if healthy "$SP"; then
+        echo "dawnr: both models are loaded, so the base model keeps its small window; \`dawnr serve stop\` first gives the assistant the large one" >&2
+      else stop_one base "$BP"; fi
+    fi
     if ! healthy "$BP"; then
       echo "starting the base model (it stays loaded for the next task, and unloads itself when idle)..." >&2
       start_one base "$BASE_GGUF" "$BP" "$BASE_CTX" "${DAWNR_IDLE:-900}"
