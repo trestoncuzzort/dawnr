@@ -718,6 +718,17 @@ not a clean test of anything here.
 The untaught 4B's reading on the 660 is running as this is written (175 of 660 judged; its counts are filled in
 below when it ends, before the taught model exists).
 
+**Filled in at 23:55Z, the taught model still training.** The untaught 4B on the 660 (eight CPU servers, 70
+minutes): taught families **413 of 530 done (77.9%)**, held-out families **88 of 130 (67.7%)**, 40 tasks with a
+file touched or a line let through unasked, 4.78 model calls a task and 6.30 a task done, 354 tokens written a
+task. Weakest: `shift_numbered` 0 of 10 (held out), `edit_insert_line` 1, `csv_group_totals` 3 (held out),
+`delete_by_name_rule`, `keep_latest_versions` and `rename_numbered` 3 each. So the bars are: F1 at least 456 of
+530; F2 at least 85 of 130; F3 at most 40 tasks; F4 at most 6.30 calls a task done; F5 at least 138 of 161 on the
+laptop (the untaught one read 141 there at this commit, 120 and 21) and at least 21 on the fifth set; F6 at least
+57 tokens a second (the untaught one wrote 62.9). What is trained, as it ran: 1,400 rows of at most 3,800 tokens
+(the first start, with rows to 4,500 tokens, ended at step 5 out of memory: that card gives 6.9 GiB and a
+4,493-token row wanted more), 176 optimizer steps of 16 rows, 3.8 minutes a step on the laptop.
+
 - **F1.** Taught families, fresh seeds (530): the taught model does at least 8 points more than the untaught one.
 - **F2.** Held-out families (130): the taught model is not lower than the untaught one by more than 3 points.
   (A rise is hoped for and not predicted: a published self-teaching run gained 9 abilities and lost 4,
