@@ -45,11 +45,15 @@ dawnr is research software. Read this before relying on anything it does.
   `locallm/PREDICT-2026-10-05-extract.md` (X10 to X13) and not yet measured. Until they are: a schema-holding
   runtime is at least as often right as `dawnr extract` has been measured to be, and what `extract` adds is the
   sentence beside every value.
-- **`dawnr calc` computes a working exactly; it does not know the right reading of the question.** The arithmetic
-  is exact, a working with a number the question does not state is not used, and an answer is shown only when
-  separate workings agree; several workings can still share one misreading. It is new (2026-10-05): how often a
-  shown answer is right and how many questions get one is registered in `locallm/PREDICT-2026-10-05-calc.md` and
-  not yet measured.
+- **`dawnr calc` computes a working exactly; it does not know the right reading of the question.** Its first form
+  (the model writes the working, an answer is shown when workings agree) was measured on 300 GSM8K problems with
+  the base model: it showed 203 answers, 94.6% of them right, where the same model simply reasoning in words
+  answered all 300 and was right on 93.0%. Held to lines of arithmetic the model sets a problem up worse than
+  when it reasons freely. The command was changed because of that: the number the model reasons its way to is
+  shown only when a working written separately and computed exactly gives the same number. On those same 300
+  problems, computed afterwards, that shows 269 answers with 97.4% right; its own measurement on problems it has
+  not seen is registered in `locallm/PREDICT-2026-10-05-calc.md` (K6 to K9) and not yet made. A misreading that the
+  reasoning and the working share is shown; the working is printed so that it can be read.
 - **With `DAWNR_WRITER_URL` set, what you ask leaves your machine.** The question, its tests, a specification or the
   Python file you give `verify` are sent to the address you named, to be written into `t` by the model there; dawnr
   prints a line saying so each time. Nothing it returns is trusted unchecked, so a wrong or hostile writer costs
