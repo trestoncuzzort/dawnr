@@ -802,6 +802,15 @@ character), and 111 are a held-out panel from their first day (`heldout_audit.wi
 on it: `PREDICT-2026-10-05-wider-reader.md`. Not done, each a language change with every lowering behind it: a
 mixed tuple (a record at the boundary), a finite map (34 problems stop at a dictionary), reals (61).
 
+### Measured and not built: membership in a sequence (2026-10-05)
+
+`x in s` with `s` a seq is what Python habit writes, and `t` has `in` for sets only. Counted on dev answers
+alone (no held-out panel was read; `~/scratch/in-seq/explore.py`): 2 of the published model's 100 greedy answers and
+5 of 1,100 sampled ones are refused for it and are well formed once the membership is written as the quantifier it
+means (`exists k in [0, len(s)) . s[k] == x`); one dev problem (200) gains an answer that passes its tests. Under 1%
+of answers, so it is recorded here and not built. What it did turn up was a fault in the checker: the set rules it
+cites were never defined, and a set type error crashed it (fixed, 979e62f3).
+
 ## The order from here
 
 Ranked by documents unlocked per unit of effort, where documents unlocked is
