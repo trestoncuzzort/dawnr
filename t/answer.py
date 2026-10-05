@@ -20,7 +20,11 @@ The stages, cheapest first (each is a tool this project already measures with):
      arXiv:2310.17807): on drawn inputs the specification must hold at the Python's output,
      admit at least half of them, and reject at least 60% of mutated outputs;
   5. the seven provers and the sabotaged twins (t/run_par.py) on what is left; an answer a
-     prover refutes is dropped, and the answer proved by the most provers is the one shown.
+     prover refutes is dropped, and the answer proved by the most provers is the one shown;
+  6. the shown answer is written again as a Python function under the question's own name and
+     run beside the `t` program on the question's tests and on inputs from the interpreter's own
+     domain (t/to_python.py: differential testing, the translation is checked and not proved);
+     the Python is shown only when every input agrees, and `--save-python FILE` writes it.
 
 The servers are OpenAI-compatible (llama.cpp with a 4-bit GGUF, or `transformers serve`); the
 question's tests are `assert f(args) == value` lines in the notation the pool reads
@@ -47,6 +51,7 @@ import spec_experiment as se                                    # noqa: E402
 import spec_first                                               # noqa: E402
 import spec_gate                                                # noqa: E402
 import surface                                                  # noqa: E402
+import to_python                                                # noqa: E402
 
 TEMPERATURE = 0.7
 
@@ -83,6 +88,28 @@ def candidates(replies: list[str], entry: dict) -> tuple[list[dict], list[str]]:
         seen.add(text)
         kept.append({"n": n + 1, "task": task, "text": text})
     return kept, refused
+
+
+def python_of(task: dict, entry: dict) -> dict:
+    """The shown answer as a Python function under the question's own name: {"source", "inputs"} when the
+    translation answers every input tried as the `t` program does, else {"source": None, "why"}. What was proved is
+    the `t` program; a translation that was not checked against it is never shown, and a fault in the translator
+    costs the Python, not the answer."""
+    tests = list(entry["rec"]["test_list"])
+    try:
+        source, fn = to_python.translate(task, tests, entry["fn"])
+    except to_python.Unsupported as unsupported:
+        return {"source": None, "why": f"it uses {unsupported}, which the translation does not write yet"}
+    except Exception as error:                                  # noqa: BLE001
+        return {"source": None, "why": f"the translation failed ({type(error).__name__})"}
+    try:
+        report = to_python.check(task, source, fn, tests)
+    except Exception as error:                                  # noqa: BLE001
+        return {"source": None, "why": f"the translation could not be run beside the proved program ({type(error).__name__})"}
+    if not report.get("agrees"):
+        return {"source": None, "inputs": report.get("inputs", 0),
+                "why": "its Python translation did not answer every input as the proved program does"}
+    return {"source": source, "inputs": report["inputs"]}
 
 
 def prove(tasks: list[dict], jobs: int = 2, timeout: float = 1800.0) -> dict[str, dict]:
@@ -131,7 +158,7 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
     for i, c in enumerate(judged):                              # distinct names: one table row each
         c["task"] = se.rename_task(c["task"], f"answer_{c['n']}__{entry['fn']}")
     cells = prover([c["task"] for c in judged], jobs)
-    best = None
+    best, best_task = None, None
     for c in judged:
         row = cells.get(c["task"]["name"])
         _level, proved = score_levels.answer_level("pass", row, None)
@@ -141,6 +168,7 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
             continue
         if best is None or proved > best["proved by"]:
             a = c["stage"].get("agreement", {})
+            best_task = c["task"]
             best = {"answer": c["n"], "program": c["text"], "proved by": proved,
                     "provers": sorted(k for k, cell in row.items() if cell == score_levels.VERIFIED),
                     "undecided": sorted(k for k, cell in row.items() if cell != score_levels.VERIFIED),
@@ -151,6 +179,8 @@ def answer(entry: dict, student, python, prompt_version: str = "s2", answers: in
     out["shown"] = best
     if best is None:
         out["why"] = "no prover proved an answer whose specification was supported"
+    else:
+        best["python"] = python_of(best_task, entry)
     return out
 
 
@@ -167,6 +197,13 @@ def render(r: dict) -> str:
                   f"Python solution's answer on {b['agrees with the Python on']} drawn inputs, and rejects "
                   + (f"{100 * b['mutated outputs rejected']:.0f}%" if isinstance(b["mutated outputs rejected"], (int, float)) else "every judged one")
                   + " of the wrong outputs tried.", "", s["program"].rstrip()]
+        py = s.get("python") or {}
+        if py.get("source"):
+            lines += ["", f"The same function in Python. It is translated from the proved program and gave the same answer on "
+                          f"{py['inputs']} inputs, the question's tests among them; the proof is of the t program above, "
+                          f"and the Python is tested against it, not proved.", "", py["source"].rstrip()]
+        elif py:
+            lines += ["", f"No Python version is shown: {py['why']}."]
     if r["refused"]:
         lines += ["", f"Of {r['answers asked']} answers asked for, not shown:"] + ["  " + x for x in r["refused"]]
     if s is None and r.get("ambiguous"):
@@ -192,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="further Python solutions sampled at 0.8 that must not find the specification false (0: off)")
     ap.add_argument("--jobs", type=int, default=2, help="provers at once")
     ap.add_argument("--json", type=Path)
+    ap.add_argument("--save-python", type=Path, metavar="FILE",
+                    help="write the shown answer's Python function here (only when it was checked against the proof)")
     a = ap.parse_args(argv)
     try:
         entry = entry_of(a.text, a.test)
@@ -202,6 +241,13 @@ def main(argv: list[str] | None = None) -> int:
     print(render(r))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=str) + "\n", encoding="utf-8")
+    if a.save_python:
+        source = ((r["shown"] or {}).get("python") or {}).get("source")
+        if source:
+            a.save_python.write_text(source if source.endswith("\n") else source + "\n", encoding="utf-8")
+            print(f"\nPython written to {a.save_python}")
+        else:
+            print(f"\nNothing written to {a.save_python}: there is no checked Python for this question.", file=sys.stderr)
     return 0 if r["shown"] else 1
 
 
