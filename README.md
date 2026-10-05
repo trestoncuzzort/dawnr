@@ -176,8 +176,11 @@ no longer answers for a plan that removes a file whose contents are kept
 nowhere else.
 These are small tasks in small folders of text files: a floor, not the job.
 The containment behind it is measured in [DAWNR-AGENT.md](DAWNR-AGENT.md).
-Commands need Linux 5.11 or newer with bubblewrap 0.8 or newer; elsewhere the
-assistant reads and edits files and runs nothing.
+Commands need bubblewrap. With bubblewrap 0.11 or newer they run over an
+overlay of the folder; with an older one (Ubuntu 24.04 ships 0.9, Debian 12
+ships 0.8) over a private copy of it, which is slower and limited to folders
+of 256 MB. Without bubblewrap (macOS, Windows outside WSL) the assistant reads
+and edits files and runs nothing.
 
 And for a program you want proved, starting from a specification:
 
