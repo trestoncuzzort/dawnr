@@ -140,6 +140,27 @@ class Meter:
                 + f", {self.written:,} written{rate}, {self.seconds:.1f} s")
 
 
+KIND = {"d": "a folder", "s": "secret, never read", "l": "a link, not followed"}
+
+
+def listing(text: str, base: str) -> str:
+    """A folder listing as paths the model can hand straight back to a tool. fs_list marks each entry with a letter
+    (`f notes.md (41 bytes)`), and on one machine the 4B read the letter as part of the name and asked for
+    `here/f notes.md`; here every line starts with the whole path."""
+    out = []
+    for line in text.split("\n"):
+        mark, _, rest = line.partition(" ")
+        if mark not in ("d", "f", "s", "l", "?") or not rest:
+            out.append(line)
+            continue
+        name, sep, note = rest.partition(" (") if mark in ("d", "f") else rest.partition(": ")
+        note = note.rstrip(")") if mark in ("d", "f") else note
+        path = f"{base}/{name}" if base else name
+        said = KIND.get(mark) if mark != "d" or not note else f"a folder, {'you may change it' if note == 'write' else 'read only'}"
+        out.append(path + (f"  ({said})" if said else f"  ({note})" if note else ""))
+    return "\n".join(out)
+
+
 class Planner(NativePlanner):
     """The model through native tool calls (locallm/agent_eval_native.py), as the front door needs it: told where it
     is, a plain path taken as one in the folder, and a plan that did not run handed back with the reason."""
@@ -181,6 +202,9 @@ class Planner(NativePlanner):
                 at += 1 + (1 if r.note else 0)
                 continue
             last = at + len(r.plan.steps)
+            for i, step in enumerate(r.plan.steps):                 # a listing, as paths that can be handed back
+                if step.tool == "fs_list" and at + 1 + i < len(msgs):
+                    msgs[at + 1 + i]["content"] = listing(msgs[at + 1 + i]["content"], str(step.arguments.get("path") or "").rstrip("/"))
             if r.dry is not None and r.dry.refused and last < len(msgs):     # nothing of it ran: say why, in the tool's place
                 msgs[last]["content"] = ("Nothing ran. " + r.dry.render(for_person=False)
                                          + "\nCorrect the call and send the plan again, or say that it cannot be done.")
