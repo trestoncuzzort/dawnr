@@ -85,7 +85,9 @@ def test_replies_that_do_not_parse_or_fail_a_test_are_named_and_duplicates_count
     bad = task("r == 2 * n", "r := n;")                              # fails the first test
     r = answer.answer(ENTRY, student("prose only", bad, RIGHT, RIGHT), python(), answers=4, prover=prover(lambda t: ALL))
     assert r["pass the tests"] == 1 and r["shown"]["answer"] == 3
-    assert r["refused"][:2] == ["answer 1: no task block", "answer 2: fails a test"]
+    assert r["refused"][0] == "answer 1: no task block"
+    # the refusal says which of the question's tests failed and what the answer returned there (2026-10-05)
+    assert r["refused"][1].startswith("answer 2: fails a test (`assert double(3) == 6`: it returns ")
 
 
 def test_tests_that_are_not_plain_assertions_are_refused_before_anything_is_asked():
@@ -181,3 +183,12 @@ def test_save_python_writes_the_checked_function_and_nothing_when_there_is_none(
     result["shown"]["python"] = {"source": None, "why": "it uses datatypes"}
     assert answer.main(argv) == 0 and not out.exists()
     assert "Nothing written" in capsys.readouterr().err
+
+
+def test_a_refusal_names_the_rule_the_answer_broke_or_what_the_parser_found():
+    not_wf = task("r == 2 * n").replace("task double(n: int) returns (r: int)\n", "task double(n: int) returns (r: int)\n  decreases n\n")
+    no_parse = "```t\nt 1\ntask double(n: int) returns (r: int)\n  ensures r == 2 * n\n{\n  r := 2 ** n;\n}\n```"
+    r = answer.answer(ENTRY, student(not_wf, no_parse), python(), answers=2, prover=prover(lambda t: dict(ALL)))
+    assert r["shown"] is None
+    assert r["refused"][0].startswith("answer 1: not well formed (task decreases without a self-call")
+    assert r["refused"][1].startswith("answer 2: does not parse (") and len(r["refused"][1]) < 160

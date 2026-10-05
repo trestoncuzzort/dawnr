@@ -85,6 +85,38 @@ def entry_of(text: str, tests: list[str]) -> dict:
     return se.mark_characters({"rec": {"text": text, "test_list": list(tests), "code": ""}, "points": points, "fn": names.pop()})
 
 
+def _detail(reply: str, entry: dict, why: str) -> str:
+    """What exactly the cheap gate found, for the refusal line: the parser's message, the first rule the answer
+    breaks, or the first of the question's tests it fails and what it returned there. "" when there is nothing more
+    to say; never raises (the line is advice, the refusal already stands)."""
+    try:
+        block = se.find_block(reply)
+        if block is None:
+            return ""
+        if why == "does not parse":
+            try:
+                surface.parse(block)
+            except Exception as error:                          # noqa: BLE001 -- the parser's message is the detail
+                return f" ({str(error).split(': ', 1)[-1][:110]})"
+            return ""
+        task = surface.parse(block)
+        if why == "not well formed":
+            import fuzz_lower
+            errs = fuzz_lower.check_wf(task)
+            if errs and task.get("t") == 0 and not fuzz_lower.check_wf(dict(task, t=1)):
+                return ""
+            return f" ({errs[0].split(' [SPEC:')[0][:110]})" if errs else ""
+        if why == "fails a test":
+            for source, point in zip(entry["rec"]["test_list"], entry["points"]):
+                v = se.run_point(task, point)
+                if v["verdict"] != "pass":
+                    got = f"it returns {json.dumps(v['got'])[:60]}" if v.get("got") is not None else v["verdict"]
+                    return f" (`{source.strip()[:90]}`: {got})"
+    except Exception:                                           # noqa: BLE001
+        return ""
+    return ""
+
+
 def candidates(replies: list[str], entry: dict) -> tuple[list[dict], list[str]]:
     """(the distinct answers that parse, are well formed and pass the question's tests, the reason
     each other reply was refused)."""
@@ -95,7 +127,7 @@ def candidates(replies: list[str], entry: dict) -> tuple[list[dict], list[str]]:
             continue
         task, why = proof_repair.cheap(reply, entry, None)
         if task is None:
-            refused.append(f"answer {n + 1}: {why}")
+            refused.append(f"answer {n + 1}: {why}{_detail(reply, entry, why)}")
             continue
         text = surface.print_task(task)
         if text in seen:
