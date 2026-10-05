@@ -44,3 +44,58 @@ def test_ask_sends_the_grammar_that_binds_quotes_to_the_picked_passages():
         seen.update(body); return {"choices": [{"message": {"content": rc.REJECT}}]}
     assert cd.ask("h:1", "door code?", docs, post=post) == rc.REJECT
     assert '"Its door code is 4417."' in seen["grammar"] and seen["temperature"] == 0
+
+
+ZH = "发票编号为2291。应付总额为1250美元，须于2026年3月3日前支付。如有疑问，请联系accounts@harbor.example。货物将运至码头办公室。"
+
+
+def test_sentences_end_where_each_script_ends_them():
+    """A profile of Unicode's rules (UAX #29): the ASCII rule read by category beyond ASCII, and the other scripts'
+    own terminals, which need no space after them."""
+    assert cd.sentences(ZH) == ["发票编号为2291。", "应付总额为1250美元，须于2026年3月3日前支付。", "如有疑问，请联系accounts@harbor.example。", "货物将运至码头办公室。"]
+    assert cd.sentences("請求書番号は2291です。「ご質問は」こちらまで。次の文です！") == ["請求書番号は2291です。", "「ご質問は」こちらまで。", "次の文です！"]
+    assert cd.sentences("चालान संख्या 2291 है। कुल देय राशि 1,250 डॉलर है। प्रश्न?") == ["चालान संख्या 2291 है।", "कुल देय राशि 1,250 डॉलर है।", "प्रश्न?"]
+    assert cd.sentences("رقم الفاتورة 2291. هل لديكم أسئلة؟ راسلونا.") == ["رقم الفاتورة 2291.", "هل لديكم أسئلة؟", "راسلونا."]
+    assert cd.sentences("Facture 2291. Échéance le 3 mars. À régler par virement.") == ["Facture 2291.", "Échéance le 3 mars.", "À régler par virement."]
+    assert cd.sentences("Счёт № 2291. Общая сумма 1250 долларов. Вопросы пишите нам.") == ["Счёт № 2291.", "Общая сумма 1250 долларов.", "Вопросы пишите нам."]
+    assert cd.sentences("«Hola.» ¿Preguntas? Escriba.") == ["«Hola.»", "¿Preguntas?", "Escriba."]
+    # a closing mark stays with its sentence, and a run of terminals is not cut in the middle
+    assert cd.sentences("他说：「好。」然后走了！！真的。") == ["他说：「好。」", "然后走了！！", "真的。"]
+
+
+def test_english_is_split_exactly_as_every_measurement_split_it():
+    """The rule cite and extract were measured with, kept here as it was written, beside the profile that replaced it."""
+    import re
+    measured = re.compile(r"(?:(?<=[.!?])|(?<=[.!?][\"'”’)\]]))\s+(?=[A-Z0-9\"'“‘(\[])|\n\s*\n|\n(?=\s*[-*•]\s)")
+
+    def as_measured(text):
+        return [s for s in (" ".join(part.split()) for part in measured.split(text)) if len(s) >= 3]
+    texts = ['Invoice 2291 from Harbor Supply Co. until paid. The total is $1,250.00, payable by March 3, 2026.\n\n'
+             'Ship to the dock office. "Really?" he asked. It is e.g. fine. See p. 4 (the annex).\n- item one\n- item two',
+             "He said \"Stop.\" Then left! (Really.) [Yes.] 'No.' It was 3 p.m. on Jan. 5. The U.S. agreed... Fine?\n\n\nNew part.\n * a point\n• another",
+             "No capital follows. so it goes on. 10 items; see e.g. the list.\nA new line is not a break. End"]
+    for text in texts:
+        assert cd.sentences(text) == as_measured(text), text
+    assert cd.sentences(texts[0])[:2] == ["Invoice 2291 from Harbor Supply Co. until paid.", "The total is $1,250.00, payable by March 3, 2026."]
+    assert "See p." in cd.sentences(texts[0])                   # a known limit of the rule: an abbreviation before a number
+
+
+def test_no_text_is_dropped_from_a_sentence_too_long_for_the_grammar():
+    long = "The supplier shall deliver " + ", ".join(f"item {i} of the annex" for i in range(60)) + " without delay."
+    parts = cd.sentences(long)
+    assert len(long) > 2 * cd.LONGEST and len(parts) >= 3 and all(len(p) <= cd.LONGEST for p in parts)
+    assert " ".join(parts) == long and all(p.endswith(",") for p in parts[:-1])        # cut after a clause mark, nothing lost
+    unbroken = "x" * 1000
+    assert cd.sentences(unbroken) == ["x" * 400, "x" * 400, "x" * 200]
+    thai = "ใบแจ้งหนี้เลขที่ 2291 " * 40
+    assert "".join(cd.sentences(thai)).replace(" ", "") == thai.replace(" ", "")
+
+
+def test_the_passages_that_match_a_question_are_found_in_any_script(tmp_path):
+    f = tmp_path / "invoice.txt"
+    f.write_text("\n\n".join(["发票编号为2291。货物将运至码头办公室。"] * 3 + ["应付总额为1250美元，须于2026年3月3日前支付。"] + ["如有疑问，请联系我们。"] * 3), encoding="utf-8")
+    ps = cd.passages([f], size=1)
+    assert [p["sentences"] for p in cd.pick(ps, "应付总额是多少？", 1)] == [["应付总额为1250美元，须于2026年3月3日前支付。"]]
+    g = tmp_path / "rechnung.txt"
+    g.write_text("Die Lieferung erfolgt an das Hafenbüro.\n\nDer Gesamtbetrag beträgt 1.250,00 €.\n\nFragen an uns.", encoding="utf-8")
+    assert cd.pick(cd.passages([g], size=1), "Wie hoch ist der Gesamtbetrag?", 1)[0]["sentences"] == ["Der Gesamtbetrag beträgt 1.250,00 €."]

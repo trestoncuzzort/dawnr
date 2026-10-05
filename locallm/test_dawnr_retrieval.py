@@ -272,3 +272,20 @@ class TheIndexAndTheHarnessTool(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_a_persons_documents_are_indexed_in_any_script():
+    from locallm.dawnr_retrieval import bm25
+    english = "The total due is $1,250.00 for square_nums and x86_64."
+    assert bm25.tokenize_any(english) == bm25.tokenize(english)                       # nothing changes for ASCII text
+    assert bm25.tokenize_any("Beyoncé's Über-Größe") == ["beyoncé", "s", "über", "grösse"]
+    assert bm25.tokenize("Beyoncé's Über-Größe") == ["beyonc", "s", "ber", "gr", "e"]  # what the corpus index does, unchanged
+    # a script written without spaces: overlapping pairs, a lone character as itself (Lucene's CJKBigramFilter)
+    assert bm25.tokenize_any("应付总额为1250美元") == ["应付", "付总", "总额", "额为", "1250", "美元"]
+    assert bm25.tokenize_any("年 привет мир") == ["年", "привет", "мир"]
+    assert bm25.unspaced("額") and bm25.unspaced("ก") and not bm25.unspaced("a") and not bm25.unspaced("я") and not bm25.unspaced("")
+    index = bm25.BM25Index(tokenizer=bm25.tokenize_any)
+    for n, text in enumerate(["发票编号为2291。", "应付总额为1250美元。", "如有疑问，请联系我们。"]):
+        index.add(n, text)
+    assert [n for n, _score in index.search("应付总额是多少", 1)] == [1]
+    assert bm25.BM25Index().tokenizer is bm25.tokenize                                  # the default index is the corpus's

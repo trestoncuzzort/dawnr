@@ -324,7 +324,11 @@ def main(argv=None) -> int:
     ap.add_argument("--json", type=Path)
     ap.add_argument("question")
     a = ap.parse_args(argv)
-    r = calc(a.host, a.question, a.ways, a.needed)
+    try:
+        r = calc(a.host, a.question, a.ways, a.needed)
+    except OSError as error:
+        print(f"calc: the model server at {a.host} did not answer ({error}).", file=sys.stderr)
+        return 2
     print(render(r))
     if a.json:
         a.json.write_text(json.dumps(r, indent=1, default=lambda x: show(x) if isinstance(x, Fraction) else str(x)) + "\n",

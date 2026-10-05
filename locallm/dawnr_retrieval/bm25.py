@@ -37,12 +37,39 @@ def tokenize(text: str) -> list[str]:
     return _TOKEN.findall((text or "").lower())
 
 
+# Scripts written without spaces between words: Han, kana, Hangul, Thai, Lao, Khmer, Myanmar.
+UNSPACED = "\u0e00-\u0eff\u1000-\u109f\u1780-\u17ff\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7a3\uf900-\ufaff"
+_RUN_UNSPACED = re.compile(f"[{UNSPACED}]+")
+_ANY_TOKEN = re.compile(f"[{UNSPACED}]+|[^\\W{UNSPACED}]+")
+
+
+def unspaced(ch: str) -> bool:
+    """Whether the character belongs to a script written without spaces between words."""
+    return bool(ch) and _RUN_UNSPACED.fullmatch(ch) is not None
+
+
+def tokenize_any(text: str) -> list[str]:
+    """Words of a document in any script, for a person's own files. A word of a spaced script is a run of letters
+    and digits, case folded; for text in ASCII these are exactly `tokenize`'s tokens. A run in a script written
+    without spaces is indexed as its overlapping pairs of characters, a lone character as itself, which is what
+    Lucene's CJKBigramFilter does (lucene.apache.org, org.apache.lucene.analysis.cjk): finding words there needs a
+    dictionary (Unicode UAX #29), and pairs need none."""
+    out = []
+    for token in _ANY_TOKEN.findall((text or "").casefold()):
+        if unspaced(token[0]):
+            out += [token] if len(token) == 1 else [token[i:i + 2] for i in range(len(token) - 1)]
+        else:
+            out.append(token)
+    return out
+
+
 @dataclass
 class BM25Index:
     """Add every document, then build() once before search(). Adding after build() is allowed but
     invalidates cached statistics until the next build()."""
     k1: float = 1.5
     b: float = 0.75
+    tokenizer: object = tokenize                         # text -> list[str]; `tokenize_any` for a person's documents
     _tokens: dict = field(default_factory=dict)          # doc_id -> list[str]
     _postings: dict = field(default_factory=dict)        # token -> {doc_id: term frequency}
     _doc_len: dict = field(default_factory=dict)         # doc_id -> token count
@@ -55,7 +82,7 @@ class BM25Index:
     def add(self, doc_id, text: str) -> None:
         if doc_id in self._tokens:
             raise ValueError(f"duplicate document id {doc_id!r}")
-        tokens = tokenize(text)
+        tokens = self.tokenizer(text)
         self._tokens[doc_id] = tokens
         self._doc_len[doc_id] = len(tokens)
         for term, count in Counter(tokens).items():
@@ -77,7 +104,7 @@ class BM25Index:
         An empty query or an index with nothing added yet returns []."""
         if not self._built:
             self.build()
-        terms = tokenize(query)
+        terms = self.tokenizer(query)
         if not terms or not self._tokens:
             return []
         scores: dict = {}

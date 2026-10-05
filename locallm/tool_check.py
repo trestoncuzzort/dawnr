@@ -346,7 +346,11 @@ def main(argv=None) -> int:
         print(f"tool_check: {a.tools}: {error}", file=sys.stderr)
         return 2
     messages = [{"role": "user", "content": a.request}]
-    reply = ask_model(a.host, tools, messages)
+    try:
+        reply = ask_model(a.host, tools, messages)
+    except OSError as error:
+        print(f"tool_check: the model server at {a.host} did not answer ({error}).", file=sys.stderr)
+        return 2
     calls = reply.get("tool_calls") or []
     if not calls:
         print((reply.get("content") or "").strip() or "(the model wrote nothing)")

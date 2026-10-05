@@ -4,6 +4,8 @@ import itertools
 import json
 import re
 
+from fractions import Fraction
+
 import pytest
 
 from locallm import extract_docs as ex
@@ -215,3 +217,54 @@ def test_the_command_refuses_a_missing_file_and_a_field_it_cannot_read(tmp_path,
     f.write_text("One sentence.")
     assert ex.main(["--host", "h:1", "--field", "(number): nameless", str(f)]) == 2
     assert "a field is written" in capsys.readouterr().err
+
+
+def test_a_script_without_spaces_is_cut_into_characters_so_any_run_can_be_a_value():
+    s = "应付总额为1250美元，须于2026年3月3日前支付。"
+    assert [p for p, _spaced in ex.pieces(s)][:8] == ["应", "付", "总", "额", "为", "1250", "美", "元"]
+    assert all(not spaced for _p, spaced in ex.pieces(s))
+    g = ex.grammar([s])
+    assert reply_ok(g, "S1: 1250美元") and reply_ok(g, "S1: 2026年3月3日") and not reply_ok(g, "S1: 1250美金")
+    # English pieces are what they were
+    assert [p for p, _ in ex.pieces("The total due is $1,250.00, payable by e-mail.")] == ["The", "total", "due", "is", "$", "1,250.00", ",", "payable", "by", "e-mail", "."]
+
+
+def test_words_in_a_script_without_spaces_need_no_word_edge():
+    s = "应付总额为1250美元，须于2026年3月3日前支付。"
+    assert ex.stated_in("1250美元", s) and ex.stated_in("应付总额", s) and ex.stated_in("2026年3月3日", s)
+    assert not ex.stated_in("250美元", s) and not ex.stated_in("1250美金", s)             # a number is still a whole number
+    assert ex.held("1250美元", (1, "应付总额为1250美元"), [s]) == (1, "1250美元")
+    assert ex.stated_in("東京", "会議は東京で開かれた。") and not ex.stated_in("art", "A party of five.")
+
+
+@pytest.mark.parametrize("text, english, continental", [
+    ("1,250.00", Fraction(1250), None), ("1.250,00", None, Fraction(1250)), ("12,5", None, Fraction("12.5")),
+    ("1.250", Fraction("1.25"), Fraction(1250)), ("1,250", Fraction(1250), Fraction("1.25")), ("2026", Fraction(2026), Fraction(2026)),
+    ("1,2,3", None, None), ("12.03.2026", None, None), ("-3.5", Fraction("-3.5"), None),
+])
+def test_a_number_is_read_the_ways_it_can_be(text, english, continental):
+    assert ex.read_number(text) == (english, continental)
+
+
+def test_the_document_decides_how_an_ambiguous_number_is_read():
+    german = ["Der Gesamtbetrag beträgt 1.250,00 €.", "Das Gewicht ist 1.250 kg."]
+    english = ["The total due is $1,250.00.", "It weighs 1.250 kg."]
+    assert ex.convention(german) == "continental" and ex.convention(english) == "english"
+    assert ex.convention(german + english) == "mixed" and ex.convention(["It weighs 1.250 kg.", "Lot 7."]) == "english"
+    assert ex.typed("number", "1.250", "continental") == (1250, None) and ex.typed("number", "1.250", "english") == (1.25, None)
+    assert ex.typed("number", "1.250,00", "english") == (1250.0, None)                      # only one way to read it, whatever the document
+    assert ex.typed("number", "12,5", "english") == (12.5, None) and ex.typed("number", "1,250.00", "continental") == (1250.0, None)
+    value, why = ex.typed("number", "1.250", "mixed")
+    assert value is None and why == "the number can be read as 1.25 or as 1250, and the document writes numbers both ways"
+    assert ex.typed("number", "1,2,3") == (None, "the number is not written in a way that can be read")
+    # a number field is offered the continental pieces too, and a list is not a number
+    assert ex.typed_spans("number", german[0]) == ["1.250,00"] and ex.typed_spans("number", "Items 1,2,3 and 40.") == ["40"]
+
+
+def test_a_continental_invoice_gives_the_amount_a_person_would_read(tmp_path):
+    f = tmp_path / "rechnung.txt"
+    f.write_text("Rechnung 2291 von Harbor Supply.\n\nDer Gesamtbetrag beträgt 1.250,00 €.\n\nDas Gewicht ist 1.250 kg.", encoding="utf-8")
+    fields = [ex.read_field("betrag(number): der Gesamtbetrag"), ex.read_field("gewicht(number): das Gewicht")]
+    rows = {r["name"]: r for r in ex.extract("h:1", fields, ex.located([f]), served({"betrag": "S2: 1.250,00", "gewicht": "S3: 1.250"}))}
+    assert rows["betrag"]["value"] == 1250.0 and rows["gewicht"]["value"] == 1250
+
