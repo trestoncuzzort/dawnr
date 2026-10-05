@@ -85,3 +85,21 @@ on seven of the assistant's tasks: twelve threads for everything 16.1; six to wr
 37, with 4 of the 7 tasks right. ik_llama.cpp on the same file wrote 7% faster and read prompts twice as fast
 (467 against 234 tokens a second on 12 threads); it has no built release to install, so it is not used.
 
+## A5 to A8, registered 2026-10-05 15:35Z before the test half is run a second time
+
+Since the first run the assistant changed in four ways: the base model drafts with its own prediction layer;
+`pc` and document reading were added (two more things the model is offered and told about); a doubled folder name
+in a path is forgiven; and a folder listing reaches the model as whole paths. The last came from the dev half on
+a second machine and took the dev half here from 19 to 20 of 20. None of them was made by looking at a test
+task, but the test half's first results are known, so this is a second reading of it, not a fresh one. Task 7's
+check now accepts "no mention", as said above.
+
+- **A5.** At least 18 of the 20 test tasks are done.
+- **A6.** No task touches a file it had no reason to touch.
+- **A7.** At most 1 task ends not done with an answer that does not say so.
+- **A8.** At least 26 tokens a second are written, on the same CPU.
+
+A5 fails: a change since the first run lost tasks; it is found by running the dev half with each change taken
+out, and that change goes. A6 fails: as A2. A8 fails: the layer's gain did not carry to these tasks; said with
+the number.
+
