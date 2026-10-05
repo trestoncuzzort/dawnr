@@ -20,7 +20,10 @@ BIN_DIR=${BIN_DIR:-$HOME/.local/bin}
 LLAMA_TAG=b11342
 DAFNY_VERSION=4.11.0
 BASE_URL=https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf
-DRAFT_URL=https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf
+# the base model's own prediction layer (locallm/gguf_layer.py): the last 81 MB of the same publisher's other
+# conversion, pinned by revision, fetched as one byte range
+LAYER_URL=https://huggingface.co/unsloth/Qwen3.5-4B-MTP-GGUF/resolve/86835bf9949e4d14d6860f7910b1340ad4f271a9/Qwen3.5-4B-Q4_K_M.gguf
+LAYER_RANGE=2753780032-2834975039
 STUDENT_RELEASE=${DAWNR_STUDENT_RELEASE:-https://github.com/trestoncuzzort/dawnr/releases/download/student-v5}
 BUILD=auto
 STUDENT=""
@@ -68,7 +71,8 @@ sum_of() {
     dafny-4.11.0-arm64-macos-13.zip) echo c90c75e7d5db9c6ccbb7127840dfe43f0ac938b039a7ebed146d8ead383a572f;;
     dafny-4.11.0-x64-macos-13.zip) echo 5fc0de946c5b2fad33f16bd22a5b06f4fd0dfa7f6d770284237e3f1f3ca9f73d;;
     Qwen3.5-4B-Q4_K_M.gguf) echo 00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4;;
-    Qwen3.5-0.8B-Q4_K_M.gguf) echo bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517;;
+    qwen35-4b-mtp-tail.bin) echo e2fe19553cd1620dad236f794b11cbeb251b2c41dd2e2bfd34ec394cc2f03bb7;;
+    Qwen3.5-4B-Q4_K_M-mtp.gguf) echo b175c3f45f708f2625189db70426949e02f815e9d1a6877f641144f6df76e612;;
   esac
 }
 
@@ -151,11 +155,30 @@ fi
 echo "  llama-server ready"
 
 say "The models"
-fetch "$BASE_URL" "$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf" "$(sum_of Qwen3.5-4B-Q4_K_M.gguf)" || fail "could not download the base model"
-# the 0.8B of the same family (Apache-2.0), which drafts for the base model on a CPU: a third more tokens a second.
-# dawnr works without it, so a failed download is said and passed over
-fetch "$DRAFT_URL" "$DAWNR_HOME/models/Qwen3.5-0.8B-Q4_K_M.gguf" "$(sum_of Qwen3.5-0.8B-Q4_K_M.gguf)" \
-  || echo "  the small drafting model did not download; dawnr runs without it, a little slower"
+# The base model, then its own prediction layer added to the file (locallm/gguf_layer.py): 15 tensors the 4-bit
+# conversion left out, appended with every other tensor byte for byte as published. llama.cpp drafts with the layer
+# and the model checks the draft, so what is written is the model's own, 1.75 times as fast on a CPU (16.8 to 29.4
+# tokens a second on the assistant's tasks, the same tasks done; 2026-10-05). dawnr works without it: a failure here
+# is said and passed over, and the base file is kept as it came.
+BASE=$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf; MERGED=$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M-mtp.gguf
+TAIL=$DAWNR_HOME/downloads/qwen35-4b-mtp-tail.bin
+if [ -s "$MERGED" ] && [ "$(sha256 "$MERGED")" = "$(sum_of Qwen3.5-4B-Q4_K_M-mtp.gguf)" ]; then
+  echo "  have $(basename "$MERGED")"
+else
+  fetch "$BASE_URL" "$BASE" "$(sum_of Qwen3.5-4B-Q4_K_M.gguf)" || fail "could not download the base model"
+  echo "  adding the base model's prediction layer (81 MB)"
+  if curl -L --fail --retry 3 -sS -r "$LAYER_RANGE" -o "$TAIL.part" "$LAYER_URL" \
+     && [ "$(sha256 "$TAIL.part")" = "$(sum_of qwen35-4b-mtp-tail.bin)" ] && mv "$TAIL.part" "$TAIL" \
+     && "$PY" "$REPO/locallm/gguf_layer.py" add "$BASE" "$TAIL" "$MERGED.part" > /dev/null \
+     && [ "$(sha256 "$MERGED.part")" = "$(sum_of Qwen3.5-4B-Q4_K_M-mtp.gguf)" ]; then
+    mv "$MERGED.part" "$MERGED"; rm -f "$BASE" "$TAIL"
+    echo "  $(basename "$MERGED") ready"
+  else
+    rm -f "$TAIL.part" "$TAIL" "$MERGED.part"
+    echo "  the prediction layer could not be added; dawnr runs without it, slower"
+  fi
+fi
+rm -f "$DAWNR_HOME/models/Qwen3.5-0.8B-Q4_K_M.gguf"      # the separate drafting model of an earlier installer, replaced by the layer
 if [ -n "$STUDENT" ] && [ -f "$STUDENT" ]; then
   # used where it is: a split model is found from its first shard's own name (llama.cpp's gguf-split)
   STUDENT_GGUF="$(cd "$(dirname "$STUDENT")" && pwd)/$(basename "$STUDENT")"
@@ -207,6 +230,8 @@ fi
 
 say "The dawnr command"
 mkdir -p "$BIN_DIR" "$DAWNR_HOME"
+# settings the person added to the env file (DAWNR_GPU_LAYERS=0, DAWNR_THREADS=...) outlive a re-install
+KEPT=$(grep -E '^DAWNR_[A-Z_]+=' "$DAWNR_HOME/env" 2>/dev/null | grep -v -E '^DAWNR_(REPO|HOME|PYTHON|BUILD)=' || true)
 cat > "$DAWNR_HOME/env" <<ENV
 DAWNR_REPO=$REPO
 DAWNR_HOME=$DAWNR_HOME
@@ -214,9 +239,10 @@ DAWNR_PYTHON=$PY
 LLAMA_SERVER=$DAWNR_HOME/llama.cpp/llama-server
 DAWNR_BUILD=$BUILD
 STUDENT_GGUF=$STUDENT_GGUF
-BASE_GGUF=$DAWNR_HOME/models/Qwen3.5-4B-Q4_K_M.gguf
+BASE_GGUF=$([ -s "$MERGED" ] && echo "$MERGED" || echo "$BASE")
 ENV
-[ -s "$DAWNR_HOME/models/Qwen3.5-0.8B-Q4_K_M.gguf" ] && echo "DRAFT_GGUF=$DAWNR_HOME/models/Qwen3.5-0.8B-Q4_K_M.gguf" >> "$DAWNR_HOME/env"
+[ -s "$MERGED" ] && echo "BASE_DRAFT=mtp" >> "$DAWNR_HOME/env"
+[ -n "$KEPT" ] && printf '%s\n' "$KEPT" >> "$DAWNR_HOME/env"
 [ -x "$DAWNR_HOME/provers/dafny/dafny" ] && echo "T_DAFNY=$DAWNR_HOME/provers/dafny/dafny" >> "$DAWNR_HOME/env"
 [ -n "${INVARIANT:-}" ] && echo "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1" >> "$DAWNR_HOME/env"
 ln -sf "$REPO/bin/dawnr" "$BIN_DIR/dawnr"
