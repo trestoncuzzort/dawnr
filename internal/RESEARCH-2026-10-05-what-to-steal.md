@@ -106,7 +106,11 @@ self-critique lowered accuracy where a sound external checker raised it (arXiv:2
 are cheaper still: dropping loop-invariant clauses that fail (Houdini), and bounded mutation of a specification's
 operators, added 61 of 279 verified programs in SpecGen. The diagnostic of 2026-10-05 agrees from our side:
 holding the output to the grammar fixed parsing and solved nothing more. *What changes:* the repair stage owed in
-the plan is built from prover output only, localised, with the deterministic repairs first.
+the plan is built from prover output only, localised, with the deterministic repairs first. *Measured the same
+day* (`t/PREDICT-2026-10-05-invariant-repair.md`): dropping and reordering invariants by rule repaired 12 of 755
+unproved loop answers, and the proofs it recovered were mostly of specifications that do not stand; it is not in
+the gate. In 484 of the 494 answers where Dafny pointed at an invariant, the proof failed somewhere else once it
+was dropped. The deterministic repair is not where the proofs are; the localised resampling is what is left to try.
 
 **10. "Seven provers" is fewer than seven independent judgements.** Several rest on the same SMT solver, and
 soundness bugs have been found in verifiers and compilers (arXiv:2512.05262); the same problems are proved about

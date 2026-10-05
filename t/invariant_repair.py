@@ -29,6 +29,14 @@ cannot make a wrong program verify, because what remains must still hold on entr
 postcondition. What comes back is a new candidate program, the one with the surviving invariants in their new
 order; it is that text which then goes through the whole gate (all the provers, the sabotaged twin) and is shown
 and certified, never the original with a borrowed verdict. Research receipt e85d39d1a968.
+
+Measured 2026-10-05 (t/PREDICT-2026-10-05-invariant-repair.md) and, by the rule set before the run, used by
+nothing: not the product's gate, not the scoreboard. Of 755 graded answers that pass their tests, have a loop and
+no prover verified, 12 were repaired (2 by the reordering alone), and no prover refuted a repaired one; but the
+specifications so proved stood up to the specification check far less often than those of proofs as written (2 of
+the 27B's 8 against 186 of 281). Where Dafny pointed at an invariant, dropping it left a proof that failed
+elsewhere 484 times in 494: the invariant that is needed is missing or wrong, and that is a writer's work
+(t/proof_repair.py), not a pruner's. This file is the instrument of that measurement.
 """
 from __future__ import annotations
 
