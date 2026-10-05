@@ -97,8 +97,8 @@ difference; they are not counted in V2.
 **V3: holds.** Each of the 16 was forged three ways with every digest taken again: 16 with the gate's own
 sabotaged twin as the body, 16 with every `ensures` replaced by `r == r`, 13 with the recorded Python made to
 answer one off (three carry no Python). All 45 read `FAILED`; none read `REPRODUCED` or `UNDECIDED HERE`. The
-twin forgeries stopped at a recorded test (15) or at an input where the program breaks its own specification
-(1), before any prover ran; the empty specifications at the measurement that the specification says too little;
+twin forgeries stopped at a recorded test (14) or at an input where the program breaks its own specification
+(2), before any prover ran; the empty specifications at the measurement that the specification says too little;
 the Python forgeries at the comparison with the proved program.
 
 ## The command with both routes, registered 2026-10-05 12:02Z before it is run on the panel (V4 to V6)
