@@ -108,7 +108,9 @@ def pieces(messages: list, tools: list, render) -> list:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--rows", type=Path, required=True, help="what dawnr_teach.py kept")
+    ap.add_argument("--rows", type=Path, required=True, action="append",
+                    help="what dawnr_teach.py kept; given more than once (several teachers), a task that more than one did is "
+                         "taken from the one that needed fewer model calls, then fewer tokens")
     ap.add_argument("--model", required=True, help="the student's hub id or folder: its tokenizer holds the chat template")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--per-family", type=int, default=0, help="at most this many rows of one family (0: all)")
@@ -117,9 +119,17 @@ def main(argv=None) -> int:
     tokenizer = AutoTokenizer.from_pretrained(a.model)
     kept = split = cleaned = 0
     seen: dict = {}
-    with open(a.out, "w") as out:
-        for line in a.rows.read_text().splitlines():
+    best: dict = {}
+    for path in a.rows:                                         # the shorter way through a task is the one to learn
+        for line in path.read_text().splitlines():
             row = json.loads(line)
+            have = best.get(row["id"])
+            if have is None or (row.get("calls", 0), row.get("written", 0)) < (have.get("calls", 0), have.get("written", 0)):
+                best[row["id"]] = row
+    order = lambda row: (row["family"], int(row["id"].rsplit(":", 1)[-1]) if row["id"].rsplit(":", 1)[-1].isdigit() else 0)
+    by: dict = {}
+    with open(a.out, "w") as out:
+        for row in sorted(best.values(), key=order):
             if a.per_family and seen.get(row["family"], 0) >= a.per_family:
                 continue
             messages = clean(row["messages"])
@@ -128,10 +138,13 @@ def main(argv=None) -> int:
             units = pieces(messages, row["tools"], render)
             split += len(units) > 1
             for n, unit in enumerate(units):
-                out.write(json.dumps({"id": row["id"] + (f"#{n}" if len(units) > 1 else ""), "family": row["family"], "pieces": unit}) + "\n")
+                out.write(json.dumps({"id": row["id"] + (f"#{n}" if len(units) > 1 else ""), "family": row["family"],
+                                      "teacher": row.get("teacher", ""), "pieces": unit}) + "\n")
             kept += bool(units)
             seen[row["family"]] = seen.get(row["family"], 0) + bool(units)
-    print(f"{kept} conversations written ({cleaned} had turns that were sent back taken out; {split} cut into a row a turn), {len(seen)} families")
+            by[row.get("teacher", "")] = by.get(row.get("teacher", ""), 0) + bool(units)
+    print(f"{kept} conversations written ({cleaned} had turns that were sent back taken out; {split} cut into a row a turn), {len(seen)} families"
+          + ("; by teacher: " + ", ".join(f"{k or 'unnamed'} {v}" for k, v in sorted(by.items())) if len(by) > 1 else ""))
     return 0
 
 
