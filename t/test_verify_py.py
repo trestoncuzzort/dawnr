@@ -87,7 +87,7 @@ def test_with_no_example_given_the_examples_are_the_functions_own_answers():
 
 @needs_sandbox
 def test_a_parameter_with_no_annotation_and_no_example_is_refused_with_both_ways_out():
-    with pytest.raises(verify_py.Refused, match="`n` has no annotation this reads; annotate each parameter .* or give an example with --test"):
+    with pytest.raises(verify_py.Refused, match="`n` has no annotation; annotate each parameter .* or give an example with --test"):
         verify_py.entry_for(function("def double(n):\n    return 2 * n\n"), [])
     entry, drawn = verify_py.entry_for(function("def double(n):\n    return 2 * n\n"), ["assert double(3) == 6"])
     assert not drawn and entry["rec"]["text"].startswith("Write `double`, the function the Python solution below computes")
@@ -237,3 +237,51 @@ def test_verify_falls_back_to_writing_the_specification_first_and_says_which_rou
     assert [x.split(":")[0] for x in nothing["refused"]] == ["answer 1", "specification 1"]
     # whole=0 is the specification route alone, as V1 was measured
     assert "answers asked" not in verify_py.verify(entry, function(), student(SPEC, BODY), specs=1, answers=1, whole=0, prover=proving)
+
+
+def test_an_annotation_is_read_by_its_structure_in_any_spelling():
+    src = ("from typing import *\nT = TypeVar('T')\n"
+           "def f(a: tuple, b: Tuple[int, ...], c: List[Tuple[int, int]], d: list, e: typing.List[int], g: dict, h: List[List[T]],\n"
+           "      i: 'list[str]', j: Optional[int], k: Sequence[Tuple[str, int]], m: tuple[int], n: float, o: list[Any], q: int | None,\n"
+           "      r: list[tuple[int, ...]], u: set[int], v: T, w: Thing):\n    return 0\n")
+    f = function(src)
+    assert f["kinds"] == ["tuple[int, ...]", "tuple[int, ...]", "list[tuple[int, int]]", "list[int]", "list[int]", None, "list[list[int]]",
+                          "list[str]", "int", "list[tuple[str, int]]", "tuple[int, ...]", None, "list[int]", "int",
+                          "list[tuple[int, ...]]", None, "int", None]
+    assert verify_py.unread(f) == "`g: dict` is not an annotation this reads"
+    assert verify_py.unread(function("def f(a, b: int):\n    return 0\n")) == "`a` has no annotation"
+    assert verify_py.unread(function("def f(a: int):\n    return 0\n")) is None
+
+
+def test_small_values_are_built_for_any_kind_and_tuples_are_put_back_after_the_crossing():
+    for kind in ("int", "bool", "str", "list[int]", "list[str]", "list[list[int]]"):          # the six measured before 2026-10-05, as they were
+        assert verify_py._pool(kind) is verify_py._DRAWS[kind]
+    assert verify_py._pool("tuple[int, ...]")[:3] == [(1, 2, 3), (), (1,)]
+    assert verify_py._pool("list[tuple[int, int]]")[:3] == [[(1, 2), (3, 4)], [], [(1, 2)]]
+    assert verify_py._pool("list[tuple[int, ...]]") == verify_py._pool("list[tuple[int, int]]")      # inside a list, pairs
+    assert verify_py._pool("tuple[tuple[int, ...], ...]")[0] == ((1, 2), (3, 4))
+    assert verify_py._pool("tuple[str, int]")[:2] == [("ab", 0), ("", 1)]
+    assert verify_py._pool("list[bool]")[0] == [True, False] and verify_py._pool("list[list[str]]")[0] == [["b", "a"], []]
+    for kind in ("list[tuple[str, int]]", "tuple[list[int], int]", "list[list[list[int]]]", "tuple[bool, ...]"):
+        pool = verify_py._pool(kind)
+        assert 3 <= len(pool) <= 8 and len({repr(v) for v in pool}) == len(pool)
+    assert verify_py._wrapper("f", ["int", "tuple[int, ...]", "list[tuple[int, int]]", "tuple[tuple[int, ...], ...]", "list[list[int]]"]).strip() == (
+        "def _t_repr_call(args):\n    return repr(f(args[0], tuple(args[1]), [((_x0[0], _x0[1],) if len(_x0) == 2 else tuple(_x0)) for _x0 in args[2]], "
+        "tuple(tuple(_x0) for _x0 in args[3]), args[4]))")
+    # a value written with lists is shown as the kind writes it, and a tuple of another length than annotated stays whole
+    assert verify_py.fit([[1, 2], [3, 4, 5]], "list[tuple[int, int]]") == [(1, 2), (3, 4, 5)]
+    assert verify_py.fit(([1, 2], 3), "tuple[tuple[int, ...], int]") == ((1, 2), 3) and verify_py.fit(5, "list[int]") == 5
+    assert verify_py.fit(((1, 2), (3,)), "list[list[int]]") == [[1, 2], [3]]
+    assert verify_py.drawn_inputs(["tuple[int, ...]", "int"], 2)[0] == ((1, 2, 3), 2)
+
+
+@needs_sandbox
+def test_examples_taken_from_a_function_of_tuples_are_written_with_tuples():
+    f = function("def swap_all(ps: list[tuple[int, int]]):\n    assert all(isinstance(p, tuple) for p in ps)\n    return [(b, a) for a, b in ps]\n")
+    tests = verify_py.drawn_tests(f)
+    assert tests[0] == "assert swap_all([(1, 2), (3, 4)]) == [(2, 1), (4, 3)]" and "assert swap_all([]) == []" in tests
+    nested = function("def flat(rows: tuple[tuple[int, ...], ...], sep: tuple[str, int]):\n"
+                      "    assert isinstance(rows, tuple) and all(isinstance(r, tuple) for r in rows) and isinstance(sep, tuple)\n"
+                      "    return [x for r in rows for x in r] + [sep[1]]\n")
+    assert verify_py.drawn_tests(nested)[0] == "assert flat(((1, 2), (3, 4)), ('ab', 0)) == [1, 2, 3, 4, 0]"
+

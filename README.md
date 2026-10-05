@@ -194,8 +194,8 @@ dawnr runs your function in the sandbox to see what it does, asks the model
 for a specification that holds at your function's own answers and then for a
 `t` program that meets it, and shows the pair only when that program answers
 as yours does on every input tried and the provers prove it. Annotate the
-parameters (`int`, `bool`, `str`, `list[int]`, `list[str]`,
-`list[list[int]]`) or give examples with `--test`. What you get is a proved
+parameters (`int`, `bool`, `str`, and lists and tuples of them such as
+`list[int]` or `list[tuple[str, int]]`) or give examples with `--test`. What you get is a proved
 twin and the specification to read; that the twin and your Python are the
 same function is tested, not proved, and the output says so. On a desktop
 CPU a ten-line function took one and a half to four and a half minutes.

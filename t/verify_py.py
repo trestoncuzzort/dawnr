@@ -37,8 +37,9 @@ is tested on drawn inputs, not proved (VERT's property-testing level; there is n
 The examples, when none is given with --test, are taken from the function itself on small inputs of its annotated
 types, so they record what it does; a bug in it is recorded too, and shows in the specification.
 
-Read: one plain top-level function with positional parameters. Without --test, each parameter needs one of the
-annotations int, bool, str, list[int], list[str], list[list[int]].
+Read: one plain top-level function with positional parameters. Without --test, each parameter needs an annotation
+built from int, bool and str with list[...] and tuple[...]: list[int], tuple[int, ...], list[tuple[str, int]] and
+the like, in any of the spellings in use (List[int], typing.Tuple[int, int], Sequence[int], a type variable).
 """
 from __future__ import annotations
 
@@ -76,25 +77,130 @@ _DRAWS = {
     "list[int]": [[1, 2, 3], [], [1], [3, 1, 2], [2, 2], [-1, 5, 0, 4], [10, -3, 7, 7, 0]],
     "list[str]": [["b", "a"], [], ["a"], ["hello", "world", "hi"]],
     "list[list[int]]": [[[1, 2], [3, 4]], [], [[1]], [[3], [], [1, 2]]],
+    "tuple[int, int]": [(1, 2), (3, 4), (0, 0), (2, 5), (7, 7), (-1, 3)],
 }
-_REPR = "\n\ndef _t_repr_call(args):\n    return repr({fn}(*args))\n"
+# Every other kind is built from these, as Hypothesis builds a strategy from an annotation (its
+# strategies/_internal/types.py: a list of the element's values, a variadic tuple as such a list made a tuple, a
+# fixed tuple as one value of each part, a type variable as one concrete type used throughout; receipt
+# ca5ca66b9df4). What differs: the annotation is read as text, because the code it stands in only ever runs in the
+# sandbox, and the values are few and plain, because a person reads them as examples.
+_LISTS = {"list", "List", "Sequence", "Iterable", "Collection", "MutableSequence"}
+_TUPLES = {"tuple", "Tuple"}
+_ANY = {"Any", "object", "T", "S", "U", "K", "V"}              # a value of any type: numbers are drawn for it
+
+
+def _kind(annotation, variables: frozenset = frozenset()) -> str | None:
+    """An annotation as a kind, written one way: int, bool, str, list[KIND], tuple[KIND, ...], tuple[KIND, KIND];
+    None when it is anything else (a float, a dict, a set, a class). `variables` are the file's type variables."""
+    node = annotation
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):          # a quoted annotation
+        try:
+            node = ast.parse(node.value, mode="eval").body
+        except SyntaxError:
+            return None
+    name = node.attr if isinstance(node, ast.Attribute) else node.id if isinstance(node, ast.Name) else None
+    if name is not None:
+        return (name if name in ("int", "bool", "str") else "int" if name in _ANY or name in variables
+                else "list[int]" if name in _LISTS else "tuple[int, ...]" if name in _TUPLES else None)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):          # X | None
+        sides = [x for x in (node.left, node.right) if not (isinstance(x, ast.Constant) and x.value is None)]
+        return _kind(sides[0], variables) if len(sides) == 1 else None
+    if not isinstance(node, ast.Subscript):
+        return None
+    base = node.value.attr if isinstance(node.value, ast.Attribute) else getattr(node.value, "id", None)
+    items = list(node.slice.elts) if isinstance(node.slice, ast.Tuple) else [node.slice]
+    variadic = len(items) == 2 and isinstance(items[1], ast.Constant) and items[1].value is Ellipsis
+    inner = [_kind(i, variables) for i in (items[:1] if variadic else items)]
+    if not inner or any(k is None for k in inner):
+        return None
+    if base == "Optional" and len(inner) == 1:
+        return inner[0]
+    if base in _LISTS and len(inner) == 1:
+        return f"list[{inner[0]}]"
+    if base in _TUPLES:                                         # `tuple[int]` is written for a tuple of numbers
+        return f"tuple[{inner[0]}, ...]" if variadic or len(inner) == 1 else f"tuple[{', '.join(inner)}]"
+    return None
+
+
+def _parts(kind: str) -> tuple[str, list[str], bool]:
+    """(the head, the kinds inside, whether it is a tuple of any length) of a kind as _kind writes it."""
+    node = ast.parse(kind, mode="eval").body
+    if isinstance(node, ast.Name):
+        return node.id, [], False
+    items = list(node.slice.elts) if isinstance(node.slice, ast.Tuple) else [node.slice]
+    variadic = len(items) == 2 and isinstance(items[1], ast.Constant) and items[1].value is Ellipsis
+    return node.value.id, [ast.unparse(i) for i in (items[:1] if variadic else items)], variadic
+
+
+def _pool(kind: str, inside: bool = False) -> list:
+    """Small values of a kind, a plain one first. Inside a list or a tuple, a tuple of any length is drawn as a
+    pair: a list of tuples is a list of pairs before it is anything else."""
+    head, inner, variadic = _parts(kind)
+    if head == "tuple" and variadic and inside:
+        return _pool(f"tuple[{inner[0]}, {inner[0]}]", True)
+    if kind in _DRAWS:
+        return _DRAWS[kind]
+    if head == "tuple" and not variadic:
+        pools = [_pool(k, True) for k in inner]
+        made = [tuple(pool[(i + j) % len(pool)] for j, pool in enumerate(pools)) for i in range(6)]
+    else:
+        e = _pool(inner[0], True)
+        at = lambda *idx: [e[i % len(e)] for i in idx]          # noqa: E731
+        made = [at(0, 1), [], at(0), at(2, 0, 1), at(1, 1), at(3, 4, 0, 2)]
+        if head == "tuple":
+            made = [tuple(v) for v in _pool(f"list[{inner[0]}]")] if f"list[{inner[0]}]" in _DRAWS else [tuple(v) for v in made]
+    out = []
+    for v in made:
+        if not any(repr(v) == repr(w) for w in out):
+            out.append(v)
+    return out
+
+
+def _rebuilt(kind: str, a: str, depth: int = 0) -> str:
+    """The expression that makes `a`, a value as the sandbox was handed it, the kind again: values cross into the
+    sandbox as JSON, where every tuple is a list."""
+    head, inner, variadic = _parts(kind)
+    x = f"_x{depth}"
+    if head == "list":
+        e = _rebuilt(inner[0], x, depth + 1)
+        return a if e == x else f"[{e} for {x} in {a}]"
+    if head == "tuple" and variadic:
+        e = _rebuilt(inner[0], x, depth + 1)
+        return f"tuple({a})" if e == x else f"tuple({e} for {x} in {a})"
+    if head == "tuple":                                         # of another length than annotated, it is still made a tuple
+        parts = ", ".join(_rebuilt(k, f"{a}[{j}]", depth + 1) for j, k in enumerate(inner))
+        return f"(({parts},) if len({a}) == {len(inner)} else tuple({a}))"
+    return a
+
+
+def fit(value, kind: str):
+    """A value someone wrote with lists or with tuples, written as the kind writes it: what _rebuilt does inside
+    the sandbox, done to the value that is shown."""
+    head, inner, variadic = _parts(kind)
+    if head not in ("list", "tuple") or not isinstance(value, (list, tuple)):
+        return value
+    if head == "list" or variadic:
+        return (list if head == "list" else tuple)(fit(v, inner[0]) for v in value)
+    return tuple(fit(v, k) for v, k in zip(value, inner)) if len(value) == len(inner) else tuple(value)
+
+
+def _wrapper(fn: str, kinds: list) -> str:
+    """The function called with one list of arguments, its result as text: appended to the code the sandbox loads."""
+    args = ", ".join(_rebuilt(k, f"args[{i}]") for i, k in enumerate(kinds))
+    return f"\n\ndef _t_repr_call(args):\n    return repr({fn}({args}))\n"
+
+
+READ = "int, bool, str, list[...] and tuple[...] of them"       # what a refusal tells the person to annotate with
 
 
 class Refused(Exception):
     """The file cannot be taken as it is; the message says what to change."""
 
 
-def _kind(annotation) -> str | None:
-    """An annotation as one of _DRAWS' keys, or None."""
-    if annotation is None:
-        return None
-    text = ast.unparse(annotation).replace(" ", "").replace("typing.", "").replace("List[", "list[")
-    return text if text in _DRAWS else None
-
-
-def read_function(source: str, fn: str | None = None) -> dict:
+def read_function(source: str, fn: str | None = None, entry: bool = False) -> dict:
     """{"fn", "kinds": [kind | None per parameter], "doc", "shown": the function and the file's functions it calls,
-    "code": the file}. Refused with what to change when the file holds no function this reads."""
+    "code": the file}. Refused with what to change when the file holds no function this reads. With `entry`, a
+    file of several functions is read as the one of them that none of the others calls, when there is one such."""
     try:
         tree = ast.parse(source)
     except SyntaxError as error:
@@ -102,6 +208,9 @@ def read_function(source: str, fn: str | None = None) -> dict:
     defs = {n.name: n for n in tree.body if isinstance(n, ast.FunctionDef)}
     if fn is None:
         public = [n for n in defs if not n.startswith("_")]
+        if entry and len(public) > 1:
+            called = {n.id for name, d in defs.items() for n in ast.walk(d) if isinstance(n, ast.Name) and n.id != name}
+            public = [n for n in public if n not in called] if len([n for n in public if n not in called]) == 1 else public
         if len(public) != 1:
             raise Refused("the file has no top-level function" if not defs else
                           f"the file has more than one function; say which with --fn ({', '.join(sorted(defs))})")
@@ -123,14 +232,28 @@ def read_function(source: str, fn: str | None = None) -> dict:
                 used.add(n.id)
                 order.append(n.id)
     shown = "\n\n".join(ast.get_source_segment(source, defs[name]) or "" for name in order)
-    return {"fn": fn, "kinds": [_kind(p.annotation) for p in a.args], "params": [p.arg for p in a.args],
+    # the file's type variables: `T = TypeVar("T")`, and the function's own (`def f[T](...)`, Python 3.12)
+    variables = frozenset([t.id for n in tree.body if isinstance(n, ast.Assign) and isinstance(n.value, ast.Call)
+                           and getattr(n.value.func, "attr", getattr(n.value.func, "id", None)) == "TypeVar"
+                           for t in n.targets if isinstance(t, ast.Name)]
+                          + [t.name for t in getattr(node, "type_params", [])])
+    return {"fn": fn, "kinds": [None if p.annotation is None else _kind(p.annotation, variables) for p in a.args],
+            "params": [p.arg for p in a.args], "written": [None if p.annotation is None else ast.unparse(p.annotation) for p in a.args],
             "doc": ast.get_docstring(node) or "", "shown": shown, "code": source}
+
+
+def unread(function: dict) -> str | None:
+    """What to say of the first parameter whose annotation is missing or not read, or None when all are read."""
+    for name, kind, written in zip(function["params"], function["kinds"], function["written"]):
+        if kind is None:
+            return f"`{name}` has no annotation" if written is None else f"`{name}: {written}` is not an annotation this reads"
+    return None
 
 
 def drawn_inputs(kinds: list[str], want: int = EXAMPLES, seed: int = 0) -> list[tuple]:
     """Small inputs for parameters of these kinds, each once: first the pools walked in step (the plainest values
     come first), then 4 * `want` drawn at random."""
-    pools = [_DRAWS[k] for k in kinds]
+    pools = [_pool(k) for k in kinds]
     rng = random.Random(seed)
     tried = [tuple(pool[i % len(pool)] for pool in pools) for i in range(max(len(pool) for pool in pools))]
     tried += [tuple(rng.choice(pool) for pool in pools) for _ in range(4 * want)]
@@ -145,12 +268,11 @@ def drawn_inputs(kinds: list[str], want: int = EXAMPLES, seed: int = 0) -> list[
 def drawn_tests(function: dict, want: int = EXAMPLES, seed: int = 0) -> list[str]:
     """`assert f(arguments) == value` lines taken from the function itself in the sandbox, on small inputs of its
     annotated types; an input it raises on is passed over. Refused when a parameter has no annotation this reads."""
-    missing = [p for p, k in zip(function["params"], function["kinds"]) if k is None]
-    if missing:
-        raise Refused(f"no --test was given and `{missing[0]}` has no annotation this reads; annotate each parameter "
-                      f"({', '.join(_DRAWS)}) or give an example with --test \"assert {function['fn']}(...) == ...\"")
+    if unread(function):
+        raise Refused(f"no --test was given and {unread(function)}; annotate each parameter ({READ}) or give an "
+                      f"example with --test \"assert {function['fn']}(...) == ...\"")
     out = []
-    with py_sandbox.Session(function["code"] + _REPR.format(fn=function["fn"]), "_t_repr_call") as session:
+    with py_sandbox.Session(function["code"] + _wrapper(function["fn"], function["kinds"]), "_t_repr_call") as session:
         for args in drawn_inputs(function["kinds"], want, seed):
             try:
                 value = session.call([list(args)])
