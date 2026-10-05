@@ -5,7 +5,8 @@ The command allowlist (commands.py) is safe because it is short, and for the sam
 `sh` runs whatever the model writes, a whole shell line, and is safe for another reason: where it runs.
 
   the sandbox   bubblewrap, as commands.py builds it: no network, its own process ids, the file system read-only,
-                the secret folders hidden
+                the secret folders hidden, and the Unix sockets found under the home folder masked (a socket can
+                be connected to on a read-only file system; /run and /tmp, where most live, are empty here)
   the overlay   each writable root is mounted as an overlay over itself (bubblewrap's --overlay-src/--overlay): the
                 command sees the folder and changes it freely, and every change lands in a directory of dawnr's own.
                 The folder is not touched
@@ -137,6 +138,33 @@ def _force_remove(path: str) -> None:
         pass
 
 
+def home_sockets(home: str, skip: list, entries: int = 150_000, seconds: float = 1.0) -> list:
+    """The Unix sockets under the home folder, outside `skip`: a listener there is a way out of the sandbox that
+    the read-only file system does not close (connecting to a socket is allowed on a read-only mount; a command in
+    the sandbox reached one and wrote to it, 2026-10-05). The search is breadth-first and bounded."""
+    found, queue, seen, started = [], [home], 0, time.monotonic()
+    skip = [os.path.realpath(p) for p in skip]
+    while queue and seen < entries and time.monotonic() - started < seconds:
+        at = queue.pop(0)
+        try:
+            with os.scandir(at) as it:
+                for e in it:
+                    seen += 1
+                    try:
+                        if e.is_symlink():
+                            continue
+                        if e.is_dir(follow_symlinks=False):
+                            if os.path.realpath(e.path) not in skip:
+                                queue.append(e.path)
+                        elif stat.S_ISSOCK(e.stat(follow_symlinks=False).st_mode):
+                            found.append(e.path)
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+    return found
+
+
 class ShellTools:
     def __init__(self, space: Space, ops: FileOps, *, program: str, state: Path, exec_path: str, env: dict | None = None,
                  timeout: float = 60.0, max_output: int = 4_000, hide: list | None = None):
@@ -148,6 +176,7 @@ class ShellTools:
         self.hide = [p for p in (hide if hide is not None else [os.path.join(home, h) for h in HIDE_UNDER_HOME])
                      if os.path.lexists(p)]
         self.roots = [r for r in space.roots if r.write]
+        self.sockets = home_sockets(home, [r.path for r in space.roots] + self.hide) if os.path.isdir(home) else []
         self.runs: dict[str, Run] = {}
         self._lock = threading.Lock()
         self.problem = self.probe()
@@ -162,6 +191,9 @@ class ShellTools:
                 a += ["--tmpfs", h]
             elif os.path.isfile(h) and not os.path.islink(h):
                 a += ["--ro-bind", "/dev/null", h]
+        for sock in self.sockets:                               # nothing listens behind these inside the sandbox
+            if os.path.lexists(sock):
+                a += ["--ro-bind", "/dev/null", sock]
         for root, (upper, work) in layers.items():
             a += ["--overlay-src", root, "--overlay", upper, work, root]
         for r in self.roots:                                    # the file tools call the folder by its name: so may a command

@@ -105,6 +105,42 @@ def test_inside_a_command_the_folder_also_answers_to_the_name_the_file_tools_giv
         assert asked == ["it would change 2: create here/b.txt; remove here/a.txt"]
 
 
+def test_a_socket_under_the_home_folder_cannot_be_reached_from_inside(tmp_path, monkeypatch):
+    import socket
+    import tempfile
+    import threading
+    base = Path(tempfile.mkdtemp(prefix=".dawnr-shell-test-", dir=os.path.expanduser("~")))
+    try:
+        home = base / "home"
+        (home / "svc").mkdir(parents=True)
+        path = str(home / "svc" / "agent.sock")
+        server = socket.socket(socket.AF_UNIX)
+        server.bind(path)
+        server.listen(1)
+        server.settimeout(4)
+        heard = []
+
+        def accept():
+            try:
+                conn, _ = server.accept()
+                heard.append(conn.recv(100))
+            except OSError:
+                pass
+        thread = threading.Thread(target=accept)
+        thread.start()
+        monkeypatch.setenv("HOME", str(home))
+        work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
+        with harness:
+            assert agent.shell.sockets == [path]
+            r = harness.call("sh", {"command": "python3 -c \"import socket; s = socket.socket(socket.AF_UNIX); "
+                                               f"s.connect('{path}'); s.send(b'out'); print('CONNECTED')\""})
+        thread.join()
+        server.close()
+        assert r.text.startswith("exit 1") and "ConnectionRefusedError" in r.text and heard == []
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
+
+
 def test_a_file_that_moved_since_the_command_ran_stops_the_apply_and_a_link_is_never_applied(tmp_path):
     work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
     with harness:
