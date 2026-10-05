@@ -68,3 +68,25 @@ holds), and 712 (its tests have two shapes). The instrument cannot ask those que
 **the wider panel is 111** (`unfaithful_ids` in `t/decontamination-wider-2026-10-05.json`), and W1 to W4 are read
 on the 111. The W4 batch had started on the 114 at 05:46Z and none of its answers had been opened; the three are
 generated and left out of every count.
+
+## W5, registered 2026-10-05 05:59Z, before the larger model is asked anything: what a person with a 24 GB card could get
+
+The scoreboard says the prompted Qwen3.5-27B proves 33 of the clean 182 where the published 4B proves 18, with 17
+answers a problem, at fp8 on a 48 GB card and with all seven provers. Whether that helps a person depends on three
+things nobody has measured: 4 bits instead of fp8 (unsloth's `Qwen3.5-27B-Q4_K_M.gguf`, 16.7 GB, Apache-2.0, which
+fits a 24 GB card with an 8k context), the gate `dawnr ask` runs instead of 17 pooled answers, and Dafny alone.
+
+Same panel, same gate, same conditions as W4, one thing changed: the model. llama.cpp's CUDA build serves the 27B at
+Q4_K_M with an 8,192-token context on one of the lab's cards (beside a training run; the card has the room); it
+answers both roles, the `t` answer under prompt v5 (the language described with examples, because it was never
+trained on `t`) and the Python beside it; `t/answer.py` with five answers and consistency 5, Dafny only, on the
+wider 111.
+
+- **W5.** It shows an answer for at least 12 of the 111, at least twice what the published model shows in W4, and
+  at least 70% of the answers it shows agree with the reference on drawn inputs with a complete specification.
+
+If W5 holds, the mode is worth building into `dawnr` for people with such a card (an installer option, one server
+for both roles); if it does not, the larger model's lead on the scoreboard does not survive the trip to a consumer
+card and the installer stays as it is. Either way the result is the 4-bit model's, through this gate; it says
+nothing new about fp8 with seven provers.
+
