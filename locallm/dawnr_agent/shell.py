@@ -161,6 +161,9 @@ class ShellTools:
                 a += ["--ro-bind", "/dev/null", h]
         for root, (upper, work) in layers.items():
             a += ["--overlay-src", root, "--overlay", upper, work, root]
+        for r in self.roots:                                    # the file tools call the folder by its name: so may a command
+            if r.path in layers and not os.path.lexists(os.path.join(r.path, r.name)):
+                a += ["--symlink", ".", os.path.join(r.path, r.name)]
         return a + ["--chdir", cwd, "--"] + command
 
     def _layers(self, scratch: Path) -> dict:
@@ -244,6 +247,8 @@ class ShellTools:
                         stat.S_ISREG(st.st_mode) and st.st_size == 0 and _xattr(path, "whiteout") is not None):
                     self._removed(root, rel, out)
                 elif stat.S_ISLNK(st.st_mode):
+                    if rel == root.name and os.readlink(path) == ".":
+                        continue                                # the sandbox's own name for the folder (_argv)
                     out.append(Change("skip", display, why="a link is not applied"))
                 elif stat.S_ISDIR(st.st_mode):
                     real_is_dir = os.path.isdir(real) and not os.path.islink(real)
@@ -397,12 +402,20 @@ class ShellTools:
         except PathRefused as e:
             return ToolResult(str(e), is_error=True)
 
+    def close(self) -> None:
+        """Drop the runs nobody answered: their changes were never applied, and now cannot be."""
+        with self._lock:
+            for run in self.runs.values():
+                _force_remove(run.scratch)
+            self.runs = {}
+
     def tools(self) -> list[Tool]:
         schema = {"type": "object",
                   "properties": {"command": {"type": "string", "minLength": 1, "maxLength": MAX_COMMAND},
                                  "cwd": {"type": "string", "minLength": 1, "maxLength": paths.MAX_PATH}},
                   "required": ["command"], "additionalProperties": False}
-        return [Tool("sh", "Run a shell command in the folder (no network). It runs in a sandbox over a copy: files change "
-                           "only after the person approves what it changed.",
+        return [Tool("sh", "Run a shell command in the folder: mv, cp, rm, mkdir, wc, sort, grep, python3 and the like (no "
+                           "network). It runs in a sandbox over a copy: files change only after the person approves "
+                           "what it changed.",
                      schema, self.sh, permission="allow", trust="untrusted", network=False, consequential=False,
                      origin="agent", decide_call=self.decide)]

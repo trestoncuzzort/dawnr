@@ -28,6 +28,10 @@ ENVF=${DAWNR_HOME:-$HOME/.local/share/dawnr}/env
 set -a; . "$ENVF"; set +a
 CORES=$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 THREADS=${DAWNR_THREADS:-$(( CORES > 2 ? CORES / 2 : 1 ))}
+# Writing a token reads every weight once, so it is bound by memory, not by cores: on a 12-core desktop the 4B wrote
+# 17.2, 17.4, 16.6 and 15.9 tokens a second on 3, 6, 8 and 12 threads, while reading a prompt went from 148 to 234 a
+# second from 6 threads to 12 (llama-bench, 2026-10-05). So: few threads to write, all the cores to read.
+GEN_THREADS=${DAWNR_GEN_THREADS:-$(( THREADS > 6 ? 6 : THREADS ))}
 SP=${DAWNR_STUDENT_PORT:-8711}; BP=${DAWNR_BASE_PORT:-8712}
 # the base model's window: the assistant's tools, the files it reads and its plans share it (4,096 held three steps)
 BASE_CTX=${DAWNR_BASE_CTX:-16384}
@@ -61,14 +65,21 @@ start_both() {  # the student, then the base: on a GPU build the base waits for 
   start_one base "$BASE_GGUF" "$BP" "$BASE_CTX"
 }
 
-start_one() {  # name gguf port [context]
+start_one() {  # name gguf port [context] [seconds idle before the model is unloaded]
   healthy "$3" && return 0
   [ -s "$2" ] || { echo "dawnr: the $1 model is missing ($2); run install.sh" >&2; exit 1; }
+  # The base model on a CPU drafts with the 0.8B of its family where the installer fetched it: the small model
+  # guesses the next tokens and the 4B checks them in one pass, so what is written is the 4B's own and comes a third
+  # faster (16.1 to 22.2 tokens a second over the assistant's tasks, 2026-10-05; DAWNR_DRAFT=0 turns it off)
+  local draft=()
+  if [ "$1" = base ] && [ "${DAWNR_DRAFT:-1}" != 0 ] && [ -s "${DRAFT_GGUF:-}" ] && { [ "${DAWNR_BUILD:-cpu}" = cpu ] || [ "${DAWNR_GPU_LAYERS:-}" = 0 ]; }; then
+    draft=(--spec-type draft-simple --spec-draft-model "$DRAFT_GGUF" --spec-draft-ngl 0 --spec-draft-threads 4 --spec-draft-n-max 16 --spec-draft-p-min 0.6)
+  fi
   # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only)
   LD_LIBRARY_PATH="$(dirname "$LLAMA_SERVER"):${LD_LIBRARY_PATH:-}" \
-  nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$THREADS" --threads-batch "$THREADS" \
-    ${DAWNR_GPU_LAYERS:+--n-gpu-layers "$DAWNR_GPU_LAYERS"} \
-    --ctx-size "${4:-4096}" --parallel 1 --reasoning off --cache-ram 256 --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
+  nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$GEN_THREADS" --threads-batch "$THREADS" \
+    ${DAWNR_GPU_LAYERS:+--n-gpu-layers "$DAWNR_GPU_LAYERS"} ${draft[@]+"${draft[@]}"} ${5:+--sleep-idle-seconds "$5"} \
+    --ctx-size "${4:-4096}" --parallel 1 --reasoning off --cache-ram 256 --slot-save-path "$RUN" --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
   echo $! > "$RUN/$1.pid"
 }
 
@@ -158,7 +169,14 @@ case $cmd in
     # locallm/dawnr_cli.py over the agent and the harness (DAWNR-AGENT.md). It works in the caller's folder, so
     # nothing here changes directory; only the base model runs
     [ "$cmd" = assistant ] || [ $# -ge 1 ] || { echo 'usage: dawnr do "TASK" [--read-only] [--root DIR] [--online] [--yes]' >&2; exit 2; }
-    base_up
+    # The model stays loaded after the assistant leaves, so the next task starts at once, and unloads itself after
+    # a quarter of an hour unused (DAWNR_IDLE seconds; `dawnr serve stop` unloads it now)
+    if ! healthy "$BP"; then
+      echo "starting the base model (it stays loaded for the next task, and unloads itself when idle)..." >&2
+      start_one base "$BASE_GGUF" "$BP" "$BASE_CTX" "${DAWNR_IDLE:-900}"
+      for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$BP" && break; sleep 1; done
+      healthy "$BP" || { echo "dawnr: the base model did not come up; see $RUN/base.log" >&2; exit 1; }
+    fi
     "$DAWNR_PYTHON" "$DAWNR_REPO/locallm/dawnr_cli.py" --host "127.0.0.1:$BP" --cwd "$PWD" "$@"
     ;;
   prove)

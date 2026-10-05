@@ -89,6 +89,14 @@ def test_the_command_cannot_reach_the_network_write_outside_the_folder_or_read_a
         shutil.rmtree(base, ignore_errors=True)
 
 
+def test_inside_a_command_the_folder_also_answers_to_the_name_the_file_tools_give_it(tmp_path):
+    work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
+    with harness:
+        r = harness.call("sh", {"command": "cat here/a.txt && mv here/a.txt here/b.txt"})
+        assert not r.is_error and "one" in r.text and sorted(os.listdir(work)) == ["b.txt"]     # and that name is no change
+        assert asked == ["it would change 2: create here/b.txt; remove here/a.txt"]
+
+
 def test_a_file_that_moved_since_the_command_ran_stops_the_apply_and_a_link_is_never_applied(tmp_path):
     work, harness, agent, asked = agent_in(tmp_path, **{"a.txt": "one\n"})
     with harness:

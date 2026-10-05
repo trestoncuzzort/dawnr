@@ -360,6 +360,7 @@ def register_agent(harness, spec: dict, *, base: Path | None = None, config: dic
         tools += commands.tools()
     if shell is not None:
         tools += shell.tools()
+        harness.clients.append(shell)      # closed with the harness: runs left unanswered are dropped
     if spec.get("processes", True):
         tools.append(ps_tool())
     from .plan import plan_tool
