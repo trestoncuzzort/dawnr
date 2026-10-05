@@ -1,5 +1,9 @@
 # r12's core: the 312M model pretrained on 15.6B tokens of English, then code, registered before the run (2026-09-30)
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 **Written 2026-09-29 22:10Z, before any training.** The general-English pilot
 (`t/PREDICT-2026-09-29-dawnr-english-pilot.md`, outcome) found that English before code beats code
 alone at matched tokens and that every core so far leaves the specification column at zero; the plan's

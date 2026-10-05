@@ -1,5 +1,9 @@
 # The base rate by sampling on r12's core
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 Registered 2026-09-30 09:29Z, before any draw. `t/PREDICT-2026-09-30-dawnr-r12-core.md` prediction
 4 read 0 (`spec_agrees` on the 100 dev problems, greedy), and its registered consequence is this
 measurement: "the base rate is measured by sampling (64 draws per problem through the checker)

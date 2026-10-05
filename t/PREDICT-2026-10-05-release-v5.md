@@ -1,5 +1,9 @@
 # Release v5: the candidate fixed by a rule and the gate, registered before its given specifications are measured
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 Registered 2026-10-05 01:41Z. `student-v1` is what `install.sh` downloads; v2, v3 and v4 each missed the gate's R1 (the 33
 held-out given specifications by all seven; v4 22 against 26, `t/PREDICT-2026-10-04-release-v4.md`), each measured on
 one seed. The teacher3 round's rows (5,095: v3's 4,027 and 1,068 from documents the provers admitted, some written by
@@ -47,3 +51,27 @@ measured on this desktop's CPU through llama-server:
 round before on 516 fewer rows, read 22 on the same 33. With one seed of each, how much of that difference is the
 seed and how much the rows is not measured; the candidate was fixed by a rule before this set was measured, so the
 gate did not choose it.
+
+## Correction, 2026-10-05 05:05Z: the panels this gate read
+
+Forty minutes after the release, an audit of the training rows took 18 problems out of the clean 200 and 5 out of
+the 100 dev problems ([DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md)). The gate is read again here on
+the corrected panels, from the same saved answers and verdicts; nothing was generated or graded again.
+
+| | as decided | on the corrected panels |
+|---|---:|---:|
+| R1: the 33 given specifications, by all seven | 27 | 27 |
+| R2: one greedy dev answer, complete specifications, at least one / all seven | 4 / 2 of 100 | **3** / 2 of 95 |
+| R3: the held-out panel, at least one / all seven | 26 / 16 of 200 | **18** / **12** of 182 |
+
+- **R1 holds as counted** (27 against 26) and says less than it did: 19 of the 33 questions have a program of the
+  same behaviour in the training rows under another name; the candidate proves 17 of those and 10 of the other 14.
+- **R2 holds, exactly** (3 against 3): dev 727, one of the four, is a twin of `mbpp_676__remove_extra_char` in the
+  rows and leaves the panel.
+- **R3 holds** (18 and 12 against 17 and 9). Eight of the 26 were on problems that left the panel; the candidate's
+  own untrained base had been credited with six of the same eight.
+
+The release stays. Two statements of its model card and notice were wrong and are corrected there: 61 of the 5,095
+rows descend from MBPP-DFY (GPL-3.0 at the source) under the vericoding benchmark's names, and the held-out problems
+were kept out of training by name only. The next release's rows are built through `t/heldout_audit.py --panels
+--refuse-gpl`.

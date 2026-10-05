@@ -1,5 +1,9 @@
 # The student on every admitted document, round 3's 129 APPS documents included, three seeds: registered before any of it trains
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 Registered 2026-10-04 13:36Z. The teacher2 round (v3's rows plus 598 rows from every document admitted through Bedrock
 round 2 and the specification round) reads 23 and 13, then 27 and 13, at one kernel and by all seven for its seeds 1
 and 3 (seed 2 is training). The prompted starting weights read 15 and 8 with 17 answers a problem

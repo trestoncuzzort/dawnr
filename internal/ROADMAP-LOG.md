@@ -2783,3 +2783,23 @@ route a rule fixed beforehand picks, against Phi-4-mini given the same number of
 - **Next:** teacher3's judgement; round 4's documents into the next student round; a release candidate that keeps the
   given-specification proofs while the teacher documents grow; the Bedrock half of the curve (needs the operator's
   AWS sign-in); lean's two diagnosed tactic gaps and rocq's loop-half timeouts, each its own registration.
+
+## The row audit, 2026-10-05
+
+- **Released:** `student-v5` (dawnr v5; teacher3's seed 1) at 03:58Z, gate R1 27 of 33, R2 4 dev, R3 26 and 16
+  (`t/PREDICT-2026-10-05-release-v5.md`). The models are called dawnr from here on.
+- **Corrected the same morning:** building round 4's rows showed the training rows held 18 of the clean 200 and 5
+  of the 100 dev problems under other names (MBPP-DFY by way of the vericoding benchmark, twice; rechecked lift sets
+  the screen never ran on; teacher answers to specification prompts nobody mapped to a problem). The panels are the
+  clean 182 and the dev 95; all 24 scoreboard rows reproduce and are restated (the published model 18 and 12, Phi
+  under the grammar 7 and 5, the prompted 27B 33 and 23); the gate of v5 still holds, R2 exactly
+  (`t/DECONTAMINATION-2026-10-05.md`, `CORRECTIONS.md`).
+- **Also found by it:** 61 of v5's rows and 48 of v1's descend from GPL-3.0 programs the notices said were left
+  out (corrected in both model cards and notices; withdrawal is the operator's call); 19 of the 33 "held-out
+  specifications" have a same-behaviour program in the rows (10 of the other 14 proved).
+- **The gate from now on:** `t/heldout_audit.py` reads every program in every row against every problem still in a
+  panel, plus the benchmark's own lineage; a row build fails on a match. Routes are not patched one by one.
+- **Next:** the round-4 student on rows built through the gate, three seeds, scored on the clean 182; answers handed
+  back in Python with a differential check (`t/to_python.py`); a specification-first way in for `dawnr`; `t` grown
+  toward the code people write.
+

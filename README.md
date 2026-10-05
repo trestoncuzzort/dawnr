@@ -2,14 +2,19 @@
 
 **An assistant whose answers come with proof.**
 
-> **New, 5 October 2026: dawnr v5.** The dawnr model now proves **26 of 200 held-out programming
-> problems** with a specification checked against the problem's own solution, **16 of them by all seven provers**.
-> Phi-4-mini, given the same 17 tries a problem and its output forced into valid `t`, proves 9 and 7. Every training
+> **New, 5 October 2026: dawnr v5.** The dawnr model now proves **18 of 182 held-out programming
+> problems** with a specification checked against the problem's own solution, **12 of them by all seven provers**.
+> Phi-4-mini, given the same 17 tries a problem and its output forced into valid `t`, proves 7 and 5. Every training
 > seed of the recipe beats it at both levels, and given a specification the new model proves **27 of 33** held-out
 > ones by all seven provers, more than any earlier release. It is a small model (Qwen3.5-4B, fine-tuned here) that
 > runs offline on an ordinary CPU or an 8 GB laptop graphics card.
 > [The release](../../releases/tag/student-v5) · [how it was measured](t/PREDICT-2026-10-05-release-v5.md) ·
 > [every number, good and bad](DISCLAIMERS.md)
+>
+> *Corrected the same day.* This first read 26 of 200, and 16. An audit of the training data then found 18 of
+> those 200 problems in it under other names, so they are no longer counted, for any model; and 19 of the 33
+> specifications are functions the training data also holds under another name (on the other 14 it proves 10).
+> [What was found and how](t/DECONTAMINATION-2026-10-05.md).
 >
 > *A note on names:* dawnr is the name for the models from now on. Earlier versions were called the student, and the
 > release tags, files and commands that still say `student` (the `student-v5` release among them) are these same
@@ -25,21 +30,21 @@ your computer.
 
 ## What it has achieved
 
-On 200 programming problems no training row touches (from MBPP and HumanEval), a problem counts only when the
+On 182 programming problems no training row touches (from MBPP), a problem counts only when the
 program passes its tests, a prover verifies it, and its specification agrees with the problem's reference solution
 and rejects most wrong answers:
 
 | | proved by at least one prover | proved by all seven |
 |---|---:|---:|
-| **dawnr v5** (Qwen3.5-4B, fine-tuned here on proved answers) | **26** | **16** |
-| the same recipe, its two other training seeds | 27, 23 | 15, 13 |
-| the same 4B before any fine-tuning, prompted, 17 tries a problem | 15 | 8 |
-| Phi-4-mini (3.8B), output forced into valid `t`, 17 tries a problem | 9 | 7 |
-| Phi-4-mini, prompted, 17 tries a problem | 3 | 3 |
-| Qwen3.5-27B, six times larger, prompted, 17 tries a problem | 43 | 29 |
+| **dawnr v5** (Qwen3.5-4B, fine-tuned here on proved answers) | **18** | **12** |
+| the same recipe, its two other training seeds | 18, 14 | 10, 8 |
+| the same 4B before any fine-tuning, prompted, 17 tries a problem | 9 | 6 |
+| Phi-4-mini (3.8B), output forced into valid `t`, 17 tries a problem | 7 | 5 |
+| Phi-4-mini, prompted, 17 tries a problem | 2 | 2 |
+| Qwen3.5-27B, six times larger, prompted, 17 tries a problem | 33 | 23 |
 
 Plainly: much of the lead over Phi comes from the base model, chosen by measurement among openly licensed ones;
-training on answers the provers admitted, some written by two openly licensed teacher models, adds 11 problems and 8
+training on answers the provers admitted, some written by two openly licensed teacher models, adds 9 problems and 6
 by all seven for this release. Doubling Phi on every training seed, the bar set in [AMBITION.md](AMBITION.md), is met
 by two seeds of three, and a much larger model still does better. Every row links to its run in
 [DISCLAIMERS.md](DISCLAIMERS.md); the curve across model sizes is in

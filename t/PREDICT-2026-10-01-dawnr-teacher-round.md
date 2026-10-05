@@ -1,5 +1,9 @@
 # The teacher round on a rented GPU: registered before any sample is drawn
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 Registered 2026-09-30 (the day before the run) by the operator's standing direction to keep with
 the plan. `t/EXPERT-ITERATION-2026-09-26.md` staged a teacher round and generated nothing: the
 27B teacher needs a 30 GB card and the shared ones never had it. r12's core then judged flat and

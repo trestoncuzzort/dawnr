@@ -1,5 +1,9 @@
 # The student on v3's rows plus every document admitted so far, three seeds: registered before any of it trains
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 Registered while `t/PREDICT-2026-10-04-teacher1-student.md` is half measured (its seed 3, with round 1's 123 documents:
 21 at one kernel and 12 at all seven, against 17 and 8 for the same seed on v3's rows alone). This round asks whether
 more documents of the kinds that helped help more. It adds every document the gates have admitted since v3's rows were

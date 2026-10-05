@@ -1,5 +1,9 @@
 # Section 3's curve on the clean 200: prompted models of every size against the fine-tuned student; registered before any answer is drawn
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 AMBITION.md section 3, as re-read on 2026-10-01: the curve is fine-tuned small models against prompted large ones.
 Only one prompted model has been measured on the clean 200 by the corrected instrument, Phi-4-mini (3.8B): 3 at one
 kernel and 3 by all seven prompted, 9 and 7 under `t`'s grammar (`t/PREDICT-2026-10-01-replication.md`). The

@@ -1,5 +1,9 @@
 # What r12 is predicted to show, registered before any seed trains
 
+> **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
+> later took out of the panel. Every published row is restated on the clean 182 in
+> [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+
 **Written 2026-09-27, before the fine-tune has run at any seed.** No r12 checkpoint
 exists yet; `t/out/pretrain-r12-2026-09-25/wd0.8-lr1e-3-seed1337-desktop-best/` is
 still training (`run.json` status `running` at the time this was written). This

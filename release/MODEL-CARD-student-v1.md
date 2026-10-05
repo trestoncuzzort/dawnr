@@ -1,5 +1,13 @@
 # dawnr-student-v1
 
+**Corrected 2026-10-05.** This card said the rows that name a dafny-synthesis program are left out, which is true,
+and that the held-out problems are kept out of training, which was checked by name. Reading the training rows
+themselves ([the audit](../t/DECONTAMINATION-2026-10-05.md)) shows 48 of the 3,835 rows are built from the same
+MBPP-DFY programs (github.com/Mondego/dafny-synthesis, GPL-3.0 at its source) under the vericoding benchmark's
+names, 36 by DafnyBench's copy and 12 by Verus-Bench's translation, and that 18 of the 200 held-out problems were
+in the rows under other names or as programs of the same behaviour. The model file is unchanged. `student-v5`
+replaced this model on 2026-10-05 and carries the same correction.
+
 The model inside dawnr that writes `t`: given a programming question in English with example tests, or a
 specification, it writes a `t` task (what the program requires, what it guarantees, and a body the provers can
 check). It is never trusted on its own: dawnr shows its answer only after the tests, an independent Python
@@ -36,9 +44,9 @@ solution and the provers agree (see [../README.md](../README.md)).
 - **Where the problems come from:** MBPP (CC-BY-4.0), HumanEval (MIT) and APPS (MIT) for the questions; the
   vericoding benchmark (MIT), DafnyBench (Apache-2.0; its programs come from many GitHub repositories),
   HumanEval-Dafny (Apache-2.0), Clover (MIT), ACSL by Example (MIT) and the Verus repository's examples (MIT) for the
-  given specifications. The 52 rows that name a
-  dafny-synthesis program, GPL-3.0 at its source, are left out
-  ([provenance](../internal/RELEASE-PROVENANCE-2026-10-01.md)).
+  given specifications, Verus-Bench (MIT) among the programs vericoding carries. The 52 rows that name a
+  dafny-synthesis program, GPL-3.0 at its source, are left out; 48 rows built from the same programs under
+  vericoding names are not (the correction above; [provenance](../internal/RELEASE-PROVENANCE-2026-10-01.md)).
 - **Kept out of training:** the 200 held-out problems, the 100 development problems and the 33 held-out
   specification questions used to measure it; every row set is checked for them before training.
 

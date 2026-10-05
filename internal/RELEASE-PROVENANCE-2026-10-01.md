@@ -26,6 +26,18 @@ headings. Both are MIT, so nothing leaves the release, but their notices were mi
 52 rows in all name a dafny-synthesis program (the 44 above and 8 memory conversations that
 reuse one).
 
+**Correction, 2026-10-05:** "name" was the whole of the check. The vericoding benchmark carries the same MBPP-DFY
+programs under its own ids, twice: DafnyBench's copy (`DD0643` and up, source-id `dafny-synthesis_task_id_N_Name`)
+and Verus-Bench's translation (`DJ...`, source-id `proofsynthesis_task_id_N`; Verus-Bench's README says its 78 MBPP
+tasks are "Translated from MBPP-DFY-153" and names github.com/Mondego/dafny-synthesis, read 2026-10-05). Counted in
+the table above under "the vericoding benchmark's programs" (MIT), they stayed in every release: **48 of
+`student-v1`'s 3,835 rows** (36 by DafnyBench's copy, 12 by the translation; 37 specification-given, 11 memory
+conversations) and **61 of `student-v5`'s 5,095** (40 and 21). The sentence below, "The released adapters are
+trained without the 52 rows", is true of those 52 and was read as "without dafny-synthesis", which is false. Both
+model cards and both notices now say so, and the next release's rows pass `t/heldout_audit.py --refuse-gpl`, which
+reads the benchmark's record and not the name. Found with the held-out audit of the same day
+(`t/DECONTAMINATION-2026-10-05.md`); the six MBPP-DFY programs that are held-out problems are how it was found.
+
 ## Finding
 
 The dafny-synthesis programs are GPL-3.0 where they were written. DafnyBench redistributes them
