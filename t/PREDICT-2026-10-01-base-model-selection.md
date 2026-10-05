@@ -3,6 +3,8 @@
 > **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
 > later took out of the panel. Every published row is restated on the clean 182 in
 > [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+> A second correction that day holds each specification to inputs larger than the examples as well; the rows are
+> restated again in [LARGER-INPUTS-2026-10-05.md](LARGER-INPUTS-2026-10-05.md).
 
 The operator, 2026-09-30: build on the ladders others have made; someone else's weights are fine,
 but they must be the best for this job and usable by everyone. `internal/RESEARCH-2026-10-01-is-

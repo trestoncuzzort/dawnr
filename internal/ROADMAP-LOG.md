@@ -2803,3 +2803,24 @@ route a rule fixed beforehand picks, against Phi-4-mini given the same number of
   back in Python with a differential check (`t/to_python.py`); a specification-first way in for `dawnr`; `t` grown
   toward the code people write.
 
+
+## Checks a person can use, and a second correction, 2026-10-05
+
+- **Built and pushed, each tried on the installed command with the published model**
+  (`internal/PLAN-2026-10-05-usable-for-everyone.md`): certificates and `dawnr check` (a shown answer replayed with
+  no model); the Python handed back refuses what was not proved; `dawnr verify FILE.py` (a proved twin of a
+  function the person already has); `dawnr extract` (fields held to the document's own words); `dawnr calc`
+  (arithmetic written down, computed exactly, shown when workings agree); `dawnr serve api` and a page in the
+  browser; `DAWNR_WRITER_URL` (any model may write, the gate decides). The install test passed on GitHub's Mac and
+  Ubuntu machines with every command.
+- **Found by the last of those:** the specification check drew inputs no larger than the examples, so a
+  specification that lists the small cases passed. With larger inputs every fine-tuned row loses 0 to 3 problems
+  (the published model 17 and 12, was 18 and 12; Phi unchanged); all 24 rows restated
+  (`t/LARGER-INPUTS-2026-10-05.md`, `CORRECTIONS.md`). The gate, the scorer (`--larger`) and the certificate replay
+  hold specifications to larger inputs from now on.
+- **The round-4 student, seed 1:** 18 and 11 on the clean 182 as registered, 17 and 11 with larger inputs; R3 holds.
+  Seeds 2 and 3, the release gate, the 9B (`t/PREDICT-2026-10-05-student-9b.md`) and the three measurements of
+  verify, extract and calc run on the lab as cards free.
+- **Next:** the training rows read with larger inputs (a student that writes a table learned it from a row); a
+  larger local writer through Colibrì (Qwen3.6-35B-A3B, Apache-2.0); an MCP server and an OpenAI-style chat
+  endpoint over the gate; invariants pooled and pruned by the prover.

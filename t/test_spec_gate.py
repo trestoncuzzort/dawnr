@@ -193,9 +193,26 @@ def test_one_false_past_the_examples_or_whose_requires_stops_there_is_refused_to
     assert not false_after["passes"] and false_after["why"] == "the specification is false at the Python's answer on an input larger than the examples"
     narrow = surface.parse(surface.print_task(_spelled_out(6, "r")).replace("  ensures r ==", "  requires len(s) <= 6\n  ensures r =="))
     stopped = spec_gate.judge(narrow, COUNT_ENTRY, COUNT_PYTHON)
-    assert not stopped["passes"] and stopped["why"] == "the requires excludes most inputs larger than the examples"
+    assert not stopped["passes"] and stopped["why"] == "the requires closes off inputs larger than the examples"
     honest = spec_gate.judge(RECURSIVE, COUNT_ENTRY, COUNT_PYTHON)
     assert honest["passes"] and honest["larger"]["completeness"] == 1.0 and honest["larger"]["draws"] == spec_gate.BEYOND_DRAWS
+
+
+def test_a_requires_as_narrow_on_the_ordinary_draws_as_on_the_larger_ones_is_not_a_matter_of_size():
+    # the two right specifications a floor on the larger draws alone refused (2026-10-05): a `requires` of hexadecimal
+    # digits where the reference answers any string, and a length argument that must not exceed another
+    ordinary = {"status": "agrees", "draws": 60, "outside_requires": 140, "completeness": 1.0}
+    larger = {"status": "agrees", "draws": 9, "outside_requires": 191, "completeness": 1.0, "requires_caps_size": False}
+    assert spec_gate.beyond_reason(larger, ordinary) is None                       # every character a hexadecimal digit
+    hexadecimal = surface.parse("t 1\ntask f(s: seq) returns (r: int)\n  requires forall i in [0, len(s)) . s[i] >= 48 and s[i] <= 70\n  ensures r == 0\n{\n  r := 0;\n}\n")
+    lengths = surface.parse("t 1\ntask f(a: seq, n: int, m: int) returns (r: int)\n  requires n >= 0 and m >= 0 and m <= n\n  ensures r == 0\n{\n  r := 0;\n}\n")
+    assert not spec_check.caps_size(hexadecimal) and not spec_check.caps_size(lengths)   # an element's bound and a relation are not a cap
+    for capped in ("requires len(s) <= 6", "requires 6 >= len(s)", "requires n < 5", "requires n >= 0 and n == 3"):
+        task = surface.parse(f"t 1\ntask f(s: seq, n: int) returns (r: int)\n  {capped}\n  ensures r == 0\n{{\n  r := 0;\n}}\n")
+        assert spec_check.caps_size(task), capped
+    closed = {"status": "agrees", "draws": 2, "outside_requires": 58, "completeness": 1.0, "requires_caps_size": True}
+    assert spec_gate.beyond_reason(closed, {"status": "agrees", "draws": 100, "completeness": 1.0}) == "the requires closes off inputs larger than the examples"
+    assert spec_gate.beyond_reason(dict(closed, requires_caps_size=False), {"status": "agrees", "draws": 100, "completeness": 1.0}) is None
 
 
 def test_too_few_larger_inputs_judged_leaves_it_unmeasured_not_refused():

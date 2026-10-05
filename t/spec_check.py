@@ -249,6 +249,77 @@ def draw_beyond(kind: str, rnd: random.Random, like=None, strings: bool = False,
     return None
 
 
+LARGER_DRAWS = 200             # larger inputs a scored verdict is held to (the product's gate asks 60, for its latency)
+MIN_LARGER = 5                 # of them inside the `requires` before the measurement counts
+# INVENTED: no published number. A `requires` may rightly exclude inputs (a problem's unstated precondition), and
+# larger inputs fall outside a right one more often than ordinary inputs do: measured 2026-10-05, a floor on the share
+# of larger inputs admitted refused two right specifications (every character a hexadecimal digit, where the
+# reference answers any string and a longer random string is less often all digits; one length argument not above
+# another). So the share is held against the share of ordinary draws admitted, and only for a `requires` that itself
+# puts a number above a length or a parameter (`len(s) <= 6`, `n < 5`): under half is a `requires` that stops at
+# the size of the examples.
+LARGER_DOMAIN_RATIO = 0.5
+
+
+def caps_size(task: dict) -> bool:
+    """Does a `requires` bound a parameter, or the length of one, from above by a number?"""
+    names = {p["name"] for p in task.get("params", [])}
+
+    def sized(e) -> bool:
+        return isinstance(e, dict) and (e.get("var") in names or (e.get("op") == "len" and len(e.get("args", [])) == 1
+                                                                 and isinstance(e["args"][0], dict) and e["args"][0].get("var") in names))
+
+    def walk(e) -> bool:
+        if isinstance(e, list):
+            return any(walk(x) for x in e)
+        if not isinstance(e, dict):
+            return False
+        a = e.get("args")
+        if e.get("op") in ("<", "<=", "==") and isinstance(a, list) and len(a) == 2 and sized(a[0]) and "int" in (a[1] or {}):
+            return True
+        if e.get("op") in (">", ">=", "==") and isinstance(a, list) and len(a) == 2 and sized(a[1]) and "int" in (a[0] or {}):
+            return True
+        return any(walk(v) for v in e.values())
+    return walk(task.get("requires", []))
+
+
+def _admitted(result: dict) -> float | None:
+    inside, outside = result.get("draws", 0) or 0, result.get("outside_requires", 0) or 0
+    return inside / (inside + outside) if inside + outside else None
+
+
+def larger_reason(larger: dict | None, floor: float = 0.6, ordinary: dict | None = None) -> str | None:
+    """Why a specification that stands on inputs the size of the examples does not stand on larger ones
+    (`larger_inputs`'s result); None when it does, when it was not measured, or when too few larger inputs could be
+    judged to say. `ordinary` is the same check's result on the ordinary draws, for the `requires` (above)."""
+    if not larger:
+        return None
+    if larger.get("status") == "disagrees":
+        return "the specification is false at the solution's answer on an input larger than the examples"
+    if larger.get("status") != "agrees":
+        return None
+    inside, outside = larger.get("draws", 0) or 0, larger.get("outside_requires", 0) or 0
+    if larger.get("requires_caps_size") and inside + outside >= MIN_LARGER:
+        before = _admitted(ordinary) if ordinary else None
+        if _admitted(larger) < LARGER_DOMAIN_RATIO * (before if before is not None else 1.0):
+            return "the requires closes off inputs larger than the examples"
+    if inside >= MIN_LARGER and complete(larger, floor) is False:
+        return "the specification says too little about inputs larger than the examples"
+    return None
+
+
+_LARGER_KEEP = ("status", "draws", "outside_requires", "completeness", "cross_completeness", "mutants_rejected",
+                "mutants_accepted", "cross_rejected", "cross_accepted", "skipped", "args", "reference_said", "ensures",
+                "weak_witness", "cross_witness")
+
+
+def larger_inputs(task: dict, entry: dict, seed, n: int = LARGER_DRAWS, oracle=None) -> dict:
+    """The check on `n` inputs larger than the examples, from a generator of its own (seeded by `seed`), so asking
+    for it moves no other draw. What a verdict stores under "larger"."""
+    r = check_task(task, entry, n, random.Random(f"larger:{seed}"), oracle=oracle, drawer=beyond_drawer(len(task["params"])))
+    return {**{k: r[k] for k in _LARGER_KEEP if k in r}, "requires_caps_size": caps_size(task)}
+
+
 def beyond_drawer(arguments: int):
     """`draw_beyond` for a problem of that many arguments: every draw larger when there is one argument, seven in ten
     of each argument's draws when there are several."""
@@ -928,6 +999,14 @@ def main() -> int:
                 trnd = random.Random(f"{a.seed}:{task_sha256(task)}") if a.per_task_seed else rnd
                 r = (check_task(task, entry, a.n, trnd) if entry is not None
                      else {"status": "problem not in pool"})
+                if r.get("status") == "agrees":
+                    # 2026-10-05: the same check on inputs larger than the examples, from the task's own generator
+                    # (no draw above moves); t/score_levels.py --larger reads it (larger_reason). A failure to
+                    # measure is recorded and never ends the run or changes the verdict above.
+                    try:
+                        r["larger"] = larger_inputs(task, entry, f"{a.seed}:{task_sha256(task)}")
+                    except Exception as e:                      # noqa: BLE001
+                        r["larger"] = {"status": f"not measured ({type(e).__name__})"}
                 if entry is not None:
                     # Clover's third consistency edge (arXiv 2310.17807): the
                     # annotation against the problem's own assertions. Needs no

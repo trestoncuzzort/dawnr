@@ -4,6 +4,24 @@ Published claims that turned out to be wrong, and what they are now. They are
 kept here rather than quietly fixed, because a project that only reports its
 successful measurements is not measuring anything.
 
+- **The specification check stopped at the size of the examples, and every fine-tuned row lost up to three
+  problems (2026-10-05, the day's second).** A specification is counted when it holds at the reference's answer
+  on drawn inputs and rejects most wrong outputs there. The draws were shaped like the problem's examples and no
+  larger than them (a list two longer than the longest example, a number twice the example), so a specification
+  that lists the answers for the small cases and says nothing after them read as complete. It was found when a
+  larger model was first allowed to write for `dawnr verify` and proved a function against
+  `if len(s) == 0 then ... else if len(s) == 6 then ... else r`. With every specification also held to inputs
+  larger than the examples (QuickCheck's growing sizes; EvalPlus, arXiv:2305.01210), the published model proves
+  **17 of the 182, 12 by all seven**, not 18 and 12; the prompted 27B 32 and 22, not 33 and 23; the prompted 9B 14,
+  not 15; Phi-4-mini under the grammar is unchanged at 7 and 5. Five problems leave somewhere: one whose
+  specifications never say in what order or how many times, two whose specifications are a table of the first few
+  answers, one that says "an even element" where the problem says "the first", one with its clauses joined
+  wrongly. All 24 rows are restated through the scorer from their saved answers; three pairs of rows change order,
+  all through one row. The product's gate and the replay of a certificate hold specifications to larger inputs
+  since the same hour, and the first form of the new rule, which refused two right specifications, was caught
+  against the rows before anything was published
+  ([what was found, the rule, every row](t/LARGER-INPUTS-2026-10-05.md)).
+
 - **"Held-out problems no training row touches" was checked by name, and 18 of the 200 were in the rows
   (2026-10-05).** `student-v5` was published at 03:58Z with "26 of 200 held-out problems, 16 by all seven provers"
   at the top of the README. Forty minutes later, building the next round's rows, the vericoding benchmark's own

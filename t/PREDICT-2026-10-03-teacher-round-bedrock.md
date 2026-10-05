@@ -3,6 +3,8 @@
 > **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
 > later took out of the panel. Every published row is restated on the clean 182 in
 > [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+> A second correction that day holds each specification to inputs larger than the examples as well; the rows are
+> restated again in [LARGER-INPUTS-2026-10-05.md](LARGER-INPUTS-2026-10-05.md).
 
 Registered 2026-10-03 23:25Z (commit dce1e288; the pilot's first sample 23:26:05Z). `t/PREDICT-2026-10-01-dawnr-teacher-round.md` staged this round for a
 27B teacher on a rented GPU and was stopped before it measured anything; its stop note says a round

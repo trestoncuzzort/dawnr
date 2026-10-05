@@ -3,6 +3,8 @@
 > **Correction, 2026-10-05:** counts on the clean 200 in this file include 18 problems that an audit of the training rows
 > later took out of the panel. Every published row is restated on the clean 182 in
 > [DECONTAMINATION-2026-10-05.md](DECONTAMINATION-2026-10-05.md).
+> A second correction that day holds each specification to inputs larger than the examples as well; the rows are
+> restated again in [LARGER-INPUTS-2026-10-05.md](LARGER-INPUTS-2026-10-05.md).
 
 `student-v1` is what `install.sh` downloads; v3 missed its gate (25 of 33 by all seven against 27,
 `t/PREDICT-2026-10-02-release-v3.md`) although its rows beat Phi-4-mini on the clean 200 with every seed. The candidate

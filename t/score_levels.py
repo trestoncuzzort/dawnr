@@ -60,9 +60,14 @@ def answer_level(tests_overall: str | None, row: dict | None, spec_status: str |
 MIN_COMPLETENESS = 0.6
 
 
-def tag_levels(tag: str, ids: set[int], verdicts: dict, min_completeness: float | None = None
+def tag_levels(tag: str, ids: set[int], verdicts: dict, min_completeness: float | None = None, larger: bool = False
                ) -> dict[int, tuple[int, int, bool, bool]]:
-    """problem -> (level, level without the spec check, reached a task, tests passed)."""
+    """problem -> (level, level without the spec check, reached a task, tests passed).
+
+    `larger` (2026-10-05, t/LARGER-INPUTS-2026-10-05.md): where a verdict carries the check on inputs larger than
+    the examples and the specification does not stand there (spec_check.larger_reason), the answer is not counted.
+    Off unless asked for, so that every run registered before that day is scored by the rule it was registered
+    under; the restated scoreboard and every registration from then on ask for it."""
     d = se.OUT_ROOT / se.model_tag(tag)
     ext = json.loads((d / "extract.json").read_text(encoding="utf-8")) if (d / "extract.json").exists() else {}
     tests = json.loads((d / "tests.json").read_text(encoding="utf-8")) if (d / "tests.json").exists() else {}
@@ -75,17 +80,19 @@ def tag_levels(tag: str, ids: set[int], verdicts: dict, min_completeness: float 
         status = score_heldout.checked_spec(raw, d / "tasks" / f"{name}.json")
         if status == "agrees" and min_completeness is not None and spec_check.complete(raw, min_completeness) is False:
             status = "weak"                                     # true of the right answer and of most wrong ones
+        if status == "agrees" and larger and spec_check.larger_reason(raw.get("larger"), min_completeness or 0.6, raw):
+            status = "weak"                                     # the same, once the inputs are larger than the examples
         level, bare = answer_level(t.get("overall"), cells.get(name), status)
         out[tid] = (level, bare, e.get("stage") == "task", t.get("overall") == "pass")
     return out
 
 
-def table(tags: list[str], ids: set[int], verdicts: dict, min_completeness: float | None = None
+def table(tags: list[str], ids: set[int], verdicts: dict, min_completeness: float | None = None, larger: bool = False
           ) -> tuple[list[dict], dict]:
     rows, best, best_bare = [], {tid: 0 for tid in ids}, {tid: 0 for tid in ids}
     any_task, any_pass = set(), set()
     for tag in tags:
-        lv = tag_levels(tag, ids, verdicts, min_completeness)
+        lv = tag_levels(tag, ids, verdicts, min_completeness, larger)
         row = {"tag": tag, "problems": len(ids), "task": sum(1 for v in lv.values() if v[2]),
                "tests pass": sum(1 for v in lv.values() if v[3])}
         for k in LEVELS:
@@ -145,10 +152,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-completeness", type=float, default=None, metavar="F",
                     help=f"count an answer only if its specification also rejects at least this share of mutated "
                          f"outputs on the check's drawn inputs (SAFE's rule is {MIN_COMPLETENESS})")
+    ap.add_argument("--larger", action="store_true",
+                    help="also require the specification to stand on inputs larger than the examples (the reading of "
+                         "record from 2026-10-05; needs verdicts that carry it: spec_check writes it, larger_inputs.py adds it)")
     a = ap.parse_args(argv)
     ids = panel_ids(a.split, a.panel, a.ids_file)
     verdicts = json.loads(a.verdicts.read_text(encoding="utf-8")).get("results", {})
-    rows, pooled = table(a.tags, ids, verdicts, a.min_completeness)
+    if a.larger and not any(isinstance(v, dict) and "larger" in v for v in verdicts.values()):
+        raise SystemExit("score_levels: --larger was asked for and these verdicts carry no check on larger inputs; "
+                         "t/larger_inputs.py adds it")
+    rows, pooled = table(a.tags, ids, verdicts, a.min_completeness, a.larger)
     print(render(rows, pooled))
     if a.json:
         a.json.write_text(json.dumps({"rows": rows, "pooled": pooled, "ids": len(ids)}, indent=1) + "\n", encoding="utf-8")
