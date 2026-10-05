@@ -180,7 +180,10 @@ Commands need bubblewrap. With bubblewrap 0.11 or newer they run over an
 overlay of the folder; with an older one (Ubuntu 24.04 ships 0.9, Debian 12
 ships 0.8) over a private copy of it, which is slower and limited to folders
 of 256 MB. Without bubblewrap (macOS, Windows outside WSL) the assistant reads
-and edits files and runs nothing.
+and edits files and runs nothing. The sandbox, the file tools and the front
+door are tested on every push on Debian 13, Ubuntu 24.04, Fedora 44, Arch and
+openSUSE Tumbleweed, each in its own container (where the copy mode is the one
+that can run), and both modes on Ubuntu 26.04 on a real disk.
 
 And for a program you want proved, starting from a specification:
 
