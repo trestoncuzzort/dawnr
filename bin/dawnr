@@ -202,6 +202,10 @@ case $cmd in
       for _ in $(seq 1 "${DAWNR_START_SECONDS:-600}"); do healthy "$BP" && break; sleep 1; done
       healthy "$BP" || { echo "dawnr: the base model did not come up; see $RUN/base.log" >&2; exit 1; }
     fi
+    # The system-and-tools prefix processed alone first (locallm/dawnr_warm.py): the server then takes the task's
+    # first call up from a checkpoint at the prefix's end instead of processing the 2,200 tokens again (19 s on six
+    # CPU cores, measured). One cheap request when the checkpoint is still there; never a reason to stop
+    "$DAWNR_PYTHON" "$DAWNR_REPO/locallm/dawnr_warm.py" --host "127.0.0.1:$BP" --cwd "$PWD" "$@" 2>/dev/null || true
     "$DAWNR_PYTHON" "$DAWNR_REPO/locallm/dawnr_cli.py" --host "127.0.0.1:$BP" --cwd "$PWD" "$@"
     ;;
   prove)

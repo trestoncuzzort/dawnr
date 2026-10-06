@@ -870,3 +870,29 @@ function moved by one line). The 37, read by hand:
 
 T3: nothing changes before F is read; the two fixtures and the figure note are the owed list. The 1,990 teaching
 rows are not touched by any of the 37: the accepted twins are either equivalent or misreported figures in prose.
+
+### S, read 2026-10-06 06:23Z (A–D), with the prefix experiment at 06:27Z
+
+| server | calls | first calls over 1,500 tokens | prompt s | tokens written | gen s | tok/s | acceptance | mean draft | done of 8 |
+|---|---|---|---|---|---|---|---|---|---|
+| A the product's flags (n-max 3) | 51 | 9 (median 2,361) | 437 | 9,949 | 791 | 12.6 | 0.95 | 3.52 | 5 |
+| B A + `--ctx-checkpoints 64 --checkpoint-min-step 256` | 55 | 9 (median 2,361) | 441 | 10,167 | 809 | 12.6 | 0.95 | 3.52 | 5 |
+| C B with n-max 5 | 45 | 9 (median 2,350) | 256 | 6,162 | 397 | 15.5 | 0.90 | 4.68 | 6 |
+| D no drafting, with the checkpoints | 54 | 7 (median 2,356) | 258 | 6,306 | 558 | 11.3 | — | — | 4 |
+
+- **S1 fails.** The checkpoint flags change nothing: B's first calls are A's to the token (2,364, then 2,497, 2,361, …).
+  Why, found in the server's own behaviour: a checkpoint is created only at the end of a processed prompt, so after a
+  task's first call the checkpoints sit at 2,361 and beyond, never at the 2,220 tokens the next task shares. The
+  server flags set how many such checkpoints are kept and how far apart, not where they fall.
+- **The fix that works, measured on a fifth server** (`prefix_slot.py`): the system-and-tools prefix processed alone
+  once (2,220 tokens, 19.3 s on six cores) leaves a checkpoint at exactly 2,220. After it, a new conversation's first
+  call processed 25–72 tokens with `cache_n` 2,220 (0.55–1.1 s), and so did a third conversation without any restore.
+  A slot saved there is 125 MB and restores in 36 ms. The system message carries no folder, date or time (read from a
+  row), so the prefix is one per machine. Adopted as a warm-up call from the launcher before each conversation.
+- **S2 stands provisionally** (n-max 5 wrote 23% more tokens per second than n-max 3 at acceptance 0.90), but C ran on
+  other cores than B, and A and B were slower at prompt processing than C and D for no reason in the flags, so the
+  comparison is rerun with the draft lengths swapped across the core groups (speed2, 06:25Z) before n-max changes.
+- **S3 fails.** Drafting at n-max 3 wrote 1.12× the tokens per second of no drafting on this CPU (bar 1.4×); the GPU
+  figures in the sources (1.4–2.2×) do not carry to a 4B on six CPU cores. n-max 5 reached 1.37×.
+- **S4 fails as written.** Done 5, 5, 6, 4 of 8: drafting on or off changes the tokens at temperature 0 (float paths
+  differ), and eight tasks cannot separate that from the known flip rate; the 161 and the 660 stay the measure.
