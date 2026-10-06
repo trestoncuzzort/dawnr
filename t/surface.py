@@ -120,10 +120,10 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
                  Clause* (SpecFun | InlineFun)* Block
     Clause   ::= "requires" Expr | "ensures" Expr | "decreases" Expr
     Params   ::= (Id ":" Type ("," Id ":" Type)*)?
-    Type     ::= BaseType | "(" BaseType "," BaseType ")"  (* pair: v1, since 2026-09-10; no pair of pairs *)
-               | "seq" "<" "seq" ">"                       (* nested seq: v1, since 2026-09-10; one level only *)
-    BaseType ::= "int" | "bool" | "seq"
-    SpecFun  ::= "spec" "fun" Id "(" Params ")" ":" ("int"|"bool"|"seq")  (* seq result: v1, since 2026-09-27 *)
+    Type     ::= "int" | "bool" | "seq" ("<" Type ">")? | "set" ("<" Type ">")?
+               | "(" Type ("," Type)+ ")" | Id          (* any depth since 2026-10-06 (SPEC.md "Compositional
+                                                           types"); seq<int>, set<int> are spelled seq, set *)
+    SpecFun  ::= "spec" "fun" Id "(" Params ")" ":" Type   (* any type since 2026-10-06 *)
                  "decreases" Expr "=" Expr
     InlineFun ::= "inline" "fun" Id "(" Params ")" ":" Type "=" Expr ";"?
     Block    ::= "{" Stmt* "}"
@@ -143,7 +143,7 @@ Grammar, in the same EBNF dialect SYNTAX.md uses:
     Add      ::= Mul (("+"|"-") Mul)*             (* left associative *)
     Mul      ::= Unary (("*"|"/"|"%") Unary)*     (* left associative; / % are div mod *)
     Unary    ::= "-" NAT | "-" Unary | Postfix
-    Postfix  ::= Atom (("[" Expr (":=" Expr)? "]") | ("." ("0"|"1")))*
+    Postfix  ::= Atom (("[" Expr (":=" Expr)? "]") | ("." NAT))*   (* .0 .1 fst snd; .k proj since 2026-10-06 *)
                                        (* `[...]` at/update; `.0`/`.1` fst/snd, v1 since 2026-09-10 *)
     Atom     ::= NAT | "true" | "false" | "len" "(" Expr ")"
                | "seq" "(" Expr "," Expr ")"       (* `fill`: seq(n, v) *)
@@ -470,7 +470,6 @@ CMP_OPS = {"==", "!=", "<", "<=", ">", ">="}
 _MUL_OPS = {"*": "*", "/": "div", "%": "mod"}
 _OP_TEXT = {"div": "/", "mod": "%"}
 VAL_TYPES = ("int", "bool", "seq", "set")   # "set": SPEC.md "Finite sets" (2026-09-27)
-PAIR_TYPES = ("int", "bool", "seq")          # what a pair component may be (SPEC.md "Pairs")
 
 
 # 2026-09-11 (ROADMAP 14.2): the production every raise site below names.
@@ -546,37 +545,38 @@ class Parser:
         return t.text
 
     def ptype(self):
-        """A t TYPE: int/bool/seq, a pair `(T1, T2)` (SPEC.md "Pairs",
-        2026-09-10), or a nested seq `seq<seq>` (SPEC.md "Nested
-        sequences", 2026-09-10). T1 and T2 are read with `vtype()`, not
-        `ptype()` itself, because there is no pair of pairs to recurse
-        into; this is the one place the grammar's `Type` and `BaseType`
-        differ. `<` and `>` are already the comparison symbols the lexer
-        tokenises everywhere else, but a type position never holds an
-        expression, so reading `<` right after the keyword `seq` here is
-        unambiguous with no new token: nothing else can follow a type's
-        own `seq` keyword at this point in the grammar."""
+        """A t TYPE (SPEC.md "Compositional types (v1)", 2026-10-06): `int`,
+        `bool`, `seq` (of ints) or `seq<T>` for any other element type T,
+        `set` (of ints) or `set<T>`, a product `(T1, T2)` (the pair, SPEC.md
+        "Pairs") or `(T1, ..., Tn)` with n >= 3 (the tuple), each component
+        any type, or a declared datatype's name (SPEC.md "Datatypes (v1)").
+        The canonical spellings are kept: `seq<int>` and `set<int>` are
+        refused in favour of `seq` and `set`, so a type has one normal form.
+        `<` and `>` are the comparison symbols the lexer tokenises everywhere
+        else, but a type position never holds an expression, so reading them
+        after `seq` or `set` is unambiguous with no new token."""
         start = self.tok
         if self.at("sym", "("):
             self.eat("sym", "(", "Type")
-            t1 = self.vtype(PAIR_TYPES)
-            self.eat("sym", ",", "Type")
-            t2 = self.vtype(PAIR_TYPES)
+            comps = [self.ptype()]
+            while self.opt("sym", ","):
+                comps.append(self.ptype())
             self.eat("sym", ")", "Type")
-            return self.mark(start, {"pair": [t1, t2]})
+            if len(comps) < 2:
+                self.err(start, "a product type has two or more components", "Type")
+            return self.mark(start, {"pair": comps} if len(comps) == 2 else {"tuple": comps})
         if self.tok.kind == "id" and self.tok.text in self.datatypes:
-            # SPEC.md "Datatypes (v1)" (2026-09-27): a declared datatype
-            # name is a TYPE, `{"datatype": D}`; `vtype()` below only ever
-            # accepts a KEYWORD, so a datatype name (an ordinary
-            # identifier) has to be read here instead, before falling
-            # through to it.
+            # a declared datatype name is a TYPE, `{"datatype": D}`; `vtype()`
+            # only ever accepts a KEYWORD, so the name is read here first.
             name = self.eat("id", production="Type").text
             return self.mark(start, {"datatype": name})
         t = self.vtype()
-        if t == "seq" and self.opt("sym", "<"):
-            self.eat("kw", "seq", "Type")
+        if t in ("seq", "set") and self.opt("sym", "<"):
+            inner = self.ptype()
             self.eat("sym", ">", "Type")
-            return self.mark(start, {"seq": "seq"})
+            if inner == "int":
+                self.err(start, "%s<int> is spelled %s" % (t, t), "Type")
+            return self.mark(start, {t: inner})
         return t
 
     # -- program -----------------------------------------------------------
@@ -823,10 +823,10 @@ class Parser:
         self.eat("kw", "fun")
         fn = {"name": self.name("SpecFun"), "params": self.params("SpecFun")}
         self.eat("sym", ":")
-        # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a spec_fun may
-        # return a seq of ints, the same elementary "seq" a param has.
-        fn["result"] = self.vtype(("int", "bool", "seq"))
-        self.production = "SpecFun"        # vtype() left it on "Type"
+        # SPEC.md "Compositional types (v1)" (2026-10-06): a spec_fun's
+        # result is any t type (2026-09-27 had added the seq of ints).
+        fn["result"] = self.ptype()
+        self.production = "SpecFun"        # ptype() left it on "Type"
         self.eat("kw", "decreases")
         fn["decreases"] = self.expr()
         self.production = "SpecFun"        # expr() left it on "Expr"
@@ -1133,11 +1133,18 @@ class Parser:
                     # "snd"), not `Expr`: a malformed projection names a
                     # specific operator, not "an expression is missing".
                     tok = self.eat("nat")
-                    if tok.text not in ("0", "1"):
-                        self.err(tok, "a pair projection is .0 or .1, "
+                    if tok.text in ("0", "1"):
+                        e = self.mark(start, {"op": "fst" if tok.text == "0"
+                                              else "snd", "args": [e]})
+                    elif tok.text == str(int(tok.text)):
+                        # .k for k >= 2: the tuple projection (SPEC.md
+                        # "Compositional types (v1)", 2026-10-06); a
+                        # zero-padded index would not round-trip.
+                        e = self.mark(start, {"op": "proj",
+                                              "args": [e, {"int": int(tok.text)}]})
+                    else:
+                        self.err(tok, "a projection is .0, .1, .2, ...; "
                                  "found .%s" % tok.text, "Op")
-                    e = self.mark(start, {"op": "fst" if tok.text == "0"
-                                          else "snd", "args": [e]})
                     continue
                 if self.tok.kind == "id" and self.tok.text in STR_METHODS:
                     # s.split(), s.count(t), sep.join(rows), ... (SPEC.md
@@ -1193,8 +1200,8 @@ class Parser:
                 # Neither .0/.1 nor a known string-library member: "Op"
                 # again, since the message names the set of valid operators
                 # a dot may introduce.
-                self.err(self.tok, "a dot must be followed by .0, .1, or a "
-                         "string-library member", "Op")
+                self.err(self.tok, "a dot must be followed by a projection "
+                         ".0, .1, .2, ... or a string-library member", "Op")
             break
         return e
 
@@ -1287,12 +1294,17 @@ class Parser:
             e = self.expr()
             self.production = "Expr"
             if self.opt("sym", ","):
-                # (e1, e2): the pair literal (SPEC.md "Pairs", 2026-09-10).
-                # `(e)` alone, no comma, stays grouping, as it always was.
-                e2 = self.expr()
+                # (e1, e2): the pair (SPEC.md "Pairs", 2026-09-10); (e1, ...,
+                # en) with n >= 3 the tuple (SPEC.md "Compositional types
+                # (v1)", 2026-10-06). `(e)` alone, no comma, stays grouping.
+                comps = [e, self.expr()]
                 self.production = "Expr"
+                while self.opt("sym", ","):
+                    comps.append(self.expr())
+                    self.production = "Expr"
                 self.eat("sym", ")")
-                return self.mark(t, {"op": "pair", "args": [e, e2]})
+                return self.mark(t, {"op": "pair", "args": comps} if len(comps) == 2
+                                 else {"op": "tuple", "args": comps})
             self.eat("sym", ")")
             return e
         if self.opt("sym", "["):
@@ -1568,6 +1580,12 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         return _wrap("%s.%s" % (pexpr(args[0], P_POSTFIX),
                                 "0" if op == "fst" else "1"),
                      P_POSTFIX, floor)
+    if op == "tuple":
+        # (e1, ..., en), n >= 3 (SPEC.md "Compositional types (v1)"): its own delimiters, like the pair's.
+        return "(%s)" % ", ".join(pexpr(a) for a in args)
+    if op == "proj":
+        # e.k for k >= 2: the tuple projection, postfix like `.0`/`.1`.
+        return _wrap("%s.%d" % (pexpr(args[0], P_POSTFIX), args[1]["int"]), P_POSTFIX, floor)
     if op == "split":
         # SPEC.md "The string library" (2026-09-11): s.split() / s.split(c),
         # postfix so it composes with indexing (`s.split()[0]`).
@@ -1638,24 +1656,20 @@ def _ident(name) -> str:
 
 
 def _print_type(t) -> str:
-    """int/bool/seq print as themselves; a pair `{"pair": [T1, T2]}`
-    (SPEC.md "Pairs", 2026-09-10) prints as `(T1, T2)`; a nested seq
-    `{"seq": "seq"}` (SPEC.md "Nested sequences", 2026-09-10) prints as
-    `seq<seq>`. Both are the notation `ptype()` parses back. Anything else
-    is not a t type."""
-    if isinstance(t, dict):
-        p = t.get("pair")
-        if (set(t) == {"pair"} and isinstance(p, list) and len(p) == 2
-                and all(c in PAIR_TYPES for c in p)):
-            return "(%s, %s)" % (p[0], p[1])
-        if t == {"seq": "seq"}:
-            return "seq<seq>"
-        if set(t) == {"datatype"} and isinstance(t["datatype"], str):
-            # SPEC.md "Datatypes (v1)" (2026-09-27): a declared datatype
-            # name prints as itself, the notation `ptype()` reads back
-            # (via `self.datatypes`, populated from the leading `datatype`
-            # declarations before this same name is ever used as a type).
-            return t["datatype"]
+    """`int`, `bool`, `seq`, `set` print as themselves; a product `{"pair":
+    [T1, T2]}` or `{"tuple": [T1, ..., Tn]}` as `(T1, ..., Tn)`; `{"seq":
+    T}` as `seq<T>` (so `{"seq": "seq"}` is `seq<seq>`, as since 2026-09-10);
+    `{"set": T}` as `set<T>`; a datatype as its name (SPEC.md "Compositional
+    types (v1)", 2026-10-06). The notation `ptype()` parses each back.
+    Anything else is not a t type."""
+    if isinstance(t, dict) and len(t) == 1:
+        (kind, inner), = t.items()
+        if kind in ("pair", "tuple") and isinstance(inner, list) and len(inner) >= 2:
+            return "(%s)" % ", ".join(_print_type(c) for c in inner)
+        if kind in ("seq", "set") and inner != "int":
+            return "%s<%s>" % (kind, _print_type(inner))
+        if kind == "datatype" and isinstance(inner, str):
+            return inner
         raise SurfaceError("not a t type: %r" % (t,))
     if t not in VAL_TYPES:
         raise SurfaceError("not a t type: %r" % (t,))
@@ -1842,6 +1856,21 @@ WRITTEN = [
      {"op": "pair", "args": [{"var": "a"}, {"var": "b"}]}),
     ("expr", "p.0", {"op": "fst", "args": [{"var": "p"}]}),
     ("expr", "p.1", {"op": "snd", "args": [{"var": "p"}]}),
+    # SPEC.md "Compositional types (v1)" (2026-10-06)
+    ("expr", "(a, b, c)", {"op": "tuple", "args": [{"var": "a"}, {"var": "b"}, {"var": "c"}]}),
+    ("expr", "u.2", {"op": "proj", "args": [{"var": "u"}, {"int": 2}]}),
+    ("stmt", "var u: (int, seq, bool) := (x, s, b);",
+     {"var": {"name": "u", "type": {"tuple": ["int", "seq", "bool"]},
+              "init": {"op": "tuple", "args": [{"var": "x"}, {"var": "s"}, {"var": "b"}]}}}),
+    ("stmt", "var f: seq<bool> := [true, false];",
+     {"var": {"name": "f", "type": {"seq": "bool"},
+              "init": {"op": "seq", "args": [{"bool": True}, {"bool": False}]}}}),
+    ("stmt", "var w: set<seq> := {};",
+     {"var": {"name": "w", "type": {"set": "seq"}, "init": {"op": "set", "args": []}}}),
+    ("stmt", "var q: ((int, int), seq<(int, int)>) := ((1, 2), []);",
+     {"var": {"name": "q", "type": {"pair": [{"pair": ["int", "int"]}, {"seq": {"pair": ["int", "int"]}}]},
+              "init": {"op": "pair", "args": [{"op": "pair", "args": [{"int": 1}, {"int": 2}]},
+                                              {"op": "seq", "args": []}]}}}),
     ("stmt", "var r: (int, int) := (x, y);",
      {"var": {"name": "r", "type": {"pair": ["int", "int"]},
               "init": {"op": "pair", "args": [{"var": "x"}, {"var": "y"}]}}}),
@@ -1992,6 +2021,7 @@ def _rand_expr(rng, depth: int) -> dict:
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
         "len", "at", "update", "fill", "seq", "slice", "ite", "quant", "call",
         "pair", "fst", "snd", "strlib", "setlit", "in", "card", "setbin",
+        "tuple", "proj",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -2034,6 +2064,11 @@ def _rand_expr(rng, depth: int) -> dict:
         return {"op": "pair", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind in ("fst", "snd"):
         return {"op": kind, "args": [_rand_expr(rng, d)]}
+    if kind == "tuple":
+        # SPEC.md "Compositional types (v1)" (2026-10-06): three or more components.
+        return {"op": "tuple", "args": [_rand_expr(rng, d) for _ in range(rng.randint(3, 4))]}
+    if kind == "proj":
+        return {"op": "proj", "args": [_rand_expr(rng, d), {"int": rng.randint(2, 3)}]}
     if kind == "setlit":
         # SPEC.md "Finite sets" (2026-09-27): {e1, ..., en}, {} included.
         return {"op": "set", "args": [_rand_expr(rng, d)
@@ -2094,6 +2129,20 @@ def _rand_type(rng):
                          rng.choice(["int", "bool", "seq"])]}
     if r < 0.35:
         return {"seq": "seq"}
+    # SPEC.md "Compositional types (v1)" (2026-10-06): a tuple of three, a
+    # seq or a set of a non-int element, a pair with a compound component,
+    # each drawn with a small share so the base shapes keep their frequency
+    # and every committed task's documented round trip is unchanged.
+    if r < 0.42:
+        return {"tuple": [_rand_type(rng) for _ in range(3)]}
+    if r < 0.48:
+        inner = _rand_type(rng)
+        return {"seq": inner} if inner != "int" else "seq"
+    if r < 0.52:
+        inner = rng.choice(["bool", "seq", {"pair": ["int", "int"]}])
+        return {"set": inner}
+    if r < 0.56:
+        return {"pair": [_rand_type(rng), _rand_type(rng)]}
     return rng.choice(["int", "bool", "seq", "set"])   # "set": SPEC.md "Finite sets"
 
 

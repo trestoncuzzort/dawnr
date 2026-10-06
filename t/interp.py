@@ -227,6 +227,16 @@ class Pair:
     b: object
 
 
+@dataclass(frozen=True)
+class Tup:
+    """SPEC.md "Compositional types (v1)" (2026-10-06): the runtime value of
+    `{"op": "tuple", "args": [...]}`, three or more components, kept out of
+    Python's tuple for the reason `Pair` is (a seq IS a Python tuple, and
+    `_tv` tags a value by its class); frozen for the componentwise `==` and
+    the hash the domain ladders need. No order, as for a pair."""
+    items: tuple
+
+
 MAX_SEQ = 1 << 16          # fill length cap, the seq analogue of MAX_BITS
 
 
@@ -629,6 +639,12 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         # SPEC.md "Pairs" (2026-09-10): (a, b), a value defined iff both
         # components are (every argument above is already evaluated).
         return Pair(a[0], a[1])
+    if op == "tuple":
+        # SPEC.md "Compositional types (v1)" (2026-10-06): (e1, ..., en).
+        return Tup(tuple(a))
+    if op == "proj":
+        # e.k, k >= 2, always defined on a tuple (the index is a literal).
+        return a[0].items[a[1]]
     if op == "set":
         # SPEC.md "Finite sets" (2026-09-27): {e1, ..., en}, the set of the
         # values (duplicates collapse), every element evaluated above so the
@@ -647,11 +663,11 @@ def ev(e: dict, env: dict, funs: dict, st: St):
     if op == "diff":
         return a[0] - a[1]
     if op == "fst":
-        # p.0: always defined on a pair (check_wf refuses a non-pair operand
-        # before this ever runs).
-        return a[0].a
+        # p.0: always defined on a pair, or the first component of a tuple
+        # (check_wf refuses any other operand before this ever runs).
+        return a[0].a if isinstance(a[0], Pair) else a[0].items[0]
     if op == "snd":
-        return a[0].b
+        return a[0].b if isinstance(a[0], Pair) else a[0].items[1]
     if op == "split":
         # SPEC.md "The string library" (2026-09-11): split(s) on whitespace
         # runs, split(s, c) on one code point, two arities of one op.
@@ -1085,12 +1101,27 @@ def _ladder(lad: dict, ty) -> tuple:
         if "pair" in ty:
             t1, t2 = ty["pair"]
             return tuple(_dedup([Pair(a, b) for a, b in
-                                 _shell([lad[t1], lad[t2]], PAIR_SHELL)]))
+                                 _shell([_ladder(lad, t1), _ladder(lad, t2)], PAIR_SHELL)]))
+        if "tuple" in ty:
+            # SPEC.md "Compositional types (v1)" (2026-10-06): the components'
+            # ladders in shell order, as the pair's, under the same cap.
+            comps = [_ladder(lad, t) for t in ty["tuple"]]
+            return tuple(_dedup([Tup(tuple(c)) for c in _shell(comps, PAIR_SHELL)]))
         if "datatype" in ty:
             # SPEC.md "Datatypes (v1)": the whole (small, finite) domain,
             # precomputed once per task in `ladders()` above.
             return lad[f"datatype:{ty['datatype']}"]
-        return lad["nested_seq"]
+        if ty == {"seq": "seq"}:
+            return lad["nested_seq"]
+        if "seq" in ty:
+            # SPEC.md "Compositional types (v1)": the seq ladder over the
+            # element type's own ladder, short first, the element alphabet
+            # capped as the nested seq's row alphabet is (NESTED_ROWS).
+            return _seq_ladder(tuple(_ladder(lad, ty["seq"])[:NESTED_ROWS]))
+        if "set" in ty:
+            # the same seqs read as sets, duplicates collapsed, as for ints.
+            return tuple(_dedup([frozenset(t) for t in
+                                 _seq_ladder(tuple(_ladder(lad, ty["set"])[:NESTED_ROWS]))]))
     return lad[ty]
 
 
@@ -1141,10 +1172,15 @@ def _j(v):
         # SPEC.md "Pairs": shown as a 2-list, recursing so a seq component
         # (itself a tuple) prints as a list too rather than as a raw tuple.
         return [_j(v.a), _j(v.b)]
+    if isinstance(v, Tup):
+        # SPEC.md "Compositional types (v1)": a tuple is shown as the list of its components.
+        return [_j(x) for x in v.items]
     if isinstance(v, frozenset):
         # SPEC.md "Finite sets" (2026-09-27): shown as its sorted list; the
         # declared type says it is a set, as it says a pair's 2-list is a pair.
-        return sorted(v)
+        # Elements of a compound type are shown as `_j` shows them and sorted
+        # by that rendering, so the order is deterministic.
+        return sorted((_j(x) for x in v), key=repr)
     if isinstance(v, tuple):
         # SPEC.md "Nested sequences" (2026-09-10): a row is itself a tuple,
         # so a bare `list(v)` here would print a nested seq as a list of
@@ -1163,7 +1199,20 @@ def _tv(v):
     A Pair's `type(v).__name__` is "Pair", never "tuple", so this keeps a
     pair distinct from a same-shaped seq for the same reason (SPEC.md
     "Pairs": "the runtime value of a pair must be DISTINCT from a seq")."""
-    return ("bool", v) if isinstance(v, bool) else (type(v).__name__, v)
+    if isinstance(v, bool):
+        return ("bool", v)
+    # SPEC.md "Compositional types (v1)" (2026-10-06): the tag reaches every
+    # depth, so a seq of bools and a seq of ints (True == 1 in Python) or a
+    # set of pairs and a set of same-shaped seqs never compare equal.
+    if isinstance(v, tuple):
+        return ("tuple", tuple(_tv(x) for x in v))
+    if isinstance(v, Pair):
+        return ("Pair", _tv(v.a), _tv(v.b))
+    if isinstance(v, Tup):
+        return ("Tup", tuple(_tv(x) for x in v.items))
+    if isinstance(v, frozenset):
+        return ("frozenset", frozenset(_tv(x) for x in v))
+    return (type(v).__name__, v)
 
 
 def _shown(env: dict) -> dict:

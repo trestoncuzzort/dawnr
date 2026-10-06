@@ -279,50 +279,85 @@ STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "isupper", "islower", "startswith", "endswith"}
 SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite sets" (2026-09-27)
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
-         | {"pair", "fst", "snd"} | STRLIB_OPS | SET_OPS)
+         | {"pair", "fst", "snd", "tuple", "proj"} | STRLIB_OPS | SET_OPS)
 TERNARY = {"update", "slice", "replace"}
-VARIADIC = {"seq", "set"}      # the two literals: any arity, zero included
+VARIADIC = {"seq", "set", "tuple"}      # the displays: seq and set at any arity, zero included; tuple at three or more
 UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
          "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
          "islower", "card"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
-BASE_TYPES = ("int", "bool", "seq")     # every T1, T2 a pair may hold
-# SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a spec_fun's result is
-# one of these three; a nested seq or a pair result is not in v1.
-SPEC_FUN_RESULTS = ("int", "bool", "seq")
+BASE_TYPES = ("int", "bool", "seq")     # the three a v1 pair held until 2026-10-06; the scalar-and-string trio
+# SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27) listed three result types; since SPEC.md "Compositional types
+# (v1)" (2026-10-06) a spec_fun takes and returns any type, so `_valid_type` decides and the list is gone.
 
 
 def _valid_type(t, dtypes=frozenset()) -> bool:
-    """A well-formed t TYPE: "int", "bool", "seq", a pair
-    `{"pair": [T1, T2]}` with T1, T2 each one of int/bool/seq (SPEC.md
-    "Pairs", 2026-09-10): no pair of pairs, no seq of pairs, no pair of
-    three; `{"seq": "seq"}` (SPEC.md "Nested sequences", 2026-09-10),
-    one level only -- the value under "seq" must be the literal string
-    "seq" and nothing else, so `{"seq": {"seq": "seq"}}` (three levels) and
-    `{"seq": {"pair": [...]}}` (a seq of pairs) are both refused here, by
-    name, exactly as the SPEC says v1 does not have them; or
-    `{"datatype": D}` (SPEC.md "Datatypes (v1)", 2026-09-27) where `D` is
-    one of THIS task's own declared datatype names -- `dtypes` is the
-    dict `check_wf` built from `task["datatypes"]` (name -> decl), so a
-    type naming a datatype no `datatype` declaration in this task defines
-    is refused here, the same way an unbound var is refused in `_ty`,
-    rather than surfacing three call frames later as a KeyError. Anything
-    else (an unknown string, a malformed dict, a pair whose own component
-    is itself a dict) is refused here rather than left for a KeyError or a
-    silent pass three checks later."""
+    """A well-formed t TYPE (SPEC.md "Compositional types (v1)", 2026-10-06): "int", "bool", "seq" (the canonical
+    spelling of a seq of ints), `{"seq": T}` for any other element type T (so `{"seq": "seq"}` is still seq<seq>,
+    as it was since 2026-09-10), `{"pair": [T1, T2]}` with any two types (a pair of pairs, a pair holding a set),
+    `{"tuple": [T1, ..., Tn]}` with n >= 3, "set" (the canonical spelling of a set of ints), `{"set": T}` for any
+    other element type, or `{"datatype": D}` naming one of THIS task's own declarations (`dtypes`: name -> decl,
+    as `check_wf` built it). The non-canonical spellings `{"seq": "int"}`, `{"set": "int"}` and a two-component
+    "tuple" are refused, so that every type has exactly one normal form (`parse(print(t)) == t`); so is anything
+    else (an unknown string, a malformed dict), here rather than as a KeyError three checks later."""
     if t in BASE_TYPES or t == "set":
-        # "set": SPEC.md "Finite sets" (2026-09-27), a finite set of ints;
-        # deliberately NOT in BASE_TYPES, so a pair may not hold one.
         return True
-    if isinstance(t, dict) and set(t) == {"pair"}:
-        return (isinstance(t["pair"], list) and len(t["pair"]) == 2
-                and all(c in BASE_TYPES for c in t["pair"]))
-    if isinstance(t, dict) and t == {"seq": "seq"}:
-        return True
-    return (isinstance(t, dict) and set(t) == {"datatype"}
-            and isinstance(t["datatype"], str) and t["datatype"] in dtypes)
+    if not (isinstance(t, dict) and len(t) == 1):
+        return False
+    (kind, inner), = t.items()
+    if kind in ("seq", "set"):
+        return inner != "int" and _valid_type(inner, dtypes)
+    if kind == "pair":
+        return isinstance(inner, list) and len(inner) == 2 and all(_valid_type(c, dtypes) for c in inner)
+    if kind == "tuple":
+        return isinstance(inner, list) and len(inner) >= 3 and all(_valid_type(c, dtypes) for c in inner)
+    return kind == "datatype" and isinstance(inner, str) and inner in dtypes
+
+
+def _is_seq(t) -> bool:
+    """A seq type of any element type ("seq" is the seq of ints)."""
+    return t == "seq" or (isinstance(t, dict) and set(t) == {"seq"})
+
+
+def _elem(t):
+    """The element type of a seq type."""
+    return "int" if t == "seq" else t["seq"]
+
+
+def _seq_of(t):
+    """The seq type over element type t, in its canonical spelling."""
+    return "seq" if t == "int" else {"seq": t}
+
+
+def _is_set(t) -> bool:
+    return t == "set" or (isinstance(t, dict) and set(t) == {"set"})
+
+
+def _set_elem(t):
+    return "int" if t == "set" else t["set"]
+
+
+def _set_of(t):
+    return "set" if t == "int" else {"set": t}
+
+
+def _components(t):
+    """The component types of a pair or tuple type, or None for any other type."""
+    if isinstance(t, dict) and (set(t) == {"pair"} or set(t) == {"tuple"}):
+        return list(t.values())[0]
+    return None
+
+
+def _empty_display(a, t, want) -> bool:
+    """Whether `a`, typed `t` with no hint, is the empty seq or set display standing for the seq or set type
+    `want` (SPEC.md "Compositional types": `[]` and `{}` take the expected type; where no declared type reaches
+    them, their default is the seq or set of ints, which is not a type error against another seq or set)."""
+    if not isinstance(a, dict) or a.get("args"):
+        return False
+    return ((t == "seq" and a.get("op") == "seq" and _is_seq(want))
+            or (t == "set" and a.get("op") == "set" and _is_set(want)))
 
 
 def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
@@ -491,111 +526,131 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         _e(errs, e, f"{op} takes two arguments", "op-arity")
     if op in NARY and len(args) < 2:
         _e(errs, e, f"{op} needs at least two arguments", "op-arity")
-    ts = [_ty(a, env, funs, dtypes, ver, errs, bound) for a in args]
+    # SPEC.md "Compositional types (v1)" (2026-10-06): a display's elements are typed against the element type
+    # of the expected type, so `[[]]` under a declared `seq<seq<bool>>` reads its inner `[]` as a `seq<bool>`.
+    expects = [None] * len(args)
+    if op == "seq" and _is_seq(expect):
+        expects = [_elem(expect)] * len(args)
+    elif op == "set" and _is_set(expect):
+        expects = [_set_elem(expect)] * len(args)
+    elif op in ("pair", "tuple") and _components(expect) is not None and len(_components(expect)) == len(args):
+        expects = list(_components(expect))
+    ts = [_ty(a, env, funs, dtypes, ver, errs, bound, x) for a, x in zip(args, expects)]
     NESTED = {"seq": "seq"}
     if op == "seq":
-        # SPEC.md "Sequences: literals, concatenation, slices": [e1, ..., en]
-        # of ints, [] included. SPEC.md "Nested sequences" (2026-09-10)
-        # makes this polymorphic: elements all int is a plain seq, elements
-        # all seq (rows) is a seq<seq>; [] has no element to type from, so
-        # it takes `expect` when the caller has one (a var/assign/return/
-        # ite/call context) and falls back to plain seq otherwise, exactly
-        # the pre-nested behaviour.
+        # SPEC.md "Sequences: literals, concatenation, slices": [e1, ..., en], [] included; SPEC.md
+        # "Compositional types (v1)" (2026-10-06): the elements are of any ONE type T and the display is the
+        # seq of T (ints: "seq"; rows: seq<seq>; bools, pairs, sets: {"seq": T}). [] has no element to type
+        # from, so it takes `expect` when the caller has a seq type for it and is the seq of ints otherwise.
         if not ts:
-            return expect if expect in ("seq", NESTED) else "seq"
-        if all(t == "int" for t in ts):
-            return "seq"
-        if all(t == "seq" for t in ts):
-            return NESTED
-        _e(errs, e, "seq literal elements must be all int or all seq "
-                "(no mixing, no pair or nested-seq rows)", "seq-lit-mixed")
-        return "seq"
+            return expect if _is_seq(expect) else "seq"
+        if any(t is None for t in ts):
+            return None
+        if all(t == ts[0] for t in ts):
+            return _seq_of(ts[0])
+        _e(errs, e, "seq literal elements must all be of one type", "seq-lit-mixed")
+        return _seq_of(ts[0])
     if op == "slice":
-        if ts[0] not in ("seq", NESTED) or ts[1] != "int" or ts[2] != "int":
-            _e(errs, e, "slice wants (seq or seq<seq>, int, int)", "slice-types")
+        if not _is_seq(ts[0]) or ts[1] != "int" or ts[2] != "int":
+            _e(errs, e, "slice wants (a seq of any element type, int, int)", "slice-types")
             return "seq"
         return ts[0]
-    if op == "+" and len(ts) == 2 and ts[0] == ts[1] and ts[0] in ("seq", NESTED):
+    if op == "+" and len(ts) == 2 and ts[0] == ts[1] and _is_seq(ts[0]):
         # s + t on two seqs (or two nested seqs, SPEC.md "Nested sequences")
         # is concatenation, the same polymorphism as ==.
         return ts[0]
     if op == "len":
-        if ts[0] not in ("seq", NESTED):
+        if not _is_seq(ts[0]):
             _e(errs, e, "len of a non-seq", "len-nonseq")
         return "int"
     if op == "at":
-        # SPEC.md "Nested sequences": at(m, i) on a seq<seq> gives a row
-        # (a seq), where at(s, i) on a plain seq gives an int.
-        if ts[1] != "int" or ts[0] not in ("seq", NESTED):
-            _e(errs, e, "at wants (seq or seq<seq>, int)", "at-types")
+        # SPEC.md "Compositional types (v1)": at(s, i) on a seq<T> gives a T (an int on a plain seq, a row on a
+        # seq<seq>, a pair on a seq of pairs).
+        if ts[1] != "int" or not _is_seq(ts[0]):
+            _e(errs, e, "at wants (a seq of any element type, int)", "at-types")
             return None
-        return "int" if ts[0] == "seq" else "seq"
+        return _elem(ts[0])
     if op == "update":
-        # SPEC.md "Sequences as values": s[i := v] is (seq, int, int) ->
-        # seq; SPEC.md "Nested sequences" (2026-09-10): m[i := r] on a
-        # seq<seq> takes a ROW (a seq) as the third argument, not an int.
+        # SPEC.md "Sequences as values": s[i := v], (seq<T>, int, T) -> seq<T> for any element type T (SPEC.md
+        # "Compositional types (v1)"); the index's definedness is `at`'s.
         if ts[1] != "int":
             _e(errs, e, "update index must be int", "update-types")
-        if ts[0] == "seq":
-            if ts[2] != "int":
-                _e(errs, e, "update wants (seq, int, int)", "update-types")
+        if not _is_seq(ts[0]):
+            _e(errs, e, "update wants (a seq of any element type, int, an element of that type)", "update-types")
             return "seq"
-        if ts[0] == NESTED:
-            if ts[2] != "seq":
-                _e(errs, e, "update wants (seq<seq>, int, seq) for the row", "update-types")
-            return NESTED
-        _e(errs, e, "update wants (seq or seq<seq>, int, element)", "update-types")
-        return "seq"
+        want = _elem(ts[0])
+        if ts[2] != want and not _empty_display(args[2], ts[2], want):
+            _e(errs, e, f"update wants an element of the seq's own type {want!r}, found {ts[2]!r}", "update-types")
+        return ts[0]
     if op == "fill":
-        # seq(n, v): v: int gives a seq, v: seq (a row) gives a seq<seq>
-        # (SPEC.md "Nested sequences", 2026-09-10).
+        # seq(n, v): n copies of v, a seq of v's type (SPEC.md "Compositional types (v1)").
         if ts[0] != "int":
             _e(errs, e, "fill count must be int", "fill-types")
-        if ts[1] == "int":
-            return "seq"
-        if ts[1] == "seq":
-            return NESTED
-        _e(errs, e, "fill wants (int, int) or (int, seq) for the row", "fill-types")
-        return "seq"
+        return _seq_of(ts[1]) if ts[1] is not None else "seq"
     if op == "set":
-        # SPEC.md "Finite sets" (2026-09-27): {e1, ..., en} of ints, {}
-        # included; unlike `seq` there is one set type, so no `expect` hint.
-        if any(t != "int" for t in ts):
-            _e(errs, e, "set display elements must be int", "set-lit-types")
-        return "set"
+        # SPEC.md "Finite sets" (2026-09-27): {e1, ..., en}, {} included; SPEC.md "Compositional types (v1)"
+        # (2026-10-06): the elements are of any ONE type T and the display is the set of T ("set" for ints).
+        if not ts:
+            return expect if _is_set(expect) else "set"
+        if any(t is None for t in ts):
+            return None
+        if all(t == ts[0] for t in ts):
+            return _set_of(ts[0])
+        _e(errs, e, "set display elements must all be of one type", "set-lit-types")
+        return _set_of(ts[0])
     if op == "in":
-        if ts[0] != "int" or ts[1] != "set":
-            _e(errs, e, "in wants (int, set)", "set-types")
+        if not _is_set(ts[1]) or (ts[0] != _set_elem(ts[1]) and not _empty_display(args[0], ts[0], _set_elem(ts[1]))):
+            _e(errs, e, "in wants (T, set<T>): an element of the set's own type", "set-types")
         return "bool"
     if op == "card":
-        if ts[0] != "set":
+        if not _is_set(ts[0]):
             _e(errs, e, "card of a non-set", "set-types")
         return "int"
     if op in ("union", "inter", "diff"):
-        if ts[0] != "set" or ts[1] != "set":
-            _e(errs, e, f"{op} wants (set, set)", "set-types")
-        return "set"
+        same = ts[0] == ts[1] or _empty_display(args[0], ts[0], ts[1]) or _empty_display(args[1], ts[1], ts[0])
+        if not (_is_set(ts[0]) and _is_set(ts[1]) and same):
+            _e(errs, e, f"{op} wants two sets of one element type", "set-types")
+            return "set"
+        return ts[1] if _empty_display(args[0], ts[0], ts[1]) else ts[0]
     if op == "pair":
-        # SPEC.md "Pairs" (2026-09-10): (e1, e2), typed from its operands;
-        # T1, T2 must each be int, bool or seq. There is no way to spell a
-        # "seq of pairs" as a type in t (seq is not parameterised), so the
-        # only shape to refuse here is a pair of pairs, one level at a time:
-        # a pair nested as either operand already failed this same check
-        # when IT was typed, so ts[0]/ts[1] not in BASE_TYPES catches it.
-        if ts[0] not in BASE_TYPES or ts[1] not in BASE_TYPES:
-            _e(errs, e, "pair components must be int, bool or seq "
-                    "(no pair of pairs, no pair of three)", "pair-types")
-        return {"pair": ts}
-    if op in ("fst", "snd"):
-        # p.0 / p.1: SPEC.md "Pairs". Only a pair operand is defined; a
-        # non-pair operand (including a pair-of-something gone wrong above,
-        # which types as None or a bad dict) is refused with a clear reason
-        # rather than an IndexError three lines from now.
-        t0 = ts[0]
-        if not (isinstance(t0, dict) and set(t0) == {"pair"}):
-            _e(errs, e, f"{op} wants a pair operand, found {t0!r}", "proj-nonpair")
+        # SPEC.md "Pairs" (2026-09-10): (e1, e2), typed from its operands; since SPEC.md "Compositional types
+        # (v1)" (2026-10-06) the two components are of any types (a pair of pairs, a pair holding a set).
+        if ts[0] is None or ts[1] is None:
             return None
-        return t0["pair"][0 if op == "fst" else 1]
+        return {"pair": ts}
+    if op == "tuple":
+        # SPEC.md "Compositional types (v1)": (e1, ..., en), n >= 3; two components are a `pair`, never a tuple.
+        if len(ts) < 3:
+            _e(errs, e, "a tuple has three or more components (two are a pair)", "tuple-arity")
+            return None
+        if any(t is None for t in ts):
+            return None
+        return {"tuple": ts}
+    if op in ("fst", "snd"):
+        # p.0 / p.1: SPEC.md "Pairs"; on a tuple of three or more they are its first two components (SPEC.md
+        # "Compositional types": `.0` and `.1` print and parse as fst and snd on any product).
+        comps = _components(ts[0])
+        if comps is None:
+            _e(errs, e, f"{op} wants a pair or tuple operand, found {ts[0]!r}", "proj-nonpair")
+            return None
+        return comps[0 if op == "fst" else 1]
+    if op == "proj":
+        # e.k for k >= 2 (SPEC.md "Compositional types (v1)"): the second argument is the literal index.
+        k = args[1].get("int") if isinstance(args[1], dict) else None
+        if not isinstance(k, int) or isinstance(k, bool):
+            _e(errs, e, "a projection index is an int literal", "proj-index")
+            return None
+        if k < 2:
+            _e(errs, e, "a projection .0 or .1 is fst or snd, never proj", "proj-index")
+            return None
+        comps = _components(ts[0])
+        if comps is None or not (isinstance(ts[0], dict) and set(ts[0]) == {"tuple"}):
+            _e(errs, e, f"proj wants a tuple operand, found {ts[0]!r}", "proj-nonpair")
+            return None
+        if k >= len(comps):
+            _e(errs, e, f"projection .{k} of a tuple of {len(comps)}", "proj-index")
+            return None
+        return comps[k]
     if op in STRLIB_OPS:
         # SPEC.md "The string library" (2026-09-11): every member's
         # signature, seq/int/seq<seq> per the table there. `split` is the
@@ -663,21 +718,11 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         # two type dicts already refuses a `==` across two DIFFERENT pair
         # types (a pair of (int, int) against a pair of (bool, int)), same
         # as it refuses int against seq.
-        if ts[0] != ts[1]:
-            # SPEC.md "Nested sequences" (2026-09-10): a bare `[]` with no
-            # hint types "seq" by default (the `op == "seq"` arm above);
-            # against a seq<seq>-typed other side that default is not a
-            # real type error, so an operand that IS the empty-literal AST
-            # node is let through as the empty nested seq it plainly is,
-            # rather than requiring a caller-supplied `expect` at every
-            # `==` site (`==` has no declared type of its own to hint with).
-            def _empty_lit(a, t):
-                return t == "seq" and a.get("op") == "seq" and not a.get("args")
-            zero, one = ts[0] == NESTED and _empty_lit(args[1], ts[1]), \
-                       ts[1] == NESTED and _empty_lit(args[0], ts[0])
-            if not (zero or one):
-                _e(errs, e, f"{op} wants two ints, two bools, two seqs, "
-                       f"two nested seqs, two sets, or two pairs of the same type", "eq-types")
+        if ts[0] != ts[1] and not (_empty_display(args[0], ts[0], ts[1]) or _empty_display(args[1], ts[1], ts[0])):
+            # SPEC.md "Nested sequences" (2026-09-10) and "Compositional types (v1)" (2026-10-06): a bare `[]` or
+            # `{}` with no hint is the seq or set of ints by default; against another seq or set type on the other
+            # side it is the empty value of THAT type, not a type error (`==` has no declared type to hint with).
+            _e(errs, e, f"{op} wants two values of one type, found {ts[0]!r} and {ts[1]!r}", "eq-types")
         return "bool"
     if any(t != "bool" for t in ts):
         _e(errs, e, f"{op} over non-bool", "bool-op")
@@ -808,14 +853,13 @@ def check_wf(task: dict, positions: dict | None = None,
         earlier = dict(expression_funs or {})
         earlier.update({g["name"]: g for g in task["spec_funs"][:i]})
         earlier[f["name"]] = f              # self-recursion is allowed
-        if f["result"] not in SPEC_FUN_RESULTS:
-            # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): int, bool
-            # or the elementary seq; a nested seq or a pair result is
-            # refused here by name (v1 does not have them), where before
-            # this rule an unlisted result only failed the body-type
-            # check below under a misleading message.
-            _e(errs, f, f"spec_fun {f['name']} result must be int, bool or "
-                        f"seq, not {f['result']!r}", "spec-fun-result")
+        for p in f["params"]:
+            if not _valid_type(p["type"], dtypes):
+                _e(errs, p, f"spec_fun {f['name']}: {p['name']} has an invalid type: {p['type']!r}", "valid-type")
+        if not _valid_type(f["result"], dtypes):
+            # SPEC.md "Compositional types (v1)" (2026-10-06): any t type; an invalid one is refused here by name,
+            # where before an unlisted result only failed the body-type check below under a misleading message.
+            _e(errs, f, f"spec_fun {f['name']} result is not a t type: {f['result']!r}", "spec-fun-result")
         if _ty(f["decreases"], fenv, earlier, dtypes, ver, errs, set()) != "int":
             _e(errs, f, f"spec_fun {f['name']} decreases is not int", "spec-fun-decreases-int")
         if _ty(f["body"], fenv, earlier, dtypes, ver, errs, set(), f["result"]) != f["result"]:

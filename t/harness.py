@@ -352,13 +352,59 @@ def _c_wrong_var(body, scope):
                 for alt, alt_ty in sc:
                     if alt != node["var"] and alt_ty == ty:
                         yield _replace(body, sp, {"var": alt})
-            elif node.get("op") == "pair":
-                a, b = node["args"]
-                yield _replace(body, sp, {"op": "pair", "args": [b, a]})
-            elif node.get("op") == "fst":
-                yield _replace(body, sp, {"op": "snd", "args": node["args"]})
-            elif node.get("op") == "snd":
-                yield _replace(body, sp, {"op": "fst", "args": node["args"]})
+            elif node.get("op") in ("pair", "tuple"):
+                # SPEC.md "Compositional types (v1)" (2026-10-06): two components of ONE type are exchanged
+                # (a swap across types would be ill-typed and is no twin); where a component's type cannot be
+                # told here (a call to a spec_fun, which this generator does not see), the swap is still tried,
+                # which is the pair's behaviour since 2026-09-10.
+                comps = node["args"]
+                types = [_etype(c, sc) for c in comps]
+                for i in range(len(comps)):
+                    for j in range(i + 1, len(comps)):
+                        if types[i] is None or types[j] is None or types[i] == types[j]:
+                            swapped = list(comps)
+                            swapped[i], swapped[j] = comps[j], comps[i]
+                            yield _replace(body, sp, {"op": node["op"], "args": swapped})
+            elif node.get("op") in ("fst", "snd", "proj"):
+                # the other projection of the same type (fst <-> snd on a pair, as since 2026-09-10; any other
+                # equal-typed component of a tuple since 2026-10-06)
+                k = {"fst": 0, "snd": 1}.get(node["op"], node["args"][1].get("int") if node["op"] == "proj" else None)
+                t0 = _etype(node["args"][0], sc)
+                comps = _components(t0)
+                if comps is None:
+                    if node["op"] in ("fst", "snd"):
+                        yield _replace(body, sp, _projection(node["args"][0], 1 - k))
+                    continue
+                for m in range(len(comps)):
+                    if m != k and comps[m] == comps[k]:
+                        yield _replace(body, sp, _projection(node["args"][0], m))
+
+
+def _etype(expr, scope):
+    """The static type of `expr` under `scope`'s (name, type) pairs, or None when it cannot be told here (an
+    unbound name, a spec_fun call: this generator sees no functions)."""
+    try:
+        import check_wf
+        t, errs = check_wf.expression_type(expr, dict(scope))
+        return None if errs else t
+    except Exception:                                       # noqa: BLE001  (an untypeable node is "unknown", not a crash)
+        return None
+
+
+def _components(t):
+    """The component types of a pair or tuple type, or None."""
+    if isinstance(t, dict) and (set(t) == {"pair"} or set(t) == {"tuple"}):
+        return list(t.values())[0]
+    return None
+
+
+def _projection(e: dict, k: int) -> dict:
+    """The AST of `e.k`: fst and snd for 0 and 1 (the canonical spellings), proj beyond."""
+    if k == 0:
+        return {"op": "fst", "args": [e]}
+    if k == 1:
+        return {"op": "snd", "args": [e]}
+    return {"op": "proj", "args": [e, {"int": k}]}
 
 
 def _c_drop_guard(body, scope):
