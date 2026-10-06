@@ -125,14 +125,16 @@ def test_dafny_text_of_a_comprehension_function():
                               "--kernel", "dafny"], capture_output=True, text=True, timeout=120)
         return out.stdout + out.stderr
     d = lowered("diffs")
-    ok("requires forall t_di :: 0 <= t_di < |t_s| ==> " in d and "t_s[t_di]" in d.split("requires forall t_di")[1],
-       "the precondition over the element, as the Std's Map requires f.requires(xs[i]): %s" % d)
-    ok("t_comp1(t_range(0, (|s| - 1)), s)" in d or "t_comp1(t_range(0, |s| - 1), s)" in d, "a range is the index sequence: %s" % d)
+    ok("requires forall t_di :: 0 <= t_di < t_n ==> " in d and "t_ix(t_di)" in d.split("requires forall t_di")[1],
+       "the precondition over the element, as the Std's Map requires f.requires(xs[i]), the range index through t_ix: %s" % d)
+    ok("t_comp1(0, ((|s| - 1) - 0), s)" in d, "a range comprehension is its lower bound and its length: %s" % d)
     d = lowered("odd_positions")
-    ok("requires |t_s| > 0 ==> " in d and "(1 <= |s|)" in d.split("requires |t_s| > 0 ==> ")[1].splitlines()[0],
-       "the conjuncts without the element are stated once under a non-empty source: %s" % d)
+    ok("requires t_n > 0 ==> " in d and "(1 <= |s|)" in d.split("requires t_n > 0 ==> ")[1].splitlines()[0],
+       "the conjuncts without the element are stated once under a non-empty prefix: %s" % d)
     d = lowered("doubled")
-    ok("requires" not in d.split("function t_comp1")[1].split("{")[0], "a total body has no precondition: %s" % d)
+    head = d.split("function t_comp1")[1].split("{")[0]
+    ok("requires forall t_di" not in head and "requires t_n > 0" not in head and "requires 0 <= t_n <= |t_s|" in head,
+       "a total body has no definedness precondition, only the prefix bound: %s" % d)
 
 
 if __name__ == "__main__":

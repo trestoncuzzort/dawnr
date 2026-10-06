@@ -256,6 +256,7 @@ KEYWORDS = {
     "t", "gate", "task", "returns", "requires", "ensures", "decreases",
     "spec", "fun", "return", "var", "while", "invariant", "if", "then", "else",
     "for",         # SPEC.md "Loops as sugar (v1)" (2026-10-06): the three for forms, expanded to while
+    "break", "continue",   # SPEC.md "Early exits (v1)" (2026-10-06): the two loop exits
     "forall", "exists", "in", "len", "true", "false", "and", "or", "not",
     "int", "bool", "seq",
     "real", "floor", "ceil",   # SPEC.md "Exact rationals (v1)" (2026-10-06): the type, and two
@@ -874,6 +875,13 @@ class Parser:
             e = self.expr()
             self.opt("sym", ";")
             return self.mark(t, {"return": [self.ret_name, e]})
+        if self.opt("kw", "break"):
+            # SPEC.md "Early exits (v1)" (2026-10-06): leaves the innermost loop; check_wf places it
+            self.opt("sym", ";")
+            return self.mark(t, {"break": True})
+        if self.opt("kw", "continue"):
+            self.opt("sym", ";")
+            return self.mark(t, {"continue": True})
         if (t.kind == "id" and t.text == "assert" and self.i + 1 < len(self.toks)
                 and not (self.toks[self.i + 1].kind == "sym"
                          and self.toks[self.i + 1].text == ":=")):
@@ -1221,7 +1229,7 @@ class Parser:
         inner[index] = "int"
         if f["range"] is not None:
             a, b = f["range"]
-            body = walk(f["body"], inner)
+            body = self._continue_steps(walk(f["body"], inner), index, pos)
             var_node = self._mk(pos, {"var": {"name": index, "type": "int", "init": a}})
             iv = lambda: {"var": index}   # noqa: E731
             while_node = self._mk(pos, {"while": {
@@ -1240,7 +1248,7 @@ class Parser:
             self._at(st, "for over something that is not a seq (or that cannot be typed here): write a seq-typed expression")
         elem_ty = "int" if ty == "seq" else ty["seq"]
         inner[elem] = elem_ty
-        body = walk(f["body"], inner)
+        body = self._continue_steps(walk(f["body"], inner), index, pos)
         iv = lambda: {"var": index}       # noqa: E731
         ln = lambda: {"op": "len", "args": [copy.deepcopy(seq)]}   # noqa: E731
         var_node = self._mk(pos, {"var": {"name": index, "type": "int", "init": {"int": 0}}})
@@ -1291,6 +1299,23 @@ class Parser:
         body = self.mark(start, {"op": "at", "args": [sl(), index]})
         return self.mark(start, {"comp": {"var": v, "lo": {"int": 0}, "hi": bound, "cond": {"bool": True},
                                           "body": body}})
+
+    def _continue_steps(self, body: list, index: str, pos) -> list:
+        """SPEC.md "Early exits (v1)" (2026-10-06): a `continue` at the for body's own level (under its ifs, not
+        inside a nested loop, whose continue is its own) must still take the step the sugar puts at the end of the
+        body, so it becomes `index := index + 1; continue;`."""
+        out = []
+        for st in body:
+            if "continue" in st:
+                out.append(self._mk(pos, {"assign": [index, {"op": "+", "args": [{"var": index}, {"int": 1}]}]}))
+                out.append(st)
+            elif "if" in st:
+                st["if"]["then"] = self._continue_steps(st["if"]["then"], index, pos)
+                st["if"]["else"] = self._continue_steps(st["if"].get("else") or [], index, pos)
+                out.append(st)
+            else:
+                out.append(st)
+        return out
 
     def _sugar_ahead(self) -> bool:
         """Whether the tokens here are `-` NAT followed by `]` or `..`: the from-the-end sugar's exact spelling.
@@ -2154,6 +2179,10 @@ def pstmts(body: list, ind: str) -> list:
         kind = next(iter(s))
         if kind == "return":
             out.append("%sreturn %s;" % (ind, pexpr(s["return"][1], 0)))
+            continue
+        if kind in ("break", "continue"):
+            # SPEC.md "Early exits (v1)" (2026-10-06)
+            out.append("%s%s;" % (ind, kind))
             continue
         if kind == "assert":
             out.append("%sassert %s;" % (ind, pexpr(s["assert"])))

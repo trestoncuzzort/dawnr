@@ -64,3 +64,6 @@ wf-v0-frozen.t	1	1	v0-frozen
 wf-v0-int-only.t	1	1	v0-int-only
 wf-v1-expr-v0.t	3	8	v1-expr-v0
 wf-while-v0.t	3	3	while-v0
+wf-exit-outside-loop.t	5	3	exit-outside-loop
+wf-exit-unreachable.t	6	5	exit-unreachable
+wf-loop-exit.t	5	3	loop-exit

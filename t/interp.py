@@ -115,6 +115,14 @@ MAX_STATES = 20_000      # loop states per INVARIANT-DROP check;
                          # the twin to the second invariant.
 
 
+class LoopExit(Exception):
+    """SPEC.md "Early exits (v1)" (2026-10-06): a `break` or a `continue`, unwinding to the innermost enclosing
+    loop's executor; never seen outside one, since check_wf places the statements."""
+    def __init__(self, kind: str):
+        super().__init__(kind)
+        self.kind = kind
+
+
 class Undef(Exception):
     """SPEC.md "Definedness": `at` outside [0, len) has no value, and neither
     does a read of a return name before its first assignment. Never a Python
@@ -844,6 +852,10 @@ def exec_body(body: list, env: dict, funs: dict, st: St, hook=None,
         elif "var" in s:
             d = s["var"]
             env[d["name"]] = ev(d["init"], env, funs, st)
+        elif "break" in s or "continue" in s:
+            kind = "break" if "break" in s else "continue"
+            emit("exit", location, loop_exit=kind)
+            raise LoopExit(kind)
         elif "if" in s:
             c = s["if"]
             branch = "then" if ev(c["cond"], env, funs, st) else "else"
@@ -881,10 +893,15 @@ def exec_body(body: list, env: dict, funs: dict, st: St, hook=None,
                                                prev_m if prev_m is not None
                                                else m, m)
                     prev_m = m
-                if exec_body(w["body"], env, funs, st, hook,
-                             trace=trace, path=(*location, "body")):
-                    emit("exit", location, returned=True)
-                    return True
+                try:
+                    if exec_body(w["body"], env, funs, st, hook,
+                                 trace=trace, path=(*location, "body")):
+                        emit("exit", location, returned=True)
+                        return True
+                except LoopExit as exc:
+                    # SPEC.md "Early exits (v1)" (2026-10-06): a break leaves, a continue goes back to the guard
+                    if exc.kind == "break":
+                        break
                 it += 1
                 if it > MAX_LOOP:
                     raise Budget("loop cap")

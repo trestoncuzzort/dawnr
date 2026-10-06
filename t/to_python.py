@@ -207,6 +207,8 @@ class _Writer:
             elif "return" in s:
                 _name, e = s["return"]
                 out.append(f"{pad}return {self.expr(e)}")
+            elif "break" in s or "continue" in s:
+                out.append(f"{pad}{'break' if 'break' in s else 'continue'}")   # SPEC.md "Early exits (v1)"
             elif "if" in s:
                 c = s["if"]
                 out.append(f"{pad}if {self.expr(c['cond'])}:")
