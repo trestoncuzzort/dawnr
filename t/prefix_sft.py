@@ -191,7 +191,7 @@ def split(features: list[dict], pad_id: int, prefix_len: int | None = None) -> d
 
 # ---- the check -------------------------------------------------------------------------------------------------------
 
-def tiny_model(seed: int = 0, layers: str = "LLFL"):
+def tiny_model(seed: int = 0, layers: str = "LLFL", device: str = "cpu", dtype=torch.float64):
     from transformers import Qwen3_5ForCausalLM, Qwen3_5TextConfig
     torch.manual_seed(seed)
     kinds = {"L": "linear_attention", "F": "full_attention"}
@@ -200,10 +200,11 @@ def tiny_model(seed: int = 0, layers: str = "LLFL"):
                                num_attention_heads=2, num_key_value_heads=1, head_dim=16, linear_num_key_heads=2,
                                linear_num_value_heads=2, linear_key_head_dim=8, linear_value_head_dim=8,
                                linear_conv_kernel_dim=4, max_position_embeddings=512, tie_word_embeddings=False, pad_token_id=0)
-    return Qwen3_5ForCausalLM(config).double()
+    return Qwen3_5ForCausalLM(config).to(device=device, dtype=dtype)
 
 
-def check(seed: int = 0, batch: int = 3, prefix: int = 20, verbose: bool = True, layers: str = "LLFL", exact64: bool = False) -> dict:
+def check(seed: int = 0, batch: int = 3, prefix: int = 20, verbose: bool = True, layers: str = "LLFL", exact64: bool = False,
+          device: str = "cpu") -> dict:
     """The plain per-row loss and gradients against the shared-prefix ones, in double precision on the CPU. The
     model casts its norms and its decay gate to 32-bit on purpose, which puts a 32-bit floor under both paths (the
     plain path moves by 1e-2 in the decay gate's gradients when its own chunks change from 64 to 32 tokens);
@@ -221,15 +222,21 @@ def check(seed: int = 0, batch: int = 3, prefix: int = 20, verbose: bool = True,
         torch.Tensor.to = to64
         torch.Tensor.float = lambda self: _to(self, torch.float64)   # noqa: E731
     try:
-        return _check(seed, batch, prefix, verbose, layers)
+        return _check(seed, batch, prefix, verbose, layers, device, torch.float64 if exact64 or device == "cpu" else torch.float32)
     finally:
         torch.Tensor.to, torch.Tensor.float = saved
 
 
-def _check(seed, batch, prefix, verbose, layers) -> dict:
+def _check(seed, batch, prefix, verbose, layers, device, dtype) -> dict:
+    """On a card the model is 32-bit (the fast kernels take no 64-bit) and the bar follows the plain path's own floor."""
     sys.path.insert(0, __file__.rsplit("/", 1)[0])
     from student_sft import pad_batch, response_loss
-    model = tiny_model(seed, layers)
+    model = tiny_model(seed, layers, device, dtype)
+
+    def on(d):
+        return {k: (v.to(device) if torch.is_tensor(v) else v) for k, v in d.items()}
+    pad_batch_cpu = pad_batch
+    pad_batch = lambda f, pad: on(pad_batch_cpu(f, pad))               # noqa: E731
     g = torch.Generator().manual_seed(seed + 1)
     shared_ids = torch.randint(1, 97, (prefix,), generator=g).tolist()
     features = []
@@ -251,8 +258,9 @@ def _check(seed, batch, prefix, verbose, layers) -> dict:
     # difference is the floor the model's 32-bit casts put under any comparison (the decay gate is computed in 32-bit)
     import transformers.models.qwen3_5.modeling_qwen3_5 as mod
     original = mod.torch_chunk_gated_delta_rule
+    plain_torch = getattr(original, "__wrapped__", original)           # the reference implementation itself, past any kernel hub
     try:
-        mod.torch_chunk_gated_delta_rule = lambda *a, **k: original(*a, **{**k, "chunk_size": 32})
+        mod.torch_chunk_gated_delta_rule = lambda *a, **k: plain_torch(*a, **{**k, "chunk_size": 32})
         again = response_loss(model, pad_batch(features, 0))
         again.backward()
         again_grads = grads()
@@ -267,7 +275,7 @@ def _check(seed, batch, prefix, verbose, layers) -> dict:
         for n, r in sorted(floor.items(), key=lambda kv: -kv[1])[:3]:
             print(f"    {r:.2e}  {n}")
     for ckpt in (False, True):
-        parts = split(features, 0, prefix_len=prefix)
+        parts = on(split(features, 0, prefix_len=prefix))
         shared = Shared(model, checkpointing=ckpt).loss(**parts)
         shared.backward()
         got = grads()
@@ -294,9 +302,10 @@ def main(argv=None) -> int:
     ap.add_argument("--batch", type=int, default=5)
     ap.add_argument("--prefix", type=int, default=100, help="longer than one 64-token chunk, so the plain path's chunking floor is measured")
     ap.add_argument("--exact64", action="store_true", help="keep the model's 32-bit casts in 64-bit, to compare the schedule alone")
+    ap.add_argument("--device", default="cpu", help="cuda: the fast kernels (fla) and their gradient of the initial state are what is checked")
     a = ap.parse_args(argv)
     if a.check:
-        out = check(a.seed, batch=a.batch, prefix=a.prefix, layers=a.layers, exact64=a.exact64)
+        out = check(a.seed, batch=a.batch, prefix=a.prefix, layers=a.layers, exact64=a.exact64, device=a.device)
         # the bar: the loss to 1e-8, and the gradients within 1.5x of what the plain path itself moves by when its
         # linear-attention chunks are 32 tokens instead of 64 (two exact formulations of one recurrence), or 1e-6 in
         # 64-bit and 1e-4 otherwise, whichever is larger
