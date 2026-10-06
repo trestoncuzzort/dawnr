@@ -1021,6 +1021,8 @@ function ZFill(s: seq<int>, w: int): seq<int>
 
 function LJust(s: seq<int>, w: int, f: int): seq<int>
   ensures |LJust(s, w, f)| == (if |s| >= w then |s| else w)
+  ensures forall i :: 0 <= i < |s| ==> LJust(s, w, f)[i] == s[i]
+  ensures forall i :: |s| <= i < |LJust(s, w, f)| ==> LJust(s, w, f)[i] == f
 { if |s| >= w then s else s + seq(w - |s|, _ => f) }
 
 function RJust(s: seq<int>, w: int, f: int): seq<int>
