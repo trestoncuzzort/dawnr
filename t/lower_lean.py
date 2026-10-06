@@ -3029,6 +3029,21 @@ class Lower:
         self.hof: dict = {}
         _hof_collect([task.get("requires", []), task.get("ensures", []), task.get("spec_funs", []), body or [],
                       task.get("methods", [])], self.hof)
+        # SPEC.md "Comprehensions (v1)" in Lean (PREDICT T12): each comprehension shape, its lemmas for grind, its
+        # definition for a certificate's unfolding
+        self.comps: dict = {}
+        _comp_collect([task.get("requires", []), task.get("ensures", []), task.get("spec_funs", []), body or [],
+                       task.get("methods", [])], self.comps)
+        for _key, (k, node) in sorted(self.comps.items(), key=lambda kv: kv[1][0]):
+            c = node["comp"]
+            nm = f"t_comp{k}" if "seq" in c else f"t_compr{k}"
+            if c["cond"] == {"bool": True}:
+                ga_names += [f"{nm}_length", f"{nm}_get"] + ([f"{nm}_get0"] if "lo" in c else [])
+            else:
+                ga_names += [f"{nm}_length"] + ([f"{nm}_all"] if c["body"] == {"var": c["var"]} else [])
+            self.lib_fns += [nm]
+        if self.comps and (self._has(task, "op", "slice") or self._has(body, "op", "slice")):
+            ga_names += ["t_seq_slice_get", "t_seq_slice_get_r"]   # PREDICT T12: a comprehension over a slice
         for _key, (k, node) in sorted(self.hof.items(), key=lambda kv: kv[1][0]):
             if node["op"] == "fold":
                 ga_names += [f"t_fold{k}_zero", f"t_fold{k}_step"]
@@ -3244,6 +3259,13 @@ class Lower:
     # ---------- sorts ----------
 
     def sort(self, e: dict, types: dict) -> str:
+        if "comp" in e:
+            # SPEC.md "Comprehensions (v1)": a seq of the body's type (an int's seq is "seq")
+            c = e["comp"]
+            el = "int" if "lo" in c else ("seq" if self._is_seqsort(self.sort(c["seq"], types)) and isinstance(
+                self.sort(c["seq"], types), dict) else "int")
+            bt = self.sort(c["body"], {**types, c["var"]: el})
+            return "seq" if bt == "int" else {"seq": bt}
         if "int" in e:
             return "int"
         if "bool" in e:
@@ -3544,6 +3566,8 @@ class Lower:
             raise NotImplementedError(
                 "bounded quantifier in computational position "
                 "is not lowered for lean")
+        if "comp" in e:
+            return self._comp_call(e, env, types, dep)      # SPEC.md "Comprehensions (v1)" (PREDICT T12)
         op = e["op"]
         if op == "len":
             s = self.term(e["args"][0], env, types, dep)
@@ -3861,6 +3885,29 @@ class Lower:
         if "int" in e or "bool" in e or "var" in e:
             return None
         guard = lambda p, d: None if d is None else f"({p} → {d})"  # noqa: E731
+        if "comp" in e:
+            # SPEC.md "Comprehensions (v1)" (PREDICT T12): the source defined; at every index of it the filter
+            # defined, and the body defined where the filter holds (Dafny's comprehension precondition, per element)
+            c = e["comp"]
+            k = self.fresh("t_dk")
+            if "seq" in c:
+                src = self.term(c["seq"], env, types)
+                ssrt = self.sort(c["seq"], types)
+                el_sort = "seq" if isinstance(ssrt, dict) and "seq" in ssrt else "int"
+                elem, lo, hi = f"(({src})[({k}).toNat]!)", "(0 : Int)", f"((({src}).length : Int))"
+                src_ob = self.dcond(c["seq"], env, types)
+            else:
+                el_sort = "int"
+                elem, lo, hi = k, self.term(c["lo"], env, types), self.term(c["hi"], env, types)
+                src_ob = self._conj([self.dcond(c["lo"], env, types), self.dcond(c["hi"], env, types)])
+            env2, types2 = {**env, c["var"]: elem}, {**types, c["var"]: el_sort}
+            dc = self.dcond(c["cond"], env2, types2)
+            db = self.dcond(c["body"], env2, types2)
+            inner = self._conj([dc, guard(self.prop(c["cond"], env2, types2), db)
+                                if c["cond"] != {"bool": True} else db])
+            if inner is None:
+                return src_ob
+            return self._conj([src_ob, f"(∀ ({k} : Int), {lo} ≤ {k} → {k} < {hi} → {inner})"])
         if "ite" in e:
             c = e["ite"]
             cp = self.prop(c["cond"], env, types)
@@ -6410,7 +6457,18 @@ class Lower:
             "      List.getElem_take, List.getElem_drop]\n"
             "  have hb2 : (a.toNat + j.toNat) < s.length := by omega\n"
             "  have heq : a.toNat + j.toNat = (a + j).toNat := by omega\n"
-            "  rw [← getElem!_pos s (a.toNat + j.toNat) hb2, heq]\n")
+            "  rw [← getElem!_pos s (a.toNat + j.toNat) hb2, heq]\n"
+            # the same read with the index's sum in the other order (PREDICT T12, measured: odd_positions' ensures
+            # read s[(2 * k + 1).toNat]! where the lemma gives s[(1 + 2 * k).toNat]!, and grind does not reorder
+            # under toNat); emitted only beside a comprehension, so every other file stays byte-identical
+            + ("\n"
+            "theorem t_seq_slice_get_r (s : List Int) (a b j : Int)\n"
+            "    (ha : (0 : Int) ≤ a) (hab : a ≤ b) "
+            "(hbl : b ≤ ((s.length : Int)))\n"
+            "    (hj : (0 : Int) ≤ j) (hju : j < b - a) :\n"
+            "    ((s.drop a.toNat).take (b - a).toNat)[(j).toNat]! "
+            "= s[(j + a).toNat]! := by\n"
+            "  rw [t_seq_slice_get s a b j ha hab hbl hj hju, Int.add_comm]\n" if self.comps else ""))
             if self.seq_append1:
                 # THE APPEND-ONE-ELEMENT LOOP (2026-09-19, ROADMAP 16.2,
                 # lean's own item). `t_seq_append_get` just above states
@@ -6614,6 +6672,146 @@ class Lower:
         args += [self.term({"var": n}, env, types, dep) for n in _lv._hof_free(e)]
         name = {"fold": "t_fold", "max_by": "t_maxby", "min_by": "t_minby"}[e["op"]]
         return f"({name}{k} {' '.join(args)} {count})"
+
+    def _comp_call(self, e: dict, env: dict, types: dict, dep: bool) -> str:
+        """A comprehension as its shape's function applied (SPEC.md "Comprehensions (v1)", PREDICT T12): a seq source
+        `s` is `(s, s.length)`, a prefix `s[0..e]` is `(s, e.toNat)`, a range `[lo, hi)` is `(lo, (hi - lo).toNat)`,
+        then the free names."""
+        import lower_verus as _lv
+        hit = self.comps.get(_comp_key(e))
+        if hit is None:
+            raise NotImplementedError("lean: a comprehension whose shape was not registered")
+        k = hit[0]
+        c = e["comp"]
+        fargs = "".join(f" {self.term({'var': n}, env, types, dep)}" for n in _lv._comp_free(e))
+        if "seq" in c:
+            sq = c["seq"]
+            if isinstance(sq, dict) and sq.get("op") == "slice" and sq["args"][1] == {"int": 0}:
+                base = self.term(sq["args"][0], env, types, dep)
+                count = f"({self.term(sq['args'][2], env, types, dep)}).toNat"
+            else:
+                base = self.term(sq, env, types, dep)
+                count = f"({base}).length"
+            return f"(t_comp{k} {base}{fargs} {count})"
+        lo, hi = self.term(c["lo"], env, types, dep), self.term(c["hi"], env, types, dep)
+        return f"(t_compr{k} {lo}{fargs} (({hi}) - ({lo})).toNat)"
+
+    def emit_comp_helpers(self) -> tuple[str, list]:
+        """Each registered comprehension shape's function, by structural recursion over Nat (so `decide` evaluates a
+        ground value), appending the element's image when the filter holds, with the lemmas its shape needs: a
+        map's length and element at an int index, a filter's length bound and that every element satisfies it. The
+        hand probe (scratch probe6.lean, 2026-10-06): doubled, evens and the range map verified, free of sorryAx."""
+        import lower_verus as _lv
+        out, thms = [], []
+        for _key, (k, e) in sorted(self.comps.items(), key=lambda kv: kv[1][0]):
+            c = e["comp"]
+            v = c["var"]
+            fvs = _lv._comp_free(e)
+            try:
+                fv_sorts = {n: self.types[n] for n in fvs}
+            except KeyError as x:
+                raise NotImplementedError(f"lean: a comprehension over a name whose type is not known here: {x}")
+            fparams = "".join(f" ({n} : {self.lean_type(t)})" for n, t in fv_sorts.items())
+            fargs = "".join(f" {n}" for n in fvs)
+            fenv = {n: n for n in fvs}
+            is_map = c["cond"] == {"bool": True}
+            is_filter = c["body"] == {"var": v}
+            if "seq" in c:
+                base = c["seq"]["args"][0] if (isinstance(c["seq"], dict) and c["seq"].get("op") == "slice"
+                                               and c["seq"]["args"][1] == {"int": 0}) else c["seq"]
+                try:
+                    src_sort = self.sort(base, self.types)
+                except KeyError as x:
+                    raise NotImplementedError(f"lean: a comprehension's source could not be typed here: {x}")
+                elem = "seq" if isinstance(src_sort, dict) and "seq" in src_sort else "int"
+                nm, head = f"t_comp{k}", f"(t_s : {self.lean_type(src_sort)}){fparams}"
+                at_n, at_i, call = "(t_s[t_n]!)", "(t_s[t_i.toNat]!)", f"t_comp{k} t_s{fargs}"
+                at_m = "(t_s[n]!)"
+            else:
+                elem = "int"
+                nm, head = f"t_compr{k}", f"(t_a : Int){fparams}"
+                at_n, at_i, call = "(t_a + (t_n : Int))", "(t_a + t_i)", f"t_compr{k} t_a{fargs}"
+                at_m = "(t_a + (n : Int))"
+            btypes = {**self.types, v: elem}
+
+            def body_at(x: str) -> str:
+                return self.term(c["body"], {**fenv, v: x}, btypes)
+
+            def cond_at(x: str) -> str:
+                return self.prop(c["cond"], {**fenv, v: x}, btypes)
+            usort = self.sort(c["body"], btypes)
+            U = self.lean_type(usort)
+            step = f"[{body_at(at_n)}]" if is_map else f"(if {cond_at(at_n)} then [{body_at(at_n)}] else [])"
+            out.append(f"def {nm} {head} : Nat → List {U}\n  | 0 => []\n  | t_n + 1 => {call} t_n ++ {step}\n")
+            if is_map:
+                out.append(
+                    f"theorem {nm}_length {head} (t_n : Nat) : ({call} t_n).length = t_n := by\n"
+                    f"  induction t_n with\n  | zero => rfl\n  | succ n ih => simp [{nm}, ih]\n\n"
+                    f"theorem {nm}_get {head} (t_n : Nat) :\n"
+                    f"    ∀ (t_i : Int), 0 ≤ t_i → t_i < (t_n : Int) → ({call} t_n)[t_i.toNat]! = {body_at(at_i)} := by\n"
+                    f"  induction t_n with\n  | zero => intro t_i h0 h1; omega\n  | succ n ih =>\n"
+                    f"    intro t_i h0 h1\n"
+                    f"    have hcomp : {call} (n + 1) = {call} n ++ [{body_at(at_m)}] := rfl\n"
+                    f"    rw [hcomp]\n"
+                    f"    have hl : ({call} n).length = n := {nm}_length {'t_s' if 'seq' in c else 't_a'}{fargs} n\n"
+                    f"    rcases Nat.lt_or_ge t_i.toNat n with h | h\n"
+                    f"    · rw [List.getElem!_eq_getElem?_getD, List.getElem?_append_left (by omega), "
+                    f"← List.getElem!_eq_getElem?_getD]\n"
+                    f"      exact ih t_i h0 (by omega)\n"
+                    f"    · have he : t_i.toNat = n := by omega\n"
+                    f"      have he2 : ((n : Nat) : Int) = t_i := by omega\n"
+                    f"      rw [List.getElem!_eq_getElem?_getD, List.getElem?_append_right (by omega)]\n"
+                    f"      simp only [hl, he, Nat.sub_self, List.getElem?_cons_zero, Option.getD_some]\n"
+                    f"      all_goals (first | rfl | (rw [he2]) | simp [he2])\n")
+                thms += [f"{nm}_length", f"{nm}_get"]
+                if "lo" in c:
+                    # a range from 0, the common case, as its own corollary with `0 + t_i` already simplified (measured,
+                    # diffs: grind did not equate s[((0 + w) + 1).toNat]! with s[(w + 1).toNat]! through the toNat)
+                    out.append(
+                        f"theorem {nm}_get0{fparams} (t_n : Nat) :\n"
+                        f"    ∀ (t_i : Int), 0 ≤ t_i → t_i < (t_n : Int) → ({call.replace('t_a', '(0 : Int)', 1)} t_n)"
+                        f"[t_i.toNat]! = {body_at('t_i')} := by\n"
+                        f"  intro t_i h0 h1\n"
+                        f"  have h := {nm}_get (0 : Int){fargs} t_n t_i h0 h1\n"
+                        f"  simp only [Int.zero_add] at h\n"
+                        f"  exact h\n")
+                    thms.append(f"{nm}_get0")
+                continue
+            out.append(
+                f"theorem {nm}_length {head} (t_n : Nat) : ({call} t_n).length ≤ t_n := by\n"
+                f"  induction t_n with\n  | zero => simp [{nm}]\n  | succ n ih =>\n"
+                f"    have hcomp : {call} (n + 1) = {call} n ++ "
+                f"(if {cond_at(at_m)} then [{body_at(at_m)}] else []) := rfl\n"
+                f"    rw [hcomp]; split <;> simp <;> omega\n")
+            thms.append(f"{nm}_length")
+            if is_filter:
+                ctop = cond_at(f"({call} t_n)[t_i.toNat]!")
+                out.append(
+                    f"theorem {nm}_all {head} (t_n : Nat) :\n"
+                    f"    ∀ (t_i : Int), 0 ≤ t_i → t_i < (({call} t_n).length : Int) → {ctop} := by\n"
+                    f"  induction t_n with\n  | zero => intro t_i h0 h1; simp [{nm}] at h1; omega\n  | succ n ih =>\n"
+                    f"    intro t_i h0 h1\n"
+                    f"    by_cases hc : {cond_at(at_m)}\n"
+                    f"    · have hcomp : {call} (n + 1) = {call} n ++ [{at_m}] := by\n"
+                    f"        show {call} n ++ (if {cond_at(at_m)} then [{at_m}] else []) = _\n"
+                    f"        rw [if_pos hc]\n"
+                    f"      rw [hcomp] at h1 ⊢\n"
+                    f"      rw [List.length_append, List.length_singleton] at h1\n"
+                    f"      rcases Nat.lt_or_ge t_i.toNat ({call} n).length with h | h\n"
+                    f"      · rw [List.getElem!_eq_getElem?_getD, List.getElem?_append_left h, "
+                    f"← List.getElem!_eq_getElem?_getD]\n"
+                    f"        exact ih t_i h0 (by omega)\n"
+                    f"      · have he : t_i.toNat = ({call} n).length := by omega\n"
+                    f"        rw [List.getElem!_eq_getElem?_getD, List.getElem?_append_right (by omega)]\n"
+                    f"        simp only [he, Nat.sub_self, List.getElem?_cons_zero, Option.getD_some]\n"
+                    f"        exact hc\n"
+                    f"    · have hcomp : {call} (n + 1) = {call} n := by\n"
+                    f"        show {call} n ++ (if {cond_at(at_m)} then [{at_m}] else []) = _\n"
+                    f"        rw [if_neg hc, List.append_nil]\n"
+                    f"      rw [hcomp] at h1 ⊢\n"
+                    f"      exact ih t_i h0 h1\n")
+                thms.append(f"{nm}_all")
+        return ("\n".join(out), thms)
 
     def emit_hof_helpers(self) -> tuple[str, list]:
         """Each registered higher-order shape's definition, by structural recursion over Nat so the kernel's `decide`
@@ -7089,6 +7287,8 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if self.seq_new:
             seq_thms += [("t_seq_append_get", "seq append-read bridge"),
                         ("t_seq_slice_get", "seq slice-read bridge")]
+            if self.comps:
+                seq_thms.append(("t_seq_slice_get_r", "seq slice-read bridge, the index sum commuted"))
             if self.seq_append1:
                 # THE APPEND-ONE-ELEMENT LOOP (2026-09-19): listed here
                 # so the file's OWN trailing audit block names them, the
@@ -7124,6 +7324,10 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         if hof_src:
             lib_src = (lib_src + "\n" + hof_src) if lib_src else hof_src
             lib_names = lib_names + hof_names
+        comp_src, comp_names = self.emit_comp_helpers()    # SPEC.md "Comprehensions (v1)" (PREDICT T12)
+        if comp_src:
+            lib_src = (lib_src + "\n" + comp_src) if lib_src else comp_src
+            lib_names = lib_names + comp_names
         strlib_src = (strlib_src + "\n" + lib_src) if strlib_src.strip() and lib_src else (strlib_src or lib_src)
         strlib_thms += [(n, "library lemma") for n in lib_names]
         sf_src, sf_thms = self.emit_sfuns()
@@ -10683,6 +10887,30 @@ theorem t_any_iff {α : Type} [Inhabited α] (s : List α) (p : α → Bool) :
 _LEAN_LIB_ORDER = ["min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev", "sort", "maxs", "anyall"]
 
 
+def _comp_key(e: dict) -> str:
+    """A comprehension's shape: its filter and body with the bound variable renamed, and whether the source is a seq
+    or a range (SPEC.md "Comprehensions (v1)", PREDICT T12)."""
+    import json
+    import lower_verus as _lv
+    c = e["comp"]
+    ren = {c["var"]: {"var": "$0"}}
+    return json.dumps({"cond": _lv.subst(c["cond"], ren), "body": _lv.subst(c["body"], ren), "range": "lo" in c},
+                      sort_keys=True)
+
+
+def _comp_collect(parts, index: dict) -> None:
+    def walk(y):
+        if isinstance(y, dict):
+            if "comp" in y:
+                index.setdefault(_comp_key(y), (len(index) + 1, y))
+            for v in y.values():
+                walk(v)
+        elif isinstance(y, list):
+            for v in y:
+                walk(v)
+    walk(parts)
+
+
 def _hof_collect(parts, index: dict) -> None:
     """Register every higher-order call shape in `parts` (SPEC.md "Higher-order calls (v1)"): lower_verus's key, the
     lambda's parameters renamed, so an invariant's and an ensures' lambdas are one shape."""
@@ -10756,7 +10984,7 @@ def _uses_sets(obj) -> bool:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "lean", carried={"comp-reduction"},
+    tshape.abstain_unless_carried(task, body, "lean", carried={"comp-reduction", "comp"},
                                   lib=LEAN_LIB)   # PREDICT T9: the library; any/all over a comprehension
     if _uses_sets(task) or _uses_sets(body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): this column

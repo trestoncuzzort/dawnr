@@ -2067,8 +2067,16 @@ result satisfies `p` and the length does not grow; for `[e for x in s]`
 for `[e for i in [a, b)]` the length is `b - a` when `a <= b` and the
 element at `k` is `e` at `a + k`; for a filter-and-map, the length bound
 only. Dafny and Verus carry it (Verus with the ensures as a broadcast
-lemma, as for `rev`); F*, SPARK, Lean, Rocq and Frama-C abstain by name
-until built and measured. Dafny, since the stepped-slice landing later the same day (T3c) and the
+lemma, as for `rev`). Lean since 2026-10-06 (PREDICT T12): each shape one
+function in the same prefix form, by structural recursion over `Nat`
+(appending the element's image when the filter holds), with the lemmas
+its shape admits generated beside it and proved by induction: a map's
+length and its element at an int index (and, for a range from 0, the
+element with `0 + i` already simplified, which grind did not do under
+`toNat`), a filter's length bound and that every element satisfies it; a
+partial body owes its definedness at every index of the source. F*, SPARK,
+Rocq and Frama-C abstain by name until built and measured. Dafny, since
+the stepped-slice landing later the same day (T3c) and the
 early-exits landing after it (T4), writes every comprehension function in
 PREFIX form: over a sequence, `t_compK(t_s, t_n)` is the comprehension of
 the first `t_n` elements of `t_s` (`requires 0 <= t_n <= |t_s|`), called
