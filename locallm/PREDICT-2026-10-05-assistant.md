@@ -814,3 +814,14 @@ said it could not and would not.
 
 What was learned: a table of lines is only as good as what it covers, and "how to look" is half of it; and a
 rule added for one reading (`type` as a file reader) can refuse the very line another part of the table gives.
+
+**The untaught model's counts, final, 2026-10-06 01:52Z (the taught model at step 30 of 176).** Between the first
+reading of the 660 and the taught model's, the front door and the judge changed (the loop of moves called an order
+mistake; two recorded lines in a row taken as the one they make; a reset that moves the branch handed over), so the
+untaught 4B was read again at the commit both are compared at (a2ff575f): **taught families 415 of 530, held-out
+84 of 130, 33 tasks with a file touched or a line let through unasked, 6.33 model calls a task done, 355 tokens
+written a task** (the first reading: 413, 88, 40, 6.30, 354: the same reading within noise, nine tasks changed
+hands). The bars stand at: **F1 at least 458 of 530; F2 at least 81 of 130; F3 at most 33 tasks; F4 at most 6.33
+calls a task done**; F5 and F6 against the untaught model's own reading on the laptop at the same commit, taken
+right before the taught one. `shift_numbered` is still 0 of 10 for the untaught model with the loop warning in
+place: to be read step by step when the taught model is.
