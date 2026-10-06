@@ -21,3 +21,44 @@ refuting its twin on the landing's committed tasks. Today: 772 of 4,239 function
 What would falsify the direction: a landing whose census bar is met while the kernels abstain on most of its tasks
 (the construct is in the language and in no proof), or a bar missed because the unlocked problems need a gate that
 is out of scope by design (classes, I/O). Both are reported as the result, not softened.
+
+## T1 read (2026-10-06 08:55Z, the census with the type detectors moved to burdens)
+
+| | before | after G1 | bar | |
+|---|---:|---:|---:|---|
+| function-shaped in fragment | 772 | **1,072** (25.3%) | ≥ 1,150 | **missed by 78** |
+| MBPP | 263 | **278** | ≥ 380 | **missed by 102** |
+| HumanEval | 12 | 14 | — | |
+| APPS (function-shaped) | 497 | 780 | — | |
+| stdin-shaped, in fragment once a signature is extracted | 3,750 | 5,345 | — | |
+
+The bar was set from the census's greedy table, whose "newly unlocked" counts are CUMULATIVE after the gates above
+them in the order (`real` and `import` first), not what each gate opens on its own. The column that answers the
+question asked was the sole-blocker column: tuple 71 + nested-seq 177 + nested-seq-pair/string/deep 0 + 18 + 16 +
+set 54 + multi-return 3 = 339 function-shaped problems with one of these as the only gap, and the landing opened
+300 (some needed two of them, some are now blocked by another gap that the greedy order had counted as already
+open). MBPP's problems that need tuples or nested seqs almost all need `real` or an `import` too, so the MBPP count
+moved 15. The bars for the landings below are restated from the sole-blocker column of the census as it stands
+after G1 (its table "Gaps, by problems that need them"), not from the greedy table, and each is read the same way.
+
+The kernels: Dafny verifies all six committed tasks with the twin refuted (sort3, zip_pairs, signs, words_seen,
+swap_ends, grid_row_sums); Verus, SPARK, Frama-C, Lean, Rocq and F* abstain by name (T8 holds on its own terms:
+no false verdict; T1's kernel half is open until each is written).
+
+### The bars restated from the sole-blocker column after G1 (2026-10-06 09:00Z, before G2 runs)
+
+Function-shaped problems with exactly one gap left, after G1: real 297, class 262, generator 257, import 253, map 110,
+string-lib 109, closure 84, any-type 83, seq-slice-step 72, unbounded-loop 53, seq-slice-negative 38, none-type 26,
+exception 13, io 6. MBPP's own greedy order now opens with `real` at +362 (278 → 640, 65.7%).
+
+| | after | bar (restated) | from |
+|---|---|---|---|
+| T2 | G2 exact rationals | all function-shaped ≥ 1,072 + 250 = 1,320; MBPP ≥ 600 | real: 297 sole blockers; +362 first in MBPP's order |
+| T3 | G3 builtins and notation | ≥ +90 function-shaped (slice step 72 + negative slice 38 sole, less overlap); the burdens `builtin-math`, `comprehension`, `sort` down by half on MBPP's in-fragment problems | the two slice gaps and the burden table |
+| T4 | G4 break and continue | ≥ +40 | unbounded-loop: 53 sole |
+| T5 | G5 maps | ≥ +90 | map: 110 sole |
+| T6 | G6 records and options | ≥ +30 | none-type 26 + exception 13 sole |
+| T7 | G7 the string library's missing members | ≥ +80 | string-lib: 109 sole |
+
+`class`, `generator`, `import` and `closure` stay as they are: the first is out of scope by design, the other three
+are met in part by G3's builtins and comprehensions (the census will say how much, by the same column).

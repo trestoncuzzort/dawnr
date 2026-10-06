@@ -17,7 +17,10 @@
 # written: t/make_grammar.py turns surface.KEYWORDS into a trie and writes the rules at the end of this file.
 # Without it the grammar admits `var int : int := 0`, which the parser refuses -- measured, 1 reply in 200.
 
-root ::= ws task ws
+root ::= ws (datatype ws)* task ws
+
+# `datatype D = C1 | C2 | ...` before the `t N` line (SPEC.md "Datatypes (v1)", 2026-09-27)
+datatype ::= "datatype" sp id ws "=" ws id (ws "|" ws id)*
 
 task ::= "t" sp ver sp gatepart "task" sp id ws params ws "returns" ws "(" ws id ws ":" ws type ws ")" clauses specfuns ws block
 ver ::= "0" | "1"
@@ -89,12 +92,15 @@ atom ::= nat
        | "card" ws "(" ws expr ws ")"
        | ("union" | "inter" | "setminus") ws "(" ws expr ws "," ws expr ws ")"
        | "{" ws args ws "}"
+       | "case" sp expr ws "{" ws arm (ws "," ws arm)* ws "}"
+       | id ws "." ws id
        | "(" ws expr (ws "," ws expr)+ ws ")"
        | "(" ws expr ws ")"
        | "[" ws args ws "]"
        | id ws "(" ws args ws ")"
        | id
 args ::= "" | expr (ws "," ws expr)*
+arm ::= id ws "=>" ws expr
 
 nat ::= [0-9]+
 
