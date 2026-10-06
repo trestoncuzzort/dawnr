@@ -162,31 +162,31 @@ DETECTORS: dict[str, tuple[str, str]] = {
                    "v1 names"),
     "real": ("gap", "real numbers: a float literal, true division `/`, "
              "math.sqrt, float(), or a decimal-valued io token"),
-    "nested-seq": ("gap", "a seq of seq whose row type could not be read "
+    "nested-seq": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "a seq of seq whose row type could not be read "
                    "as string or tuple (an int/bool row, or a subscript of "
                    "a subscript, or a grid a static read genuinely cannot "
                    "classify): SPEC.md's 'Nested sequences (v1)' burden "
                    "`seq<seq<int>>` and the unreadable fallback both land "
                    "here"),
-    "nested-seq-string": ("gap", "a seq of seq (or equivalent) whose row "
+    "nested-seq-string": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "a seq of seq (or equivalent) whose row "
                    "reads as a string: SPEC.md v1 has no seq<string> type"),
-    "nested-seq-pair": ("gap", "a seq of seq whose row reads as a tuple "
+    "nested-seq-pair": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "a seq of seq whose row reads as a tuple "
                    "(a list of tuples, or a nested annotation through "
                    "Tuple/tuple): SPEC.md v1 has no seq of pairs"),
-    "nested-seq-deep": ("gap", "three or more levels of seq nesting: "
+    "nested-seq-deep": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "three or more levels of seq nesting: "
                    "SPEC.md v1's nested seq is exactly one level deep"),
     "map": ("gap", "dict literal, dict(), defaultdict, Counter, or a "
             "dict-typed io value"),
-    "set": ("gap", "set literal, set(), frozenset(), a set/dict "
+    "set": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "set literal, set(), frozenset(), a set/dict "
             "comprehension's set form"),
-    "tuple": ("gap", "a tuple of three or more elements, a nested tuple, "
+    "tuple": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "a tuple of three or more elements, a nested tuple, "
               "a tuple with a string component (until strings-as-seq's "
               "seq-of-code-points model covers a pair component too), or "
               "a list of tuples (the separate gap `nested-seq-pair`, "
               "tagged where a list literal's own elements are inspected): "
               "SPEC.md's 'Pairs (v1)' covers only the two-element case, "
               "the burden tuple-pair"),
-    "multi-return": ("gap", "a function-shaped problem returning a tuple "
+    "multi-return": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "a function-shaped problem returning a tuple "
                       "(several return values; t returns exactly one)"),
     "none-type": ("gap", "Optional[..] or an explicit None return/argument"),
     "any-type": ("gap", "the interface's type could not be pinned to one of "

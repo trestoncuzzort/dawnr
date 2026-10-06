@@ -16,137 +16,107 @@ detectors at the end.
   - APPS: 10000
   - CodeContests: 13610
 - function-shaped: 4239; stdin-shaped: 20509
-- in t's fragment today: **772** of 4239 function-shaped (18.2%)
-- stdin-shaped, in fragment once a signature is extracted (all-int sample io, solution tags no gap): **3750** of 20509 (18.3%)
-- function-shaped problems blocked by exactly one gap: 1566
+- in t's fragment today: **1072** of 4239 function-shaped (25.3%)
+- stdin-shaped, in fragment once a signature is extracted (all-int sample io, solution tags no gap): **5345** of 20509 (26.1%)
+- function-shaped problems blocked by exactly one gap: 1663
 
 ## Gaps, by problems that need them
 
 | gap | problems | sole blocker for (function-shaped) | meaning |
 |---|---|---|---|
-| unbounded-loop | 4403 | 32 | while True, or a break/continue (t has no while-true, no continue, and a break is only in the fragment as a tail-position return, decision 23 -- not distinguished here, see Method) |
-| import | 3932 | 194 | an import other than math, sys or typing: an unmodeled library the solution's meaning depends on |
-| tuple | 3872 | 71 | a tuple of three or more elements, a nested tuple, a tuple with a string component (until strings-as-seq's seq-of-code-points model covers a pair component too), or a list of tuples (the separate gap `nested-seq-pair`, tagged where a list literal's own elements are inspected): SPEC.md's 'Pairs (v1)' covers only the two-element case, the burden tuple-pair |
-| nested-seq | 3606 | 177 | a seq of seq whose row type could not be read as string or tuple (an int/bool row, or a subscript of a subscript, or a grid a static read genuinely cannot classify): SPEC.md's 'Nested sequences (v1)' burden `seq<seq<int>>` and the unreadable fallback both land here |
-| real | 3517 | 245 | real numbers: a float literal, true division `/`, math.sqrt, float(), or a decimal-valued io token |
-| map | 2463 | 73 | dict literal, dict(), defaultdict, Counter, or a dict-typed io value |
-| closure | 2243 | 47 | a lambda, a nested def, or map/filter with a lambda |
-| generator | 1686 | 167 | a generator expression or a generator function (yield): t has no lazy or deferred evaluation |
-| class | 1641 | 213 | a class definition (t has no classes, no heap) |
-| set | 1604 | 54 | set literal, set(), frozenset(), a set/dict comprehension's set form |
-| string-lib | 1288 | 92 | a Python string-library use that SPEC.md's 'The string library (v1)' does NOT cover (split into this gap and the burden `string-lib-v1` on 2026-09-11, the day that section landed; read the dated docstring note above): an f-string or `.format()`, a based `int(x, base)` conversion, `strip`/`lstrip`/`rstrip` given a `chars` argument, `split` on a literal longer than one code point or on a non-literal separator, `sorted()` on a string, or a call to capitalize/title/zfill/center/ljust/rjust/partition/splitlines/encode/swapcase -- none of which SPEC.md's v1 names |
-| seq-slice-step | 852 | 39 | a slice with a step, s[a:b:c]: t's slice form takes two bounds only, no step |
-| nested-seq-pair | 566 | 0 | a seq of seq whose row reads as a tuple (a list of tuples, or a nested annotation through Tuple/tuple): SPEC.md v1 has no seq of pairs |
-| exception | 502 | 11 | try/except/raise |
-| seq-slice-negative | 489 | 23 | a slice bound that is a negative literal, s[-1:] or s[:-1]: t's slice is defined only for 0 <= a <= b <= len(s), so a negative index is measured apart from the burden seq-slice |
+| unbounded-loop | 4403 | 53 | while True, or a break/continue (t has no while-true, no continue, and a break is only in the fragment as a tail-position return, decision 23 -- not distinguished here, see Method) |
+| import | 3932 | 253 | an import other than math, sys or typing: an unmodeled library the solution's meaning depends on |
+| real | 3517 | 297 | real numbers: a float literal, true division `/`, math.sqrt, float(), or a decimal-valued io token |
+| map | 2463 | 110 | dict literal, dict(), defaultdict, Counter, or a dict-typed io value |
+| closure | 2243 | 84 | a lambda, a nested def, or map/filter with a lambda |
+| generator | 1686 | 257 | a generator expression or a generator function (yield): t has no lazy or deferred evaluation |
+| class | 1641 | 262 | a class definition (t has no classes, no heap) |
+| string-lib | 1288 | 109 | a Python string-library use that SPEC.md's 'The string library (v1)' does NOT cover (split into this gap and the burden `string-lib-v1` on 2026-09-11, the day that section landed; read the dated docstring note above): an f-string or `.format()`, a based `int(x, base)` conversion, `strip`/`lstrip`/`rstrip` given a `chars` argument, `split` on a literal longer than one code point or on a non-literal separator, `sorted()` on a string, or a call to capitalize/title/zfill/center/ljust/rjust/partition/splitlines/encode/swapcase -- none of which SPEC.md's v1 names |
+| seq-slice-step | 852 | 72 | a slice with a step, s[a:b:c]: t's slice form takes two bounds only, no step |
+| exception | 502 | 13 | try/except/raise |
+| seq-slice-negative | 489 | 38 | a slice bound that is a negative literal, s[-1:] or s[:-1]: t's slice is defined only for 0 <= a <= b <= len(s), so a negative index is measured apart from the burden seq-slice |
 | global | 316 | 0 | global or nonlocal: mutable state outside the function, which t's pure functions have no notion of |
-| any-type | 141 | 72 | the interface's type could not be pinned to one of the other named types: a bare Any annotation, a call expression as a test argument, or an untyped io value |
-| nested-seq-string | 119 | 18 | a seq of seq (or equivalent) whose row reads as a string: SPEC.md v1 has no seq<string> type |
-| none-type | 99 | 17 | Optional[..] or an explicit None return/argument |
-| nested-seq-deep | 95 | 16 | three or more levels of seq nesting: SPEC.md v1's nested seq is exactly one level deep |
-| multi-return | 43 | 3 | a function-shaped problem returning a tuple (several return values; t returns exactly one) |
-| io | 30 | 2 | input()/print()/sys.stdin used INSIDE a function-shaped solution (for a stdin-shaped problem, I/O is the shape itself, not a separate gap) |
+| any-type | 141 | 83 | the interface's type could not be pinned to one of the other named types: a bare Any annotation, a call expression as a test argument, or an untyped io value |
+| none-type | 99 | 26 | Optional[..] or an explicit None return/argument |
+| io | 30 | 6 | input()/print()/sys.stdin used INSIDE a function-shaped solution (for a stdin-shaped problem, I/O is the shape itself, not a separate gap) |
 
 ## Greedy gate order, whole corpus (function-shaped population)
 
 | step | gate | newly unlocked | cumulative in fragment | of function-shaped |
 |---|---|---|---|---|
-| 1 | real | 395 | 1167 | 27.5% |
-| 2 | class | 244 | 1411 | 33.3% |
-| 3 | nested-seq | 223 | 1634 | 38.5% |
-| 4 | import | 244 | 1878 | 44.3% |
-| 5 | generator | 277 | 2155 | 50.8% |
-| 6 | map | 246 | 2401 | 56.6% |
-| 7 | string-lib | 195 | 2596 | 61.2% |
-| 8 | closure | 202 | 2798 | 66.0% |
-| 9 | tuple | 214 | 3012 | 71.1% |
-| 10 | set | 206 | 3218 | 75.9% |
-| 11 | seq-slice-step | 169 | 3387 | 79.9% |
-| 12 | unbounded-loop | 176 | 3563 | 84.1% |
-| 13 | any-type | 129 | 3692 | 87.1% |
-| 14 | nested-seq-string | 91 | 3783 | 89.2% |
-| 15 | seq-slice-negative | 92 | 3875 | 91.4% |
-| 16 | nested-seq-deep | 80 | 3955 | 93.3% |
-| 17 | none-type | 81 | 4036 | 95.2% |
-| 18 | exception | 82 | 4118 | 97.1% |
-| 19 | nested-seq-pair | 49 | 4167 | 98.3% |
-| 20 | multi-return | 41 | 4208 | 99.3% |
-| 21 | io | 30 | 4238 | 100.0% |
-| 22 | global | 1 | 4239 | 100.0% |
+| 1 | real | 562 | 1634 | 38.5% |
+| 2 | class | 297 | 1931 | 45.6% |
+| 3 | generator | 312 | 2243 | 52.9% |
+| 4 | import | 349 | 2592 | 61.1% |
+| 5 | map | 326 | 2918 | 68.8% |
+| 6 | closure | 255 | 3173 | 74.9% |
+| 7 | string-lib | 262 | 3435 | 81.0% |
+| 8 | seq-slice-step | 183 | 3618 | 85.4% |
+| 9 | unbounded-loop | 191 | 3809 | 89.9% |
+| 10 | any-type | 135 | 3944 | 93.0% |
+| 11 | seq-slice-negative | 100 | 4044 | 95.4% |
+| 12 | none-type | 82 | 4126 | 97.3% |
+| 13 | exception | 82 | 4208 | 99.3% |
+| 14 | io | 30 | 4238 | 100.0% |
+| 15 | global | 1 | 4239 | 100.0% |
 
 A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
 more than one gate.
 
-### MBPP greedy gate order (974 function-shaped, 263 in fragment today)
+### MBPP greedy gate order (974 function-shaped, 278 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | real | 240 | 503 | 51.6% |
-| 2 | import | 89 | 592 | 60.8% |
-| 3 | tuple | 72 | 664 | 68.2% |
-| 4 | nested-seq | 52 | 716 | 73.5% |
-| 5 | generator | 52 | 768 | 78.9% |
-| 6 | map | 49 | 817 | 83.9% |
-| 7 | closure | 51 | 868 | 89.1% |
-| 8 | set | 33 | 901 | 92.5% |
-| 9 | unbounded-loop | 29 | 930 | 95.5% |
-| 10 | seq-slice-step | 10 | 940 | 96.5% |
-| 11 | string-lib | 9 | 949 | 97.4% |
-| 12 | seq-slice-negative | 8 | 957 | 98.3% |
-| 13 | none-type | 6 | 963 | 98.9% |
-| 14 | any-type | 3 | 966 | 99.2% |
-| 15 | class | 4 | 970 | 99.6% |
-| 16 | nested-seq-pair | 2 | 972 | 99.8% |
-| 17 | exception | 2 | 974 | 100.0% |
+| 1 | real | 362 | 640 | 65.7% |
+| 2 | import | 102 | 742 | 76.2% |
+| 3 | generator | 55 | 797 | 81.8% |
+| 4 | map | 54 | 851 | 87.4% |
+| 5 | closure | 52 | 903 | 92.7% |
+| 6 | unbounded-loop | 29 | 932 | 95.7% |
+| 7 | seq-slice-step | 10 | 942 | 96.7% |
+| 8 | string-lib | 9 | 951 | 97.6% |
+| 9 | seq-slice-negative | 8 | 959 | 98.5% |
+| 10 | none-type | 6 | 965 | 99.1% |
+| 11 | any-type | 3 | 968 | 99.4% |
+| 12 | class | 4 | 972 | 99.8% |
+| 13 | exception | 2 | 974 | 100.0% |
 
-### HumanEval greedy gate order (164 function-shaped, 12 in fragment today)
+### HumanEval greedy gate order (164 function-shaped, 14 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | any-type | 72 | 84 | 51.2% |
-| 2 | real | 15 | 99 | 60.4% |
-| 3 | closure | 8 | 107 | 65.2% |
-| 4 | generator | 10 | 117 | 71.3% |
-| 5 | set | 7 | 124 | 75.6% |
-| 6 | unbounded-loop | 5 | 129 | 78.7% |
-| 7 | map | 4 | 133 | 81.1% |
-| 8 | multi-return | 4 | 137 | 83.5% |
-| 9 | seq-slice-step | 5 | 142 | 86.6% |
-| 10 | string-lib | 3 | 145 | 88.4% |
-| 11 | nested-seq | 4 | 149 | 90.9% |
-| 12 | tuple | 3 | 152 | 92.7% |
-| 13 | none-type | 3 | 155 | 94.5% |
-| 14 | seq-slice-negative | 3 | 158 | 96.3% |
-| 15 | import | 3 | 161 | 98.2% |
-| 16 | exception | 2 | 163 | 99.4% |
-| 17 | nested-seq-pair | 1 | 164 | 100.0% |
+| 1 | any-type | 83 | 97 | 59.1% |
+| 2 | real | 16 | 113 | 68.9% |
+| 3 | closure | 11 | 124 | 75.6% |
+| 4 | generator | 10 | 134 | 81.7% |
+| 5 | seq-slice-step | 6 | 140 | 85.4% |
+| 6 | unbounded-loop | 5 | 145 | 88.4% |
+| 7 | map | 4 | 149 | 90.9% |
+| 8 | string-lib | 4 | 153 | 93.3% |
+| 9 | none-type | 3 | 156 | 95.1% |
+| 10 | seq-slice-negative | 3 | 159 | 97.0% |
+| 11 | import | 3 | 162 | 98.8% |
+| 12 | exception | 2 | 164 | 100.0% |
 
-### APPS greedy gate order (3101 function-shaped, 497 in fragment today)
+### APPS greedy gate order (3101 function-shaped, 780 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | class | 215 | 712 | 23.0% |
-| 2 | real | 180 | 892 | 28.8% |
-| 3 | generator | 180 | 1072 | 34.6% |
-| 4 | nested-seq | 207 | 1279 | 41.2% |
-| 5 | import | 190 | 1469 | 47.4% |
-| 6 | map | 206 | 1675 | 54.0% |
-| 7 | string-lib | 186 | 1861 | 60.0% |
-| 8 | closure | 160 | 2021 | 65.2% |
-| 9 | set | 166 | 2187 | 70.5% |
-| 10 | seq-slice-step | 152 | 2339 | 75.4% |
-| 11 | unbounded-loop | 137 | 2476 | 79.8% |
-| 12 | tuple | 112 | 2588 | 83.5% |
-| 13 | nested-seq-string | 91 | 2679 | 86.4% |
-| 14 | seq-slice-negative | 81 | 2760 | 89.0% |
-| 15 | nested-seq-deep | 80 | 2840 | 91.6% |
-| 16 | none-type | 72 | 2912 | 93.9% |
-| 17 | exception | 78 | 2990 | 96.4% |
-| 18 | nested-seq-pair | 46 | 3036 | 97.9% |
-| 19 | multi-return | 34 | 3070 | 99.0% |
-| 20 | io | 30 | 3100 | 100.0% |
-| 21 | global | 1 | 3101 | 100.0% |
+| 1 | class | 266 | 1046 | 33.7% |
+| 2 | real | 226 | 1272 | 41.0% |
+| 3 | generator | 257 | 1529 | 49.3% |
+| 4 | import | 246 | 1775 | 57.2% |
+| 5 | map | 270 | 2045 | 65.9% |
+| 6 | string-lib | 221 | 2266 | 73.1% |
+| 7 | closure | 231 | 2497 | 80.5% |
+| 8 | seq-slice-step | 172 | 2669 | 86.1% |
+| 9 | unbounded-loop | 161 | 2830 | 91.3% |
+| 10 | seq-slice-negative | 89 | 2919 | 94.1% |
+| 11 | none-type | 73 | 2992 | 96.5% |
+| 12 | exception | 78 | 3070 | 99.0% |
+| 13 | io | 30 | 3100 | 100.0% |
+| 14 | global | 1 | 3101 | 100.0% |
 
 ### CodeContests: no function-shaped problems
 
@@ -154,10 +124,10 @@ more than one gate.
 
 | source | problems | function-shaped | stdin-shaped | in fragment | stdin in fragment once signature extracted |
 |---|---|---|---|---|---|
-| MBPP | 974 | 974 | 0 | 263 | 0 |
-| HumanEval | 164 | 164 | 0 | 12 | 0 |
-| APPS | 10000 | 3101 | 6899 | 497 | 1752 |
-| CodeContests | 13610 | 0 | 13610 | 0 | 1998 |
+| MBPP | 974 | 974 | 0 | 278 | 0 |
+| HumanEval | 164 | 164 | 0 | 14 | 0 |
+| APPS | 10000 | 3101 | 6899 | 780 | 2432 |
+| CodeContests | 13610 | 0 | 13610 | 0 | 2913 |
 
 ## Burdens (expressible in t at a translation cost)
 
@@ -171,14 +141,21 @@ more than one gate.
 | builtin-math | 6624 | min, max, sum or abs; t can express each but has no builtin for any of them |
 | seq-append | 6030 | sequence concatenation `+` or .append()/.extend()/.insert(): t's v1 already has + on seqs (SPEC.md 'Sequences: literals, concatenation, slices'), landed as r + [x] or r + s |
 | comprehension | 5920 | a list/set/dict comprehension over ints; t writes this as an explicit loop or a quantifier |
+| tuple | 3872 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a tuple of three or more elements, a nested tuple, a tuple with a string component (until strings-as-seq's seq-of-code-points model covers a pair component too), or a list of tuples (the separate gap `nested-seq-pair`, tagged where a list literal's own elements are inspected): SPEC.md's 'Pairs (v1)' covers only the two-element case, the burden tuple-pair |
+| nested-seq | 3606 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a seq of seq whose row type could not be read as string or tuple (an int/bool row, or a subscript of a subscript, or a grid a static read genuinely cannot classify): SPEC.md's 'Nested sequences (v1)' burden `seq<seq<int>>` and the unreadable fallback both land here |
 | sort | 2908 | sorted() or .sort(); expressible in t but needs a spec, not a builtin |
 | seq-slice | 2474 | slicing s[a:b], s[a:], s[:b] with non-negative bounds and no step: t's v1 already has slice (SPEC.md 'Sequences: literals, concatenation, slices'); a negative bound or a step is measured separately as the gaps seq-slice-negative / seq-slice-step |
 | py2-unparseable | 2107 | the chosen Python solution does not parse under Python 3's ast (typically a Python 2 solution: print statement, raw_input, etc.); only its io-types are measured, its AST is not |
+| set | 1604 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): set literal, set(), frozenset(), a set/dict comprehension's set form |
 | recursion | 1496 | the solution's function calls itself; t supports this through spec functions (self-calls and calls to earlier functions), so it is a burden, not a gap |
+| nested-seq-pair | 566 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a seq of seq whose row reads as a tuple (a list of tuples, or a nested annotation through Tuple/tuple): SPEC.md v1 has no seq of pairs |
+| nested-seq-string | 119 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a seq of seq (or equivalent) whose row reads as a string: SPEC.md v1 has no seq<string> type |
+| nested-seq-deep | 95 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): three or more levels of seq nesting: SPEC.md v1's nested seq is exactly one level deep |
+| multi-return | 43 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a function-shaped problem returning a tuple (several return values; t returns exactly one) |
 
 ## Method
 
-Run time: 45.8s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
+Run time: 29.4s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
 unread. `mbpp_dfy.parse_assertion` is reused for every MBPP
 assertion (spec_experiment.py's `pool()` uses the same function to
 decide the same question, whether a problem's tests fit t's
