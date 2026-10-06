@@ -642,6 +642,11 @@ operators; it had refused every twin that called one. min, max and abs are repla
 branch-free: a live `?:` arm at ground values is dead code to the smoke tests, which read `clamp`'s and `distance`'s
 twins UNPROVED. Membership in a seq left Frama-C's set detector, as in Lean and Rocq.
 
+Measured (2026-10-06 22:49Z, the matrix regenerated from a clean clone at 3c9d721b, 88 tasks, 7 kernels): all seven
+went from 36 to 43, the count this read predicted. Exactly the 22 cells T10 and T11 named moved (14 Rocq, 8 Frama-C)
+and no other cell in any column; every kernel still refutes the twin of every real it verifies (100%). Frama-C is now
+the only kernel keeping a task in six columns out of all seven: `double_all`, `palindrome` and `swap_rows`.
+
 ## T12 registered (2026-10-06 22:32Z, before any run): comprehensions in Lean
 
 D1's fourth landing. Seven committed tasks state a comprehension (`doubled`, `squares`, `evens`, `diffs`,

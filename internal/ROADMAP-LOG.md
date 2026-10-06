@@ -3175,7 +3175,12 @@ is queued, and the ones running are read as they finish.
   recursion over Nat, with its length, element and filter lemmas proved by induction; doubled, squares, evens, diffs,
   every_other verified with the twin refuted; odd_positions UNPROVED (an index sum under toNat in the other order);
   count_evens_skip refused (early exits). Lean 56 -> 61.
-- **Next (before T12):** the clean-clone matrix at T11. Then D2, AlgoVeri's 22 contracts in seven kernels (`t/algoveri/`,
-  `t/ALGOVERI.md`), and the next depth items: comprehensions in Lean, Rocq, F*, SPARK and Frama-C (7 tasks each),
-  the higher-order calls in Rocq, compositional types in Lean, Rocq and Frama-C. The language queue: G9 datatypes with
-  fields (records, options, trees, which 37 of AlgoVeri's contracts need), then iteration over a map.
+- **The matrix regenerated from a clean clone (10-06 22:32Z start, at 3c9d721b):** all seven 36 -> 43, as T11 predicted;
+  exactly the 22 cells T10 and T11 named moved (Rocq 43 -> 57, Frama-C 36 -> 44), no other cell. Frama-C alone keeps
+  double_all, palindrome and swap_rows out of all seven.
+- **Next:** the engine moves to its own repository (github.com/trestoncuzzort/t-proof-engine) with its history; dawnr
+  keeps a pinned copy until its pipeline leaves `t/`. The clean-clone matrix at T12 runs from that repository, which
+  also proves it stands alone. Then D2, AlgoVeri's 22 contracts in seven kernels (`t/algoveri/`, `t/ALGOVERI.md`),
+  and the next depth items: comprehensions in Rocq, F*, SPARK and Frama-C (7 tasks each), the higher-order calls in
+  Rocq, compositional types in Lean, Rocq and Frama-C. The language queue: G9 datatypes with fields (records,
+  options, trees, which 37 of AlgoVeri's contracts need), then iteration over a map.
