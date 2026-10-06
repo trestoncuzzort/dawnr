@@ -1,0 +1,16 @@
+[
+  {
+    "populations": {
+      "clean": {
+        "answers": 1,
+        "exploited": 0,
+        "post_completeness": 1.0,
+        "post_correctness": 1.0,
+        "pre_completeness": null,
+        "pre_completeness_n": 0,
+        "pre_correctness": 1.0
+      }
+    },
+    "tag": "phi4-mini-g"
+  }
+]
