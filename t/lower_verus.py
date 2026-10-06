@@ -1835,6 +1835,11 @@ proof fn t_lemma_stripc_len(s: Seq<int>, t: Seq<int>)
     ensures t_str_stripc(s, t).len() <= s.len(), s.len() > 0 && t.contains(s[0]) ==> t_str_stripc(s, t).len() <= s.len() - 1,
         s.len() > 0 && t.len() == 1 && s[0] == t[0] ==> t_str_stripc(s, t).len() <= s.len() - 1,
 { t_lemma_lstripc_len(s, t); t_lemma_rstripc_len(t_str_lstripc(s, t), t); }
+proof fn t_lemma_ljust(s: Seq<int>, w: int, f: int)
+    ensures t_str_ljust(s, w, f).len() == (if s.len() >= w { s.len() as int } else { w }),
+        forall|i: int| 0 <= i < s.len() ==> #[trigger] t_str_ljust(s, w, f)[i] == s[i],
+        forall|i: int| s.len() <= i < t_str_ljust(s, w, f).len() ==> #[trigger] t_str_ljust(s, w, f)[i] == f,
+{ }
 proof fn t_lemma_rfind_from_bounds(s: Seq<int>, t: Seq<int>, i: int)
     requires -1 <= i, i + t.len() <= s.len(),
     ensures -1 <= t_str_rfind_from(s, t, i) <= i,
@@ -6391,6 +6396,8 @@ def _strlib2_lemma_args(x) -> list:
         op, args = x.get("op"), x.get("args", [])
         if op == "rfind" and len(args) == 2:
             out.append(("t_lemma_rfind_bounds", list(args)))
+        if op == "ljust":
+            out.append(("t_lemma_ljust", list(args) if len(args) == 3 else list(args) + [{"int": 32}]))
         if op in ("strip", "lstrip", "rstrip") and len(args) == 2:
             out.append(({"strip": "t_lemma_stripc_len", "lstrip": "t_lemma_lstripc_len",
                          "rstrip": "t_lemma_rstripc_len"}[op], list(args)))
