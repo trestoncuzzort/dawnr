@@ -1857,8 +1857,20 @@ unproved there), SPARK (`Min`,
 zero guard; `T_Pow`, `T_Isqrt`, `T_Sum`, `T_Rev`, `T_Contains` as
 recursive expression functions with `Subprogram_Variant`), F*
 (`FStar.Math.Lib`'s `abs`, `max`, `min`, `powx`; `t_gcd`, `t_isqrt`,
-`t_sum`, `t_rev` as `let rec`; `Seq.mem`). Lean, Rocq and Frama-C abstain
-by name until their encodings are built and measured. The writer's side:
+`t_sum`, `t_rev` as `let rec`; `Seq.mem`). Lean since 2026-10-06 (PREDICT
+T9, the first landing of the depth programme in
+`internal/RESEARCH-2026-10-06-landscape.md`): core Lean only, every
+function by structural recursion so the kernel's own `decide` evaluates a
+ground value (a well-founded definition, core's `List.mergeSort` among
+them, does not reduce under `decide`, and `native_decide` is banned):
+`t_min`, `t_max`, `t_abs`, `t_gcd` (`Int.gcd` cast back to an int),
+`t_pow` and `t_isqrt` over `Nat`, `t_sum` with its append lemma, `t_rev`
+as `List.reverse`, membership as `List` membership, and `sort` as a stable
+insertion sort (the list Python's `sorted` gives) with its permutation,
+order and length lemmas; `isqrt`'s bounds reach `grind` through a
+`grind_pattern` (measured: handed the lemma alone, grind did not
+instantiate it). Rocq and Frama-C abstain by name until their encodings
+are built and measured. The writer's side:
 `to_python.py` hands back `min`, `max`, `abs`, `sum`, `math.gcd`, `a **
 n`, `math.isqrt`, `x in s` and `s[::-1]`.
 
@@ -2282,8 +2294,13 @@ comprehension `set x | x in s`. Verus: `t_any`/`t_all` as spec fns with
 a quantifier, `max(s)`/`min(s)` as vstd's own `s.max()`/`s.min()` with
 `max_ensures()`/`min_ensures()` stated inside the proof fn for every use
 over the parameters (vstd's lemmas are not broadcast), `toset(s)` as
-`s.to_set()`. F*, SPARK, Lean, Rocq and Frama-C abstain by name. The
-hand-back writes Python's own built-ins.
+`s.to_set()`. Lean (since 2026-10-06, PREDICT T9): `max(s)`/`min(s)` as
+structurally recursive `t_maxs`/`t_mins` with membership and bound lemmas,
+`any`/`all` as core's `List.any`/`List.all` over a predicate (a
+comprehension of a seq under them is the predicate), carried to the index
+quantifier by two bridge lemmas; `toset` stays refused (core Lean has no
+finite set). F*, SPARK, Rocq and Frama-C abstain by name. The hand-back
+writes Python's own built-ins.
 
 **The twins.** No new move: WRONG-CONSTANT and OFF-BY-ONE reach the ints
 inside the comprehension a reduction consumes, COMPARE-FLIP its condition.
@@ -2362,8 +2379,13 @@ comparison is only a preorder; its facts come from three insertion lemmas
 and vstd's `to_multiset_ensures`, with each count term named (the
 `contains <==> count > 0` fact triggers on a count term only: measured,
 the membership asserts failed without them). Measured on a hand probe
-before the generator was written: 14 verified, 0 errors. SPARK, Frama-C,
-Lean, Rocq and F* abstain by name.
+before the generator was written: 14 verified, 0 errors. Lean (since
+2026-10-06, PREDICT T9): `fold`, `max_by` and `min_by` in the same prefix
+form, by structural recursion over `Nat` (so ground values evaluate under
+`decide`), with fold's zero and step equations stated at an int index (the
+form a loop's invariant reaches) and the extrema's chosen-index bounds,
+membership and key bound; `sort_by` is refused by name there. SPARK,
+Frama-C, Rocq and F* abstain by name.
 
 **The certificates.** A ground `fold` becomes the nested body it denotes
 and a ground `max_by`/`min_by` the nested choice, so the kernel computes

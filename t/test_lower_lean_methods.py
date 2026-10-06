@@ -201,7 +201,9 @@ def test_tasks_without_methods_emit_no_method_machinery() -> None:
             src = lower(t, t["body"])
         except NotImplementedError:
             continue
-        assert "grind_pattern" not in src, f
+        # a method's contract pattern is `grind_pattern <m>_t_spec => ...`; the library's own patterns
+        # (PREDICT T9: `grind_pattern t_isqrt_spec => t_isqrt n`) are not method machinery
+        assert not re.search(r"grind_pattern \w+_t_spec\b", src), f
         assert not re.search(r"attribute \[irreducible\]", src), f
 
 
