@@ -841,7 +841,7 @@ now-unconstrained `ensures`).
 
 ### The string library (v2)
 
-Stated 2026-10-07, the string library's second wave, measured first
+Stated 2026-10-06, the string library's second wave, measured first
 (receipt 608b2fa22b76): after the fourth landing's census corrections,
 `string-lib` is a gap on 1,288 problems, the largest language item left,
 and the members the corpus uses beyond the first wave are, in order,
@@ -2248,7 +2248,7 @@ len(s)`).
 
 ### Reductions (v1)
 
-Stated 2026-10-07, after a measurement of the corpus's generator
+Stated 2026-10-06, after a measurement of the corpus's generator
 expressions (receipt 4c05105b66f2, with the pages read first: Python's
 built-in `any`, `all`, `max`, `min` and `set`; Dafny's Std `Seq.Max`/`Min`,
 recursive with `requires 0 < |xs|` and the ensures that the result is in
@@ -2293,6 +2293,103 @@ the quantifier), `has_negative` (`any([x < 0 for x in s])` against the
 existential), `largest` (`max(s)` on a non-empty sequence: in it, above
 every element), `members_upto` (`toset(s[0..n])`: every element of the
 prefix is in it).
+
+### Higher-order calls (v1)
+
+Stated 2026-10-06 (PREDICT T8, registered before any run; receipt
+b27338128981 for the semantics read first: Python's `functools.reduce`,
+left to right with the initial value first; `sorted`, stable; `max` and
+`min` with a key, the first maximal or minimal item; receipt f70120c23d30
+for the Verus side: vstd's `seq_lib.rs` and the guide's pages on
+broadcast lemmas and on recursion and fuel). Measured first on the
+corpus's first solutions: of the uses behind the census gap `closure`
+(2,243 problems), the higher-order ones are sort keys 185 (`sorted` 107,
+`.sort` 78), `map` 68, `filter` 26, `max`/`min` keys 35 and `reduce` 24;
+beside them 419 lambdas bound to a name and 347 nested defs, 336 of them
+without `nonlocal`.
+
+A lambda is an expression with one or two bound parameters, allowed in
+exactly one place: the function argument of four library calls.
+
+```
+{"lam": {"vars": [Id], "body": Expr}}         // written x => e
+{"lam": {"vars": [Id, Id], "body": Expr}}     // written (a, x) => e
+{"op": "fold",    "args": [Lam2, Init, SeqExpr]}  // fold(f, init, s): f(...f(f(init, s[0]), s[1])..., s[n-1])
+{"op": "sort_by", "args": [SeqExpr, Lam1]}    // sort_by(s, key): s ordered by key, stable
+{"op": "max_by",  "args": [SeqExpr, Lam1]}    // max_by(s, key): the first element whose key is largest
+{"op": "min_by",  "args": [SeqExpr, Lam1]}    // min_by(s, key): the first element whose key is smallest
+```
+
+Typing (the checker's `hof-types` rule): `fold`'s lambda takes the
+accumulator first (the type of `init`, `A`) and the element second (the
+sequence's element type, `T`), and its body has type `A`; the result is
+`A`. A key takes `T` and gives an `int` or a `real`; `sort_by` gives
+`seq<T>`, `max_by` and `min_by` give `T`. A lambda's parameters scope over
+its body only and may not shadow a name in scope (the quantifier rule,
+`quant-shadow`). A lambda anywhere else is refused (`lambda-position`):
+there are no function values, no function types, and no function returned
+or stored. The four names are library names, resolved after parsing; a
+declared name shadows them.
+
+Definedness: `max_by` and `min_by` owe `len(s) > 0`; the sequence and
+`init` are defined; the lambda's body is defined at every element it is
+applied to. A lowering refuses by name a lambda whose body is partial
+(an index, a division) rather than state the obligation per element. The
+interpreter is Python's own `functools.reduce`, `sorted(key=)`, `max(key=)`
+and `min(key=)`; the hand-back writes them.
+
+**The lowerings.** Each call shape (the op and its lambda, the lambda's
+parameters renamed so that an invariant's `(a, y) => a + w * y` and an
+ensures' `(a, x) => a + w * x` are one shape: measured, as two functions
+they never met) becomes one recursive function in PREFIX form, over the
+first `t_n` elements of `t_s`, with the lambda's free names as further
+parameters: a call on `s[0..e]` is `(s, e)`, any other is `(s, len(s))`,
+so a loop invariant over a prefix and a postcondition over the whole are
+one unfolding apart and meet by congruence. Dafny: `fold` and the extrema
+are functions whose ensures (the extreme is in the sequence and bounds
+every key) are proved by induction from the definition; `sort_by` is a
+stable insertion sort (a later element is inserted after the equal keys
+before it) whose ensures (length, multiset, membership, key order) need
+two explicit lemmas, an upper bound on the keys an insertion yields and
+order preservation, called from inside the sort function: a quantified
+bound in a postcondition gave Dafny no instantiation (the registered
+falsifier; the lemma was written, as registered). Verus: the same
+functions as `spec fn`s; `max_by`/`min_by` through the index of the
+chosen element, with a broadcast lemma for its bounds and the key order;
+`sort_by` as the same insertion sort, since vstd's `lemma_sort_by_ensures`
+requires a total order (antisymmetric, `relations.rs`) and a key
+comparison is only a preorder; its facts come from three insertion lemmas
+and vstd's `to_multiset_ensures`, with each count term named (the
+`contains <==> count > 0` fact triggers on a count term only: measured,
+the membership asserts failed without them). Measured on a hand probe
+before the generator was written: 14 verified, 0 errors. SPARK, Frama-C,
+Lean, Rocq and F* abstain by name.
+
+**The certificates.** A ground `fold` becomes the nested body it denotes
+and a ground `max_by`/`min_by` the nested choice, so the kernel computes
+the value (in Verus, at most eight elements: the choice doubles per
+element); a ground `sort_by` is not unrolled and its certificate is
+refused.
+
+**The twins.** The ladder's moves reach a lambda's body (WRONG-CONSTANT,
+OFF-BY-ONE, COMPARE-FLIP inside it); WRONG-OPERATOR swaps `max_by` and
+`min_by`.
+
+**The census.** A lambda as a sort, max or min key, as the function of
+`map`, `filter` or `reduce`, or bound to a name, and a nested def that
+neither rebinds (`nonlocal`) nor mutates a name it captured (an append, a
+subscript or attribute store: t's values are immutable), are in the
+fragment (the burden `higher-order`): t states a nested def as a top-level
+helper with its captures as parameters. `functools`'s `reduce` is a
+modelled import. In the fragment: 2,773 -> 2,959 of 4,239 function-shaped
+problems; the gap `closure` 2,243 -> 707 (other lambda positions, and
+nested defs that mutate what they capture).
+
+**The committed tasks:** `longest_row` (`max_by` over rows by length),
+`cheapest` (`min_by` over pairs by the second component), `by_second`
+(`sort_by` over pairs: length, adjacent key order, every input element in
+the output), `weighted_sum` (a loop whose invariant is the fold over the
+prefix and whose postcondition is the fold over the whole).
 
 ## The twins
 
@@ -2547,7 +2644,9 @@ No unbounded quantifiers. No heap, no aliasing: `seq` is a value, and an
 array with mutation is a `seq` updated functionally ("Sequences as
 values"). No overflow semantics (mathematical integers; bounded backends
 owe explicit range obligations). One return value. No mutual recursion,
-no higher-order functions. A string is a seq of code points (stated
+no function values: since 2026-10-06 a lambda exists only as the function
+argument of `fold`, `sort_by`, `max_by` and `min_by` ("Higher-order calls
+(v1)"). A string is a seq of code points (stated
 2026-09-09, sequence literals/concatenation/slices the same night); its
 library (`split`, `join`, `tostr`, `count`, `find`, `strip`/`lstrip`/
 `rstrip`, `replace`, `lower`/`upper`, `isdigit`/`isalpha`/`isupper`/

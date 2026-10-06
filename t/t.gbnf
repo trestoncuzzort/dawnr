@@ -60,7 +60,9 @@ semi ::= ws ";" | ""
 
 # Expressions, lowest binding first, exactly t/surface.py's ladder. Quantifiers and if/then/else run to the
 # right as far as they can, which is why they sit above implies rather than beside the atoms.
-expr ::= quant | ite | implies
+expr ::= quant | ite | lam | implies
+# SPEC.md "Higher-order calls (v1)" (2026-10-06): a lambda, placed by the checker (the argument of fold, sort_by, max_by, min_by)
+lam ::= (id | "(" ws id (ws "," ws id)* ws ")") ws "=>" ws expr
 quant ::= ("forall" | "exists") sp id sp "in" sp "[" ws expr ws "," ws expr ws ")" ws "." ws expr
 ite ::= "if" sp expr sp "then" sp expr sp "else" sp expr
 implies ::= disj (ws "==>" ws (quant | ite | implies))?

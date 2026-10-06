@@ -118,8 +118,9 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
 
 
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",
-                     "any", "all", "toset",    # SPEC.md "Reductions (v1)" (2026-10-07)
-                     "isint", "toint"})        # SPEC.md "The string library (v2)" (2026-10-07)
+                     "any", "all", "toset",    # SPEC.md "Reductions (v1)" (2026-10-06)
+                     "isint", "toint",         # SPEC.md "The string library (v2)" (2026-10-06)
+                     "fold", "sort_by", "max_by", "min_by"})   # SPEC.md "Higher-order calls (v1)" (2026-10-06)
 STRLIB2_OPS = frozenset({"index", "rfind", "zfill", "center", "ljust", "rjust", "capitalize", "swapcase", "title",
                          "isspace", "isalnum", "splitlines", "partition"})
 
@@ -185,7 +186,7 @@ def abstain_on_library(task: dict, body: list, kernel: str, carried: frozenset =
     if used:
         raise NotImplementedError(f"{kernel}: {', '.join(used)} is not lowered yet (SPEC.md 'The library (v1)')")
     if "maxs" not in carried and _extrema_of_one(task, body):
-        # SPEC.md "Reductions (v1)" (2026-10-07): max(s)/min(s) of one argument are their own library shape
+        # SPEC.md "Reductions (v1)" (2026-10-06): max(s)/min(s) of one argument are their own library shape
         raise NotImplementedError(f"{kernel}: max/min of one argument are not lowered yet (SPEC.md 'Reductions (v1)')")
     if "in" not in carried and seq_membership_used(task, body):
         raise NotImplementedError(f"{kernel}: membership in a seq is not lowered yet (SPEC.md 'The library (v1)')")
@@ -204,7 +205,7 @@ def _extrema_of_one(task: dict, body: list) -> bool:
 
 
 def strlib2_used(task: dict, body: list) -> bool:
-    """Whether the task uses a second-wave string member (SPEC.md "The string library (v2)", 2026-10-07): one of
+    """Whether the task uses a second-wave string member (SPEC.md "The string library (v2)", 2026-10-06): one of
     STRLIB2_OPS, a strip with a character set, or a split with a sequence separator (told by the argument's type)."""
     import check_wf
     scope = _scope_of(task, body)

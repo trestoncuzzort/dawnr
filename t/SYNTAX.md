@@ -94,6 +94,10 @@ Expr     ::= {"int": integer}                   (* mathematical integer *)
                                                                            written [body for var in seq if cond] and
                                                                            [body for var in [lo, hi) if cond]; `if cond`
                                                                            omitted is "cond": {"bool": true} *)
+           | {"lam":    {"vars": [Id] | [Id, Id], "body": Expr}}         (* since 2026-10-06, SPEC.md "Higher-order
+                                                                           calls (v1)"; written x => e and (a, x) => e;
+                                                                           ONLY as the function argument of fold, sort_by,
+                                                                           max_by, min_by *)
 
 Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "div" | "mod"                     (* v1; written / and %; Euclidean on ints; "div" on two reals is exact
@@ -101,11 +105,13 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "toreal" | "floor" | "ceil"       (* since 2026-10-06; written real(x), floor(x), ceil(x): int -> real,
                                                    real -> int, real -> int; SPEC.md "Exact rationals (v1)" *)
            | "min" | "max" | "abs" | "sum"     (* since 2026-10-06, SPEC.md "The library (v1)"; written as calls,
-           | "any" | "all" | "toset"             (* since 2026-10-07, SPEC.md "Reductions (v1)": any(s)/all(s) on a
+           | "any" | "all" | "toset"             (* since 2026-10-06, SPEC.md "Reductions (v1)": any(s)/all(s) on a
                                                    seq<bool>, toset(s) the set of a seq's elements; max(s)/min(s) of
                                                    one argument the largest/smallest element of a non-empty seq *)
            | "gcd" | "pow" | "isqrt" | "rev"      min(a, b) ... rev(s), resolved by name after parsing: a declared
            | "sort"                               ("sort": SPEC.md "Sorting (v1)", the same day: the sorted permutation)
+           | "fold" | "sort_by" | "max_by" | "min_by"   (* since 2026-10-06, SPEC.md "Higher-order calls (v1)":
+                                                   fold(f, init, s), sort_by(s, key), max_by(s, key), min_by(s, key) *)
                                                    spec_fun/method/helper of the same name shadows the library;
                                                    "in" with a seq on the right is membership in a seq *)
            | "==" | "!=" | "<" | "<=" | ">" | ">="
@@ -544,6 +550,25 @@ shadow a name in scope; the result is `seq<U>` for `U` the body's type
 defined, `cond` at every element, `body` wherever `cond` holds. The
 printer omits `if true`. No set or map comprehension.
 
+### Higher-order calls (v1)
+
+```json
+{"op": "fold", "args": [{"lam": {"vars": ["a", "x"], "body": {"op": "+", "args": [{"var": "a"}, {"var": "x"}]}}}, {"int": 0}, {"var": "s"}]}
+{"op": "max_by", "args": [{"var": "rows"}, {"lam": {"vars": ["w"], "body": {"op": "len", "args": [{"var": "w"}]}}}]}
+{"op": "sort_by", "args": [{"var": "s"}, {"lam": {"vars": ["p"], "body": {"op": "snd", "args": [{"var": "p"}]}}}]}
+```
+written: `fold((a, x) => a + x, 0, s)` · `max_by(rows, w => len(w))` · `sort_by(s, p => p.1)`
+
+Since 2026-10-06 (SPEC.md "Higher-order calls (v1)"), a lambda `x => e`
+or `(a, x) => e` is an expression with bound parameters, as a quantifier
+is, written only as the function argument of the four library calls:
+`fold(f, init, s)` (a left fold, the accumulator first), `sort_by(s, key)`
+(stable), `max_by(s, key)` and `min_by(s, key)` (the first extreme
+element; `len(s) > 0` owed). A key gives an int or a real. A lambda's
+parameters scope over its body only and may not shadow a name in scope;
+a lambda in any other position is refused by the checker
+(`lambda-position`), and there is no function type.
+
 ### Nested sequences (v1)
 
 ```json
@@ -621,7 +646,7 @@ lowercase vowels, twin INVARIANT-DROP) are the committed examples. No new
 twin move: OFF-BY-ONE, WRONG-VAR, COLLAPSE-IF and an invariant drop reach
 these bodies exactly as they reach any seq-typed one.
 
-Since 2026-10-07 (SPEC.md "The string library (v2)"): `s.split(t)` on a
+Since 2026-10-06 (SPEC.md "The string library (v2)"): `s.split(t)` on a
 sequence separator (the second arity of `split`, by the argument's type),
 `s.strip(t)`, `s.lstrip(t)`, `s.rstrip(t)` with a character set, `s.index(t)`,
 `s.rfind(t)`, `s.zfill(w)`, `s.center(w)`, `s.ljust(w)`, `s.rjust(w)` (each
@@ -823,8 +848,9 @@ own module) to reuse the same positions once it exists.
 
 No unbounded quantifiers. No
 mutation of sequences in place (a seq is a value, updated functionally), no
-arrays, no heap, no aliasing. No mutual recursion, no higher-order
-functions. A character and a string are sugar over `int` and `seq`, not
+arrays, no heap, no aliasing. No mutual recursion, no function values
+(since 2026-10-06 a lambda is only the function argument of `fold`,
+`sort_by`, `max_by` and `min_by`, SPEC.md "Higher-order calls"). A character and a string are sugar over `int` and `seq`, not
 their own types. No floating point: `real` is the exact rational, with no
 rounding, no `round`, no `sqrt` (a root is specified as `r * r == x`), and a
 problem whose answer depends on IEEE rounding is not posed in t. Since 2026-10-06 a pair, a tuple, a seq and a set hold

@@ -115,6 +115,20 @@ MAX_STATES = 20_000      # loop states per INVARIANT-DROP check;
                          # the twin to the second invariant.
 
 
+class LamV:
+    """SPEC.md "Higher-order calls (v1)" (2026-10-06): a lambda's value inside the call it is an argument of; it
+    never escapes (check_wf's lambda-position), so it needs no equality or rendering."""
+    __slots__ = ("vars", "body", "env", "funs", "st")
+
+    def __init__(self, vars_, body, env, funs, st):
+        self.vars, self.body, self.env, self.funs, self.st = vars_, body, env, funs, st
+
+    def __call__(self, *vals):
+        sub = dict(self.env)
+        sub.update(zip(self.vars, vals))
+        return ev(self.body, sub, self.funs, self.st)
+
+
 class LoopExit(Exception):
     """SPEC.md "Early exits (v1)" (2026-10-06): a `break` or a `continue`, unwinding to the innermost enclosing
     loop's executor; never seen outside one, since check_wf places the statements."""
@@ -471,7 +485,7 @@ def _str_islower(s: tuple) -> bool:
     return has and not any(_is_upper_letter(c) for c in s)
 
 
-# SPEC.md "The string library (v2)" (2026-10-07): the second wave, Python's methods transcribed over tuples as above.
+# SPEC.md "The string library (v2)" (2026-10-06): the second wave, Python's methods transcribed over tuples as above.
 _LINEBREAKS = (10, 13, 11, 12, 28, 29, 30, 133, 8232, 8233)   # str.splitlines's boundaries; 13 10 is one
 
 
@@ -704,6 +718,8 @@ def ev(e: dict, env: dict, funs: dict, st: St):
                 return ev(arm["body"], sub, funs, st)
         raise ValueError(f"match: no arm for constructor {v.ctor!r} "
                          f"(check_wf should have refused this)")
+    if "lam" in e:
+        return LamV(e["lam"]["vars"], e["lam"]["body"], env, funs, st)
     if "comp" in e:
         # SPEC.md "Comprehensions (v1)" (2026-10-06): the elements (or ints) in order where cond holds, through body
         c = e["comp"]
@@ -905,7 +921,7 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         if len(a) == 1:
             return _str_split_ws(a[0])
         if isinstance(a[1], tuple):
-            # SPEC.md "The string library (v2)" (2026-10-07): a sequence separator, DEFINED IFF non-empty
+            # SPEC.md "The string library (v2)" (2026-10-06): a sequence separator, DEFINED IFF non-empty
             if not a[1]:
                 raise Undef("split with an empty separator", expr=e)
             return _str_split_str(a[0], a[1])
@@ -994,12 +1010,25 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return Fraction(a[0]) / Fraction(a[1])
     if op in ("min", "max"):
         # SPEC.md "The library (v1)" (2026-10-06): Python's own, exact on ints and Fractions alike; SPEC.md
-        # "Reductions (v1)" (2026-10-07): of one argument, the extremum of a non-empty seq
+        # "Reductions (v1)" (2026-10-06): of one argument, the extremum of a non-empty seq
         if len(a) == 1:
             if not a[0]:
                 raise Undef(f"{op} of an empty seq", expr=e)
             return (min if op == "min" else max)(a[0])
         return (min if op == "min" else max)(a[0], a[1])
+    if op == "fold":
+        # SPEC.md "Higher-order calls (v1)" (2026-10-06): functools.reduce(f, s, init), left to right
+        f, acc, s = a
+        for x in s:
+            st.tick()
+            acc = f(acc, x)
+        return acc
+    if op == "sort_by":
+        return tuple(sorted(a[0], key=a[1]))            # Python's sorted: stable
+    if op in ("max_by", "min_by"):
+        if not a[0]:
+            raise Undef(f"{op} of an empty seq", expr=e)
+        return (max if op == "max_by" else min)(a[0], key=a[1])   # the first extreme item, as Python's
     if op in ("any", "all"):
         return (any if op == "any" else all)(a[0])   # SPEC.md "Reductions (v1)": Python's own
     if op == "toset":

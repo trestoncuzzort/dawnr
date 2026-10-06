@@ -55,7 +55,7 @@ _STR_HELPERS = {
     "isupper": ["_str_isupper", "_is_upper_letter", "_is_lower_letter"],
     "islower": ["_str_islower", "_is_upper_letter", "_is_lower_letter"],
     "startswith": ["_str_startswith"], "endswith": ["_str_endswith"],
-    # SPEC.md "The string library (v2)" (2026-10-07)
+    # SPEC.md "The string library (v2)" (2026-10-06)
     "index": ["_str_index", "_str_find"], "rfind": ["_str_rfind"], "zfill": ["_str_zfill"],
     "center": ["_str_just"], "ljust": ["_str_just"], "rjust": ["_str_just"],
     "capitalize": ["_str_capitalize", "_str_upper", "_str_lower", "_is_upper_letter", "_is_lower_letter"],
@@ -106,6 +106,9 @@ class _Writer:
             return f"({self.expr(c['then'])} if {self.expr(c['cond'])} else {self.expr(c['else'])})"
         if "ctor" in e or "match" in e:
             raise Unsupported("datatypes")
+        if "lam" in e:
+            # SPEC.md "Higher-order calls (v1)" (2026-10-06): Python's own lambda
+            return "(lambda %s: %s)" % (", ".join(_ident(v) for v in e["lam"]["vars"]), self.expr(e["lam"]["body"]))
         if "comp" in e:
             # SPEC.md "Comprehensions (v1)" (2026-10-06): Python's own, as a tuple
             c = e["comp"]
@@ -171,6 +174,12 @@ class _Writer:
         if op == "in":
             return f"({x[0]} in {x[1]})"
         # SPEC.md "The library (v1)" (2026-10-06): Python's own where it has one, a helper where it does not
+        if op == "fold":
+            return f"__import__('functools').reduce({x[0]}, {x[2]}, {x[1]})"   # SPEC.md "Higher-order calls (v1)"
+        if op == "sort_by":
+            return f"tuple(sorted({x[0]}, key={x[1]}))"
+        if op in ("max_by", "min_by"):
+            return f"{op[:3]}({x[0]}, key={x[1]})"
         if op in ("min", "max", "abs", "sum", "any", "all"):
             return f"{op}({', '.join(x)})"   # Python's own, at either arity of min/max (SPEC.md "Reductions (v1)")
         if op == "toset":

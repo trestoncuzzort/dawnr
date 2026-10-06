@@ -253,7 +253,7 @@ def test_string_lib_properties():
 
 
 # ------------------------------------------------ the second wave (v2) --
-# SPEC.md "The string library (v2)" (2026-10-07): the same parity, member by member, against Python's own.
+# SPEC.md "The string library (v2)" (2026-10-06): the same parity, member by member, against Python's own.
 
 def _t1(rng):
     return rand_seq(rng, rng.randint(1, 2), ASCII)
@@ -371,7 +371,7 @@ def test_padding_is_capped():
 # SPEC.md "The string library": every member form, one line each (split at
 # both its arities). Round-tripped through surface.parse_expr/pexpr.
 NOTATION_FORMS = [
-    # SPEC.md "The string library (v2)" (2026-10-07)
+    # SPEC.md "The string library (v2)" (2026-10-06)
     "s.split(u)", "s.strip(u)", "s.lstrip(u)", "s.rstrip(u)", "s.index(u)", "s.rfind(u)", "s.zfill(w)",
     "s.center(w)", "s.center(w, c)", "s.ljust(w)", "s.rjust(w, c)", "s.capitalize()", "s.swapcase()", "s.title()",
     "s.isspace()", "s.isalnum()", "s.splitlines()", "s.partition(u)", "isint(s)", "toint(s)",

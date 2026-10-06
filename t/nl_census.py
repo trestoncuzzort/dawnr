@@ -152,7 +152,7 @@ DETECTORS: dict[str, tuple[str, str]] = {
                    "'The string library (v1)' does NOT cover (split into "
                    "this gap and the burden `string-lib-v1` on 2026-09-11, "
                    "the day that section landed; read the dated docstring "
-                   "note above; since 2026-10-07 the second wave, SPEC.md "
+                   "note above; since 2026-10-06 the second wave, SPEC.md "
                    "'The string library (v2)', is in the fragment too): an "
                    "f-string or `.format()`, a based `int(x, base)` "
                    "conversion, `split(sep, maxsplit)`, `sorted()` on a "
@@ -199,7 +199,15 @@ DETECTORS: dict[str, tuple[str, str]] = {
                  "expression as a test argument, or an untyped io value"),
     "class": ("gap", "a stateful class (attributes set in __init__ and read or written by methods): t has no "
               "classes, no heap; a bare method wrapper is the burden class-wrapper, a record the gap record"),
-    "closure": ("gap", "a lambda, a nested def, or map/filter with a lambda"),
+    "closure": ("gap", "a lambda anywhere but a sort, max or min key, the function of map, filter or reduce, or "
+                "a value bound to a name; a nested def or lambda that mutates a name it captured (an append, a "
+                "subscript or attribute store): t's values are immutable (since 2026-10-06 the rest is the "
+                "burden higher-order)"),
+    "higher-order": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Higher-order calls): a lambda as a "
+                     "sort, max or min key (t's sort_by, max_by, min_by), as the function of map or filter (a "
+                     "comprehension) or of reduce (t's fold), or bound to a name; a nested def that neither "
+                     "rebinds (nonlocal) nor mutates a captured name, which t states as a top-level helper with "
+                     "its captures as parameters"),
     "exception": ("gap", "try/except/raise"),
     "unbounded-loop": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Early exits): while True, break "
                         "and continue are t's own statements now (a while true needs a break of its own or a "
@@ -219,20 +227,21 @@ DETECTORS: dict[str, tuple[str, str]] = {
                               "bound"),
     "generator": ("gap", "a generator expression not consumed by a reduction, or a generator function "
                   "(yield): t has no lazy or deferred evaluation"),
-    "generator-consumed": ("burden", "IN THE FRAGMENT since 2026-10-07 (SPEC.md Reductions): a generator "
+    "generator-consumed": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Reductions): a generator "
                            "expression under sum, join, any, all, max, min, sorted, tuple, list, set, len or next "
                            "is a comprehension under a library op"),
-    "class-wrapper": ("burden", "IN THE FRAGMENT since 2026-10-07: a class whose methods never read self beyond "
+    "class-wrapper": ("burden", "IN THE FRAGMENT since 2026-10-06: a class whose methods never read self beyond "
                       "calling each other (the `class Solution` wrapper): its method is the function"),
     "record": ("gap", "a dataclass, NamedTuple or init-only class: a datatype with fields, not in t yet "
                "(SPEC.md Datatypes names enumerations only)"),
-    "import-modelled": ("burden", "IN THE FRAGMENT since 2026-10-07: an import of collections, bisect, fractions, "
-                        "copy, string, array, queue, decimal, or functools's lru_cache/cache alone, whose meaning "
+    "import-modelled": ("burden", "IN THE FRAGMENT since 2026-10-06: an import of collections, bisect, fractions, "
+                        "copy, string, array, queue, decimal, or functools's lru_cache/cache/reduce alone (reduce "
+                        "since 2026-10-06, t's fold), whose meaning "
                         "t's maps, slices, reals, values and literals carry"),
     "global": ("gap", "global or nonlocal: mutable state outside the "
                "function, which t's pure functions have no notion of"),
     "import": ("gap", "an import of an unmodelled library the solution's meaning depends on (itertools, re, "
-               "heapq, functools.reduce, numpy, random, os, ...); the modelled ones are the burden import-modelled"),
+               "heapq, operator, numpy, random, os, ...); the modelled ones are the burden import-modelled"),
     "io": ("gap", "input()/print()/sys.stdin used INSIDE a function-shaped "
            "solution (for a stdin-shaped problem, I/O is the shape itself, "
            "not a separate gap)"),
@@ -313,21 +322,21 @@ STRING_METHODS = {"upper", "lower", "split", "join", "strip", "lstrip",
                    "partition", "splitlines", "encode", "swapcase",
                    "find", "count"}
 # the first wave's reading, frozen: pool v3/v7's gate (mbpp_dfy.string_lib_v1_only) is defined by it, and a held-out
-# panel built from that gate must not move when the census learns the second wave (2026-10-07: adding `index` here
+# panel built from that gate must not move when the census learns the second wave (2026-10-06: adding `index` here
 # read the field `self.index` of a heap node as a string use and dropped MBPP 342 from the wider panel)
 STRING_METHODS_V1SET = frozenset(STRING_METHODS)
-STRING_METHODS = STRING_METHODS | {"index", "rfind", "isspace", "isalnum", "translate", "maketrans"}   # 2026-10-07
+STRING_METHODS = STRING_METHODS | {"index", "rfind", "isspace", "isalnum", "translate", "maketrans"}   # 2026-10-06
 MAP_CALLS = {"dict", "defaultdict", "Counter", "OrderedDict"}
-# SPEC.md "Reductions (v1)" (2026-10-07): the calls under which a generator expression is a comprehension in t
+# SPEC.md "Reductions (v1)" (2026-10-06): the calls under which a generator expression is a comprehension in t
 GENERATOR_CONSUMERS = {"sum", "join", "any", "all", "max", "min", "sorted", "tuple", "list", "set", "len", "next",
                        "frozenset"}
-# 2026-10-07: modules whose meaning t already carries (maps for collections, slices for bisect and deque, reals for
+# 2026-10-06: modules whose meaning t already carries (maps for collections, slices for bisect and deque, reals for
 # fractions and decimal, values for copy, literals for string, seqs for array/queue)
 MODELLED_MODULES = {"collections", "bisect", "fractions", "copy", "string", "array", "queue", "decimal"}
 
 
 def _class_shape(cls: ast.ClassDef) -> str:
-    """2026-10-07, measured on the corpus's first solutions (950 with a class: 638 bare wrappers, 66 wrappers
+    """2026-10-06, measured on the corpus's first solutions (950 with a class: 638 bare wrappers, 66 wrappers
     calling each other through self, 173 stateful, 17 records): `class-wrapper` when every member is a method and
     no method reads a `self` attribute (the `class Solution` namespace; its method is the function); `record` for
     a dataclass, a NamedTuple, or a class whose only method is an __init__ that sets attributes; `class` (the
@@ -356,6 +365,40 @@ SET_CALLS = {"set", "frozenset"}
 SORT_CALLS = {"sorted"}
 MATH_BUILTIN_CALLS = {"min", "max", "sum", "abs"}
 APPEND_METHODS = {"append", "extend", "insert"}
+# SPEC.md "Higher-order calls (v1)" (2026-10-06): the methods that change their receiver in place, for the census's
+# reading of a nested def or lambda that mutates a name it captured (the gap `closure`)
+MUTATING_METHODS = frozenset({"append", "extend", "insert", "pop", "remove", "clear", "sort", "reverse", "add",
+                              "discard", "update", "setdefault", "popitem", "appendleft", "popleft", "extendleft",
+                              "rotate", "difference_update", "intersection_update",
+                              "symmetric_difference_update"})
+HOF_KEY_CALLS = {"sorted", "sort", "max", "min"}
+HOF_FN_CALLS = {"map", "filter", "reduce"}
+
+
+def _base_name(e: ast.AST) -> str | None:
+    """The name at the root of a subscript or attribute chain (`grid` in `grid[i][j]`), or None."""
+    while isinstance(e, (ast.Subscript, ast.Attribute)):
+        e = e.value
+    return e.id if isinstance(e, ast.Name) else None
+
+
+def _mutates_captured(fn: ast.AST) -> bool:
+    """Whether a nested def or a lambda changes, in place, a name it captured (one neither a parameter of it nor
+    assigned inside it): a mutating method call on the name, or a subscript or attribute store or delete under it."""
+    a = fn.args
+    bound = {x.arg for x in a.posonlyargs + a.args + a.kwonlyargs}
+    bound |= {x.arg for x in (a.vararg, a.kwarg) if x is not None}
+    bound |= {n.id for n in ast.walk(fn) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Store)}
+    for n in ast.walk(fn):
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr in MUTATING_METHODS:
+            base = _base_name(n.func.value)
+            if base is not None and base not in bound:
+                return True
+        if isinstance(n, (ast.Subscript, ast.Attribute)) and isinstance(n.ctx, (ast.Store, ast.Del)):
+            base = _base_name(n.value)
+            if base is not None and base not in bound:
+                return True
+    return False
 ORD_CHR_CALLS = {"ord", "chr"}
 
 # `string-lib` split into the burden `string-lib-v1` and a narrower gap
@@ -410,11 +453,11 @@ def _string_method_call_is_v1(attr: str, call: ast.Call) -> bool:
 
 
 def _string_method_call_in_fragment(attr: str, call: ast.Call) -> bool:
-    """The census's reading since 2026-10-07: a v1 form, or one of SPEC.md "The string library (v2)"'s forms."""
+    """The census's reading since 2026-10-06: a v1 form, or one of SPEC.md "The string library (v2)"'s forms."""
     if attr in STRING_METHODS_V1_ANYARG or attr in STRING_METHODS_V1_NOARG:
         return True
     n = len(call.args) + len(call.keywords)
-    # SPEC.md "The string library (v2)" (2026-10-07): the second wave's forms are in the fragment too
+    # SPEC.md "The string library (v2)" (2026-10-06): the second wave's forms are in the fragment too
     if attr == "split":
         return n <= 1 and not call.keywords   # any separator; split(sep, maxsplit) stays out
     if attr in ("strip", "lstrip", "rstrip"):
@@ -556,10 +599,31 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool, strlib_w
                 _mark_nested(child, inside_def)
 
     _mark_nested(tree, False)
-    if nested_defs:
+    # SPEC.md "Higher-order calls (v1)" (2026-10-06): a nested def that neither rebinds (nonlocal, the gap `global`)
+    # nor mutates what it captured is a top-level helper with its captures as parameters
+    if any(_mutates_captured(d) for d in nested_defs):
         tags["closure"] = True
+    elif nested_defs:
+        tags["higher-order"] = True
+    # the lambdas in the four library positions or bound to a name (SPEC.md "Higher-order calls (v1)")
+    hof_lambdas: set[int] = set()
+    for _n in ast.walk(tree):
+        if isinstance(_n, ast.Call):
+            _cn = _call_name(_n)
+            if _cn in HOF_KEY_CALLS:
+                for _kw in _n.keywords:
+                    if _kw.arg == "key" and isinstance(_kw.value, ast.Lambda):
+                        hof_lambdas.add(id(_kw.value))
+            if _cn in HOF_FN_CALLS and _n.args and isinstance(_n.args[0], ast.Lambda):
+                hof_lambdas.add(id(_n.args[0]))
+        elif isinstance(_n, (ast.Assign, ast.AnnAssign)) and isinstance(_n.value, ast.Lambda):
+            _tg = _n.targets if isinstance(_n, ast.Assign) else [_n.target]
+            if len(_tg) == 1 and isinstance(_tg[0], ast.Name):
+                hof_lambdas.add(id(_n.value))
+    functools_attrs = {n.attr for n in ast.walk(tree)
+                       if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name) and n.value.id == "functools"}
 
-    # SPEC.md "Reductions (v1)" (2026-10-07): a generator expression consumed by a reduction is a comprehension
+    # SPEC.md "Reductions (v1)" (2026-10-06): a generator expression consumed by a reduction is a comprehension
     # under a library op; the consumer is read off the enclosing call
     consumed_gens: set[int] = set()
     for _n in ast.walk(tree):
@@ -672,7 +736,10 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool, strlib_w
         elif isinstance(node, ast.ClassDef):
             tags[_class_shape(node)] = True
         elif isinstance(node, ast.Lambda):
-            tags["closure"] = True
+            if id(node) in hof_lambdas and not _mutates_captured(node):
+                tags["higher-order"] = True   # SPEC.md "Higher-order calls (v1)" (2026-10-06)
+            else:
+                tags["closure"] = True
         elif isinstance(node, (ast.Try, ast.Raise)):
             tags["exception"] = True
         elif isinstance(node, (ast.Global, ast.Nonlocal)):
@@ -683,9 +750,12 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool, strlib_w
                 base = (m or "").split(".")[0]
                 if base in ("math", "sys", "typing", ""):
                     continue
-                if base in MODELLED_MODULES or (base == "functools" and isinstance(node, ast.ImportFrom)
-                                                 and all(a.name in ("lru_cache", "cache") for a in node.names)):
-                    tags["import-modelled"] = True   # 2026-10-07: carried by maps, slices, reals, values, literals
+                # functools's reduce is t's fold since 2026-10-06 (SPEC.md "Higher-order calls (v1)")
+                if base in MODELLED_MODULES or (base == "functools" and (
+                        all(a.name in ("lru_cache", "cache", "reduce") for a in node.names)
+                        if isinstance(node, ast.ImportFrom)
+                        else functools_attrs <= {"lru_cache", "cache", "reduce"})):
+                    tags["import-modelled"] = True   # 2026-10-06: carried by maps, slices, reals, values, literals
                 else:
                     tags["import"] = True
         elif isinstance(node, ast.While):
@@ -741,8 +811,6 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool, strlib_w
                 string_lib_v1 = True  # tostr(n), unconditionally v1
             elif name == "int" and len(node.args) >= 2:
                 string_lib_gap = True  # int(x, base): not in SPEC.md v1
-            elif name in ("map", "filter") and any(isinstance(a, ast.Lambda) for a in node.args):
-                tags["closure"] = True
             elif name == "print":
                 if function_shaped:
                     tags["io"] = True

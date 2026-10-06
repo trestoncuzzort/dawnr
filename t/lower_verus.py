@@ -1400,7 +1400,7 @@ TYPES = {"int": "int", "bool": "bool", "seq": "Seq<int>",
 STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
               "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
               "isupper", "islower", "startswith", "endswith",
-              # SPEC.md "The string library (v2)" (2026-10-07)
+              # SPEC.md "The string library (v2)" (2026-10-06)
               "index", "rfind", "zfill", "center", "ljust", "rjust", "capitalize", "swapcase", "title",
               "isspace", "isalnum", "splitlines", "partition", "isint", "toint"}
 
@@ -1731,7 +1731,7 @@ proof fn t_lemma_split_len_law(s: Seq<int>, c: int)
     }
 }
 
-// SPEC.md "The string library (v2)" (2026-10-07): the second wave as total spec fns, Python's methods transcribed
+// SPEC.md "The string library (v2)" (2026-10-06): the second wave as total spec fns, Python's methods transcribed
 spec fn t_upc(c: int) -> int { if t_is_lower(c) { c - 32 } else { c } }
 spec fn t_lowc(c: int) -> int { if t_is_upper(c) { c + 32 } else { c } }
 spec fn t_swapc(c: int) -> int { if t_is_upper(c) { c + 32 } else if t_is_lower(c) { c - 32 } else { c } }
@@ -2702,6 +2702,8 @@ def expr(e: dict, vty: str | None = None) -> str:
         c = e["comp"]
         src = [expr(c["seq"])] if "seq" in c else [expr(c["lo"]), expr(c["hi"])]
         return f"t_comp{k}({', '.join(src + _comp_free(e))})"
+    if e.get("op") in _HOF_OPS:
+        return _hof_call(e)   # SPEC.md "Higher-order calls (v1)" (2026-10-06): the registered spec fn
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
@@ -2944,7 +2946,7 @@ def expr(e: dict, vty: str | None = None) -> str:
         # a Set's and a Seq's `contains` alike (SPEC.md "The library (v1)", 2026-10-06: membership in a seq)
         return f"{args[1]}.contains({args[0]})"
     if op in ("any", "all") and len(e.get("args", [])) == 1 and isinstance(e["args"][0], dict) and "comp" in e["args"][0]:
-        # SPEC.md "Reductions (v1)" (2026-10-07): a comprehension under any/all is the quantifier itself (measured:
+        # SPEC.md "Reductions (v1)" (2026-10-06): a comprehension under any/all is the quantifier itself (measured:
         # through the comprehension's spec fn and t_all, Z3 had no term to instantiate the two quantifiers on and
         # left `all_positive`'s ensures unproved); over the source's index, the bound variable the element
         c = e["args"][0]["comp"]
@@ -2962,7 +2964,7 @@ def expr(e: dict, vty: str | None = None) -> str:
             return f"(forall|t_qi: int| {guard} ==> {expr(body)})"
         return f"(exists|t_qi: int| {guard} && {expr(body)})"
     if op in ("min", "max") and len(args) == 1:
-        return f"{args[0]}.{op}()"   # SPEC.md "Reductions (v1)" (2026-10-07): vstd's own Seq<int>::max/min
+        return f"{args[0]}.{op}()"   # SPEC.md "Reductions (v1)" (2026-10-06): vstd's own Seq<int>::max/min
     if op == "toset":
         return f"{args[0]}.to_set()"   # vstd's own, with its broadcast ensures
     if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev", "sort", "any", "all"):
@@ -2993,7 +2995,7 @@ def expr(e: dict, vty: str | None = None) -> str:
         if len(args) == 1:
             return f"t_str_split_ws({args[0]})"
         if _ty_of(e["args"][1]) == "seq":
-            return f"t_str_split_str({args[0]}, {args[1]})"   # SPEC.md "The string library (v2)" (2026-10-07)
+            return f"t_str_split_str({args[0]}, {args[1]})"   # SPEC.md "The string library (v2)" (2026-10-06)
         return f"t_str_split_c({args[0]}, {args[1]})"
     if op in ("strip", "lstrip", "rstrip") and len(args) == 2:
         return f"t_str_{op}c({args[0]}, {args[1]})"         # with a character set
@@ -3167,6 +3169,14 @@ def defined(e: dict, is_real=None) -> dict:
         inner = _conj([dc, _t_guard(subst(c["cond"], {c["var"]: at}), dbody)]) if hasattr(sys.modules[__name__], "_t_guard") else _conj([dc, {"op": "implies", "args": [subst(c["cond"], {c["var"]: at}), dbody]}])
         body_ob = TRUE if inner == TRUE else {"forall": {"var": "t_di", "lo": lo, "hi": hi, "body": inner}}
         return _conj([src_ob, body_ob])
+    if e.get("op") in _HOF_OPS:
+        # SPEC.md "Higher-order calls (v1)" (2026-10-06): the sequence defined (and fold's initial value), max_by's
+        # and min_by's sequence non-empty; the lambda's body is total (a partial one is refused at its spec fn)
+        _lam, seq, init = _hof_parts(e)
+        obs = [defined(seq, is_real)] + ([defined(init, is_real)] if init is not None else [])
+        if e["op"] in ("max_by", "min_by"):
+            obs.append({"op": ">", "args": [{"op": "len", "args": [seq]}, {"int": 0}]})
+        return _conj(obs)
     op, args = e["op"], e.get("args", [])
     if op == "at" and _is_map_ty(_ty_of(args[0])):
         # SPEC.md "Maps (v1)" (2026-10-06): m[k] is defined iff k in m
@@ -3210,7 +3220,7 @@ def defined(e: dict, is_real=None) -> dict:
             {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}
         return _conj([defined(s, is_real), defined(a, is_real), defined(b, is_real), bound])
     if op == "split" and len(args) == 2 and _ty_of(args[1]) == "seq":
-        # SPEC.md "The string library (v2)" (2026-10-07): a sequence separator owes len(t) > 0
+        # SPEC.md "The string library (v2)" (2026-10-06): a sequence separator owes len(t) > 0
         return _conj([defined(a, is_real) for a in args] + [{"op": ">", "args": [{"op": "len", "args": [args[1]]}, {"int": 0}]}])
     if op == "partition":
         return _conj([defined(a, is_real) for a in args] + [{"op": ">", "args": [{"op": "len", "args": [args[1]]}, {"int": 0}]}])
@@ -3219,7 +3229,7 @@ def defined(e: dict, is_real=None) -> dict:
     if op == "toint":
         return _conj([defined(args[0], is_real), {"op": "isint", "args": [args[0]]}])
     if op in ("min", "max") and len(args) == 1:
-        # SPEC.md "Reductions (v1)" (2026-10-07): the extremum of a seq owes a non-empty seq
+        # SPEC.md "Reductions (v1)" (2026-10-06): the extremum of a seq owes a non-empty seq
         return _conj([defined(args[0], is_real), {"op": ">", "args": [{"op": "len", "args": [args[0]]}, {"int": 0}]}])
     if op in ("pow", "isqrt"):
         # SPEC.md "The library (v1)" (2026-10-06): pow(a, n) and isqrt(n) owe `n >= 0`
@@ -3464,6 +3474,11 @@ def subst(e: dict, m: dict) -> dict:
         return {kind: {"var": q["var"], "lo": subst(q["lo"], m),
                        "hi": subst(q["hi"], m),
                        "body": subst(q["body"], inner)}}
+    if "lam" in e:
+        # SPEC.md "Higher-order calls (v1)" (2026-10-06): a lambda's own parameters are bound in its body
+        lv = e["lam"]["vars"]
+        inner = {k: v for k, v in m.items() if k not in lv}
+        return {"lam": {"vars": lv, "body": subst(e["lam"]["body"], inner)}}
     if "comp" in e:
         c = e["comp"]   # SPEC.md "Comprehensions (v1)": the bound variable scopes over cond and body
         inner = {k: v for k, v in m.items() if k != c["var"]}
@@ -4949,7 +4964,8 @@ class _V1:
             f"{req}    ensures\n        {ens_s},\n"
             f"    decreases ({expr(dec)}) + (2int),\n"
             "{\n"
-            f"{old_lets}{carry_pre}{shadows}{guard_pre}"
+            + "".join(ln + "\n" for ln in _hof_lemma_lines("    "))   # SPEC.md "Higher-order calls (v1)"
+            + f"{old_lets}{carry_pre}{shadows}{guard_pre}"
             f"    if {expr(cond)} {{\n"
             + "\n".join(inner) + "\n"
             f"        {hname}({args})\n"
@@ -5097,7 +5113,8 @@ class _V1:
         main = self._main_fn(body)
 
         strlib_blocks = [STRLIB_PRELUDE] if _uses_strlib(task) else []
-        lib_blocks = _lib_blocks(task, body) + _comp_blocks(task, body)   # SPEC.md "The library (v1)", "Comprehensions (v1)"
+        lib_blocks = (_lib_blocks(task, body) + _comp_blocks(task, body)   # SPEC.md "The library (v1)", "Comprehensions (v1)"
+                      + _hof_blocks(task, body))                       # SPEC.md "Higher-order calls (v1)"
         rotate_blocks = ([ROTATE_PRELUDE]
                          if _rotate_witnesses(task)
                          or any(_rotate_witnesses(p) for p in pseudos)
@@ -5321,16 +5338,17 @@ class _V1:
         if "rev" in lib_used:
             lib_lines.append("    broadcast use t_rev_spec;")
         if tshape.uses_ops(body or [], task, {"toset"}):
-            # SPEC.md "Reductions (v1)" (2026-10-07)
+            # SPEC.md "Reductions (v1)" (2026-10-06)
             lib_lines.append("    broadcast use t_toset_mem;")
             lib_lines.append("    broadcast use t_toset_sub;")
         for key, (k, _node) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
             lib_lines.append(f"    reveal_with_fuel(t_comp{k}, 6);")
             lib_lines.append(f"    broadcast use t_comp{k}_spec;")
+        lib_lines += _hof_lemma_lines("    ")   # SPEC.md "Higher-order calls (v1)" (2026-10-06)
         param_names = {p["name"] for p in task["params"]}
-        # SPEC.md "Reductions (v1)" (2026-10-07): vstd's max_ensures/min_ensures are not broadcast; stated for every
+        # SPEC.md "Reductions (v1)" (2026-10-06): vstd's max_ensures/min_ensures are not broadcast; stated for every
         # max(s)/min(s) over the parameters, in the spec and in the body
-        # SPEC.md "The string library (v2)" (2026-10-07): the second wave's lemmas, stated per use over the parameters
+        # SPEC.md "The string library (v2)" (2026-10-06): the second wave's lemmas, stated per use over the parameters
         for lemma, largs in _strlib2_lemma_args([task.get("requires", []), task.get("ensures", []), body or []]):
             if all(_free_vars(a) <= param_names for a in largs):
                 line = f"    {lemma}({', '.join(expr(a) for a in largs)});"
@@ -5676,6 +5694,11 @@ def _gint(e) -> int:
         # by then, from the row's own ground rendering) is already covered
         # by the case above.
         return len(args[0]["_nested_seq"])
+    if op == "len" and len(args) == 1 and isinstance(args[0], dict) and args[0].get("op") == "seq":
+        # SPEC.md "Compositional types (v1)" (2026-10-06): a display of compound elements (pairs, tuples), the shape
+        # _tlit gives a seq<(int, int)> witness; measured 2026-10-06, its length was not read and every certificate
+        # quantifying over such a parameter was refused (cheapest, by_second)
+        return len(args[0]["args"])
     if op == "neg" and len(args) == 1:
         return -_gint(args[0])
     if op in ("+", "-", "*") and len(args) == 2:
@@ -5731,6 +5754,8 @@ def _unroll(e: dict, budget: list, spec_funs: dict | None = None) -> dict:
     certificates): 0 errors; see `_cert_formula`'s own wiring below and
     t/test_lower_verus_refusals.py / t/test_lower_verus_nested_trigger.py
     for the regression bar this change must keep passing."""
+    if isinstance(e, dict) and e.get("op") in _HOF_OPS:
+        return _hof_unroll(e, budget, spec_funs)   # SPEC.md "Higher-order calls (v1)" (2026-10-06)
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
@@ -6196,7 +6221,8 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
 # recursive lemma is a cycle Verus refuses, measured 2026-10-06); recursive definitions get `reveal_with_fuel`
 # there too (a two-element display needs two unfoldings). Emitted per function, once per file, when used.
 VERUS_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in", "sort",
-                       "any", "all", "toset", "maxs"})   # SPEC.md "Reductions (v1)" (2026-10-07); "maxs": max/min of one arg
+                       "any", "all", "toset", "maxs",   # SPEC.md "Reductions (v1)" (2026-10-06); "maxs": max/min of one arg
+                       "fold", "sort_by", "max_by", "min_by"})   # SPEC.md "Higher-order calls (v1)" (2026-10-06)
 _VLIB = {
     "min": "pub open spec fn t_min(a: int, b: int) -> int { if a < b { a } else { b } }\n",
     "max": "pub open spec fn t_max(a: int, b: int) -> int { if a < b { b } else { a } }\n",
@@ -6234,7 +6260,7 @@ _VLIB = {
             "{ if s.len() > 0 { t_rev_spec(s.drop_last()); } }\n"),
 }
 _VLIB["toset"] = (
-    # SPEC.md "Reductions (v1)" (2026-10-07): vstd's to_set with its ensures stated as two broadcast lemmas whose
+    # SPEC.md "Reductions (v1)" (2026-10-06): vstd's to_set with its ensures stated as two broadcast lemmas whose
     # triggers are the goals a task states (an element of the sequence, or of a slice of it, is in the set);
     # measured: the bare `to_set()` left `members_upto`'s ensures unproved, the membership needing the witness index
     # over Seq<int> (the adapter's vacuity probe cannot copy a generic lemma's parameter list: "no probe
@@ -6386,6 +6412,340 @@ def _comp_blocks(task: dict, body: list) -> list:
             f"pub broadcast proof fn t_comp{k}_spec({', '.join(params)})\n    ensures {', '.join(ens)},\n    decreases {size},\n"
             f"{{ if !({base}) {{ {rec_call}; }} }}\n")
     return out
+
+
+# SPEC.md "Higher-order calls (v1)" (2026-10-06): fold, max_by, min_by and sort_by with a lambda argument. Each call
+# shape (the op and its lambda, parameters renamed $0, $1) is one spec fn in PREFIX form, over the first t_n elements
+# of t_s, as lower_dafny's are: a call on s[0..e] and one on s are one unfolding apart, so a loop invariant over a
+# prefix meets a postcondition over the whole by congruence (a drop_last recursion, vstd's fold_left shape, would need
+# the subrange extensionality at every step). Measured first on a hand probe (2026-10-06, 14 verified, 0 errors):
+# fold by its definition at the default fuel; max_by/min_by through the index of the chosen element, with a
+# broadcast lemma (bounds, key order) proved by induction; sort_by as a stable insertion sort (a later element goes
+# after the equal keys before it), since vstd's lemma_sort_by_ensures requires a total ORDER (antisymmetric,
+# relations.rs) and a key comparison is only a preorder. Its facts (length, multiset, membership both ways, key
+# order over all pairs) come from three insertion lemmas and to_multiset_ensures, with each count term named (the
+# contains <==> count > 0 fact triggers on a count term only: measured, the membership asserts failed without them).
+# A lambda whose body is partial is refused by name.
+_HOF_OPS = frozenset({"fold", "sort_by", "max_by", "min_by"})
+_HOF_INDEX: dict = {}      # json key of (op, lambda body, parameters renamed) -> (k, node)
+_HOF_NAME = {"fold": "t_fold", "sort_by": "t_sortby", "max_by": "t_maxby", "min_by": "t_minby"}
+
+
+def _hof_parts(e: dict):
+    """(lambda node, the sequence argument, fold's initial value or None) of a higher-order call."""
+    a = e["args"]
+    if e["op"] == "fold":
+        return a[0], a[2], a[1]
+    return a[1], a[0], None
+
+
+def _hof_key(e: dict) -> str:
+    """The call's shape up to the names of its lambda's parameters, so an invariant's `(a, y) => a + w * y` and an
+    ensures' `(a, x) => a + w * x` are one function (measured in Dafny: as two, they never met)."""
+    import json
+    lam = _hof_parts(e)[0]
+    ren = {v: {"var": f"${k}"} for k, v in enumerate(lam["lam"]["vars"])}
+    return json.dumps({"op": e["op"], "body": subst(lam["lam"]["body"], ren)}, sort_keys=True)
+
+
+def _hof_fv(x, bound: frozenset) -> set:
+    """Free variable names of an expression, binders of quantifiers, comprehensions and lambdas subtracted."""
+    if isinstance(x, dict):
+        if "var" in x and len(x) == 1:
+            return set() if x["var"] in bound else {x["var"]}
+        if "lam" in x:
+            return _hof_fv(x["lam"]["body"], bound | set(x["lam"]["vars"]))
+        if "comp" in x:
+            c = x["comp"]
+            out = set()
+            for k in ("seq", "lo", "hi"):
+                if k in c:
+                    out |= _hof_fv(c[k], bound)
+            inner = bound | {c["var"]}
+            return out | _hof_fv(c["cond"], inner) | _hof_fv(c["body"], inner)
+        if "forall" in x or "exists" in x:
+            q = x.get("forall") or x.get("exists")
+            return _hof_fv(q["lo"], bound) | _hof_fv(q["hi"], bound) | _hof_fv(q["body"], bound | {q["var"]})
+        return set().union(*(_hof_fv(v, bound) for v in x.values())) if x else set()
+    if isinstance(x, list):
+        return set().union(*(_hof_fv(v, bound) for v in x)) if x else set()
+    return set()
+
+
+def _hof_free(e: dict) -> list:
+    lam = _hof_parts(e)[0]
+    return sorted(_hof_fv(lam["lam"]["body"], frozenset(lam["lam"]["vars"])))
+
+
+def _hof_register(task: dict, body: list) -> None:
+    _HOF_INDEX.clear()
+
+    def walk(x):
+        if isinstance(x, dict):
+            if x.get("op") in _HOF_OPS:
+                _HOF_INDEX.setdefault(_hof_key(x), (len(_HOF_INDEX) + 1, x))
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    for part in (task.get("requires", []), task.get("ensures", []), task.get("spec_funs", []), body or [],
+                 task.get("methods", [])):
+        walk(part)
+
+
+def _hof_prefix(seq: dict):
+    """(base, count) of a call's sequence: s[0..e] is (s, e), any other s is (s, len(s))."""
+    if isinstance(seq, dict) and seq.get("op") == "slice" and seq["args"][1] == {"int": 0}:
+        return seq["args"][0], seq["args"][2]
+    return seq, {"op": "len", "args": [seq]}
+
+
+def _hof_call(e: dict) -> str:
+    """The registered spec fn of a higher-order call, applied (SPEC.md "Higher-order calls (v1)")."""
+    hit = _HOF_INDEX.get(_hof_key(e))
+    if hit is None:
+        # a lambda whose free names were rewritten after registration (a loop's state carried as a tuple component)
+        raise NotImplementedError(f"verus: a {e['op']} call whose shape was not registered")
+    k = hit[0]
+    _lam, seq, init = _hof_parts(e)
+    base, n = _hof_prefix(seq)
+    args = [expr(base), expr(n)] + ([expr(init)] if init is not None else []) + _hof_free(e)
+    return f"{_HOF_NAME[e['op']]}{k}({', '.join(args)})"
+
+
+def _hof_trig(text: str, elem: str) -> str:
+    """`text` with its first occurrence of the element `elem` marked as the quantifier's trigger; a key that never
+    reads its element has no term to trigger on and is refused by name."""
+    if elem not in text:
+        raise NotImplementedError("verus: a key that does not read its element is not lowered yet")
+    return text.replace(elem, f"(#[trigger] {elem})", 1)
+
+
+def _hof_blocks(task: dict, body: list) -> list:
+    """The Verus text of every registered higher-order call shape: its spec fns and lemmas, in index order."""
+    import check_wf
+    import tshape
+    hints = tshape._scope_of(task, body)
+    funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    saved = dict(_SCOPE)
+    out = []
+
+    def typed(x, h):
+        try:
+            ty, errs = check_wf.expression_type(x, dict(h), functions=funs)
+        except Exception:                                   # noqa: BLE001
+            return None
+        return None if errs else ty
+
+    def at(s, i):
+        return {"op": "at", "args": [s if isinstance(s, dict) else {"var": s}, i if isinstance(i, dict) else {"var": i}]}
+
+    try:
+        for _key, (k, e) in sorted(_HOF_INDEX.items(), key=lambda kv: kv[1][0]):
+            op = e["op"]
+            lam, seq, init = _hof_parts(e)
+            names, lbody = lam["lam"]["vars"], lam["lam"]["body"]
+            fvs = _hof_free(e)
+            for n in fvs:
+                if n not in hints:
+                    raise NotImplementedError(f"verus: a lambda over a name whose type is not declared here: {n!r}")
+            src_t = typed(_hof_prefix(seq)[0], hints)
+            if not (src_t == "seq" or (isinstance(src_t, dict) and "seq" in src_t)):
+                raise NotImplementedError(f"verus: the sequence of {op} could not be typed here")
+            elem_t = "int" if src_t == "seq" else src_t["seq"]
+            h2 = dict(hints)
+            if op == "fold":
+                acc_t = typed(init, hints)
+                if acc_t is None:
+                    raise NotImplementedError("verus: fold's initial value could not be typed here")
+                h2[names[0]], h2[names[1]] = acc_t, elem_t
+            else:
+                h2[names[0]] = elem_t
+            # the names the emitted text binds, typed for expr's operand reads (a map index, a set's membership)
+            h2.update({n: src_t for n in ("t_s", "t_r", "t_o", "t_u", "t_p")})
+            h2.update({n: elem_t for n in ("t_x", "t_l")})
+            _SCOPE.clear()
+            _SCOPE.update(h2)
+            if defined(lbody) != TRUE:
+                raise NotImplementedError(f"verus: a lambda whose body is partial is not lowered yet ({op})")
+            T, S = _vty(elem_t), _vty(src_t)
+            fparams = [f"{n}: {_vty(hints[n])}" for n in fvs]
+            fa = "".join(f", {n}" for n in fvs)
+            fnodes = [{"var": n} for n in fvs]
+            if op == "fold":
+                A = _vty(acc_t)
+                out.append(
+                    f"pub open spec fn t_fold{k}({', '.join([f't_s: {S}', 't_n: int', f't_init: {A}'] + fparams)}) -> {A}\n"
+                    "    decreases t_n,\n"
+                    f"{{ if t_n <= 0 {{ t_init }} else {{ let {names[0]} = t_fold{k}(t_s, t_n - 1, t_init{fa}); "
+                    f"let {names[1]} = t_s[t_n - 1]; {expr(lbody)} }} }}\n")
+                continue
+            v = names[0]
+
+            def key_of(x: dict) -> str:
+                return expr(subst(lbody, {v: x}))
+            if typed(lbody, h2) != "int":
+                raise NotImplementedError(f"verus: a key of {op} that is not an int is not lowered yet")
+            ps = ", ".join([f"t_s: {S}", "t_n: int"] + fparams)
+            if op in ("max_by", "min_by"):
+                better, keep = (">", "<=") if op == "max_by" else ("<", ">=")
+                nm = _HOF_NAME[op]
+                last = at("t_s", {"op": "-", "args": [{"var": "t_n"}, {"int": 1}]})
+                chosen = at("t_s", {"call": {"fun": f"{nm}i{k}", "args": [{"var": "t_s"}, {"var": "t_n"}] + fnodes}})
+                out.append(
+                    f"pub open spec fn {nm}i{k}({ps}) -> int\n    decreases t_n,\n"
+                    f"{{ if t_n <= 1 {{ 0 }} else {{ let t_m = {nm}i{k}(t_s, t_n - 1{fa}); "
+                    f"if {key_of(last)} {better} {key_of(at('t_s', 't_m'))} {{ t_n - 1 }} else {{ t_m }} }} }}\n"
+                    f"pub open spec fn {nm}{k}({ps}) -> {T} {{ t_s[{nm}i{k}(t_s, t_n{fa})] }}\n"
+                    f"pub broadcast proof fn {nm}{k}_spec({ps})\n"
+                    "    requires 0 < t_n <= t_s.len(),\n"
+                    f"    ensures 0 <= #[trigger] {nm}i{k}(t_s, t_n{fa}) < t_n,\n"
+                    f"        forall|t_i: int| 0 <= t_i < t_n ==> {_hof_trig(key_of(at('t_s', 't_i')), 't_s[t_i]')} "
+                    f"{keep} {key_of(chosen)},\n"
+                    "    decreases t_n,\n"
+                    f"{{ if t_n > 1 {{ {nm}{k}_spec(t_s, t_n - 1{fa}); }} }}\n")
+                continue
+            # sort_by: the stable insertion sort and its lemmas, the hand probe's text with the key filled in
+            ins, bnd, srt, perm, sb = (f"t_sbins{k}", f"t_sbbound{k}", f"t_sbsorted{k}", f"t_sbperm{k}",
+                                       f"t_sortby{k}")
+            insc = {"call": {"fun": ins, "args": [{"var": "t_r"}, {"var": "t_x"}] + fnodes}}
+            ins_txt = expr(insc)
+            o = {"call": {"fun": sb, "args": [{"var": "t_s"}, {"var": "t_n"}] + fnodes}}
+            o_txt = expr(o)
+            kx, kl = key_of({"var": "t_x"}), key_of({"var": "t_l"})
+            kr_i = _hof_trig(key_of(at("t_r", "t_i")), "t_r[t_i]")
+            kr_j = _hof_trig(key_of(at("t_r", "t_j")), "t_r[t_j]")
+            ki_i = _hof_trig(key_of(at(insc, "t_i")), f"{ins_txt}[t_i]")
+            ki_j = _hof_trig(key_of(at(insc, "t_j")), f"{ins_txt}[t_j]")
+            ko_i = _hof_trig(key_of(at(o, "t_i")), f"{o_txt}[t_i]")
+            ko_j = _hof_trig(key_of(at(o, "t_j")), f"{o_txt}[t_j]")
+            empty = f"Seq::<{T}>::empty()"
+            rx = ", ".join([f"t_r: {S}", f"t_x: {T}"] + fparams)
+            out.append(
+                f"pub open spec fn {ins}({rx}) -> {S}\n    decreases t_r.len(),\n"
+                f"{{ if t_r.len() == 0 {{ seq![t_x] }} else {{ let t_l = t_r.last(); "
+                f"if {kl} <= {kx} {{ t_r.push(t_x) }} else {{ {ins}(t_r.drop_last(), t_x{fa}).push(t_l) }} }} }}\n"
+                f"pub open spec fn {sb}({ps}) -> {S}\n    decreases t_n,\n"
+                f"{{ if t_n <= 0 {{ {empty} }} else {{ {ins}({sb}(t_s, t_n - 1{fa}), t_s[t_n - 1]{fa}) }} }}\n"
+                f"proof fn {perm}({rx})\n"
+                f"    ensures {ins_txt}.len() == t_r.len() + 1,\n"
+                f"        {ins_txt}.to_multiset() =~= t_r.to_multiset().insert(t_x),\n"
+                "    decreases t_r.len(),\n{\n"
+                "    t_r.to_multiset_ensures();\n"
+                f"    if t_r.len() == 0 {{\n        assert(t_r =~= {empty});\n        {empty}.to_multiset_ensures();\n"
+                f"        assert(seq![t_x] =~= {empty}.push(t_x));\n"
+                f"    }} else {{\n        let t_l = t_r.last();\n        if !({kl} <= {kx}) {{\n"
+                f"            let t_p = t_r.drop_last();\n            {perm}(t_p, t_x{fa});\n"
+                f"            t_p.to_multiset_ensures();\n            {ins}(t_p, t_x{fa}).to_multiset_ensures();\n"
+                "            assert(t_r =~= t_p.push(t_l));\n        }\n    }\n}\n"
+                f"proof fn {bnd}({rx}, t_b: int)\n"
+                f"    requires forall|t_i: int| 0 <= t_i < t_r.len() ==> {kr_i} <= t_b,\n        {kx} <= t_b,\n"
+                f"    ensures forall|t_i: int| 0 <= t_i < {ins_txt}.len() ==> {ki_i} <= t_b,\n"
+                "    decreases t_r.len(),\n{\n"
+                f"    {perm}(t_r, t_x{fa});\n"
+                f"    if t_r.len() > 0 {{\n        let t_l = t_r.last();\n        if !({kl} <= {kx}) {{\n"
+                f"            {bnd}(t_r.drop_last(), t_x{fa}, t_b);\n            {perm}(t_r.drop_last(), t_x{fa});\n"
+                "        }\n    }\n}\n"
+                f"proof fn {srt}({rx})\n"
+                f"    requires forall|t_i: int, t_j: int| 0 <= t_i < t_j < t_r.len() ==> {kr_i} <= {kr_j},\n"
+                f"    ensures forall|t_i: int, t_j: int| 0 <= t_i < t_j < {ins_txt}.len() ==> {ki_i} <= {ki_j},\n"
+                "    decreases t_r.len(),\n{\n"
+                f"    {perm}(t_r, t_x{fa});\n"
+                f"    if t_r.len() > 0 {{\n        let t_l = t_r.last();\n        if !({kl} <= {kx}) {{\n"
+                f"            let t_p = t_r.drop_last();\n            {srt}(t_p, t_x{fa});\n"
+                f"            {bnd}(t_p, t_x{fa}, {kl});\n            {perm}(t_p, t_x{fa});\n"
+                "        }\n    }\n}\n"
+                f"proof fn {sb}_spec({ps})\n    requires 0 <= t_n <= t_s.len(),\n"
+                f"    ensures {o_txt}.len() == t_n,\n"
+                f"        {o_txt}.to_multiset() =~= t_s.subrange(0, t_n).to_multiset(),\n"
+                f"        forall|t_i: int, t_j: int| 0 <= t_i < t_j < t_n ==> {ko_i} <= {ko_j},\n"
+                "    decreases t_n,\n{\n"
+                f"    if t_n > 0 {{\n        let t_p = {sb}(t_s, t_n - 1{fa});\n        {sb}_spec(t_s, t_n - 1{fa});\n"
+                f"        {perm}(t_p, t_s[t_n - 1]{fa});\n        {srt}(t_p, t_s[t_n - 1]{fa});\n"
+                "        assert(t_s.subrange(0, t_n) =~= t_s.subrange(0, t_n - 1).push(t_s[t_n - 1]));\n"
+                "        t_s.subrange(0, t_n - 1).to_multiset_ensures();\n"
+                f"    }} else {{\n        assert(t_s.subrange(0, 0) =~= {empty});\n    }}\n}}\n"
+                f"pub broadcast proof fn {sb}_mem({ps})\n    requires 0 <= t_n <= t_s.len(),\n"
+                f"    ensures (#[trigger] {o_txt}).len() == t_n,\n"
+                f"        forall|t_i: int, t_j: int| 0 <= t_i < t_j < t_n ==> {ko_i} <= {ko_j},\n"
+                f"        forall|t_i: int| 0 <= t_i < t_n ==> {o_txt}.contains(#[trigger] t_s[t_i]),\n"
+                f"        forall|t_i: int| 0 <= t_i < t_n ==> t_s.subrange(0, t_n).contains(#[trigger] {o_txt}[t_i]),\n"
+                "        t_n == t_s.len() ==> t_s.subrange(0, t_n) == t_s,\n{\n"
+                f"    {sb}_spec(t_s, t_n{fa});\n"
+                f"    let t_o = {o_txt};\n    let t_u = t_s.subrange(0, t_n);\n"
+                "    t_o.to_multiset_ensures();\n    t_u.to_multiset_ensures();\n"
+                "    assert forall|t_i: int| 0 <= t_i < t_n implies t_o.contains(t_s[t_i]) by {\n"
+                "        assert(t_u[t_i] == t_s[t_i]);\n        assert(t_u.contains(t_s[t_i]));\n"
+                "        assert(t_u.to_multiset().count(t_s[t_i]) > 0);\n"
+                "        assert(t_o.to_multiset().count(t_s[t_i]) > 0);\n    }\n"
+                "    assert forall|t_i: int| 0 <= t_i < t_n implies t_u.contains(t_o[t_i]) by {\n"
+                "        assert(t_o.contains(t_o[t_i]));\n"
+                "        assert(t_o.to_multiset().count(t_o[t_i]) > 0);\n"
+                "        assert(t_u.to_multiset().count(t_o[t_i]) > 0);\n    }\n"
+                "    if t_n == t_s.len() {\n        assert(t_s.subrange(0, t_n) =~= t_s);\n    }\n}\n")
+    finally:
+        _SCOPE.clear()
+        _SCOPE.update(saved)
+    return out
+
+
+def _hof_lemma_lines(ind: str) -> list:
+    """The `broadcast use` lines a proof fn needs for the registered shapes (fold needs none: its one unfolding per
+    loop step is the default fuel)."""
+    out = []
+    for _key, (k, e) in sorted(_HOF_INDEX.items(), key=lambda kv: kv[1][0]):
+        if e["op"] in ("max_by", "min_by"):
+            out.append(f"{ind}broadcast use {_HOF_NAME[e['op']]}{k}_spec;")
+        elif e["op"] == "sort_by":
+            out.append(f"{ind}broadcast use t_sortby{k}_mem;")
+    return out
+
+
+def _hof_unroll(e: dict, budget: list, spec_funs) -> dict:
+    """A ground higher-order call in a certificate formula as the expression it denotes (SPEC.md "Higher-order calls
+    (v1)"), so compute_only evaluates it: a fold the nested lambda body, a max_by/min_by the nested choice; a sort_by
+    is not unrolled (the certificate is refused), nor is a source that is not a display or a constant slice of one."""
+    op = e["op"]
+    lam, seq, init = _hof_parts(e)
+    if op == "sort_by":
+        raise ValueError("a ground sort_by is not unrolled in a certificate")
+    src = _unroll(seq, budget, spec_funs)
+    lo = hi = None
+    if src.get("op") == "slice" and "int" in src["args"][1] and "int" in src["args"][2]:
+        lo, hi = src["args"][1]["int"], src["args"][2]["int"]
+        src = src["args"][0]
+    if "_seq" in src:
+        elems = [{"int": x} for x in src["_seq"]]
+    elif "_nested_seq" in src:
+        elems = list(src["_nested_seq"])
+    elif src.get("op") == "seq":
+        elems = list(src["args"])
+    else:
+        raise ValueError(f"{op} over a source that is not a display")
+    if lo is not None:
+        if not 0 <= lo <= hi <= len(elems):
+            raise ValueError(f"{op} over a slice outside its display")
+        elems = elems[lo:hi]
+    names, lbody = lam["lam"]["vars"], lam["lam"]["body"]
+    budget[0] -= len(elems)
+    if budget[0] < 0:
+        raise ValueError("higher-order unroll budget exhausted")
+    if op == "fold":
+        acc = init
+        for x in elems:
+            acc = subst(lbody, {names[0]: acc, names[1]: x})
+        return _unroll(acc, budget, spec_funs)
+    if not elems:
+        raise ValueError(f"{op} of an empty seq in a certificate")
+    if len(elems) > 8:
+        raise ValueError(f"{op} over more than 8 elements is not unrolled (the choice doubles per element)")
+    better = ">" if op == "max_by" else "<"
+    m = elems[0]
+    for x in elems[1:]:
+        m = {"ite": {"cond": {"op": better, "args": [subst(lbody, {names[0]: x}), subst(lbody, {names[0]: m})]},
+                     "then": x, "else": m}}
+    return _unroll(m, budget, spec_funs)
 
 
 def _strlib2_lemma_args(x) -> list:
@@ -6573,6 +6933,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # object from task["body"] (2026-09-11, names.rename_body's note)
     body = names.rename_body(twin_body, renames) if twin_body is not None else task["body"]
     witness = names.remap_witness(witness, renames)
+    _hof_register(task, body)   # SPEC.md "Higher-order calls (v1)" (2026-10-06), on the renamed nodes expr will see
     if task.get("t", 0) == 0:
         if task.get("lemmas"):
             raise NotImplementedError("verus: lemmas are v1 only")
