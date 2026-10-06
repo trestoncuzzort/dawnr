@@ -2109,6 +2109,71 @@ the first zero), `count_evens_skip` (`for i, x in s` with `continue` on
 the odd elements, counting the rest: `c == len([y for y in s if y % 2 ==
 0])`, the invariant the same count over `s[0..i]`).
 
+### Maps (v1)
+
+Stated 2026-10-06, the fourth landing's third form, with the pages on
+receipt 85a79b86b0ce read first: Dafny's `map<T, U>` (reference 5.5.4)
+with the display `map[k := v, ...]`, selection `m[k]` (defined for `k in
+m`), update `m[k := u]`, domain membership `k in m`, cardinality `|m|`,
+`m.Keys`, and domain subtraction `m - s`; vstd's `Map<K, V>` for
+specifications, with `dom()`, `index`, `insert`, `remove`, `len` and its
+broadcast lemmas on insert and remove; Python's `dict`, the census'
+semantics of record. The census: `map` is a gap on 2,464 problems, the
+fourth-largest.
+
+**One type, one display, six operations.**
+
+```
+{"map": [K, V]}                                        // map<K, V>; K any type with t equality, V any type
+{"op": "mapdisp", "args": [k1, v1, ..., kn, vn]}       // map[k1 := v1, ..., kn := vn]; map[] the empty map
+{"op": "at",      "args": [MapExpr, KExpr]}            // m[k]; DEFINED IFF k in m
+{"op": "update",  "args": [MapExpr, KExpr, VExpr]}     // m[k := v]; the map with k mapped to v; always defined
+{"op": "in",      "args": [KExpr, MapExpr]}            // k in m; domain membership
+{"op": "len",     "args": [MapExpr]}                   // len(m); the number of keys
+{"op": "keys",    "args": [MapExpr]}                   // keys(m); the domain, a set<K>
+{"op": "remove",  "args": [MapExpr, KExpr]}            // remove(m, k); the map without k; always defined
+```
+
+`at`, `update`, `in` and `len` are the polymorphic operators seqs and
+sets already have, chosen by the operand's type; `keys` and `remove` are
+library names, resolved after parsing like `min` and `rev` (a declared
+spec_fun, method or lemma of that name shadows them). A display's keys are
+of one type and its values of one type; with two equal keys the rightmost
+wins, as in Python and as a chain of updates says, which is how every
+kernel writes a display; `map[]` takes the type its position expects and
+is the `map<int, int>` empty map where none reaches it. `==` and `!=` on
+two maps are extensional (the same keys, the same value at each), the
+polymorphic `==` again. There is no order on a map and no iteration over
+one: a quantifier still ranges over `[lo, hi)`, so "every key satisfies
+P" is written over a sequence of candidates (`forall i in [0, len(s)) .
+s[i] in m`), and a loop over a map's keys is not in v1 (the census names
+it `map-iteration`). Definedness: `m[k]` owes `k in m`; everything else is
+total.
+
+**The interpreter and the twins.** A map's runtime value is its own
+class, a sorted tuple of key/value pairs (hashable, so the witness ladder
+dedups it, and tagged so it never compares equal to a seq of pairs); the
+ladder for a `map<K, V>` name is every map over the first three keys of
+`K`'s ladder and the first two values of `V`'s, the empty map first. The
+twin ladder needs no new move: WRONG-VAR swaps two map-typed names,
+OFF-BY-ONE and WRONG-CONSTANT reach the ints inside a display or a key,
+DROP-GUARD a membership test.
+
+**Each lowering** uses its kernel's own map: Dafny's `map<K, V>` with
+`map[]` built up by `[k := v]` updates (so the rightmost key wins
+whatever Dafny's display rule), `m[k]`, `m[k := v]`, `k in m`, `|m|`,
+`m.Keys` and `m - {k}`; Verus's `Map<K, V>` with `Map::empty().insert(k,
+v)`, `m[k]`, `m.insert(k, v)`, `m.dom().contains(k)`, `m.len() as int`,
+`m.dom()` and `m.remove(k)`, the `==` of two maps bridged by `=~=` as a
+set's is. F*, SPARK, Lean, Rocq and Frama-C abstain by name on the type
+until built and measured. The hand-back writes Python's dict.
+
+**The committed tasks:** `lookup_or` (`if k in m then m[k] else d`),
+`put_key` (`m[k := v]`: the key is in, its value is `v`, the size does
+not shrink, `remove(r, k) == remove(m, k)`), `index_map` (a loop
+`m := m[x := i]` over `s`: every element of `s` is a key and `len(m) <=
+len(s)`).
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

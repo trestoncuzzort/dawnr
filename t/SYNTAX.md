@@ -61,6 +61,7 @@ Datatype ::= {"name": Id, "ctors": [ {"name": Id}+ ]}  (* v1, since 2026-09-27; 
                                                           a constructor carries no fields this landing *)
 
 Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local type since 2026-09-09; the seq of ints *)
+           | {"map": [Type, Type]}                 (* map<K, V>; since 2026-10-06, SPEC.md "Maps (v1)" *)
            | {"seq": Type}                      (* a seq of any element type, written seq<T> (SPEC.md "Compositional types
                                                    (v1)", 2026-10-06); {"seq": "seq"} is seq<seq>, as since 2026-09-10;
                                                    {"seq": "int"} is not a spelling: that type is "seq" *)
@@ -115,6 +116,9 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
                                                    tuple too, since 2026-10-06 *)
            | "tuple" | "proj"                   (* since 2026-10-06; written (e1, ..., en) at n >= 3, and e.k for k >= 2
                                                    (proj's second argument is the literal k) *)
+           | "mapdisp" | "keys" | "remove"      (* since 2026-10-06, SPEC.md "Maps (v1)"; written map[k := v, ...]
+                                                   (map[] empty), keys(m), remove(m, k); at/update/in/len take a
+                                                   map too, by the operand's type *)
            | "set" | "in" | "card"              (* v1, since 2026-09-27; written {e1, ..., en} (any arity, {} empty),
            | "union" | "inter" | "diff"         x in s, card(s), union(s, t), inter(s, t), setminus(s, t);
                                                    SPEC.md "Finite sets" -- the AST tag is "diff", the surface
@@ -335,6 +339,31 @@ stay int-only (no subset operator; `card(setminus(s, u)) == 0` says it). `in`
 sits at the comparison level and does not chain. Not in v1: a set of
 bools, seqs or pairs, a set inside a pair or a seq, a set-typed spec_fun
 parameter or result, a set as a quantifier's range, and the comprehension.
+
+### Maps (v1)
+
+```json
+{"var": {"name": "m", "type": {"map": ["int", "int"]}, "init": {"op": "mapdisp", "args": [{"int": 1}, {"int": 2}]}}}
+{"op": "at",     "args": [{"var": "m"}, {"var": "k"}]}
+{"op": "update", "args": [{"var": "m"}, {"var": "k"}, {"var": "v"}]}
+{"op": "in",     "args": [{"var": "k"}, {"var": "m"}]}
+{"op": "keys",   "args": [{"var": "m"}]}
+{"op": "remove", "args": [{"var": "m"}, {"var": "k"}]}
+```
+written: `var m: map<int, int> := map[1 := 2];` · `m[k]` · `m[k := v]` · `k in m` · `keys(m)` · `remove(m, k)`
+
+Since 2026-10-06 (SPEC.md "Maps (v1)"), a finite map is a value: the type
+`map<K, V>` (both written; `K` any type with equality, `V` any type), a
+parameter, return or local type. `map[k1 := v1, ..., kn := vn]` builds one
+(`map[]` the empty map; of two equal keys the rightmost wins), `m[k]` is
+the lookup (defined only for `k in m`), `m[k := v]` the update, `k in m`
+membership, `len(m)` the number of keys, `keys(m)` the domain as a set,
+`remove(m, k)` the map without `k`. `at`, `update`, `in` and `len` are the
+same operators seqs have, read by type; `keys` and `remove` are library
+names (a declared name shadows them). `==` and `!=` on two maps are
+extensional. No order, no iteration: a quantifier ranges over `[lo, hi)`.
+`tasks/lookup_or.t`, `tasks/put_key.t` and `tasks/index_map.t` are the
+committed examples.
 
 ### Datatypes (v1)
 

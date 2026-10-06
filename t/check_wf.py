@@ -162,6 +162,9 @@ RULES: dict[str, str] = {
     # type error raised KeyError inside the checker and the answer's reason read "check_wf raised KeyError:
     # 'set-types'" (3 of the published model's 100 greedy dev answers, each `x in s` with s a seq)
     "set-lit-types": "a set display's elements are all of one type (Finite sets; Compositional types)",
+    "map-lit-types": "a map display's keys are of one type and its values of one type (Maps)",
+    "map-types": "m[k] and k in m take a map and a key of its key type, m[k := v] a value of its value type, "
+                 "keys and remove a map (Maps)",
     "lib-types": "min/max take two ints or two reals, abs an int or a real, sum a seq of ints or of reals, gcd/pow/isqrt "
                  "ints, rev a seq, sort a seq of ints or of reals, `in` an element of the seq's own type (The library; Sorting)",
     "set-types": "in wants (T, set<T>) or (T, seq<T>), card wants a set, union/inter/setminus want two sets of one type; "
@@ -284,15 +287,17 @@ STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
              "isupper", "islower", "startswith", "endswith"}
 SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite sets" (2026-09-27)
+MAP_OPS = {"mapdisp", "keys", "remove"}   # SPEC.md "Maps (v1)" (2026-10-06); at/update/in/len take a map by type
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev",   # SPEC.md "The library (v1)" (2026-10-06)
                      "sort"})                                                       # SPEC.md "Sorting (v1)" (2026-10-06)
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
-         | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS | LIB_OPS)
+         | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS | LIB_OPS
+         | MAP_OPS)
 TERNARY = {"update", "slice", "replace"}
-VARIADIC = {"seq", "set", "tuple"}      # the displays: seq and set at any arity, zero included; tuple at three or more
+VARIADIC = {"seq", "set", "tuple", "mapdisp"}   # the displays: seq, set and map at any arity, zero included; tuple at three or more
 UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
          "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
-         "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev", "sort"}
+         "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev", "sort", "keys"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
@@ -331,6 +336,9 @@ def _valid_type(t, dtypes=frozenset()) -> bool:
     (kind, inner), = t.items()
     if kind in ("seq", "set"):
         return inner != "int" and _valid_type(inner, dtypes)
+    if kind == "map":
+        # SPEC.md "Maps (v1)" (2026-10-06): map<K, V>, both written
+        return isinstance(inner, list) and len(inner) == 2 and all(_valid_type(c, dtypes) for c in inner)
     if kind == "pair":
         return isinstance(inner, list) and len(inner) == 2 and all(_valid_type(c, dtypes) for c in inner)
     if kind == "tuple":
@@ -365,6 +373,11 @@ def _set_of(t):
     return "set" if t == "int" else {"set": t}
 
 
+def _is_map(t) -> bool:
+    """A map type (SPEC.md "Maps (v1)", 2026-10-06)."""
+    return isinstance(t, dict) and set(t) == {"map"}
+
+
 def _components(t):
     """The component types of a pair or tuple type, or None for any other type."""
     if isinstance(t, dict) and (set(t) == {"pair"} or set(t) == {"tuple"}):
@@ -379,7 +392,8 @@ def _empty_display(a, t, want) -> bool:
     if not isinstance(a, dict) or a.get("args"):
         return False
     return ((t == "seq" and a.get("op") == "seq" and _is_seq(want))
-            or (t == "set" and a.get("op") == "set" and _is_set(want)))
+            or (t == "set" and a.get("op") == "set" and _is_set(want))
+            or (_is_map(t) and a.get("op") == "mapdisp" and _is_map(want)))
 
 
 def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
@@ -588,6 +602,8 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         expects = [_elem(expect)] * len(args)
     elif op == "set" and _is_set(expect):
         expects = [_set_elem(expect)] * len(args)
+    elif op == "mapdisp" and _is_map(expect):
+        expects = list(expect["map"]) * (len(args) // 2)
     elif op in ("pair", "tuple") and _components(expect) is not None and len(_components(expect)) == len(args):
         expects = list(_components(expect))
     ts = [_ty(a, env, funs, dtypes, ver, errs, bound, x) for a, x in zip(args, expects)]
@@ -615,9 +631,22 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         # is concatenation, the same polymorphism as ==.
         return ts[0]
     if op == "len":
-        if not _is_seq(ts[0]):
-            _e(errs, e, "len of a non-seq", "len-nonseq")
+        if not (_is_seq(ts[0]) or _is_map(ts[0])):
+            _e(errs, e, "len of a non-seq, non-map", "len-nonseq")
         return "int"
+    if op == "at" and _is_map(ts[0]):
+        # SPEC.md "Maps (v1)" (2026-10-06): m[k], the key of the map's key type, defined iff k in m
+        kt, vt = ts[0]["map"]
+        if ts[1] != kt and not _empty_display(args[1], ts[1], kt):
+            _e(errs, e, f"m[k] wants a key of the map's key type {kt!r}, found {ts[1]!r}", "map-types")
+        return vt
+    if op == "update" and _is_map(ts[0]):
+        kt, vt = ts[0]["map"]
+        if ts[1] != kt and not _empty_display(args[1], ts[1], kt):
+            _e(errs, e, f"m[k := v] wants a key of the map's key type {kt!r}, found {ts[1]!r}", "map-types")
+        if ts[2] != vt and not _empty_display(args[2], ts[2], vt):
+            _e(errs, e, f"m[k := v] wants a value of the map's value type {vt!r}, found {ts[2]!r}", "map-types")
+        return ts[0]
     if op == "at":
         # SPEC.md "Compositional types (v1)": at(s, i) on a seq<T> gives a T (an int on a plain seq, a row on a
         # seq<seq>, a pair on a seq of pairs).
@@ -653,6 +682,43 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
             return _set_of(ts[0])
         _e(errs, e, "set display elements must all be of one type", "set-lit-types")
         return _set_of(ts[0])
+    if op == "in" and _is_map(ts[1]):
+        # SPEC.md "Maps (v1)" (2026-10-06): domain membership
+        kt = ts[1]["map"][0]
+        if ts[0] != kt and not _empty_display(args[0], ts[0], kt):
+            _e(errs, e, f"k in m wants a key of the map's key type {kt!r}, found {ts[0]!r}", "map-types")
+        return "bool"
+    if op == "mapdisp":
+        # SPEC.md "Maps (v1)": map[k1 := v1, ...]; the keys of one type, the values of one type; map[] takes the
+        # expected map type and is map<int, int> where none reaches it
+        if len(args) % 2 == 1:
+            _e(errs, e, "a map display is written in key/value pairs", "map-lit-types")
+            return None
+        if not ts:
+            return expect if _is_map(expect) else {"map": ["int", "int"]}
+        if any(t is None for t in ts):
+            return None
+        kts, vts = ts[0::2], ts[1::2]
+        kt = next((t for t in kts if not (t == "seq" or t == "set")), kts[0])
+        vt = next((t for t in vts if not (t == "seq" or t == "set")), vts[0])
+        if not all(t == kt or _empty_display(a, t, kt) for a, t in zip(args[0::2], kts)):
+            _e(errs, e, "a map display's keys must all be of one type", "map-lit-types")
+        if not all(t == vt or _empty_display(a, t, vt) for a, t in zip(args[1::2], vts)):
+            _e(errs, e, "a map display's values must all be of one type", "map-lit-types")
+        return {"map": [kt, vt]}
+    if op == "keys":
+        if not _is_map(ts[0]):
+            _e(errs, e, "keys of a non-map", "map-types")
+            return "set"
+        return _set_of(ts[0]["map"][0])
+    if op == "remove":
+        if not _is_map(ts[0]):
+            _e(errs, e, "remove wants a map and a key", "map-types")
+            return None
+        kt = ts[0]["map"][0]
+        if ts[1] != kt and not _empty_display(args[1], ts[1], kt):
+            _e(errs, e, f"remove wants a key of the map's key type {kt!r}, found {ts[1]!r}", "map-types")
+        return ts[0]
     if op == "in" and _is_seq(ts[1]):
         # SPEC.md "The library (v1)" (2026-10-06): membership in a seq, by the right operand's type
         if ts[0] != _elem(ts[1]) and not _empty_display(args[0], ts[0], _elem(ts[1])):

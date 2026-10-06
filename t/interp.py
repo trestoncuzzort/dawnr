@@ -248,6 +248,46 @@ class Tup:
     items: tuple
 
 
+@dataclass(frozen=True)
+class MapV:
+    """SPEC.md "Maps (v1)" (2026-10-06): the runtime value of a map, kept out of Python's dict so that it is
+    hashable (the domain ladders dedup through sets) and `_tv` tags it by its class, never as a seq of pairs.
+    `items` is the tuple of (key, value) pairs sorted by the key's tagged rendering, so two equal maps are equal
+    tuples and `==` is extensional for free."""
+    items: tuple
+
+    @staticmethod
+    def of(pairs) -> "MapV":
+        d: dict = {}
+        for k, v in pairs:            # the rightmost of two equal keys wins (SPEC.md "Maps (v1)")
+            d[_tv(k)] = (k, v)
+        return MapV(tuple(d[key] for key in sorted(d, key=repr)))
+
+    def has(self, k) -> bool:
+        tk = _tv(k)
+        return any(_tv(kk) == tk for kk, _ in self.items)
+
+    def get(self, k):
+        tk = _tv(k)
+        for kk, vv in self.items:
+            if _tv(kk) == tk:
+                return vv
+        raise KeyError(k)
+
+    def put(self, k, v) -> "MapV":
+        return MapV.of(list(self.items) + [(k, v)])
+
+    def drop(self, k) -> "MapV":
+        tk = _tv(k)
+        return MapV(tuple((kk, vv) for kk, vv in self.items if _tv(kk) != tk))
+
+    def __contains__(self, k) -> bool:
+        return self.has(k)
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+
 MAX_SEQ = 1 << 16          # fill length cap, the seq analogue of MAX_BITS
 
 
@@ -637,6 +677,11 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return len(a[0])
     if op == "at":
         s, i = a
+        if isinstance(s, MapV):
+            # SPEC.md "Maps (v1)" (2026-10-06): m[k], DEFINED IFF k in m
+            if not s.has(i):
+                raise Undef(f"key {_j(i)!r} not in the map", expr=e)
+            return s.get(i)
         if not (0 <= i < len(s)):
             raise Undef(f"at index {i} outside [0,{len(s)})", expr=e)
         return s[i]
@@ -644,6 +689,8 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         # SPEC.md "Sequences as values" (2026-09-09): s[i := v], the same
         # definedness as `at`; a fresh tuple, never a mutation in place.
         s, i, v = a
+        if isinstance(s, MapV):
+            return s.put(i, v)     # SPEC.md "Maps (v1)": total
         if not (0 <= i < len(s)):
             raise Undef(f"update index {i} outside [0,{len(s)})", expr=e)
         return s[:i] + (v,) + s[i + 1:]
@@ -676,6 +723,13 @@ def ev(e: dict, env: dict, funs: dict, st: St):
     if op == "proj":
         # e.k, k >= 2, always defined on a tuple (the index is a literal).
         return a[0].items[a[1]]
+    if op == "mapdisp":
+        # SPEC.md "Maps (v1)" (2026-10-06): map[k1 := v1, ...], the rightmost of two equal keys wins
+        return MapV.of(list(zip(a[0::2], a[1::2])))
+    if op == "keys":
+        return frozenset(k for k, _ in a[0].items)
+    if op == "remove":
+        return a[0].drop(a[1])
     if op == "set":
         # SPEC.md "Finite sets" (2026-09-27): {e1, ..., en}, the set of the
         # values (duplicates collapse), every element evaluated above so the
@@ -1222,6 +1276,18 @@ def _ladder(lad: dict, ty) -> tuple:
             # the same seqs read as sets, duplicates collapsed, as for ints.
             return tuple(_dedup([frozenset(t) for t in
                                  _seq_ladder(tuple(_ladder(lad, ty["set"])[:NESTED_ROWS]))]))
+        if "map" in ty:
+            # SPEC.md "Maps (v1)" (2026-10-06): every map over the first three keys of K's ladder and the first
+            # two values of V's, the empty map first, then by the number of keys.
+            import itertools
+            ks = list(_ladder(lad, ty["map"][0])[:3])
+            vs = list(_ladder(lad, ty["map"][1])[:2])
+            out = []
+            for n in range(0, len(ks) + 1):
+                for keys in itertools.combinations(ks, n):
+                    for vals in itertools.product(vs, repeat=n):
+                        out.append(MapV.of(list(zip(keys, vals))))
+            return tuple(_dedup(out))
     return lad[ty]
 
 
@@ -1278,6 +1344,9 @@ def _j(v):
     if isinstance(v, Tup):
         # SPEC.md "Compositional types (v1)": a tuple is shown as the list of its components.
         return [_j(x) for x in v.items]
+    if isinstance(v, MapV):
+        # SPEC.md "Maps (v1)" (2026-10-06): shown as its list of [key, value] pairs, in the map's own key order
+        return [[_j(k), _j(x)] for k, x in v.items]
     if isinstance(v, frozenset):
         # SPEC.md "Finite sets" (2026-09-27): shown as its sorted list; the
         # declared type says it is a set, as it says a pair's 2-list is a pair.
@@ -1315,6 +1384,8 @@ def _tv(v):
         return ("Tup", tuple(_tv(x) for x in v.items))
     if isinstance(v, frozenset):
         return ("frozenset", frozenset(_tv(x) for x in v))
+    if isinstance(v, MapV):
+        return ("MapV", tuple((_tv(k), _tv(x)) for k, x in v.items))
     return (type(v).__name__, v)
 
 

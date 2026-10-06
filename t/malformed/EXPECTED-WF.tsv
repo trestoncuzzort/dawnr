@@ -67,3 +67,5 @@ wf-while-v0.t	3	3	while-v0
 wf-exit-outside-loop.t	5	3	exit-outside-loop
 wf-exit-unreachable.t	6	5	exit-unreachable
 wf-loop-exit.t	5	3	loop-exit
+wf-map-types.t	4	9	map-types
+wf-map-lit-types.t	4	8	map-lit-types

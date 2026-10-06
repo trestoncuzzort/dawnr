@@ -178,8 +178,12 @@ DETECTORS: dict[str, tuple[str, str]] = {
                    "Tuple/tuple): SPEC.md v1 has no seq of pairs"),
     "nested-seq-deep": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "three or more levels of seq nesting: "
                    "SPEC.md v1's nested seq is exactly one level deep"),
-    "map": ("gap", "dict literal, dict(), defaultdict, Counter, or a "
-            "dict-typed io value"),
+    "map": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Maps): a dict literal, dict(), defaultdict, "
+            "Counter, or a dict-typed io value is t's map<K, V> (display, lookup, update, membership, len, keys, "
+            "remove); iterating one is the gap map-iteration"),
+    "map-iteration": ("gap", "iteration over a dict (.items(), .values()): t has no order on a map and no loop "
+                      "over its keys; a loop over a sequence of candidate keys says it (a bare `for k in d` is "
+                      "not recognised here, undercounted)"),
     "set": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "set literal, set(), frozenset(), a set/dict "
             "comprehension's set form"),
     "tuple": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "a tuple of three or more elements, a nested tuple, "
@@ -269,8 +273,8 @@ DETECTORS: dict[str, tuple[str, str]] = {
                   "supports this through spec functions (self-calls and "
                   "calls to earlier functions), so it is a burden, not a "
                   "gap"),
-    "set-dict-comprehension": ("burden", "a set or dict comprehension: t writes a set by a loop until maps land "
-                               "(SPEC.md Comprehensions names seq comprehensions only)"),
+    "set-dict-comprehension": ("burden", "a set or dict comprehension: t writes a set or a map by a loop "
+                               "(SPEC.md Comprehensions names seq comprehensions only; maps since 2026-10-06)"),
     "comprehension": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Comprehensions): a list comprehension "
                       "over a seq or a range is t's [body for x in s if cond]; before that day "
                        "t writes this as an explicit loop or a quantifier"),
@@ -615,6 +619,8 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
                     string_lib_gap = True
             if node.attr in APPEND_METHODS:
                 tags["seq-append"] = True
+            if node.attr in ("items", "values"):
+                tags["map-iteration"] = True     # SPEC.md "Maps (v1)" (2026-10-06): no iteration over a map
             if node.attr == "sort":
                 tags["sort"] = True
             if node.attr == "sqrt":
