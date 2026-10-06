@@ -1742,7 +1742,8 @@ def _free_names(e) -> set:
 
 
 LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",   # "sort": SPEC.md "Sorting (v1)"
-                       "keys", "remove"})                                                   # SPEC.md "Maps (v1)" (2026-10-06)
+                       "keys", "remove",                                                    # SPEC.md "Maps (v1)" (2026-10-06)
+                       "any", "all", "toset"})                                              # SPEC.md "Reductions (v1)" (2026-10-07)
 
 
 def _resolve_library(task: dict) -> None:
@@ -1916,7 +1917,8 @@ P_POSTFIX = 9
 
 _BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
 _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice": 3, "implies": 2,
-          "min": 2, "max": 2, "abs": 1, "sum": 1, "gcd": 2, "pow": 2, "isqrt": 1, "rev": 1, "sort": 1,
+          "min": (1, 2), "max": (1, 2), "abs": 1, "sum": 1, "gcd": 2, "pow": 2, "isqrt": 1, "rev": 1, "sort": 1,
+          "any": 1, "all": 1, "toset": 1,   # SPEC.md "Reductions (v1)" (2026-10-07); min/max at two arities
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2,
           "pair": 2, "fst": 1, "snd": 1,
@@ -2012,9 +2014,11 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         raise SurfaceError("unknown expression node %r" % kind)
 
     op, args = e["op"], e["args"]
-    if op in _ARITY and len(args) != _ARITY[op]:
-        raise SurfaceError("%r takes %d argument(s), given %d"
-                           % (op, _ARITY[op], len(args)))
+    if op in _ARITY:
+        want = _ARITY[op] if isinstance(_ARITY[op], tuple) else (_ARITY[op],)
+        if len(args) not in want:
+            raise SurfaceError("%r takes %s argument(s), given %d"
+                               % (op, "/".join(str(w) for w in want), len(args)))
 
     if op == "len":
         return "len(%s)" % pexpr(args[0])
@@ -2363,6 +2367,11 @@ WRITTEN = [
     ("expr", "len(s)", {"op": "len", "args": [{"var": "s"}]}),
     # SPEC.md "Finite sets" (2026-09-27), SYNTAX.md's own written: line.
     ("expr", "{1, x}", {"op": "set", "args": [{"int": 1}, {"var": "x"}]}),
+    # SPEC.md "Reductions (v1)" (2026-10-07)
+    ("expr", "max(s)", {"op": "max", "args": [{"var": "s"}]}),
+    ("expr", "any([x > 0 for x in s])", {"op": "any", "args": [{"comp": {"var": "x", "seq": {"var": "s"}, "cond": {"bool": True},
+                                                                  "body": {"op": ">", "args": [{"var": "x"}, {"int": 0}]}}}]}),
+    ("expr", "card(toset(s))", {"op": "card", "args": [{"op": "toset", "args": [{"var": "s"}]}]}),
     # SPEC.md "Maps (v1)" (2026-10-06)
     ("expr", "map[1 := 2, x := y]", {"op": "mapdisp", "args": [{"int": 1}, {"int": 2}, {"var": "x"}, {"var": "y"}]}),
     ("expr", "map[]", {"op": "mapdisp", "args": []}),

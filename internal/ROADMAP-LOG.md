@@ -3105,5 +3105,18 @@ is queued, and the ones running are read as they finish.
   Three committed tasks (`lookup_or`, `put_key`, `index_map`) verified with the twin refuted in both. Census: `map`
   (2,464 problems) in the fragment, iteration over a dict the gap `map-iteration` (535); 1,777 -> 1,892
   function-shaped problems in the fragment (44.6%).
-- **Next:** the matrix regenerated from a clean clone (76 tasks); then G6 records and options, G7 the string
-  library's missing members; Verus on early exits, map iteration and SPARK's `sum` lemma as design items.
+- **The matrix regenerated from a clean clone (10-07 01:20Z, at 3923342f):** 76 tasks; the three map rows verified
+  with the twin refuted in Dafny and Verus, the other five columns by name.
+- **T6 landed (10-07 01:50Z), reductions and three census corrections:** `any(s)`, `all(s)` on a `seq<bool>`,
+  `max(s)`/`min(s)` of one argument (defined iff the seq is non-empty), `toset(s)` (SPEC "Reductions (v1)");
+  Dafny as functions in the Std's shapes, Verus as vstd's own `max`/`min`/`to_set` with their lemmas stated and a
+  comprehension under `any`/`all` written as the quantifier itself; four committed tasks (`all_positive`,
+  `has_negative`, `largest`, `members_upto`) verified with the twin refuted in both. The census, measured first on
+  the corpus's first solutions (638 of 950 classes are bare method wrappers; generator expressions feed sum, join,
+  any, all, max, min; collections, bisect, fractions are the common imports), now counts a consumed generator, a
+  method-only class and a modelled import as burdens: 1,892 -> 2,745 function-shaped problems in the fragment
+  (64.8%). The remaining language items, by the gap table: the string library's missing members, records and
+  options, map iteration, nested helpers.
+- **Next:** the matrix regenerated from a clean clone (80 tasks); then G7 the string library's missing members, G8
+  records and options (constructors with fields; the checker and the kernels' match already carry binders), map
+  iteration; Verus on early exits and SPARK's `sum` lemma as design items.

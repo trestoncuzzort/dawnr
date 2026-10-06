@@ -289,7 +289,8 @@ STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
 SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite sets" (2026-09-27)
 MAP_OPS = {"mapdisp", "keys", "remove"}   # SPEC.md "Maps (v1)" (2026-10-06); at/update/in/len take a map by type
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev",   # SPEC.md "The library (v1)" (2026-10-06)
-                     "sort"})                                                       # SPEC.md "Sorting (v1)" (2026-10-06)
+                     "sort",                                                        # SPEC.md "Sorting (v1)" (2026-10-06)
+                     "any", "all", "toset"})                                        # SPEC.md "Reductions (v1)" (2026-10-07)
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
          | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS | LIB_OPS
          | MAP_OPS)
@@ -297,7 +298,8 @@ TERNARY = {"update", "slice", "replace"}
 VARIADIC = {"seq", "set", "tuple", "mapdisp"}   # the displays: seq, set and map at any arity, zero included; tuple at three or more
 UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
          "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
-         "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev", "sort", "keys"}
+         "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev", "sort", "keys",
+         "any", "all", "toset"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
@@ -590,6 +592,10 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         # arities of one op, neither the plain-binary nor any other group.
         if len(args) not in (1, 2):
             _e(errs, e, "split takes one or two arguments", "strlib-arity")
+    elif op in ("min", "max"):
+        # SPEC.md "Reductions (v1)" (2026-10-07): two ints or reals, or one seq of them
+        if len(args) not in (1, 2):
+            _e(errs, e, f"{op} takes one or two arguments", "op-arity")
     elif (op not in UNARY and op not in NARY and op not in TERNARY
             and op not in VARIADIC and len(args) != 2):
         _e(errs, e, f"{op} takes two arguments", "op-arity")
@@ -728,6 +734,21 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         if not _is_set(ts[1]) or (ts[0] != _set_elem(ts[1]) and not _empty_display(args[0], ts[0], _set_elem(ts[1]))):
             _e(errs, e, "in wants (T, set<T>) or (T, seq<T>): an element of the collection's own type", "set-types")
         return "bool"
+    if op in ("min", "max") and len(ts) == 1:
+        # SPEC.md "Reductions (v1)" (2026-10-07): the largest/smallest element of a seq of ints or of reals
+        if _is_seq(ts[0]) and _elem(ts[0]) in ("int", "real"):
+            return _elem(ts[0])
+        _e(errs, e, f"{op} of one argument wants a seq of ints or of reals, found {ts[0]!r}", "lib-types")
+        return "int"
+    if op in ("any", "all"):
+        if ts[0] != {"seq": "bool"}:
+            _e(errs, e, f"{op} wants a seq<bool>, found {ts[0]!r}", "lib-types")
+        return "bool"
+    if op == "toset":
+        if not _is_seq(ts[0]):
+            _e(errs, e, f"toset wants a seq, found {ts[0]!r}", "lib-types")
+            return "set"
+        return _set_of(_elem(ts[0]))
     if op in ("min", "max"):
         # SPEC.md "The library (v1)" (2026-10-06): two ints or two reals, never mixed
         if not (ts[0] == ts[1] and ts[0] in ("int", "real")):

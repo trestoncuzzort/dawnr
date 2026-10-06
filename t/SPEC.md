@@ -2174,6 +2174,54 @@ not shrink, `remove(r, k) == remove(m, k)`), `index_map` (a loop
 `m := m[x := i]` over `s`: every element of `s` is a key and `len(m) <=
 len(s)`).
 
+### Reductions (v1)
+
+Stated 2026-10-07, after a measurement of the corpus's generator
+expressions (receipt 4c05105b66f2, with the pages read first: Python's
+built-in `any`, `all`, `max`, `min` and `set`; Dafny's Std `Seq.Max`/`Min`,
+recursive with `requires 0 < |xs|` and the ensures that the result is in
+the sequence and bounds every element, and `ToSet(xs) = set x | x in xs`;
+vstd's `Seq<int>::max`/`min` with `max_ensures`/`min_ensures` and
+`Seq::to_set` with its broadcast ensures). Of 1,047 corpus solutions with
+a generator expression, 405 feed `sum`, 293 `join`, 114 `all`, 65 `max`,
+65 `any`, 55 `sorted`, 53 `tuple`, 50 `min`: a comprehension under a
+reduction. The library gains the reductions the comprehension lacked:
+
+```
+{"op": "any",   "args": [SeqBoolExpr]}   // any(s): some element is true; any([]) is false
+{"op": "all",   "args": [SeqBoolExpr]}   // all(s): every element is true; all([]) is true
+{"op": "max",   "args": [SeqExpr]}       // max(s): the largest element; DEFINED IFF len(s) > 0
+{"op": "min",   "args": [SeqExpr]}       // min(s): the smallest element; DEFINED IFF len(s) > 0
+{"op": "toset", "args": [SeqExpr]}       // toset(s): the set of the elements, duplicates collapsed
+```
+
+`max` and `min` are the two-argument library functions at a second arity,
+over a `seq` of ints or a `seq<real>`, with the element type as result;
+`any`/`all` take a `seq<bool>`; `toset` takes a `seq<T>` and gives a
+`set<T>`. All are library names, resolved after parsing like `sum` (a
+declared name shadows them). Definedness: `max`/`min` of one argument owe
+`len(s) > 0`; the other three are total. The interpreter is Python's own
+`any`, `all`, `max`, `min` and `frozenset`.
+
+**The lowerings.** Dafny: `t_any`/`t_all` as the bounded quantifiers over
+the sequence, `t_maxs`/`t_mins` (and the real twins) in the Std's shape,
+recursive with `requires |s| > 0` and the two ensures, `t_toset` as the set
+comprehension `set x | x in s`. Verus: `t_any`/`t_all` as spec fns with
+a quantifier, `max(s)`/`min(s)` as vstd's own `s.max()`/`s.min()` with
+`max_ensures()`/`min_ensures()` stated inside the proof fn for every use
+over the parameters (vstd's lemmas are not broadcast), `toset(s)` as
+`s.to_set()`. F*, SPARK, Lean, Rocq and Frama-C abstain by name. The
+hand-back writes Python's own built-ins.
+
+**The twins.** No new move: WRONG-CONSTANT and OFF-BY-ONE reach the ints
+inside the comprehension a reduction consumes, COMPARE-FLIP its condition.
+
+**The committed tasks:** `all_positive` (`all([x > 0 for x in s])` against
+the quantifier), `has_negative` (`any([x < 0 for x in s])` against the
+existential), `largest` (`max(s)` on a non-empty sequence: in it, above
+every element), `members_upto` (`toset(s[0..n])`: every element of the
+prefix is in it).
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

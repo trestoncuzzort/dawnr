@@ -199,7 +199,8 @@ DETECTORS: dict[str, tuple[str, str]] = {
     "any-type": ("gap", "the interface's type could not be pinned to one of "
                  "the other named types: a bare Any annotation, a call "
                  "expression as a test argument, or an untyped io value"),
-    "class": ("gap", "a class definition (t has no classes, no heap)"),
+    "class": ("gap", "a stateful class (attributes set in __init__ and read or written by methods): t has no "
+              "classes, no heap; a bare method wrapper is the burden class-wrapper, a record the gap record"),
     "closure": ("gap", "a lambda, a nested def, or map/filter with a lambda"),
     "exception": ("gap", "try/except/raise"),
     "unbounded-loop": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Early exits): while True, break "
@@ -218,12 +219,22 @@ DETECTORS: dict[str, tuple[str, str]] = {
     "seq-slice-step-other": ("gap", "a slice whose step is not a positive literal: a variable step (written as "
                               "the comprehension by hand, not posed by the notation) or a negative step with a "
                               "bound"),
-    "generator": ("gap", "a generator expression or a generator function "
+    "generator": ("gap", "a generator expression not consumed by a reduction, or a generator function "
                   "(yield): t has no lazy or deferred evaluation"),
+    "generator-consumed": ("burden", "IN THE FRAGMENT since 2026-10-07 (SPEC.md Reductions): a generator "
+                           "expression under sum, join, any, all, max, min, sorted, tuple, list, set, len or next "
+                           "is a comprehension under a library op"),
+    "class-wrapper": ("burden", "IN THE FRAGMENT since 2026-10-07: a class whose methods never read self beyond "
+                      "calling each other (the `class Solution` wrapper): its method is the function"),
+    "record": ("gap", "a dataclass, NamedTuple or init-only class: a datatype with fields, not in t yet "
+               "(SPEC.md Datatypes names enumerations only)"),
+    "import-modelled": ("burden", "IN THE FRAGMENT since 2026-10-07: an import of collections, bisect, fractions, "
+                        "copy, string, array, queue, decimal, or functools's lru_cache/cache alone, whose meaning "
+                        "t's maps, slices, reals, values and literals carry"),
     "global": ("gap", "global or nonlocal: mutable state outside the "
                "function, which t's pure functions have no notion of"),
-    "import": ("gap", "an import other than math, sys or typing: an "
-               "unmodeled library the solution's meaning depends on"),
+    "import": ("gap", "an import of an unmodelled library the solution's meaning depends on (itertools, re, "
+               "heapq, functools.reduce, numpy, random, os, ...); the modelled ones are the burden import-modelled"),
     "io": ("gap", "input()/print()/sys.stdin used INSIDE a function-shaped "
            "solution (for a stdin-shaped problem, I/O is the shape itself, "
            "not a separate gap)"),
@@ -304,6 +315,40 @@ STRING_METHODS = {"upper", "lower", "split", "join", "strip", "lstrip",
                    "partition", "splitlines", "encode", "swapcase",
                    "find", "count"}
 MAP_CALLS = {"dict", "defaultdict", "Counter", "OrderedDict"}
+# SPEC.md "Reductions (v1)" (2026-10-07): the calls under which a generator expression is a comprehension in t
+GENERATOR_CONSUMERS = {"sum", "join", "any", "all", "max", "min", "sorted", "tuple", "list", "set", "len", "next",
+                       "frozenset"}
+# 2026-10-07: modules whose meaning t already carries (maps for collections, slices for bisect and deque, reals for
+# fractions and decimal, values for copy, literals for string, seqs for array/queue)
+MODELLED_MODULES = {"collections", "bisect", "fractions", "copy", "string", "array", "queue", "decimal"}
+
+
+def _class_shape(cls: ast.ClassDef) -> str:
+    """2026-10-07, measured on the corpus's first solutions (950 with a class: 638 bare wrappers, 66 wrappers
+    calling each other through self, 173 stateful, 17 records): `class-wrapper` when every member is a method and
+    no method reads a `self` attribute (the `class Solution` namespace; its method is the function); `record` for
+    a dataclass, a NamedTuple, or a class whose only method is an __init__ that sets attributes; `class` (the
+    gap) otherwise."""
+    funcs = [n for n in cls.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    others = [n for n in cls.body if not isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Pass, ast.Expr))]
+    decos = [d.id if isinstance(d, ast.Name) else getattr(d, "attr", "") for d in cls.decorator_list]
+    if "dataclass" in decos or any(isinstance(b, ast.Name) and b.id == "NamedTuple" for b in cls.bases):
+        return "record"
+    inits = [f for f in funcs if f.name == "__init__"]
+    if inits:
+        sets = [n for n in ast.walk(inits[0]) if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)
+                and n.value.id == "self" and isinstance(n.ctx, ast.Store)]
+        return "record" if (sets and len(funcs) == 1) else "class"
+    if funcs and not others:
+        reads_attr = any(isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name) and n.value.id == "self"
+                         and not (isinstance(getattr(n, "_parent_call", None), ast.Call))
+                         for f in funcs for n in ast.walk(f))
+        # an attribute read through self that is a method call (`self.helper(x)`) is a call to another function
+        calls = {id(n.func) for f in funcs for n in ast.walk(f) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
+        reads_attr = any(isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name) and n.value.id == "self"
+                         and id(n) not in calls for f in funcs for n in ast.walk(f))
+        return "class" if reads_attr else "class-wrapper"
+    return "class"
 SET_CALLS = {"set", "frozenset"}
 SORT_CALLS = {"sorted"}
 MATH_BUILTIN_CALLS = {"min", "max", "sum", "abs"}
@@ -492,6 +537,18 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
     if nested_defs:
         tags["closure"] = True
 
+    # SPEC.md "Reductions (v1)" (2026-10-07): a generator expression consumed by a reduction is a comprehension
+    # under a library op; the consumer is read off the enclosing call
+    consumed_gens: set[int] = set()
+    for _n in ast.walk(tree):
+        if isinstance(_n, ast.Call):
+            _f = _n.func
+            _name = _f.id if isinstance(_f, ast.Name) else (_f.attr if isinstance(_f, ast.Attribute) else "")
+            if _name in GENERATOR_CONSUMERS:
+                for _a in _n.args:
+                    if isinstance(_a, ast.GeneratorExp):
+                        consumed_gens.add(id(_a))
+
     # A parallel assignment whose right-hand side is a tuple literal of
     # the same length as its tuple target (`a, b = b, a`, `a, b = 1, 2`)
     # is not a `tuple`/`tuple-pair` shape at all: t writes it as two
@@ -587,9 +644,11 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
         elif isinstance(node, (ast.SetComp, ast.DictComp)):
             tags["set-dict-comprehension"] = True
         elif isinstance(node, ast.GeneratorExp):
+            tags["generator-consumed" if id(node) in consumed_gens else "generator"] = True
+        elif isinstance(node, (ast.Yield, ast.YieldFrom)):
             tags["generator"] = True
         elif isinstance(node, ast.ClassDef):
-            tags["class"] = True
+            tags[_class_shape(node)] = True
         elif isinstance(node, ast.Lambda):
             tags["closure"] = True
         elif isinstance(node, (ast.Try, ast.Raise)):
@@ -600,7 +659,12 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             mods = [node.module] if isinstance(node, ast.ImportFrom) else [a.name for a in node.names]
             for m in mods:
                 base = (m or "").split(".")[0]
-                if base not in ("math", "sys", "typing", ""):
+                if base in ("math", "sys", "typing", ""):
+                    continue
+                if base in MODELLED_MODULES or (base == "functools" and isinstance(node, ast.ImportFrom)
+                                                 and all(a.name in ("lru_cache", "cache") for a in node.names)):
+                    tags["import-modelled"] = True   # 2026-10-07: carried by maps, slices, reals, values, literals
+                else:
                     tags["import"] = True
         elif isinstance(node, ast.While):
             test = node.test
