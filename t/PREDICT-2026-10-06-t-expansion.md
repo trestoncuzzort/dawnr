@@ -143,3 +143,28 @@ three unproved cells are measured kernel limits, kept in the matrix as they read
 (SPARK's package already has a `Last`). The `gcd` task was restated once: its
 first form asked `gcd(b, a) == gcd(a, b)`, a theorem about Euclid that no kernel proves from the definition, and
 a committed task is a use of the library, not a lemma about it.
+
+## T3b-1 registered (2026-10-06 15:00Z, before any run): `for` as sugar, SPEC "Loops as sugar (v1)"
+
+The three `for` forms expand to the `while` the AST has, with the bound invariants and the `decreases` supplied.
+Bars: the census does not move (a Python `for` was never a gap: `while` already carried it); the three committed
+tasks read as `while` tasks do in every kernel (the kernel half of T8: Dafny, Verus, SPARK, F*, Lean, Rocq,
+Frama-C each verify the real and refute the twin wherever that kernel counts the existing while-loop tasks, or
+read the same limit by name); `surface.py --check` round-trips 1,939 of 1,939 and the lab's grammar check agrees
+with the new `for` rule (T9). What would falsify the design: a kernel that counts `while` tasks and not these
+(then the expansion is wrong, not the kernel).
+
+### T3b-1 read (2026-10-06 15:40Z): the three `for` tasks parse to their `while`, round-trip through it, and Dafny
+verifies each with the twin refuted (`count_pos_for` compare-flip, `zeros_for` compare-flip, `any_neg_for`
+collapse-if); the other six columns are read from the clean-clone matrix that follows the commit. The census did
+not move, as registered. `surface.py --check` round-trips 1,943 of 1,943; the lab's grammar check agrees on every
+program with the `for` rule and the optional `else` (an `if` without `else` is the `if` with an empty `else`, a
+notation change made the same day because every `for` body in the committed tasks wanted one).
+
+## T3b-2 registered (2026-10-06 15:50Z, before any run): `sort(s)`, SPEC "Sorting (v1)"
+
+Bars: the `sort` burden (2,908 problems) is re-tagged IN THE FRAGMENT (its count is the same by construction);
+the census does not otherwise move. Kernels: Dafny and Verus verify the two committed tasks with the twin refuted,
+or read a limit by name; F*, SPARK, Lean, Rocq and Frama-C abstain by name. T9 as before (the grammar is unchanged:
+a call). What would falsify the design: Dafny failing to prove its own insertion sort's postconditions (then the
+Std's merge sort shape is taken instead, and the result says so).

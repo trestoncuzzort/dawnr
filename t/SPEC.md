@@ -1800,6 +1800,114 @@ theorem about it: its first form asked `gcd(b, a) == gcd(a, b)`), `cube`
 `has_elem` (`x in s` on a seq), `palindrome` (`s == rev(s)`), `last`
 (`s[-1]`, the sugar).
 
+### Loops as sugar (v1)
+
+Stated 2026-10-06, the second half of the third landing, with the four
+pages on receipt 8f5b4d0085b5 read first: Verus's `for idx in 0..n
+invariant ...` is a `while` whose index is stepped at the end of each
+iteration and whose `idx <= n` the loop supplies itself; Why3's and
+Dafny's libraries state `Sorted`, permutation (occurrence counts or
+multisets) and `Filter`/`Map` with their lemmas. This section is the
+loop sugar; `sort`, comprehensions and the slice step follow as their own
+sections when measured.
+
+**Three forms, one statement.** The notation reads
+
+```
+for i in [a, b) invariant I ... { body }       // an index over the half-open range, as a quantifier's is written
+for x in s invariant I ... { body }            // the elements of a seq, in order; the index is in scope as i_x
+for i, x in s invariant I ... { body }         // the index and the element
+```
+
+and the parser expands each to the `while` the AST already has, so the
+AST, the checker, the interpreter, the twins and every lowering see a
+`while` and nothing new: `for i in [a, b)` is
+
+```
+var i: int := a;
+while i < b
+  invariant a <= i and i <= b
+  invariant I ...
+  decreases b - i
+{ body; i := i + 1; }
+```
+
+and `for i, x in s` (or `for x in s`, with `i` spelled `i_x`) is
+
+```
+var i: int := 0;
+while i < len(s)
+  invariant 0 <= i and i <= len(s)
+  invariant I ...
+  decreases len(s) - i
+{ var x: T := s[i]; body; i := i + 1; }
+```
+
+with `T` the element type of `s`, read by the checker's own typing of `s`
+under the names in scope at the loop. The loop supplies the two bound
+invariants and the `decreases`, as Verus's `for` does; the user writes
+only what the body needs. The printer writes the expansion (as it writes
+`s[a..]` expanded), so a `for` is written sugar and printed `while`.
+
+**What the parser refuses, by name:** an assignment to the loop variable
+or the index in the body (the step is the loop's); a bound `b` or a
+sequence `s` that mentions a variable the body assigns (Python evaluates
+the iterable once, this expansion re-reads it each iteration, and the two
+agree only when it is fixed: so it must be); a loop variable or index
+already declared in scope. A `return` inside the body is the early exit
+"Early exit (v1)" already states for a `while`.
+
+**Measured.** No kernel work: a lowering that carries `while` carries
+`for`. The committed tasks: `count_pos_for` (`for i, x in s invariant 0 <=
+c and c <= i`), `zeros_for` (`for i in [0, n)` building a seq by
+concatenation), `any_neg_for` (`for x in s`, an early `return`).
+
+### Sorting (v1)
+
+Stated 2026-10-06, after the loop sugar, with the library pages on receipt
+8f5b4d0085b5 read first: Dafny's `Std.Collections.Seq.MergeSortBy` ensures
+`multiset(a) == multiset(result)` and `SortedBy`; Why3's `seq.mlw` states
+`sorted` as `forall i1 i2. l <= i1 <= i2 < u -> le s[i1] s[i2]` and a
+permutation through occurrence counts (`occ_all`); Verus's `sort_by`
+carries `lemma_sort_by_ensures` (multiset equality and `sorted_by`); Lean
+defines `mergeSort` for verification and swaps in an efficient sort at run
+time. The census: `sort` is a burden on 2,908 problems (`sorted()` or
+`.sort()`), expressible before this section only as a loop with its own
+specification.
+
+**One operator.** `sort(s)`, written as a call and resolved by name like
+the library's, takes a `seq` or a `seq<real>` and gives a seq of the same
+type (any other element type is ill-typed: the order is the type's own
+`<=`). Its meaning is the unique sorted permutation:
+
+```
+len(sort(s)) == len(s)
+forall i, j. 0 <= i < j < len(s) ==> sort(s)[i] <= sort(s)[j]              (sorted, non-decreasing)
+forall x. count(sort(s), x) == count(s, x)                                 (a permutation: the same occurrences)
+```
+
+where `count(s, x)` is the number of indices `i` with `s[i] == x` (the
+string library's `count` of the one-element seq `[x]`, which on a seq of
+ints is exactly that number). Stable sorting is not a notion here: equal
+elements are equal. The interpreter sorts (Python's own, exact on ints and
+on `Fraction`s).
+
+**The twins.** No new move: `sort` is total and takes one argument, so
+WRONG-VAR, WRONG-CONSTANT and the rest reach around it as around `rev`.
+
+**Each lowering** emits a definition when the task uses `sort`: Dafny
+`t_sort` as an insertion sort over `seq<int>` (or `seq<real>`) with the
+ensures `multiset(r) == multiset(s)` and `t_sorted(r)` (a recursive
+insertion whose postconditions Dafny proves by induction, the Std's
+shapes), Verus `s.sort_by(|a: int, b: int| a <= b)` with vstd's own
+`lemma_sort_by_ensures` called inside the proof fn; F*, SPARK, Lean, Rocq
+and Frama-C abstain by name until their encodings are built and
+measured. The writer's side: `to_python.py` hands back `sorted(s)`.
+
+**The committed tasks:** `sort_it` (`r := sort(s)` with the sorted
+clause as its `ensures`), `first_sorted` (`r == sort(s)[0]` under
+`requires len(s) > 0`).
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

@@ -3033,6 +3033,13 @@ is queued, and the ones running are read as they finish.
   no place to put). Lean, Rocq and Frama-C abstain by name. The census: 1,601 → 1,642
   function-shaped (T3a's bar 1,636 met), MBPP 618 → 625; `seq-slice-negative` and `builtin-math` are in the
   fragment; the `sqrt` sub-bar was missed by construction (the detector never counted `isqrt` there).
-- **Next:** the matrix regenerated from a clean clone; then G3b (`for`, comprehensions, `sorted`, the slice step),
-  and the three library proofs the kernels do not reach alone (a `sum` slice lemma for SPARK, F* and Verus; a
+- **The matrix regenerated from a clean clone (10-06 15:20Z):** 59 tasks; the library rows as measured above.
+- **G3b-1 landed (10-06 15:40Z), `for` as sugar:** `for i in [a, b)`, `for x in s`, `for i, x in s` are the
+  notation's, expanded by the parser to the AST's `while` with the two bound invariants and the `decreases`
+  supplied (Verus's reading of a for loop, receipt 8f5b4d0085b5); the index of `for x in s` is in scope as `i_x`;
+  the parser refuses an assignment to the loop variable, a bound or sequence the body changes, and a name already
+  declared. No kernel work. An `if` may now omit its `else` (an empty one). Three committed tasks
+  (`count_pos_for`, `zeros_for`, `any_neg_for`), Dafny verified with the twin refuted; the matrix follows.
+- **Next:** `sort(s)` with its multiset-and-order specification, comprehensions as a bound-variable form, the slice
+  step; the three library proofs the kernels do not reach alone (a `sum` slice lemma for SPARK, F* and Verus; a
   nonlinear hint for Verus) as their own measured item.

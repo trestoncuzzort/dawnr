@@ -134,7 +134,9 @@ Stmt     ::= {"assign": [Id, Expr]}
            | {"return": [Id, Expr]}                 (* v1; written `return Expr;`; ends the task *)
            | {"while": {"cond": Expr,
                         "invariants": [Expr*],
-                        "decreases": Expr,      (* required on every loop *)
+                        "decreases": Expr,      (* required on every loop; a `for` in the notation is this
+                                                   while with the bounds and decreases supplied (SPEC.md "Loops
+                                                   as sugar (v1)", 2026-10-06) *)
                         "body": [Stmt+]}}                                   (* v1 *)
            | {"lemma": {"name": Id, "args": [Expr*]}}  (* v1; written `L(a, b);`; a no-op at run time *)
 
@@ -195,6 +197,10 @@ that backend abstains. Division and modulo are `div` and `mod` since 2026-09-08,
         "else": [{"assign": ["r", {"op": "neg", "args": [{"var": "x"}]}]}]}}
 ```
 written: `if x >= 0 { r := x } else { r := -x }`
+
+Since 2026-10-06 the `else` may be omitted: `if c { s }` is the `if` with
+an empty `else` (the AST's `"else": []`), and the printer writes it back
+without the clause.
 
 ### Sequences and quantifiers (gate 1)
 
@@ -442,6 +448,26 @@ position at parse time; the AST and the printer carry the expanded form,
 so it is written sugar, printed expanded, and a variable index is never
 wrapped; the raw literal index `-k` (undefined on every seq) is spelled
 `s[(-k)]`, which is how the printer writes an AST that holds one.
+
+### Loops as sugar (v1)
+
+```
+for i in [a, b) invariant I { body }      for x in s invariant I { body }      for i, x in s invariant I { body }
+```
+written: `for i in [0, n) invariant len(r) == i { r := r + [0]; }` ·
+`for i, x in s invariant 0 <= c and c <= i { if x > 0 { c := c + 1; } }` · `for x in s { if x < 0 { return true; } }`
+
+Since 2026-10-06 (SPEC.md "Loops as sugar (v1)"), the three `for` forms
+are notation only: the parser expands each to the `while` of the AST
+(`var i: int := a; while i < b invariant a <= i and i <= b invariant I
+decreases b - i { body; i := i + 1; }`, and over a seq `var i: int := 0;
+while i < len(s) ... { var x: T := s[i]; body; i := i + 1; }` with `T` the
+seq's element type and the index spelled `i_x` when `for x in s` names
+none), so the checker, the twins and every lowering see a `while`, and
+the printer writes the expansion. The parser refuses, by name, an
+assignment to the loop variable or index in the body, a bound or sequence
+that mentions a variable the body assigns, and a loop variable already in
+scope. No JSON form: a `for` is the `while` it expands to.
 
 ### Nested sequences (v1)
 
