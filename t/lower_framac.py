@@ -3798,7 +3798,9 @@ def typ(e: dict, env: dict, funs: dict):
         return "seq" if is_nested_seq_type(bt) else "int"
     if op in ("len", "neg") or op in ARITH or op in DIVMOD:
         return "int"
-    return "bool"                                # cmp, and, or, not, implies
+    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum"):
+        return "int"                             # SPEC.md "The library (v1)" (PREDICT T11)
+    return "bool"                                # cmp, and, or, not, implies, in
 
 
 def is_nested_seq_type(t) -> bool:
@@ -4191,6 +4193,28 @@ def _gap(rendered: str) -> str:
     return " " + rendered if rendered[:1] in "-+" else rendered
 
 
+def _lib_term(op: str, args: list, ctx: "Ctx") -> str:
+    """A library call in an ACSL term (SPEC.md "The library (v1)", PREDICT T11): ACSL's own \\min/\\max/\\abs, the
+    prelude's logic functions, a sum over a seq variable or (its definitional unfolding) over a display."""
+    if op in ("min", "max") and len(args) == 2:
+        return f"\\{op}({term(args[0], ctx)}, {term(args[1], ctx)})"
+    if op in ("min", "max"):
+        sv = seq_var(args[0], ctx.env)
+        return f"t_{op}s({sv}, {ctx.seq_len.get(sv, sv + '_n')})"
+    if op == "abs":
+        return f"\\abs({term(args[0], ctx)})"
+    if op in ("gcd", "pow", "isqrt"):
+        return f"t_{op}({', '.join(term(a, ctx) for a in args)})"
+    a0 = args[0]
+    if isinstance(a0, dict) and a0.get("op") == "seq":
+        acc = "0"                                 # sum([e1, ..., en]) unfolds to ((0 + e1) + ...) + en
+        for x in a0.get("args", []):
+            acc = f"({acc} + ({term(x, ctx)}))"
+        return acc
+    sv = seq_var(a0, ctx.env)
+    return f"t_sum({sv}, {ctx.seq_len.get(sv, sv + '_n')})"
+
+
 def term(e: dict, ctx: Ctx) -> str:
     """ACSL term. int-typed terms are `integer`-valued; bool-typed terms are
     ACSL boolean terms (comparisons / && / || / ! coerce in term position,
@@ -4213,6 +4237,8 @@ def term(e: dict, ctx: Ctx) -> str:
         raise NotImplementedError("quantifier in ACSL term position")
     op, args = e["op"], e.get("args", [])
     _strlib_abstain(op, "ACSL term position")
+    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum"):
+        return _lib_term(op, args, ctx)          # SPEC.md "The library (v1)" (PREDICT T11)
     if op == "len":
         return _seq_len_render(args[0], ctx)
     if op == "at":
@@ -4456,6 +4482,12 @@ def defs(e: dict, ctx: Ctx):
         y = term(args[1], ctx)
         return _conj([defs(args[0], ctx), defs(args[1], ctx),
                       f"(({y}) != 0)"])
+    if op in ("pow", "isqrt"):
+        k = term(args[-1], ctx)
+        return _conj([defs(a, ctx) for a in args] + [f"(({k}) >= 0)"])
+    if op in ("min", "max") and len(args) == 1:
+        sv = seq_var(args[0], ctx.env)
+        return f"({ctx.seq_len.get(sv, sv + '_n')} > 0)"
     if op in ("and", "or", "implies"):
         acc, guards = [defs(args[0], ctx)], []
         for k, a in enumerate(args[1:], 1):
@@ -4496,6 +4528,11 @@ def pred(e: dict, ctx: Ctx) -> str:
     if "call" in e:
         return f"({acsl_call(e['call'], ctx)} == \\true)"
     op, args = e["op"], e.get("args", [])
+    if op == "in" and typ(args[1], ctx.env, ctx.funs) == "seq":
+        # SPEC.md "The library (v1)" (PREDICT T11): membership in a seq is some index holding it
+        sv = seq_var(args[1], ctx.env)
+        n = ctx.seq_len.get(sv, f"{sv}_n")
+        return f"(\\exists integer t_k; 0 <= t_k < {n} && {sv}[t_k] == ({term(args[0], ctx)}))"
     _strlib_abstain(op, "ACSL predicate position")
     if op == "not":
         return f"(!{pred(args[0], ctx)})"
@@ -5031,6 +5068,27 @@ def cexpr(e: dict, env: dict, funs: dict, task_name: str,
         fn = "t_find_c" if op == "find" else "t_count_c"
         return f"{fn}({sv}, {sv}_n, {t_ptr}, {t_n})"
     _strlib_abstain(op, "executable position")
+    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "in"):
+        # SPEC.md "The library (v1)" in Frama-C (PREDICT T11): a C conditional, or the prelude's helper
+        c = [cexpr(a, env, funs, task_name, _div_style) if op not in ("sum", "in") or k > 0 or op == "in"
+             else None for k, a in enumerate(args)]
+        if op in ("min", "max") and len(args) == 2:
+            a, b = c
+            return f"(({a}) < ({b}) ? ({b if op == 'max' else a}) : ({a if op == 'max' else b}))"
+        if op in ("min", "max"):
+            sv = seq_var(args[0], env)
+            return f"t_{op}s_c({sv}, {sv}_n)"
+        if op == "abs":
+            return f"(({c[0]}) < 0 ? -({c[0]}) : ({c[0]}))"
+        if op in ("gcd", "pow", "isqrt"):
+            return f"t_{op}_c({', '.join(c)})"
+        if op == "sum":
+            sv = seq_var(args[0], env)
+            return f"t_sum_c({sv}, {sv}_n)"
+        if typ(args[1], env, funs) != "seq":
+            raise NotImplementedError("framac: membership in a non-seq is not lowered here")
+        sv = seq_var(args[1], env)
+        return f"t_memb_c({sv}, {sv}_n, {c[0]})"
     if op == "len":
         a0 = args[0]
         if a0.get("op") == "split" and len(a0.get("args", ())) == 1:
@@ -5410,6 +5468,16 @@ def code_ats(e: dict, env: dict, guard: tuple = ()) -> list:
         else:
             out.append(("at", seq_var(base, env), args[1], guard))
         return out
+    if op in ("pow", "isqrt"):
+        # SPEC.md "The library (v1)" (PREDICT T11): pow(a, n) and isqrt(n) DEFINED IFF n >= 0
+        for a in args:
+            out += code_ats(a, env, guard)
+        out.append(("ge0", args[-1], guard))
+        return out
+    if op in ("min", "max") and len(args) == 1:
+        # SPEC.md "Reductions (v1)": max(s)/min(s) DEFINED IFF len(s) > 0
+        out.append(("pos", seq_var(args[0], env), guard))
+        return out
     if op in DIVMOD:
         out += code_ats(args[0], env, guard)
         out += code_ats(args[1], env, guard)
@@ -5474,6 +5542,12 @@ def at_asserts(e: dict, ctx: Ctx, indent: str, funs=None,
         elif tag == "nz":
             (yx,) = rest
             body = f"({term(yx, ctx)}) != 0"
+        elif tag == "ge0":
+            (nx,) = rest
+            body = f"({term(nx, ctx)}) >= 0"
+        elif tag == "pos":
+            (sv,) = rest
+            body = f"{sv}_n > 0"
         else:                                      # "dm": bridging assert
             (node,) = rest
             if funs is not None and task_name is not None:
@@ -8589,6 +8663,31 @@ def _cev(e: dict, st: dict):
         a, b = _cev(args[0], st), _cev(args[1], st)
         return {"==": a == b, "!=": a != b, "<": a < b, "<=": a <= b,
                 ">": a > b, ">=": a >= b}[op]
+    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "in"):
+        # SPEC.md "The library (v1)" (PREDICT T11): the interpreter's own values, undefined where it is
+        import math
+        vs = [_cev(a, st) for a in args]
+        if op in ("min", "max"):
+            if len(vs) == 1:
+                if not vs[0]:
+                    raise _CertSkip(f"{op} of an empty seq in replay")
+                return (min if op == "min" else max)(vs[0])
+            return (min if op == "min" else max)(vs[0], vs[1])
+        if op == "abs":
+            return abs(vs[0])
+        if op == "gcd":
+            return math.gcd(vs[0], vs[1])
+        if op == "pow":
+            if vs[1] < 0:
+                raise _CertSkip("undefined pow in replay")
+            return vs[0] ** vs[1]
+        if op == "isqrt":
+            if vs[0] < 0:
+                raise _CertSkip("undefined isqrt in replay")
+            return math.isqrt(vs[0])
+        if op == "sum":
+            return sum(vs[0])
+        return vs[0] in list(vs[1])
     raise _CertSkip(f"no ground evaluation for operator {op!r}")
 
 
@@ -8646,6 +8745,18 @@ def _cert_cexpr(e: dict, ctx: Ctx, st: dict, funs: dict, name: str,
     measured lifted task loses its short-circuit here, since one
     containing a partial operator anywhere falls through to the ordinary
     path below unchanged."""
+    if e.get("op") in ("min", "max", "abs") and (e["op"] == "abs" or len(e.get("args", [])) == 2):
+        # SPEC.md "The library (v1)" (PREDICT T11): min/max/abs are C conditionals, so in the replay they are their
+        # `ite`, resolved branch-free below (measured: clamp's twin read UNPROVED on a live `?:` arm at ground values)
+        a = e["args"]
+        if e["op"] == "abs":
+            ite = {"ite": {"cond": {"op": "<", "args": [a[0], {"int": 0}]},
+                           "then": {"op": "neg", "args": [a[0]]}, "else": a[0]}}
+        else:
+            lt = {"op": "<", "args": [a[0], a[1]]}
+            ite = {"ite": {"cond": lt, "then": a[0] if e["op"] == "min" else a[1],
+                           "else": a[1] if e["op"] == "min" else a[0]}}
+        return _cert_cexpr(ite, ctx, st, funs, name, asserts, ind)
     if e.get("op") in ("and", "or") and not _has_partial_op(e):
         a_c = _cert_cexpr(e["args"][0], ctx, st, funs, name, asserts, ind)
         b_c = _cert_cexpr(e["args"][1], ctx, st, funs, name, asserts, ind)
@@ -9420,6 +9531,10 @@ def defs_t(e: dict):
     if op in DIVMOD:
         return _t_and([defs_t(args[0]), defs_t(args[1]),
                        {"op": "!=", "args": [args[1], {"int": 0}]}])
+    if op in ("pow", "isqrt"):
+        return _t_and([defs_t(a) for a in args] + [{"op": ">=", "args": [args[-1], {"int": 0}]}])
+    if op in ("min", "max") and len(args) == 1:
+        return _t_and([{"op": ">", "args": [{"op": "len", "args": [args[0]]}, {"int": 0}]}])
     if op in ("and", "or", "implies"):
         acc, guards = [defs_t(args[0])], []
         for k, a in enumerate(args[1:], 1):
@@ -10178,7 +10293,8 @@ def _always_returns(body: list) -> bool:
 # sites pass it; when it is certifiable, the emitted file carries the
 # refutation certificate (see the section above).
 
-_SET_OPS_T = {"set", "in", "card", "union", "inter", "diff"}
+# `in` left this list on 2026-10-06 (PREDICT T11): membership in a SEQ is the library's
+_SET_OPS_T = {"set", "card", "union", "inter", "diff"}
 
 
 def _uses_sets(obj) -> bool:
@@ -10197,7 +10313,9 @@ def _uses_sets(obj) -> bool:
 def lower(task: dict, body: list, witness: dict | None = None,
           _unit: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "framac")
+    import framac_lib
+    tshape.abstain_unless_carried(task, body, "framac",
+                                  lib=framac_lib.FRAMAC_LIB)   # PREDICT T11: the library in Frama-C
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
         # names "Frama-C ... through records with discriminants" as the
@@ -10586,6 +10704,10 @@ def lower(task: dict, body: list, witness: dict | None = None,
         header.append(T_WORDCOUNT_ACSL.rstrip("\n"))
     if _has_countfind(task) or _has_countfind(body):
         header.append(T_STRFIND_ACSL.rstrip("\n"))
+    import framac_lib       # SPEC.md "The library (v1)" in Frama-C (PREDICT T11)
+    _lib = framac_lib.used(task) | framac_lib.used(body)
+    if _lib:
+        header.append(framac_lib.prelude(_lib).rstrip("\n"))
     if _has_seq_slice_sf(task):
         header.append(T_SEQ_OF_RANGE_ACSL.rstrip("\n"))
     if _has_seq_result_sf(task):

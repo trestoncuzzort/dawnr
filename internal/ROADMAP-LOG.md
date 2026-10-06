@@ -3164,7 +3164,14 @@ is queued, and the ones running are read as they finish.
   is posed before the proof engine runs. A certificate repair: witness sequences now reach the interpreter as tuples
   (a list made every concatenation in an ensures raise). Rocq: 43 -> 57 verified, 45 -> 31 refusals, no other cell
   moved. Eight tasks are now blocked by Frama-C alone.
-- **Next:** D1 continues with T11, the library in Frama-C: two hand probes prove the integer pieces and the sequence
-  pieces as logic definitions with C loops mirroring them. Then the higher-order calls in Rocq, compositional types in
-  Lean, Rocq and Frama-C, comprehensions in all five. D2: AlgoVeri's 22 stateable contracts are being written in t.
-  The language queue: G9 datatypes with fields (records, options, trees), then iteration over a map.
+- **The matrix regenerated from a clean clone (10-06 22:04Z start, at 66788268):** 88 tasks; Lean 40 -> 56, every
+  other cell unchanged; all seven 36.
+- **T11 landed (10-06 22:31Z), the library in Frama-C:** `t/framac_lib.py`. ACSL logic definitions, each recursive one
+  with its proved termination lemma, and C helper functions whose loops mirror them, each proved once. Eight tasks
+  verified with the twin refuted (clamp, cube, distance, gcd_of, has_elem, largest, root_floor, sum_one); Frama-C
+  36 -> 44, refusals 51 -> 43, no other cell moved. All seven should go 36 -> 43. Certificate repairs: the replay
+  evaluates the library, and min/max/abs replay branch-free.
+- **Next:** the clean-clone matrix at T11. Then D2, AlgoVeri's 22 contracts in seven kernels (`t/algoveri/`,
+  `t/ALGOVERI.md`), and the next depth items: comprehensions in Lean, Rocq, F*, SPARK and Frama-C (7 tasks each),
+  the higher-order calls in Rocq, compositional types in Lean, Rocq and Frama-C. The language queue: G9 datatypes with
+  fields (records, options, trees, which 37 of AlgoVeri's contracts need), then iteration over a map.
