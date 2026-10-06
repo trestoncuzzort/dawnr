@@ -33,6 +33,20 @@ Nothing, by default. The three exceptions are each something you choose:
 The page sets no cookies and stores nothing else in the browser. The API server writes no request log. The files you
 point the assistant at are read in place; the only copies are the journal's undo record and the jobs above.
 
+## What runs beside dawnr, and whether it talks to the network
+
+| component | licence | from | network |
+|---|---|---|---|
+| llama.cpp's server (`llama-server`) | MIT | its publisher's release, by SHA-256 | listens on 127.0.0.1 only; fetches nothing |
+| the model files (dawnr v5 and the base) | Apache-2.0 (see `release/`) | their publishers, by SHA-256 | none |
+| the PDF reader (pypdfium2 over PDFium) | BSD-3-Clause or Apache-2.0; PDFium BSD-3-Clause | its publisher, by SHA-256 | none |
+| Dafny | MIT | its publisher, by SHA-256 | none when run by dawnr |
+| the other provers (Verus, Lean, Rocq, Frama-C, GNATprove, F*) | each its own | installed by you, if at all | none when run by dawnr |
+| bubblewrap (the sandbox) | LGPL-2.0 | your distribution | none; it is what keeps commands off the network |
+| Python and its standard library | PSF | your distribution | nothing beyond the three exceptions above |
+
+dawnr has no analytics, crash reporter, update checker or other software that calls home, and adds none of its own.
+
 ## Children
 
 dawnr collects no personal data from anyone, so it collects none from children, and it is not directed at them.
