@@ -261,7 +261,10 @@ DETECTORS: dict[str, tuple[str, str]] = {
                   "supports this through spec functions (self-calls and "
                   "calls to earlier functions), so it is a burden, not a "
                   "gap"),
-    "comprehension": ("burden", "a list/set/dict comprehension over ints; "
+    "set-dict-comprehension": ("burden", "a set or dict comprehension: t writes a set by a loop until maps land "
+                               "(SPEC.md Comprehensions names seq comprehensions only)"),
+    "comprehension": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Comprehensions): a list comprehension "
+                      "over a seq or a range is t's [body for x in s if cond]; before that day "
                        "t writes this as an explicit loop or a quantifier"),
     "sort": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Sorting): sorted() or .sort() is t's sort(s); before "
              "that day it was expressible in t but needed a "
@@ -557,8 +560,11 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             tags["set"] = True
         elif isinstance(node, ast.DictComp):
             tags["map"] = True
-        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp)):
+        elif isinstance(node, ast.ListComp):
+            # SPEC.md "Comprehensions (v1)" (2026-10-06): a list comprehension is t's seq comprehension
             tags["comprehension"] = True
+        elif isinstance(node, (ast.SetComp, ast.DictComp)):
+            tags["set-dict-comprehension"] = True
         elif isinstance(node, ast.GeneratorExp):
             tags["generator"] = True
         elif isinstance(node, ast.ClassDef):

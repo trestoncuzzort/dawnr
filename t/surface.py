@@ -1522,6 +1522,43 @@ class Parser:
                 while True:
                     args.append(self.expr())
                     self.production = "Expr"
+                    if len(args) == 1 and self.at("kw", "for"):
+                        # SPEC.md "Comprehensions (v1)" (2026-10-06): [body for x in s if p], [body for i in [a, b) if p]
+                        self.eat("kw", "for")
+                        v = self.name("Expr")
+                        self.eat("kw", "in")
+                        node = {"var": v}
+                        if self.at("sym", "["):
+                            lb = self.tok
+                            self.eat("sym", "[")
+                            lo = self.expr()
+                            self.production = "Expr"
+                            if self.opt("sym", ","):
+                                hi = self.expr()
+                                self.production = "Expr"
+                                if self.opt("sym", ")"):
+                                    node["lo"], node["hi"] = lo, hi
+                                else:
+                                    # a seq display as the source: finish it
+                                    elems = [lo, hi]
+                                    while self.opt("sym", ","):
+                                        elems.append(self.expr())
+                                        self.production = "Expr"
+                                    self.eat("sym", "]")
+                                    node["seq"] = self.mark(lb, {"op": "seq", "args": elems})
+                            else:
+                                self.eat("sym", "]")
+                                node["seq"] = self.mark(lb, {"op": "seq", "args": [lo]})
+                        else:
+                            node["seq"] = self.expr()
+                            self.production = "Expr"
+                        node["cond"] = {"bool": True}
+                        if self.opt("kw", "if"):
+                            node["cond"] = self.expr()
+                            self.production = "Expr"
+                        node["body"] = args[0]
+                        self.eat("sym", "]")
+                        return self.mark(t, {"comp": node})
                     if not self.opt("sym", ","):
                         break
             self.eat("sym", "]")
@@ -1771,6 +1808,12 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # A negative literal binds like a unary minus for the reader; it is
         # one token for the parser.
         return _wrap(str(n), P_UNARY if n < 0 else P_POSTFIX, floor)
+    if kind == "comp":
+        # SPEC.md "Comprehensions (v1)" (2026-10-06): a display of its own, so no floor; `if true` is omitted
+        c = e["comp"]
+        src = ("[%s, %s)" % (pexpr(c["lo"]), pexpr(c["hi"])) if "lo" in c else pexpr(c["seq"]))
+        cond = "" if c["cond"] == {"bool": True} else " if %s" % pexpr(c["cond"])
+        return "[%s for %s in %s%s]" % (pexpr(c["body"]), c["var"], src, cond)
     if kind == "rat":
         # SPEC.md "Exact rationals (v1)": the shortest finite decimal (the denominator is 2^a 5^b, or check_wf
         # refused the literal); a negative one is the literal with its sign, binding like a unary minus.
@@ -2189,6 +2232,11 @@ WRITTEN = [
      {"op": "pair", "args": [{"var": "a"}, {"var": "b"}]}),
     ("expr", "p.0", {"op": "fst", "args": [{"var": "p"}]}),
     ("expr", "p.1", {"op": "snd", "args": [{"var": "p"}]}),
+    # SPEC.md "Comprehensions (v1)" (2026-10-06)
+    ("expr", "[x for x in s if x % 2 == 0]", {"comp": {"var": "x", "seq": {"var": "s"}, "cond": {"op": "==", "args": [{"op": "mod", "args": [{"var": "x"}, {"int": 2}]}, {"int": 0}]}, "body": {"var": "x"}}}),
+    ("expr", "[2 * x for x in s]", {"comp": {"var": "x", "seq": {"var": "s"}, "cond": {"bool": True}, "body": {"op": "*", "args": [{"int": 2}, {"var": "x"}]}}}),
+    ("expr", "[i * i for i in [0, n)]", {"comp": {"var": "i", "lo": {"int": 0}, "hi": {"var": "n"}, "cond": {"bool": True}, "body": {"op": "*", "args": [{"var": "i"}, {"var": "i"}]}}}),
+    ("expr", "[y for y in [1, 2] if y > 1]", {"comp": {"var": "y", "seq": {"op": "seq", "args": [{"int": 1}, {"int": 2}]}, "cond": {"op": ">", "args": [{"var": "y"}, {"int": 1}]}, "body": {"var": "y"}}}),
     # SPEC.md "The library (v1)" (2026-10-06)
     ("expr", "max(lo, min(hi, x))", {"op": "max", "args": [{"var": "lo"}, {"op": "min", "args": [{"var": "hi"}, {"var": "x"}]}]}),
     ("expr", "abs(a - b)", {"op": "abs", "args": [{"op": "-", "args": [{"var": "a"}, {"var": "b"}]}]}),
@@ -2375,7 +2423,7 @@ def _rand_expr(rng, depth: int) -> dict:
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
         "len", "at", "update", "fill", "seq", "slice", "ite", "quant", "call",
         "pair", "fst", "snd", "strlib", "setlit", "in", "card", "setbin",
-        "tuple", "proj", "rat", "realfn", "lib1", "lib2",
+        "tuple", "proj", "rat", "realfn", "lib1", "lib2", "comp",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -2425,6 +2473,16 @@ def _rand_expr(rng, depth: int) -> dict:
         return {"rat": [f.numerator, f.denominator]}
     if kind == "realfn":
         return {"op": rng.choice(["toreal", "floor", "ceil"]), "args": [_rand_expr(rng, d)]}
+    if kind == "comp":
+        # SPEC.md "Comprehensions (v1)" (2026-10-06): over a seq or a range, with or without a condition
+        v = rng.choice(["x", "y", "k"])
+        node = {"var": v, "cond": rng.choice([{"bool": True}, {"op": "<", "args": [{"var": v}, _rand_expr(rng, d)]}]),
+                "body": rng.choice([{"var": v}, {"op": "+", "args": [{"var": v}, _rand_expr(rng, d)]}])}
+        if rng.random() < 0.5:
+            node["seq"] = _rand_expr(rng, d)
+        else:
+            node["lo"], node["hi"] = _rand_expr(rng, d), _rand_expr(rng, d)
+        return {"comp": node}
     if kind == "lib1":
         # SPEC.md "The library (v1)" (2026-10-06)
         return {"op": rng.choice(["abs", "sum", "isqrt", "rev", "sort"]), "args": [_rand_expr(rng, d)]}

@@ -1212,6 +1212,8 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return "true" if e["bool"] else "false"
     if "var" in e:
         return e["var"]
+    if "comp" in e:
+        return _comp_call(e, lambda x: expr(x, self_name))   # SPEC.md "Comprehensions (v1)" (2026-10-06)
     if "forall" in e:
         q = e["forall"]
         v = q["var"]
@@ -1513,6 +1515,132 @@ _LIB_TEXT["t_sort"] = _sort_text("", "int")
 _LIB_TEXT["t_rsort"] = _sort_text("r", "real")
 
 
+# SPEC.md "Comprehensions (v1)" (2026-10-06): one recursive function per comprehension in the file, over the source
+# (or the two bounds) and every free variable of cond/body but the bound one, recursing from the end as Std's Filter
+# does, with the ensures its shape admits (filter: every element satisfies cond and the length does not grow; map:
+# the length and the image at every index; range map: the length `hi - lo` and the image at `lo + k`).
+_COMP_INDEX: dict = {}      # json key of the comp node -> (k, node)
+
+
+def _comp_key(e: dict) -> str:
+    import json
+    return json.dumps(e["comp"], sort_keys=True)
+
+
+def _comp_free(node: dict) -> list:
+    """Free variable names of a comp's cond and body (binders of inner quantifiers and comps subtracted), sorted."""
+    def walk(x, bound: frozenset) -> set:
+        if isinstance(x, dict):
+            if "var" in x and len(x) == 1:
+                return set() if x["var"] in bound else {x["var"]}
+            if "comp" in x:
+                c = x["comp"]
+                inner = bound | {c["var"]}
+                out = set()
+                for k in ("seq", "lo", "hi"):
+                    if k in c:
+                        out |= walk(c[k], bound)
+                return out | walk(c["cond"], inner) | walk(c["body"], inner)
+            if "forall" in x or "exists" in x:
+                q = x.get("forall") or x.get("exists")
+                return walk(q["lo"], bound) | walk(q["hi"], bound) | walk(q["body"], bound | {q["var"]})
+            if "call" in x:
+                return set().union(*(walk(a, bound) for a in x["call"]["args"])) if x["call"]["args"] else set()
+            return set().union(*(walk(v, bound) for v in x.values())) if x else set()
+        if isinstance(x, list):
+            return set().union(*(walk(v, bound) for v in x)) if x else set()
+        return set()
+    c = node["comp"]
+    return sorted(walk(c["cond"], frozenset({c["var"]})) | walk(c["body"], frozenset({c["var"]})))
+
+
+def _comp_register(task: dict, body: list) -> None:
+    """Number every comp node of the task in reading order (requires, ensures, spec_funs, body, methods)."""
+    _COMP_INDEX.clear()
+
+    def walk(x):
+        if isinstance(x, dict):
+            if "comp" in x:
+                _COMP_INDEX.setdefault(_comp_key(x), (len(_COMP_INDEX) + 1, x))
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    walk(task.get("requires", []))
+    walk(task.get("ensures", []))
+    walk(task.get("spec_funs", []))
+    walk(body or [])
+    walk(task.get("methods", []))
+
+
+def _comp_call(e: dict, render) -> str:
+    k, _ = _COMP_INDEX[_comp_key(e)]
+    c = e["comp"]
+    src = [render(c["seq"])] if "seq" in c else [render(c["lo"]), render(c["hi"])]
+    return f"t_comp{k}({', '.join(src + _comp_free(e))})"
+
+
+def _comp_defs(self_name) -> list:
+    """The Dafny text of every registered comprehension function, in index order."""
+    import check_wf
+    out = []
+    for key, (k, e) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
+        c = e["comp"]
+        v = c["var"]
+        fvs = _comp_free(e)
+        for n in fvs:
+            if n not in _HINTS and n not in _FUNS:
+                raise NotImplementedError(f"dafny: comprehension over a name whose type is not declared here: {n!r}")
+        fvs = [n for n in fvs if n in _HINTS]
+        if "seq" in c:
+            src_t = _arg_type(c["seq"])
+            if not (src_t == "seq" or (isinstance(src_t, dict) and "seq" in src_t)):
+                raise NotImplementedError("dafny: a comprehension's source could not be typed here")
+            elem_t = "int" if src_t == "seq" else src_t["seq"]
+        else:
+            elem_t = "int"
+        hints = dict(_HINTS)
+        hints[v] = elem_t
+        try:
+            body_t, errs = check_wf.expression_type(c["body"], hints, functions=_FUNS)
+        except Exception:                                   # noqa: BLE001
+            body_t, errs = None, ["untypeable"]
+        if errs or body_t is None:
+            raise NotImplementedError("dafny: a comprehension's body could not be typed here")
+        params = ([f"t_s: {dafny_type(src_t)}"] if "seq" in c else ["t_a: int", "t_b: int"]) + [f"{n}: {dafny_type(_HINTS[n])}" for n in fvs]
+        rec_args = ", ".join((["t_s[..|t_s| - 1]"] if "seq" in c else ["t_a", "t_b - 1"]) + fvs)
+        is_filter = c["body"] == {"var": v}
+        is_map = c["cond"] == {"bool": True}
+        ri = {"var": "t_r"}
+        idx = {"var": "t_i"}
+        ens = []
+        if "seq" in c:
+            size = "|t_s|"
+            elem_at = {"op": "at", "args": [{"var": "t_s"}, idx]}
+        else:
+            size = "(if t_a <= t_b then t_b - t_a else 0)"
+            elem_at = {"op": "+", "args": [{"var": "t_a"}, idx]}
+        ens.append(f"  ensures |t_r| {'==' if is_map else '<='} {size}")
+        if is_map:
+            img = subst(c["body"], {v: elem_at})
+            ens.append(f"  ensures forall t_i :: 0 <= t_i < |t_r| ==> t_r[t_i] == {expr(img, self_name)}")
+        if is_filter:
+            holds = subst(c["cond"], {v: {"op": "at", "args": [ri, idx]}})
+            ens.append(f"  ensures forall t_i :: 0 <= t_i < |t_r| ==> {expr(holds, self_name)}")
+        base = "|t_s| == 0" if "seq" in c else "t_b <= t_a"
+        last = "t_s[|t_s| - 1]" if "seq" in c else "t_b - 1"
+        p_txt = expr(c["cond"], self_name)
+        e_txt = expr(c["body"], self_name)
+        body_txt = (f"  if {base} then [] else\n"
+                    f"    var t_p := t_comp{k}({rec_args});\n"
+                    f"    var {v} := {last};\n"
+                    f"    if {p_txt} then t_p + [{e_txt}] else t_p")
+        out += [f"function t_comp{k}({', '.join(params)}): (t_r: seq<{dafny_type(body_t)}>)"] + ens + [
+            f"  decreases {size}", "{", body_txt, "}", ""]
+    return out
+
+
 def _lib_defs() -> list:
     """The definitions this file uses, in a fixed order (a dependency before its user), each followed by a blank."""
     out = []
@@ -1640,6 +1768,8 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
         tmp = ctx.fresh()
         pre.append(f"var {tmp} := {ctx.method}({args});")
         return tmp
+    if "comp" in e:
+        return _comp_call(e, lambda x: body_expr(x, ctx, pre, lazy))   # SPEC.md "Comprehensions (v1)"
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
         kind = "forall" if "forall" in e else "exists"
@@ -2008,6 +2138,16 @@ def subst(e: dict, m: dict) -> dict:
         return {kind: {"var": q["var"], "lo": subst(q["lo"], m),
                        "hi": subst(q["hi"], m),
                        "body": subst(q["body"], inner)}}
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)" (2026-10-06): the bound variable scopes over cond and body
+        c = e["comp"]
+        inner = {k: v for k, v in m.items() if k != c["var"]}
+        out = {"var": c["var"], "cond": subst(c["cond"], inner), "body": subst(c["body"], inner)}
+        if "seq" in c:
+            out["seq"] = subst(c["seq"], m)
+        else:
+            out["lo"], out["hi"] = subst(c["lo"], m), subst(c["hi"], m)
+        return {"comp": out}
     if "ctor" in e:
         c = e["ctor"]
         return {"ctor": {"dtype": c["dtype"], "name": c["name"],
@@ -2155,6 +2295,26 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
                     sub[bname] = fv
                 return _ev(a["body"], sub, funs, st, facts, hoist)
         raise interp.Undef(f"match: no arm for constructor {sv.ctor!r}")
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)": evaluated as interp does; a certificate unrolls it first (`_unroll`)
+        if hoist is not None:
+            raise ValueError("comprehension survived unrolling")
+        c = e["comp"]
+        if "seq" in c:
+            src = _ev(c["seq"], env, funs, st, facts, None)[1]
+        else:
+            lo = _ev(c["lo"], env, funs, st, facts, None)[1]
+            hi = _ev(c["hi"], env, funs, st, facts, None)[1]
+            if hi - lo > interp.MAX_RANGE:
+                raise interp.Budget("comprehension range")
+            src = tuple(range(lo, hi))
+        vals = []
+        for x in src:
+            sub = dict(env)
+            sub[c["var"]] = x
+            if _ev(c["cond"], sub, funs, st, facts, None)[1] is True:
+                vals.append(_ev(c["body"], sub, funs, st, facts, None)[1])
+        return e, tuple(vals)
     if "forall" in e or "exists" in e:
         if hoist is not None:
             raise ValueError("quantifier survived unrolling")
@@ -2363,6 +2523,56 @@ def _unroll(e: dict, funs: dict, st, budget: list, bounds: list) -> dict:
     instances; exhausting it raises and the certificate is refused. Each
     bound's value is recorded in `bounds` as an equation the kernel
     re-proves (step 1 of the certificate section)."""
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)" (2026-10-06): a ground comprehension becomes the display it denotes, one
+        # `(if cond then [body] else [])` per element, so the kernel checks every instance and no recursive
+        # function has to be unfolded; the source's value is recorded as an equation the kernel re-proves
+        c = e["comp"]
+        if "seq" in c:
+            src_e = _unroll(c["seq"], funs, st, budget, bounds)
+            src = _ev(src_e, {}, funs, st, {}, None)[1]
+            lit = _tlit(src)
+            if src_e != lit:
+                bounds.append({"op": "==", "args": [src_e, lit]})
+            elems = list(src)
+        else:
+            lo_e = _unroll(c["lo"], funs, st, budget, bounds)
+            hi_e = _unroll(c["hi"], funs, st, budget, bounds)
+            lo, hi = _gint(lo_e, funs, st), _gint(hi_e, funs, st)
+            for b_e, b_v in ((lo_e, lo), (hi_e, hi)):
+                if b_e != _tlit(b_v):
+                    bounds.append({"op": "==", "args": [b_e, _tlit(b_v)]})
+            elems = list(range(lo, hi))
+        insts = []
+        for x in elems:
+            budget[0] -= 1
+            if budget[0] < 0:
+                raise ValueError("comprehension unroll budget exhausted")
+            m = {c["var"]: _tlit(x)}
+            inst = {"ite": {"cond": subst(c["cond"], m), "then": {"op": "seq", "args": [subst(c["body"], m)]},
+                            "else": {"op": "seq", "args": []}}}
+            insts.append(_unroll(inst, funs, st, budget, bounds))
+        if not insts:
+            return {"op": "seq", "args": []}
+        return _nary("+", insts) if len(insts) > 1 else insts[0]
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)": the source defined, cond at every element, body where cond holds
+        c = e["comp"]
+        if "seq" in c:
+            src = _ev_undef(c["seq"], env, funs, st)
+        else:
+            lo = _ev_undef(c["lo"], env, funs, st)
+            hi = _ev_undef(c["hi"], env, funs, st)
+            if hi - lo > interp.MAX_RANGE:
+                raise interp.Budget("comprehension range")
+            src = tuple(range(lo, hi))
+        vals = []
+        for x in src:
+            sub = dict(env)
+            sub[c["var"]] = x
+            if _ev_undef(c["cond"], sub, funs, st) is True:
+                vals.append(_ev_undef(c["body"], sub, funs, st))
+        return tuple(vals)
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
@@ -3175,6 +3385,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     _FUNS.clear()
     _FUNS.update({f["name"]: f for f in task.get("spec_funs", [])})
     _LIB_USED.clear()
+    _comp_register(task, body)   # SPEC.md "Comprehensions (v1)" (2026-10-06)
     lines = []
     # SPEC.md "The string library (v1)" (2026-09-11): "each kernel lowers a
     # member to a definition in its prelude", but gate (c)'s byte-identical
@@ -3253,7 +3464,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     lines.append("{")
     lines.append(stmts(body, "  ", ctx))
     lines.append("}")
-    lines[lib_slot:lib_slot] = _lib_defs()
+    lines[lib_slot:lib_slot] = _lib_defs() + _comp_defs(self_name)
     src = "\n".join(lines) + "\n"
     if witness is not None:
         cert = _certificate(task, body, witness)

@@ -35,10 +35,10 @@ class CheapCheck(unittest.TestCase):
         self.assertIn("40", said)
 
     def test_an_unparseable_reply_carries_the_parsers_message_and_its_own_text(self):
-        c = self.check(GOOD.replace("r := 4 * side;", "r := [x for x in side];"))
+        c = self.check(GOOD.replace("r := 4 * side;", "r := for side;"))
         self.assertEqual(c["stage"], "parse")
         self.assertIn("for", c["why"])
-        self.assertIn("[x for x in side]", c["attempt"])
+        self.assertIn("for side", c["attempt"])
 
     def test_a_v0_line_over_a_v1_body_is_read_as_v1(self):
         reply = "```t\nt 0\ntask f(side: int) returns (r: int)\n  ensures r == 4 * side\n{\n  var k: int := 4;\n  r := k * side;\n}\n```"

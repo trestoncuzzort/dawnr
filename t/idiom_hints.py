@@ -34,9 +34,11 @@ _CLASSES = [
      "The nested type is written seq<seq>."),
     ("comprehension",
      re.compile(r"\[[^\]]*\b(in|for)\b[^\]]*\]|\b(sum|count|max|min)\s*\([^)]*\bfor\b"),
-     "t has no comprehension and no built-in sum, count, max or min. Define the quantity with a "
-     "recursive spec fun over a prefix length, placed after the ensures, for example\n" + COUNT_EXAMPLE +
-     "\nand write count_neg(s, len(s)) in the ensures and count_neg(s, i) in the loop invariant."),
+     # since SPEC.md "Comprehensions (v1)" and "The library (v1)" (2026-10-06) the forms exist; the hint names them
+     "A comprehension is written [x for x in s if x < 0] (or [e for i in [a, b) if p]); a count of the elements "
+     "is len([x for x in s if x < 0]); sum(s), min(a, b), max(a, b) and abs(x) are the library's. A quantity "
+     "can also be a recursive spec fun over a prefix length, placed after the ensures, for example\n" + COUNT_EXAMPLE +
+     "\nwith count_neg(s, len(s)) in the ensures and count_neg(s, i) in the loop invariant."),
     ("unbounded quantifier",
      re.compile(r"\b(forall|exists)\s+\w+(\s*,\s*\w+|\s+\w+)*\s*(:\s*(int|nat|bool)\b|such\s+that|>=|<=|<|>|\|)"),
      "A quantifier ranges over a half-open interval of integers: exists k in [lo, hi) . P. "
@@ -49,7 +51,9 @@ _CLASSES = [
      "There is no power operator: multiply, or define the power with a recursive spec fun."),
     ("for loop",
      re.compile(r"^\s*for\b"),
-     "There is no for loop: declare `var i: int := 0;` and use `while` with invariants and a decreases."),
+     # since SPEC.md "Loops as sugar (v1)" (2026-10-06) a for loop exists; a Python colon or range() does not parse
+     "A for loop is `for i in [a, b) invariant ... { ... }` or `for x in s invariant ... { ... }`: no colon, no "
+     "range(), the body in braces; the loop supplies its bound invariants and decreases."),
     ("boolean operators",
      re.compile(r"&&|\|\|"),
      "The boolean operators are written and, or, not."),

@@ -1908,6 +1908,62 @@ measured. The writer's side: `to_python.py` hands back `sorted(s)`.
 clause as its `ensures`), `first_sorted` (`r == sort(s)[0]` under
 `requires len(s) > 0`).
 
+### Comprehensions (v1)
+
+Stated 2026-10-06, the last part of the third landing, with the pages on
+receipt 8f5b4d0085b5 read first: Dafny's `Std.Collections.Seq.Filter` and
+`Map` are opaque recursive functions carrying their ensures (every element
+of a filter satisfies the predicate and the length does not grow; a map
+has the length of its source and the image at every index); Verus's
+`filter` and `map_values` are the same shapes with `reveal_with_fuel` and
+lemmas; Why3 builds a sequence by `create (len, fun i -> ...)`. The census:
+`comprehension` is a burden on 5,920 problems, the single largest after
+the string ones.
+
+**One expression form.** A seq comprehension is an expression with a
+bound variable, as a quantifier is:
+
+```
+{"comp": {"var": Id, "seq": Expr, "cond": Expr, "body": Expr}}           // [body for var in seq if cond]
+{"comp": {"var": Id, "lo": Expr, "hi": Expr, "cond": Expr, "body": Expr}} // [body for var in [lo, hi) if cond]
+```
+
+written `[e for x in s if p]` and `[e for i in [a, b) if p]`; `if p` may
+be omitted, and then `"cond"` is the literal `true`. The bound variable
+has the element type of `s` (an int over a range) and scopes over `cond`
+and `body` only; the result has type `seq<U>` for `U` the type of `body`
+(`seq` when `U` is `int`). The value is the sequence of `body` at each
+element (each index) in order for which `cond` holds. Definedness: `s`
+(or `lo` and `hi`) must be defined; `cond` at every element; `body` at
+every element where `cond` holds; so `[s[i] for i in [0, len(s))]` is
+defined and `[s[i] for i in [0, len(s) + 1)]` is not, exactly as the
+quantifier rules state. No set or map comprehension here: a set is built
+by a loop until "Maps" lands.
+
+**The twins.** No new move: OFF-BY-ONE reaches a literal bound,
+COMPARE-FLIP and BOUNDARY-SWAP reach `cond`, WRONG-VAR a free variable in
+`body` or `cond` (never the bound one, which carries no declared type in
+scope, as a quantifier's does not). The interpreter evaluates the form
+directly.
+
+**Each lowering** emits one recursive function per comprehension in the
+file (`t_comp1`, `t_comp2`, ...), over the sequence (or the two bounds)
+and every free variable of `cond` and `body` other than the bound one,
+recursing from the end as the Std's `Filter` does, and gives it the ensures
+the shape admits: for `[x for x in s if p]` (a filter) every element of the
+result satisfies `p` and the length does not grow; for `[e for x in s]`
+(a map) the length is `len(s)` and the element at `i` is `e` at `s[i]`;
+for `[e for i in [a, b)]` the length is `b - a` when `a <= b` and the
+element at `k` is `e` at `a + k`; for a filter-and-map, the length bound
+only. Dafny and Verus carry it (Verus with the ensures as a broadcast
+lemma, as for `rev`); F*, SPARK, Lean, Rocq and Frama-C abstain by name
+until built and measured. The writer's side: `to_python.py` hands back
+the Python comprehension as a tuple.
+
+**The committed tasks:** `evens` (`[x for x in s if x % 2 == 0]`, every
+element even), `doubled` (`[2 * x for x in s]`, the length and each
+element), `squares` (`[i * i for i in [0, n)]`, the length).
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

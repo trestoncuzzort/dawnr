@@ -179,3 +179,28 @@ in the clause well-formedness lemmas and in a certificate that sorts. Both commi
 The `sort` burden is IN THE FRAGMENT (2,908 problems; the census count unchanged by construction, 1,642 in
 fragment). `sort_it` was given a local (`var u := sort(s); r := u`) so the ladder has a mutation to make: a body
 `r := sort(s)` alone has no twin, and a task without a twin cannot count.
+
+## T3b-3 registered (2026-10-06 16:50Z, before any run): comprehensions, SPEC "Comprehensions (v1)"
+
+Bars: the `comprehension` burden (5,920 problems) is re-tagged IN THE FRAGMENT for list comprehensions whose
+source is a sequence or a range; set and dict comprehensions stay a burden by name (`set-comprehension`,
+`dict-comprehension`) until maps land, so the count will split, not vanish. Kernels: Dafny and Verus verify the
+three committed tasks with the twin refuted, or read a limit by name; the other five abstain by name. T9: the
+round trip over the new form (`surface.py --check`, which fuzzes it) and the lab's grammar check with the new
+rule. What would falsify the design: a filter or map ensures Dafny does not prove by induction from the
+recursive definition (then the Std's opaque-plus-lemma shape is taken and the result says so).
+
+### T3b-3 read (2026-10-06 18:05Z): comprehensions landed. The form `[body for x in s if cond]` (and over `[lo, hi)`)
+parses, prints and fuzzes (`surface.py --check` 1,948 of 1,948; the lab's grammar check agrees with the new rule);
+the checker types the bound variable from the source, the interpreter evaluates it, the twins reach its bounds and
+condition. Dafny carries it as one recursive function per comprehension with the ensures its shape admits (filter:
+every element satisfies the condition, the length does not grow; map: the length and the image at every index;
+range map: `hi - lo` and the image at `lo + k`), proved by induction from the definition as the Std's Filter and
+Map are, and a ground comprehension in a certificate is unrolled into the display it denotes, one `(if cond then
+[body] else [])` per element, so no recursive function is unfolded there; Verus carries it as a `spec fn` with a
+broadcast lemma of the same ensures, revealed with fuel inside the proof fn (its nonlinear-arithmetic bridge
+steps aside for a return built from a comprehension, since that block sees no outside fact). All three committed
+tasks (`evens`, `doubled`, `squares`) verified with the twin refuted in both kernels; F*, SPARK, Lean, Rocq and
+Frama-C abstain by name. The census: `comprehension` (5,920 problems) is IN THE FRAGMENT for list comprehensions;
+set and dict comprehensions are the new burden `set-dict-comprehension`; the in-fragment count is unchanged by
+construction (1,642).

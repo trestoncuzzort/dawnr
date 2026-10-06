@@ -3047,6 +3047,16 @@ is queued, and the ones running are read as they finish.
   vstd's `sort_by` with one shared comparison closure and the lemma stated at every use, in the wf lemmas and in
   certificates. Two committed tasks verified with the twin refuted in both; the other five kernels abstain by name.
   The `sort` burden is in the fragment.
-- **Next:** the matrix regenerated from a clean clone (64 tasks); then comprehensions as a bound-variable form, the
-  slice step, and the three library proofs the kernels do not reach alone (a `sum` slice lemma for SPARK, F* and
-  Verus; a nonlinear hint for Verus) as their own measured item; then G4 (`break`, `continue`, `while true`).
+- **The matrix regenerated from a clean clone (10-06 17:00Z):** 64 tasks; the for-loop rows verified/refuted in
+  all seven kernels, the sort rows in Dafny and Verus, the rest by name.
+- **G3b-3 landed (10-06 18:05Z), comprehensions:** `[body for x in s if cond]` and `[body for i in [a, b) if cond]`
+  as one expression form with a bound variable (SPEC "Comprehensions (v1)"); Dafny as one recursive function per
+  comprehension carrying the filter/map ensures (proved by induction, the Std's shapes), ground ones unrolled into
+  displays in certificates; Verus as a spec fn with a broadcast lemma revealed with fuel inside the proof fn (its
+  nonlinear bridge steps aside for such a return). Three committed tasks verified with the twin refuted in both;
+  the other five kernels abstain by name. The `comprehension` burden (5,920 problems) is in the fragment for list
+  comprehensions; set and dict comprehensions are their own burden until maps.
+- **Next:** the matrix regenerated from a clean clone (67 tasks); then the slice step and the three library proofs the
+  kernels do not reach alone (a `sum` slice lemma for SPARK, F* and Verus; a nonlinear hint for Verus) as their own
+  measured item; then G4 (`break`, `continue`, `while true`), G5 maps, G6 records and options, G7 the string
+  library's missing members.

@@ -82,7 +82,8 @@ strmember ::= "split" | "join" | "count" | "find" | "startswith" | "endswith" | 
             | "strip" | "lstrip" | "rstrip" | "lower" | "upper"
             | "isdigit" | "isalpha" | "isupper" | "islower"
 
-atom ::= reallit
+atom ::= "[" ws expr sp "for" sp id sp "in" sp ("[" ws expr ws "," ws expr ws ")" | expr) (sp "if" sp expr)? ws "]"
+       | reallit
        | nat
        | charlit
        | strlit

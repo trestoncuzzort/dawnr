@@ -11,6 +11,8 @@ wf-call-argtype.t	4	8	call-argtype
 wf-call-arity.t	4	8	call-arity
 wf-call-unknown.t	3	8	call-unknown
 wf-cmp-int.t	1	45	cmp-int
+wf-comp-cond.t	3	8	comp-cond
+wf-comp-seq.t	3	8	comp-seq
 wf-ctor-arity.t	4	8	ctor-arity
 wf-ctor-dup.t	1	1	ctor-dup
 wf-decreases-selfcall.t	1	1	decreases-selfcall

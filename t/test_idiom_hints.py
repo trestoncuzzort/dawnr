@@ -26,7 +26,6 @@ def refused(ensures, head=HEAD):
 
 def test_each_class_is_recognised_on_the_line_the_parser_stops_at():
     for ensures, cls in [("r == len([x in s . x < 0])", "comprehension"),
-                         ("r == sum([s[i] for i in [0, n)])", "comprehension"),
                          ("exists k: int . n == 2 * k", "unbounded quantifier"),
                          ("exists a b such that a * b == n", "unbounded quantifier"),
                          ("forall x in s . x >= 0", "element quantifier"),
@@ -61,7 +60,9 @@ def test_the_counting_example_is_valid_t_and_counts():
 
 def test_the_other_idioms_the_hints_name_are_valid_t():
     for ensures in ("exists k in [0, n + 1) . n == 2 * k", "forall i in [0, len(s)) . s[i] >= 0",
-                    "r >= 0 and not (n < 0) or r == 0", "len(s[0..0]) == 0"):
+                    "r >= 0 and not (n < 0) or r == 0", "len(s[0..0]) == 0",
+                    # SPEC.md "Comprehensions (v1)" and "The library (v1)" (2026-10-06): these parse now
+                    "r == sum([s[i] for i in [0, n)])", "r == len([x for x in s if x < 0])"):
         surface.parse(HEAD + f"  ensures {ensures}\n" + BODY)
     surface.parse("t 1\ngate loops\ntask f(s: seq<seq>) returns (r: int)\n  ensures r == 0\n" + BODY)
 
@@ -70,7 +71,7 @@ def test_the_parse_message_carries_the_hint_when_the_attempt_is_given_and_is_unc
     block, why = refused("r == len([x in s . x < 0])")
     kind, said = debug_rows.message_for("parse", why, None, None, None, attempt=block)
     assert kind == "parse" and said.startswith("The t checker rejected it: " + why)
-    assert "t has no comprehension" in said and "spec fun count_neg" in said
+    assert "A comprehension is written [x for x in s if x < 0]" in said and "spec fun count_neg" in said
     assert debug_rows.message_for("parse", why, None, None, None) == ("parse", "The t checker rejected it: " + why)
     plain, why2 = refused("r == == n")
     assert debug_rows.message_for("parse", why2, None, None, None, attempt=plain)[1] == "The t checker rejected it: " + why2
