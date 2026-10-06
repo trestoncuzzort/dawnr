@@ -2142,12 +2142,19 @@ def _vty(ty) -> str:
             # and returning it, `==` and `match` in its own ensures/body,
             # 0 errors with `#[derive(PartialEq, Eq)]` alone).
             return ty["datatype"]
+        if "set" in ty:
+            # SPEC.md "Compositional types (v1)" (2026-10-06): vstd's Set is generic over its element type.
+            return f"Set<{_vty(ty['set'])}>"
+        if "tuple" in ty:
+            # a Rust tuple of any arity, each component this same function's rendering (a pair of pairs too)
+            return "(%s)" % ", ".join(_vty(c) for c in ty["tuple"])
         t1, t2 = ty["pair"]
         return f"({_vty(t1)}, {_vty(t2)})"
     return TYPES[ty]
 
 
 _SUFFIX_INT = False   # v1 only: literals as `(7int)` so ite branches infer
+_EMPTIES: dict = {}   # id(empty display) -> its t type, from tshape.empty_display_types, filled by lower()
                       # (measured: bare `1` in an ite arm is E0283); v0
                       # output stays byte-identical with bare literals.
 
@@ -2698,8 +2705,13 @@ def expr(e: dict, vty: str | None = None) -> str:
         # threaded from the one statement-level site an empty literal's
         # type is actually known (`stmts`'s "var"/"assign"/"return").
         if not args:
-            if vty == "Seq<Seq<int>>":
-                return "Seq::<Seq<int>>::empty()"
+            # SPEC.md "Compositional types (v1)" (2026-10-06): the empty display's type is the declared type
+            # that reaches it (tshape.empty_display_types, filled by `lower()`), else the statement-level `vty`.
+            ty = _EMPTIES.get(id(e))
+            if ty is not None:
+                return f"{_vty(ty).replace('Seq<', 'Seq::<', 1)}::empty()"
+            if vty and vty.startswith("Seq<"):
+                return f"{vty.replace('Seq<', 'Seq::<', 1)}::empty()"
             return "Seq::<int>::empty()"
         return "seq![" + ", ".join(args) + "]"
     if op == "slice":
@@ -2720,10 +2732,21 @@ def expr(e: dict, vty: str | None = None) -> str:
         # probe_pair_basic.rs); no per-pair-type declaration is needed the
         # way SPARK or Lean need one.
         return f"({args[0]}, {args[1]})"
+    if op == "tuple":
+        # SPEC.md "Compositional types (v1)" (2026-10-06): the Rust tuple at any arity.
+        return "(" + ", ".join(args) + ")"
+    if op == "proj":
+        # e.k: Rust's own tuple index.
+        return f"{args[0]}.{e['args'][1]['int']}"
     if op == "set":
         # SPEC.md "Finite sets" (2026-09-27): vstd's `set![..]` display,
         # `Set::<int>::empty()` for `{}` (the macro has no typed empty form).
         if not args:
+            ty = _EMPTIES.get(id(e))
+            if ty is not None:
+                return f"{_vty(ty).replace('Set<', 'Set::<', 1)}::empty()"
+            if vty and vty.startswith("Set<"):
+                return f"{vty.replace('Set<', 'Set::<', 1)}::empty()"
             return "Set::<int>::empty()"
         return "set![" + ", ".join(args) + "]"
     if op == "in":
@@ -2969,7 +2992,9 @@ def _nested_seq_operand_ty(e: dict, scope: dict) -> str | None:
         op, args = e["op"], e.get("args", [])
         if op in ("+", "slice", "update") and args:
             return _nested_seq_operand_ty(args[0], scope)
-        if op in ("set", "union", "inter", "diff"):
+        if op in ("union", "inter", "diff") and args:
+            return _nested_seq_operand_ty(args[0], scope) or _nested_seq_operand_ty(args[1], scope) or "Set<int>"
+        if op == "set":
             # SPEC.md "Finite sets" (2026-09-27): a set-valued operator's
             # result is a set, whatever its operands (a display's are ints).
             return "Set<int>"
@@ -2999,14 +3024,14 @@ def _nested_eq_bridges(e: dict, scope: dict, out: list) -> None:
         if op in ("==", "!=") and len(args) == 2:
             a, b = args
             ta, tb = _nested_seq_operand_ty(a, scope), _nested_seq_operand_ty(b, scope)
-            if ((ta == "Seq<Seq<int>>" and tb == "Seq<Seq<int>>")
+            if ((ta is not None and ta == tb and (ta.startswith("Seq<Seq") or (ta.startswith("Seq<") and ta != "Seq<int>")))
                     # SPEC.md "Finite sets" (2026-09-27): `Set` equality is
                     # the same story as the nested seq's -- measured, the
                     # set-equality probe's `r = (a == b)` left `r == (|a -
                     # b| == 0 && |b - a| == 0)` unproved with vstd's ext
                     # axiom triggering on `=~=` alone; the same bridge
                     # `assert((a == b) == (a =~= b))` closes it.
-                    or (ta == "Set<int>" and tb == "Set<int>")):
+                    or (ta is not None and ta == tb and ta.startswith("Set<"))):
                 out.append((a, b))
         for a in args:
             _nested_eq_bridges(a, scope, out)
@@ -3519,8 +3544,15 @@ def _dummy(ty) -> str:
     by construction rather than left silent, same posture as this
     function's own pair-of-pair note before it."""
     if isinstance(ty, dict):
-        if "seq" in ty:
+        if ty == {"seq": "seq"}:
             return expr({"_nested_seq": []})
+        if "seq" in ty:
+            # SPEC.md "Compositional types (v1)" (2026-10-06): the empty Seq of the element's Verus type.
+            return f"Seq::<{_vty(ty['seq'])}>::empty()"
+        if "set" in ty:
+            return f"Set::<{_vty(ty['set'])}>::empty()"
+        if "tuple" in ty:
+            return "(%s)" % ", ".join(_dummy(c) for c in ty["tuple"])
         t1, t2 = ty["pair"]
         return f"({_dummy(t1)}, {_dummy(t2)})"
     if ty == "int":
@@ -5167,6 +5199,17 @@ def _tlit(v, ty=None):
         t1, t2 = (ty["pair"] if isinstance(ty, dict) and "pair" in ty
                   else (None, None))
         return {"op": "pair", "args": [_tlit(v.a, t1), _tlit(v.b, t2)]}
+    # SPEC.md "Compositional types (v1)" (2026-10-06): a tuple (interp.Tup, or a list under a tuple type), a
+    # set of a compound element type, a seq of any element type but ints and int rows, each rebuilt from its
+    # own declared type; the shapes below this block are the ones that were there before and are unchanged.
+    if isinstance(v, interp.Tup) or (isinstance(ty, dict) and "tuple" in ty and isinstance(v, (list, tuple))):
+        comps = v.items if isinstance(v, interp.Tup) else list(v)
+        tys = ty["tuple"] if isinstance(ty, dict) and "tuple" in ty else [None] * len(comps)
+        return {"op": "tuple", "args": [_tlit(c, t) for c, t in zip(comps, tys)]}
+    if isinstance(ty, dict) and "set" in ty and isinstance(v, (list, tuple, frozenset)):
+        return {"op": "set", "args": [_tlit(x, ty["set"]) for x in (sorted(v, key=repr) if isinstance(v, frozenset) else v)]}
+    if isinstance(ty, dict) and "seq" in ty and ty != {"seq": "seq"} and isinstance(v, (list, tuple)):
+        return {"op": "seq", "args": [_tlit(x, ty["seq"]) for x in v]}
     if isinstance(v, frozenset) or (ty == "set" and isinstance(v, list)):
         # SPEC.md "Finite sets" (2026-09-27): a runtime frozenset is
         # unmistakably a set; a witness dict's sorted list (interp._j) is
@@ -5408,8 +5451,13 @@ def _to_py(v, ty=None):
         t1, t2 = ty["pair"]
         a, b = v
         return interp.Pair(_to_py(a, t1), _to_py(b, t2))
+    if isinstance(ty, dict) and "tuple" in ty:
+        # SPEC.md "Compositional types (v1)" (2026-10-06)
+        return interp.Tup(tuple(_to_py(c, t) for c, t in zip(v, ty["tuple"])))
     if isinstance(ty, dict) and "seq" in ty:
-        return tuple(_to_py(row, "seq") for row in v)
+        return tuple(_to_py(row, ty["seq"]) for row in v)
+    if isinstance(ty, dict) and "set" in ty and isinstance(v, (list, tuple)):
+        return frozenset(_to_py(x, ty["set"]) for x in v)
     if ty == "set" and isinstance(v, list):
         return frozenset(v)   # SPEC.md "Finite sets" (2026-09-27): interp's own value
     if isinstance(v, list):
@@ -5791,9 +5839,10 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
 # sites pass it; when it is present and ground-certificatable, the lowering
 # appends the refutation certificate block (see the section above).
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
-    import tshape
-    tshape.abstain_unless_carried(task, body, "verus")
     global _SUFFIX_INT
+    import tshape
+    _EMPTIES.clear()
+    _EMPTIES.update(tshape.empty_display_types(task, body))
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Verus/Rust reserved word, before either lowering
     # path renders anything -- see names.py's module docstring. `task` is

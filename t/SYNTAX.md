@@ -326,7 +326,7 @@ of `e`'s own datatype exactly once. The keyword is `case`, not Dafny's own
 PARAMETER name (proving F*'s and Lean's own reserved words do not leak
 into t), so reserving it in t's own grammar would break that exact
 probe -- the same reasoning that gave finite-set difference the surface
-spelling `setminus` over the AST's own `diff`. The twin ladder's `SWAP-CTOR`
+spelling `setminus` over the AST's own `diff`. Since 2026-10-06 any `Name.Name` parses as a constructor value, so that the grammar (`t.gbnf`) and the parser agree; a name that is not a declared datatype is `check_wf`'s refusal, by name. The twin ladder's `SWAP-CTOR`
 move (SPEC.md "The twins" note in "Datatypes (v1)") swaps two of a
 match's arms. Not in v1: a datatype as a pair/seq/set component or a
 spec_fun's own type, field-carrying constructors (records), more than one
