@@ -151,6 +151,6 @@ that core's `ckpt.pt` through the launcher's overrides (`R12_RUN_CORE`, `R12_RUN
 registered (lab grading at 6 cells). The Base arm is unchanged. Predictions 1 to 5 stand as
 written; prediction 6 of the core's registration (at least 1 clean, spec checked, on the 200 for
 at least one seed) is what this round answers. The specification check applied at scoring is the
-repaired one (commit 9243383b: string problems' references called with str arguments), which
+repaired one (commit 6159cd4a: string problems' references called with str arguments), which
 moved no published count when every graded arm was re-scored.
 

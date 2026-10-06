@@ -12,10 +12,10 @@ names the run that produced it; the runs live under the measuring machine's
 in the text.
 
 Branch `cloud/fable-t-features`, from `r12-blockers`. Commits, in order:
-4f8e80f (seq decreases), ff6347d (quantifier bounds), 425dc96 (multi-return
-calls), 31f69be (arrays read by functions), 0cef4d5 (nested string
-sequences), c200789 (Lean strings, `function-result`, a Dafny-lowering
-fix), d323cce (tuples), 7616eac (lemmas in Rocq), ec555ae (decision rows
+2f8b460 (seq decreases), 7bdd7aa (quantifier bounds), dd62bdb (multi-return
+calls), fec4de6 (arrays read by functions), 6ee8bfb (nested string
+sequences), 7078b9a (Lean strings, `function-result`, a Dafny-lowering
+fix), 9c9813c (tuples), 4aa93d3 (lemmas in Rocq), adaec5b (decision rows
 39 to 44 and the track's Done entries), then this report.
 
 ## Phase 0: the seven kernels, and the conformance suite

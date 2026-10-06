@@ -12339,7 +12339,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): Rocq's own
         # `Inductive` is the exact source for a field-less v1 enum
         # (Rocq reference: `Inductive`, one constant constructor per
-        # `|`), and this column's finite-set wave (bf9d70b4) already
+        # `|`), and this column's finite-set wave (8824a865) already
         # measured how much of its own prelude machinery (custom lemmas
         # for membership/equality decided through a term-by-term case
         # split) a new value type costs here -- an equal or larger cost

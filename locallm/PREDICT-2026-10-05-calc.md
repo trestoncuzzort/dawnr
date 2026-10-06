@@ -50,7 +50,7 @@ own phrasing. The gate does not know the right reading of a question; the workin
 
 ## Outcome, 2026-10-05 11:40Z (K1 to K5)
 
-Run on the lab from commit 35c2b88e, one llama-server (build b11325, the base model at 4 bits), 300 problems, four
+Run on the lab from commit 9278405e, one llama-server (build b11325, the base model at 4 bits), 300 problems, four
 requests a problem. `locallm/calc_eval.py report`:
 
 | arm | shown, of 300 | right | right, of shown | wrong shown |
@@ -118,7 +118,7 @@ What each outcome changes:
 
 ## Outcome, 2026-10-05 12:31Z (K6 to K9)
 
-Run on the lab from commit 3c5852a5, two llama-servers (build b11325, the base model at 4 bits), 300 problems none
+Run on the lab from commit 4f916515, two llama-servers (build b11325, the base model at 4 bits), 300 problems none
 of which was in the first 300. `locallm/calc_eval.py report`:
 
 | arm | shown, of 300 | right | right, of shown | wrong shown |

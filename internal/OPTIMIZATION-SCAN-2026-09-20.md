@@ -90,7 +90,7 @@ whole corpus twice, then once with `--no-cache`, and require all three tables to
 agree apart from the timestamp. Until that passes, the cache stays exactly where
 it is.
 
-**Bar passed, 2026-09-30 23:11Z (lab, head 39295428, `--jobs 4`).** The committed
+**Bar passed, 2026-09-30 23:11Z (lab, head 989f7cad, `--jobs 4`).** The committed
 39-task matrix graded three times in a row into scratch tables: `--cache`
 (3 min 10 s; the lab's cache was warm from earlier grades), `--cache` again
 (1 min 11 s; 256 of 260 cells whole from the cache, 516 of 520 sides, the 4

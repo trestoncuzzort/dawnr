@@ -12,12 +12,12 @@ file is the record, in the shape of round 1's `t/FEATURES-CLOUD-2026-09-27.md`.
 Every count names the run that produced it; the runs live under the
 measuring machine's `lift-runs/` directory (not committed).
 
-Branch `cloud/features-r2`, from `r12-blockers` (1b3c4cc). Commits, in
-order: a4322ab (the return default, feature B2), aa78327 (sequence elements
-named, B1), 8083e2a (zero-return methods named, B3, with decision rows 46
-and 47 and Done 9 and 10), a9a4426 (merge of `cloud/features-r2-sets`:
-66f8e4c the set type, core and three lowerings, bf9d70b the Rocq lowering,
-the two committed tasks and Done 11), a22a1ad (decision row 45 and Done 12),
+Branch `cloud/features-r2`, from `r12-blockers` (6fa3618). Commits, in
+order: 7c396e1 (the return default, feature B2), 6ec9e9e (sequence elements
+named, B1), b71ebde (zero-return methods named, B3, with decision rows 46
+and 47 and Done 9 and 10), 39765d9 (merge of `cloud/features-r2-sets`:
+66fae19 the set type, core and three lowerings, 8824a86 the Rocq lowering,
+the two committed tasks and Done 11), 98ea147 (decision row 45 and Done 12),
 then the grading table and this report.
 
 ## Phase 0: the committed conformance table still holds
@@ -75,7 +75,7 @@ changes nothing else). Every commit cites the design it copies or says
 `INVENTED:` and what was searched.
 
 The round's first pull request (#51) was merged by hand mid-round as
-`ee35da6`, beside the seq-valued spec_fun and source-axiom work (rows
+`54224ee`, beside the seq-valued spec_fun and source-axiom work (rows
 49-51, entries 13-14); the commits after it were replayed on that base, so
 the datatype and match work below are rows 48 and 52 and entries 15 and
 16, and the byte-identity check was taken again against the merged base:
@@ -266,7 +266,7 @@ subtests passed. Round 1 closed at 51 failed, 1396 passed, 28 skipped. Set
 against round 1's 51 by test name, none of the 51 stopped failing and four
 are new, all in `test_dawnr_english.py` (`WidenedProtectedSetTest`, three
 cases, and `FlaggedIdsUncappedTest`, one): they come with tests the base
-gained on 2026-09-27 after round 1's run (`6f988e8`, `f875427`) and fail
+gained on 2026-09-27 after round 1's run (`7f8590c`, `70b857d`) and fail
 here with `gzip.BadGzipFile: Not a gzipped file (b've')`, because
 `nl/data/mbpp.jsonl.gz` and `nl/data/humaneval.jsonl.gz` are 130-byte
 git-lfs pointers on this checkout, the same cause as the baseline's

@@ -108,7 +108,7 @@ train-side sets, and 23 dev answers.
 
 **The pooled table of pretrained models on the clean 200** (the same 19 prompted answer sets,
 `t/score_levels.py`; the last row adds the 18 small sets of answers the test harness had refused
-for declaring a parameter `seq<seq>`, fixed in cf84b8ea):
+for declaring a parameter `seq<seq>`, fixed in 5261ae00):
 
 | | reach a task | tests pass | some prover, none refuting | at least 1, spec checked | at least 3 | at least 5 | at least 6 | all seven |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|

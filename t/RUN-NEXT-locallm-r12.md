@@ -213,7 +213,7 @@ that matters: **tests pass on the clean 200, today 0 in nine of ten arms.**
 
 ## Build status, 2026-09-25
 
-Branch `r12-blockers`, from main 54448b01. Every blocker in section A landed
+Branch `r12-blockers`, from main 4405f7cf. Every blocker in section A landed
 with a test that fails on the old code; the run itself has not started. The
 build was planned as a workflow on 2026-09-21 that produced the designs and the
 adversarial reviews but no code before the usage limit; the designs were
@@ -221,15 +221,15 @@ executed on 2026-09-25 with the reviews' corrections folded in.
 
 | # | landed as | proof |
 |---|---|---|
-| A1 | 2c5609ec, 78de5547 | `t/test_r12_problem_id.py`: the two real leaked lifts are refused by the builder, preflight and the trainer |
-| A2 | 2c5609ec, 78de5547, 5f0ad873 | the builder drops the 37 documents and 21 ids; the scorer reports the clean 200; the pool builder drops the 21 |
-| A3 | 7090ec28, c9101f04, fa1bedda, 5f0ad873 | the 35 tasks regraded on the lab (242 cells): the same 31 clean as before; run_par, cli.py and run_all.py refuse the committed table from a partial run; preflight check 13 |
-| A4 | c9101f04, ab2542d3, 522dc9ea | generate exits non-zero on an unanswered id; the scorer refuses a partial set; the fleet's sentinel needs every eval id |
-| A5 | dd35848c, a41e402c, 5f0ad873 | the prover's process group is killed on every exit path; `t/stall_check.py`; the cpu-yield watcher resumes what it froze when it exits (outside the repository, both machines) |
-| A6 | c9101f04, ab2542d3, 41c5f0ac | `--temperature` required; a resume refuses a changed configuration; the scorer refuses mixed decoding; options name the stop rule and the per-problem seeding |
-| A7 | 4b1a84f0, 8b9b004b, 53d0fc26 | holdout by document hash under `--split-seed`; order mode pinned byte-identical by golden hashes; `--deterministic` recorded either way; `preflight --run-json` |
-| A8 | fa1bedda, 5f0ad873, c1f24626 | `T_SPARK_JOBS=1` in every parallel sweep: run_par, conformance, grade_lab matrix |
-| A9 | a530691a | example_holdout scores the pair the prompt printed; the constructed failure reads 232 of 232 |
+| A1 | 6c52f231, e963dbbb | `t/test_r12_problem_id.py`: the two real leaked lifts are refused by the builder, preflight and the trainer |
+| A2 | 6c52f231, e963dbbb, b31b09d1 | the builder drops the 37 documents and 21 ids; the scorer reports the clean 200; the pool builder drops the 21 |
+| A3 | b8ffd68e, 5efb71d1, fa1bedda, b31b09d1 | the 35 tasks regraded on the lab (242 cells): the same 31 clean as before; run_par, cli.py and run_all.py refuse the committed table from a partial run; preflight check 13 |
+| A4 | 5efb71d1, ab2542d3, 522dc9ea | generate exits non-zero on an unanswered id; the scorer refuses a partial set; the fleet's sentinel needs every eval id |
+| A5 | dd35848c, a41e402c, b31b09d1 | the prover's process group is killed on every exit path; `t/stall_check.py`; the cpu-yield watcher resumes what it froze when it exits (outside the repository, both machines) |
+| A6 | 5efb71d1, ab2542d3, 58441415 | `--temperature` required; a resume refuses a changed configuration; the scorer refuses mixed decoding; options name the stop rule and the per-problem seeding |
+| A7 | 4b1a84f0, 8b9b004b, 6c0cb1c8 | holdout by document hash under `--split-seed`; order mode pinned byte-identical by golden hashes; `--deterministic` recorded either way; `preflight --run-json` |
+| A8 | fa1bedda, b31b09d1, 9692e632 | `T_SPARK_JOBS=1` in every parallel sweep: run_par, conformance, grade_lab matrix |
+| A9 | f46c9fd2 | example_holdout scores the pair the prompt printed; the constructed failure reads 232 of 232 |
 
 Section B: `t/r12_data_queue.sh`, `t/r12-dev-ids.json` (100 of 174 eligible,
 rule in `t/DATA-r12.md`), the light steps ran (qwen235-train-p4 extracted and
@@ -249,7 +249,7 @@ continuation does.
 
 ## Data build status, 2026-09-26
 
-Seven tracks (branch `r12-blockers`, commits 98bbc41b to c16b73a4 and 8ca1c161), each
+Seven tracks (branch `r12-blockers`, commits 98bbc41b to 6db7cdc8 and 26da7ada), each
 implemented in a worktree and passed by an adversarial review; the GPU was
 never used, nothing concerns any outside model.
 

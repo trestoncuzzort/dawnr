@@ -49,7 +49,7 @@ measured on this desktop's CPU through llama-server:
 - **R2 holds:** 4 dev problems on complete specifications, against at least 3.
 - **R3 holds:** 26 and 16, against 17 and 9.
 
-**Published as `student-v5`; `install.sh` moves to it** (the gate's commit cbc724eb). v4's candidate, one seed of the
+**Published as `student-v5`; `install.sh` moves to it** (the gate's commit 579ee907). v4's candidate, one seed of the
 round before on 516 fewer rows, read 22 on the same 33. With one seed of each, how much of that difference is the
 seed and how much the rows is not measured; the candidate was fixed by a rule before this set was measured, so the
 gate did not choose it.

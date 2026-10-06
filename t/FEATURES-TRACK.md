@@ -809,7 +809,7 @@ alone (no held-out panel was read; `~/scratch/in-seq/explore.py`): 2 of the publ
 5 of 1,100 sampled ones are refused for it and are well formed once the membership is written as the quantifier it
 means (`exists k in [0, len(s)) . s[k] == x`); one dev problem (200) gains an answer that passes its tests. Under 1%
 of answers, so it is recorded here and not built. What it did turn up was a fault in the checker: the set rules it
-cites were never defined, and a set type error crashed it (fixed, 979e62f3).
+cites were never defined, and a set type error crashed it (fixed, 7838215f).
 
 ## The order from here
 

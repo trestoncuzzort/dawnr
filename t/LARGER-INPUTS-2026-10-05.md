@@ -44,7 +44,7 @@ generalise to show it.
   five larger inputs fall inside the `requires`; where the solution answers none, it is not measured and nothing
   is refused on its account.
 - **The product's gate** (`t/spec_gate.judge`, so `dawnr ask`, `spec`, `verify` and the replay of a certificate)
-  holds every specification that passes to 60 larger inputs, since commit 8836cdec. The enumerated specification
+  holds every specification that passes to 60 larger inputs, since commit 3ce62a51. The enumerated specification
   above is refused: "the specification says too little about inputs larger than the examples".
 - **The scoreboard's check** (`t/spec_check.py`) now stores the larger-input measurement with every agreeing
   verdict, from the task's own generator (200 draws), and `t/score_levels.py --larger` counts an answer only if it
@@ -122,7 +122,7 @@ rule; both specifications count.
   many.
 - **Runs in flight.** The three round-4 seeds and the release gate for dawnr v6 were registered under the reading
   without larger inputs and are judged by it, as registered; each is reported both ways.
-- **Certificates.** A certificate written before commit 8836cdec can now fail its replay on the specification
+- **Certificates.** A certificate written before commit 3ce62a51 can now fail its replay on the specification
   step, which is the check being stricter than the producer was.
 - **The sizes.** Sequences to 40 and integers to twenty times the example are bounds too. They are past what an
   enumeration fits in an answer's budget today, and that is an argument about budgets, not a proof.

@@ -81,7 +81,7 @@ the request still implies.
 
 ## Outcome, 2026-10-05 12:02Z (T1 to T4)
 
-Run on the lab from commit 2fccaaba, its own llama-server (build b11325, the base model at 4 bits), the 900 test
+Run on the lab from commit 7ff88955, its own llama-server (build b11325, the base model at 4 bits), the 900 test
 items, one request an item. `locallm/tool_check_eval.py report`:
 
 | kind (300 each) | native: a call released | checked: a call released | checked: asked |

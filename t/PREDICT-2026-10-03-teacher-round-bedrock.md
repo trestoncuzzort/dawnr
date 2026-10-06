@@ -6,7 +6,7 @@
 > A second correction that day holds each specification to inputs larger than the examples as well; the rows are
 > restated again in [LARGER-INPUTS-2026-10-05.md](LARGER-INPUTS-2026-10-05.md).
 
-Registered 2026-10-03 23:25Z (commit dce1e288; the pilot's first sample 23:26:05Z). `t/PREDICT-2026-10-01-dawnr-teacher-round.md` staged this round for a
+Registered 2026-10-03 23:25Z (commit 4be186a1; the pilot's first sample 23:26:05Z). `t/PREDICT-2026-10-01-dawnr-teacher-round.md` staged this round for a
 27B teacher on a rented GPU and was stopped before it measured anything; its stop note says a round
 elsewhere is a new registration with its own predictions. This is that registration. The reason is
 unchanged and sharper: the student is proved correct on 15 to 18 of the clean 200, Section 1 of
@@ -91,7 +91,7 @@ decontamination exclusions), the clean-200 gate stays where it is, and a documen
 being proved, not for being novel. The 27B round's 74 specification sample files on the lab are a
 different teacher's and are not mixed into this round.
 
-## Pilot outcome, 2026-10-03 23:38Z (commit 0f1b1d89; the rule applied, the round not yet run)
+## Pilot outcome, 2026-10-03 23:38Z (commit 83e44896; the rule applied, the round not yet run)
 
 One sample each on the 40 training ids and 40 specification prompts; spend by the proxy's ledger.
 
@@ -108,7 +108,7 @@ lower cost per proved item is Qwen3-235B's: **the teacher is `qwen.qwen3-235b-a2
 about $0.00055 a sample, projects the round (798 prompts, k = 8) to about $3.50, so k = 8 as registered.
 
 gpt-oss-120b spent its whole budget reasoning on 3 of 80 replies and Bedrock returned no content; the client
-handed on None and the scorers stopped (fixed in 0116e4b0: an absent answer is an empty one), and those three were
+handed on None and the scorers stopped (fixed in d8d90961: an absent answer is an empty one), and those three were
 scored as empty answers. Every teacher proves far more given a specification (6 to 14 of 40) than from a problem
 statement alone (0 to 4 of 40), where the specification check and the proof both have to come out right.
 
@@ -137,7 +137,7 @@ student. 123 documents were admitted (six or seven kernels) and go to the regist
 (`t/PREDICT-2026-10-04-teacher1-student.md`).
 
 **Two things that went wrong on the way, both fixed.** The reward scorer stopped on 7 problems whose own test
-points mix output kinds (146c38ff). The first seven-kernel assembly ran eight cells at once (about 48 provers on a
+points mix output kinds (1e342728). The first seven-kernel assembly ran eight cells at once (about 48 provers on a
 15 GB machine), was killed whole under memory pressure with nothing logged, and ran again with three; the prover
 cache kept the finished cells, including any timeout recorded while the machine was overloaded. A timeout never
 admits a document, so the error can only have kept out documents, not let any in; the documents near the line

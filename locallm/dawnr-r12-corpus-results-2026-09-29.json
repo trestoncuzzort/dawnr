@@ -1,5 +1,5 @@
 {
-  "registered": "locallm/PREDICT-2026-09-29-dawnr-r12-corpus.md (commit 0ee087ad, before the run)",
+  "registered": "locallm/PREDICT-2026-09-29-dawnr-r12-corpus.md (commit 89dc2941, before the run)",
   "run": {
     "corpus": "t/out/loop/corpus-r12-headed.txt",
     "corpus_sha256": "12491a7f067ea0b96a6ee6217b9869c9d81e743904603f202109d8f878daf943",
@@ -8,7 +8,7 @@
     "pipeline": "locallm/dawnr_pipeline.py --harness-tokens --tool-rate 0.5 --mid-steps 400 --mid-lr 1e-4 --dev 100 --max-tokens 800",
     "evaluation": "chat_eval.py greedy, 800 tokens, --grammar --max-calls 2 --answer best-verdict, 100 dev problems (t/r12-dev-ids.json)",
     "machine": "desktop RTX 4080 under the GPU lock beside the r12 launcher",
-    "code": "453fc1a5"
+    "code": "a69078ac"
   },
   "baseline_2026_09_27_A_arms": {
     "corpus": "358 documents",

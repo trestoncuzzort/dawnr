@@ -4,7 +4,7 @@ Feature 9 of `t/FEATURES-TRACK.md`, the binding refusal for string
 programs: a spec_fun whose result is a sequence of ints, so that a lifted
 Dafny helper function returning `string` or `seq<int>` becomes a spec_fun
 instead of refusing `function-result`. Branch `feat/seq-spec-fun`, from
-`r12-blockers` (fc7e7933). This file is the record: what landed, the status
+`r12-blockers` (dce2b29d). This file is the record: what landed, the status
 of every kernel on the fixtures, the measurement on the staged corpus, what
 is left and why, and how to reproduce every count. Every count names the
 run that produced it; the runs live under the measuring machine's
@@ -135,7 +135,7 @@ After the review's fix (the certificate rungs, "The review and the seeded
 faults" below), hashed again with the same script on a fresh `git archive
 r12-blockers` export: **546 of 546 identical** (`fix/hashes_base.json`
 against `fix/hashes_fix.json`), and **560 of 560 identical** against the
-branch as reviewed, 4cb7e5b4 (`fix/hashes_reviewed.json`): the fix changes
+branch as reviewed, 5a43cefa (`fix/hashes_reviewed.json`): the fix changes
 no committed lowering, double_all's own twin included, since its witness
 is the undefined-kind one at `s = []` whose formula reaches no spec_fun
 call, and the rungs are emitted only for a certificate that reaches a
@@ -415,7 +415,7 @@ the same way.
 ## What is left and why
 
 - **Frama-C**: the `\list` route, built on `feat/framac-seq-fun` (from
-  `r12-blockers`, f9da6dca), below ("Frama-C, the `\list` route"). What
+  `r12-blockers`, cc9a7bec), below ("Frama-C, the `\list` route"). What
   is left there specifically: the check stage's own automation gap
   combining a recursive `\list` unfolding with a loop-carried or
   slice-derived fact under the task's other hypotheses (WP/alt-ergo,
@@ -455,7 +455,7 @@ the same way.
 
 ## Frama-C, the `\list` route
 
-Built on `feat/framac-seq-fun` (from `r12-blockers`, f9da6dca), closing
+Built on `feat/framac-seq-fun` (from `r12-blockers`, cc9a7bec), closing
 the abstain named above. A seq-valued spec_fun is a recursive ACSL logic
 function returning `\list<integer>`, ACSL's own built-in list type
 (constructors `\Nil`/`\Cons`, and `\nth`/`\length`/`\concat`, all builtin
@@ -752,10 +752,10 @@ verifiers/framac.py (the verifier, never the lowering), and the
 certificate-rung fix only changes behavior on an exception path that no
 committed task's lowering takes. Measured directly: sha256 of
 `tlib.lower(task, "framac", twin_body)` over every t/tasks, t/lemmas,
-t/nested file, real and twin, on the reviewed commit (`fb3c5f27`)
+t/nested file, real and twin, on the reviewed commit (`60a3f575`)
 against this fix -- **84 of 84 identical, 0 different** -- and, repeating
 this file's own sweep, against a clean `git archive` of `r12-blockers`
-at the fork point (f9da6dca) -- **82 of 84 identical, exactly 2
+at the fork point (cc9a7bec) -- **82 of 84 identical, exactly 2
 different** (`tasks/double_all.t`'s own real and twin, the only
 committed task with a seq-valued spec_fun), the same count this file
 already recorded above.
@@ -775,7 +775,7 @@ fourth being the `spec-fun-result` coverage row added since). The three
   On the tree as reviewed it read 4 failed, 1,431 passed: the fourth was
   t/test_twin_hints.py's exemplar `min_max` for "a program with a
   timeout column is not a source", which the committed-matrix regrade
-  (4cb7e5b4, min_max's Rocq cell verified / refuted on the desktop) had
+  (5a43cefa, min_max's Rocq cell verified / refuted on the desktop) had
   made a source; the test now names count_vowels, whose row still
   carries a timeout in spark and fstar (the rule under test unchanged).
 - `python3 t/test_seq_spec_fun.py`: 7 tests, 588 lowerings of the

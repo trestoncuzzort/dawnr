@@ -59,7 +59,7 @@ ratios are what is registered.
 
 ## Outcome, 2026-09-30 21:47Z
 
-Run as written on the laptop's RTX 5050, head edccc742, both answer sets copied to the desktop
+Run as written on the laptop's RTX 5050, head 4b7c2c48, both answer sets copied to the desktop
 (`~/scratch/cache-probe/`).
 
 | run | wall clock | replies | to the cap |

@@ -60,4 +60,4 @@ directories are `~/scratch/dawnr-r12/A-s<seed>` on the desktop (not in the repos
 
 One conversation was dropped whole at mid-training on every seed
 (`vericoding_da0085__findMinimumTotalDistance`, 2,109 tokens against a 2,048 context; the drop
-rule and its record, 453fc1a5). Each seed took about seven minutes on the desktop card.
+rule and its record, a69078ac). Each seed took about seven minutes on the desktop card.

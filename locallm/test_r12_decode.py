@@ -39,7 +39,7 @@ def model_for(architecture="gpt", block_size=16, vocab=43, seed=173):
 
 @torch.no_grad()
 def legacy_generate(model, idx, max_new_tokens, temperature=1.0, top_k=None, *, use_cache=False):
-    """model.generate as committed at 78de5547, kept verbatim so the refactor is
+    """model.generate as committed at e963dbbb, kept verbatim so the refactor is
     measured against the code it replaced rather than against itself."""
     model.eval()
     cache = None

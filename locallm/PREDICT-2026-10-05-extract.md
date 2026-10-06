@@ -50,7 +50,7 @@ paragraph is read whole.
 
 ## Outcome, 2026-10-05 10:44Z (X1 to X5)
 
-Run on the lab from commit 35c2b88e, one llama-server (build b11325) holding the base model at 4 bits, 600 questions,
+Run on the lab from commit 9278405e, one llama-server (build b11325) holding the base model at 4 bits, 600 questions,
 three requests a question. `locallm/extract_eval.py report`:
 
 | arm | shown, of 300 answerable | exact, of 300 answerable | F1 of those shown | left empty, of 300 unanswerable | shown in all | exact of shown | not in the paragraph word for word |
@@ -131,7 +131,7 @@ What each outcome changes:
 
 ## Outcome, 2026-10-05 11:22Z (X6 to X9)
 
-Run on the lab from commit 2e7da151, its own llama-server (build b11325, the base model at 4 bits), 600 questions
+Run on the lab from commit 852e0b99, its own llama-server (build b11325, the base model at 4 bits), 600 questions
 none of which was in the first sample, five requests a question. `locallm/extract_eval.py report`:
 
 | arm | shown, of 300 answerable | exact, of 300 answerable | left empty, of 300 unanswerable | shown in all | exact of shown | not in a sentence as shown |
@@ -161,7 +161,7 @@ shown (first sample: 256, 208, 242, 66.2% of 314). That is computed after the fa
 answers; it was not a registered arm, so it is a reason for the change below and not yet a result.
 
 **What the registered rules say, and what is done.** X7 fails against `schema` and neither `value` nor `both` is
-above it: as built at 2e7da151 the command's text reading is less often right than a schema's, and DISCLAIMERS says
+above it: as built at 852e0b99 the command's text reading is less often right than a schema's, and DISCLAIMERS says
 so with these numbers until the next measurement is in. X9 holds: the second reading stays. The lesson is kept in
 the code: the two prompts are now the measured arms' prompts word for word, and a test holds them equal.
 
@@ -197,7 +197,7 @@ What each outcome changes:
 
 ## Outcome, 2026-10-05 11:55Z (X10 to X13)
 
-Run on the lab from commit 5be41839, its own llama-server (build b11325, the base model at 4 bits), 600 questions
+Run on the lab from commit f00b92a1, its own llama-server (build b11325, the base model at 4 bits), 600 questions
 none of which was in the first 1,200. `locallm/extract_eval.py report`:
 
 | arm | shown, of 300 answerable | exact, of 300 answerable | left empty, of 300 unanswerable | shown in all | exact of shown | not in a sentence as shown |

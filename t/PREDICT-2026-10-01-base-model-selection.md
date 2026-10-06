@@ -139,7 +139,7 @@ decides the small base and now includes the 9B.
 at LoRA rank 16 instead of 64: the 4B at rank 64 already takes 14.7 GB of the 16 GB card, and
 QLoRA reports that "LoRA r is unrelated to final performance if LoRA is used on all layers"
 (arXiv:2305.14314 B.2, figure 4). Everything else is unchanged. (2) Answers are extracted with
-`--promote-header` (608ac34a) for every fine-tuned candidate and the counts without it are given
+`--promote-header` (ec2927d2) for every fine-tuned candidate and the counts without it are given
 beside them: a task that states `t 0` over a body that is well formed only as `t 1` is read as
 `t 1`, since the format line is derivable.
 
@@ -158,7 +158,7 @@ adapter) and its first five steps raise its loss elevenfold; it ends at 0.72, ha
 it began. That student is a damaged run and is **not a measurement of the 4B**. Its dev answers,
 when they are scored, are recorded as that and kept out of the ranking.
 
-What it is not. The 4B was the first run through `student_sft.response_loss` (a08bd1a8), which was
+What it is not. The 4B was the first run through `student_sft.response_loss` (97e10dee), which was
 the obvious suspect. Measured on the real stack (4-bit base, k-bit preparation with gradient
 checkpointing, a fresh rank-64 adapter), that function and the model's own forward-with-labels
 give the same loss to four decimals on six rows, in train and eval mode, on the 2B (1.3550) and on
@@ -249,7 +249,7 @@ by the accumulation count only when the model does not take loss arguments or no
 given, and says of a custom loss: "If you are not using `num_items_in_batch` when computing your
 loss, make sure to overwrite `self.model_accepts_loss_kwargs` to `False`." The library's own
 loss (`loss/loss_utils.py`, `fixed_cross_entropy`) sums the token losses and divides by the
-window's token count. The `compute_loss` override added in a08bd1a8 ignored that count and
+window's token count. The `compute_loss` override added in 97e10dee ignored that count and
 returned each row's mean, so with sixteen accumulated rows the logged loss was the SUM of sixteen
 row means and the gradient before clipping was sixteen times too large. Earlier tonight this
 file said the loss change "is not the cause". That was wrong: the function's value was checked
@@ -390,7 +390,7 @@ prediction 12 of `t/PREDICT-2026-10-01-spec-given.md`.
 Found while following the students' answers gate by gate (the section above).
 
 **The test harness.** `run_point` refused an answer that declared a nested parameter `seq<seq>`
-(fixed in cf84b8ea). Of this file's answer sets it touched six answers of three prompted
+(fixed in 5261ae00). Of this file's answer sets it touched six answers of three prompted
 candidates, and three of them pass their problem's tests once read correctly: the 4B and the 9B
 on dev problem 186, the 14B on 450. The fine-tuned students were not touched (they did not write
 `seq<seq>`).
