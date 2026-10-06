@@ -1441,6 +1441,138 @@ extension): sha256 of every committed task's, lemma's and nested file's
 lowered source, real and twin, in all seven kernels, is unchanged from
 before this landing (588 = 42 files x 7 kernels x 2 sides, byte for byte).
 
+### Compositional types (v1)
+
+Stated 2026-10-06 (the operator's direction of that morning: t is the ceiling,
+and the language comes first). Measured first: `t/nl_census.py` over the
+24,748 problems of `nl/` (`t/COVERAGE-nl.md`, re-run 2026-10-06 on the
+language as it stands) has 772 of 4,239 function-shaped problems in t's
+fragment, 263 of 974 MBPP. Of what keeps the rest out, four gaps are one
+gap: `tuple` (3,872 problems: three or more elements, a nested tuple, a
+tuple with a string component, a list of tuples), `nested-seq` (3,606: a
+seq whose rows are ints or bools, or a subscript of a subscript the census
+cannot classify), `nested-seq-pair`/`-string`/`-deep` (566, 119, 95) and
+`set` beyond ints (part of 1,604), with `multi-return` (43) the tuple
+return. Each is t's type grammar being a FIXED LIST: `int`, `bool`, `seq`
+(of ints), `(T1, T2)` of base types, `seq<seq>` one level, `set` of ints, an
+enumeration. The kernels t lowers to all have products of any arity and
+collections over any element type (Dafny's tuples and `seq<T>`/`set<T>`,
+Verus's tuples and vstd `Seq<A>`/`Set<A>`, Lean's right-nested `Prod` and
+`List`, Rocq's `prod` and `list`, F*'s `tuple2`..`tuple14` and `list`,
+SPARK's records and arrays, ACSL's structs and arrays; the three kernel
+pages fetched 2026-10-06 are in the receipt). So t's types become an
+algebra.
+
+**The type grammar.** A t TYPE is one of:
+
+```
+Type ::= "int" | "bool"
+       | "seq"                       // a seq of ints: the canonical spelling of seq<int>
+       | {"seq": Type}               // a seq of any element type; {"seq": "seq"} is seq<seq<int>> as before
+       | {"pair": [Type, Type]}      // a pair of ANY two types (a pair of pairs, a pair holding a set)
+       | {"tuple": [Type, Type, Type, ...]}   // three or more components, any types
+       | "set"                       // a set of ints: the canonical spelling of set<int>
+       | {"set": Type}               // a set of any element type
+       | {"datatype": Id}            // as before
+```
+
+Two spellings would be two normal forms, so the plain strings stay the
+canonical forms of the shapes they already name: `{"seq": "int"}` and
+`{"set": "int"}` are refused by `check_wf` as non-canonical (the printer
+never emits them, the parser never produces them), and `{"tuple": [T1,
+T2]}` is refused in favour of `{"pair": [T1, T2]}`. Every committed task
+is therefore valid byte for byte, and `parse(print(t)) == t` keeps one
+normal form per type. Written: `seq` (`seq<int>` is NOT a spelling),
+`seq<bool>`, `seq<seq>`, `seq<seq<seq>>`, `seq<(int, int)>`, `(int, seq,
+bool)`, `((int, int), seq)`, `set`, `set<seq>`, `set<(int, int)>`. A
+quantifier's bound variable is still an int over a range: the element
+of a `seq<T>` is reached as `s[i]`, of a set by membership. A
+spec_fun's parameters and result may be any type (the former
+`SPEC_FUN_RESULTS` list of three is gone); a method's and a lemma's
+already were.
+
+**Values and operators.** No operator is new except two, and every
+existing one is polymorphic by the static type of its operands, exactly
+as `==` and `+` already were:
+
+```
+{"op": "tuple", "args": [Expr, Expr, Expr, ...]}   // (e1, ..., en), n >= 3; a value defined iff every component is
+{"op": "proj",  "args": [TupleExpr, {"int": k}]}    // e.k, 0 <= k < n, k a literal; always defined on a tuple
+```
+
+`pair`, `fst` and `snd` stay the forms for two components (`(e1, e2)`,
+`.0`, `.1` on a pair print and parse as they did); on a tuple of three or
+more, `.k` is `proj`. A `seq` display `[e1, ..., en]` takes elements of
+any ONE type and is a `seq` of that type (`[]` takes the expected type as
+before, a plain `seq` where none is expected); `len`, `at`, `slice`,
+`update`, `fill` and `+` work on a `seq<T>` for every `T` with the element
+type `T` where an int stood (`update(s, i, v)` wants `v: T`, `fill(n, v)`
+gives a `seq<T>`, `at` gives a `T`), with the definedness rules unchanged
+(`at` and `update` in `[0, len)`, `slice` in `0 <= a <= b <= len`, `fill`
+for `n >= 0`). A `set` display `{e1, ..., en}` takes elements of any one
+type and is a `set` of that type (`{}` takes the expected type, a plain
+`set` where none is expected); `in` wants `(T, set<T>)`; `card`, `union`,
+`inter`, `setminus` work on any one set type. `==` and `!=` on two values
+of one type are structural and extensional at every depth (two seqs of
+pairs are equal when the same length and equal pair by pair); `< <= > >=`
+stay int-only. The string library stays on `seq` (of ints) and `seq<seq>`
+(of int rows): a `seq<bool>` has no `split`. A `+`, `update`, `fill`,
+display, `in`, `==` or projection whose operand types disagree is
+ill-typed, by name, in `check_wf`.
+
+**The frame rule, definedness, scope.** Unchanged: a loop havocs the
+variables its body assigns, whatever their types; a component of a
+compound value obeys its own type's definedness through the projection or
+index that reaches it; a bound variable is an int.
+
+**The twins.** `wrong-var` keeps its moves and gains their generalisation:
+two components of one `tuple` or `pair` display of the SAME type are
+swapped (the swap of two components of different types would be
+ill-typed and is not a twin), `fst`/`snd` are exchanged only when the
+pair's two component types are equal, and a `proj` index moves to another
+component of the same type. `off-by-one` reaches an int anywhere inside a
+display, `wrong-var` swaps two names of any equal declared type (the
+comparison is on the type's JSON, as it always was). The witness ladders
+(`interp.ladders`) are compositional: a `seq<T>` ladder is built from `T`'s
+ladder in shell order over short lengths, a tuple's from its components'
+ladders as the pair's is, a `set<T>` from `T`'s seq ladder with duplicates
+collapsed, each capped as the pair ladder is capped, so the near corner
+(small values, short seqs) still comes first and a committed task's
+documented witness is unchanged (the `int`, `bool`, `seq`, `seq<seq>`,
+`(T1, T2)` of base types and `set` ladders are byte for byte what they
+were).
+
+**Each lowering** prints a type recursively in its kernel's own words and
+builds and projects with the kernel's own product: Dafny `(T1, T2, T3)` and
+`.2`, `seq<T>`, `set<T>`; Verus the tuple, `Seq<T>`, `Set<T>`; Lean the
+right-nested product with `.2.1`-style projections, `List T`, its set
+encoding over `T`; Rocq `prod` (left-nested as written) with `fst`/`snd`
+chains, `list T`, its set encoding; F* `tuple3`..`tuple14` with `._1`..,
+`list T`, `FStar.FiniteSet` over `T`; SPARK a record declared per tuple
+shape and an array type declared per seq shape inside the task's package;
+Frama-C a struct per tuple shape and the offsets encoding of
+`DESIGN-framac-nested-seq.md` per seq shape. A kernel whose encoding is not
+yet written for a shape abstains WITH THE SHAPE NAMED (AGENTS rule 2), and
+`AGREEMENT.md` says which; the landing's registration
+(`t/PREDICT-2026-10-06-t-expansion.md`, T1 and T8) counts tasks only where
+every present kernel verifies the real and refutes the twin.
+
+**The committed tasks** (each verified and its twin refuted in the kernels
+that carry the shape, named in `AGREEMENT.md`): `sort3` (`(int, int, int)`
+returned in ascending order from three ints: the triple), `zip_pairs` (a
+`seq<(int, int)>` built by a loop from two seqs of one length: the seq of
+pairs), `signs` (a `seq<bool>` of which elements are non-negative: the seq
+of bools), `words_seen` (a `set<seq>` of the distinct words of a string: the
+set of strings), `swap_ends` (a pair of pairs, `((int, int), (int, int))`,
+with its outer components exchanged: the nested pair), `grid_row_sums`
+(the row sums of a `seq<seq>` as a seq, unchanged shapes but written over
+the new typing, a control). The lifter's mapping: a method with three or
+more returns lifts to one tuple return (LIFTER-DECISIONS.md row 29 widened
+from pairs); a Dafny `seq<(int, int)>`, `seq<bool>`, `set<string>` lifts
+to the type of the same shape; `nl_census.py`'s `tuple`, `nested-seq*`,
+`multi-return` and `set` detectors stop reporting what is now in the
+fragment, which is how the landing is measured.
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice
@@ -1705,8 +1837,11 @@ separator, `splitlines`, the padding members, `title`/`capitalize`/
 stated 2026-09-10): no pair of pairs, no seq of pairs, no triple. A nested seq is one
 level deep ("Nested sequences", stated 2026-09-10): no third level, no seq
 of bools, no seq of pairs.
-These are gates to open with measurements, not omissions to apologize
-for.
+Since 2026-10-06 ("Compositional types (v1)") a pair holds any two types,
+a tuple three or more, a seq any element type at any depth and a set any
+element type; what stays out by design is listed under "What does not
+exist (on purpose)" in SYNTAX.md. These are gates to open with
+measurements, not omissions to apologize for.
 
 ## Typed inline helpers (surface, v1)
 
