@@ -172,7 +172,10 @@ that is in no commit is handed to you instead of run.
 
 With `--online` it can search the web and read pages, and each search and each
 page is asked for. The search needs no account or key: it reads DuckDuckGo's
-page for browsers without JavaScript, as a text browser would. A search or an
+page for browsers without JavaScript, as a text browser would. A page is not
+handed to the model whole: told what it is looking for, the fetch returns the
+paragraphs about that, in the page's order and within a budget, so a long
+page costs a few hundred tokens rather than thousands. A search or an
 address that carries text it read from one of your files is marked as that
 before you are asked.
 
