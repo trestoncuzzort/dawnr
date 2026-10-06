@@ -298,6 +298,12 @@ class Planner(NativePlanner):
         the folder held no logs), nor `du here`, nor `cp -r here`. Left alone where the folder really holds
         something of that name."""
         name = self.roots[0]
+        # the folder's real path, which a `pc` line was given (outside) and the model copied into an `sh` line next:
+        # inside the sandbox it is the folder (`cd /tmp/x/work && git branch` printed nothing, and the model said
+        # there was no repository)
+        real = self.paths[name].rstrip("/")
+        if real and real != "/":
+            command = re.sub(r"(?<![\w./~-])" + re.escape(real) + r"(?=/|(?![\w./-]))", lambda m: ".", command)
         if os.path.lexists(os.path.join(self.paths[name], name)):
             return command
         at_start = r"(?<![\w./~-])" + re.escape(name)
