@@ -1,4 +1,4 @@
-t 1 task f(s: seq, x: int) returns (r: bool) ensures true
+t 1 task f(x: int) returns (r: int) ensures true
 {
-  r := x in s
+  r := card(x)
 }

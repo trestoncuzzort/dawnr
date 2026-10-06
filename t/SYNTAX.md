@@ -94,6 +94,10 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
                                                    division, undefined at 0.0 (since 2026-10-06); "mod" is int-only *)
            | "toreal" | "floor" | "ceil"       (* since 2026-10-06; written real(x), floor(x), ceil(x): int -> real,
                                                    real -> int, real -> int; SPEC.md "Exact rationals (v1)" *)
+           | "min" | "max" | "abs" | "sum"     (* since 2026-10-06, SPEC.md "The library (v1)"; written as calls,
+           | "gcd" | "pow" | "isqrt" | "rev"      min(a, b) ... rev(s), resolved by name after parsing: a declared
+                                                   spec_fun/method/helper of the same name shadows the library;
+                                                   "in" with a seq on the right is membership in a seq *)
            | "==" | "!=" | "<" | "<=" | ">" | ">="
            | "and" | "or" | "not" | "implies"   (* and/or n-ary, short-circuit *)
            | "len" | "at"                       (* v1, seq only *)
@@ -406,6 +410,38 @@ reach a real literal as they reach an int one (`off-by-one` on `0.5` gives
 `1.5` and `-0.5`; `wrong-constant` on a real site adds `1.0`), and a
 witness value is shown as `n/d`. The committed tasks are `average`,
 `half_way`, `floor_ceil` and `safe_ratio`.
+
+### The library (v1)
+
+```json
+{"op": "max", "args": [{"var": "lo"}, {"op": "min", "args": [{"var": "hi"}, {"var": "x"}]}]}
+{"op": "abs", "args": [{"op": "-", "args": [{"var": "a"}, {"var": "b"}]}]}
+{"op": "sum", "args": [{"var": "s"}]}
+{"op": "gcd", "args": [{"var": "a"}, {"var": "b"}]}
+{"op": "pow", "args": [{"var": "x"}, {"int": 3}]}
+{"op": "isqrt", "args": [{"var": "n"}]}
+{"op": "in", "args": [{"var": "x"}, {"var": "s"}]}
+{"op": "rev", "args": [{"var": "s"}]}
+```
+written: `max(lo, min(hi, x))` · `abs(a - b)` · `sum(s)` · `gcd(a, b)` · `pow(x, 3)` · `isqrt(n)` ·
+`x in s` (with `s: seq`) · `rev(s)`
+
+Since 2026-10-06 (SPEC.md "The library (v1)"), these are operators written
+as calls. No new keyword: a call whose name is none of the task's own
+name, its spec_funs, its methods or its inline helpers is the library
+function, and a declared one shadows it (as in Python), so `abs`, `gcd`,
+`max` and `rev` remain legal task and variable names. `min`, `max` and
+`abs` take two ints or two reals (never mixed) and give that type; `sum`
+takes a `seq` (giving an int) or a `seq<real>` (giving a real); `gcd`,
+`pow` and `isqrt` are over ints, `pow(a, n)` and `isqrt(n)` undefined for
+`n < 0` (an obligation `n >= 0`, as `/` owes `y != 0`); `x in s` is
+membership in a seq when `s` is a seq (the set form is unchanged; the
+right operand's type decides); `rev(s)` reverses any seq. The sugar `s[-k]`,
+`s[a..-k]`, `s[-k..b]` for a literal `k` reads as `len(s) - k` in that
+position at parse time; the AST and the printer carry the expanded form,
+so it is written sugar, printed expanded, and a variable index is never
+wrapped; the raw literal index `-k` (undefined on every seq) is spelled
+`s[(-k)]`, which is how the printer writes an AST that holds one.
 
 ### Nested sequences (v1)
 

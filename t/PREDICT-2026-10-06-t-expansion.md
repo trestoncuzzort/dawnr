@@ -100,3 +100,46 @@ refused).
 Sole blockers after G2 (the restated bars stand as written above): generator 295, class 294, import 273, map
 128, string-lib 125, closure 99, any-type 96, seq-slice-step 77, unbounded-loop 62, seq-slice-negative 41,
 none-type 35, sqrt 23, exception 20, io 7.
+
+## T3a registered (2026-10-06 13:05Z, before any run): the library, SPEC "The library (v1)"
+
+G3 is split: G3a is the integer and sequence library (`min`, `max`, `abs`, `sum`, `gcd`, `pow`, `isqrt`, `x in s`
+on a seq, `rev`) and the negative-literal index/bound sugar; G3b is `for` as sugar over `while`, seq comprehensions,
+`sorted` and the slice step. Bars for G3a, read by the census and the matrix:
+
+| | bar | from |
+|---|---|---|
+| function-shaped in fragment | ≥ 1,601 + 35 = 1,636 | `seq-slice-negative`: 41 sole blockers, less those whose negative bound is not a literal |
+| `builtin-math` | stays a burden, re-tagged IN THE FRAGMENT (the count is the same by construction; what changes is that the writer has the word) | the detector |
+| `sqrt` | the `math.isqrt` / `int(math.sqrt(..))` forms leave the gap (≥ 5 of its 23 sole blockers); `math.sqrt` as a real stays a gap | the detector, split |
+| kernels | Dafny, Verus, SPARK and F* verify the real and refute the twin on every committed task of the landing, or abstain by name on a function they cannot carry (named); Lean, Rocq, Frama-C abstain by name; no old task's cell changes | T8 |
+| notation | `surface.py --check` round-trips every example; the grammar is unchanged (calls were already in it), so the lab check holds as it stands | T9 |
+
+What would falsify the design: a kernel that verifies a wrong twin through a library definition that differs from
+the interpreter's (the interpreter is the reference; a disagreement is a lowering bug, reported as such), or a
+committed task whose proof needs a lemma about the library (`isqrt`'s uniqueness, `sum` over a slice) that no
+kernel discharges without help: then the task is restated or the function abstains by name, and the result says
+which.
+
+### T3a read (2026-10-06 13:50Z, the library's core and Dafny landed; the census with the detectors moved)
+
+| | before | after | bar | |
+|---|---:|---:|---:|---|
+| function-shaped in fragment | 1,601 | **1,642** (38.7%) | ≥ 1,636 | met (+41: the 41 `seq-slice-negative` sole blockers, all of them literal bounds) |
+| MBPP | 618 | 625 | — | +7 |
+| HumanEval | 18 | 19 | — | +1 |
+| `builtin-math` | 6,624 burden | 6,686, re-tagged IN THE FRAGMENT (now also `math.gcd`, `math.isqrt`) | re-tagged | as stated |
+| `sqrt` sole blockers | 23 | 23 | ≥ 5 leave | **missed**: the detector had never tagged `math.isqrt` under `sqrt` (it reads `.sqrt` only), so nothing could leave by moving `isqrt`; the 23 are `math.sqrt` on a real, which stays a gap by design |
+
+The kernels at this read: Dafny verifies all nine committed tasks with the twin refuted. `sum`'s first task,
+`sum_two` (`r == sum([a, b])`), read UNPROVED: the two-element display is not unfolded at Dafny's default fuel
+(`t_pow(x, 3)` is), a `{:fuel 3, 4}` attribute proved it but the adapter bans every attribute (its audit rule),
+so the committed tasks are `sum_tail` (`r == sum(s + [x])`, one unfolding, which Dafny proves and SPARK (timeout)
+and F* (gave up) do not: both need the slice lemma Dafny's sequence axioms supply) and `sum_one` (`r == sum([x])`,
+which all three prove). SPARK and F* carry the library (9 of 10 tasks each, `sum_tail` the exception); Verus
+carries it on 7 of 10 (`sum_tail` the same lemma; `cube` and `root_floor` need nonlinear arithmetic Verus does not
+try unhinted); Lean, Rocq and Frama-C abstain by name on every library function and on membership in a seq. The
+three unproved cells are measured kernel limits, kept in the matrix as they read, not false verdicts. `last` is `last_of`
+(SPARK's package already has a `Last`). The `gcd` task was restated once: its
+first form asked `gcd(b, a) == gcd(a, b)`, a theorem about Euclid that no kernel proves from the definition, and
+a committed task is a use of the library, not a lemma about it.

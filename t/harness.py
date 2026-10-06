@@ -436,7 +436,10 @@ def _c_drop_guard(body, scope):
                            else {"op": "and", "args": rest})
 
 
-_INT_ROOTED_OPS = ("neg", "len", "*", "-", "div", "mod")
+_INT_ROOTED_OPS = ("neg", "len", "*", "-", "div", "mod",
+                   # SPEC.md "The library (v1)" (2026-10-06); `_c_wrong_constant` reads the site's type first,
+                   # so a real min/max/abs/sum never takes an int constant through this list
+                   "min", "max", "abs", "sum", "gcd", "pow", "isqrt")
 
 
 def _int_rooted(node: dict, ty_of: dict) -> bool:
@@ -483,7 +486,8 @@ def _c_wrong_constant(body, scope):
 
 
 ARITH_ALT = {"+": ("-", "*"), "-": ("+", "*"), "*": ("+", "-"),
-             "div": ("mod",), "mod": ("div",)}
+             "div": ("mod",), "mod": ("div",),
+             "min": ("max",), "max": ("min",)}   # SPEC.md "The library (v1)" (2026-10-06): the one new move
 
 
 def _c_wrong_operator(body, scope):

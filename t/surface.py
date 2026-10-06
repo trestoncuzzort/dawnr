@@ -700,6 +700,7 @@ class Parser:
                 line, col = self.positions.get(id(exc.node), (start.line, start.col))
                 raise SurfaceError(str(exc), file=self.file, line=line, col=col,
                                    production="InlineFun") from exc
+        _resolve_library(task)   # SPEC.md "The library (v1)" (2026-10-06): calls by a library name become operators
         return task
 
     def at_inline_fun(self) -> bool:
@@ -1095,6 +1096,29 @@ class Parser:
             return self.mark(start, {"op": "neg", "args": [self.p_unary()]})
         return self.p_postfix()
 
+    def _sugar_ahead(self) -> bool:
+        """Whether the tokens here are `-` NAT followed by `]` or `..`: the from-the-end sugar's exact spelling.
+        A parenthesised negative literal, `s[(-1)]`, is not it: that is the raw index -1 (undefined on every seq),
+        which is how the printer writes an AST that holds one, so the round trip keeps both."""
+        t0 = self.toks[self.i] if self.i < len(self.toks) else None
+        t1 = self.toks[self.i + 1] if self.i + 1 < len(self.toks) else None
+        t2 = self.toks[self.i + 2] if self.i + 2 < len(self.toks) else None
+        return (t0 is not None and t0.kind == "sym" and t0.text == "-" and t1 is not None and t1.kind == "nat"
+                and t2 is not None and t2.kind == "sym" and t2.text in ("]", ".."))
+
+    def _from_end(self, seq: dict, bound: dict, start, sugar: bool) -> dict:
+        """SPEC.md "The library (v1)" (2026-10-06): a NEGATIVE LITERAL index or slice bound written directly as
+        `-k` counts from the end, `s[-k]` is `s[len(s) - k]`; expanded here, so the AST and the printer carry
+        `len(s) - k` and no kernel sees a negative index. A variable index is never wrapped (`at` is defined on
+        0 <= i < len(s) only), and `s[(-k)]` is the raw literal (see `_sugar_ahead`)."""
+        if sugar and isinstance(bound, dict) and set(bound) == {"int"} and bound["int"] < 0:
+            import copy
+            seq_copy = copy.deepcopy(seq)
+            self.mark(start, seq_copy)
+            return self.mark(start, {"op": "-", "args": [self.mark(start, {"op": "len", "args": [seq_copy]}),
+                                                           {"int": -bound["int"]}]})
+        return bound
+
     def p_postfix(self) -> dict:
         e = self.p_atom()
         while True:
@@ -1104,13 +1128,15 @@ class Parser:
                     # s[..b] is s[0..b] (SPEC.md "Sequences: literals,
                     # concatenation, slices"): sugar the parser expands, the
                     # AST carries the three-argument slice only.
-                    hi = self.expr()
+                    sugar = self._sugar_ahead()
+                    hi = self._from_end(e, self.expr(), start, sugar)
                     self.production = "Expr"
                     self.eat("sym", "]")
                     e = self.mark(start, {"op": "slice",
                                           "args": [e, {"int": 0}, hi]})
                     continue
-                idx = self.expr()
+                sugar = self._sugar_ahead()
+                idx = self._from_end(e, self.expr(), start, sugar)
                 self.production = "Expr"
                 if self.opt("sym", ":="):
                     val = self.expr()
@@ -1125,7 +1151,8 @@ class Parser:
                         e = self.mark(start, {"op": "slice", "args": [
                             e, idx, {"op": "len", "args": [e]}]})
                         continue
-                    hi = self.expr()
+                    sugar = self._sugar_ahead()
+                    hi = self._from_end(e, self.expr(), start, sugar)
                     self.production = "Expr"
                     self.eat("sym", "]")
                     e = self.mark(start, {"op": "slice", "args": [e, idx, hi]})
@@ -1386,6 +1413,37 @@ class Parser:
                  % (t.text or "end of input"))
 
 
+LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})
+
+
+def _resolve_library(task: dict) -> None:
+    """SPEC.md "The library (v1)" (2026-10-06): a call whose name is none of the task's own name, its spec_funs,
+    methods, lemmas or inline helpers is a library function; the node is rewritten IN PLACE to the operator (so
+    a position recorded for it stays valid). A declared name shadows the library, as in Python; `abs`, `gcd`,
+    `max` and `rev` are committed task names already, and a variable may carry any of these names."""
+    declared = {task.get("name")}
+    for key in ("spec_funs", "methods", "lemmas", "inline_funs", "helpers"):
+        for f in task.get(key, []) or []:
+            if isinstance(f, dict) and "name" in f:
+                declared.add(f["name"])
+
+    def walk(x):
+        if isinstance(x, dict):
+            c = x.get("call")
+            if isinstance(c, dict) and c.get("fun") in LIB_NAMES and c["fun"] not in declared \
+                    and set(x) == {"call"}:
+                args = c.get("args", [])
+                x.clear()
+                x["op"] = c["fun"]
+                x["args"] = args
+            for v in list(x.values()):
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    walk(task)
+
+
 def parse(src: str, positions=None) -> dict:
     """Text to canonical JSON. `positions`, if given a dict, is filled with
     id(node) -> (line, col) for every AST dict this parse builds (the task
@@ -1447,6 +1505,7 @@ def parse_expr(src: str, datatypes: dict | None = None) -> dict:
         p.datatypes = dict(datatypes)
     e = p.expr()
     p.eat("eof")
+    _resolve_library({"expr": e})   # SPEC.md "The library (v1)": no task declares a name here, so every library call resolves
     return e
 
 
@@ -1476,6 +1535,7 @@ P_POSTFIX = 9
 
 _BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
 _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice": 3, "implies": 2,
+          "min": 2, "max": 2, "abs": 1, "sum": 1, "gcd": 2, "pow": 2, "isqrt": 1, "rev": 1,
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2,
           "pair": 2, "fst": 1, "snd": 1,
@@ -1572,7 +1632,7 @@ def pexpr(e, floor: int = P_QUANT) -> str:
     if op == "len":
         return "len(%s)" % pexpr(args[0])
     if op == "at":
-        return _wrap("%s[%s]" % (pexpr(args[0], P_POSTFIX), pexpr(args[1])),
+        return _wrap("%s[%s]" % (pexpr(args[0], P_POSTFIX), _bound(args[1])),
                      P_POSTFIX, floor)
     if op == "update":
         return _wrap("%s[%s := %s]" % (pexpr(args[0], P_POSTFIX), pexpr(args[1]),
@@ -1587,8 +1647,8 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # Always the three-argument form: the parser's `s[a..]` and `s[..b]`
         # sugars print back as `s[a..len(s)]` and `s[0..b]`, which reparse
         # to the same AST.
-        return _wrap("%s[%s..%s]" % (pexpr(args[0], P_POSTFIX), pexpr(args[1]),
-                                     pexpr(args[2])), P_POSTFIX, floor)
+        return _wrap("%s[%s..%s]" % (pexpr(args[0], P_POSTFIX), _bound(args[1]),
+                                     _bound(args[2])), P_POSTFIX, floor)
     if op == "set":
         # {e1, ..., en}, the set display, any arity including zero (SPEC.md
         # "Finite sets", 2026-09-27); its own delimiters, no floor.
@@ -1637,6 +1697,9 @@ def pexpr(e, floor: int = P_QUANT) -> str:
                                       pexpr(args[0])), P_POSTFIX, floor)
     if op == "tostr":
         return "tostr(%s)" % pexpr(args[0])
+    if op in LIB_NAMES:
+        # SPEC.md "The library (v1)" (2026-10-06): written as a call; parse() resolves it back to the operator
+        return "%s(%s)" % (op, ", ".join(pexpr(a) for a in args))
     if op in ("toreal", "floor", "ceil"):
         # SPEC.md "Exact rationals (v1)" (2026-10-06): real(x), floor(x), ceil(x)
         return "%s(%s)" % ("real" if op == "toreal" else op, pexpr(args[0]))
@@ -1690,6 +1753,14 @@ def _ident(name) -> str:
         raise SurfaceError("%r is a keyword of the surface syntax and has no "
                            "notation as a name" % name)
     return name
+
+
+def _bound(e) -> str:
+    """An index or slice bound as the printer writes it: a raw negative literal is parenthesised, `s[(-1)]`, so it
+    does not read back as the from-the-end sugar (SPEC.md "The library (v1)", 2026-10-06)."""
+    if isinstance(e, dict) and set(e) == {"int"} and e["int"] < 0:
+        return "(%d)" % e["int"]
+    return pexpr(e)
 
 
 def _rat_of(text: str) -> tuple:
@@ -1920,6 +1991,12 @@ WRITTEN = [
      {"op": "pair", "args": [{"var": "a"}, {"var": "b"}]}),
     ("expr", "p.0", {"op": "fst", "args": [{"var": "p"}]}),
     ("expr", "p.1", {"op": "snd", "args": [{"var": "p"}]}),
+    # SPEC.md "The library (v1)" (2026-10-06)
+    ("expr", "max(lo, min(hi, x))", {"op": "max", "args": [{"var": "lo"}, {"op": "min", "args": [{"var": "hi"}, {"var": "x"}]}]}),
+    ("expr", "abs(a - b)", {"op": "abs", "args": [{"op": "-", "args": [{"var": "a"}, {"var": "b"}]}]}),
+    ("expr", "sum(s) + gcd(a, b)", {"op": "+", "args": [{"op": "sum", "args": [{"var": "s"}]}, {"op": "gcd", "args": [{"var": "a"}, {"var": "b"}]}]}),
+    ("expr", "pow(x, 3) - isqrt(n)", {"op": "-", "args": [{"op": "pow", "args": [{"var": "x"}, {"int": 3}]}, {"op": "isqrt", "args": [{"var": "n"}]}]}),
+    ("expr", "rev(s) == s", {"op": "==", "args": [{"op": "rev", "args": [{"var": "s"}]}, {"var": "s"}]}),
     # SPEC.md "Exact rationals (v1)" (2026-10-06)
     ("expr", "1.5", {"rat": [3, 2]}),
     ("expr", "-0.25", {"rat": [-1, 4]}),
@@ -2100,7 +2177,7 @@ def _rand_expr(rng, depth: int) -> dict:
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
         "len", "at", "update", "fill", "seq", "slice", "ite", "quant", "call",
         "pair", "fst", "snd", "strlib", "setlit", "in", "card", "setbin",
-        "tuple", "proj", "rat", "realfn",
+        "tuple", "proj", "rat", "realfn", "lib1", "lib2",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -2150,6 +2227,11 @@ def _rand_expr(rng, depth: int) -> dict:
         return {"rat": [f.numerator, f.denominator]}
     if kind == "realfn":
         return {"op": rng.choice(["toreal", "floor", "ceil"]), "args": [_rand_expr(rng, d)]}
+    if kind == "lib1":
+        # SPEC.md "The library (v1)" (2026-10-06)
+        return {"op": rng.choice(["abs", "sum", "isqrt", "rev"]), "args": [_rand_expr(rng, d)]}
+    if kind == "lib2":
+        return {"op": rng.choice(["min", "max", "gcd", "pow"]), "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind == "tuple":
         # SPEC.md "Compositional types (v1)" (2026-10-06): three or more components.
         return {"op": "tuple", "args": [_rand_expr(rng, d) for _ in range(rng.randint(3, 4))]}

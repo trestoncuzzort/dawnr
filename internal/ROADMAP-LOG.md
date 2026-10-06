@@ -3012,4 +3012,27 @@ is queued, and the ones running are read as they finish.
 - **The matrix regenerated from a clean clone (10-06 12:48Z):** 49 tasks; every pre-10-06 row unchanged; the four
   rationals rows read Dafny, SPARK and F* `verified / refuted` (`floor_ceil` abstains in SPARK and F* by name), the
   other kernels abstain by name; the six compositional-type rows as on 10:04Z.
-- **Next:** G3, builtins and notation (research first: the provers' own libraries fetched on receipt 54355043298c).
+- **G3a landed (10-06 14:00Z), the library:** `min`, `max`, `abs` (ints or reals), `sum` (seq or seq<real>), `gcd`
+  (Euclid on absolute values, total), `pow` and `isqrt` (undefined below 0, an obligation like `/`'s), `x in s` on
+  a seq, `rev`, and the from-the-end sugar `s[-k]` for a literal `k` (the raw literal is spelled `s[(-k)]`). No new
+  keyword: a call by one of these names is the library unless the task declares the name (SPEC "The library (v1)";
+  the eight prover library pages on receipt 54355043298c). Dafny carries all of it with definitions emitted when
+  used (nine committed tasks verified with the twin refuted; `sum_two` was restated as `sum_tail` because Dafny's
+  default fuel does not unfold a two-element display and the adapter bans fuel attributes; `gcd_of` lost its
+  commutativity clause, a theorem, not a use). SPARK carries it through Big_Integers' `Min`/`Max`/`abs` and
+  recursive expression functions with variants (`T_Pow`, `T_Isqrt` with Rocq's sqrt_spec as its Post, `T_Gcd`
+  by Euclid over `T_Mod`, `T_Sum`, `T_Rev` with Dafny Std's Reverse facts as its Post, `T_Contains`); F* through
+  `FStar.Math.Lib`'s `abs`/`max`/`min`/`powx`, `let rec`s and `Seq.mem`. Ten committed tasks: Dafny 10 of 10,
+  SPARK and F* 9 of 10 each; the tenth, `sum_tail` (`sum(s + [x]) == sum(s) + x`), needs the slice lemma
+  `sum(s + [x])[0..len(s)] == s` that Dafny's sequence axioms give and gnatprove (timeout) and F* (gave up) do
+  not from the definition alone: a measured limit, kept in the matrix as it reads. `last` was renamed `last_of`
+  (SPARK's package has a `Last`). Verus carries it through `spec fn`s with `reveal_with_fuel` and the `isqrt`/`rev`
+  facts as broadcast lemmas brought in inside the proof fn (a module-level `broadcast use` of a recursive lemma
+  is a cycle Verus refuses): 7 of 10, the three others read "gave up" (`sum_tail`, the same slice lemma; `cube`
+  and `root_floor`, nonlinear arithmetic Verus does not try without a `by(nonlinear_arith)` hint the lowering has
+  no place to put). Lean, Rocq and Frama-C abstain by name. The census: 1,601 → 1,642
+  function-shaped (T3a's bar 1,636 met), MBPP 618 → 625; `seq-slice-negative` and `builtin-math` are in the
+  fragment; the `sqrt` sub-bar was missed by construction (the detector never counted `isqrt` there).
+- **Next:** the matrix regenerated from a clean clone; then G3b (`for`, comprehensions, `sorted`, the slice step),
+  and the three library proofs the kernels do not reach alone (a `sum` slice lemma for SPARK, F* and Verus; a
+  nonlinear hint for Verus) as their own measured item.

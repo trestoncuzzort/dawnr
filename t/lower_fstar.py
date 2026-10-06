@@ -1545,6 +1545,32 @@ ARITH = {"+": "+", "-": "-", "*": "*", "div": "/", "mod": "%"}
 RCMP = {"<": "<.", "<=": "<=.", ">": ">.", ">=": ">=."}
 RARITH = {"+": "+.", "-": "-.", "*": "*.", "div": "/."}
 _SEM = "FStar.IndefiniteDescription.strong_excluded_middle"
+# SPEC.md "The library (v1)" (2026-10-06). FStar.Math.Lib carries abs/max/min/powx (fetched, receipt 54355043298c);
+# the rest are `let rec` definitions emitted once per file when used (`_LIB_USED`, filled while emitting). powx's
+# `n:nat` and t_isqrt's `n:nat` are the definedness obligations (SPEC: undefined below 0), checked at the call as
+# Seq.index's refinement is. The real variants decide `<.` ghostly (the file is in the Ghost effect for a real task).
+_LIB_USED: set = set()
+FSTAR_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in"})
+_LIB_TEXT = {
+    "t_sum": "let rec t_sum (s:Seq.seq int) : Tot int (decreases (Seq.length s))\n"
+             "= if Seq.length s = 0 then 0 else t_sum (Seq.slice s 0 (Seq.length s - 1)) + Seq.index s (Seq.length s - 1)\n",
+    "t_rsum": "let rec t_rsum (s:Seq.seq real) : GTot real (decreases (Seq.length s))\n"
+              "= if Seq.length s = 0 then 0.0R else t_rsum (Seq.slice s 0 (Seq.length s - 1)) +. Seq.index s (Seq.length s - 1)\n",
+    "t_gcd": "let rec t_gcdn (a:nat) (b:nat) : Tot nat (decreases b) = if b = 0 then a else t_gcdn b (a % b)\n"
+             "let t_gcd (a:int) (b:int) : Tot int = t_gcdn (FStar.Math.Lib.abs a) (FStar.Math.Lib.abs b)\n",
+    "t_isqrt": "let rec t_isqrt (n:nat) : Tot (r:nat{r * r <= n /\\ n < (r + 1) * (r + 1)}) (decreases n)\n"
+               "= if n = 0 then 0 else (let r = t_isqrt (n - 1) in if (r + 1) * (r + 1) <= n then r + 1 else r)\n",
+    "t_rev": "let rec t_rev (#a:Type) (s:Seq.seq a) : Tot (Seq.seq a) (decreases (Seq.length s))\n"
+             "= if Seq.length s = 0 then Seq.empty else Seq.append (Seq.create 1 (Seq.index s (Seq.length s - 1))) (t_rev (Seq.slice s 0 (Seq.length s - 1)))\n",
+    "t_rmin": f"let t_rmin (a:real) (b:real) : GTot real = if {_SEM} (a <. b) then a else b\n",
+    "t_rmax": f"let t_rmax (a:real) (b:real) : GTot real = if {_SEM} (a <. b) then b else a\n",
+    "t_rabs": f"let t_rabs (a:real) : GTot real = if {_SEM} (a <. 0.0R) then 0.0R -. a else a\n",
+}
+_LIB_ORDER = ["t_sum", "t_rsum", "t_gcd", "t_isqrt", "t_rev", "t_rmin", "t_rmax", "t_rabs"]
+
+
+def _lib_defs() -> list:
+    return [_LIB_TEXT[n] for n in _LIB_ORDER if n in _LIB_USED]
 
 
 def _real_lit(n: int, d: int) -> str:
@@ -2083,6 +2109,13 @@ class Ctx:
             return "real"   # SPEC.md "Exact rationals (v1)": real(x)
         if op in ("floor", "ceil"):
             return "int"
+        if op in ("min", "max", "abs", "rev"):
+            return self.ty(e["args"][0], local)   # SPEC.md "The library (v1)" (2026-10-06)
+        if op == "sum":
+            t0 = self.ty(e["args"][0], local)
+            return "real" if isinstance(t0, dict) and t0.get("seq") == "real" else "int"
+        if op in ("gcd", "pow", "isqrt"):
+            return "int"
         if op in ("+", "-", "*", "div", "neg"):
             # int or real by the operand (SPEC.md "Exact rationals (v1)": the two never mix)
             return "real" if self.ty(e["args"][0], local) == "real" else "int"
@@ -2113,6 +2146,14 @@ class Ctx:
             return f"({op} {self.px(e['args'][0], env, local)})"
         if op == "toreal":
             return f"(of_int {self.zx(e['args'][0], env, local)})"
+        if op in ("min", "max", "abs"):
+            # SPEC.md "The library (v1)" (2026-10-06): the real variants, `<.` decided ghostly
+            name = {"min": "t_rmin", "max": "t_rmax", "abs": "t_rabs"}[op]
+            _LIB_USED.add(name)
+            return f"({name} {' '.join(self.rx(x, env, local) for x in e['args'])})"
+        if op == "sum":
+            _LIB_USED.add("t_rsum")
+            return f"(t_rsum {self.sx(e['args'][0], env, local)})"
         if op == "neg":
             return f"(0.0R -. {self.rx(e['args'][0], env, local)})"
         if op in RARITH:
@@ -2147,6 +2188,10 @@ class Ctx:
             # tree that bottoms out at one.
             items = "; ".join(str(int(v)) for v in e["_seq"])
             return f"(Seq.createL #int [{items}])"
+        if e.get("op") == "rev":
+            # SPEC.md "The library (v1)" (2026-10-06): Std's Reverse shape as a `let rec`
+            _LIB_USED.add("t_rev")
+            return f"(t_rev {self.sx(e['args'][0], env, local)})"
         if "ite" in e:
             # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a seq
             # spec_fun's body is an `ite` whose branches are seqs (the
@@ -2558,6 +2603,22 @@ class Ctx:
         if op in ("floor", "ceil"):
             raise NotImplementedError(
                 f"fstar lowering: {op}: FStar.Real has no floor or ceiling (SPEC.md 'Exact rationals (v1)')")
+        if op in ("min", "max", "abs"):
+            # SPEC.md "The library (v1)" (2026-10-06): FStar.Math.Lib's own, with their refined results
+            return f"(FStar.Math.Lib.{op} {' '.join(self.zx(x, env, local) for x in e['args'])})"
+        if op == "sum":
+            _LIB_USED.add("t_sum")
+            return f"(t_sum {self.sx(e['args'][0], env, local)})"
+        if op == "gcd":
+            _LIB_USED.add("t_gcd")
+            a, b = (self.zx(x, env, local) for x in e["args"])
+            return f"(t_gcd {a} {b})"
+        if op == "pow":
+            a, b = (self.zx(x, env, local) for x in e["args"])
+            return f"(FStar.Math.Lib.powx {a} {b})"
+        if op == "isqrt":
+            _LIB_USED.add("t_isqrt")
+            return f"(t_isqrt {self.zx(e['args'][0], env, local)})"
         if op in ARITH:
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {ARITH[op]} {b})"
@@ -2676,6 +2737,11 @@ class Ctx:
             return f"({a} {CMP[op]} {b})"
         if op == "in":
             # SPEC.md "Finite sets" (2026-09-27): `FSet.mem` is a Tot bool.
+            if self.ty(e["args"][1], local) == "seq":
+                # SPEC.md "The library (v1)" (2026-10-06): membership in a seq, FStar.Seq.Properties' `mem`, a
+                # Tot bool (int is an eqtype), coerced to a proposition where one is wanted
+                x, sq = e["args"]
+                return f"(Seq.mem {self.zx(x, env, local)} {self.sx(sq, env, local)})"
             x, st = e["args"]
             return f"(FSet.mem {self.zx(x, env, local)} {self.stx(st, env, local)})"
         if op in ("==", "!=") and self.ty(e["args"][0], local) == "set":
@@ -2991,6 +3057,11 @@ class Ctx:
         if op == "in":
             # SPEC.md "Finite sets" (2026-09-27): a bool term, coerced to a
             # proposition the way every CMP term below already is.
+            if self.ty(e["args"][1], local) == "seq":
+                # SPEC.md "The library (v1)" (2026-10-06): membership in a seq, FStar.Seq.Properties' `mem`, a
+                # Tot bool (int is an eqtype), coerced to a proposition where one is wanted
+                x, sq = e["args"]
+                return f"(Seq.mem {self.zx(x, env, local)} {self.sx(sq, env, local)})"
             x, st = e["args"]
             return f"(FSet.mem {self.zx(x, env, local)} {self.stx(st, env, local)})"
         if op in ("==", "!=") and self.ty(e["args"][0], local) == "set":
@@ -5892,7 +5963,8 @@ def _method_src(task: dict, m: dict, used: set) -> tuple[Ctx, str]:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "fstar", carried=frozenset({"real"}))
+    tshape.abstain_unless_carried(task, body, "fstar", carried=frozenset({"real"}), lib=FSTAR_LIB)
+    _LIB_USED.clear()
     if tshape.uses_ops(body, task, {"floor", "ceil"}):
         # SPEC.md "Exact rationals (v1)" (2026-10-06): FStar.Real has neither
         raise NotImplementedError(
@@ -5964,6 +6036,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     strlib_prelude = _strlib_prelude_for(r_task, r_body)
     if strlib_prelude:
         parts.append(strlib_prelude)
+    lib_slot = len(parts)   # SPEC.md "The library (v1)": the definitions the task turns out to use go here
     # QUANTIFIER-HELPER EMISSION ORDER (2026-09-15, ROADMAP r27 fstar-
     # closure item, "the malformed seq-of-array rows": dafny-synthesis 2
     # SharedElements, 161 RemoveElements, 249 Intersection). A spec_fun
@@ -6067,6 +6140,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     rc = names.rename_comment(renames)
     if rc:
         parts.append(f"// {rc}")
+    parts[lib_slot:lib_slot] = _lib_defs()
     return "\n".join(parts)
 
 
