@@ -15,6 +15,12 @@ exists to answer is whether a model built from that data does more per parameter
 
 `README.md` is the honest public summary, including what has been ruled out and what this project got wrong.
 
+**The t engine has its own repository.** [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine) holds the
+language, the seven lowerings, the kernel adapters, the twin harness, the matrix runner, the tasks and their
+documents. It was split out on 2026-10-06 with its history. `t/` here carries a pinned copy (`t/ENGINE.md` names
+the commit) beside the pipeline scripts, which still live here. Engine changes land in t-proof-engine first, then
+`bash t/sync_engine.sh` brings them here; never edit an engine file only in this repository.
+
 ## The rules that matter
 
 1. **Measure before you claim.** Every number in this repository links to the script that produced it. If you

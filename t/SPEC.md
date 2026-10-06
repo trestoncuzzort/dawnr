@@ -2768,5 +2768,5 @@ ASTs: `parse(print(parse(source))) == parse(source)`. A context-free constrained
 decoding grammar covers declaration structure; scope, type, acyclicity and
 expansion-size rules are checked during elaboration. See
 [test_inline_helpers.py](test_inline_helpers.py),
-[the preregistration](PREREG-inline-helpers-2026-09-19.md), and
-[the seven-kernel measurement](INLINE-HELPERS-2026-09-19.md).
+[the preregistration](https://github.com/trestoncuzzort/dawnr/blob/main/t/PREREG-inline-helpers-2026-09-19.md), and
+[the seven-kernel measurement](https://github.com/trestoncuzzort/dawnr/blob/main/t/INLINE-HELPERS-2026-09-19.md).
