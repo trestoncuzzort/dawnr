@@ -533,9 +533,12 @@ def test_build_table_and_report_totals() -> None:
         # measurement, not a guess -- a real regression should move them,
         # which is the point of asserting exact counts rather than "some
         # positive number".
-        assert summary.method_lifted == 76, summary.method_lifted
-        assert summary.disagreement_counts.get("agree") == 76, summary.disagreement_counts
-        assert summary.disagreement_counts.get("undecided") == 1, summary.disagreement_counts
+        # 2026-10-06, measured again over the same 77 (lift_census.build_table + summarize, the lifter-design
+        # corpus restored to the desktop from the lab): all 77 lift and agree, none undecided -- the one holdout of
+        # 2026-09-06 lifts since the lifter's later landings. The exact counts stay, so a regression still moves them.
+        assert summary.method_lifted == 77, summary.method_lifted
+        assert summary.disagreement_counts.get("agree") == 77, summary.disagreement_counts
+        assert summary.disagreement_counts.get("undecided", 0) == 0, summary.disagreement_counts
         assert summary.disagreement_counts.get("lifter", 0) == 0
         assert summary.disagreement_counts.get("gap-name", 0) == 0
 
@@ -547,7 +550,7 @@ def test_build_table_and_report_totals() -> None:
         assert report_json["summary"]["census_in_method_rows"] == 77
         print(f"test_build_table_and_report_totals: 77 rows, "
               f"{summary.census_in_method_rows} census-in, "
-              f"{summary.method_lifted} lifted, undecided={summary.disagreement_counts['undecided']}")
+              f"{summary.method_lifted} lifted, undecided={summary.disagreement_counts.get('undecided', 0)}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

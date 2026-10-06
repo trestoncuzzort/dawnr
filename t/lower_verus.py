@@ -1399,7 +1399,10 @@ TYPES = {"int": "int", "bool": "bool", "seq": "Seq<int>",
 # open.
 STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
               "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
-              "isupper", "islower", "startswith", "endswith"}
+              "isupper", "islower", "startswith", "endswith",
+              # SPEC.md "The string library (v2)" (2026-10-07)
+              "index", "rfind", "zfill", "center", "ljust", "rjust", "capitalize", "swapcase", "title",
+              "isspace", "isalnum", "splitlines", "partition", "isint", "toint"}
 
 ROTATE_PRELUDE = """\
 proof fn t_lemma_rotate_left(l: Seq<int>, n: int)
@@ -1725,6 +1728,125 @@ proof fn t_lemma_split_len_law(s: Seq<int>, c: int)
         assert(s.subrange(0, t.len() as int)[0] == s[0]);
         assert(t[0] == c);
         assert(t_str_count(s, t) == t_str_count(rest, t));
+    }
+}
+
+// SPEC.md "The string library (v2)" (2026-10-07): the second wave as total spec fns, Python's methods transcribed
+spec fn t_upc(c: int) -> int { if t_is_lower(c) { c - 32 } else { c } }
+spec fn t_lowc(c: int) -> int { if t_is_upper(c) { c + 32 } else { c } }
+spec fn t_swapc(c: int) -> int { if t_is_upper(c) { c + 32 } else if t_is_lower(c) { c - 32 } else { c } }
+spec fn t_is_letter(c: int) -> bool { t_is_upper(c) || t_is_lower(c) }
+spec fn t_str_lstripc(s: Seq<int>, t: Seq<int>) -> Seq<int>
+    decreases s.len(),
+{
+    if s.len() == 0 { s } else if t.contains(s[0]) { t_str_lstripc(s.subrange(1, s.len() as int), t) } else { s }
+}
+spec fn t_str_rstripc(s: Seq<int>, t: Seq<int>) -> Seq<int>
+    decreases s.len(),
+{
+    if s.len() == 0 { s } else if t.contains(s[s.len() - 1]) { t_str_rstripc(s.subrange(0, s.len() - 1), t) } else { s }
+}
+spec fn t_str_stripc(s: Seq<int>, t: Seq<int>) -> Seq<int> { t_str_rstripc(t_str_lstripc(s, t), t) }
+spec fn t_str_split_str(s: Seq<int>, t: Seq<int>) -> Seq<Seq<int>>
+    decreases s.len(),
+{
+    if t.len() == 0 || s.len() < t.len() { seq![s] }
+    else if s.subrange(0, t.len() as int) == t { seq![Seq::<int>::empty()] + t_str_split_str(s.subrange(t.len() as int, s.len() as int), t) }
+    else { let r = t_str_split_str(s.subrange(1, s.len() as int), t); seq![seq![s[0]] + r[0]] + r.subrange(1, r.len() as int) }
+}
+spec fn t_str_rfind_from(s: Seq<int>, t: Seq<int>, i: int) -> int
+    decreases (if i < 0 { 0 } else { i + 1 }),
+{
+    if i < 0 { -1 }
+    else if i + t.len() <= s.len() && s.subrange(i, i + t.len() as int) == t { i }
+    else { t_str_rfind_from(s, t, i - 1) }
+}
+spec fn t_str_rfind(s: Seq<int>, t: Seq<int>) -> int {
+    if t.len() > s.len() { -1 } else { t_str_rfind_from(s, t, s.len() - t.len()) }
+}
+spec fn t_str_index(s: Seq<int>, t: Seq<int>) -> int { t_str_find(s, t) }
+spec fn t_str_zfill(s: Seq<int>, w: int) -> Seq<int> {
+    if s.len() >= w { s }
+    else if s.len() > 0 && (s[0] == 43 || s[0] == 45) { seq![s[0]] + Seq::new((w - s.len()) as nat, |i: int| 48) + s.subrange(1, s.len() as int) }
+    else { Seq::new((w - s.len()) as nat, |i: int| 48) + s }
+}
+spec fn t_str_ljust(s: Seq<int>, w: int, f: int) -> Seq<int> {
+    if s.len() >= w { s } else { s + Seq::new((w - s.len()) as nat, |i: int| f) }
+}
+spec fn t_str_rjust(s: Seq<int>, w: int, f: int) -> Seq<int> {
+    if s.len() >= w { s } else { Seq::new((w - s.len()) as nat, |i: int| f) + s }
+}
+spec fn t_str_center(s: Seq<int>, w: int, f: int) -> Seq<int> {
+    if s.len() >= w { s } else {
+        let marg = w - s.len();
+        let left = marg / 2 + (if marg % 2 == 1 && w % 2 == 1 { 1int } else { 0int });
+        Seq::new(left as nat, |i: int| f) + s + Seq::new((marg - left) as nat, |i: int| f)
+    }
+}
+spec fn t_str_capitalize(s: Seq<int>) -> Seq<int> {
+    if s.len() == 0 { s } else { seq![t_upc(s[0])] + t_str_lower(s.subrange(1, s.len() as int)) }
+}
+spec fn t_str_swapcase(s: Seq<int>) -> Seq<int> { Seq::new(s.len(), |i: int| t_swapc(s[i])) }
+spec fn t_str_title_from(s: Seq<int>, prev: bool) -> Seq<int>
+    decreases s.len(),
+{
+    if s.len() == 0 { s } else { seq![if prev { t_lowc(s[0]) } else { t_upc(s[0]) }] + t_str_title_from(s.subrange(1, s.len() as int), t_is_letter(s[0])) }
+}
+spec fn t_str_title(s: Seq<int>) -> Seq<int> { t_str_title_from(s, false) }
+spec fn t_str_isspace(s: Seq<int>) -> bool { s.len() > 0 && forall|i: int| 0 <= i < s.len() ==> t_ws(s[i]) }
+spec fn t_str_isalnum(s: Seq<int>) -> bool { s.len() > 0 && forall|i: int| 0 <= i < s.len() ==> t_is_letter(s[i]) || (48 <= s[i] && s[i] <= 57) }
+spec fn t_is_linebreak(c: int) -> bool { c == 10 || c == 13 || c == 11 || c == 12 || c == 28 || c == 29 || c == 30 || c == 133 || c == 8232 || c == 8233 }
+spec fn t_str_splitlines(s: Seq<int>) -> Seq<Seq<int>>
+    decreases s.len(),
+{
+    if s.len() == 0 { Seq::empty() }
+    else if s[0] == 13 && s.len() > 1 && s[1] == 10 { seq![Seq::<int>::empty()] + t_str_splitlines(s.subrange(2, s.len() as int)) }
+    else if t_is_linebreak(s[0]) { seq![Seq::<int>::empty()] + t_str_splitlines(s.subrange(1, s.len() as int)) }
+    else { let r = t_str_splitlines(s.subrange(1, s.len() as int)); if r.len() == 0 { seq![seq![s[0]]] } else { seq![seq![s[0]] + r[0]] + r.subrange(1, r.len() as int) } }
+}
+spec fn t_str_partition(s: Seq<int>, t: Seq<int>) -> (Seq<int>, Seq<int>, Seq<int>) {
+    let i = t_str_find(s, t);
+    if i < 0 || i + t.len() > s.len() { (s, Seq::<int>::empty(), Seq::<int>::empty()) } else { (s.subrange(0, i), t, s.subrange(i + t.len() as int, s.len() as int)) }
+}
+spec fn t_str_isint(s: Seq<int>) -> bool {
+    s.len() > 0 && (if s[0] == 43 || s[0] == 45 { s.len() > 1 && t_all_digit(s.subrange(1, s.len() as int)) } else { t_all_digit(s) })
+}
+spec fn t_digits_acc(d: Seq<int>, acc: int) -> int
+    decreases d.len(),
+{
+    if d.len() == 0 { acc } else { t_digits_acc(d.subrange(1, d.len() as int), acc * 10 + (d[0] - 48)) }
+}
+spec fn t_str_toint(s: Seq<int>) -> int {
+    if s.len() == 0 { 0 } else if s[0] == 45 { -t_digits_acc(s.subrange(1, s.len() as int), 0) } else if s[0] == 43 { t_digits_acc(s.subrange(1, s.len() as int), 0) } else { t_digits_acc(s, 0) }
+}
+proof fn t_lemma_lstripc_len(s: Seq<int>, t: Seq<int>)
+    ensures t_str_lstripc(s, t).len() <= s.len(), s.len() > 0 && t.contains(s[0]) ==> t_str_lstripc(s, t).len() <= s.len() - 1,
+        s.len() > 0 && t.len() == 1 && s[0] == t[0] ==> t_str_lstripc(s, t).len() <= s.len() - 1,
+    decreases s.len(),
+{
+    if s.len() > 0 && t.len() == 1 && s[0] == t[0] { assert(t.contains(s[0])) by { assert(t[0] == s[0]); } }
+    if s.len() > 0 && t.contains(s[0]) { t_lemma_lstripc_len(s.subrange(1, s.len() as int), t); }
+}
+proof fn t_lemma_rstripc_len(s: Seq<int>, t: Seq<int>)
+    ensures t_str_rstripc(s, t).len() <= s.len(),
+    decreases s.len(),
+{ if s.len() > 0 && t.contains(s[s.len() - 1]) { t_lemma_rstripc_len(s.subrange(0, s.len() - 1), t); } }
+proof fn t_lemma_stripc_len(s: Seq<int>, t: Seq<int>)
+    ensures t_str_stripc(s, t).len() <= s.len(), s.len() > 0 && t.contains(s[0]) ==> t_str_stripc(s, t).len() <= s.len() - 1,
+        s.len() > 0 && t.len() == 1 && s[0] == t[0] ==> t_str_stripc(s, t).len() <= s.len() - 1,
+{ t_lemma_lstripc_len(s, t); t_lemma_rstripc_len(t_str_lstripc(s, t), t); }
+proof fn t_lemma_rfind_from_bounds(s: Seq<int>, t: Seq<int>, i: int)
+    requires -1 <= i, i + t.len() <= s.len(),
+    ensures -1 <= t_str_rfind_from(s, t, i) <= i,
+    decreases (if i < 0 { 0 } else { i + 1 }),
+{ if i >= 0 && !(s.subrange(i, i + t.len() as int) == t) { t_lemma_rfind_from_bounds(s, t, i - 1); } }
+proof fn t_lemma_rfind_bounds(s: Seq<int>, t: Seq<int>)
+    ensures -1 <= t_str_rfind(s, t) <= s.len(), t_str_rfind(s, t) >= 0 ==> t_str_rfind(s, t) + t.len() <= s.len(),
+        t.len() == 0 ==> t_str_rfind(s, t) == s.len(),
+{
+    if t.len() <= s.len() {
+        t_lemma_rfind_from_bounds(s, t, s.len() - t.len());
+        if t.len() == 0 { assert(s.subrange(s.len() as int, s.len() as int) =~= t); }
     }
 }
 """
@@ -2863,8 +2985,19 @@ def expr(e: dict, vty: str | None = None) -> str:
         # SPEC.md "The string library (v1)": split(s) (whitespace) and
         # split(s, c) (one code point) are "two arities of one op" --
         # `STRLIB_PRELUDE`'s own two spec fns, dispatched on arg count.
-        return (f"t_str_split_ws({args[0]})" if len(args) == 1
-                else f"t_str_split_c({args[0]}, {args[1]})")
+        if len(args) == 1:
+            return f"t_str_split_ws({args[0]})"
+        if _ty_of(e["args"][1]) == "seq":
+            return f"t_str_split_str({args[0]}, {args[1]})"   # SPEC.md "The string library (v2)" (2026-10-07)
+        return f"t_str_split_c({args[0]}, {args[1]})"
+    if op in ("strip", "lstrip", "rstrip") and len(args) == 2:
+        return f"t_str_{op}c({args[0]}, {args[1]})"         # with a character set
+    if op in ("center", "ljust", "rjust"):
+        fill = args[2] if len(args) == 3 else "(32int)"
+        return f"t_str_{op}({args[0]}, {args[1]}, {fill})"
+    if op in ("index", "rfind", "zfill", "capitalize", "swapcase", "title", "isspace", "isalnum", "splitlines",
+              "partition", "isint", "toint"):
+        return f"t_str_{op}(" + ", ".join(args) + ")"
     if op == "join":
         return f"t_str_join({args[0]}, {args[1]})"
     if op == "tostr":
@@ -3071,6 +3204,15 @@ def defined(e: dict, is_real=None) -> dict:
             {"op": "<=", "args": [a, b]},
             {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}
         return _conj([defined(s, is_real), defined(a, is_real), defined(b, is_real), bound])
+    if op == "split" and len(args) == 2 and _ty_of(args[1]) == "seq":
+        # SPEC.md "The string library (v2)" (2026-10-07): a sequence separator owes len(t) > 0
+        return _conj([defined(a, is_real) for a in args] + [{"op": ">", "args": [{"op": "len", "args": [args[1]]}, {"int": 0}]}])
+    if op == "partition":
+        return _conj([defined(a, is_real) for a in args] + [{"op": ">", "args": [{"op": "len", "args": [args[1]]}, {"int": 0}]}])
+    if op == "index":
+        return _conj([defined(a, is_real) for a in args] + [{"op": ">=", "args": [{"op": "find", "args": list(args)}, {"int": 0}]}])
+    if op == "toint":
+        return _conj([defined(args[0], is_real), {"op": "isint", "args": [args[0]]}])
     if op in ("min", "max") and len(args) == 1:
         # SPEC.md "Reductions (v1)" (2026-10-07): the extremum of a seq owes a non-empty seq
         return _conj([defined(args[0], is_real), {"op": ">", "args": [{"op": "len", "args": [args[0]]}, {"int": 0}]}])
@@ -5183,6 +5325,12 @@ class _V1:
         param_names = {p["name"] for p in task["params"]}
         # SPEC.md "Reductions (v1)" (2026-10-07): vstd's max_ensures/min_ensures are not broadcast; stated for every
         # max(s)/min(s) over the parameters, in the spec and in the body
+        # SPEC.md "The string library (v2)" (2026-10-07): the second wave's lemmas, stated per use over the parameters
+        for lemma, largs in _strlib2_lemma_args([task.get("requires", []), task.get("ensures", []), body or []]):
+            if all(_free_vars(a) <= param_names for a in largs):
+                line = f"    {lemma}({', '.join(expr(a) for a in largs)});"
+                if line not in lib_lines:
+                    lib_lines.append(line)
         for a, which in _extrema_args([task.get("requires", []), task.get("ensures", []), body or []]):
             if _free_vars(a) <= param_names:
                 line = f"    {expr(a)}.{which}_ensures();"
@@ -6232,6 +6380,25 @@ def _comp_blocks(task: dict, body: list) -> list:
             f"if {expr(c['cond'])} {{ t_p.push({expr(c['body'])}) }} else {{ t_p }} }} }}\n"
             f"pub broadcast proof fn t_comp{k}_spec({', '.join(params)})\n    ensures {', '.join(ens)},\n    decreases {size},\n"
             f"{{ if !({base}) {{ {rec_call}; }} }}\n")
+    return out
+
+
+def _strlib2_lemma_args(x) -> list:
+    """Every second-wave string use with a lemma to state (SPEC.md "The string library (v2)"): rfind's bounds, and
+    the stripped length of strip/lstrip/rstrip with a character set; as (lemma name, [args]) in reading order."""
+    out = []
+    if isinstance(x, dict):
+        op, args = x.get("op"), x.get("args", [])
+        if op == "rfind" and len(args) == 2:
+            out.append(("t_lemma_rfind_bounds", list(args)))
+        if op in ("strip", "lstrip", "rstrip") and len(args) == 2:
+            out.append(({"strip": "t_lemma_stripc_len", "lstrip": "t_lemma_lstripc_len",
+                         "rstrip": "t_lemma_rstripc_len"}[op], list(args)))
+        for v in x.values():
+            out += _strlib2_lemma_args(v)
+    elif isinstance(x, list):
+        for v in x:
+            out += _strlib2_lemma_args(v)
     return out
 
 

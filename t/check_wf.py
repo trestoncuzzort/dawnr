@@ -283,23 +283,27 @@ V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
 # `fst`/`snd` are its only projections.
 # The string library is v1 (SPEC.md "The string library", 2026-09-11): 17
 # polymorphic seq members, split at two arities (one op).
-STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
+STRLIB2_OPS = {"index", "rfind", "zfill", "center", "ljust", "rjust", "capitalize", "swapcase", "title",
+               "isspace", "isalnum", "splitlines", "partition"}   # SPEC.md "The string library (v2)" (2026-10-07)
+STRLIB_OPS = STRLIB2_OPS | {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
              "isupper", "islower", "startswith", "endswith"}
 SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite sets" (2026-09-27)
 MAP_OPS = {"mapdisp", "keys", "remove"}   # SPEC.md "Maps (v1)" (2026-10-06); at/update/in/len take a map by type
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev",   # SPEC.md "The library (v1)" (2026-10-06)
                      "sort",                                                        # SPEC.md "Sorting (v1)" (2026-10-06)
-                     "any", "all", "toset"})                                        # SPEC.md "Reductions (v1)" (2026-10-07)
+                     "any", "all", "toset",                                         # SPEC.md "Reductions (v1)" (2026-10-07)
+                     "isint", "toint"})                                             # SPEC.md "The string library (v2)" (2026-10-07)
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
          | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS | LIB_OPS
          | MAP_OPS)
 TERNARY = {"update", "slice", "replace"}
 VARIADIC = {"seq", "set", "tuple", "mapdisp"}   # the displays: seq, set and map at any arity, zero included; tuple at three or more
-UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
-         "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
+UNARY = {"neg", "not", "len", "fst", "snd", "tostr",
+         "lower", "upper", "isdigit", "isalpha", "isupper",
          "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev", "sort", "keys",
-         "any", "all", "toset"}
+         "any", "all", "toset",
+         "capitalize", "swapcase", "title", "isspace", "isalnum", "splitlines", "isint", "toint"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
@@ -596,6 +600,13 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         # SPEC.md "Reductions (v1)" (2026-10-07): two ints or reals, or one seq of them
         if len(args) not in (1, 2):
             _e(errs, e, f"{op} takes one or two arguments", "op-arity")
+    elif op in ("strip", "lstrip", "rstrip"):
+        # SPEC.md "The string library (v2)" (2026-10-07): whitespace, or a character set
+        if len(args) not in (1, 2):
+            _e(errs, e, f"{op} takes one or two arguments", "strlib-arity")
+    elif op in ("center", "ljust", "rjust"):
+        if len(args) not in (2, 3):
+            _e(errs, e, f"{op} takes two or three arguments", "strlib-arity")
     elif (op not in UNARY and op not in NARY and op not in TERNARY
             and op not in VARIADIC and len(args) != 2):
         _e(errs, e, f"{op} takes two arguments", "op-arity")
@@ -740,6 +751,11 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
             return _elem(ts[0])
         _e(errs, e, f"{op} of one argument wants a seq of ints or of reals, found {ts[0]!r}", "lib-types")
         return "int"
+    if op in ("isint", "toint"):
+        # SPEC.md "The string library (v2)" (2026-10-07): library names over a seq of code points
+        if ts[0] != "seq":
+            _e(errs, e, f"{op} wants a seq, found {ts[0]!r}", "lib-types")
+        return "bool" if op == "isint" else "int"
     if op in ("any", "all"):
         if ts[0] != {"seq": "bool"}:
             _e(errs, e, f"{op} wants a seq<bool>, found {ts[0]!r}", "lib-types")
@@ -841,10 +857,14 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         # few or too many arguments is a refusal and never an IndexError
         # (the core's adversarial check found the crash, 2026-09-11).
         want = {"split": (1, 2), "join": (2,), "tostr": (1,), "count": (2,),
-                "find": (2,), "strip": (1,), "lstrip": (1,), "rstrip": (1,),
+                "find": (2,), "strip": (1, 2), "lstrip": (1, 2), "rstrip": (1, 2),
                 "replace": (3,), "lower": (1,), "upper": (1,), "isdigit": (1,),
                 "isalpha": (1,), "isupper": (1,), "islower": (1,),
-                "startswith": (2,), "endswith": (2,)}[op]
+                "startswith": (2,), "endswith": (2,),
+                # SPEC.md "The string library (v2)" (2026-10-07)
+                "index": (2,), "rfind": (2,), "zfill": (2,), "center": (2, 3), "ljust": (2, 3), "rjust": (2, 3),
+                "capitalize": (1,), "swapcase": (1,), "title": (1,), "isspace": (1,), "isalnum": (1,),
+                "splitlines": (1,), "partition": (2,)}[op]
         if len(ts) not in want:
             _e(errs, e, f"{op} wants {' or '.join(str(w) for w in want)} "
                     f"argument(s), found {len(ts)}", "strlib-arity")
@@ -855,9 +875,42 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
             if len(ts) == 1:
                 if ts[0] != "seq":
                     _e(errs, e, "split wants a seq", "strlib-types")
-            elif ts[0] != "seq" or ts[1] != "int":
-                _e(errs, e, "split wants (seq, int)", "strlib-types")
+            elif ts[0] != "seq" or ts[1] not in ("int", "seq"):
+                # SPEC.md "The string library (v2)": a code point or a sequence separator
+                _e(errs, e, "split wants (seq, int) or (seq, seq)", "strlib-types")
             return NESTED
+        if op in ("strip", "lstrip", "rstrip") and len(ts) == 2:
+            if ts[0] != "seq" or ts[1] != "seq":
+                _e(errs, e, f"{op} with a character set wants (seq, seq)", "strlib-types")
+            return "seq"
+        if op in ("index", "rfind"):
+            if ts[0] != "seq" or ts[1] != "seq":
+                _e(errs, e, f"{op} wants (seq, seq)", "strlib-types")
+            return "int"
+        if op == "zfill":
+            if ts[0] != "seq" or ts[1] != "int":
+                _e(errs, e, "zfill wants (seq, int)", "strlib-types")
+            return "seq"
+        if op in ("center", "ljust", "rjust"):
+            if ts[0] != "seq" or ts[1] != "int" or (len(ts) == 3 and ts[2] != "int"):
+                _e(errs, e, f"{op} wants (seq, int) or (seq, int, int)", "strlib-types")
+            return "seq"
+        if op in ("capitalize", "swapcase", "title"):
+            if ts[0] != "seq":
+                _e(errs, e, f"{op} wants a seq", "strlib-types")
+            return "seq"
+        if op in ("isspace", "isalnum"):
+            if ts[0] != "seq":
+                _e(errs, e, f"{op} wants a seq", "strlib-types")
+            return "bool"
+        if op == "splitlines":
+            if ts[0] != "seq":
+                _e(errs, e, "splitlines wants a seq", "strlib-types")
+            return NESTED
+        if op == "partition":
+            if ts[0] != "seq" or ts[1] != "seq":
+                _e(errs, e, "partition wants (seq, seq)", "strlib-types")
+            return {"tuple": ["seq", "seq", "seq"]}
         if op == "join":
             if ts[0] != NESTED or ts[1] != "seq":
                 _e(errs, e, "join wants (seq<seq>, seq)", "strlib-types")

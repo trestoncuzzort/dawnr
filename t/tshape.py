@@ -112,10 +112,16 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
         raise NotImplementedError(f"{kernel}: comprehensions are not lowered yet (SPEC.md 'Comprehensions (v1)')")
     if "exit" not in carried:
         abstain_on_exits(task, body, kernel)
+    if "strlib2" not in carried and strlib2_used(task, body):
+        raise NotImplementedError(f"{kernel}: the string library's second wave is not lowered yet "
+                                  f"(SPEC.md 'The string library (v2)')")
 
 
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",
-                     "any", "all", "toset"})   # SPEC.md "Reductions (v1)" (2026-10-07)
+                     "any", "all", "toset",    # SPEC.md "Reductions (v1)" (2026-10-07)
+                     "isint", "toint"})        # SPEC.md "The string library (v2)" (2026-10-07)
+STRLIB2_OPS = frozenset({"index", "rfind", "zfill", "center", "ljust", "rjust", "capitalize", "swapcase", "title",
+                         "isspace", "isalnum", "splitlines", "partition"})
 
 
 def _scope_of(task: dict, body: list) -> dict:
@@ -191,6 +197,33 @@ def _extrema_of_one(task: dict, body: list) -> bool:
         if isinstance(x, dict):
             if x.get("op") in ("min", "max") and len(x.get("args", [])) == 1:
                 return True
+            return any(walk(v) for v in x.values())
+        return isinstance(x, list) and any(walk(v) for v in x)
+    return walk(body or []) or walk(task.get("requires", [])) or walk(task.get("ensures", [])) \
+        or walk(task.get("spec_funs", [])) or walk(task.get("methods", []))
+
+
+def strlib2_used(task: dict, body: list) -> bool:
+    """Whether the task uses a second-wave string member (SPEC.md "The string library (v2)", 2026-10-07): one of
+    STRLIB2_OPS, a strip with a character set, or a split with a sequence separator (told by the argument's type)."""
+    import check_wf
+    scope = _scope_of(task, body)
+    funs = {f["name"]: f for f in task.get("spec_funs", [])}
+
+    def walk(x) -> bool:
+        if isinstance(x, dict):
+            op, args = x.get("op"), x.get("args", [])
+            if op in STRLIB2_OPS:
+                return True
+            if op in ("strip", "lstrip", "rstrip") and len(args) == 2:
+                return True
+            if op == "split" and len(args) == 2:
+                try:
+                    t, errs = check_wf.expression_type(args[1], dict(scope), functions=funs)
+                except Exception:                           # noqa: BLE001
+                    t, errs = None, ["?"]
+                if not errs and t == "seq":
+                    return True
             return any(walk(v) for v in x.values())
         return isinstance(x, list) and any(walk(v) for v in x)
     return walk(body or []) or walk(task.get("requires", [])) or walk(task.get("ensures", [])) \

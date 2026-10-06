@@ -16,38 +16,38 @@ detectors at the end.
   - APPS: 10000
   - CodeContests: 13610
 - function-shaped: 4239; stdin-shaped: 20509
-- in t's fragment today: **2745** of 4239 function-shaped (64.8%)
-- stdin-shaped, in fragment once a signature is extracted (all-int sample io, solution tags no gap): **9787** of 20509 (47.7%)
-- function-shaped problems blocked by exactly one gap: 1117
+- in t's fragment today: **2773** of 4239 function-shaped (65.4%)
+- stdin-shaped, in fragment once a signature is extracted (all-int sample io, solution tags no gap): **9839** of 20509 (48.0%)
+- function-shaped problems blocked by exactly one gap: 1102
 - function-shaped, out of the fragment with no gap named: 6 (no gate opens them: an assertion form or io shape the reader refuses, or no reference solution; counted apart from the greedy order since 2026-10-06)
 
 ## Gaps, by problems that need them
 
 | gap | problems | sole blocker for (function-shaped) | meaning |
 |---|---|---|---|
-| import | 2446 | 310 | an import of an unmodelled library the solution's meaning depends on (itertools, re, heapq, functools.reduce, numpy, random, os, ...); the modelled ones are the burden import-modelled |
+| import | 2446 | 317 | an import of an unmodelled library the solution's meaning depends on (itertools, re, heapq, functools.reduce, numpy, random, os, ...); the modelled ones are the burden import-modelled |
 | closure | 2243 | 201 | a lambda, a nested def, or map/filter with a lambda |
-| string-lib | 1288 | 203 | a Python string-library use that SPEC.md's 'The string library (v1)' does NOT cover (split into this gap and the burden `string-lib-v1` on 2026-09-11, the day that section landed; read the dated docstring note above): an f-string or `.format()`, a based `int(x, base)` conversion, `strip`/`lstrip`/`rstrip` given a `chars` argument, `split` on a literal longer than one code point or on a non-literal separator, `sorted()` on a string, or a call to capitalize/title/zfill/center/ljust/rjust/partition/splitlines/encode/swapcase -- none of which SPEC.md's v1 names |
+| string-lib | 1095 | 175 | a Python string-library use that SPEC.md's 'The string library (v1)' does NOT cover (split into this gap and the burden `string-lib-v1` on 2026-09-11, the day that section landed; read the dated docstring note above; since 2026-10-07 the second wave, SPEC.md 'The string library (v2)', is in the fragment too): an f-string or `.format()`, a based `int(x, base)` conversion, `split(sep, maxsplit)`, `sorted()` on a string, or a call to translate/maketrans/encode/expandtabs -- none of which either wave names |
 | class | 902 | 27 | a stateful class (attributes set in __init__ and read or written by methods): t has no classes, no heap; a bare method wrapper is the burden class-wrapper, a record the gap record |
-| map-iteration | 535 | 68 | iteration over a dict (.items(), .values()): t has no order on a map and no loop over its keys; a loop over a sequence of candidate keys says it (a bare `for k in d` is not recognised here, undercounted) |
-| exception | 502 | 37 | try/except/raise |
+| map-iteration | 535 | 70 | iteration over a dict (.items(), .values()): t has no order on a map and no loop over its keys; a loop over a sequence of candidate keys says it (a bare `for k in d` is not recognised here, undercounted) |
+| exception | 502 | 38 | try/except/raise |
 | generator | 460 | 24 | a generator expression not consumed by a reduction, or a generator function (yield): t has no lazy or deferred evaluation |
 | record | 390 | 3 | a dataclass, NamedTuple or init-only class: a datatype with fields, not in t yet (SPEC.md Datatypes names enumerations only) |
 | global | 316 | 0 | global or nonlocal: mutable state outside the function, which t's pure functions have no notion of |
 | sqrt | 192 | 28 | math.sqrt: a real root is specified in t (`r * r == x`), not computed; `math.isqrt` is in t since 2026-10-06 (SPEC.md The library) and is tagged builtin-math, not here |
-| any-type | 142 | 115 | the interface's type could not be pinned to one of the other named types: a bare Any annotation, a call expression as a test argument, or an untyped io value |
+| any-type | 142 | 116 | the interface's type could not be pinned to one of the other named types: a bare Any annotation, a call expression as a test argument, or an untyped io value |
 | seq-slice-step-other | 108 | 19 | a slice whose step is not a positive literal: a variable step (written as the comprehension by hand, not posed by the notation) or a negative step with a bound |
 | none-type | 105 | 61 | Optional[..] or an explicit None return/argument |
 | loop-else | 61 | 1 | a loop's else clause (for/while ... else, run when no break fired): t has no such clause; written by hand with a flag |
-| io | 30 | 20 | input()/print()/sys.stdin used INSIDE a function-shaped solution (for a stdin-shaped problem, I/O is the shape itself, not a separate gap) |
+| io | 30 | 22 | input()/print()/sys.stdin used INSIDE a function-shaped solution (for a stdin-shaped problem, I/O is the shape itself, not a separate gap) |
 
 ## Greedy gate order, whole corpus (function-shaped population)
 
 | step | gate | newly unlocked | cumulative in fragment | of function-shaped |
 |---|---|---|---|---|
-| 1 | import | 310 | 3055 | 72.1% |
-| 2 | closure | 251 | 3306 | 78.0% |
-| 3 | string-lib | 271 | 3577 | 84.4% |
+| 1 | import | 317 | 3090 | 72.9% |
+| 2 | closure | 252 | 3342 | 78.8% |
+| 3 | string-lib | 235 | 3577 | 84.4% |
 | 4 | any-type | 133 | 3710 | 87.5% |
 | 5 | map-iteration | 103 | 3813 | 90.0% |
 | 6 | generator | 92 | 3905 | 92.1% |
@@ -65,42 +65,42 @@ A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
 more than one gate.
 
-### MBPP greedy gate order (974 function-shaped, 747 in fragment today)
+### MBPP greedy gate order (974 function-shaped, 752 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | import | 99 | 846 | 86.9% |
-| 2 | closure | 48 | 894 | 91.8% |
-| 3 | map-iteration | 19 | 913 | 93.7% |
-| 4 | sqrt | 16 | 929 | 95.4% |
-| 5 | none-type | 12 | 941 | 96.6% |
-| 6 | string-lib | 10 | 951 | 97.6% |
-| 7 | generator | 6 | 957 | 98.3% |
-| 8 | seq-slice-step-other | 5 | 962 | 98.8% |
-| 9 | any-type | 4 | 966 | 99.2% |
+| 1 | import | 101 | 853 | 87.6% |
+| 2 | closure | 48 | 901 | 92.5% |
+| 3 | map-iteration | 19 | 920 | 94.5% |
+| 4 | sqrt | 16 | 936 | 96.1% |
+| 5 | none-type | 12 | 948 | 97.3% |
+| 6 | generator | 6 | 954 | 97.9% |
+| 7 | seq-slice-step-other | 5 | 959 | 98.5% |
+| 8 | any-type | 4 | 963 | 98.9% |
+| 9 | string-lib | 3 | 966 | 99.2% |
 | 10 | record | 3 | 969 | 99.5% |
 | 11 | exception | 2 | 971 | 99.7% |
 | 12 | class | 1 | 972 | 99.8% |
 
-### HumanEval greedy gate order (164 function-shaped, 23 in fragment today)
+### HumanEval greedy gate order (164 function-shaped, 24 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | any-type | 112 | 135 | 82.3% |
-| 2 | closure | 16 | 151 | 92.1% |
-| 3 | string-lib | 3 | 154 | 93.9% |
-| 4 | none-type | 3 | 157 | 95.7% |
-| 5 | sqrt | 2 | 159 | 97.0% |
-| 6 | exception | 2 | 161 | 98.2% |
+| 1 | any-type | 113 | 137 | 83.5% |
+| 2 | closure | 16 | 153 | 93.3% |
+| 3 | none-type | 3 | 156 | 95.1% |
+| 4 | sqrt | 2 | 158 | 96.3% |
+| 5 | exception | 2 | 160 | 97.6% |
+| 6 | string-lib | 1 | 161 | 98.2% |
 | 7 | import | 2 | 163 | 99.4% |
 | 8 | seq-slice-step-other | 1 | 164 | 100.0% |
 
-### APPS greedy gate order (3101 function-shaped, 1975 in fragment today)
+### APPS greedy gate order (3101 function-shaped, 1997 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | import | 211 | 2186 | 70.5% |
-| 2 | string-lib | 232 | 2418 | 78.0% |
+| 1 | import | 216 | 2213 | 71.4% |
+| 2 | string-lib | 205 | 2418 | 78.0% |
 | 3 | closure | 228 | 2646 | 85.3% |
 | 4 | map-iteration | 84 | 2730 | 88.0% |
 | 5 | generator | 86 | 2816 | 90.8% |
@@ -120,10 +120,10 @@ more than one gate.
 
 | source | problems | function-shaped | stdin-shaped | in fragment | stdin in fragment once signature extracted |
 |---|---|---|---|---|---|
-| MBPP | 974 | 974 | 0 | 747 | 0 |
-| HumanEval | 164 | 164 | 0 | 23 | 0 |
-| APPS | 10000 | 3101 | 6899 | 1975 | 4225 |
-| CodeContests | 13610 | 0 | 13610 | 0 | 5562 |
+| MBPP | 974 | 974 | 0 | 752 | 0 |
+| HumanEval | 164 | 164 | 0 | 24 | 0 |
+| APPS | 10000 | 3101 | 6899 | 1997 | 4247 |
+| CodeContests | 13610 | 0 | 13610 | 0 | 5592 |
 
 ## Burdens (expressible in t at a translation cost)
 
@@ -131,7 +131,7 @@ more than one gate.
 |---|---|---|
 | stdin-to-signature | 20509 | a stdin-shaped problem carries no function signature; one has to be extracted from its input format before t can pose the problem at all |
 | string-as-seq | 13229 | a string used only the way t's `seq` of code points already covers: a str literal, a str-typed io value, indexing/len/slicing/concatenation/comparison of strings, `ord`/`chr`, iterating over a string, or `in` on a string (a bounded exists) -- SPEC.md's 'Strings as sequences of code points' |
-| string-lib-v1 | 11978 | a Python string-library use that IS one of SPEC.md's 'The string library (v1)' sixteen members, called in a v1 form: `split()` or `split(c)` on a one-code-point literal, `join`, `str()`, `count`/`find`/`replace`/`startswith`/`endswith` with any argument, `strip`/`lstrip`/`rstrip` with no argument, `lower`/`upper`, or one of the four predicates isdigit/isalpha/isupper/islower; tags only when EVERY string-library use in the solution reads this way -- one use outside v1 anywhere in the same solution tags the gap `string-lib` instead, not both. Split from `string-lib` 2026-09-11 the day SPEC.md's section landed |
+| string-lib-v1 | 12271 | a Python string-library use that IS one of SPEC.md's 'The string library (v1)' sixteen members, called in a v1 form: `split()` or `split(c)` on a one-code-point literal, `join`, `str()`, `count`/`find`/`replace`/`startswith`/`endswith` with any argument, `strip`/`lstrip`/`rstrip` with no argument, `lower`/`upper`, or one of the four predicates isdigit/isalpha/isupper/islower; tags only when EVERY string-library use in the solution reads this way -- one use outside v1 anywhere in the same solution tags the gap `string-lib` instead, not both. Split from `string-lib` 2026-09-11 the day SPEC.md's section landed |
 | seq-literal | 8599 | a sequence literal [..] in an expression: t's v1 already has seq (SPEC.md 'Sequences: literals, concatenation, slices'), landed 2026-09-09, so this is expressible directly, not a gap |
 | tuple-pair | 7738 | a tuple of exactly two values, each an int, bool or seq of ints, built, returned, passed, compared, or unpacked from such a pair: t's v1 already has {"pair": [T1, T2]} (SPEC.md 'Pairs (v1)'), landed 2026-09-10 |
 | builtin-math | 6686 | IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): min, max, sum, abs, math.gcd, math.isqrt, ** -- library functions of t; before that day t could express each but has no builtin for any of them |

@@ -55,6 +55,15 @@ _STR_HELPERS = {
     "isupper": ["_str_isupper", "_is_upper_letter", "_is_lower_letter"],
     "islower": ["_str_islower", "_is_upper_letter", "_is_lower_letter"],
     "startswith": ["_str_startswith"], "endswith": ["_str_endswith"],
+    # SPEC.md "The string library (v2)" (2026-10-07)
+    "index": ["_str_index", "_str_find"], "rfind": ["_str_rfind"], "zfill": ["_str_zfill"],
+    "center": ["_str_just"], "ljust": ["_str_just"], "rjust": ["_str_just"],
+    "capitalize": ["_str_capitalize", "_str_upper", "_str_lower", "_is_upper_letter", "_is_lower_letter"],
+    "swapcase": ["_str_swapcase", "_is_upper_letter", "_is_lower_letter"],
+    "title": ["_str_title", "_is_upper_letter", "_is_lower_letter"],
+    "isspace": ["_str_isspace"], "isalnum": ["_str_isalnum", "_is_upper_letter", "_is_lower_letter"],
+    "splitlines": ["_str_splitlines"], "partition": ["_str_partition3", "_str_find"],
+    "isint": ["_str_isint"], "toint": ["_str_toint"],
 }
 _BINOP = {"+": "+", "-": "-", "*": "*", "==": "==", "!=": "!=", "<": "<", "<=": "<=", ">": ">", ">=": ">="}
 
@@ -190,13 +199,21 @@ class _Writer:
         if op in _STR_HELPERS:
             self._need(_STR_HELPERS[op])
             if op == "split":
-                return f"_str_split_ws({x[0]})" if len(x) == 1 else f"_str_split_sep({x[0]}, {x[1]})"
-            if op == "strip":
-                return f"_str_strip({x[0]}, True, True)"
-            if op == "lstrip":
-                return f"_str_strip({x[0]}, True, False)"
-            if op == "rstrip":
-                return f"_str_strip({x[0]}, False, True)"
+                if len(x) == 1:
+                    return f"_str_split_ws({x[0]})"
+                self._need(["_str_split_str"])   # SPEC.md "The string library (v2)": by the separator's kind
+                return f"(_str_split_sep({x[0]}, {x[1]}) if isinstance({x[1]}, int) else _str_split_str({x[0]}, {x[1]}))"
+            if op in ("strip", "lstrip", "rstrip"):
+                left, right = op != "rstrip", op != "lstrip"
+                if len(x) == 2:
+                    self._need(["_str_strip_chars"])
+                    return f"_str_strip_chars({x[0]}, {x[1]}, {left}, {right})"
+                return f"_str_strip({x[0]}, {left}, {right})"
+            if op in ("center", "ljust", "rjust"):
+                fill = x[2] if len(x) == 3 else "32"
+                return f"_str_just({x[0]}, {x[1]}, {fill}, {op[0]!r})"
+            if op == "partition":
+                return f"_str_partition3({x[0]}, {x[1]})"
             return f"_str_{op}({', '.join(x)})"
         if op in _BINOP:
             return f"({x[0]} {_BINOP[op]} {x[1]})"
@@ -437,6 +454,8 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
     head = []
     if "_WS" in joined:
         head.append(f"_WS = {interp._WS!r}")
+    if "_LINEBREAKS" in joined:
+        head.append(f"_LINEBREAKS = {interp._LINEBREAKS!r}")
     if "MAX_SEQ" in joined:
         head.append(f"MAX_SEQ = {interp.MAX_SEQ!r}")
     if "Budget" in joined:

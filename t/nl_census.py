@@ -152,14 +152,12 @@ DETECTORS: dict[str, tuple[str, str]] = {
                    "'The string library (v1)' does NOT cover (split into "
                    "this gap and the burden `string-lib-v1` on 2026-09-11, "
                    "the day that section landed; read the dated docstring "
-                   "note above): an f-string or `.format()`, a based "
-                   "`int(x, base)` conversion, `strip`/`lstrip`/`rstrip` "
-                   "given a `chars` argument, `split` on a literal longer "
-                   "than one code point or on a non-literal separator, "
-                   "`sorted()` on a string, or a call to "
-                   "capitalize/title/zfill/center/ljust/rjust/partition/"
-                   "splitlines/encode/swapcase -- none of which SPEC.md's "
-                   "v1 names"),
+                   "note above; since 2026-10-07 the second wave, SPEC.md "
+                   "'The string library (v2)', is in the fragment too): an "
+                   "f-string or `.format()`, a based `int(x, base)` "
+                   "conversion, `split(sep, maxsplit)`, `sorted()` on a "
+                   "string, or a call to translate/maketrans/encode/"
+                   "expandtabs -- none of which either wave names"),
     "real": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Exact rationals): " "a float literal, true "
              "division `/`, float(), or a decimal-valued io token -- t's `real` is the exact rational, so a "
              "problem whose answer depends on float rounding is still not posed (undercounted here)"),
@@ -314,6 +312,11 @@ STRING_METHODS = {"upper", "lower", "split", "join", "strip", "lstrip",
                    "islower", "zfill", "center", "ljust", "rjust",
                    "partition", "splitlines", "encode", "swapcase",
                    "find", "count"}
+# the first wave's reading, frozen: pool v3/v7's gate (mbpp_dfy.string_lib_v1_only) is defined by it, and a held-out
+# panel built from that gate must not move when the census learns the second wave (2026-10-07: adding `index` here
+# read the field `self.index` of a heap node as a string use and dropped MBPP 342 from the wider panel)
+STRING_METHODS_V1SET = frozenset(STRING_METHODS)
+STRING_METHODS = STRING_METHODS | {"index", "rfind", "isspace", "isalnum", "translate", "maketrans"}   # 2026-10-07
 MAP_CALLS = {"dict", "defaultdict", "Counter", "OrderedDict"}
 # SPEC.md "Reductions (v1)" (2026-10-07): the calls under which a generator expression is a comprehension in t
 GENERATOR_CONSUMERS = {"sum", "join", "any", "all", "max", "min", "sorted", "tuple", "list", "set", "len", "next",
@@ -406,6 +409,25 @@ def _string_method_call_is_v1(attr: str, call: ast.Call) -> bool:
     # rjust, partition, splitlines, encode: never in v1, any form
 
 
+def _string_method_call_in_fragment(attr: str, call: ast.Call) -> bool:
+    """The census's reading since 2026-10-07: a v1 form, or one of SPEC.md "The string library (v2)"'s forms."""
+    if attr in STRING_METHODS_V1_ANYARG or attr in STRING_METHODS_V1_NOARG:
+        return True
+    n = len(call.args) + len(call.keywords)
+    # SPEC.md "The string library (v2)" (2026-10-07): the second wave's forms are in the fragment too
+    if attr == "split":
+        return n <= 1 and not call.keywords   # any separator; split(sep, maxsplit) stays out
+    if attr in ("strip", "lstrip", "rstrip"):
+        return n <= 1                          # whitespace, or a character set
+    if attr in ("index", "rfind", "zfill", "partition"):
+        return n == 1
+    if attr in ("center", "ljust", "rjust"):
+        return n in (1, 2)
+    if attr in ("capitalize", "swapcase", "title", "isspace", "isalnum", "splitlines"):
+        return n == 0
+    return False  # format, translate, maketrans, encode, expandtabs: never in the library, any form
+
+
 # ---------------------------------------------------------- solution AST
 def _call_name(node: ast.Call) -> str | None:
     f = node.func
@@ -434,13 +456,13 @@ def _looks_stringy(node: ast.AST) -> bool:
         return True
     if isinstance(node, ast.JoinedStr):
         return True
-    if isinstance(node, ast.Attribute) and node.attr in STRING_METHODS:
+    if isinstance(node, ast.Attribute) and node.attr in STRING_METHODS_V1SET:
         return True
     if isinstance(node, ast.Call):
         name = _call_name(node)
         if name == "str":
             return True
-        if isinstance(node.func, ast.Attribute) and node.func.attr in STRING_METHODS:
+        if isinstance(node.func, ast.Attribute) and node.func.attr in STRING_METHODS_V1SET:
             return True
     return False
 
@@ -499,7 +521,7 @@ def _classify_tuple_literal_elts(elts: list[ast.AST]) -> str:
     return "tuple-pair"
 
 
-def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
+def solution_tags(src: str, fn_name: str | None, function_shaped: bool, strlib_wave: int = 2) -> dict:
     """Tag one reference solution's AST. `fn_name` is the entry point for a
     function-shaped problem (used to detect self-recursion and multi-return
     on ITS OWN return statements); None for a stdin-shaped problem, where
@@ -675,9 +697,16 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
         elif isinstance(node, (ast.Break, ast.Continue)):
             tags["unbounded-loop"] = True
         elif isinstance(node, ast.Attribute):
-            if node.attr in STRING_METHODS:
+            # `strlib_wave` 1 is the first wave's reading exactly (the frozen pools' gate); 2, the default, the census's:
+            # both waves' forms, and a name only the second wave added counts only when it is called (a field
+            # `self.index` is not a string use)
+            members = STRING_METHODS if strlib_wave >= 2 else STRING_METHODS_V1SET
+            if node.attr in members:
                 call = call_of_str_method_attr.get(id(node))
-                if call is not None and _string_method_call_is_v1(node.attr, call):
+                if strlib_wave >= 2 and call is None and node.attr not in STRING_METHODS_V1SET:
+                    pass
+                elif call is not None and (_string_method_call_in_fragment(node.attr, call) if strlib_wave >= 2
+                                           else _string_method_call_is_v1(node.attr, call)):
                     string_lib_v1 = True
                 else:
                     string_lib_gap = True

@@ -422,3 +422,50 @@ constant, an off-by-one slice bound); SPARK and F* abstain by name on the one-ar
 `rjust`, `capitalize`, `swapcase`, `title`, `isspace`, `isalnum`, `splitlines`, `partition`; `format` and
 `translate` stay out), records and options (constructors with fields), map iteration and closures as nested
 helpers; the rest is the instrument's honesty about what no verifier should carry.
+
+## T7 registered (2026-10-07 02:40Z, before any run): the string library's second wave, SPEC "The string library
+(v2)"
+
+The census after T6: `string-lib` is a gap on 1,288 problems (the sole blocker for 203), the largest language item
+left; measured on the corpus's first solutions (01:00Z), the members used beyond v1 are, in order, `split(sep)` with
+a longer or variable separator (part of 6,637 `split` calls), `index` 226, `format` 220, `rstrip`/`strip` with a
+character set (part of 816), `translate`/`maketrans` 80, `capitalize` 21, `swapcase` 20, `center` 17, `rfind` 15,
+`zfill` 14, `rjust` 13, `ljust` 10, `splitlines` 8, `isspace` 7, `isalnum` 6, `title` 6, `partition` 5. Read first
+(receipt 608b2fa22b76): Python's str methods (the semantics of record, transcribed over tuples of code points as
+the first wave was); Dafny's Std Strings module (number conversion only, nothing to borrow for these). The wave
+takes fifteen members, each Python's exactly: `split(s, t)` on a sequence separator (owes `len(t) > 0`),
+`strip/lstrip/rstrip(s, t)` with a character set, `index(s, t)` (owes `find(s, t) >= 0`), `rfind`, `zfill`,
+`center/ljust/rjust(s, w[, f])`, `capitalize`, `swapcase`, `title`, `isspace`, `isalnum`, `splitlines`,
+`partition(s, t)` (a 3-tuple; owes `len(t) > 0`), and two library names `isint(s)` and `toint(s)` (owes
+`isint(s)`), the inverse of `tostr`. `format`, f-strings, `translate`, `encode` stay out by name. Bars: (1) parity
+with Python's own methods on 2,000 random ASCII sequences per member (`test_strlib.py`), the notation round trip
+for every form, the lab's grammar check with the new `strmember` names; (2) Dafny and Verus carry all fifteen in
+their preludes with the ensures the committed tasks need (lengths and bounds), the other five abstain by name on
+the second wave; four committed tasks (`pad_right_len`, `swap_prefix`, `last_pos`, `strip_dots`) `verified /
+refuted` in both; (3) the census re-reads the v1 rule as v1 plus v2 and the `string-lib` gap shrinks by the
+members' share, printed in the read. What would falsify the design: a Dafny prelude function whose ensures do not
+verify on their own (then that member is stated without ensures and the task that needed them says so); Verus
+needing an induction lemma for a bound the task states (then the lemma is added and the read says which).
+
+### T7 read (2026-10-06 18:40Z): the string library's second wave landed, with three repairs found on the way.
+(1) Fifteen members and two library names (`split` on a sequence separator, `strip/lstrip/rstrip` with a set,
+`index`, `rfind`, `zfill`, `center/ljust/rjust` with an optional fill, `capitalize`, `swapcase`, `title`,
+`isspace`, `isalnum`, `splitlines`, `partition`, `isint`, `toint`): parity with Python's own methods on 2,000 random
+ASCII sequences per member (`test_strlib.py`), undefinedness where Python raises (`split`/`partition` on an empty
+separator, `index` of an absent part, `toint` of a non-integer); the notation round trip 1,965 of 1,965.
+(2) Dafny and Verus carry every member; `pad_right_len`, `swap_prefix`, `last_pos`, `strip_dots` are `verified /
+refuted` in both. The second registered falsifier fired in Verus: `rfind`'s bounds needed a lemma (with `-1 <= i`
+in its precondition), and the stripped length under a one-code-point set its own lemma form; Dafny's preludes
+verified on their own (the first falsifier did not fire). The other five kernels abstain by name on the wave.
+(3) Repairs: the padding members built a sequence as long as the width the twin search tried (the int ladder
+reaches 2**31) and twice OOM-killed the session; they now stop at MAX_SEQ as `fill` and `join` do. The grammar
+check, run on the desktop for the first time (its 22,569 raw replies against the lab's 7,150), found two
+disagreements older than this wave: a simple statement with no terminator let `x := gap := [5]` read as `x := g`
+then `ap := [5]`, and every string member took any argument list; both repaired (a simple statement ends with `;`,
+whitespace or the block's `}`; members split by arity), 472 of 472 refusals now agree with acceptance unchanged.
+Adding `index` to the census's string list read the field `self.index` of a heap node as a string use and dropped
+MBPP 342 from the frozen wider panel (145 -> 144); the frozen pools keep the first wave's reading exactly
+(`solution_tags(strlib_wave=1)`), the census reads both waves and ignores plain field accesses for the new names.
+(4) Census: `string-lib` 1,288 -> 1,095 problems (sole blocker 203 -> 175); in the fragment 2,745 -> 2,773 of
+4,239 function-shaped (65.4%). The lift report's exact counts were re-measured once the lab-only corpus came home:
+all 77 programs lift and agree (was 76 of 77).

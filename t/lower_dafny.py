@@ -950,6 +950,147 @@ function StartsWith(s: seq<int>, t: seq<int>): bool
 
 function EndsWith(s: seq<int>, t: seq<int>): bool
 { |t| <= |s| && s[|s|-|t|..] == t }
+
+// SPEC.md "The string library (v2)" (2026-10-07): the second wave, Python's methods as recursive functions, with
+// the ensures the committed tasks need (lengths and bounds); every function verifies on its own.
+function LStripC(s: seq<int>, t: seq<int>): seq<int>
+  decreases |s|
+  ensures |LStripC(s, t)| <= |s|
+  ensures |s| > 0 && s[0] in t ==> |LStripC(s, t)| <= |s| - 1
+{
+  if |s| == 0 then []
+  else if s[0] in t then LStripC(s[1..], t)
+  else s
+}
+
+function RStripC(s: seq<int>, t: seq<int>): seq<int>
+  decreases |s|
+  ensures |RStripC(s, t)| <= |s|
+{
+  if |s| == 0 then []
+  else if s[|s|-1] in t then RStripC(s[0..|s|-1], t)
+  else s
+}
+
+function StripC(s: seq<int>, t: seq<int>): seq<int>
+  ensures |StripC(s, t)| <= |s|
+  ensures |s| > 0 && s[0] in t ==> |StripC(s, t)| <= |s| - 1
+{
+  RStripC(LStripC(s, t), t)
+}
+
+function SplitStr(s: seq<int>, t: seq<int>): seq<seq<int>>
+  requires |t| > 0
+  decreases |s|
+  ensures |SplitStr(s, t)| >= 1
+{
+  if |s| < |t| then [s]
+  else if s[0..|t|] == t then [[]] + SplitStr(s[|t|..], t)
+  else var r := SplitStr(s[1..], t); [[s[0]] + r[0]] + r[1..]
+}
+
+function RFindFrom(s: seq<int>, t: seq<int>, i: int): int
+  requires -1 <= i && i + |t| <= |s|
+  decreases i + 1
+  ensures -1 <= RFindFrom(s, t, i) <= i
+{
+  if i < 0 then -1
+  else if s[i..i+|t|] == t then i
+  else RFindFrom(s, t, i - 1)
+}
+
+function RFind(s: seq<int>, t: seq<int>): int
+  ensures -1 <= RFind(s, t) <= |s|
+  ensures RFind(s, t) >= 0 ==> RFind(s, t) + |t| <= |s|
+  ensures |t| == 0 ==> RFind(s, t) == |s|
+{
+  if |t| > |s| then -1 else RFindFrom(s, t, |s| - |t|)
+}
+
+function Index(s: seq<int>, t: seq<int>): int
+  requires Find(s, t) >= 0
+{ Find(s, t) }
+
+function ZFill(s: seq<int>, w: int): seq<int>
+  ensures |ZFill(s, w)| == (if |s| >= w then |s| else w)
+{
+  if |s| >= w then s
+  else if |s| > 0 && (s[0] == 43 || s[0] == 45) then [s[0]] + seq(w - |s|, _ => 48) + s[1..]
+  else seq(w - |s|, _ => 48) + s
+}
+
+function LJust(s: seq<int>, w: int, f: int): seq<int>
+  ensures |LJust(s, w, f)| == (if |s| >= w then |s| else w)
+{ if |s| >= w then s else s + seq(w - |s|, _ => f) }
+
+function RJust(s: seq<int>, w: int, f: int): seq<int>
+  ensures |RJust(s, w, f)| == (if |s| >= w then |s| else w)
+{ if |s| >= w then s else seq(w - |s|, _ => f) + s }
+
+function Center(s: seq<int>, w: int, f: int): seq<int>
+  ensures |Center(s, w, f)| == (if |s| >= w then |s| else w)
+{
+  if |s| >= w then s
+  else var marg := w - |s|;
+       var left := marg / 2 + (if marg % 2 == 1 && w % 2 == 1 then 1 else 0);
+       seq(left, _ => f) + s + seq(marg - left, _ => f)
+}
+
+function Capitalize(s: seq<int>): seq<int>
+  ensures |Capitalize(s)| == |s|
+{ if |s| == 0 then [] else [UpperC(s[0])] + Lower(s[1..]) }
+
+function SwapC(c: int): int { if IsUpperLetter(c) then c + 32 else if IsLowerLetter(c) then c - 32 else c }
+
+function SwapCase(s: seq<int>): seq<int>
+  ensures |SwapCase(s)| == |s|
+{ seq(|s|, i requires 0 <= i < |s| => SwapC(s[i])) }
+
+function IsLetter(c: int): bool { IsUpperLetter(c) || IsLowerLetter(c) }
+
+function TitleFrom(s: seq<int>, prevLetter: bool): seq<int>
+  decreases |s|
+  ensures |TitleFrom(s, prevLetter)| == |s|
+{ if |s| == 0 then [] else [if prevLetter then LowerC(s[0]) else UpperC(s[0])] + TitleFrom(s[1..], IsLetter(s[0])) }
+
+function Title(s: seq<int>): seq<int>
+  ensures |Title(s)| == |s|
+{ TitleFrom(s, false) }
+
+function IsSpaceStr(s: seq<int>): bool { |s| > 0 && forall i :: 0 <= i < |s| ==> IsWs(s[i]) }
+
+function IsAlnum(s: seq<int>): bool { |s| > 0 && forall i :: 0 <= i < |s| ==> IsLetter(s[i]) || IsDigitC(s[i]) }
+
+function IsLineBreak(c: int): bool
+{ c == 10 || c == 13 || c == 11 || c == 12 || c == 28 || c == 29 || c == 30 || c == 133 || c == 8232 || c == 8233 }
+
+function SplitLines(s: seq<int>): seq<seq<int>>
+  decreases |s|
+{
+  if |s| == 0 then []
+  else if s[0] == 13 && |s| > 1 && s[1] == 10 then [[]] + SplitLines(s[2..])
+  else if IsLineBreak(s[0]) then [[]] + SplitLines(s[1..])
+  else var r := SplitLines(s[1..]); if |r| == 0 then [[s[0]]] else [[s[0]] + r[0]] + r[1..]
+}
+
+function Partition(s: seq<int>, t: seq<int>): (seq<int>, seq<int>, seq<int>)
+  requires |t| > 0
+{
+  var i := Find(s, t);
+  if i < 0 || i + |t| > |s| then (s, [], []) else (s[0..i], t, s[i+|t|..])
+}
+
+function IsIntStr(s: seq<int>): bool
+{ |s| > 0 && (if s[0] == 43 || s[0] == 45 then |s| > 1 && AllDigits(s[1..]) else AllDigits(s)) }
+
+function DigitsAcc(d: seq<int>, acc: int): int
+  requires AllDigits(d)
+  decreases |d|
+{ if |d| == 0 then acc else DigitsAcc(d[1..], acc * 10 + (d[0] - 48)) }
+
+function ToInt(s: seq<int>): int
+  requires IsIntStr(s)
+{ if s[0] == 45 then -DigitsAcc(s[1..], 0) else if s[0] == 43 then DigitsAcc(s[1..], 0) else DigitsAcc(s, 0) }
 """
 
 NARY_OPS = {"and": "&&", "or": "||"}
@@ -973,8 +1114,13 @@ STRLIB_OPS = {
     "lower": "Lower", "upper": "Upper", "isdigit": "IsDigit",
     "isalpha": "IsAlpha", "isupper": "IsUpperStr", "islower": "IsLowerStr",
     "startswith": "StartsWith", "endswith": "EndsWith",
+    # SPEC.md "The string library (v2)" (2026-10-07); strip/center and their kin with a second arity, and split
+    # with a sequence separator, are special-cased in _strlib_lower by arity and type
+    "index": "Index", "rfind": "RFind", "zfill": "ZFill", "capitalize": "Capitalize", "swapcase": "SwapCase",
+    "title": "Title", "isspace": "IsSpaceStr", "isalnum": "IsAlnum", "splitlines": "SplitLines",
+    "partition": "Partition", "isint": "IsIntStr", "toint": "ToInt",
 }
-STRLIB_MEMBERS = frozenset(STRLIB_OPS) | {"split", "count"}
+STRLIB_MEMBERS = frozenset(STRLIB_OPS) | {"split", "count", "center", "ljust", "rjust"}   # the special-cased ones too
 
 
 def _uses_strlib(obj) -> bool:
@@ -1080,7 +1226,17 @@ def _strlib_lower(op: str, raw_args: list, lower_fn) -> str | None:
     if op == "split":
         if len(raw_args) == 1:
             return f"SplitWs({lower_fn(raw_args[0])})"
+        if _arg_type(raw_args[1]) == "seq":
+            return f"SplitStr({lower_fn(raw_args[0])}, {lower_fn(raw_args[1])})"   # SPEC.md "The string library (v2)"
         return f"SplitSep({lower_fn(raw_args[0])}, {lower_fn(raw_args[1])})"
+    if op in ("strip", "lstrip", "rstrip") and len(raw_args) == 2:
+        # SPEC.md "The string library (v2)" (2026-10-07): with a character set
+        fname = {"strip": "StripC", "lstrip": "LStripC", "rstrip": "RStripC"}[op]
+        return f"{fname}({lower_fn(raw_args[0])}, {lower_fn(raw_args[1])})"
+    if op in ("center", "ljust", "rjust"):
+        fname = {"center": "Center", "ljust": "LJust", "rjust": "RJust"}[op]
+        fill = lower_fn(raw_args[2]) if len(raw_args) == 3 else "32"
+        return f"{fname}({lower_fn(raw_args[0])}, {lower_fn(raw_args[1])}, {fill})"
     if op == "count":
         base, pat = raw_args
         if _is_zero_slice(base) and _is_singleton_seq(pat):
@@ -2661,6 +2817,10 @@ _STRLIB_ARITY1 = {
     "lower": interp._str_lower, "upper": interp._str_upper,
     "isdigit": interp._str_isdigit, "isalpha": interp._str_isalpha,
     "isupper": interp._str_isupper, "islower": interp._str_islower,
+    # SPEC.md "The string library (v2)" (2026-10-07)
+    "capitalize": interp._str_capitalize, "swapcase": interp._str_swapcase, "title": interp._str_title,
+    "isspace": interp._str_isspace, "isalnum": interp._str_isalnum, "isint": interp._str_isint,
+    "toint": interp._str_toint,
 }
 _STRLIB_ARITY2 = {
     "join": lambda rows, sep: interp._str_join(
@@ -2669,6 +2829,10 @@ _STRLIB_ARITY2 = {
     "find": lambda s, t: interp._str_find(tuple(s), tuple(t)),
     "startswith": lambda s, t: interp._str_startswith(tuple(s), tuple(t)),
     "endswith": lambda s, t: interp._str_endswith(tuple(s), tuple(t)),
+    # SPEC.md "The string library (v2)" (2026-10-07)
+    "rfind": lambda s, t: interp._str_rfind(tuple(s), tuple(t)),
+    "index": lambda s, t: interp._str_index(tuple(s), tuple(t)),
+    "zfill": lambda s, w: interp._str_zfill(tuple(s), w),
 }
 
 
@@ -2688,7 +2852,17 @@ def _strlib_ev(op: str, vs: list):
         if len(vs) == 1:
             return [list(row) for row in interp._str_split_ws(tuple(vs[0]))]
         s, c = vs
+        if isinstance(c, (list, tuple)):
+            return [list(row) for row in interp._str_split_str(tuple(s), tuple(c))]   # SPEC.md "The string library (v2)"
         return [list(row) for row in interp._str_split_sep(tuple(s), c)]
+    if op in ("strip", "lstrip", "rstrip") and len(vs) == 2:
+        return list(interp._str_strip_chars(tuple(vs[0]), tuple(vs[1]), op != "rstrip", op != "lstrip"))
+    if op in ("center", "ljust", "rjust"):
+        return list(interp._str_just(tuple(vs[0]), vs[1], vs[2] if len(vs) == 3 else 32, op[0]))
+    if op == "splitlines":
+        return [list(row) for row in interp._str_splitlines(tuple(vs[0]))]
+    if op == "partition":
+        return interp.Tup(tuple(list(x) for x in interp._str_partition3(tuple(vs[0]), tuple(vs[1]))))
     if op == "replace":
         s, t, u = vs
         return list(interp._str_replace(tuple(s), tuple(t), tuple(u)))

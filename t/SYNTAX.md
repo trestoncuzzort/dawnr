@@ -621,6 +621,17 @@ lowercase vowels, twin INVARIANT-DROP) are the committed examples. No new
 twin move: OFF-BY-ONE, WRONG-VAR, COLLAPSE-IF and an invariant drop reach
 these bodies exactly as they reach any seq-typed one.
 
+Since 2026-10-07 (SPEC.md "The string library (v2)"): `s.split(t)` on a
+sequence separator (the second arity of `split`, by the argument's type),
+`s.strip(t)`, `s.lstrip(t)`, `s.rstrip(t)` with a character set, `s.index(t)`,
+`s.rfind(t)`, `s.zfill(w)`, `s.center(w)`, `s.ljust(w)`, `s.rjust(w)` (each
+with an optional fill code point), `s.capitalize()`, `s.swapcase()`,
+`s.title()`, `s.isspace()`, `s.isalnum()`, `s.splitlines()`,
+`s.partition(t)` (a 3-tuple), and the library names `isint(s)` and
+`toint(s)`. Python's semantics, exactly; `split` with an empty separator,
+`index` of an absent part, `partition` with an empty separator and `toint`
+of a non-integer are undefined, everything else total.
+
 ### Locals and loops (gate 2)
 
 ```json

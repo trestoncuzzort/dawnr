@@ -40,17 +40,22 @@ param ::= id ws ":" ws type
 type ::= "seq" (ws "<" ws type ws ">")? | "set" (ws "<" ws type ws ">")? | "map" ws "<" ws type ws "," ws type ws ">" | "int" | "bool" | "real"
        | "(" ws type (ws "," ws type)+ ws ")" | id
 
-block ::= "{" ws stmts "}"
+# a statement that ends in an expression is closed by ";" or whitespace, or is the last one before "}": GBNF has no
+# lexer, so with an empty terminator `x := gap := [5]` read as `x := g` then `ap := [5]`, a split the parser's
+# tokenizer never makes (found 2026-10-06 by grammar_check.py on a reply the parser refuses)
+block ::= "{" ws stmts (simple ws)? "}"
 stmts ::= (stmt ws)*
-stmt ::= "return" sp expr semi
-       | "break" semi
-       | "continue" semi
-       | "var" sp id ws ":" ws type ws ":=" ws expr semi
+stmt ::= simple term
        | "if" sp expr ws block (ws "else" ws block)?
        | "while" sp expr invariants ws "decreases" sp expr ws block
        | "for" sp id (ws "," ws id)? sp "in" sp ("[" ws expr ws "," ws expr ws ")" | expr) invariants ws block
-       | id ws ":=" ws expr semi
 invariants ::= (ws "invariant" sp expr)*
+simple ::= "return" sp expr
+         | "break"
+         | "continue"
+         | "var" sp id ws ":" ws type ws ":=" ws expr
+         | id ws ":=" ws expr
+term ::= ws ";" | [ \t\r\n]
 semi ::= ws ";" | ""
 
 # Expressions, lowest binding first, exactly t/surface.py's ladder. Quantifiers and if/then/else run to the
@@ -80,10 +85,18 @@ post ::= "[" ws ".." ws expr ws "]"
        | "[" ws expr ws ":=" ws expr ws "]"
        | "[" ws expr ws "]"
        | "." nat
-       | "." strmember ws "(" ws args ws ")"
-strmember ::= "split" | "join" | "count" | "find" | "startswith" | "endswith" | "replace"
-            | "strip" | "lstrip" | "rstrip" | "lower" | "upper"
-            | "isdigit" | "isalpha" | "isupper" | "islower"
+       | "." strm0 ws "(" ws ")"
+       | "." strm01 ws "(" ws (expr ws)? ")"
+       | "." strm1 ws "(" ws expr ws ")"
+       | "." strm12 ws "(" ws expr (ws "," ws expr)? ws ")"
+       | "." strm2 ws "(" ws expr ws "," ws expr ws ")"
+# string-library members by the argument counts the parser takes (SPEC.md "The string library", v1 and v2)
+strm0 ::= "lower" | "upper" | "isdigit" | "isalpha" | "isupper" | "islower" | "capitalize" | "swapcase" | "title"
+        | "isspace" | "isalnum" | "splitlines"
+strm01 ::= "split" | "strip" | "lstrip" | "rstrip"
+strm1 ::= "join" | "count" | "find" | "startswith" | "endswith" | "index" | "rfind" | "zfill" | "partition"
+strm12 ::= "center" | "ljust" | "rjust"
+strm2 ::= "replace"
 
 atom ::= "[" ws expr sp "for" sp id sp "in" sp ("[" ws expr ws "," ws expr ws ")" | expr) (sp "if" sp expr)? ws "]"
        | reallit

@@ -839,6 +839,78 @@ against the five lowercase vowels; twin INVARIANT-DROP on that
 invariant, witness `s = []`, exit state `i = 0, r = 1` violating the
 now-unconstrained `ensures`).
 
+### The string library (v2)
+
+Stated 2026-10-07, the string library's second wave, measured first
+(receipt 608b2fa22b76): after the fourth landing's census corrections,
+`string-lib` is a gap on 1,288 problems, the largest language item left,
+and the members the corpus uses beyond the first wave are, in order,
+`split(sep)` with a longer or variable separator, `index`, `format`,
+`strip`/`rstrip` with a character set, `translate`, `capitalize`,
+`swapcase`, `center`, `rfind`, `zfill`, `rjust`, `ljust`, `splitlines`,
+`isspace`, `isalnum`, `title`, `partition`. The semantics stay Python's,
+exactly, transcribed over tuples of code points as the first wave's were
+and measured against Python's own methods by `test_strlib.py`:
+
+- `split(s, t)` : seq, seq -> seq<seq>, Python's `s.split(t)` on a
+  sequence separator: non-overlapping occurrences left to right separate,
+  empty rows kept; DEFINED IFF `len(t) > 0` (Python refuses an empty
+  separator). The same op as `split(s, c)` on one code point, told apart
+  by the second argument's type.
+- `strip(s, t)`, `lstrip(s, t)`, `rstrip(s, t)` : seq, seq -> seq, the code
+  points of `t` removed at both ends, the left, the right (`t == []`
+  removes nothing, as Python does).
+- `index(s, t)` : seq, seq -> int, `find(s, t)`; DEFINED IFF `find(s, t) >=
+  0` (Python raises).
+- `rfind(s, t)` : seq, seq -> int, the greatest index where `t` occurs,
+  `-1` when none; `rfind(s, []) == len(s)`.
+- `zfill(s, w)` : seq, int -> seq, `s` padded on the left with `0` (48) to
+  width `w`, a leading sign (43 or 45) kept in front; `s` itself when
+  `len(s) >= w`.
+- `center(s, w)`, `ljust(s, w)`, `rjust(s, w)` : seq, int -> seq, and with a
+  third int argument the fill code point (32 when omitted); `center`
+  puts `(w - len(s)) div 2 + (if both w - len(s) and w are odd then 1 else
+  0)` fills on the left, Python's own split.
+- `capitalize(s)`, `swapcase(s)`, `title(s)` : seq -> seq, on the ASCII
+  letters: the first code point upper and the rest lower; every letter's
+  case swapped; a letter after a non-letter (or first) upper and a letter
+  after a letter lower.
+- `isspace(s)`, `isalnum(s)` : seq -> bool, non-empty and every code point
+  whitespace (the ten of `split`), or a letter or digit.
+- `splitlines(s)` : seq -> seq<seq>, the rows between line boundaries (10,
+  13, the pair 13 10 as one, 11, 12, 28, 29, 30, 133, 8232, 8233); a
+  trailing boundary ends the last row without opening an empty one;
+  `splitlines([]) == []`.
+- `partition(s, t)` : seq, seq -> (seq, seq, seq), the part before the
+  first occurrence of `t`, `t`, the part after; `(s, [], [])` when `t` does
+  not occur; DEFINED IFF `len(t) > 0`.
+- `isint(s)` : seq -> bool, an optional sign (43 or 45) then one or more
+  digits; `toint(s)` : seq -> int, the integer written, DEFINED IFF
+  `isint(s)`; `toint(tostr(n)) == n`. Both are library names, written as
+  calls like `tostr`.
+
+Every member keeps the first wave's notation, `s.member(args)`, and the
+JSON op is the member's name with the receiver first; `strip`,
+`lstrip`, `rstrip`, `split` and the three padding members gain a second
+arity. Not in v2, by name: `format` and f-strings, `translate` and
+`maketrans`, `encode`, `expandtabs`, `splitlines(keepends)`,
+`split(sep, maxsplit)`, `rindex`, `removeprefix`/`removesuffix`, and the
+Unicode case tables (ASCII, as in v1).
+
+**The lowerings.** Dafny and Verus carry every member in their preludes,
+recursive functions in the first wave's style with the ensures the
+committed tasks need (a padded length, a stripped length no greater than
+the input's and smaller when the first code point is stripped, `rfind`'s
+bounds); F*, SPARK, Lean, Rocq and Frama-C abstain by name on the second
+wave until built and measured. The hand-back writes Python's own methods
+through the same transcriptions.
+
+**The committed tasks:** `pad_right_len` (`s.ljust(w)`: the length is
+the larger of `len(s)` and `w`), `swap_prefix` (`s[0..n].swapcase()`: the
+length is `n`), `last_pos` (`s.rfind(t)`: between -1 and `len(s)`, room
+for `t` when found, `len(s)` for an empty `t`), `strip_dots`
+(`s.strip([46])`: no longer than `s`, shorter when `s` starts with a dot).
+
 ### Methods (v1)
 
 Stated 2026-09-26 (t/FEATURES-TRACK.md, feature 1). Copied from Dafny's

@@ -471,6 +471,152 @@ def _str_islower(s: tuple) -> bool:
     return has and not any(_is_upper_letter(c) for c in s)
 
 
+# SPEC.md "The string library (v2)" (2026-10-07): the second wave, Python's methods transcribed over tuples as above.
+_LINEBREAKS = (10, 13, 11, 12, 28, 29, 30, 133, 8232, 8233)   # str.splitlines's boundaries; 13 10 is one
+
+
+def _str_split_str(s: tuple, t: tuple) -> tuple:
+    """s.split(t) on a non-empty sequence separator (the caller owes len(t) > 0)."""
+    out, cur, i, lt, ls = [], [], 0, len(t), len(s)
+    while i < ls:
+        if i + lt <= ls and s[i:i + lt] == t:
+            out.append(tuple(cur))
+            cur = []
+            i += lt
+        else:
+            cur.append(s[i])
+            i += 1
+    out.append(tuple(cur))
+    return tuple(out)
+
+
+def _str_strip_chars(s: tuple, t: tuple, left: bool, right: bool) -> tuple:
+    lo, hi = 0, len(s)
+    if left:
+        while lo < hi and s[lo] in t:
+            lo += 1
+    if right:
+        while hi > lo and s[hi - 1] in t:
+            hi -= 1
+    return s[lo:hi]
+
+
+def _str_rfind(s: tuple, t: tuple) -> int:
+    if not t:
+        return len(s)
+    lt = len(t)
+    for i in range(len(s) - lt, -1, -1):
+        if s[i:i + lt] == t:
+            return i
+    return -1
+
+
+def _str_index(s: tuple, t: tuple) -> int:
+    i = _str_find(s, t)
+    if i < 0:
+        raise ValueError("substring not found")      # Python's own; interp.ev reads it as Undef
+    return i
+
+
+def _str_zfill(s: tuple, w: int) -> tuple:
+    n = len(s)
+    if n >= w:
+        return s
+    if w > MAX_SEQ:
+        # the padded result is w long; past MAX_SEQ it decides nothing, as for fill and join (2026-10-06: the witness
+        # ladder tries widths up to 2**31, and an uncapped pad built a 2-billion-element tuple and OOM-killed the session)
+        raise Budget("seq length cap")
+    pad = (48,) * (w - n)
+    if n and s[0] in (43, 45):
+        return (s[0],) + pad + s[1:]
+    return pad + s
+
+
+def _str_just(s: tuple, w: int, f: int, kind: str) -> tuple:
+    """ljust ("l"), rjust ("r") and center ("c") with fill f; center's split is CPython's own."""
+    n = len(s)
+    if n >= w:
+        return s
+    if w > MAX_SEQ:
+        raise Budget("seq length cap")                      # see _str_zfill
+    marg = w - n
+    if kind == "l":
+        return s + (f,) * marg
+    if kind == "r":
+        return (f,) * marg + s
+    left = marg // 2 + (marg & w & 1)
+    return (f,) * left + s + (f,) * (marg - left)
+
+
+def _str_capitalize(s: tuple) -> tuple:
+    return (_str_upper(s[:1]) + _str_lower(s[1:])) if s else ()
+
+
+def _str_swapcase(s: tuple) -> tuple:
+    return tuple(c + 32 if _is_upper_letter(c) else (c - 32 if _is_lower_letter(c) else c) for c in s)
+
+
+def _str_title(s: tuple) -> tuple:
+    out, prev = [], False
+    for c in s:
+        letter = _is_upper_letter(c) or _is_lower_letter(c)
+        if prev:
+            out.append(c + 32 if _is_upper_letter(c) else c)
+        else:
+            out.append(c - 32 if _is_lower_letter(c) else c)
+        prev = letter
+    return tuple(out)
+
+
+def _str_isspace(s: tuple) -> bool:
+    return len(s) > 0 and all(c in _WS for c in s)
+
+
+def _str_isalnum(s: tuple) -> bool:
+    return len(s) > 0 and all(_is_upper_letter(c) or _is_lower_letter(c) or 48 <= c <= 57 for c in s)
+
+
+def _str_splitlines(s: tuple) -> tuple:
+    out, cur, i, n = [], [], 0, len(s)
+    while i < n:
+        c = s[i]
+        if c == 13 and i + 1 < n and s[i + 1] == 10:
+            out.append(tuple(cur))
+            cur = []
+            i += 2
+        elif c in _LINEBREAKS:
+            out.append(tuple(cur))
+            cur = []
+            i += 1
+        else:
+            cur.append(c)
+            i += 1
+    if cur:
+        out.append(tuple(cur))
+    return tuple(out)
+
+
+def _str_partition3(s: tuple, t: tuple) -> tuple:
+    """(head, sep, tail) as a plain triple of tuples (the caller owes len(t) > 0; interp.ev wraps it in a Tup)."""
+    i = _str_find(s, t)
+    return (s, (), ()) if i < 0 else (s[:i], t, s[i + len(t):])
+
+
+def _str_isint(s: tuple) -> bool:
+    body = s[1:] if s and s[0] in (43, 45) else s
+    return len(body) > 0 and all(48 <= c <= 57 for c in body)
+
+
+def _str_toint(s: tuple) -> int:
+    """The integer an isint sequence writes (the caller owes isint(s))."""
+    sign = -1 if s and s[0] == 45 else 1
+    body = s[1:] if s and s[0] in (43, 45) else s
+    v = 0
+    for c in body:
+        v = v * 10 + (c - 48)
+    return sign * v
+
+
 def _str_startswith(s: tuple, t: tuple) -> bool:
     return s[:len(t)] == t
 
@@ -756,7 +902,14 @@ def ev(e: dict, env: dict, funs: dict, st: St):
     if op == "split":
         # SPEC.md "The string library" (2026-09-11): split(s) on whitespace
         # runs, split(s, c) on one code point, two arities of one op.
-        return _str_split_ws(a[0]) if len(a) == 1 else _str_split_sep(a[0], a[1])
+        if len(a) == 1:
+            return _str_split_ws(a[0])
+        if isinstance(a[1], tuple):
+            # SPEC.md "The string library (v2)" (2026-10-07): a sequence separator, DEFINED IFF non-empty
+            if not a[1]:
+                raise Undef("split with an empty separator", expr=e)
+            return _str_split_str(a[0], a[1])
+        return _str_split_sep(a[0], a[1])
     if op == "join":
         return _str_join(a[0], a[1])
     if op == "tostr":
@@ -765,12 +918,44 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return _str_count(a[0], a[1])
     if op == "find":
         return _str_find(a[0], a[1])
-    if op == "strip":
-        return _str_strip(a[0], True, True)
-    if op == "lstrip":
-        return _str_strip(a[0], True, False)
-    if op == "rstrip":
-        return _str_strip(a[0], False, True)
+    if op in ("strip", "lstrip", "rstrip"):
+        left, right = op != "rstrip", op != "lstrip"
+        if len(a) == 2:
+            return _str_strip_chars(a[0], a[1], left, right)   # SPEC.md "The string library (v2)"
+        return _str_strip(a[0], left, right)
+    if op == "index":
+        i = _str_find(a[0], a[1])
+        if i < 0:
+            raise Undef("index of a part that does not occur", expr=e)
+        return i
+    if op == "rfind":
+        return _str_rfind(a[0], a[1])
+    if op == "zfill":
+        return _str_zfill(a[0], a[1])
+    if op in ("center", "ljust", "rjust"):
+        return _str_just(a[0], a[1], a[2] if len(a) == 3 else 32, op[0])
+    if op == "capitalize":
+        return _str_capitalize(a[0])
+    if op == "swapcase":
+        return _str_swapcase(a[0])
+    if op == "title":
+        return _str_title(a[0])
+    if op == "isspace":
+        return _str_isspace(a[0])
+    if op == "isalnum":
+        return _str_isalnum(a[0])
+    if op == "splitlines":
+        return _str_splitlines(a[0])
+    if op == "partition":
+        if not a[1]:
+            raise Undef("partition with an empty separator", expr=e)
+        return Tup(_str_partition3(a[0], a[1]))
+    if op == "isint":
+        return _str_isint(a[0])
+    if op == "toint":
+        if not _str_isint(a[0]):
+            raise Undef("toint of a sequence that is not an integer", expr=e)
+        return _str_toint(a[0])
     if op == "replace":
         return _str_replace(a[0], a[1], a[2])
     if op == "lower":
