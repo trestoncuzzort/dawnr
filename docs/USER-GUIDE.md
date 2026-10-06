@@ -413,6 +413,14 @@ c-...` reverts. Commands are off until you both allow `run_command` in
 `"sandbox": "bwrap"` they run without network and can write only inside your
 writable roots.
 
+## Your data
+
+Nothing leaves this machine unless you turn the network on, set a hosted writer, or run the installer (which
+downloads from the publishers). What dawnr keeps on the machine, where, and why is listed in
+[PRIVACY.md](../PRIVACY.md). `dawnr forget` erases the assistant's journal and state, the page's jobs and the run
+folder; `dawnr forget --all` also erases the models and everything the installer fetched. The terms of use are in
+[TERMS.md](../TERMS.md).
+
 ## Testing what is here
 
 ```bash

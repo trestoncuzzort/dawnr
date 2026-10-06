@@ -14,6 +14,7 @@
 #   dawnr tools TOOLS.json "REQUEST"    your tools offered to the model; a call is shown only when its values were said
 #   dawnr check FILE      replay a certificate (ask or prove with --certificate FILE wrote it): no model, this machine's provers
 #   dawnr doctor          what is installed and what each part found
+#   dawnr forget          erase what dawnr kept about your work here: the journal, the jobs, the run folder (PRIVACY.md) [--all]
 #   dawnr serve start     keep the two model servers running between questions (faster); serve stop / serve status
 #   dawnr ui              all of the above as a page, opened in your browser (this machine only; no terminal needed after this)
 #   dawnr serve api       the same page and a local HTTP API, without opening a browser
@@ -328,6 +329,31 @@ case $cmd in
     # the page, opened in the person's browser: `serve api`, and the browser handed a file only its owner can read
     # that sends it on to the page (t/serve_api.py, open_page)
     exec "$0" serve api --open
+    ;;
+  forget)
+    # Everything dawnr kept about the person's work on this machine (PRIVACY.md lists it): the agent's journal and
+    # state, the API's jobs (the text and files given to the page), the run folder (logs, pids, the page's token).
+    # --all also erases the models and everything install.sh fetched; the launcher then needs install.sh again.
+    [ $# -eq 0 ] || [ "${1:-}" = --all ] || { echo 'usage: dawnr forget [--all]' >&2; exit 2; }
+    stop_all 2>/dev/null || true
+    case $(uname -s) in
+      Darwin) STATE="$HOME/Library/Application Support/dawnr-agent";;
+      *) STATE="${XDG_STATE_HOME:-$HOME/.local/state}/dawnr-agent";;
+    esac
+    gone=0
+    for d in "$STATE" "$DAWNR_HOME/jobs" "$DAWNR_HOME/run"; do
+      [ -e "$d" ] || continue
+      rm -rf -- "$d" && echo "erased $d" && gone=$((gone + 1))
+    done
+    if [ "${1:-}" = --all ]; then
+      for d in "$DAWNR_HOME/models" "$DAWNR_HOME/downloads" "$DAWNR_HOME/llama.cpp" "$DAWNR_HOME/provers" "$DAWNR_HOME/pylib" "$DAWNR_HOME/env"; do
+        [ -e "$d" ] || continue
+        rm -rf -- "$d" && echo "erased $d" && gone=$((gone + 1))
+      done
+      echo "the models and what install.sh fetched are gone; run install.sh again before the next dawnr command"
+    fi
+    [ $gone -gt 0 ] || echo "nothing was kept"
+    echo "dawnr sends nothing anywhere, so there is nothing else to erase (PRIVACY.md)"
     ;;
   doctor)
     echo "dawnr at $DAWNR_REPO, data in $DAWNR_HOME"

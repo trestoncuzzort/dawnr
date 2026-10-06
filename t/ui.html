@@ -8,11 +8,15 @@
      returns is put on the page as text (textContent), never as markup: it is model output and the person's files. -->
 <style>
   :root { --ink: #1c2024; --soft: #5b6470; --line: #d9dee4; --paper: #fbfcfd; --card: #ffffff; --go: #1f6f43; --hold: #8a5a00;
-          --stop: #a3261f; --accent: #24507a; }
+          --stop: #a3261f; --accent: #24507a; --edge: #7d8793; --on-accent: #ffffff; }
   @media (prefers-color-scheme: dark) {
     :root { --ink: #e6e9ec; --soft: #9aa4af; --line: #2c333b; --paper: #14181c; --card: #1b2026; --go: #6fcf97; --hold: #e3b35b;
-            --stop: #f08a80; --accent: #8ab8e6; }
+            --stop: #f08a80; --accent: #8ab8e6; --edge: #6b7684; --on-accent: #14181c; }
   }
+  /* --edge borders the controls at 3:1 or more against the paper (WCAG 2.2 1.4.11); --on-accent is the text on the
+     accent at 4.5:1 or more in both schemes (1.4.3); the rest of the text was measured at 5.8:1 or more */
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  ::placeholder { color: var(--soft); opacity: 1; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
   header { padding: 18px 16px 6px; max-width: 900px; margin: 0 auto; }
@@ -20,21 +24,21 @@
   header p { margin: 4px 0 0; color: var(--soft); }
   main { max-width: 900px; margin: 0 auto; padding: 8px 16px 48px; }
   nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 12px; }
-  nav button { border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 7px 12px; border-radius: 6px;
+  nav button { border: 1px solid var(--edge); background: var(--card); color: var(--ink); padding: 7px 12px; border-radius: 6px;
                font: inherit; cursor: pointer; }
   nav button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
   section { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
   section.on { display: block; }
   section > p { margin: 0 0 10px; color: var(--soft); }
-  label { display: block; font-weight: 600; margin: 10px 0 4px; }
-  label small { font-weight: 400; color: var(--soft); }
-  textarea, input[type=text], select { width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+  label, .legend { display: block; font-weight: 600; margin: 10px 0 4px; }
+  label small, .legend small { font-weight: 400; color: var(--soft); }
+  textarea, input[type=text], select { width: 100%; border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px;
             background: var(--paper); color: var(--ink); font: 13.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   textarea { min-height: 84px; resize: vertical; }
   .row { display: grid; grid-template-columns: 1fr 110px 2fr 34px; gap: 6px; margin-bottom: 6px; }
-  .row button, .plain { border: 1px solid var(--line); background: var(--paper); color: var(--ink); border-radius: 6px; cursor: pointer;
+  .row button, .plain { border: 1px solid var(--edge); background: var(--paper); color: var(--ink); border-radius: 6px; cursor: pointer;
                         font: inherit; padding: 6px 10px; }
-  .run { margin-top: 12px; background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 9px 18px; font: inherit;
+  .run { margin-top: 12px; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 9px 18px; font: inherit;
          font-weight: 600; cursor: pointer; }
   .run:disabled { opacity: .5; cursor: default; }
   #out { margin-top: 16px; display: none; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
@@ -46,6 +50,7 @@
   #health { color: var(--soft); font-size: 13px; }
   #notoken { display: none; background: var(--card); border: 1px solid var(--stop); border-radius: 8px; padding: 14px 16px; margin-top: 14px; }
   .modes { display: flex; gap: 16px; margin: 8px 0; } .modes label { font-weight: 400; margin: 0; }
+  #sending, footer p { color: var(--soft); font-size: 13px; margin: 10px 0 0; }
 </style>
 </head>
 <body>
@@ -93,7 +98,7 @@
       <label><input type="radio" name="mode" value="cite"> Answer a question</label>
     </div>
     <div id="fields-box">
-      <label>Fields <small>a name, its kind, and what it is</small></label>
+      <p class="legend" id="fields-legend">Fields <small>a name, its kind, and what it is</small></p>
       <div id="fields"></div>
       <button class="plain" id="add-field" type="button">Add a field</button>
     </div>
@@ -118,10 +123,12 @@
   </section>
 
   <button class="run" id="run" type="button">Run</button>
+  <p id="sending">Run sends what is on this page to dawnr on this computer, and nowhere else. The browser keeps only this tab's
+    session token, and forgets it when the tab closes.</p>
 
   <div id="out">
-    <div id="state"></div>
-    <div id="verdict"></div>
+    <div id="state" aria-live="polite"></div>
+    <div id="verdict" aria-live="polite"></div>
     <pre id="text"></pre>
     <div id="actions">
       <button class="plain" id="cancel" type="button" style="display:none">Cancel</button>
@@ -129,6 +136,8 @@
       <button class="plain" id="copy" type="button" style="display:none">Copy the text</button>
     </div>
   </div>
+  <footer><p>What dawnr keeps on this machine and how to erase it: PRIVACY.md beside this program; its terms: TERMS.md.
+    Nothing here is sent anywhere else.</p></footer>
 </main>
 <script>
 "use strict";
@@ -148,16 +157,20 @@ function api(path, options) {
 function lines(id) { return $(id).value.split("\n").map(s => s.trim()).filter(Boolean); }
 function select(name) {
   current = name;
-  for (const [id] of TABS) { $(id).classList.toggle("on", id === name); $("tab-" + id).setAttribute("aria-selected", id === name); }
+  for (const [id] of TABS) {
+    $(id).classList.toggle("on", id === name);
+    $("tab-" + id).setAttribute("aria-selected", id === name); $("tab-" + id).tabIndex = id === name ? 0 : -1;
+  }
 }
 function addField(name, kind, what) {
   const row = document.createElement("div"); row.className = "row";
-  const n = document.createElement("input"); n.type = "text"; n.placeholder = "total"; n.value = name || "";
-  const k = document.createElement("select");
+  const n = document.createElement("input"); n.type = "text"; n.placeholder = "total"; n.value = name || ""; n.setAttribute("aria-label", "The field's name");
+  const k = document.createElement("select"); k.setAttribute("aria-label", "The field's kind");
   for (const v of ["text", "number", "date"]) { const o = document.createElement("option"); o.value = v; o.textContent = v; k.appendChild(o); }
   k.value = kind || "text";
-  const w = document.createElement("input"); w.type = "text"; w.placeholder = "the amount due"; w.value = what || "";
-  const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.title = "Remove"; x.onclick = () => row.remove();
+  const w = document.createElement("input"); w.type = "text"; w.placeholder = "the amount due"; w.value = what || ""; w.setAttribute("aria-label", "What the field is");
+  const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.title = "Remove this field"; x.setAttribute("aria-label", "Remove this field");
+  x.onclick = () => row.remove();
   row.append(n, k, w, x); $("fields").appendChild(row);
 }
 function readFiles(input) {
@@ -232,8 +245,16 @@ for (const radio of document.querySelectorAll("input[name=mode]")) radio.onchang
 };
 for (const [id, label] of TABS) {
   const b = document.createElement("button"); b.id = "tab-" + id; b.type = "button"; b.setAttribute("role", "tab"); b.textContent = label;
-  b.onclick = () => select(id); $("tabs").appendChild(b);
+  b.setAttribute("aria-controls", id); b.onclick = () => select(id); $("tabs").appendChild(b);
+  $(id).setAttribute("role", "tabpanel"); $(id).setAttribute("aria-labelledby", "tab-" + id);
 }
+// the tabs from the keyboard (the WAI-ARIA tabs pattern): arrows move and select, Home and End go to the ends
+$("tabs").onkeydown = e => {
+  const ids = TABS.map(t => t[0]), i = ids.indexOf(current);
+  const to = e.key === "ArrowRight" ? ids[(i + 1) % ids.length] : e.key === "ArrowLeft" ? ids[(i + ids.length - 1) % ids.length]
+           : e.key === "Home" ? ids[0] : e.key === "End" ? ids[ids.length - 1] : null;
+  if (to) { e.preventDefault(); select(to); $("tab-" + to).focus(); }
+};
 addField("total", "number", "the amount due"); addField("due", "date", "when payment is due");
 select("ask");
 if (!token) { $("notoken").style.display = "block"; $("run").disabled = true; }

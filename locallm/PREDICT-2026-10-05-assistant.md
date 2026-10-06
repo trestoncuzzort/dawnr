@@ -838,3 +838,35 @@ Four servers on the lab's CPUs (six cores each, same model file, the same eight 
 - S4: the count of tasks done is the same within one across A–D (temperature 0; the flags must not change what is written).
 
 Sources: llama.cpp PR 22673 (MTP drafting; 82–91% acceptance on 27B/35B), Unsloth's MTP page (start at n-max 2, try 1–6), the Particula write-up on hybrid models' prompt cache falling to zero and llama.cpp issue 22384 (checkpoint restore). No published number exists for a 4B on a CPU; this is the measurement.
+
+## T: wrong twins of every family's right work (registered 2026-10-06 06:08Z, before the run)
+
+`locallm/judge_twins.py --seeds 3`: each family's solution changed one way at a time (a written file cut in half, one digit changed, one of several files dropped, two lines swapped, a junk line, a wrong figure in the answer, no answer, no action on the computer) and judged by the family's own check. After SWE-ABS (arXiv:2603.00520: one in five "solved" patches wrong) and arXiv:2604.01518 (77% of instances admit a surviving variant).
+
+- T1: under a tenth of the twins are accepted overall.
+- T2: the accepted twins come mostly from judges keyed on a few required substrings (`files: {path: [...]}`) and from `junk`, which a judge that checks only what was asked for cannot see; the exact-content, JSON and `run` judges accept none of half/digit/swap/drop.
+- T3: every accepted twin that is a real wrong answer (not a changed comment or an equivalent line) gets a judge change or a note, before any of these families' rows go to F2.
+
+### T, read 2026-10-06 06:13Z
+
+`judge_twins.py --seeds 3`: 557 twins, 37 accepted (6.6%). T1 holds. T2 holds in part: the exact-content, JSON and
+`run` judges rejected every `half`, and all but four `digit`/`swap` twins they accepted were the same program in
+another order (a docstring or blank line swapped, two JSON keys swapped, `indent=2` → `indent=3` in a dump, a
+function moved by one line). The 37, read by hand:
+
+- 13 `figure`: the answer's prose says "all 24 checks passed" (14), "Kept brief v22.md" (v12), "Debian GNU/Linux 23"
+  (13), when the files and the run are right. No judge reads the figures in the prose when the work itself is
+  checked. A wrong figure told to the person is a real miss; a note for the judge (an `answer` key with the count
+  the test prints), owed after F is read, since the families are what F's reading runs on.
+- 2 real weak tests: `complete_class` seed 1 (`qty <= 0` → `qty <= 1` passes test_stockroom.py: no case at qty 1)
+  and `fix_planted_bug` seed 1 (`+ 1` → `+ 2` in the word-wrap width check passes test_helpers.py: no case at the
+  exact width). The twin probe found what the papers predicted: a boundary no test touches. Owed after F: a case at
+  the boundary in each fixture.
+- 3 `drop` in `shift_numbered`: the dropped write was chapter-01.md, which the solution writes unchanged; equivalent.
+- 2 `junk` in `summary_file`: "zzz left over" as a sixth line of a five-line summary passes the judge's length and
+  content checks; the request's limits hold, so equivalent by the request's letter; a tighter judge is not owed.
+- the rest: swaps of adjacent lines that do not change behaviour (docstrings, blank lines, independent defs, JSON
+  key order, two summary lines); equivalent.
+
+T3: nothing changes before F is read; the two fixtures and the figure note are the owed list. The 1,990 teaching
+rows are not touched by any of the 37: the accepted twins are either equivalent or misreported figures in prose.
