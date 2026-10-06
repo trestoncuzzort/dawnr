@@ -608,3 +608,36 @@ falsifier did not fire: ground values reduce by computation. One repair older th
 builder handed the interpreter a witness sequence as a JSON list, so an ensures with a concatenation raised and was
 skipped, and `sum_tail`'s twin had no certificate; witness sequences now enter as the interpreter's tuples. Membership
 in a seq left Rocq's set detector, as it left Lean's.
+
+## T11 registered (2026-10-06 22:20Z, after two hand probes and before the generator): the library in Frama-C
+
+D1's third landing. After T9 and T10, ten committed tasks are kept from all-seven agreement by Frama-C alone; eight of
+them are library tasks (`clamp`, `cube`, `distance`, `gcd_of`, `has_elem`, `palindrome`, `root_floor`,
+`sum_one`). Stated plainly: two hand probes ran before this registration (scratch `p1.c`, `p2.c`, under the
+adapter's own WP flags without `-wp-rte`: the integer pieces 64 of 65 goals, the one open goal an overflow check
+the adapter does not ask for; the sequence pieces 42 of 42). The bars are about the generated lowering, which has not
+run. Design: the library as ACSL `logic` definitions (recursive ones with the termination lemma this file already
+emits for a recursive spec function, proved by WP, never assumed), and in executable position small C helper
+functions whose loops mirror the logic recursion one step per iteration, each with its own contract proved once and
+called from the task's body, the pattern the string library already uses (`t_count_c`). Membership in a seq in
+ACSL is the existential over indices. `sum` of a display is its definitional unfolding (`sum([x])` is `0 + x`);
+a sum over a concatenation is not rewritten by a law. Bars: (1) Frama-C verifies the real and refutes the twin on
+at least 6 of the 8, and the all-seven count rises by the same number; (2) the rest refuse by name; (3) no Frama-C
+cell that agreed before changes (the whole column is re-run); (4) no ACSL `axiom` is emitted. What would falsify the
+design: WP not closing a helper's contract inside the adapter's step budget (then that helper is refused by name), or
+a twin's certificate not reaching a library call (then that twin reads UNPROVED, counted against bar 1).
+
+### T11 read (2026-10-06 22:31Z): the library in Frama-C, 8 tasks verified with the twin refuted, 7 of them reaching all seven.
+(1) Bar 1 held: Frama-C verifies the real program and refutes its twin on 7 of the 8 tasks registered (`clamp`,
+`cube`, `distance`, `gcd_of`, `has_elem`, `root_floor`, `sum_one`) and on `largest` besides. Those seven were
+blocked by Frama-C alone, so the all-seven count should rise from 36 to 43; the clean-clone matrix measures it. (2) Bar 2
+held: `palindrome` refuses by name (`rev`, a sequence value built in code), as do `sort`, `any`/`all`, `toset`
+and a sum over a concatenation. (3) Bar 3 held: the whole Frama-C column was re-run over the 88 tasks; only those 8
+cells moved, Frama-C from 36 to 44 verified with the twin refuted, its refusals from 51 to 43. (4) Bar 4 held: no ACSL
+axiom; every recursive logic definition carries its termination lemma, proved by WP (the prelude alone proves 105 of
+105 goals). Neither registered falsifier fired. What did fire was the adapter's structural backstop: one recursive
+definition without its own termination lemma (`t_mins`, which shared `t_maxs`'s) read the whole task vacuous, and each
+now has its own. Two certificate repairs belong to this landing. The replay's ground evaluator gained the library's
+operators; it had refused every twin that called one. min, max and abs are replayed as their `ite`, resolved
+branch-free: a live `?:` arm at ground values is dead code to the smoke tests, which read `clamp`'s and `distance`'s
+twins UNPROVED. Membership in a seq left Frama-C's set detector, as in Lean and Rocq.

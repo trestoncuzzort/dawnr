@@ -1878,8 +1878,18 @@ the proof engine runs; `sum`, membership and the extrema as fuel
 membership in a seq stated as the existential over indices, its decided
 bool bridged by `t_memb_spec`; `rev` as `fun k => f (n - 1 - k)`; `sort`
 as a stable insertion sort over the listed elements, read back as a
-function, with its order lemma. Frama-C abstains by name until its
-encoding is built and measured. The writer's side:
+function, with its order lemma. Frama-C since 2026-10-06 (PREDICT T11,
+`t/framac_lib.py`): ACSL's own `\min`, `\max`, `\abs` in a specification
+and a C conditional in code; `gcd`, `pow`, `isqrt`, `sum`, max/min of one
+argument as ACSL `logic` definitions, each recursive one with its
+termination lemma (proved by WP; the adapter reads a missing one as
+vacuous), and in code as small C helper functions whose loops mirror the
+logic recursion one step per iteration, each proved once against its own
+contract; membership in a seq as the existential over indices, with
+`t_memb_c` in code; `sum` of a display as its definitional unfolding. No
+ACSL axiom is emitted. Not yet in Frama-C: `rev` and `sort` (a sequence
+value built in code), any/all, `toset`, a sum over a concatenation. The
+writer's side:
 `to_python.py` hands back `min`, `max`, `abs`, `sum`, `math.gcd`, `a **
 n`, `math.isqrt`, `x in s` and `s[::-1]`.
 
