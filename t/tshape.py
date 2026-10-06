@@ -108,7 +108,7 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
     abstain_on_library(task, body, kernel, lib)
 
 
-LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})
+LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"})
 
 
 def _scope_of(task: dict, body: list) -> dict:

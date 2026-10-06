@@ -83,7 +83,8 @@ def test_typing():
            ("x: real", "int", "r := gcd(x, x);", "gcd wants"),
            ("n: int", "int", "r := rev(n);", "rev wants"),
            ("s: seq", "bool", "r := true in s;", "in wants (T, seq<T>)"),
-           ("x: real", "int", "r := isqrt(x);", "isqrt wants")]
+           ("x: real", "int", "r := isqrt(x);", "isqrt wants"),
+           ("s: seq<bool>", "seq<bool>", "r := sort(s);", "sort wants")]
     for params, ret, body, msg in bad:
         errs = check_wf.check_wf(_task(params, ret, body))
         ok(any(msg in e for e in errs), "ill-typed %s needs %r: %r" % (body, msg, errs))
@@ -103,6 +104,8 @@ def test_interpreter_values():
     ok(_ev("sum([1, 2, 3])") == 6 and _ev("sum([])") == 0, "sum")
     ok(_ev("rev([1, 2, 3])", ret="seq") == (3, 2, 1) and _ev("rev([])", ret="seq") == (), "rev")
     ok(_ev("2 in [1, 2, 3]", ret="bool") is True and _ev("4 in [1, 2, 3]", ret="bool") is False, "in on a seq")
+    ok(_ev("sort([3, 1, 2])", ret="seq") == (1, 2, 3) and _ev("sort([])", ret="seq") == (), "sort (SPEC.md Sorting)")
+    ok(_ev("sort(s)", {"s": (Fraction(1, 2), Fraction(-1, 3))}, "s: seq<real>", "seq<real>") == (Fraction(-1, 3), Fraction(1, 2)), "sort of reals")
     ok(_ev("min(1.5, 0.25)", ret="real") == Fraction(1, 4) and _ev("abs(-2.5)", ret="real") == Fraction(5, 2), "reals")
     ok(_ev("sum(s)", {"s": (Fraction(1, 2), Fraction(1, 2))}, "s: seq<real>", "real") == 1, "sum of reals")
     for text in ("pow(2, -1)", "isqrt(-1)"):
@@ -114,7 +117,8 @@ def test_interpreter_values():
 
 
 def test_twins_of_the_committed_tasks():
-    want = {"clamp": "wrong-var", "distance": "wrong-var", "sum_tail": "wrong-operator", "gcd_of": "wrong-var",
+    want = {"sort_it": "wrong-var", "first_sorted": "off-by-one",
+            "clamp": "wrong-var", "distance": "wrong-var", "sum_tail": "wrong-operator", "gcd_of": "wrong-var",
             "cube": "wrong-constant", "root_floor": "wrong-constant", "has_elem": "collapse-if",
             "palindrome": "wrong-var", "last_of": "off-by-one", "sum_one": "wrong-constant"}
     for name, op in want.items():
@@ -154,6 +158,8 @@ def test_shape_guard_and_hand_back():
         ok(piece in src, "hand-back has %r" % piece)
     src, _fn = to_python.translate(_task("s: seq", "seq", "r := rev(s);"))
     ok("[::-1]" in src, "rev hands back as a reversed slice")
+    src, _fn = to_python.translate(_task("s: seq", "seq", "r := sort(s);"))
+    ok("tuple(sorted(s))" in src, "sort hands back as sorted")
 
 
 def test_dafny_text():
@@ -167,6 +173,9 @@ def test_dafny_text():
     ok("function t_rev<T>(s: seq<T>): (r: seq<T>)" in lowered("palindrome"), "rev is generic with its ensures")
     ok("t_gcdn(t_abs(a), t_abs(b))" in lowered("gcd_of"), "gcd is Euclid on absolute values")
     ok("(x in s)" in lowered("has_elem"), "membership is Dafny's own")
+    st = lowered("sort_it")
+    ok("function t_sort(s: seq<int>): (r: seq<int>)" in st and "multiset(s) == multiset(r)" in st and "predicate" not in st,
+       "sort in Dafny: the Std's merge sort with its ensures, as functions only")
     # SPARK and F* (SPEC.md "The library (v1)": each kernel's own where it has one, a recursive definition where not)
     def lowered_in(name, kernel):
         out = subprocess.run([sys.executable, str(HERE / "cli.py"), "lower", str(HERE / "tasks" / f"{name}.t"),

@@ -158,6 +158,8 @@ class _Writer:
             return f"_t_isqrt({x[0]})"
         if op == "rev":
             return f"{x[0]}[::-1]"
+        if op == "sort":
+            return f"tuple(sorted({x[0]}))"   # SPEC.md "Sorting (v1)" (2026-10-06)
         if op == "card":
             return f"len({x[0]})"
         if op == "union":

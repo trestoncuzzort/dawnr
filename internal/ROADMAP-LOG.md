@@ -3040,6 +3040,13 @@ is queued, and the ones running are read as they finish.
   the parser refuses an assignment to the loop variable, a bound or sequence the body changes, and a name already
   declared. No kernel work. An `if` may now omit its `else` (an empty one). Three committed tasks
   (`count_pos_for`, `zeros_for`, `any_neg_for`), Dafny verified with the twin refuted; the matrix follows.
-- **Next:** `sort(s)` with its multiset-and-order specification, comprehensions as a bound-variable form, the slice
-  step; the three library proofs the kernels do not reach alone (a `sum` slice lemma for SPARK, F* and Verus; a
-  nonlinear hint for Verus) as their own measured item.
+- **G3b-2 landed (10-06 16:30Z), `sort(s)`:** the sorted permutation as one operator (SPEC "Sorting (v1)": length,
+  the non-decreasing order, the same occurrence counts), written as a call like the library's. Dafny carries it as
+  the Std's merge sort specialised to the element type (the Std's lemma and asserts; an insertion sort did not
+  prove itself; `t_sorted` as a boolean function since the adapter admits no `predicate`); Verus as a wrapper over
+  vstd's `sort_by` with one shared comparison closure and the lemma stated at every use, in the wf lemmas and in
+  certificates. Two committed tasks verified with the twin refuted in both; the other five kernels abstain by name.
+  The `sort` burden is in the fragment.
+- **Next:** the matrix regenerated from a clean clone (64 tasks); then comprehensions as a bound-variable form, the
+  slice step, and the three library proofs the kernels do not reach alone (a `sum` slice lemma for SPARK, F* and
+  Verus; a nonlinear hint for Verus) as their own measured item; then G4 (`break`, `continue`, `while true`).

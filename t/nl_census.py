@@ -263,7 +263,8 @@ DETECTORS: dict[str, tuple[str, str]] = {
                   "gap"),
     "comprehension": ("burden", "a list/set/dict comprehension over ints; "
                        "t writes this as an explicit loop or a quantifier"),
-    "sort": ("burden", "sorted() or .sort(); expressible in t but needs a "
+    "sort": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Sorting): sorted() or .sort() is t's sort(s); before "
+             "that day it was expressible in t but needed a "
              "spec, not a builtin"),
     "builtin-math": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): min, max, sum, abs, "
                      "math.gcd, math.isqrt, ** -- library functions of t; before that day t could express each "

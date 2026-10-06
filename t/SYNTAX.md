@@ -96,6 +96,7 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
                                                    real -> int, real -> int; SPEC.md "Exact rationals (v1)" *)
            | "min" | "max" | "abs" | "sum"     (* since 2026-10-06, SPEC.md "The library (v1)"; written as calls,
            | "gcd" | "pow" | "isqrt" | "rev"      min(a, b) ... rev(s), resolved by name after parsing: a declared
+           | "sort"                               ("sort": SPEC.md "Sorting (v1)", the same day: the sorted permutation)
                                                    spec_fun/method/helper of the same name shadows the library;
                                                    "in" with a seq on the right is membership in a seq *)
            | "==" | "!=" | "<" | "<=" | ">" | ">="
@@ -430,9 +431,9 @@ witness value is shown as `n/d`. The committed tasks are `average`,
 {"op": "rev", "args": [{"var": "s"}]}
 ```
 written: `max(lo, min(hi, x))` · `abs(a - b)` · `sum(s)` · `gcd(a, b)` · `pow(x, 3)` · `isqrt(n)` ·
-`x in s` (with `s: seq`) · `rev(s)`
+`x in s` (with `s: seq`) · `rev(s)` · `sort(s)`
 
-Since 2026-10-06 (SPEC.md "The library (v1)"), these are operators written
+Since 2026-10-06 (SPEC.md "The library (v1)" and "Sorting (v1)"), these are operators written
 as calls. No new keyword: a call whose name is none of the task's own
 name, its spec_funs, its methods or its inline helpers is the library
 function, and a declared one shadows it (as in Python), so `abs`, `gcd`,
