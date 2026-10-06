@@ -22,6 +22,8 @@ def shape(t) -> str:
             return "(%s)" % ", ".join(shape(c) for c in inner)
         if kind in ("seq", "set"):
             return "%s<%s>" % (kind, shape(inner))
+        if kind == "map":
+            return "map<%s, %s>" % (shape(inner[0]), shape(inner[1]))   # SPEC.md "Maps (v1)" (2026-10-06)
         if kind == "datatype":
             return str(inner)
     return str(t)
@@ -258,6 +260,8 @@ def empty_display_types(task: dict, body: list) -> dict:
             return
         if e.get("op") in ("set", "seq") and not e.get("args") and (is_set(ty) if e["op"] == "set" else is_seq(ty)):
             out[id(e)] = ty
+        elif e.get("op") == "mapdisp" and not e.get("args") and isinstance(ty, dict) and set(ty) == {"map"}:
+            out[id(e)] = ty          # SPEC.md "Maps (v1)" (2026-10-06): map[] takes the expected map type
         elif e.get("op") in ("pair", "tuple") and isinstance(ty, dict) and (set(ty) == {"pair"} or set(ty) == {"tuple"}):
             for a, t in zip(e["args"], list(ty.values())[0]):
                 note(a, t)

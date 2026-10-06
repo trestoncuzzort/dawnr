@@ -1863,6 +1863,19 @@ def _uses_strlib(node) -> bool:
     return False
 
 
+def _uses_maps(node) -> bool:
+    """True iff `node` holds a map display, keys or remove (SPEC.md "Maps (v1)", 2026-10-06): a ground formula over
+    a map is closed by the SMT arm of the certificate, as a set's is, since verus's interpreter does not evaluate
+    vstd's Map."""
+    if isinstance(node, dict):
+        if node.get("op") in ("mapdisp", "keys", "remove"):
+            return True
+        return any(_uses_maps(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_uses_maps(v) for v in node)
+    return False
+
+
 def _uses_sets(node) -> bool:
     """True iff `node` mentions the set type or one of its six operations
     anywhere (SPEC.md "Finite sets", 2026-09-27), by the same generic walk
@@ -2145,12 +2158,34 @@ def _vty(ty) -> str:
         if "set" in ty:
             # SPEC.md "Compositional types (v1)" (2026-10-06): vstd's Set is generic over its element type.
             return f"Set<{_vty(ty['set'])}>"
+        if "map" in ty:
+            return f"Map<{_vty(ty['map'][0])}, {_vty(ty['map'][1])}>"   # SPEC.md "Maps (v1)" (2026-10-06)
         if "tuple" in ty:
             # a Rust tuple of any arity, each component this same function's rendering (a pair of pairs too)
             return "(%s)" % ", ".join(_vty(c) for c in ty["tuple"])
         t1, t2 = ty["pair"]
         return f"({_vty(t1)}, {_vty(t2)})"
     return TYPES[ty]
+
+
+_SCOPE: dict = {}        # name -> t type of every param, return and local of the task being lowered (SPEC.md "Maps
+                         # (v1)", 2026-10-06): `expr` and `defined` read an operand's type here where the kernel's
+                         # text differs by it (a map's insert, dom().contains, and the membership `at` owes)
+_SCOPE_FUNS: dict = {}
+
+
+def _ty_of(e):
+    """The static t type of `e` under `_SCOPE`, or None."""
+    try:
+        import check_wf
+        t, errs = check_wf.expression_type(e, dict(_SCOPE), functions=_SCOPE_FUNS)
+        return None if errs else t
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+def _is_map_ty(t) -> bool:
+    return isinstance(t, dict) and set(t) == {"map"}
 
 
 _SUFFIX_INT = False   # v1 only: literals as `(7int)` so ite branches infer
@@ -2690,7 +2725,28 @@ def expr(e: dict, vty: str | None = None) -> str:
     if op == "at":
         return f"{args[0]}[{args[1]}]"
     if op == "update":
+        if _is_map_ty(_ty_of(e["args"][0])):
+            return f"{args[0]}.insert({args[1]}, {args[2]})"   # SPEC.md "Maps (v1)" (2026-10-06)
         return f"{args[0]}.update({args[1]}, {args[2]})"
+    if op == "mapdisp":
+        # SPEC.md "Maps (v1)" (2026-10-06): vstd's Map, `empty()` built up by `insert` (the rightmost of two equal
+        # keys wins); the empty display takes the type its position declares, or int/int where none reaches it
+        ty = _EMPTIES.get(id(e))
+        if ty is not None:
+            base = f"{_vty(ty).replace('Map<', 'Map::<', 1)}::empty()"
+        elif args:
+            base = "Map::empty()"
+        elif vty and vty.startswith("Map<"):
+            base = f"{vty.replace('Map<', 'Map::<', 1)}::empty()"
+        else:
+            base = "Map::<int, int>::empty()"
+        for i in range(0, len(args), 2):
+            base = f"{base}.insert({args[i]}, {args[i + 1]})"
+        return base
+    if op == "keys":
+        return f"{args[0]}.dom()"
+    if op == "remove":
+        return f"{args[0]}.remove({args[1]})"
     if op == "fill":
         return f"Seq::new({args[0]} as nat, |_t_fill_i: int| {args[1]})"
     if op == "seq":
@@ -2756,6 +2812,8 @@ def expr(e: dict, vty: str | None = None) -> str:
             return "Set::<int>::empty()"
         return "set![" + ", ".join(args) + "]"
     if op == "in":
+        if _is_map_ty(_ty_of(e["args"][1])):
+            return f"{args[1]}.dom().contains({args[0]})"   # SPEC.md "Maps (v1)": domain membership
         # a Set's and a Seq's `contains` alike (SPEC.md "The library (v1)", 2026-10-06: membership in a seq)
         return f"{args[1]}.contains({args[0]})"
     if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev", "sort"):
@@ -2950,6 +3008,12 @@ def defined(e: dict, is_real=None) -> dict:
         body_ob = TRUE if inner == TRUE else {"forall": {"var": "t_di", "lo": lo, "hi": hi, "body": inner}}
         return _conj([src_ob, body_ob])
     op, args = e["op"], e.get("args", [])
+    if op == "at" and _is_map_ty(_ty_of(args[0])):
+        # SPEC.md "Maps (v1)" (2026-10-06): m[k] is defined iff k in m
+        s, k = args
+        return _conj([defined(s, is_real), defined(k, is_real), {"op": "in", "args": [k, s]}])
+    if op == "update" and _is_map_ty(_ty_of(args[0])):
+        return _conj([defined(a, is_real) for a in args])   # m[k := v] is total
     if op == "at":
         s, i = args
         bound = {"op": "and", "args": [
@@ -3037,7 +3101,7 @@ def _nested_seq_operand_ty(e: dict, scope: dict) -> str | None:
         return ent[0] if ent else None
     if "op" in e:
         op, args = e["op"], e.get("args", [])
-        if op in ("+", "slice", "update") and args:
+        if op in ("+", "slice", "update", "remove") and args:
             return _nested_seq_operand_ty(args[0], scope)
         if op in ("union", "inter", "diff") and args:
             return _nested_seq_operand_ty(args[0], scope) or _nested_seq_operand_ty(args[1], scope) or "Set<int>"
@@ -3078,7 +3142,9 @@ def _nested_eq_bridges(e: dict, scope: dict, out: list) -> None:
                     # b| == 0 && |b - a| == 0)` unproved with vstd's ext
                     # axiom triggering on `=~=` alone; the same bridge
                     # `assert((a == b) == (a =~= b))` closes it.
-                    or (ta is not None and ta == tb and ta.startswith("Set<"))):
+                    or (ta is not None and ta == tb and ta.startswith("Set<"))
+                    # SPEC.md "Maps (v1)" (2026-10-06): a Map's `==` is the same story, bridged by `=~=`
+                    or (ta is not None and ta == tb and ta.startswith("Map<"))):
                 out.append((a, b))
         for a in args:
             _nested_eq_bridges(a, scope, out)
@@ -4536,6 +4602,10 @@ class _V1:
             m = {state[0]: base}
         else:
             m = {v: f"{base}.{j}" for j, v in enumerate(state)}
+        for v_name, alias in m.items():
+            if v_name in _SCOPE:
+                _SCOPE[alias] = _SCOPE[v_name]   # SPEC.md "Maps (v1)" (2026-10-06): the result tuple's components keep
+                                                 # their t types, so `_ty_of` reads a map state as a map in the ensures
 
         if may_ret:
             rname = self.task["returns"][0]["name"]
@@ -4543,6 +4613,7 @@ class _V1:
             rtype = _vty(rtty)
             res_ty = f"(bool, {rtype}, {state_ty})"
             m_ret = {rname: "t_res.1"}
+            _SCOPE["t_res.1"] = rtty
             ens = ([f"t_res.0 ==> {expr(subst(en, m_ret))}"
                     for en in self.task["ensures"]]
                    + [f"(!t_res.0) ==> {expr(subst(iv, m))}" for iv in invs]
@@ -5311,6 +5382,13 @@ def _tlit(v, ty=None):
     if isinstance(v, str) and _RAT_TEXT.match(v) and (ty == "real" or ty is None):
         n, d = v.split("/")
         return {"rat": [int(n), int(d)]}
+    if isinstance(v, interp.MapV):
+        # SPEC.md "Maps (v1)" (2026-10-06): a raw runtime map, unmistakable by its class; its display
+        kt, vt = (ty["map"] if isinstance(ty, dict) and "map" in ty else (None, None))
+        return {"op": "mapdisp", "args": [x for k, vv in v.items for x in (_tlit(k, kt), _tlit(vv, vt))]}
+    if isinstance(ty, dict) and "map" in ty and isinstance(v, list):
+        kt, vt = ty["map"]   # a map-typed witness arrives as interp._j's list of [key, value] pairs
+        return {"op": "mapdisp", "args": [x for kv in v for x in (_tlit(kv[0], kt), _tlit(kv[1], vt))]}
     if isinstance(v, interp.Ctor):
         # SPEC.md "Datatypes (v1)" (2026-09-27): a raw interp.Ctor is
         # unmistakable by its Python type, exactly as interp.Pair is
@@ -5582,6 +5660,12 @@ def _to_py(v, ty=None):
         return tuple(_to_py(row, ty["seq"]) for row in v)
     if isinstance(ty, dict) and "set" in ty and isinstance(v, (list, tuple)):
         return frozenset(_to_py(x, ty["set"]) for x in v)
+    if isinstance(ty, dict) and "map" in ty and isinstance(v, (list, tuple)):
+        # SPEC.md "Maps (v1)" (2026-10-06): interp._j's list of [key, value] pairs back to the runtime map
+        # (measured: without this, `lookup_or`'s off-by-one twin replayed its witness `m = [[0, 0]]` as a list,
+        # `k in m` read false, the `else` branch hid the undefined lookup and no certificate was built)
+        kt, vt = ty["map"]
+        return interp.MapV.of([(_to_py(kv[0], kt), _to_py(kv[1], vt)) for kv in v])
     if ty == "set" and isinstance(v, list):
         return frozenset(v)   # SPEC.md "Finite sets" (2026-09-27): interp's own value
     if isinstance(v, str) and _RAT_TEXT.match(v) and (ty == "real" or ty is None):
@@ -6181,7 +6265,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         body = expr(formula)
     finally:
         _SUFFIX_INT = saved
-    if _uses_sets(formula) or _sort_args(formula):
+    if _uses_sets(formula) or _sort_args(formula) or _uses_maps(formula):
         # a formula that sorts (SPEC.md "Sorting (v1)"): sort_by is not computed, its lemma is stated first
         pre = "".join(f"    t_sort_spec({expr(a)});\n" for a in _sort_args(formula))
         # SPEC.md "Finite sets" (2026-09-27): verus's interpreter does not
@@ -6227,6 +6311,10 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
     _EMPTIES.clear()
     _EMPTIES.update(tshape.empty_display_types(task, body))
+    _SCOPE.clear()
+    _SCOPE.update(tshape._scope_of(task, body))   # SPEC.md "Maps (v1)" (2026-10-06): the operand types expr reads
+    _SCOPE_FUNS.clear()
+    _SCOPE_FUNS.update({f["name"]: f for f in task.get("spec_funs", [])})
     # SPEC.md "Exact rationals (v1)" (2026-10-06): Verus has no reals; a task that names one abstains by name
     tshape.abstain_on_reals(task, body, "verus")
     tshape.abstain_on_library(task, body, "verus", carried=VERUS_LIB)   # SPEC.md "The library (v1)" (2026-10-06)

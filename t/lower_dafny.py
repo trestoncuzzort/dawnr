@@ -1115,6 +1115,8 @@ def dafny_type(t) -> str:
             return t["datatype"]
         if "set" in t:
             return f"set<{dafny_type(t['set'])}>"
+        if "map" in t:
+            return f"map<{dafny_type(t['map'][0])}, {dafny_type(t['map'][1])}>"   # SPEC.md "Maps (v1)" (2026-10-06)
         return f"seq<{dafny_type(t['seq'])}>"
     return TYPES[t]
 
@@ -1336,6 +1338,9 @@ def expr(e: dict, self_name: str | None = None) -> str:
     sl = _set_lower(op, args, e)
     if sl is not None:
         return sl
+    ml = _map_lower(op, args, e)   # SPEC.md "Maps (v1)" (2026-10-06)
+    if ml is not None:
+        return ml
     if op in NARY_OPS:
         return "(" + f" {NARY_OPS[op]} ".join(args) + ")"
     if op in BIN_OPS:
@@ -1699,6 +1704,10 @@ def _comp_defs(self_name) -> list:
             except Exception:                               # noqa: BLE001
                 return False
             return not errs2 and ty == "real"
+        _lv._SCOPE.clear()
+        _lv._SCOPE.update(hints)          # the formula's own typer (a map's `at` owes membership, not a bound)
+        _lv._SCOPE_FUNS.clear()
+        _lv._SCOPE_FUNS.update(_FUNS)
         d_cond = _lv.defined(c["cond"], is_real)
         d_body = _lv.defined(c["body"], is_real)
         guard = d_body if (d_body == _lv.TRUE or is_map) else {"op": "implies", "args": [c["cond"], d_body]}
@@ -1785,6 +1794,46 @@ def _real_lower(op: str, args: list) -> str | None:
 # from the declared types the display sits under, for the body it lowers; a display no declared type reaches
 # keeps the set-of-ints form, which is every display there was before.
 _EMPTIES: dict = {}
+
+
+def _map_lower(op: str, args: list, node: dict | None = None) -> str | None:
+    """SPEC.md "Maps (v1)" (2026-10-06): Dafny's own map<K, V>. A display is `map[]` built up by updates, so the
+    rightmost of two equal keys wins whatever Dafny's display rule (the reference marks duplicate keys as likely to
+    change); `m[k]`, `m[k := v]`, `k in m` and `|m|` are the polymorphic operators' own text, the same as a seq's;
+    `keys` is `.Keys`, `remove` is domain subtraction by a singleton. An empty display takes the type its position
+    declares (`tshape.empty_display_types`) where Dafny's inference would not reach it."""
+    if op == "mapdisp":
+        ty = _EMPTIES.get(id(node)) if node is not None else None
+        base = f"(var t_emptymap: {dafny_type(ty)} := map[]; t_emptymap)" if ty is not None else "map[]"
+        for i in range(0, len(args), 2):
+            base = f"{base}[{args[i]} := {args[i + 1]}]"
+        return base
+    if op == "keys":
+        return f"({args[0]}.Keys)"
+    if op == "remove":
+        return f"({args[0]} - {{{args[1]}}})"
+    return None
+
+
+def _map_ev(op: str, vs: list):
+    """The map operations on evaluated operands (SPEC.md "Maps (v1)"), mirroring interp.ev."""
+    if op == "mapdisp":
+        return interp.MapV.of(list(zip(vs[0::2], vs[1::2])))
+    if op == "keys":
+        return frozenset(k for k, _ in vs[0].items)
+    if op == "remove":
+        return vs[0].drop(vs[1])
+    if op == "in":
+        return vs[1].has(vs[0])
+    if op == "len":
+        return len(vs[0])
+    if op == "update":
+        return vs[0].put(vs[1], vs[2])
+    if op == "at":
+        if not vs[0].has(vs[1]):
+            raise interp.Undef(f"key {interp._j(vs[1])!r} not in the map")
+        return vs[0].get(vs[1])
+    raise ValueError(op)
 
 
 def _set_lower(op: str, args: list, node: dict | None = None) -> str | None:
@@ -1927,6 +1976,9 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
         sl = _set_lower(op, args, e)
         if sl is not None:
             return sl
+        ml = _map_lower(op, args, e)   # SPEC.md "Maps (v1)" (2026-10-06)
+        if ml is not None:
+            return ml
         if op == "fst":
             return f"{args[0]}.0"
         if op == "snd":
@@ -2148,6 +2200,14 @@ def _tlit(v, ty=None):
         # the pair case just below -- needs no `ty` at all.
         return {"ctor": {"dtype": v.dtype, "name": v.ctor,
                          "args": [_tlit(a) for a in v.args]}}
+    if isinstance(v, interp.MapV):
+        # SPEC.md "Maps (v1)" (2026-10-06): a raw runtime map, unmistakable by its class; its display
+        kt, vt = (ty["map"] if isinstance(ty, dict) and "map" in ty else (None, None))
+        return {"op": "mapdisp", "args": [x for k, vv in v.items for x in (_tlit(k, kt), _tlit(vv, vt))]}
+    if isinstance(ty, dict) and "map" in ty:
+        # a map-typed witness arrives as interp._j's list of [key, value] pairs
+        kt, vt = ty["map"]
+        return {"op": "mapdisp", "args": [x for kv in v for x in (_tlit(kv[0], kt), _tlit(kv[1], vt))]}
     if isinstance(ty, dict):
         if "pair" in ty:
             t1, t2 = ty["pair"]
@@ -2472,6 +2532,9 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         return out, -vs[0]
     if op == "not":
         return out, not vs[0]
+    if op in ("mapdisp", "keys", "remove") or (op in ("in", "len", "at", "update")
+                                               and any(isinstance(v, interp.MapV) for v in vs)):
+        return out, _map_ev(op, vs)   # SPEC.md "Maps (v1)" (2026-10-06)
     if op == "len":
         return out, len(vs[0])
     if op == "at":
@@ -2963,6 +3026,14 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
         return -a[0]
     if op == "not":
         return not a[0]
+    if op == "at" and isinstance(a[0], interp.MapV):
+        # SPEC.md "Maps (v1)" (2026-10-06): m[k] owes k in m; the guard is the ground membership
+        if not a[0].has(a[1]):
+            raise _DefViol({"op": "in", "args": [_tlit(a[1]), _tlit(a[0])]})
+        return a[0].get(a[1])
+    if op in ("mapdisp", "keys", "remove") or (op in ("in", "len", "update")
+                                               and any(isinstance(v, interp.MapV) for v in a)):
+        return _map_ev(op, a)
     if op == "len":
         return len(a[0])
     if op == "at":
@@ -3124,18 +3195,22 @@ def _scope_types(task: dict) -> dict:
     return out
 
 
-def _witness_env(names: dict) -> dict:
+def _witness_env(names: dict, types: dict | None = None) -> dict:
     """A witness dict's values as the mirror evaluates them. interp._j renders a real as "n/d" text (SPEC.md
-    "Exact rationals", 2026-10-06), which `_ev_undef`'s arithmetic cannot take; every other value keeps the shape
-    the mirror already reads (ints, bools, lists for seqs and pairs)."""
-    def conv(v):
+    "Exact rationals", 2026-10-06), which `_ev_undef`'s arithmetic cannot take, and a map as its list of [key,
+    value] pairs (SPEC.md "Maps (v1)"), which is rebuilt as a map where `types` says the name is one; every other
+    value keeps the shape the mirror already reads (ints, bools, lists for seqs and pairs)."""
+    def conv(v, ty=None):
         if isinstance(v, str) and _RAT_TEXT.match(v):
             n, d = v.split("/")
             return interp.Fraction(int(n), int(d))
+        if isinstance(ty, dict) and "map" in ty and isinstance(v, list):
+            kt, vt = ty["map"]
+            return interp.MapV.of([(conv(kv[0], kt), conv(kv[1], vt)) for kv in v])
         if isinstance(v, list):
             return [conv(x) for x in v]
         return v
-    return {k: conv(v) for k, v in names.items()}
+    return {k: conv(v, (types or {}).get(k)) for k, v in names.items()}
 
 
 def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
@@ -3225,7 +3300,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             # `_expr` shape `_ev_undef` still abstains on) refuses the
             # certificate rather than guessing, same as the body-level
             # path.
-            env = _witness_env(names)
+            env = _witness_env(names, scope_types)
             st2 = interp.St()
             try:
                 _ev_undef(w["_expr"], env, funs, st2)
@@ -3243,7 +3318,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             # a loop that exceeds interp.MAX_LOOP, or a quantifier/call the
             # mirror still abstains on) refuses the certificate rather than
             # guessing.
-            env = _witness_env(names)
+            env = _witness_env(names, scope_types)
             st2 = interp.St()
             try:
                 _exec_undef(twin_body, env, funs, st2)

@@ -152,6 +152,13 @@ class _Writer:
             return f"{x[0]}[1]"
         if op == "set":
             return "frozenset((" + "".join(v + ", " for v in x) + "))"
+        if op == "mapdisp":
+            # SPEC.md "Maps (v1)" (2026-10-06): Python's own dict (the rightmost of two equal keys wins there too)
+            return "{" + ", ".join(f"{x[i]}: {x[i + 1]}" for i in range(0, len(x), 2)) + "}"
+        if op == "keys":
+            return f"frozenset({x[0]}.keys())"
+        if op == "remove":
+            return f"_t_mapdel({x[0]}, {x[1]})"
         if op == "in":
             return f"({x[0]} in {x[1]})"
         # SPEC.md "The library (v1)" (2026-10-06): Python's own where it has one, a helper where it does not
@@ -400,7 +407,10 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
     lines += core + [""] + funs
     support: list[str] = []
     if any("_t_update(" in l for l in lines):
-        support += ["def _t_update(s, i, v):", f"{INDENT}return s[:i] + (v,) + s[i + 1:]", ""]
+        support += ["def _t_update(s, i, v):", f"{INDENT}if isinstance(s, dict):", f"{INDENT}{INDENT}return {{**s, i: v}}",
+                    f"{INDENT}return s[:i] + (v,) + s[i + 1:]", ""]
+    if any("_t_mapdel(" in l for l in lines):
+        support += ["def _t_mapdel(m, k):", f"{INDENT}return {{kk: vv for kk, vv in m.items() if kk != k}}", ""]
     if any("_t_gcd(" in l for l in lines):
         support += ["def _t_gcd(a, b):", f"{INDENT}import math", f"{INDENT}return math.gcd(a, b)", ""]
     if any("_t_isqrt(" in l for l in lines):

@@ -257,6 +257,7 @@ KEYWORDS = {
     "spec", "fun", "return", "var", "while", "invariant", "if", "then", "else",
     "for",         # SPEC.md "Loops as sugar (v1)" (2026-10-06): the three for forms, expanded to while
     "break", "continue",   # SPEC.md "Early exits (v1)" (2026-10-06): the two loop exits
+    "map",         # SPEC.md "Maps (v1)" (2026-10-06): the type map<K, V> and the display map[k := v, ...]
     "forall", "exists", "in", "len", "true", "false", "and", "or", "not",
     "int", "bool", "seq",
     "real", "floor", "ceil",   # SPEC.md "Exact rationals (v1)" (2026-10-06): the type, and two
@@ -581,6 +582,15 @@ class Parser:
             # only ever accepts a KEYWORD, so the name is read here first.
             name = self.eat("id", production="Type").text
             return self.mark(start, {"datatype": name})
+        if self.at("kw", "map"):
+            # SPEC.md "Maps (v1)" (2026-10-06): map<K, V>, both written, no shorthand
+            self.eat("kw")
+            self.eat("sym", "<", "Type")
+            k = self.ptype()
+            self.eat("sym", ",", "Type")
+            v = self.ptype()
+            self.eat("sym", ">", "Type")
+            return self.mark(start, {"map": [k, v]})
         t = self.vtype()
         if t in ("seq", "set") and self.opt("sym", "<"):
             inner = self.ptype()
@@ -1543,6 +1553,22 @@ class Parser:
             self.production = "Expr"
             self.eat("sym", ")")
             return self.mark(t, {"op": op, "args": [a, b]})
+        if self.at("kw", "map"):
+            # SPEC.md "Maps (v1)" (2026-10-06): map[k1 := v1, ..., kn := vn]; map[] the empty map
+            self.eat("kw")
+            self.eat("sym", "[")
+            args = []
+            if not self.at("sym", "]"):
+                while True:
+                    args.append(self.expr())
+                    self.production = "Expr"
+                    self.eat("sym", ":=")
+                    args.append(self.expr())
+                    self.production = "Expr"
+                    if not self.opt("sym", ","):
+                        break
+            self.eat("sym", "]")
+            return self.mark(t, {"op": "mapdisp", "args": args})
         if self.opt("sym", "{"):
             # {e1, ..., en}, the set display; {} the empty set (SPEC.md
             # "Finite sets", 2026-09-27). An expression position never
@@ -1715,7 +1741,8 @@ def _free_names(e) -> set:
     return set()
 
 
-LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"})   # "sort": SPEC.md "Sorting (v1)"
+LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",   # "sort": SPEC.md "Sorting (v1)"
+                       "keys", "remove"})                                                   # SPEC.md "Maps (v1)" (2026-10-06)
 
 
 def _resolve_library(task: dict) -> None:
@@ -2009,6 +2036,10 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # to the same AST.
         return _wrap("%s[%s..%s]" % (pexpr(args[0], P_POSTFIX), _bound(args[1]),
                                      _bound(args[2])), P_POSTFIX, floor)
+    if op == "mapdisp":
+        # SPEC.md "Maps (v1)" (2026-10-06): map[k := v, ...], its own delimiters, no floor; map[] empty
+        pairs = ["%s := %s" % (pexpr(args[i]), pexpr(args[i + 1])) for i in range(0, len(args), 2)]
+        return "map[%s]" % ", ".join(pairs)
     if op == "set":
         # {e1, ..., en}, the set display, any arity including zero (SPEC.md
         # "Finite sets", 2026-09-27); its own delimiters, no floor.
@@ -2163,6 +2194,8 @@ def _print_type(t) -> str:
             return "(%s)" % ", ".join(_print_type(c) for c in inner)
         if kind in ("seq", "set") and inner != "int":
             return "%s<%s>" % (kind, _print_type(inner))
+        if kind == "map" and isinstance(inner, list) and len(inner) == 2:
+            return "map<%s, %s>" % (_print_type(inner[0]), _print_type(inner[1]))   # SPEC.md "Maps (v1)"
         if kind == "datatype" and isinstance(inner, str):
             return inner
         raise SurfaceError("not a t type: %r" % (t,))
@@ -2330,6 +2363,11 @@ WRITTEN = [
     ("expr", "len(s)", {"op": "len", "args": [{"var": "s"}]}),
     # SPEC.md "Finite sets" (2026-09-27), SYNTAX.md's own written: line.
     ("expr", "{1, x}", {"op": "set", "args": [{"int": 1}, {"var": "x"}]}),
+    # SPEC.md "Maps (v1)" (2026-10-06)
+    ("expr", "map[1 := 2, x := y]", {"op": "mapdisp", "args": [{"int": 1}, {"int": 2}, {"var": "x"}, {"var": "y"}]}),
+    ("expr", "map[]", {"op": "mapdisp", "args": []}),
+    ("expr", "keys(m)", {"op": "keys", "args": [{"var": "m"}]}),
+    ("expr", "remove(m, k)[k]", {"op": "at", "args": [{"op": "remove", "args": [{"var": "m"}, {"var": "k"}]}, {"var": "k"}]}),
     ("expr", "x in s", {"op": "in", "args": [{"var": "x"}, {"var": "s"}]}),
     ("expr", "card(union(s, u))",
      {"op": "card", "args": [{"op": "union", "args": [{"var": "s"}, {"var": "u"}]}]}),

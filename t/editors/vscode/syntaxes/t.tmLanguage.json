@@ -62,7 +62,7 @@
         },
         {
           "name": "storage.type.t",
-          "match": "\\b(int|bool|seq|set|real)\\b"
+          "match": "\\b(int|bool|seq|set|map|real)\\b"
         }
       ]
     },

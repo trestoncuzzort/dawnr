@@ -3093,5 +3093,17 @@ is queued, and the ones running are read as they finish.
   earlier comprehension tasks unchanged in both kernels. Census: `unbounded-loop` (4,403 problems) in the
   fragment, the loop `else` clause the gap `loop-else` (61); 1,713 -> 1,777 function-shaped problems in the
   fragment (41.9%).
-- **Next:** the matrix regenerated from a clean clone (73 tasks); then G5 maps, G6 records and options, G7 the
-  string library's missing members; Verus on early exits and SPARK's `sum` lemma as design items.
+- **The matrix regenerated from a clean clone (10-06 23:30Z, at b18ec9ba):** 73 tasks; the three early-exit rows
+  verified with the twin refuted in Dafny, the other six columns by name; the library-proof rows as read.
+- **G5 landed (10-06 23:50Z), maps:** the type `map<K, V>`, the display `map[k := v, ...]` (`map[]` empty; the
+  rightmost of two equal keys wins, written by every kernel as a chain of updates), `m[k]` (defined iff `k in m`),
+  `m[k := v]`, `k in m`, `len(m)`, `keys(m)` (a set), `remove(m, k)` (SPEC "Maps (v1)"); `at`, `update`, `in` and
+  `len` read by the operand's type, `keys` and `remove` as library names. The interpreter's map value is its own
+  hashable class; the witness ladder reaches small maps; the checker's `map-types` and `map-lit-types`. Dafny and
+  Verus carry maps natively (Verus's `==` on maps bridged by `=~=` as a set's, and the loop result tuple's
+  components aliased to their t types so a map state reads as a map), the other five abstain by name on the type.
+  Three committed tasks (`lookup_or`, `put_key`, `index_map`) verified with the twin refuted in both. Census: `map`
+  (2,464 problems) in the fragment, iteration over a dict the gap `map-iteration` (535); 1,777 -> 1,892
+  function-shaped problems in the fragment (44.6%).
+- **Next:** the matrix regenerated from a clean clone (76 tasks); then G6 records and options, G7 the string
+  library's missing members; Verus on early exits, map iteration and SPARK's `sum` lemma as design items.

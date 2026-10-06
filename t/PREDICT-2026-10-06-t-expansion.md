@@ -327,3 +327,45 @@ census: `unbounded-loop` (4,403 problems) IN THE FRAGMENT; the loop `else` claus
 sole blocker for 1); in the fragment 1,713 -> 1,777 of 4,239 function-shaped (40.4% -> 41.9%). Not done, by
 name: Verus (a loop is a recursive proof fn there; `continue` is a recursive call and `break` an exit the
 function's contract does not describe), F*, SPARK, Lean, Rocq and Frama-C on bodies with an exit.
+
+## T5 registered (2026-10-06 23:20Z, before any run): maps, SPEC "Maps (v1)"
+
+The census: `map` is a gap on 2,464 problems (a dict literal, `dict()`, `Counter`, `defaultdict`, a dict-typed io
+value; the sole blocker for 129), the fourth-largest. Read first (receipt 85a79b86b0ce): Dafny's `map<T, U>` with
+`map[k := v]` displays, `m[k]`, `m[k := v]`, `k in m`, `|m|`, `m.Keys` and `m - s`; vstd's `Map<K, V>` with `dom()`,
+`index`, `insert`, `remove`, `len` and its broadcast lemmas; Python's `dict`. Bars: (1) the type `map<K, V>`, the
+display `map[k1 := v1, ...]` (`map[]` empty; the rightmost of two equal keys wins, as in Python), `m[k]` (defined iff
+`k in m`), `m[k := v]`, `k in m`, `len(m)`, `keys(m)` (a set) and `remove(m, k)` parse, print and round-trip
+(`surface.py --check`); the lab's grammar check agrees; the checker's `map-types` and `map-lit-types` fire. (2) The
+interpreter agrees with Python's dict on lookup, update, membership, size, keys and removal; the witness ladder
+reaches small maps. (3) Dafny and Verus carry maps natively (`map<K, V>` / `Map<K, V>`); the other five abstain by
+name (the type shape). Three committed tasks: `lookup_or` (lookup with a default), `put_key` (one update: the key is
+in, its value, the size does not shrink, the rest unchanged by `remove`), `index_map` (a loop building a map from a
+sequence: every element is a key, the size is at most the length), each `verified / refuted` in both. (4) The census
+re-tags `map` IN THE FRAGMENT and names iteration over a dict (`.items()`, `.values()`) as the gap `map-iteration`.
+What would falsify the design: Verus's `==` on two maps needs the same `=~=` bridge nested seqs and sets needed
+(then `_nested_eq_bridges` takes `Map<` too, and the read says so); Dafny not proving `|m[k := v]| <= |m| + 1` from
+its own map axioms (then the size ensures of `index_map` is dropped and the read says so).
+
+### T5 read (2026-10-07 00:20Z): maps landed.
+(1) `map<K, V>`, `map[k := v, ...]`, `m[k]`, `m[k := v]`, `k in m`, `len(m)`, `keys(m)` and `remove(m, k)` parse, print
+and round-trip (`surface.py --check`: 1,957 of 1,957 well-formed corpus tasks); the lab's grammar check agrees with
+the parser on every program tested (the `map` keyword, the type rule, the display rule); `map-types` and
+`map-lit-types` fire with fixtures. (2) The interpreter's `MapV` agrees with Python's dict on lookup, update (insert
+and overwrite), membership, size, keys, removal (total on an absent key), the rightmost duplicate key, and
+extensional `==`; a map is never a seq of pairs to `_tv`; the ladder starts at the empty map. (3) Dafny and Verus
+carry the type natively; the three tasks `lookup_or`, `put_key`, `index_map` are `verified / refuted` in both (the
+twins: an off-by-one key, an off-by-one key in the update, a flipped loop guard). Both registered falsifiers held
+their ground without firing: Dafny proved `|m[k := v]| <= |m| + 1` and `(m[k := v] - {k}) == (m - {k})` from its own
+axioms, and Verus proved `put_key`'s map equality with the `=~=` bridge extended to `Map<` as registered. Two
+things the registration did not foresee, both repaired and measured: Verus's loop helper renames its state to the
+result tuple's components (`t_res.0`, `t_res.1`), so a map state's `k in m` was written as a seq's `.contains` until
+the components were aliased to their t types for the typer (`index_map`: `no method named contains` before, 5
+verified after); and the Verus certificate path rebuilt a map witness as a plain list, so `lookup_or`'s off-by-one
+twin replayed `k in m` as false, hid the undefined lookup behind the `else`, and built no certificate (`twin =
+unproved`) until `_to_py` learnt maps and a ground formula over a map took the SMT arm as a set's does (`twin =
+refuted` after). F*, SPARK, Lean, Rocq and Frama-C abstain by name on the type shape (`map<int, int> is not lowered
+yet`). (4) The census: `map` (2,464 problems) IN THE FRAGMENT; iteration over a dict is the gap `map-iteration`
+(535; the sole blocker for 21; a bare `for k in d` is not recognised, undercounted); in the fragment 1,777 ->
+1,892 of 4,239 function-shaped (41.9% -> 44.6%). Not done, by name: iteration over a map, `values(m)`, a map
+comprehension, and the other five kernels.
