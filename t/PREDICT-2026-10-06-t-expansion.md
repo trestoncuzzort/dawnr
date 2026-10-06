@@ -62,3 +62,41 @@ exception 13, io 6. MBPP's own greedy order now opens with `real` at +362 (278 �
 
 `class`, `generator`, `import` and `closure` stay as they are: the first is out of scope by design, the other three
 are met in part by G3's builtins and comprehensions (the census will say how much, by the same column).
+
+## T2 read (2026-10-06 10:45Z, after G2 and two corrections to the instrument)
+
+| | after G1 (T1 read) | after G2 alone | after G2 and the reader correction | bar | |
+|---|---:|---:|---:|---:|---|
+| function-shaped in fragment | 1,072 | 1,302 | **1,601** (37.8%; 275 of them carry a real) | ≥ 1,320 | met on the corrected instrument; G2 alone missed by 18 |
+| MBPP | 278 | 319 | **618** (86 carry a real) | ≥ 600 | met on the corrected instrument; G2 alone missed by 281 |
+| HumanEval | 14 | 18 | 18 | — | |
+
+Two faults in `t/nl_census.py` were found while reading, both fixed today and both stated here because they
+move the numbers more than the landing did:
+
+1. **The MBPP io reader was the pool's v1 reader** (ints, bools, seq<int>): every assertion with a string, a
+   tuple, a nested row or a decimal argument was a refusal, and one refused assertion put the problem out of the
+   fragment whatever its gaps. So G1's shapes were never counted into MBPP's fragment at the T1 read (278), and
+   305 MBPP problems sat out of the fragment with no gap named. The reader now reads strings, tuples, nested rows
+   and nested ints (the 2026-10-05 wider reader) and a decimal as `real`; a refusal the reader maps to a burden
+   or gap by name no longer disqualifies the problem, a structural refusal (not `f(...) == v`) still does.
+2. **The greedy table credited a problem with no gap to whichever gate opened first.** That is where "real
+   +362" came from in the T1 read: 305 no-gap MBPP problems were counted under the first gate. The sole-blocker
+   column was right (real: 297 across the corpus). The greedy order now runs over gap-blocked problems only and
+   the report counts the no-gap problems apart (6 today).
+
+The landing's own effect, by the instrument as it stands: function-shaped 1,072 → 1,302 (+230 against 297 sole
+blockers; the rest needed a second gate), MBPP 278 → 319 (+41), HumanEval 14 → 18. `sqrt` is split out of
+`real` as its own gap (192 problems, 23 sole blockers): a root is specified in t (`r * r == x`), not computed,
+and `isqrt` is G3's library. The kernels: Dafny verifies all four committed tasks with the twin refuted
+(`average`, `half_way`, `floor_ceil`, `safe_ratio`; the last through the definedness obligation, the collapse-if
+twin dividing by `b` unguarded); SPARK (`Big_Reals`) and F* (`FStar.Real`, Ghost effect) each verify three
+with the twin refuted and abstain by name on `floor_ceil` (neither library has a floor); Verus, Frama-C, Lean
+and Rocq abstain by name. T8 and T9
+hold: every old task keeps its twin rung (checked against the 09:15Z matrix), `surface.py --check` round-trips
+1,937 of 1,937 and the grammar check on the lab agrees on every program (8,975 canonical, 7,150 as written, 490
+refused).
+
+Sole blockers after G2 (the restated bars stand as written above): generator 295, class 294, import 273, map
+128, string-lib 125, closure 99, any-type 96, seq-slice-step 77, unbounded-loop 62, seq-slice-negative 41,
+none-type 35, sqrt 23, exception 20, io 7.

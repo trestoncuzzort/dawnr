@@ -1530,6 +1530,9 @@ import names                                     # noqa: E402
 from verifiers import fstar as fstar_backend     # noqa: E402
 
 TY = {"int": "int", "bool": "bool", "seq": "Seq.seq int",
+      # SPEC.md "Exact rationals (v1)" (2026-10-06): FStar.Real's `real` (opened when a task uses it; erasable,
+      # so such a task is lowered in the Ghost effect like a set task is); see `_uses_reals` and `Ctx.rx`
+      "real": "real",
       # SPEC.md "Finite sets" (2026-09-27): ulib's own FStar.FiniteSet.Base
       # (`FSet` below), with FStar.FiniteSet.Ambient's squashed facts in
       # scope; see the FINITE SETS note by `_uses_sets`.
@@ -1537,6 +1540,45 @@ TY = {"int": "int", "bool": "bool", "seq": "Seq.seq int",
 _EFFECT = "Pure"   # "Ghost" for a task that uses sets; see _uses_sets
 CMP = {"<": "<", "<=": "<=", ">": ">", ">=": ">="}
 ARITH = {"+": "+", "-": "-", "*": "*", "div": "/", "mod": "%"}
+# SPEC.md "Exact rationals (v1)" (2026-10-06): FStar.Real's own operators (`+.` ... `/.`, `<.` ... `>=.`), all
+# mapped to Z3's theory of reals; `/.` takes a divisor refined `=!= 0.0R`, which is the definedness obligation.
+RCMP = {"<": "<.", "<=": "<=.", ">": ">.", ">=": ">=."}
+RARITH = {"+": "+.", "-": "-.", "*": "*.", "div": "/."}
+_SEM = "FStar.IndefiniteDescription.strong_excluded_middle"
+
+
+def _real_lit(n: int, d: int) -> str:
+    """A t real literal n/d as F* text: a finite decimal with the `R` suffix (`1.5R`; a negative one as
+    `(0.0R -. 1.5R)`, since `-.` is binary), or `((of_int n) /. (of_int d))` for a certificate's quotient with no
+    finite decimal. Measured 2026-10-06 (RealProbe.fst, F* 2026.08.30): `0.1R +. 0.2R == 0.3R` verifies."""
+    twos = fives = 0
+    dd = d
+    while dd % 2 == 0:
+        dd //= 2
+        twos += 1
+    while dd % 5 == 0:
+        dd //= 5
+        fives += 1
+    if dd != 1:
+        return f"((of_int {_int_text(n)}) /. (of_int {_int_text(d)}))"
+    places = max(twos, fives)
+    scaled = abs(n) * (10 ** places) // d
+    digits = str(scaled).rjust(places + 1, "0")
+    whole, frac = digits[:len(digits) - places], digits[len(digits) - places:]
+    frac = (frac.rstrip("0") or "0") if places else "0"
+    text = f"{whole or '0'}.{frac}R"
+    return f"(0.0R -. {text})" if n < 0 else text
+
+
+def _int_text(n: int) -> str:
+    return f"({n})" if n < 0 else str(n)
+
+
+def _has_rat(x) -> bool:
+    """Whether a t AST (or list of them) holds a real literal (SPEC.md "Exact rationals (v1)")."""
+    if isinstance(x, dict):
+        return "rat" in x or any(_has_rat(v) for v in x.values())
+    return isinstance(x, list) and any(_has_rat(v) for v in x)
 
 
 def _tystr(t) -> str:
@@ -1940,6 +1982,8 @@ class Ctx:
     def ty(self, e: dict, local: dict) -> str:
         if "int" in e:
             return "int"
+        if "rat" in e:
+            return "real"   # SPEC.md "Exact rationals (v1)" (2026-10-06)
         if "bool" in e:
             return "bool"
         if "_seq" in e:
@@ -2035,9 +2079,46 @@ class Ctx:
             return "int"
         if op in ("set", "union", "inter", "diff"):
             return "set"   # SPEC.md "Finite sets" (2026-09-27)
-        if op in ARITH or op in ("neg", "len", "card"):
+        if op == "toreal":
+            return "real"   # SPEC.md "Exact rationals (v1)": real(x)
+        if op in ("floor", "ceil"):
+            return "int"
+        if op in ("+", "-", "*", "div", "neg"):
+            # int or real by the operand (SPEC.md "Exact rationals (v1)": the two never mix)
+            return "real" if self.ty(e["args"][0], local) == "real" else "int"
+        if op in ARITH or op in ("len", "card"):
             return "int"
         return "bool"
+
+    def rx(self, e: dict, env: dict, local: dict) -> str:
+        """Real-valued term (SPEC.md "Exact rationals (v1)", 2026-10-06): FStar.Real's operators, `of_int` for
+        `real(x)`, a literal through `_real_lit`. `floor`/`ceil` do not exist in FStar.Real, so a task using
+        them abstains by name in `lower()` before this is reached."""
+        if "rat" in e:
+            return _real_lit(*e["rat"])
+        if "var" in e:
+            return env.get(e["var"], e["var"])
+        if "ite" in e:
+            c = e["ite"]
+            return (f"(if {self.bx(c['cond'], env, local)} "
+                    f"then {self.rx(c['then'], env, local)} "
+                    f"else {self.rx(c['else'], env, local)})")
+        if "call" in e:
+            return self.call(e, env, local)
+        op = e.get("op")
+        if op in ("fst", "snd"):
+            comp = _proj_pair(op, e["args"][0])
+            if comp is not None:
+                return self.rx(comp, env, local)
+            return f"({op} {self.px(e['args'][0], env, local)})"
+        if op == "toreal":
+            return f"(of_int {self.zx(e['args'][0], env, local)})"
+        if op == "neg":
+            return f"(0.0R -. {self.rx(e['args'][0], env, local)})"
+        if op in RARITH:
+            a, b = (self.rx(x, env, local) for x in e["args"])
+            return f"({a} {RARITH[op]} {b})"
+        raise ValueError(f"t -> fstar: not a real expression: {op!r}")
 
     def sx(self, e: dict, env: dict, local: dict) -> str:
         """Seq-valued term. Through 2026-09-08 a seq position could only be
@@ -2474,6 +2555,9 @@ class Ctx:
             s, t = e["args"]
             return (f"(t_find {self.sx(s, env, local)} "
                     f"{self.sx(t, env, local)})")
+        if op in ("floor", "ceil"):
+            raise NotImplementedError(
+                f"fstar lowering: {op}: FStar.Real has no floor or ceiling (SPEC.md 'Exact rationals (v1)')")
         if op in ARITH:
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {ARITH[op]} {b})"
@@ -2582,6 +2666,11 @@ class Ctx:
             if comp is not None:
                 return self.bx(comp, env, local)
             return f"({op} {self.px(e['args'][0], env, local)})"
+        if op in CMP and self.ty(e["args"][0], local) == "real":
+            # SPEC.md "Exact rationals (v1)": FStar.Real's comparisons are props on an erasable type, so the
+            # computational bool is the ghost decision of the prop, as a set's `==` already is (Ghost effect)
+            a, b = (self.rx(x, env, local) for x in e["args"])
+            return f"({_SEM} ({a} {RCMP[op]} {b}))"
         if op in CMP:
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {CMP[op]} {b})"
@@ -2667,6 +2756,11 @@ class Ctx:
                 snd_eq = (f"(Seq.eq {sa} {sb})" if t2 == "seq"
                           else f"({sa} = {sb})")
                 core = f"({fst_eq} && {snd_eq})"
+                return core if op == "==" else f"(not {core})"
+            if t == "real":
+                # SPEC.md "Exact rationals (v1)": `real` is not an eqtype; the ghost decision of `==`
+                a, b = (self.rx(x, env, local) for x in e["args"])
+                core = f"({_SEM} ({a} == {b}))"
                 return core if op == "==" else f"(not {core})"
             rd = self.bx if t == "bool" else self.zx
             a, b = (rd(x, env, local) for x in e["args"])
@@ -3003,10 +3097,16 @@ class Ctx:
 
                 core = f"({_ceq(t1, fa, fb)} /\\ {_ceq(t2, sa, sb)})"
                 return core if op == "==" else f"(~ {core})"
+            elif t0 == "real":
+                a, b = (self.rx(x, env, local) for x in e["args"])
+                core = f"({a} == {b})"   # SPEC.md "Exact rationals (v1)": propositional equality of reals
             else:
                 a, b = (self.zx(x, env, local) for x in e["args"])
                 core = f"({a} == {b})"
             return core if op == "==" else f"(~ {core})"
+        if op in CMP and self.ty(e["args"][0], local) == "real":
+            a, b = (self.rx(x, env, local) for x in e["args"])
+            return f"({a} {RCMP[op]} {b})"   # SPEC.md "Exact rationals (v1)": FStar.Real's own props
         if op in CMP:
             a, b = (self.zx(x, env, local) for x in e["args"])
             return f"({a} {CMP[op]} {b})"
@@ -3117,6 +3217,8 @@ def _render(cx: "Ctx", e: dict, t, env: dict, local: dict) -> str:
         return cx.sx(e, env, local)
     if t == "set":
         return cx.stx(e, env, local)   # SPEC.md "Finite sets" (2026-09-27)
+    if t == "real":
+        return cx.rx(e, env, local)    # SPEC.md "Exact rationals (v1)" (2026-10-06)
     if isinstance(t, dict):
         if "seq" in t:
             return cx.nx(e, env, local)
@@ -3144,6 +3246,8 @@ def _dummy(t) -> str:
         return "(Seq.createL #int [])"
     if t == "set":
         return "(FSet.emptyset #int)"   # SPEC.md "Finite sets" (2026-09-27)
+    if t == "real":
+        return "0.0R"                   # SPEC.md "Exact rationals (v1)" (2026-10-06)
     if isinstance(t, dict):
         if "seq" in t:
             return "(Seq.createL #(Seq.seq int) [])"
@@ -5321,6 +5425,17 @@ def _certificate(cx: Ctx, task: dict, twin_body: list, w: dict) -> str | None:
                 f"  FStar.Classical.move_requires seq_uneq_{i} ();\n")
     except (KeyError, TypeError, ValueError, NotImplementedError):
         return None
+    if _has_rat(formula):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): a ground formula over reals is decided by Z3's theory of
+        # reals, which FStar.Real maps to (measured: half_way's twin certificate by `()`); no normalizer
+        # evaluates FStar.Real's erasable terms, so `assert_norm` would not do here.
+        return (
+            "\n// Ground refutation certificate for the measured twin witness, over exact"
+            "\n// rationals: decided by the SMT theory of reals (FStar.Real's own model),"
+            "\n// no normalizer step. verifiers/fstar.py mints REFUTED only if a targeted run"
+            "\n// discharges this one lemma, and a file carrying this name can never mint VERIFIED.\n"
+            + f"let {CERT_NAME} () : Lemma ({body})\n"
+            + "= " + ("\n" + "".join(rungs) + "".join(helpers) + "  ()\n" if helpers or rungs else "()\n"))
     return (
         "\n// Ground refutation certificate for the measured twin witness." \
         + "\n// assert_norm evaluates it with no SMT fallback (plus, when "
@@ -5356,6 +5471,17 @@ _STR_OPS = frozenset({
 
 
 _SET_OPS_F = {"set", "in", "card", "union", "inter", "diff"}
+
+
+def _uses_reals(task: dict, body: list) -> bool:
+    """Whether the task declares a real anywhere, writes a real literal, or uses real(x)/floor/ceil (SPEC.md
+    "Exact rationals (v1)", 2026-10-06): the file then opens FStar.Real and is lowered in the Ghost effect."""
+    import tshape
+    body = body or []
+    return (any(tshape.mentions_real(t) for t in tshape.declared_types(task, body))
+            or bool(tshape.uses_ops(body, task, {"toreal", "floor", "ceil"}))
+            or _has_rat(body) or _has_rat(task.get("requires", [])) or _has_rat(task.get("ensures", []))
+            or _has_rat(task.get("spec_funs", [])))
 
 
 def _uses_sets(obj) -> bool:
@@ -5766,7 +5892,11 @@ def _method_src(task: dict, m: dict, used: set) -> tuple[Ctx, str]:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "fstar")
+    tshape.abstain_unless_carried(task, body, "fstar", carried=frozenset({"real"}))
+    if tshape.uses_ops(body, task, {"floor", "ceil"}):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): FStar.Real has neither
+        raise NotImplementedError(
+            "fstar lowering: floor/ceil: FStar.Real has no floor or ceiling (SPEC.md 'Exact rationals (v1)')")
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): F*'s own
         # `type D = | C1 | C2 | ...` is the exact source for a field-less
@@ -5795,8 +5925,9 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     mod = name[0].upper() + name[1:]
     parts = [f"module {mod}\n", "module Seq = FStar.Seq\n"]
     global _EFFECT
-    _EFFECT = "Ghost" if _uses_sets(task) else "Pure"
-    if _EFFECT == "Ghost":
+    uses_reals = _uses_reals(task, body)
+    _EFFECT = "Ghost" if (_uses_sets(task) or uses_reals) else "Pure"
+    if _uses_sets(task):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): ulib's
         # FStar.FiniteSet.Base is the kernel's own finite set (`set int`,
         # `mem`, `cardinality`, `insert`, `union`, `intersection`,
@@ -5823,6 +5954,13 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # elaborates, whether or not the task calls `count` -- see the note
     # above `_BLOCK_IS_WS`), so `_strlib_prelude_for` now emits only the
     # blocks this task's own member usage (and their dependencies) reach.
+    if uses_reals:
+        # EXACT RATIONALS (2026-10-06, SPEC.md "Exact rationals (v1)"): FStar.Real is "only a logical model of
+        # the reals", an erasable type whose comparisons are props, so the task is lowered in the Ghost effect
+        # (as a set task is) and a comparison in a computational position is its ghost decision (`_SEM`).
+        # Measured (RealProbe.fst, F* 2026.08.30): the four committed shapes verify; the unguarded `a /. b`
+        # fails `/.`'s refinement `d =!= 0.0R`, which is the definedness obligation.
+        parts.append("open FStar.Real\n")
     strlib_prelude = _strlib_prelude_for(r_task, r_body)
     if strlib_prelude:
         parts.append(strlib_prelude)

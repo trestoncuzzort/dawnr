@@ -68,7 +68,7 @@ import re
 # ===========================================================================
 
 RULES: dict[str, str] = {
-    "arith-int": "+ - * neg div mod are int-only",
+    "arith-int": "+ - * neg take all ints or all reals, / both, % ints only; real(x) converts (Division and modulo; Exact rationals)",
     "assign-target": "assign targets a return or a local in scope (Gate 2)",
     "assign-type": "assign's expression type must match the target's declared type",
     "at-types": "at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)",
@@ -78,7 +78,9 @@ RULES: dict[str, str] = {
     "call-argtype": "a call's argument types must match the callee's params (Gate 3)",
     "call-arity": "a call's arity must match the callee's params (Gate 3)",
     "call-unknown": "call names a declared spec_fun or the task's own name (Gate 3)",
-    "cmp-int": "< <= > >= are int-only (Gate 1)",
+    "cmp-int": "< <= > >= compare two ints or two reals (Gate 1; Exact rationals)",
+    "rat-literal": "a real literal is n/d in lowest terms with a finite decimal expansion (Exact rationals)",
+    "real-conv": "real(x) wants an int; floor(x) and ceil(x) want a real (Exact rationals)",
     "decreases-selfcall": "a task decreases requires a self-recursive body, and vice versa (Gate 3)",
     "ensures-bool": "each ensures clause must be bool",
     "ensures-nonempty": "ensures must be non-empty (v0 and v1)",
@@ -139,7 +141,6 @@ RULES: dict[str, str] = {
     "one-return": "exactly one return value (SPEC.md v0 and v1)",
     "op-arity": "each operator has the fixed arity its Expr form declares",
     "op-unknown": "an operator must be in the declared version's operator set",
-    "pair-types": "a pair's components are any two types (Pairs; Compositional types)",
     "proj-nonpair": "fst/snd want a pair or tuple operand, proj wants a tuple (Pairs; Compositional types)",
     "proj-index": "a projection index is an int literal within the tuple; .0 and .1 are fst and snd (Compositional types)",
     "tuple-arity": "a tuple display has three or more components; two are a pair (Compositional types)",
@@ -277,18 +278,32 @@ STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "isupper", "islower", "startswith", "endswith"}
 SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite sets" (2026-09-27)
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
-         | {"pair", "fst", "snd", "tuple", "proj"} | STRLIB_OPS | SET_OPS)
+         | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS)
 TERNARY = {"update", "slice", "replace"}
 VARIADIC = {"seq", "set", "tuple"}      # the displays: seq and set at any arity, zero included; tuple at three or more
 UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
          "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
-         "islower", "card"}
+         "islower", "card", "toreal", "floor", "ceil"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
-BASE_TYPES = ("int", "bool", "seq")     # the three a v1 pair held until 2026-10-06; the scalar-and-string trio
+BASE_TYPES = ("int", "bool", "seq", "real")     # the scalars and the string; "real": SPEC.md "Exact rationals (v1)" (2026-10-06)
 # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27) listed three result types; since SPEC.md "Compositional types
 # (v1)" (2026-10-06) a spec_fun takes and returns any type, so `_valid_type` decides and the list is gone.
+
+
+def _gcd(a: int, b: int) -> int:
+    while b:
+        a, b = b, a % b
+    return a
+
+
+def _finite_decimal(d: int) -> bool:
+    """Whether 1/d has a finite decimal expansion: d is 2^a 5^b."""
+    for q in (2, 5):
+        while d % q == 0:
+            d //= q
+    return d == 1
 
 
 def _valid_type(t, dtypes=frozenset()) -> bool:
@@ -375,6 +390,15 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
     unchanged from before this construct."""
     if "int" in e:
         return "int"
+    if "rat" in e:
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): n / d in lowest terms, d >= 1, d of the form 2^a 5^b (a
+        # finite decimal, the only literal the notation writes), else refused as non-canonical.
+        r = e["rat"]
+        ok = (isinstance(r, list) and len(r) == 2 and all(isinstance(x, int) and not isinstance(x, bool) for x in r)
+              and r[1] >= 1 and _gcd(abs(r[0]), r[1]) == 1 and _finite_decimal(r[1]))
+        if not ok:
+            _e(errs, e, f"a real literal is n/d in lowest terms with a finite decimal expansion, not {r!r}", "rat-literal")
+        return "real"
     if "bool" in e:
         if ver == 0:
             _e(errs, e, "bool literal in a v0 task", "bool-lit-v1")
@@ -702,12 +726,22 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
             _e(errs, e, f"{op} wants (seq, seq)", "strlib-types")
         return "bool"
     if op in ("+", "-", "*", "neg", "div", "mod"):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): all-int or all-real, never mixed; `/` on reals is exact
+        # division (the op stays "div"; the type decides), `%` is int-only.
+        if ts and all(t == "real" for t in ts) and op != "mod":
+            return "real"
         if any(t != "int" for t in ts):
-            _e(errs, e, f"{op} over non-int", "arith-int")
+            _e(errs, e, f"{op} wants all ints or all reals (not {ts!r}); write real(x) to convert", "arith-int")
+            return "real" if "real" in ts and op != "mod" else "int"
         return "int"
+    if op in ("toreal", "floor", "ceil"):
+        want = "int" if op == "toreal" else "real"
+        if ts[0] != want:
+            _e(errs, e, f"{op} wants a {want}, found {ts[0]!r}", "real-conv")
+        return "real" if op == "toreal" else "int"
     if op in ("<", "<=", ">", ">="):
-        if any(t != "int" for t in ts):
-            _e(errs, e, f"{op} is int-only (SPEC.md gate 1)", "cmp-int")
+        if not (all(t == "int" for t in ts) or all(t == "real" for t in ts)):
+            _e(errs, e, f"{op} compares two ints or two reals (SPEC.md gate 1; Exact rationals)", "cmp-int")
         return "bool"
     if op in ("==", "!="):
         # Two seqs compare extensionally since SPEC.md "Sequences as

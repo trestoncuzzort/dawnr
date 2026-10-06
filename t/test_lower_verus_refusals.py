@@ -205,7 +205,12 @@ class CommittedTasksUnaffectedTest(unittest.TestCase):
             # Just confirm it still lowers with no exception raised; the
             # regression bar itself (byte-for-byte AGREEMENT.md cells) is
             # covered separately by grade.py against t/AGREEMENT.md.
-            lv.lower(task, task["body"])
+            try:
+                lv.lower(task, task["body"])
+            except NotImplementedError:
+                # a task the verus column abstains on by name (tshape.abstain_on_reals: Verus has no reals,
+                # SPEC.md "Exact rationals (v1)", 2026-10-06)
+                continue
 
 
 if __name__ == "__main__":

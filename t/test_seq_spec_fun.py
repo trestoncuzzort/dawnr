@@ -73,12 +73,20 @@ def test_check_wf_accepts_seq_and_refuses_the_rest() -> None:
     bad["spec_funs"][0]["result"] = "int"
     errs = check_wf.check_wf(bad)
     assert any("spec-fun-body-type" in e or "body type != result" in e for e in errs), errs
-    # a nested-seq or pair result is refused by name (not in v1)
-    for res in ({"seq": "seq"}, {"pair": ["int", "int"]}, "nat"):
+    # since SPEC.md "Compositional types (v1)" (2026-10-06) a spec_fun's result is any t type: a nested-seq
+    # or pair result is a valid declaration, and what fails is the seq body against it (the body-type rule)
+    for res in ({"seq": "seq"}, {"pair": ["int", "int"]}):
         bad = copy.deepcopy(task)
         bad["spec_funs"][0]["result"] = res
         errs = check_wf.check_wf(bad)
-        assert any("result must be int, bool or seq" in e for e in errs), (res, errs)
+        assert errs and all("spec-fun-body-type" in e or "body type" in e or "one type" in e
+                            or "all ints or all reals" in e or "branches" in e for e in errs), (res, errs)
+        assert not any("not a t type" in e for e in errs), (res, errs)
+    # a name that is no type at all is still refused by name
+    bad = copy.deepcopy(task)
+    bad["spec_funs"][0]["result"] = "nat"
+    errs = check_wf.check_wf(bad)
+    assert any("not a t type" in e for e in errs), errs
     print("test_check_wf_accepts_seq_and_refuses_the_rest: ok")
 
 

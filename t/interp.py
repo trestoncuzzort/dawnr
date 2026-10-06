@@ -80,6 +80,9 @@ SPEC.md's three predicted twins to what the ladder actually finds.
 """
 from __future__ import annotations
 
+import math
+from fractions import Fraction
+
 import itertools
 from copy import deepcopy
 from dataclasses import dataclass
@@ -464,6 +467,9 @@ class St:
 
 def ev(e: dict, env: dict, funs: dict, st: St):
     st.tick()
+    if "rat" in e:
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): an exact rational, Python's Fraction.
+        return Fraction(e["rat"][0], e["rat"][1])
     if "int" in e:
         return e["int"]
     if "bool" in e:
@@ -717,6 +723,17 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return _bounded(a[0] - a[1])
     if op == "*":
         return _bounded(a[0] * a[1])
+    if op == "div" and (isinstance(a[0], Fraction) or isinstance(a[1], Fraction)):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): exact division, undefined at a zero divisor as div is.
+        if a[1] == 0:
+            raise Undef("div by zero", expr=e)
+        return Fraction(a[0]) / Fraction(a[1])
+    if op == "toreal":
+        return Fraction(a[0])
+    if op == "floor":
+        return math.floor(a[0])
+    if op == "ceil":
+        return math.ceil(a[0])
     if op in ("div", "mod"):
         # SPEC.md "Division and modulo" (2026-09-08): Euclidean, the
         # convention SMT-LIB, Dafny, Boogie, Verus, Lean 4 and F* share and
@@ -952,6 +969,30 @@ ALPHA = 13              # sequence element alphabet size; 8 through
                         # non-string seq task still needs.
 
 
+def rat_literals(node) -> list:
+    """Every real literal in a task, as Fractions."""
+    out = []
+    if isinstance(node, dict):
+        if "rat" in node and isinstance(node["rat"], list) and len(node["rat"]) == 2:
+            out.append(Fraction(node["rat"][0], node["rat"][1]))
+        for v in node.values():
+            out += rat_literals(v)
+    elif isinstance(node, list):
+        for v in node:
+            out += rat_literals(v)
+    return out
+
+
+def _real_ladder(ints: tuple, lits: list) -> tuple:
+    """SPEC.md "Exact rationals (v1)" (2026-10-06): the witness domain for a real parameter, near first."""
+    out = [Fraction(0), Fraction(1), Fraction(-1), Fraction(1, 2), Fraction(-1, 2), Fraction(2), Fraction(-2),
+           Fraction(3, 2), Fraction(-3, 2), Fraction(1, 4), Fraction(1, 3), Fraction(2, 3), Fraction(-1, 3)]
+    for f in lits:
+        out += [f, f + 1, f - 1, f + Fraction(1, 2), f - Fraction(1, 2), f * 2, f / 2]
+    out += [Fraction(i) for i in ints]
+    return tuple(_dedup(out))
+
+
 def _dedup(vs):
     out, seen = [], set()
     for v in vs:
@@ -1055,6 +1096,9 @@ def ladders(task: dict) -> dict:
                          + [2, -2, 3, -3] + list(STR_ALPHA))[:ALPHA])
     seqs = _seq_ladder(alpha)
     lad = {"int": ints, "seq": seqs, "bool": BOOLS,
+          # SPEC.md "Exact rationals (v1)" (2026-10-06): the ints as reals, the halves, thirds and quarters
+          # between the small ones, and each real literal with its neighbours at a half, near first.
+          "real": _real_ladder(ints, rat_literals(task)),
           "nested_seq": _nested_seq_ladder(seqs),
           # SPEC.md "Finite sets" (2026-09-27): the seq ladder's tuples
           # read as sets, duplicates collapsed, so the near corner (the
@@ -1160,6 +1204,9 @@ def _names(task: dict) -> list[tuple[str, str]]:
 
 
 def _j(v):
+    if isinstance(v, Fraction):
+        # SPEC.md "Exact rationals (v1)": shown as n/d in lowest terms.
+        return f"{v.numerator}/{v.denominator}"
     if isinstance(v, Ctor):
         # SPEC.md "Datatypes (v1)": shown as "Dtype.Ctor(field, ...)", the
         # surface notation for the value (empty parens omitted, v1's enum

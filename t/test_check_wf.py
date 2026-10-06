@@ -217,4 +217,5 @@ def test_membership_in_a_seq_is_refused_in_words_not_with_a_crash():
     import surface
     task = surface.parse("t 1\ngate quantifiers\ntask has(s: seq, x: int) returns (r: bool)\n  ensures r == (x in s)\n{\n  r := x in s;\n}\n")
     errs = check_wf.check_wf(task)
-    assert errs and all("in wants (int, set)" in e and "Finite sets" in e for e in errs)
+    # "in wants (T, set<T>)" since SPEC.md "Compositional types (v1)" (2026-10-06); "(int, set)" before
+    assert errs and all("in wants (T, set<T>)" in e and "Finite sets" in e for e in errs)

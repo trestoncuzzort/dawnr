@@ -57,12 +57,21 @@ UNREACHABLE = {
                   "exactly one `(name: Type)`; there is no way to write a "
                   "second return in the surface syntax (program() eats "
                   "exactly one Id ':' Type between the parens).",
-    "valid-type": "ptype()'s pair branch reads T1/T2 with vtype() (base "
-                  "types only, not recursive), and its seq<seq> branch "
-                  "accepts only the literal keyword pair 'seq' '<' 'seq' "
-                  "'>', so the parser cannot build a pair of pairs or a "
-                  ">1-level seq<seq>; every Type the grammar accepts is "
-                  "already _valid_type()-valid.",
+    "valid-type": "ptype() is recursive since SPEC.md \"Compositional "
+                  "types (v1)\" (2026-10-06) and refuses the non-canonical "
+                  "spellings itself (seq<int>, set<int>, a one-component "
+                  "tuple), so every Type the grammar builds is already "
+                  "_valid_type()-valid; the rule guards the JSON gate.",
+    "tuple-arity": "the parser builds a `tuple` display only from three or "
+                   "more parenthesised expressions (two are a `pair`, one is "
+                   "a parenthesised expression), so no notation reaches "
+                   "check_wf with a tuple of fewer than three components "
+                   "(SPEC.md \"Compositional types (v1)\", 2026-10-06).",
+    "rat-literal": "the parser reduces every decimal literal to lowest terms "
+                   "with a denominator of the form 2^a 5^b (a finite "
+                   "decimal is nothing else), so a `rat` node from the "
+                   "notation is always canonical; the rule guards the JSON "
+                   "gate (SPEC.md \"Exact rationals (v1)\", 2026-10-06).",
     "op-arity": "every operator's AST arity is fixed by which grammar rule "
                "built it (p_add/p_mul/p_cmp always build 2 args, unary "
                "prefixes always 1, `and`/`or` fold to a chain of >=2 "
@@ -86,11 +95,12 @@ UNREACHABLE = {
                    "self.ret_name (the task's own declared return name) "
                    "at parse time (stmt()'s `return` arm); there is no "
                    "notation for a `return` naming any other variable.",
-    "spec-fun-result": "spec_fun()'s result reads vtype(('int', 'bool', "
-                       "'seq')) (SPEC.md \"Seq-valued spec_funs (v1)\", "
-                       "2026-09-27), so the notation cannot spell a nested "
-                       "seq, a pair or any other result type there; the "
-                       "rule guards the JSON gate (a lifted task) and "
+    "spec-fun-result": "spec_fun()'s result is read by ptype(), which builds "
+                       "only _valid_type()-valid types (any type since "
+                       "SPEC.md \"Compositional types (v1)\", 2026-10-06; a "
+                       "bare unknown name reads as a datatype and is refused "
+                       "by name elsewhere), so the notation cannot reach this "
+                       "rule; it guards the JSON gate (a lifted task) and "
                        "t/test_seq_spec_fun.py triggers it on the AST.",
     # SPEC.md "Datatypes (v1)" (2026-09-27): datatype-name/-dup/-empty and
     # ctor-name/-unknown are all guards the PARSER itself already enforces

@@ -72,7 +72,7 @@ def test_seq_and_set_of_anything():
     ok(isinstance(v, interp.Pair) and v.a == (True, False, True) and v.b == frozenset({(97,)}), "evaluates: %r" % (v,))
     errs = check_wf.check_wf(surface.parse("t 1\ntask f(s: seq<bool>) returns (r: seq<bool>)\n  ensures true\n"
                                            "{ r := s + [1]; }\n"))
-    ok(any("over non-int" in e or "one type" in e for e in errs), "a bool seq plus an int seq is refused: %r" % errs)
+    ok(any("all ints or all reals" in e or "one type" in e for e in errs), "a bool seq plus an int seq is refused: %r" % errs)
     errs = check_wf.check_wf(surface.parse("t 1\ntask f(w: set<seq>) returns (r: bool)\n  ensures true\n"
                                            "{ r := 3 in w; }\n"))
     ok(any("in wants" in e for e in errs), "an int in a set of strings is refused: %r" % errs)

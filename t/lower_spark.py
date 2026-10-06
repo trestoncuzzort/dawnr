@@ -1498,7 +1498,31 @@ import interp                                    # noqa: E402
 import names as t_names                          # noqa: E402
 from verifiers import spark as spark_backend     # noqa: E402
 
-TYPE = {"int": "Big_Integer", "bool": "Boolean", "seq": "Seq"}
+TYPE = {"int": "Big_Integer", "bool": "Boolean", "seq": "Seq",
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): Ada 2022's Big_Real (A.5.7), an exact rational with
+        # Numerator/Denominator in lowest terms; gnatprove maps it to the reals (measured on this desktop:
+        # literals as quotients, "/" with its Pre, To_Big_Real, the comparisons)
+        "real": "Big_Real"}
+_RAT_TEXT = __import__("re").compile(r"^-?\d+/\d+$")   # interp._j's rendering of a real witness value
+
+
+def _real_lit(n: int, d: int) -> str:
+    """A t real literal n/d as Ada text: the quotient of two Big_Reals built from Big_Integer literals, which
+    gnatprove reads as the rational it is (measured 2026-10-06: `1/10 + 2/10 = 3/10` proved; From_Quotient_String
+    was not tried, since the quotient form keeps every literal a Big_Integer the file already uses)."""
+    return f"(To_Big_Real (Big_Integer'({n})) / To_Big_Real (Big_Integer'({d})))"
+
+
+def _real_lit_of(v) -> str:
+    """A real witness value (a Fraction, or interp._j's "n/d" text) as Ada text."""
+    if isinstance(v, str):
+        n, d = v.split("/")
+        return _real_lit(int(n), int(d))
+    return _real_lit(v.numerator, v.denominator)
+
+
+def _is_real_value(v) -> bool:
+    return isinstance(v, interp.Fraction) or (isinstance(v, str) and bool(_RAT_TEXT.match(v)))
 CMP = {"==": "=", "!=": "/=", "<": "<", "<=": "<=", ">": ">", ">=": ">="}
 ARITH = {"+": "+", "-": "-", "*": "*"}
 DIVMOD = {"div": "T_Div", "mod": "T_Mod"}
@@ -1586,6 +1610,8 @@ def _ce_bound(e: dict, env: dict):
     it would have fit."""
     if "int" in e:
         return _ce_cap(abs(int(e["int"])))
+    if "rat" in e:
+        raise _NoCe("real literal: the instance is over machine integers (SPEC.md 'Exact rationals (v1)')")
     if "bool" in e:
         return None
     if "var" in e:
@@ -1632,6 +1658,8 @@ def _ce_bound(e: dict, env: dict):
         # even if a bound existed. Abstain, the same fail-closed treatment
         # already given to seq ops, calls and quantifiers here.
         raise _NoCe(f"{op!r}: no machine mirror for T_Div/T_Mod")
+    if op in ("toreal", "floor", "ceil"):
+        raise _NoCe(f"{op!r}: reals have no machine mirror here")
     bs = [_ce_bound(a, env) for a in e.get("args", [])]
     if op in ("not", "and", "or", "implies") or op in CMP:
         return None
@@ -3429,7 +3457,7 @@ def _dead_lit(t) -> str:
         return (f"{_pair_ada_name(t)}'(P_A => {_dead_lit(t1)}, "
                f"P_B => {_dead_lit(t2)})")
     return {"int": "Big_Integer'(0)", "bool": "False",
-           "seq": "Seqs.Empty_Sequence"}[t]
+           "seq": "Seqs.Empty_Sequence", "real": _real_lit(0, 1)}[t]
 
 
 def locals_seq(body: list) -> bool:
@@ -3835,6 +3863,8 @@ class Lower:
         self.wcount = 0
         self.needs_range = False       # set by the first lowered quantifier
         self.needs_divmod = False      # set by the first lowered div/mod
+        self.needs_reals = False       # set by the first lowered real literal, real(x) or real `/`; lower()
+                                       # also reads the declared types (SPEC.md "Exact rationals (v1)")
         self.needs_fill = False        # set by the first lowered fill()
         self.needs_update = False      # set by the first lowered update
         self.needs_slice = False       # set by the first lowered slice()
@@ -3921,7 +3951,7 @@ class Lower:
         file compares seqs through T_Eq), so a seq-valued call is evaluated
         under Len instead; any Boolean that evaluates the call serves."""
         guard = " and then ".join(f"({p})" for p in self.path)
-        if ty in ("int", "bool"):
+        if ty in ("int", "bool", "real"):
             ev = f"{text} = {text}"
         elif ty == "seq" or _is_nested_seq(ty):
             ev = f"Len ({text}) = Len ({text})"
@@ -3959,6 +3989,8 @@ class Lower:
         `types` dict at a witness."""
         if "int" in e:
             return "int"
+        if "rat" in e:
+            return "real"   # SPEC.md "Exact rationals (v1)" (2026-10-06)
         if "bool" in e:
             return "bool"
         if "var" in e:
@@ -4028,7 +4060,14 @@ class Lower:
             if not (isinstance(pty, dict) and "pair" in pty):
                 raise ValueError(f"{op} of a non-pair expression")
             return pty["pair"][0 if op == "fst" else 1]
-        if op in ("neg", "-", "*", "div", "mod"):
+        if op == "toreal":
+            return "real"   # SPEC.md "Exact rationals (v1)": real(x)
+        if op in ("floor", "ceil"):
+            return "int"
+        if op in ("neg", "-", "*", "div"):
+            # int or real, by the operand (SPEC.md "Exact rationals (v1)": never mixed)
+            return self._ty(e["args"][0], types)
+        if op == "mod":
             return "int"
         if op == "+":
             return self._ty(e["args"][0], types)
@@ -4076,6 +4115,10 @@ class Lower:
             # universal integer" on count_matches), and the qualified form
             # keeps the Big_Integer literal aspect for arbitrary magnitude.
             return f"{self.num}'({e['int']})"
+        if "rat" in e:
+            # SPEC.md "Exact rationals (v1)" (2026-10-06): a real literal, the quotient of two Big_Reals
+            self.needs_reals = True
+            return _real_lit(*e["rat"])
         if "bool" in e:
             return "True" if e["bool"] else "False"
         if "var" in e:
@@ -4338,6 +4381,20 @@ class Lower:
                 self.needs_range = True
             eq = f"{_pair_ada_name(pty)}_Eq ({args[0]}, {args[1]})"
             return eq if op == "==" else f"(not {eq})"
+        if op == "toreal":
+            # SPEC.md "Exact rationals (v1)": real(x) is Big_Reals' own conversion from a Big_Integer
+            self.needs_reals = True
+            return f"To_Big_Real ({args[0]})"
+        if op in ("floor", "ceil"):
+            # Big_Reals (A.5.7) has no floor or ceiling; lower() refuses the task by name before emission
+            raise NotImplementedError(
+                f"spark: {op}: Ada.Numerics.Big_Numbers.Big_Reals has no floor or ceiling (SPEC.md 'Exact rationals (v1)')")
+        if op == "div" and self._ty(e["args"][0], types) == "real":
+            # SPEC.md "Exact rationals (v1)": exact division, Big_Reals' own "/" whose Pre (Den /= 0) is the
+            # definedness obligation, checked by gnatprove at this call site exactly as T_Div's is for ints
+            # (measured 2026-10-06: the unguarded `A / B` reads "divide by zero might fail")
+            self.needs_reals = True
+            return f"({args[0]} / {args[1]})"
         if op in CMP:
             return f"({args[0]} {CMP[op]} {args[1]})"
         if op in ARITH:
@@ -5144,6 +5201,9 @@ def _cert_lit(v) -> str:
     either, by the same argument one level down."""
     if isinstance(v, bool):
         return "True" if v else "False"
+    if _is_real_value(v):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): a Fraction from interp.exit_env, or a witness's "n/d"
+        return _real_lit_of(v)
     if isinstance(v, interp.Pair):
         def _kind(x):
             return ("bool" if isinstance(x, bool) else
@@ -5215,6 +5275,8 @@ def _cert_lit_of_type(v, ty) -> str:
         return _cert_lit(list(v))
     if ty == "bool":
         return "True" if v else "False"
+    if ty == "real":
+        return _real_lit_of(v)
     return f"Big_Integer'({v})"
 
 
@@ -5249,7 +5311,7 @@ def _t_guard(p: dict, q: dict) -> dict:
     return {"op": "implies", "args": [p, q]}
 
 
-def defined(e: dict) -> dict:
+def defined(e: dict, is_real=None) -> dict:
     """SPEC.md's "Definedness" obligation for `e`, as a t-expression (TRUE
     when the whole subtree is total). Mirrors lower_verus.py's function of
     the same name, structure for structure: the rule is SPEC.md's, stated
@@ -5259,40 +5321,40 @@ def defined(e: dict) -> dict:
     OTHER definedness check this file emits is stated directly as a Pre
     aspect at the call site (Elem/T_Update/T_Fill/T_Div/T_Mod), and needs
     no separate t-expression reading of "defined" to do that."""
-    if "int" in e or "var" in e or "bool" in e:
+    if "int" in e or "var" in e or "bool" in e or "rat" in e:
         return TRUE
     if "ite" in e:
         c = e["ite"]
-        dt, de = defined(c["then"]), defined(c["else"])
+        dt, de = defined(c["then"], is_real), defined(c["else"], is_real)
         branch = (TRUE if dt == TRUE and de == TRUE
                   else {"ite": {"cond": c["cond"], "then": dt, "else": de}})
-        return _t_conj([defined(c["cond"]), branch])
+        return _t_conj([defined(c["cond"], is_real), branch])
     if "call" in e:
-        return _t_conj([defined(a) for a in e["call"]["args"]])
+        return _t_conj([defined(a, is_real) for a in e["call"]["args"]])
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        db = defined(q["body"])
+        db = defined(q["body"], is_real)
         body_ob = (TRUE if db == TRUE else
                    {"forall": {"var": q["var"], "lo": q["lo"], "hi": q["hi"],
                                "body": db}})
-        return _t_conj([defined(q["lo"]), defined(q["hi"]), body_ob])
+        return _t_conj([defined(q["lo"], is_real), defined(q["hi"], is_real), body_ob])
     op, args = e["op"], e.get("args", [])
     if op == "at":
         s, i = args
         bound = {"op": "and", "args": [
             {"op": "<=", "args": [{"int": 0}, i]},
             {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
-        return _t_conj([defined(s), defined(i), bound])
+        return _t_conj([defined(s, is_real), defined(i, is_real), bound])
     if op == "update":
         s, i, v = args
         bound = {"op": "and", "args": [
             {"op": "<=", "args": [{"int": 0}, i]},
             {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
-        return _t_conj([defined(s), defined(i), defined(v), bound])
+        return _t_conj([defined(s, is_real), defined(i, is_real), defined(v, is_real), bound])
     if op == "fill":
         n, v = args
         nonneg = {"op": ">=", "args": [n, {"int": 0}]}
-        return _t_conj([defined(n), defined(v), nonneg])
+        return _t_conj([defined(n, is_real), defined(v, is_real), nonneg])
     if op == "slice":
         # s[a..b] (SPEC.md "Sequences: literals, concatenation, slices",
         # 2026-09-09): DEFINED IFF 0 <= a <= b <= len(s), a definedness
@@ -5303,25 +5365,29 @@ def defined(e: dict) -> dict:
             {"op": "and", "args": [
                 {"op": "<=", "args": [a, b]},
                 {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}]}
-        return _t_conj([defined(s), defined(a), defined(b), bound])
+        return _t_conj([defined(s, is_real), defined(a, is_real), defined(b, is_real), bound])
     if op in ("div", "mod"):
         x, y = args
-        nonzero = {"op": "!=", "args": [y, {"int": 0}]}
-        return _t_conj([defined(x), defined(y), nonzero])
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): a real divisor owes `y != 0.0`; `is_real` (the caller's
+        # static reading, Lower._ty under the certificate's types) says which zero, since `real != int` is
+        # ill-typed and would render as an Ada type error, not an obligation
+        zero = {"rat": [0, 1]} if (is_real is not None and op == "div" and is_real(y)) else {"int": 0}
+        nonzero = {"op": "!=", "args": [y, zero]}
+        return _t_conj([defined(x, is_real), defined(y, is_real), nonzero])
     if op == "and":
         res = TRUE
         for a in reversed(args):
-            res = _t_conj([defined(a), _t_guard(a, res)])
+            res = _t_conj([defined(a, is_real), _t_guard(a, res)])
         return res
     if op == "or":
         res = TRUE
         for a in reversed(args):
             res = _t_conj(
-                [defined(a), _t_guard({"op": "not", "args": [a]}, res)])
+                [defined(a, is_real), _t_guard({"op": "not", "args": [a]}, res)])
         return res
     if op == "implies":
         p, q = args
-        return _t_conj([defined(p), _t_guard(p, defined(q))])
+        return _t_conj([defined(p, is_real), _t_guard(p, defined(q, is_real))])
     # total operators: not neg len + - * == != < <= > >= seq. A seq literal
     # and a seq `+` (concatenation) are both total given their operands are
     # (SPEC.md "Sequences: literals, concatenation, slices", 2026-09-09:
@@ -5333,9 +5399,9 @@ def defined(e: dict) -> dict:
     # defined iff both components are"), exactly this fallthrough's own
     # two-argument conjunction; `fst`/`snd` take one argument, and "always
     # defined on a pair" (SPEC.md) is exactly the same fallthrough's
-    # one-argument conjunction, defined(p) alone, with no extra bound
+    # one-argument conjunction, defined(p, is_real) alone, with no extra bound
     # added the way `at`'s index gets one.
-    return _t_conj([defined(a) for a in args])
+    return _t_conj([defined(a, is_real) for a in args])
 
 
 def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
@@ -5404,10 +5470,14 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
             return interp.Pair(_to_py(a, t1), _to_py(b, t2))
         if ty == "seq":
             return tuple(v)
+        if ty == "real" and isinstance(v, str):
+            n, d = v.split("/")
+            return interp.Fraction(int(n), int(d))
         return v
 
     env_py = {n: (_to_py(v, param_types[n]) if n in param_types else
-                 (tuple(v) if isinstance(v, list) else v))
+                 (tuple(v) if isinstance(v, list) else
+                  _to_py(v, "real") if _is_real_value(v) else v))
              for n, v in vals.items()}
     # A static `types` dict for Lower._ty (SPEC.md "Sequences: literals,
     # concatenation, slices", 2026-09-09: needed to render a seq `+` inside
@@ -5419,7 +5489,8 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
     # AST-level types dict at a witness for a local.
     types = {n: (param_types[n] if n in param_types else
                 ("seq" if isinstance(v, tuple) else
-                 "bool" if isinstance(v, bool) else "int"))
+                 "bool" if isinstance(v, bool) else
+                 "real" if isinstance(v, interp.Fraction) else "int"))
             for n, v in env_py.items()}
     sub = dict(sub)
     funs = interp.funs_of(task, twin_body)
@@ -5457,6 +5528,14 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
     # `if`'s (a False reading there is not itself surfaced as the found
     # obligation -- the pre-existing conservative posture the `if` case
     # above already has, not changed here).
+    def isr(x) -> bool:
+        """Whether `x` reads as a real under the walk's growing `types` (SPEC.md "Exact rationals (v1)"): the
+        definedness obligation of a real division is `y != 0.0`, an int one's `y != 0`."""
+        try:
+            return L._ty(x, types) == "real"
+        except ValueError:
+            return False
+
     def _walk(stmts: list) -> str | None:
         for s in stmts:
             if "var" in s:
@@ -5465,7 +5544,7 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                 name, e = s["assign"]
             elif "if" in s:
                 cond = s["if"]["cond"]
-                cob = defined(cond)
+                cob = defined(cond, isr)
                 if cob != TRUE and not interp.ev(cob, env_py, funs, st):
                     # 2026-09-14 (spark-sole, ROADMAP 16.2 "spark: the nine
                     # sole-blocked rows"): an `if`'s own COND can itself be
@@ -5484,7 +5563,7 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                     # this concrete witness the exact same way a var/
                     # assign RHS's own would be trusted two lines below.
                     # Surfacing it here is the same reading, never a new
-                    # one: `cob` is `defined(cond)`, ground-false at this
+                    # one: `cob` is `defined(cond, isr)`, ground-false at this
                     # witness by construction, rendered through the SAME
                     # L.expr() every other certificate part uses.
                     return f"(not {L.expr(cob, sub, types)})"
@@ -5499,7 +5578,7 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                 it = 0
                 while True:
                     cond = w["cond"]
-                    cob = defined(cond)
+                    cob = defined(cond, isr)
                     if cob != TRUE and not interp.ev(cob, env_py, funs, st):
                         # Same widening as the `if` case just above, for a
                         # while's own guard.
@@ -5517,7 +5596,7 @@ def _undef_obligation(task: dict, twin_body: list, sub: dict, vals: dict,
                 continue          # SPEC.md "Lemmas (v1)": erased at run time
             else:
                 return None
-            ob = defined(e)
+            ob = defined(e, isr)
             if ob != TRUE and not interp.ev(ob, env_py, funs, st):
                 return f"(not {L.expr(ob, sub, types)})"
             val = interp.ev(e, env_py, funs, st)
@@ -5731,7 +5810,8 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower,
     # name with no AST-level declaration here.
     types = {k: (param_types[k] if k in param_types else
                 ("seq" if isinstance(v, list) else
-                 "bool" if isinstance(v, bool) else "int"))
+                 "bool" if isinstance(v, bool) else
+                 "real" if _is_real_value(v) else "int"))
             for k, v in vals.items()}
     types[ret] = task["returns"][0]["type"]
     ens = None
@@ -5831,7 +5911,7 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower,
             expr_node = w.get("_expr")
             if expr_node is None:
                 return ""
-            ob_t = defined(expr_node)
+            ob_t = defined(expr_node, lambda x: L._ty(x, types) == "real")
             if ob_t == TRUE:
                 return ""
             parts.append(f"(not {L.expr(ob_t, sub, types)})")
@@ -6075,7 +6155,11 @@ def _uses_sets(obj) -> bool:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "spark")
+    tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real"}))
+    if tshape.uses_ops(body, task, {"floor", "ceil"}):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): Big_Reals (Ada 2022 A.5.7) has no floor or ceiling
+        raise NotImplementedError(
+            "spark: floor/ceil: Ada.Numerics.Big_Numbers.Big_Reals has no floor or ceiling (SPEC.md 'Exact rationals (v1)')")
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
         # names "Frama-C and SPARK through records with discriminants" as
@@ -6530,6 +6614,10 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         "with Ada.Numerics.Big_Numbers.Big_Integers;",
         "use  Ada.Numerics.Big_Numbers.Big_Integers;",
     ]
+    if L.needs_reals or any(tshape.mentions_real(t) for t in tshape.declared_types(task, body)):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): Big_Real, To_Big_Real and the operators
+        parts += ["with Ada.Numerics.Big_Numbers.Big_Reals;",
+                  "use  Ada.Numerics.Big_Numbers.Big_Reals;"]
     if needs_seq:
         parts += ["with SPARK.Containers.Functional.Infinite_Sequences;"]
     parts += [f"package {pkg} with SPARK_Mode is", ""]
