@@ -937,3 +937,21 @@ final for the CPU.
 back to 16.1 (the longer drafts are accepted less and cost more to check). On six CPU cores the ladder is 11.3 (none),
 12.0 (3), 15.8 (5), 17.7 (6), 16.1 (8): the launcher's draft length is 6. The card's optimum is read when the laptop
 is free (its 161 are read at 3 for both the untaught and the taught model, so F stays comparable).
+
+**S2c (registered 07:06Z, before the run)**: n-gram self-speculation added to the MTP draft (`--spec-type
+draft-mtp,ngram-mod`, n-max 6) on the same eight tasks and cores 54–59, against n-max 6 alone (17.7 tok/s on cores
+48–53, S2b). The sources (llama.cpp PR 18471) report gains only on output with long repeated runs; the assistant's
+tool calls quote file content back, which may be such a case. Bar: at least 5% more tokens per second with the tasks
+done unchanged within one; otherwise MTP alone stays.
+
+### S2c read 07:15Z
+
+| server | calls | prompt s | tokens written | gen s | tok/s | acceptance | mean draft | done |
+|---|---|---|---|---|---|---|---|---|
+| draft-mtp,ngram-mod, n-max 6, cores 54–59 | 43 | 166 | 5,248 | 248 | 21.2 | 0.64 | 8.45 | 7 |
+
+**S2c holds**: 21.2 tokens per second against 17.7 for the MTP draft alone (+20%), done 7 of 8 against 6 (within one).
+The n-gram draft hits when the model writes back a run it has already seen (one call: 1,123 of 1,320 drafted tokens
+accepted, mean draft 19.1) and misses often elsewhere (acceptance 0.64 overall), and the misses cost less than the hits
+save on this workload. The launcher's draft is `draft-mtp,ngram-mod` at n-max 6; the CPU ladder ends at 21.2 against
+11.3 with no draft (1.9×). The card's values are read when the laptop is free.
