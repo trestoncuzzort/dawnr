@@ -178,6 +178,13 @@ ones; the training adds 8 problems. These counts were corrected three times on t
 (contaminated problems removed, inputs made larger, proofs sorted by what they prove); the corrections and
 their reasons are in [CORRECTIONS.md](CORRECTIONS.md). A much larger model still does better.
 
+**The seven kernels.** Every committed `t` task is lowered into seven independent proof systems. Each must prove
+the program and refute a deliberately broken twin at a concrete input, or refuse by name. Of the 88 tasks, Dafny
+proves 88, Verus 80, F* 53, SPARK 50, Rocq 43, Lean 40 and Frama-C 36. In every kernel, the twin of every proved
+program is refuted (100%). 36 tasks are proved, with the twin refuted, in all seven; the rest are named refusals,
+mostly of the constructs added on 2026-10-06, which the other kernels are being taught now
+([the matrix](t/AGREEMENT.md)).
+
 **What went wrong**, kept on the record: a file written into a folder the request did not name; two files
 "swapped" with a command that lost one; the smaller of two files removed when the larger was asked for; a
 warning misread by the model as "try again". Each is why a check now exists, and each check is measured.

@@ -893,6 +893,8 @@ def format_table(cols, rows, tasks, out_dir: Path, wits: dict | None = None) -> 
     # ROADMAP WS-19 move 4: the sole-blocker count, over the cell text just
     # built above, no second parse of the table this function is writing.
     lines += ["", blockers.render_section(col_names, cell_rows).rstrip("\n")]
+    # internal/RESEARCH-2026-10-06-landscape.md, decision D3: the twin-refuted share and the all-columns count
+    lines += ["", blockers.render_kernels(col_names, cell_rows).rstrip("\n")]
     return "\n".join(lines) + "\n"
 
 

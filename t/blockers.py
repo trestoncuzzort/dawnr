@@ -145,6 +145,32 @@ def render_section(col_names: list[str], cell_rows: dict[str, dict[str, str]]) -
     return "## Sole blockers\n\n" + render_block(col_names, cell_rows)
 
 
+def render_kernels(col_names: list[str], cell_rows: dict[str, dict[str, str]]) -> str:
+    """The '## Per kernel' section (internal/RESEARCH-2026-10-06-landscape.md, decision D3): per kernel, the tasks it
+    carries (does not abstain on by name), the tasks whose real program it verifies, how many of those it also
+    refutes the twin of (the share is the headline beside the proof count: a verified real whose twin is not refuted
+    proves a spec that cannot tell right from wrong), and its refusals by name; then the all-columns count. Cells are
+    read by the same plain string test as the blocker count, a "(FLAKED)" suffix stripped."""
+    def cell(t: str, k: str) -> str:
+        return cell_rows[t].get(k, "").replace(" (FLAKED)", "").strip()
+    n = len(col_names)
+    lines = ["## Per kernel", "",
+             "| kernel | carried | real verified | twin refuted where the real is verified | abstains by name |",
+             "|---|---|---|---|---|"]
+    for k in col_names:
+        cells = [cell(t, k) for t in cell_rows]
+        abstain = sum(1 for c in cells if c.startswith("abstain"))
+        absent = sum(1 for c in cells if c in ("", "—"))
+        verified = [c for c in cells if c.startswith("verified /")]
+        refuted = sum(1 for c in verified if c == COUNTS)
+        share = f"{refuted} of {len(verified)} ({100 * refuted // len(verified)}%)" if verified else "0 of 0"
+        lines.append(f"| {k} | {len(cells) - abstain - absent} | {len(verified)} | {share} | {abstain} |")
+    every = sum(1 for t in cell_rows if all(cell(t, k) == COUNTS for k in col_names))
+    out_of = f"all {_word(n)}" if n in _WORDS else f"all {n}"
+    lines += ["", f"Verified with the twin refuted in {out_of} columns: {every} of {len(cell_rows)} tasks."]
+    return "\n".join(lines) + "\n"
+
+
 def _replace_or_append(text: str, section: str, replace: bool) -> str:
     lines = text.splitlines(keepends=True)
     if replace:
@@ -166,7 +192,25 @@ def main() -> int:
                     help="append the block, under a '## Sole blockers' heading, to this file")
     ap.add_argument("--replace", action="store_true",
                     help="with --append, replace an existing '## Sole blockers' section in place")
+    ap.add_argument("--kernels", action="store_true",
+                    help="print (and with --append, add or replace) the '## Per kernel' section instead")
     args = ap.parse_args()
+
+    if args.kernels:
+        col_names, cell_rows = parse_table(args.table)
+        section = render_kernels(col_names, cell_rows)
+        print(section)
+        if args.append is not None:
+            text = args.append.read_text(encoding="utf-8") if args.append.exists() else ""
+            lines = text.splitlines(keepends=True)
+            start = next((i for i, l in enumerate(lines) if l.rstrip("\n") == "## Per kernel"), None)
+            if start is not None:
+                end = next((j for j in range(start + 1, len(lines)) if lines[j].startswith("## ")), len(lines))
+                text = "".join(lines[:start]) + section + "".join(lines[end:])
+            else:
+                text = text.rstrip("\n") + "\n\n" + section
+            args.append.write_text(text, encoding="utf-8", newline="\n")
+        return 0
 
     col_names, cell_rows = parse_table(args.table)
     block = render_block(col_names, cell_rows)

@@ -527,3 +527,22 @@ Each is now the time the entry was written, taken from the session's own log, an
 table's own UTC stamp. Every "2026-10-07" in the repository (74 dating notes on Reductions and the string library's
 second wave) is now 2026-10-06. The order of every registration before its runs is unchanged. A clock is read from
 now on (`date -u`).
+
+## T9 registered (2026-10-06 21:23Z, before any run): the library in Lean, the first landing of the depth programme
+
+`internal/RESEARCH-2026-10-06-landscape.md` decision D1: the five kernels carry what the language already has, before
+more breadth. Lean refuses 18 of the 84 committed tasks for "The library (v1)" (and Rocq and Frama-C the same 18), the
+largest single block of refusals in the matrix. Read first (receipt 14c792546549): core Lean 4.33's `List.mergeSort`
+("a stable merge sort") with `mergeSort_perm`, `length_mergeSort`, `mem_mergeSort` and `pairwise_mergeSort`
+(sorted under a total, transitive comparison); `List.sum_append`, `List.getElem_reverse`, `List.foldl_append`;
+`Int.gcd` (a Nat); the reference's `grind` chapter (linear integer arithmetic, a commutative ring solver,
+E-matching over `@[grind]`-annotated library lemmas). No Mathlib: this column is core Lean only. Bars: (1) Lean
+verifies the real and refutes the twin on at least 12 of the 18 tasks, with every theorem's `#print axioms` free
+of `sorryAx`; (2) the rest are refused by name with the reason stated: `members_upto` (finite sets, not in core
+Lean), `pad_right_len` (the string library's second wave), and any other op that does not close, named; (3) no
+Lean cell that agreed before changes, measured by the clean-clone matrix; (4) the definitions are Python's (and t's
+interpreter's) semantics: `sort` and `sort_by` are `mergeSort` itself, not merely a sorted permutation, since a
+stable sort is unique. What would falsify the design: `grind` not closing the sorted-output ensures from
+`pairwise_mergeSort` without an explicit instance (then the lowering states the instance, and the read says so);
+a ground certificate over `mergeSort` not reducing by `decide` (then that certificate is refused by name and the
+twin reads UNPROVED, a cell the read counts against bar 1).
