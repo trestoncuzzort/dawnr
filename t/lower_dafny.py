@@ -2073,10 +2073,15 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         # SPEC.md "Pairs" (2026-09-10): defined iff both components are,
         # already true here since vs[0]/vs[1] are already-evaluated values.
         return out, interp.Pair(vs[0], vs[1])
+    if op == "tuple":
+        # SPEC.md "Compositional types (v1)" (2026-10-06): as the pair, at any arity.
+        return out, interp.Tup(tuple(vs))
+    if op == "proj":
+        return out, vs[0].items[e["args"][1]["int"]]
     if op == "fst":
-        return out, vs[0].a
+        return out, vs[0].a if isinstance(vs[0], interp.Pair) else vs[0].items[0]
     if op == "snd":
-        return out, vs[0].b
+        return out, vs[0].b if isinstance(vs[0], interp.Pair) else vs[0].items[1]
     if op in ("set", "in", "card", "union", "inter", "diff"):
         # SPEC.md "Finite sets" (2026-09-27): six total operations, the
         # dispatch of interp.ev (a set value is a frozenset there too; a

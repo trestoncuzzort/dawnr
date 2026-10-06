@@ -5791,6 +5791,8 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
 # sites pass it; when it is present and ground-certificatable, the lowering
 # appends the refutation certificate block (see the section above).
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    import tshape
+    tshape.abstain_unless_carried(task, body, "verus")
     global _SUFFIX_INT
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Verus/Rust reserved word, before either lowering

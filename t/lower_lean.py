@@ -10215,6 +10215,8 @@ def _uses_sets(obj) -> bool:
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    import tshape
+    tshape.abstain_unless_carried(task, body, "lean")
     if _uses_sets(task) or _uses_sets(body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): this column
         # is core Lean 4 with no Mathlib (measured: the toolchain here is

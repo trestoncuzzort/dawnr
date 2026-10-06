@@ -5765,6 +5765,8 @@ def _method_src(task: dict, m: dict, used: set) -> tuple[Ctx, str]:
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    import tshape
+    tshape.abstain_unless_carried(task, body, "fstar")
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): F*'s own
         # `type D = | C1 | C2 | ...` is the exact source for a field-less

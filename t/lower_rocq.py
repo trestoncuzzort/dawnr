@@ -12333,6 +12333,8 @@ def _v0_cert(task: dict, body: list, witness: dict):
 # sites pass it; when a certificate can ground it, the twin file carries
 # t_refutation_certificate instead of an unprovable spec theorem.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    import tshape
+    tshape.abstain_unless_carried(task, body, "rocq")
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): Rocq's own
         # `Inductive` is the exact source for a field-less v1 enum
