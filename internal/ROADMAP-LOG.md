@@ -3158,6 +3158,13 @@ is queued, and the ones running are read as they finish.
   stable insertion sort with its own lemmas; `any`/`all` are `List.any`/`List.all` with bridge lemmas; `fold`,
   `max_by` and `min_by` are in prefix form over `Nat`. `members_upto` (sets) and `pad_right_len` (strings v2) refuse
   by name. Lean: 40 -> 56 verified, 46 -> 30 refusals, no other cell moved.
-- **Next:** D1 continues: the library in Rocq and Frama-C (18 tasks each), compositional types in Lean, Rocq and
-  Frama-C (14 each), comprehensions in all five (7). D2's first step runs beside it: AlgoVeri's 25 stateable contracts
-  written in t. The language queue: G9 datatypes with fields (records, options, trees), then iteration over a map.
+- **T10 landed (10-06 22:18Z), the library in Rocq:** 14 of the 18 library tasks Rocq refused are now verified with
+  the twin refuted, over Rocq's own function-plus-length encoding (`t/rocq_lib.py`): the stdlib's `Z` functions, fuel
+  `Fixpoint`s for sum, membership, the extrema and any/all, a stable insertion sort read back as a function. Each fact
+  is posed before the proof engine runs. A certificate repair: witness sequences now reach the interpreter as tuples
+  (a list made every concatenation in an ensures raise). Rocq: 43 -> 57 verified, 45 -> 31 refusals, no other cell
+  moved. Eight tasks are now blocked by Frama-C alone.
+- **Next:** D1 continues with T11, the library in Frama-C: two hand probes prove the integer pieces and the sequence
+  pieces as logic definitions with C loops mirroring them. Then the higher-order calls in Rocq, compositional types in
+  Lean, Rocq and Frama-C, comprehensions in all five. D2: AlgoVeri's 22 stateable contracts are being written in t.
+  The language queue: G9 datatypes with fields (records, options, trees), then iteration over a map.

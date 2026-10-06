@@ -590,3 +590,21 @@ re-run); (4) every theorem closed under the global context. What would falsify t
 (`t_sweep`/`t_base`) not reaching a library lemma stated at the use (then a `pose proof` line names it, and the
 read says which); a ground certificate over a fuel `Fixpoint` not reducing by `reflexivity` (then that twin reads
 UNPROVED, counted against bar 1).
+
+### T10 read (2026-10-06 22:18Z): the library in Rocq, 14 of the 18 tasks verified with the twin refuted.
+(1) Bar 1 held: Rocq verifies the real program and refutes the twin on 14 of the 18 tasks it refused for the library:
+`clamp`, `distance`, `gcd_of`, `cube`, `root_floor`, `has_elem`, `sum_one`, `sum_tail`, `largest`,
+`palindrome`, `first_sorted`, `sort_it`, `all_positive`, `has_negative`. (2) Bar 2 held: `members_upto`
+(`toset`), `pad_right_len` (strings v2), `weighted_sum` (`fold`) and `longest_row` (`max_by`) refuse by name;
+the higher-order calls are this column's next item. (3) Bar 3 held: the whole Rocq column was re-run over the 88 tasks,
+and exactly those 14 cells moved. Rocq goes from 43 to 57 verified with the twin refuted, its refusals from 45 to 31.
+(4) Every theorem is closed under the global context. The first registered falsifier fired, as allowed: the proof
+engine did not reach a library fact on its own, so each fact is posed at its use before `t_dis`, as a `pose proof`
+line built from the call's own arguments (gcd's sign, isqrt's bounds, the extremum's facts, the sort's order, a sum
+over a concatenation). Membership needed more. The engine does not case-split an arbitrary bool-valued call, so the
+membership bridge is rewritten into the goal, the bool destructed, and the first branch closed in place. `any`'s
+bool predicate needed a pointwise bool/Prop bridge rewritten under the binder (`setoid_rewrite`). The second
+falsifier did not fire: ground values reduce by computation. One repair older than the landing: the certificate
+builder handed the interpreter a witness sequence as a JSON list, so an ensures with a concatenation raised and was
+skipped, and `sum_tail`'s twin had no certificate; witness sequences now enter as the interpreter's tuples. Membership
+in a seq left Rocq's set detector, as it left Lean's.
