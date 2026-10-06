@@ -252,11 +252,129 @@ def test_string_lib_properties():
         assert ev("find", s, ()) == 0
 
 
+# ------------------------------------------------ the second wave (v2) --
+# SPEC.md "The string library (v2)" (2026-10-07): the same parity, member by member, against Python's own.
+
+def _t1(rng):
+    return rand_seq(rng, rng.randint(1, 2), ASCII)
+
+
+@test
+def test_split_str():
+    def one(rng):
+        s, u = _s(rng), _t1(rng)
+        return ev("split", s, u), tuple(_from_str(w) for w in _to_str(s).split(_to_str(u)))
+    _run_parity("split(s, u)", 2, one)
+
+
+@test
+def test_strip_chars():
+    for op, py in (("strip", str.strip), ("lstrip", str.lstrip), ("rstrip", str.rstrip)):
+        def one(rng, op=op, py=py):
+            s, u = _s(rng), rand_seq(rng, rng.randint(0, 3), ASCII)
+            return ev(op, s, u), _from_str(py(_to_str(s), _to_str(u)))
+        _run_parity(op + "(s, u)", 2, one)
+
+
+@test
+def test_index_rfind():
+    def one(rng):
+        s, u = _s(rng), _t1(rng)
+        got_r = ev("rfind", s, u)
+        want_r = _to_str(s).rfind(_to_str(u))
+        if want_r >= 0:
+            assert ev("index", s, u) == _to_str(s).index(_to_str(u))
+        else:
+            try:
+                ev("index", s, u)
+                raise AssertionError("index of an absent part must be undefined")
+            except interp.Undef:
+                pass
+        return got_r, want_r
+    _run_parity("rfind/index", 2, one)
+
+
+@test
+def test_padding():
+    def one(rng):
+        s, w, f = _s(rng), rng.randint(0, 14), rng.choice(ASCII[33:127])
+        got = (ev("zfill", s, w), ev("center", s, w), ev("ljust", s, w, f), ev("rjust", s, w, f), ev("center", s, w, f))
+        st = _to_str(s)
+        want = (_from_str(st.zfill(w)), _from_str(st.center(w)), _from_str(st.ljust(w, chr(f))),
+                _from_str(st.rjust(w, chr(f))), _from_str(st.center(w, chr(f))))
+        return got, want
+    _run_parity("zfill/center/ljust/rjust", 2, one)
+
+
+@test
+def test_case_members():
+    def one(rng):
+        s = _s(rng)
+        st = _to_str(s)
+        return ((ev("capitalize", s), ev("swapcase", s), ev("title", s)),
+                (_from_str(st.capitalize()), _from_str(st.swapcase()), _from_str(st.title())))
+    _run_parity("capitalize/swapcase/title", 1, one)
+
+
+@test
+def test_isspace_isalnum_isint():
+    import re
+    def one(rng):
+        s = rand_seq(rng, rand_len(rng), rng.choice([ASCII, list(range(48, 58)) + [43, 45], [9, 10, 32, 28]]))
+        st = _to_str(s)
+        return ((ev("isspace", s), ev("isalnum", s), ev("isint", s)),
+                (st.isspace(), st.isalnum(), bool(re.fullmatch(r"[+-]?[0-9]+", st))))
+    _run_parity("isspace/isalnum/isint", 1, one)
+
+
+@test
+def test_toint():
+    def one(rng):
+        n = rng.randint(-10 ** 6, 10 ** 6)
+        s = _from_str((rng.choice(["", "+"]) if n >= 0 else "") + str(n))
+        return ev("toint", s), int(_to_str(s))
+    _run_parity("toint", 1, one)
+    try:
+        ev("toint", _from_str("12a"))
+        raise AssertionError("toint of a non-integer must be undefined")
+    except interp.Undef:
+        pass
+
+
+@test
+def test_splitlines_partition():
+    LB = [10, 13, 11, 12, 28, 29, 30, 133, 8232, 8233]
+    def one(rng):
+        s = rand_seq(rng, rand_len(rng), ASCII[32:127] + LB * 4)
+        u = _t1(rng)
+        st = _to_str(s)
+        got_p = ev("partition", s, u)
+        return ((ev("splitlines", s), tuple(got_p.items)),
+                (tuple(_from_str(x) for x in st.splitlines()), tuple(_from_str(x) for x in st.partition(_to_str(u)))))
+    _run_parity("splitlines/partition", 1, one)
+
+
+@test
+def test_padding_is_capped():
+    # 2026-10-06: a width past MAX_SEQ decides nothing (Budget), as for fill and join; uncapped, the twin search's
+    # width 2**31 built a 2-billion-element tuple and the OOM killer took the session down
+    for op in ("zfill", "center", "ljust", "rjust"):
+        try:
+            ev(op, (49,), interp.MAX_SEQ + 1)
+            raise AssertionError(op + " past MAX_SEQ must hit the length cap")
+        except interp.Budget:
+            pass
+
+
 # --------------------------------------------------- notation round trip --
 
 # SPEC.md "The string library": every member form, one line each (split at
 # both its arities). Round-tripped through surface.parse_expr/pexpr.
 NOTATION_FORMS = [
+    # SPEC.md "The string library (v2)" (2026-10-07)
+    "s.split(u)", "s.strip(u)", "s.lstrip(u)", "s.rstrip(u)", "s.index(u)", "s.rfind(u)", "s.zfill(w)",
+    "s.center(w)", "s.center(w, c)", "s.ljust(w)", "s.rjust(w, c)", "s.capitalize()", "s.swapcase()", "s.title()",
+    "s.isspace()", "s.isalnum()", "s.splitlines()", "s.partition(u)", "isint(s)", "toint(s)",
     "s.split()",
     "s.split(c)",
     "sep.join(rows)",

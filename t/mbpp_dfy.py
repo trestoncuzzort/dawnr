@@ -291,7 +291,7 @@ def string_lib_v1_only(code: str, fn_name: str | None) -> bool:
     on a solution `ast.parse` cannot read, False (the conservative
     refusal every other unreadable shape in this file takes)."""
     try:
-        tags = nl_census.solution_tags(code, fn_name, True)
+        tags = nl_census.solution_tags(code, fn_name, True, strlib_wave=1)   # the frozen first-wave reading
     except Exception:                                             # noqa: BLE001
         return False
     if tags.get("py2-unparseable"):

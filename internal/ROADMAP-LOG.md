@@ -3117,6 +3117,16 @@ is queued, and the ones running are read as they finish.
   method-only class and a modelled import as burdens: 1,892 -> 2,745 function-shaped problems in the fragment
   (64.8%). The remaining language items, by the gap table: the string library's missing members, records and
   options, map iteration, nested helpers.
-- **Next:** the matrix regenerated from a clean clone (80 tasks); then G7 the string library's missing members, G8
-  records and options (constructors with fields; the checker and the kernels' match already carry binders), map
-  iteration; Verus on early exits and SPARK's `sum` lemma as design items.
+- **G7 landed (10-06 18:40Z), the string library's second wave:** fifteen members and `isint`/`toint` (SPEC "The
+  string library (v2)"), Python's semantics checked member by member; Dafny and Verus carry all of them, four
+  committed tasks verified with the twin refuted in both. Repairs found on the way: the padding members now stop at
+  MAX_SEQ (an uncapped width of 2**31 from the twin search twice OOM-killed the session); the grammar's simple
+  statements need `;`, whitespace or `}` and the string members are split by arity (two disagreements with the
+  parser, older than the wave, found by the first desktop grammar check); the frozen pools keep the first wave's
+  string reading. Census: 2,773 of 4,239 function-shaped problems in the fragment (65.4%); the string gap 1,095.
+- **The lab, 10-06 evening:** another student cleared the shared workstation; ~/scratch was already gone; everything
+  else lab-only went to the desktop's /data/lab-rescue; the lab now holds 13 GB of ours (prover toolchains and a
+  shallow checkout) under the operator's 20 GB ceiling. Heavy commands now run in memory-capped user units.
+- **Next:** the matrix regenerated from a clean clone (84 tasks); then G8 records and options (constructors with
+  fields; the checker and the kernels' match already carry binders), iteration over a map; Verus on early exits and
+  SPARK's `sum` lemma as design items.

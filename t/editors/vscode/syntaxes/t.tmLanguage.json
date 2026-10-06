@@ -108,7 +108,7 @@
       "patterns": [
         {
           "name": "support.function.string-method.t",
-          "match": "(?<=\\.)\\s*\\b(startswith|endswith|isupper|islower|isalpha|replace|isdigit|lstrip|rstrip|upper|strip|lower|count|split|find|join)\\b"
+          "match": "(?<=\\.)\\s*\\b(capitalize|splitlines|startswith|partition|swapcase|endswith|isalnum|isspace|isupper|islower|isalpha|replace|isdigit|center|lstrip|rstrip|index|rfind|zfill|ljust|rjust|title|upper|strip|lower|count|split|find|join)\\b"
         }
       ]
     },

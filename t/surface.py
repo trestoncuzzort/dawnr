@@ -305,7 +305,10 @@ KEYWORDS = {
 # "0" and "1"; a task is still free to name a spec_fun or a local `split`.
 STR_METHODS = {"split", "join", "count", "find", "strip", "lstrip", "rstrip",
               "replace", "lower", "upper", "isdigit", "isalpha", "isupper",
-              "islower", "startswith", "endswith"}
+              "islower", "startswith", "endswith",
+              # SPEC.md "The string library (v2)" (2026-10-07)
+              "index", "rfind", "zfill", "center", "ljust", "rjust", "capitalize", "swapcase", "title",
+              "isspace", "isalnum", "splitlines", "partition"}
 
 # Longest match first: "==>" before "==" before "=", "=>" before "=", ":=" before ":".
 SYMBOLS = ["==>", "==", "=>", "!=", "<=", ">=", ":=", "=", "<", ">", "+", "-",
@@ -1457,12 +1460,22 @@ class Parser:
                                      "arguments, given %d" % len(margs), "Op")
                         e = self.mark(start, {"op": "replace",
                                               "args": [e] + margs})
-                    elif name in ("count", "find", "startswith", "endswith"):
+                    elif name in ("count", "find", "startswith", "endswith",
+                                  "index", "rfind", "zfill", "partition"):
                         if len(margs) != 1:
                             self.err(ntok, ".%s takes exactly one argument, "
                                      "given %d" % (name, len(margs)), "Op")
                         e = self.mark(start, {"op": name,
                                               "args": [e, margs[0]]})
+                    elif name in ("strip", "lstrip", "rstrip"):
+                        # SPEC.md "The string library (v2)" (2026-10-07): whitespace, or a character set
+                        if len(margs) > 1:
+                            self.err(ntok, ".%s takes zero or one argument, given %d" % (name, len(margs)), "Op")
+                        e = self.mark(start, {"op": name, "args": [e] + margs})
+                    elif name in ("center", "ljust", "rjust"):
+                        if len(margs) not in (1, 2):
+                            self.err(ntok, ".%s takes one or two arguments, given %d" % (name, len(margs)), "Op")
+                        e = self.mark(start, {"op": name, "args": [e] + margs})
                     else:
                         # strip, lstrip, rstrip, lower, upper, isdigit,
                         # isalpha, isupper, islower: no arguments.
@@ -1743,7 +1756,8 @@ def _free_names(e) -> set:
 
 LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",   # "sort": SPEC.md "Sorting (v1)"
                        "keys", "remove",                                                    # SPEC.md "Maps (v1)" (2026-10-06)
-                       "any", "all", "toset"})                                              # SPEC.md "Reductions (v1)" (2026-10-07)
+                       "any", "all", "toset",                                               # SPEC.md "Reductions (v1)" (2026-10-07)
+                       "isint", "toint"})                                                   # SPEC.md "The string library (v2)" (2026-10-07)
 
 
 def _resolve_library(task: dict) -> None:
@@ -1929,10 +1943,14 @@ _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice"
           # here (one or two arguments) and checked in its own print/parse
           # branches instead, exactly as `seq`/`and`/`or` are excluded for
           # their own variable arities.
-          "join": 2, "tostr": 1, "count": 2, "find": 2, "strip": 1,
-          "lstrip": 1, "rstrip": 1, "replace": 3, "lower": 1, "upper": 1,
+          "join": 2, "tostr": 1, "count": 2, "find": 2, "strip": (1, 2),
+          "lstrip": (1, 2), "rstrip": (1, 2), "replace": 3, "lower": 1, "upper": 1,
           "isdigit": 1, "isalpha": 1, "isupper": 1, "islower": 1,
-          "startswith": 2, "endswith": 2}
+          "startswith": 2, "endswith": 2,
+          # SPEC.md "The string library (v2)" (2026-10-07)
+          "index": 2, "rfind": 2, "zfill": 2, "center": (2, 3), "ljust": (2, 3), "rjust": (2, 3), "capitalize": 1,
+          "swapcase": 1, "title": 1, "isspace": 1, "isalnum": 1, "splitlines": 1, "partition": 2,
+          "isint": 1, "toint": 1}
 
 
 def _wrap(text: str, prec: int, floor: int) -> str:
@@ -2098,11 +2116,15 @@ def pexpr(e, floor: int = P_QUANT) -> str:
     if op in ("toreal", "floor", "ceil"):
         # SPEC.md "Exact rationals (v1)" (2026-10-06): real(x), floor(x), ceil(x)
         return "%s(%s)" % ("real" if op == "toreal" else op, pexpr(args[0]))
-    if op in ("count", "find", "startswith", "endswith"):
+    if op in ("count", "find", "startswith", "endswith", "index", "rfind", "zfill", "partition"):
         return _wrap("%s.%s(%s)" % (pexpr(args[0], P_POSTFIX), op,
                                     pexpr(args[1])), P_POSTFIX, floor)
-    if op in ("strip", "lstrip", "rstrip", "lower", "upper", "isdigit",
-             "isalpha", "isupper", "islower"):
+    if op in ("strip", "lstrip", "rstrip", "center", "ljust", "rjust"):
+        # SPEC.md "The string library (v2)" (2026-10-07): the receiver, then the optional arguments
+        return _wrap("%s.%s(%s)" % (pexpr(args[0], P_POSTFIX), op, ", ".join(pexpr(a) for a in args[1:])),
+                     P_POSTFIX, floor)
+    if op in ("lower", "upper", "isdigit", "isalpha", "isupper", "islower",
+              "capitalize", "swapcase", "title", "isspace", "isalnum", "splitlines"):
         return _wrap("%s.%s()" % (pexpr(args[0], P_POSTFIX), op),
                      P_POSTFIX, floor)
     if op == "replace":
@@ -2453,6 +2475,11 @@ WRITTEN = [
               "init": {"op": "seq", "args": []}}}),
     # SPEC.md "The string library (v1)", added 2026-09-11.
     ("expr", "s.split()", {"op": "split", "args": [{"var": "s"}]}),
+    # SPEC.md "The string library (v2)" (2026-10-07)
+    ("expr", "s.strip(u)", {"op": "strip", "args": [{"var": "s"}, {"var": "u"}]}),
+    ("expr", "s.center(w, c)", {"op": "center", "args": [{"var": "s"}, {"var": "w"}, {"var": "c"}]}),
+    ("expr", "s.partition(u).0", {"op": "fst", "args": [{"op": "partition", "args": [{"var": "s"}, {"var": "u"}]}]}),
+    ("expr", "toint(s)", {"op": "toint", "args": [{"var": "s"}]}),
     ("expr", "s.split(c)",
      {"op": "split", "args": [{"var": "s"}, {"var": "c"}]}),
     ("expr", "sep.join(rows)",
