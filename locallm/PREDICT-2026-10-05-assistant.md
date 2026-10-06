@@ -825,3 +825,16 @@ hands). The bars stand at: **F1 at least 458 of 530; F2 at least 81 of 130; F3 a
 calls a task done**; F5 and F6 against the untaught model's own reading on the laptop at the same commit, taken
 right before the taught one. `shift_numbered` is still 0 of 10 for the untaught model with the loop warning in
 place: to be read step by step when the taught model is.
+
+## S: the server's speed flags on a CPU (registered 2026-10-06 05:59Z, before the run)
+
+Where the time went in the untaught 4B's reading of the 660 tasks on the lab's CPUs (eight servers, six cores each, 7,209 model calls): generation 73,680 s, prompt processing 35,557 s, of which 16,957 s was the first call of a task (618 calls of ~2,334 tokens: the shared prefix, processed again for every new conversation although the previous conversation held it; the other 6,591 calls processed a median of 123 tokens, so within a conversation the cache held). Generation ran at a median of 19.8 tokens per second per call with MTP drafting at n-max 3, acceptance 0.83–1.0, mean draft length 2.2–3.5.
+
+Four servers on the lab's CPUs (six cores each, same model file, the same eight tasks one after another: edit_insert_line, rename_numbered, csv_group_totals, function_to_test, git_last_commit, sheet_figures, machine_look_then_act, flatten_with_prefix, seed 3000): A the product's flags (MTP n-max 3, p-min 0.6); B A plus `--ctx-checkpoints 64 --checkpoint-min-step 256`; C B with n-max 5; D no drafting, with the checkpoints.
+
+- S1: with the checkpoints (B), the first call of tasks 2–8 processes under 400 prompt tokens (A: ~2,300).
+- S2: n-max 5 (C) writes at least 10% more tokens per second than n-max 3 (B), with acceptance at or above 0.75.
+- S3: drafting (B) writes at least 1.4× the tokens per second of no drafting (D).
+- S4: the count of tasks done is the same within one across A–D (temperature 0; the flags must not change what is written).
+
+Sources: llama.cpp PR 22673 (MTP drafting; 82–91% acceptance on 27B/35B), Unsloth's MTP page (start at n-max 2, try 1–6), the Particula write-up on hybrid models' prompt cache falling to zero and llama.cpp issue 22384 (checkpoint restore). No published number exists for a 4B on a CPU; this is the measurement.
