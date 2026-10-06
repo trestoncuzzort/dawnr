@@ -142,7 +142,10 @@ def merge(adapter: Path, out: Path, cpu: bool = False) -> int:
     merged = PeftModel.from_pretrained(base, str(adapter)).merge_and_unload()
     out.mkdir(parents=True, exist_ok=True)
     merged.save_pretrained(str(out))
-    AutoTokenizer.from_pretrained(str(adapter)).save_pretrained(str(out))
+    # the tokenizer: the adapter folder's where training saved one there, else the base's (a checkpoint the Trainer
+    # saved mid-run holds the adapter and the optimizer, not the tokenizer)
+    where = str(adapter) if (adapter / "tokenizer_config.json").exists() else base_id
+    AutoTokenizer.from_pretrained(where).save_pretrained(str(out))
     (out / "merged-from.json").write_text(json.dumps({"base": base_id, "adapter": str(adapter)}, indent=1) + "\n",
                                           encoding="utf-8")
     print(f"merged {adapter} into {base_id}: {out}")
