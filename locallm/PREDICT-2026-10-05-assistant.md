@@ -955,3 +955,24 @@ The n-gram draft hits when the model writes back a run it has already seen (one 
 accepted, mean draft 19.1) and misses often elsewhere (acceptance 0.64 overall), and the misses cost less than the hits
 save on this workload. The launcher's draft is `draft-mtp,ngram-mod` at n-max 6; the CPU ladder ends at 21.2 against
 11.3 with no draft (1.9×). The card's values are read when the laptop is free.
+
+## X: the shared prefix computed once per training step (registered 2026-10-06 07:36Z)
+
+Every row of the assistant's training data is the same ~2,220-token system-and-tools prefix and then a task; a step of
+sixteen rows runs the prefix sixteen times (78% of the tokens). `t/prefix_sft.py` runs it once: the prefix pass keeps
+its state (keys and values of the attention layers, recurrent state and conv window of the linear-attention layers)
+on the graph, the suffixes run as one batch from it, and the loss's gradient flows back through the shared state into
+the one prefix pass (arXiv:2606.01143's schedule, arXiv:2511.00413's reuse, written for the hybrid model; fla's
+kernel returns dh0). Each layer is a pure function of its inputs and incoming state under torch's checkpoint, and the
+linear-attention cache layer assigns instead of copying in place.
+
+- X1 (read 07:34Z, lab CPU, 64-bit, a tiny random model): **exact**. Loss equal to 12 digits; every gradient within
+  2e-10 of the plain per-row path, over seeds 0–3, prefixes 20–100, batches 3–6, layouts LLFL / LLLFLLF / FFL,
+  checkpointing on and off; the plain path itself moves by the same 1e-10 when its own chunks change from 64 to 32.
+  (With the model's 32-bit casts in place, both paths move by up to 2e-2 in the decay gate's gradients: that is the
+  kernel's precision, not the schedule's.)
+- X2 (to read on the laptop's card after F): one step of 16 rows of the real data under QLoRA takes at most half the
+  plain trainer's time (2.0 min at 16 × 1 with checkpointing) at equal or lower peak memory, with the 16 suffixes
+  as one batch.
+- X3: ten steps from the same checkpoint and data order give a logged loss within 2% of the plain trainer's at each
+  step (bf16 noise; the schedule is exact in 64-bit).

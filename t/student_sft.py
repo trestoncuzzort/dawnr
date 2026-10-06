@@ -178,6 +178,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--small-card", action="store_true",
                     help="for an 8 GB card: keep the embedding and the norms in their own 16-bit type instead of casting them "
                          "to 32-bit, and plain AdamW instead of the paged one")
+    ap.add_argument("--shared-prefix", action="store_true",
+                    help="the prefix the rows of a batch share (the assistant's system text and tools, ~2,200 of ~2,900 tokens) "
+                         "computed once per step, exactly (t/prefix_sft.py); rows are sorted so that a batch shares as much as "
+                         "it can, and --batch rows form one item (use --grad-accum 1 for sixteen rows a step)")
     ap.add_argument("--save-steps", type=int, default=0,
                     help="save the adapter and the trainer's state every N optimizer steps, and continue from the last "
                          "one when --out already holds any (a run of many hours on a laptop)")
@@ -246,17 +250,41 @@ def main(argv: list[str] | None = None) -> int:
         save_strategy="steps" if a.save_steps else "no", save_steps=a.save_steps or 500, save_total_limit=2,
         report_to=[], seed=a.seed, data_seed=a.seed, remove_unused_columns=False)
 
+    if a.shared_prefix:
+        # rows sorted by their tokens, so that neighbours share the longest prefix (rows of a described machine have
+        # another system text); --batch neighbours make one dataset item, and the Trainer shuffles the items
+        import prefix_sft
+        ordered = sorted(encoded, key=lambda e: e["input_ids"][:4000])
+        items = [ordered[i:i + a.batch] for i in range(0, len(ordered), a.batch)]
+        shared_of = sum(prefix_sft.common_prefix([e["input_ids"] for e in it]) for it in items) / len(items)
+        print(f"shared prefix: {len(items)} items of up to {a.batch} rows, {shared_of:.0f} tokens shared on average", flush=True)
+        args.per_device_train_batch_size = 1
+
+        def collate(batch_of_items):
+            features = batch_of_items[0]
+            if len(features) > 1 and prefix_sft.common_prefix([e["input_ids"] for e in features]) >= 64:
+                parts = prefix_sft.split(features, tokenizer.pad_token_id)
+                return {**parts, "labels": parts["suffix_labels"]}          # `labels`: what the Trainer counts the targets from
+            return pad_batch(features, tokenizer.pad_token_id)               # too little in common: the plain path
+    else:
+        items, collate = encoded, (lambda fs: pad_batch(fs, tokenizer.pad_token_id))
+
     class Rows(torch.utils.data.Dataset):
         def __len__(self):
-            return len(encoded)
+            return len(items)
 
         def __getitem__(self, i):
-            return encoded[i]
+            return items[i]
 
     class ResponseOnly(Trainer):
         def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **_kw):
             base = model.get_base_model() if hasattr(model, "get_base_model") else model
-            loss = response_loss(base, inputs, num_items_in_batch)
+            if "prefix_ids" in inputs:
+                import prefix_sft
+                loss = prefix_sft.Shared(base, checkpointing=True).loss(inputs["prefix_ids"], inputs["suffix_ids"], inputs["suffix_labels"],
+                                                                       inputs["suffix_mask"], num_items_in_batch)
+            else:
+                loss = response_loss(base, inputs, num_items_in_batch)
             return (loss, None) if return_outputs else loss
 
     from transformers import TrainerCallback
@@ -269,8 +297,7 @@ def main(argv: list[str] | None = None) -> int:
             if logs and "loss" in logs:
                 print(f"step {state.global_step}: loss {float(logs['loss']):.4f}", flush=True)
 
-    trainer = ResponseOnly(model=model, args=args, train_dataset=Rows(), callbacks=[PrintLoss()],
-                           data_collator=lambda fs: pad_batch(fs, tokenizer.pad_token_id))
+    trainer = ResponseOnly(model=model, args=args, train_dataset=Rows(), callbacks=[PrintLoss()], data_collator=collate)
     started = time.time()
     saved = a.save_steps and any((a.out / "trainer").glob("checkpoint-*"))
     if saved:
@@ -287,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
                          "lr": a.lr, "schedule": "constant", "adam_beta2": 0.999, "max_grad_norm": 0.3,
                          "warmup_steps": a.warmup_steps, "max_steps": a.max_steps or None,
                          "batch": a.batch, "grad_accum": a.grad_accum, "epochs": a.epochs,
-                         "max_len": a.max_len, "seed": a.seed, "loss": "response only",
+                         "max_len": a.max_len, "seed": a.seed, "loss": "response only", "shared_prefix": a.shared_prefix,
                          "small_card": bool(a.small_card),
                          "sources": ["arXiv:2305.14314 B.2, table 9", "arXiv:2410.15756 C.3"]},
               "trainable_parameters": trainable, "train_loss": result.training_loss,
