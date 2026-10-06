@@ -60,10 +60,15 @@ Task     ::= { "t": 0|1, "name": Id,
 Datatype ::= {"name": Id, "ctors": [ {"name": Id}+ ]}  (* v1, since 2026-09-27; enumerations only,
                                                           a constructor carries no fields this landing *)
 
-Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local type since 2026-09-09 *)
-           | {"pair": [Type, Type]}             (* v1, since 2026-09-10; written (T1, T2); T1, T2 int/bool/seq, no pair of pairs *)
-           | {"seq": "seq"}                     (* v1, since 2026-09-10; written seq<seq>; one level only, rows are seqs of int *)
+Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local type since 2026-09-09; the seq of ints *)
+           | {"seq": Type}                      (* a seq of any element type, written seq<T> (SPEC.md "Compositional types
+                                                   (v1)", 2026-10-06); {"seq": "seq"} is seq<seq>, as since 2026-09-10;
+                                                   {"seq": "int"} is not a spelling: that type is "seq" *)
+           | {"pair": [Type, Type]}             (* v1, since 2026-09-10; written (T1, T2); any two types since 2026-10-06 *)
+           | {"tuple": [Type, Type, Type+]}     (* three or more components, written (T1, ..., Tn); since 2026-10-06 *)
            | "set"                              (* v1, since 2026-09-27; a finite set of ints; SPEC.md "Finite sets" *)
+           | {"set": Type}                      (* a set of any element type, written set<T>; since 2026-10-06;
+                                                   {"set": "int"} is not a spelling: that type is "set" *)
            | {"datatype": Id}                   (* v1, since 2026-09-27; Id names one of the task's own
                                                    "datatypes" declarations; SPEC.md "Datatypes (v1)" *)
 
@@ -88,7 +93,10 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "update" | "fill"                  (* v1; written s[i := v] and seq(n, v) *)
            | "seq" | "slice"                    (* v1; written [a, b] (any arity, [] empty) and s[a..b];
                                                    "+" on two seqs is concatenation *)
-           | "pair" | "fst" | "snd"             (* v1, since 2026-09-10; written (e1, e2), p.0, p.1 *)
+           | "pair" | "fst" | "snd"             (* v1, since 2026-09-10; written (e1, e2), p.0, p.1; .0 and .1 on a
+                                                   tuple too, since 2026-10-06 *)
+           | "tuple" | "proj"                   (* since 2026-10-06; written (e1, ..., en) at n >= 3, and e.k for k >= 2
+                                                   (proj's second argument is the literal k) *)
            | "set" | "in" | "card"              (* v1, since 2026-09-27; written {e1, ..., en} (any arity, {} empty),
            | "union" | "inter" | "diff"         x in s, card(s), union(s, t), inter(s, t), setminus(s, t);
                                                    SPEC.md "Finite sets" -- the AST tag is "diff", the surface
@@ -120,8 +128,8 @@ Stmt     ::= {"assign": [Id, Expr]}
            | {"lemma": {"name": Id, "args": [Expr*]}}  (* v1; written `L(a, b);`; a no-op at run time *)
 
 SpecFun  ::= {"name": Id,
-              "params": [ {"name": Id, "type": "int"|"seq"}* ],
-              "result": "int"|"bool"|"seq",     (* "seq": v1, since 2026-09-27; a seq of ints, one level *)
+              "params": [ {"name": Id, "type": Type}* ],       (* any type since 2026-10-06 *)
+              "result": Type,                   (* any type since 2026-10-06 ("seq" since 2026-09-27) *)
               "decreases": Expr,                (* int-valued, over the params *)
               "body": Expr}                     (* may call itself and EARLIER spec_funs *)
 
@@ -324,6 +332,38 @@ match's arms. Not in v1: a datatype as a pair/seq/set component or a
 spec_fun's own type, field-carrying constructors (records), more than one
 constructor with fields (non-recursive sums), and a recursive constructor
 (permanently out of scope for now).
+
+### Compositional types (v1)
+
+```json
+{"var": {"name": "u", "type": {"tuple": ["int", "seq", "bool"]},
+         "init": {"op": "tuple", "args": [{"var": "x"}, {"var": "s"}, {"var": "b"}]}}}
+{"op": "proj", "args": [{"var": "u"}, {"int": 2}]}
+{"var": {"name": "f", "type": {"seq": "bool"},
+         "init": {"op": "seq", "args": [{"bool": true}, {"bool": false}]}}}
+{"var": {"name": "w", "type": {"set": "seq"}, "init": {"op": "set", "args": []}}}
+{"var": {"name": "q", "type": {"pair": [{"pair": ["int", "int"]}, {"seq": {"pair": ["int", "int"]}}]},
+         "init": {"op": "pair", "args": [{"op": "pair", "args": [{"int": 1}, {"int": 2}]},
+                                         {"op": "seq", "args": []}]}}}
+```
+written: `var u: (int, seq, bool) := (x, s, b);` · `u.2` ·
+`var f: seq<bool> := [true, false];` · `var w: set<seq> := {};` ·
+`var q: ((int, int), seq<(int, int)>) := ((1, 2), []);`
+
+Since 2026-10-06 (SPEC.md "Compositional types (v1)"), t's types are an
+algebra rather than a list: a pair holds any two types, a tuple three or
+more (`(a, b, c)` builds one, `.k` projects for `k >= 2`, `.0` and `.1`
+stay `fst` and `snd` on a tuple as on a pair), a seq holds any element
+type at any depth (`seq<bool>`, `seq<(int, int)>`, `seq<seq<seq>>`), a set
+any element type (`set<seq>` is a set of strings). The canonical spellings
+stay: `seq` and `set` are the seq and set of ints and `seq<int>`,
+`set<int>` are refused, so a type has one normal form. Every existing seq
+and set operator is polymorphic by the static type of its operands, as
+`==` and `+` already were: `at` on a `seq<T>` gives a `T`, `update` wants a
+`T`, `fill(n, v)` gives the seq of `v`'s type, `in` wants `(T, set<T>)`,
+and `==` is structural at every depth. `[]` and `{}` take the declared type
+where one reaches them. A spec_fun's parameters and result are any type.
+What does not exist is listed at the end of this page.
 
 ### Nested sequences (v1)
 
@@ -583,8 +623,9 @@ No unbounded quantifiers. No
 mutation of sequences in place (a seq is a value, updated functionally), no
 arrays, no heap, no aliasing. No mutual recursion, no higher-order
 functions. A character and a string are sugar over `int` and `seq`, not
-their own types; a pair is one value, no pair of pairs, no seq of pairs,
-no triple; a nested seq is one level only, no seq of seq of seq, no seq
-of pairs, no seq of bools or strings as its own type. One return value.
+their own types. Since 2026-10-06 a pair, a tuple, a seq and a set hold
+any types at any depth ("Compositional types"); what a type still cannot
+be is a function, a reference or a map (maps are the next landing,
+SPEC.md). One return value (a tuple return carries several).
 Gates open with measurements, not intentions; see `AGREEMENT.md` for what
 each kernel has actually verified.

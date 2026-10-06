@@ -71,7 +71,7 @@ RULES: dict[str, str] = {
     "arith-int": "+ - * neg div mod are int-only",
     "assign-target": "assign targets a return or a local in scope (Gate 2)",
     "assign-type": "assign's expression type must match the target's declared type",
-    "at-types": "at wants (seq or seq<seq>, int) (Gate 1; Nested sequences)",
+    "at-types": "at wants (a seq of any element type, int) and gives the element (Gate 1; Compositional types)",
     "bool-cond": "a condition or loop guard must be bool",
     "bool-lit-v1": "the bool literal is a v1 construct (Gate 1)",
     "bool-op": "and/or/not/implies are bool-only",
@@ -82,10 +82,8 @@ RULES: dict[str, str] = {
     "decreases-selfcall": "a task decreases requires a self-recursive body, and vice versa (Gate 3)",
     "ensures-bool": "each ensures clause must be bool",
     "ensures-nonempty": "ensures must be non-empty (v0 and v1)",
-    "eq-types": "== and != apply to two ints, two bools, two seqs, two "
-                "nested seqs, or two pairs of the same type",
-    "fill-types": "fill wants (int, int) or (int, seq) for the row "
-                  "(Sequences as values; Nested sequences)",
+    "eq-types": "== and != apply to two values of one type, structural at every depth (Gate 1; Compositional types)",
+    "fill-types": "fill wants (int, v) and gives the seq of v's type (Sequences as values; Compositional types)",
     "ite-branches": "ite branches must have the same type",
     "lemma-body": "a lemma body holds only `if`, `assert` and lemma-call "
                   "statements, and a lemma has no return (Lemmas; Dafny "
@@ -141,9 +139,10 @@ RULES: dict[str, str] = {
     "one-return": "exactly one return value (SPEC.md v0 and v1)",
     "op-arity": "each operator has the fixed arity its Expr form declares",
     "op-unknown": "an operator must be in the declared version's operator set",
-    "pair-types": "pair components must each be int, bool or seq, no pair "
-                  "of pairs, no pair of three (Pairs)",
-    "proj-nonpair": "fst/snd require a pair operand (Pairs)",
+    "pair-types": "a pair's components are any two types (Pairs; Compositional types)",
+    "proj-nonpair": "fst/snd want a pair or tuple operand, proj wants a tuple (Pairs; Compositional types)",
+    "proj-index": "a projection index is an int literal within the tuple; .0 and .1 are fst and snd (Compositional types)",
+    "tuple-arity": "a tuple display has three or more components; two are a pair (Compositional types)",
     "quant-bounds": "a quantifier's lo and hi must be int (Gate 1)",
     "quant-body": "a quantifier's body must be bool (Gate 1)",
     "quant-shadow": "a bound variable must not collide with a name already "
@@ -152,21 +151,20 @@ RULES: dict[str, str] = {
     "return-name": "return must name the task's return variable (Early exit)",
     "return-unreachable": "no statement follows a return in its block (Early exit)",
     "return-v0": "return is a v1 construct (Early exit)",
-    "seq-lit-mixed": "a seq literal's elements must be all int or all seq, "
-                     "no mixing, no pair or nested-seq rows (Nested sequences)",
+    "seq-lit-mixed": "a seq literal's elements are all of one type (Nested sequences; Compositional types)",
     # 2026-10-05: both names were used by _ty since sets landed (2026-09-27) and never defined, so the first set
     # type error raised KeyError inside the checker and the answer's reason read "check_wf raised KeyError:
     # 'set-types'" (3 of the published model's 100 greedy dev answers, each `x in s` with s a seq)
-    "set-lit-types": "a set display's elements must be int (Finite sets)",
-    "set-types": "in wants (int, set), card wants a set, union/inter/setminus want (set, set); "
-                 "membership in a seq is written with a quantifier (Finite sets)",
-    "slice-types": "slice wants (seq or seq<seq>, int, int) (Sequences: "
-                   "literals, concatenation, slices)",
+    "set-lit-types": "a set display's elements are all of one type (Finite sets; Compositional types)",
+    "set-types": "in wants (T, set<T>), card wants a set, union/inter/setminus want two sets of one type; "
+                 "membership in a seq is written with a quantifier (Finite sets; Compositional types)",
+    "slice-types": "slice wants (a seq of any element type, int, int) (Sequences: "
+                   "literals, concatenation, slices; Compositional types)",
     "len-nonseq": "len is defined on a seq (Gate 1)",
     "loop-decreases": "a loop requires a decreases measure (Gate 2)",
     "loop-invariant-bool": "each loop invariant must be bool (Gate 2)",
     "spec-fun-body-type": "a spec_fun's body type must match its declared result (Gate 3)",
-    "spec-fun-result": "a spec_fun's result is int, bool or seq (Gate 3; Seq-valued spec_funs)",
+    "spec-fun-result": "a spec_fun's result is any t type (Gate 3; Compositional types)",
     "spec-fun-decreases-int": "a spec_fun's decreases must be int (Gate 3)",
     "strlib-arity": "each string-library member has a fixed arity (The string library)",
     "strlib-types": "each string-library member's argument types must "
@@ -174,13 +172,13 @@ RULES: dict[str, str] = {
     "unbound": "a name must be bound before use (v0 and Gate 1 scope rule)",
     "unknown-stmt": "a Stmt is one of assign/var/if/while/return, or a "
                     "lemma call (v0 Stmt; Gate 2; Lemmas)",
-    "update-types": "update wants (seq, int, int) or (seq<seq>, int, seq) "
-                    "for the row (Sequences as values; Nested sequences)",
+    "update-types": "update wants (seq<T>, int, T) for the seq's own element type T "
+                    "(Sequences as values; Compositional types)",
     "v0-frozen": "t:0 is frozen; spec_funs/methods/decreases/gate are v1 fields",
     "v0-int-only": "v0 has int only",
     "v1-expr-v0": "ite/forall/exists/call are v1 expression forms (v1: the three gates)",
-    "valid-type": "a declared type is int, bool, seq, a pair of two base "
-                  "types, or a seq<seq> (Pairs; Nested sequences)",
+    "valid-type": "a declared type is int, bool, seq, seq<T>, set, set<T>, a pair or tuple of types, or a "
+                  "declared datatype; seq<int> and set<int> are spelled seq and set (Compositional types)",
     "while-v0": "while is a v1 construct (Gate 2)",
 }
 
