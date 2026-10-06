@@ -180,10 +180,11 @@ their reasons are in [CORRECTIONS.md](CORRECTIONS.md). A much larger model still
 
 **The seven kernels.** Every committed `t` task is lowered into seven independent proof systems. Each must prove
 the program and refute a deliberately broken twin at a concrete input, or refuse by name. Of the 88 tasks, Dafny
-proves 88, Verus 80, Lean 56, F* 53, SPARK 50, Rocq 43 and Frama-C 36. In every kernel, the twin of every proved
-program is refuted (100%). 36 tasks are proved, with the twin refuted, in all seven; the rest are named refusals,
+proves 88, Verus 80, Rocq 57, Lean 56, F* 53, SPARK 50 and Frama-C 44. In every kernel, the twin of every proved
+program is refuted (100%). 43 tasks are proved, with the twin refuted, in all seven; the rest are named refusals,
 mostly of the constructs added on 2026-10-06, which the other kernels are being taught now
-([the matrix](t/AGREEMENT.md)).
+([the matrix](t/AGREEMENT.md), regenerated from a clean clone at 3c9d721b). Lean's own column, re-run after
+comprehensions landed (998d3acc), reads 61; the next clean-clone matrix installs it.
 
 **What went wrong**, kept on the record: a file written into a folder the request did not name; two files
 "swapped" with a command that lost one; the smaller of two files removed when the larger was asked for; a
