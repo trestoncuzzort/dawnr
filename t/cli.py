@@ -306,6 +306,19 @@ def _verify_dir(args, path: Path) -> int:
     table_path = Path(args.table) if args.table else HERE / "AGREEMENT.md"
 
     tasks = tasks_io.load_dir(path)
+    # A table row and every lowered file are keyed by the task's declared name (run_par.lower_and_dispatch,
+    # harness.OUT/<name>.<suffix>), so two files declaring one name would overwrite each other's sources while
+    # both run and leave one row for two tasks (2026-10-06: AlgoVeri's polymul_naive and polymul_karatsuba both
+    # declared poly_multiply). Refused before anything is lowered.
+    seen: dict = {}
+    for p in tasks:
+        seen.setdefault(tasks_io.load_task(p)["name"], []).append(Path(p).name)
+    dup = {n: fs for n, fs in seen.items() if len(fs) > 1}
+    if dup:
+        for n, fs in sorted(dup.items()):
+            print(f"cli.py verify: {len(fs)} files declare the task name {n} ({', '.join(fs)}); a table row and "
+                  f"the lowered files are keyed by that name", file=sys.stderr)
+        return 2
     # `t verify <dir>` writes t/AGREEMENT.md by default, the same accident as
     # a3c6f955 (a one-directory run replaced the committed matrix): the
     # committed table takes exactly the committed tasks and all seven kernels

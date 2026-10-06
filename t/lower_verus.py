@@ -2344,6 +2344,79 @@ def _has_indexable(e: dict) -> bool:
     return False
 
 
+def _indexable_outside_nested(e: dict) -> bool:
+    """True iff e has an `at` or a `call` that is not inside a nested forall/exists (its bounds included: in the
+    emitted Rust they sit inside the nested quantifier too). Those are the only candidates Verus's own trigger
+    inference sees for the enclosing quantifier (PREDICT T15, 2026-10-06)."""
+    if "op" in e:
+        if e["op"] == "at":
+            return True
+        return any(_indexable_outside_nested(a) for a in e.get("args", []))
+    if "call" in e:
+        return True
+    if "ite" in e:
+        c = e["ite"]
+        return any(_indexable_outside_nested(c[k]) for k in ("cond", "then", "else"))
+    if "comp" in e:
+        return True   # a registered spec fn call (`t_compK(...)`), as `expr()` renders it
+    return False
+
+
+def _free_vars(e) -> set:
+    out: set = set()
+
+    def walk(x, bound):
+        if isinstance(x, dict):
+            if "var" in x and isinstance(x["var"], str) and len(x) == 1:
+                if x["var"] not in bound:
+                    out.add(x["var"])
+                return
+            if "forall" in x or "exists" in x:
+                q = x.get("forall") or x.get("exists")
+                walk(q["lo"], bound)
+                walk(q["hi"], bound)
+                walk(q["body"], bound | {q["var"]})
+                return
+            for val in x.values():
+                walk(val, bound)
+        elif isinstance(x, list):
+            for val in x:
+                walk(val, bound)
+    walk(e, frozenset())
+    return out
+
+
+def _nested_index_terms(e: dict, v: str, out: dict, inner: frozenset = frozenset(), depth: int = 0) -> None:
+    """PREDICT T15 (2026-10-06): every `at(X, v)` inside a nested forall/exists (its bounds or its body) whose base X
+    mentions no variable bound between the outer quantifier and the term, X any expression, keyed by its rendering.
+    Three AlgoVeri quantifiers were MALFORMED for want of these (Verus: "Could not automatically infer triggers"):
+    `A[i]` read only in an inner quantifier's bound `A[i].len()`, `fail[q]` only in an inner bound, and
+    `(m + seq![e])[i]`, whose base is not a variable, which `_nested_at_roots_by_var` does not collect."""
+    if isinstance(e, dict):
+        if "forall" in e or "exists" in e:
+            q = e.get("forall") or e.get("exists")
+            _nested_index_terms(q["lo"], v, out, inner, depth + 1)
+            _nested_index_terms(q["hi"], v, out, inner, depth + 1)
+            if q["var"] != v:   # a nested binder of the same name shadows v: its body's v is not ours
+                _nested_index_terms(q["body"], v, out, inner | {q["var"]}, depth + 1)
+            return
+        if depth > 0 and e.get("op") == "at" and len(e.get("args", [])) == 2:
+            base, idx = e["args"]
+            if idx == {"var": v} and not (_free_vars(base) & inner) and v not in _free_vars(base):
+                out.setdefault(expr(e), e)
+        for val in e.values():
+            _nested_index_terms(val, v, out, inner, depth)
+    elif isinstance(e, list):
+        for val in e:
+            _nested_index_terms(val, v, out, inner, depth)
+
+
+def _nested_terms_of(body: dict, v: str) -> list:
+    out: dict = {}
+    _nested_index_terms(body, v, out)
+    return list(out)
+
+
 def _mod_div_trigger(e: dict) -> dict | None:
     """First `mod`/`div` application in e, pre-order, or None. is_prime's
     ensures/invariant (SPEC.md "Early exit" corpus, 2026-09-08) is
@@ -2800,6 +2873,13 @@ def expr(e: dict, vty: str | None = None) -> str:
             # quantifier (every one of which already has a directly
             # visible, auto-inferred candidate) changes.
             trig = "".join(f" #![trigger {expr(t)}]" for t in nested_roots.values())
+        elif not _indexable_outside_nested(q["body"]) and _nested_terms_of(q["body"], v):
+            # INDEX ONLY INSIDE A NESTED QUANTIFIER (PREDICT T15, 2026-10-06; Verus guide, "forall and triggers"): the
+            # bound variable is read only inside a nested quantifier, in its bounds or under a base that is not a plain
+            # variable, so neither `roots` nor `nested_roots` above saw a usable candidate and Verus refused outright.
+            # Fires only when the body has no indexable term outside nested quantifiers, i.e. when Verus's own
+            # inference had nothing to choose, so it never replaces a trigger Verus would have chosen.
+            trig = "".join(f" #![trigger {t}]" for t in _nested_terms_of(q["body"], v))
         elif not _has_indexable(q["body"]):
             t = _mod_div_trigger(q["body"])
             if t is not None:

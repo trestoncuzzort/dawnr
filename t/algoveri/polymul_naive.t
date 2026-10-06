@@ -1,5 +1,5 @@
 t 1
-task poly_multiply(a: seq, b: seq) returns (res: seq)
+task poly_multiply_naive(a: seq, b: seq) returns (res: seq)
   requires len(a) > 0
   requires len(b) > 0
   requires len(a) + len(b) <= 1000

@@ -2081,8 +2081,14 @@ so a map is its own pair and needs no recursive function: over a seq,
 Z.max 0 (hi - lo))`, the index alone when `lo` is the literal 0; the body owes
 its definedness at every element. A filter, and a comprehension inside a
 spec_fun, method or lemma, refuse by name in Rocq until a filter's
-construction is built and measured. F*, SPARK and Frama-C abstain by name
-until built and measured. Dafny, since
+construction is built and measured. F* since 2026-10-06 (PREDICT T16): each
+map shape is one function `t_compK` in the prefix form above, built by
+`Seq.init` with one call of `Seq.init_index`, so its postcondition carries the
+length and every element; the definedness is its precondition, the conjuncts
+that do not mention the element stated once (`t_n > 0 ==> ...`) and the rest
+as a quantifier triggered on the element (`t_ix` over a range, as in Dafny); a
+filter refuses by name. SPARK and Frama-C abstain by name until built and
+measured. Dafny, since
 the stepped-slice landing later the same day (T3c) and the
 early-exits landing after it (T4), writes every comprehension function in
 PREFIX form: over a sequence, `t_compK(t_s, t_n)` is the comprehension of

@@ -3191,7 +3191,17 @@ is queued, and the ones running are read as they finish.
 - **T14 landed (10-06 23:30Z), comprehensions in Rocq:** a map is its own (function, length) pair in Rocq's encoding;
   all 5 maps verified with the twin refuted (odd_positions too, which Lean leaves UNPROVED); evens (a filter) and
   count_evens_skip (early exits) refuse by name. Rocq 57 -> 62, no other cell moved.
-- **Next:** T13's seven-kernel AlgoVeri run and its read (`t/ALGOVERI.md`), then the next depth items:
-  comprehensions in F*, SPARK and Frama-C (7 tasks each) and a filter in Rocq, the higher-order calls in
+- **T13 read (10-06 23:51Z), AlgoVeri in seven kernels (`t/ALGOVERI.md`):** Dafny 21 of 21; Verus 5, SPARK 3, F* 3,
+  Lean 0, Rocq 1, Frama-C 2 verified with the twin refuted, all far below the registered ranges except Rocq and
+  Frama-C; all seven 0. 13 MALFORMED cells, six causes in four lowerings, each named (Verus triggers x5, SPARK `use
+  type` x2, F* nested-quantifier scope x3 and Tot/GTot x3). Also found: two tasks declaring one name (now refused by
+  `cli.py verify`).
+- **T15 landed (10-06 23:53Z), Verus triggers for nested-only index terms:** 4 MALFORMED cells -> named outcomes,
+  quick_sort verified; Verus on AlgoVeri 5 -> 6; poly_multiply_naive (an index into an update) still MALFORMED.
+- **T16 landed (10-06 23:52Z), comprehensions in F*:** Seq.init per map shape; all 5 maps verified with the twin
+  refuted, F* 53 -> 58, no other cell moved. The maps now wait on SPARK and Frama-C for all seven.
+- **Next:** the named AlgoVeri repairs (SPARK `use type`, F* nested-quantifier scope and Tot/GTot, the Verus update
+  index), comprehensions in SPARK and Frama-C (the last two kernels between the five maps and all seven) and a filter
+  in Rocq and F*, the higher-order calls in
   Rocq, compositional types in Lean, Rocq and Frama-C. The language queue: G9 datatypes with fields (records,
   options, trees, which 37 of AlgoVeri's contracts need), then iteration over a map.

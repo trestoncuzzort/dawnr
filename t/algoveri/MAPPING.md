@@ -251,6 +251,9 @@ Notes: Recursive merge sort: base case len(v) <= 1, otherwise split at mid = len
 
 ## polymul_karatsuba
 
+The t task is named `poly_multiply_karatsuba`. AlgoVeri names both polynomial problems' methods `poly_multiply`, and t keys a
+table row and the lowered files by the task's name, so the two need distinct names.
+
 Status: stated; Dafny verifies the real program and refutes its twin. Last verdict while writing: dafny: COUNTS, real is a real proof; collapse-if twin is refuted, the kernel found this wrong
 
 ```
@@ -269,6 +272,9 @@ preamble to_int, coeffs_bounded, spec_convolution_sum, spec_poly_mul_coeff => sp
 Notes: 3 versions. v1 (Dafny run directly): all algebra lemmas verified but cs_addL and cs_addR (nonlinear step (x[i]+x2[i])*y[k-i]) and the single big method kmul ran out of the 500000 resource limit (they pass at 5M: 2.1M, 1.0M, 2.2M). v2: distributivity helper lemmas mul_dist_l/mul_dist_r, kmul split into methods vadd and combine, internal contracts stated with a predicate is_prod(z, x, y) (len(z) == len(x)+len(y)-1 and z[j] == spec_poly_mul_coeff(x, y, j)); verified, official COUNTS. v3 (final): kara_coeff split into kara_d1 and kara_d2 for headroom; official COUNTS again; largest method is now 143k of the 500k limit, all 48 symbols verify, no warnings. Structure: the task cannot recurse on itself because z1 = (A0+A1)(B0+B1) has coefficients up to 2,000,000 and violates coeffs_bounded, so the recursion lives in method kmul(a, b) with requires len(a) == len(b) and p2(len(a)) (p2 = power of two, recursive spec fun) and no coefficient bound. kmul is the full Karatsuba: base case scalar product; else split a, b at m = len(a)/2, sa = a0+a1 and sb = b0+b1 (method vadd), z0 = kmul(a0,b0), z2 = kmul(a1,b1), z1 = kmul(sa,sb), result coefficient k = z0[k] + (z1[k-m]-z0[k-m]-z2[k-m]) + z2[k-2m] with out-of-range reads as 0 (spec fun kc over at0), assembled in method combine by a loop calling lemma kara_coeff each k. The ghost proof of the algebraic equivalence is lemma-only: tail lemma conv_tail, conv_last/conv_last_n/conv_out, cs_pre/cs_catL/cs_catR/cs_addL/cs_addR (induction on the sum index), conv_catL/conv_catR (concatenation in either argument), conv_addL/conv_addR (bilinearity), at0_conv, kara_d1 (four-way split), kara_d2 ((a0+a1)(b0+b1) expansion), kara_coeff. The task body is exists_p2(len(a)) (bridges the original exists/pow requirement to p2 via p2_pow induction) then `if len(a) == 1 { conv_single; res := [a[0]*b[0]] } else { res := kmul(a, b) }`. Twin: collapse-if on that top-level base-case branch (twins never mutate methods, so kmul's body is the fixed instrument), witness a=[0,0], b=[0,0]: real [0,0,0], twin [0]. Caveat 1: in the installed Dafny 4.11 the original `1 << k` on ints is a resolution error (`type of << must be a bitvector type (instead got int)`), so the Dafny spec as shipped does not type-check; its evident meaning 2^k for k in 0..10 is what the t requires states. Caveat 2: the interpreter step cap (60,000) is exceeded for len(a) >= 16 because the method requires is_prod(...) is evaluated at run time; lengths 1, 2, 4, 8 run correctly (150 random runs match the textbook product), the cap does not affect Dafny verification or the twin search (domain lengths <= 5). All lemma statements were also checked true on thousands of random instances before the kernel run.
 
 ## polymul_naive
+
+The t task is named `poly_multiply_naive`. AlgoVeri names both polynomial problems' methods `poly_multiply`, and t keys a
+table row and the lowered files by the task's name, so the two need distinct names.
 
 Status: stated; Dafny verifies the real program and refutes its twin. Last verdict while writing: dafny: COUNTS, real is a real proof; compare-flip twin is refuted, the kernel found this wrong
 
