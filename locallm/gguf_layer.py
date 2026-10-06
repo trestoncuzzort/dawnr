@@ -173,8 +173,11 @@ def add(base, tail_path, out, manifest: dict = QWEN35_4B) -> dict:
     blocks_key, layers_key = f"{arch}.block_count", f"{arch}.nextn_predict_layers"
     if blocks_key not in h["keys"] or h["keys"][blocks_key][0] != UINT32:
         raise Bad(f"{Path(base).name} is not a {arch} model")
-    if layers_key in h["keys"] or any(t[0] == manifest["tensors"][0][0] for t in h["tensors"]):
+    if any(t[0] == manifest["tensors"][0][0] for t in h["tensors"]):
         raise Bad(f"{Path(base).name} already has its prediction layer")
+    # a file converted from the model's own weights says a prediction layer is there (the converter copies the
+    # count from the model's configuration) without holding its tensors: the key is then set, not added twice
+    has_key = layers_key in h["keys"] and h["keys"][layers_key][0] == UINT32
     if Path(tail_path).stat().st_size != manifest["bytes"] or _sha256(tail_path) != manifest["sha256"]:
         raise Bad(f"{Path(tail_path).name} is not the layer the manifest names (its size or checksum differs)")
     if sum(size for _n, _d, _k, size in manifest["tensors"]) != manifest["bytes"]:
@@ -185,14 +188,18 @@ def add(base, tail_path, out, manifest: dict = QWEN35_4B) -> dict:
     with open(base, "rb") as f:
         f.seek(h["keys"][blocks_key][1])
         (blocks,) = struct.unpack("<I", f.read(4))
-        if blocks != manifest["blocks"] - manifest["layers"]:
+        if blocks != manifest["blocks"] - manifest["layers"] and not (has_key and blocks == manifest["blocks"]):
             raise Bad(f"{Path(base).name} has {blocks} blocks, not the {manifest['blocks'] - manifest['layers']} the layer follows")
         f.seek(h["kv"][0])
         kv = bytearray(f.read(h["kv"][1] - h["kv"][0]))
         at = h["keys"][blocks_key][1] - h["kv"][0]
         kv[at:at + 4] = struct.pack("<I", manifest["blocks"])
-        raw = layers_key.encode("utf-8")
-        kv += struct.pack("<Q", len(raw)) + raw + struct.pack("<II", UINT32, manifest["layers"])
+        if has_key:
+            at = h["keys"][layers_key][1] - h["kv"][0]
+            kv[at:at + 4] = struct.pack("<I", manifest["layers"])
+        else:
+            raw = layers_key.encode("utf-8")
+            kv += struct.pack("<Q", len(raw)) + raw + struct.pack("<II", UINT32, manifest["layers"])
         f.seek(h["infos"][0])
         infos = bytearray(f.read(h["infos"][1] - h["infos"][0]))
         old_data = h["size"] - h["data"]
@@ -200,7 +207,7 @@ def add(base, tail_path, out, manifest: dict = QWEN35_4B) -> dict:
         for name, dims, kind, size in manifest["tensors"]:
             infos += _info(name, dims, kind, offset)
             offset += size
-        head = MAGIC + struct.pack("<IQQ", h["version"], len(h["tensors"]) + len(manifest["tensors"]), h["n_kv"] + 1) + kv + infos
+        head = MAGIC + struct.pack("<IQQ", h["version"], len(h["tensors"]) + len(manifest["tensors"]), h["n_kv"] + (0 if has_key else 1)) + kv + infos
         with open(out, "wb") as o:
             o.write(head)
             o.write(b"\0" * (-len(head) % align))
