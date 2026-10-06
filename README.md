@@ -217,10 +217,16 @@ only at the end of a prompt it has processed. Since 2026-10-06 the launcher
 processes the prefix alone before each conversation, which leaves a checkpoint
 where the next task needs it: the first call then costs the task's own 100 to
 150 tokens (`locallm/dawnr_warm.py`, measured on the lab's CPUs). The same
-morning the draft length moved from 3 to 6: on six CPU cores, the same eight
-tasks, the model wrote 12.0 tokens a second at 3, 15.8 at 5, 17.7 at 6 and
-16.1 at 8, and 11.3 with no drafting at all
-([PREDICT, S](locallm/PREDICT-2026-10-05-assistant.md)).
+morning the draft changed: on six CPU cores, the same eight tasks, the model
+wrote 11.3 tokens a second with no drafting, 12.0 drafting 3 tokens from the
+prediction layer, 15.8 at 5, 17.7 at 6, 16.1 at 8, and 21.2 at 6 with runs it
+had already written drafted from the text as well (llama.cpp's `ngram-mod`
+beside `draft-mtp`), which is what the launcher now does
+([PREDICT, S](locallm/PREDICT-2026-10-05-assistant.md)). On a machine whose
+card sits on a slow PCIe link, `DAWNR_GPU_LAYERS=0` now keeps the card out of
+prompt reading too (`--device none`): this desktop's link had fallen to
+generation 1 of 3 and read prompts at 6 tokens a second through it, 130 to
+200 without.
 
 The assistant drives whatever model the server holds, and four sizes of the
 same family were read on the same tasks and the same card. On the first four

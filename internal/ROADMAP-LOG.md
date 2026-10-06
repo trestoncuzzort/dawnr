@@ -2970,8 +2970,9 @@ is queued, and the ones running are read as they finish.
   (`internal/RESEARCH-2026-10-06-speed-and-steal.md`). Where the time goes, from the farm's own logs: generation
   67%, the shared prefix processed again for every new task 16%. The server's checkpoint flags did nothing (S1);
   the prefix warmed alone before each conversation cuts a task's first call from ~2,350 tokens to ~130
-  (`locallm/dawnr_warm.py`, called by the launcher); draft length 5 writes 30% more tokens a second than 3 on six
-  CPU cores (S2; 6 and 8 under test); drafting at 3 is only 1.12x over none on a CPU (S3). Judge twins
+  (`locallm/dawnr_warm.py`, called by the launcher); the draft on six CPU cores: none 11.3, 3 tokens 12.0, 5 15.8, 6 17.7, 8 16.1, and 6 with the
+  n-gram draft beside it 21.2 tokens a second (S2, S2b, S2c; the launcher carries the last); a GPU build with zero
+  layers still read prompts through a card on a PCIe link at generation 1 (6 tokens a second): `--device none` now. Judge twins
   (`locallm/judge_twins.py`): 37 of 557 wrong twins accepted: two weak tests, thirteen misreported figures in prose,
   the rest equivalent. The operator's list of twenty, where applicable: PRIVACY.md, TERMS.md, `dawnr forget`, the
   page at WCAG 2.2 AA (contrast, keyboard tabs, live results), the sentence under Run.

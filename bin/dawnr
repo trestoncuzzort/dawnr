@@ -89,10 +89,14 @@ start_one() {  # name gguf port [context] [seconds idle before the model is unlo
     # 12.0 at n-max 3, 15.8 at 5, 17.7 at 6, 16.1 at 8, and 21.2 at 6 with the n-gram draft (PREDICT S2, S2b, S2c)
     draft=(--spec-type draft-mtp,ngram-mod --spec-draft-n-max 6 --spec-draft-p-min 0.6)
   fi
-  # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only)
+  # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only). CPU only means
+  # the card is not used at all: without --device none a GPU build still runs prompt batches through the card
+  # (--op-offload, on by default), and on a card whose PCIe link had fallen to generation 1 that read 6 tokens a
+  # second against 115 on six CPU cores (2026-10-06, this desktop)
+  local nocard=(); [ "${DAWNR_GPU_LAYERS:-}" = 0 ] && nocard=(--device none)
   LD_LIBRARY_PATH="$(dirname "$LLAMA_SERVER"):${LD_LIBRARY_PATH:-}" \
   nohup "$LLAMA_SERVER" --model "$2" --host 127.0.0.1 --port "$3" --threads "$GEN_THREADS" --threads-batch "$THREADS" \
-    ${DAWNR_GPU_LAYERS:+--n-gpu-layers "$DAWNR_GPU_LAYERS"} ${draft[@]+"${draft[@]}"} ${5:+--sleep-idle-seconds "$5"} \
+    ${DAWNR_GPU_LAYERS:+--n-gpu-layers "$DAWNR_GPU_LAYERS"} ${nocard[@]+"${nocard[@]}"} ${draft[@]+"${draft[@]}"} ${5:+--sleep-idle-seconds "$5"} \
     --ctx-size "${4:-4096}" --parallel 1 --reasoning off --cache-ram 256 --slot-save-path "$RUN" --no-webui > "$RUN/$1.log" 2>&1 < /dev/null &
   echo $! > "$RUN/$1.pid"; echo "${4:-4096}" > "$RUN/$1.ctx"
 }
@@ -370,6 +374,11 @@ case $cmd in
       [ -s "$f" ] && echo "model: $(basename "$f") ($(du -Lh "$f" | cut -f1))" || echo "model: $(basename "$f") MISSING"
     done
     if [ -n "${T_DAFNY:-}" ] && ! out=$("$T_DAFNY" --version 2>&1); then echo "dafny: CANNOT RUN: ${out%%$'\n'*}"; fi
+    if command -v nvidia-smi >/dev/null && link=$(nvidia-smi --query-gpu=name,pcie.link.gen.gpucurrent,pcie.link.gen.max --format=csv,noheader 2>/dev/null | head -1); then
+      # the link generation is read now; the card lowers it while idle, so a low number here is normal, and a low
+      # number under load is what makes prompt reading on the card slow. With DAWNR_GPU_LAYERS=0 the card is not used
+      echo "card: ${link%%,*}, PCIe generation$(echo "$link" | cut -d, -f2) of$(echo "$link" | cut -d, -f3) now$([ "${DAWNR_GPU_LAYERS:-}" = 0 ] && echo " (not used: DAWNR_GPU_LAYERS=0)")"
+    fi
     if command -v pdftotext >/dev/null; then echo "PDFs: read with pdftotext"
     elif PYTHONPATH="$DAWNR_HOME/pylib" "$DAWNR_PYTHON" -c 'import pypdfium2; pypdfium2.PdfDocument.new()' >/dev/null 2>&1; then echo "PDFs: read with PDFium (dawnr's own copy)"
     else echo "PDFs: NO READER (run install.sh again, or install poppler)"; fi
