@@ -1382,7 +1382,7 @@ def _dafny_rat(n: int, d: int) -> str:
 _HINTS: dict = {}
 _FUNS: dict = {}
 _LIB_USED: set = set()
-_LIB_INT = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})
+_LIB_INT = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"})
 
 
 def _arg_type(e):
@@ -1422,6 +1422,12 @@ def _lib_lower(op: str, args: list, e: dict) -> str | None:
     if op == "rev":
         _LIB_USED.add("t_rev")
         return f"t_rev({args[0]})"
+    if op == "sort":
+        # SPEC.md "Sorting (v1)" (2026-10-06): Std.Collections.Seq.MergeSortBy's shape, by element type
+        t0 = _arg_type(e["args"][0])
+        real = isinstance(t0, dict) and t0.get("seq") == "real"
+        _LIB_USED.add("t_rsort" if real else "t_sort")
+        return f"{'t_rsort' if real else 't_sort'}({args[0]})"
     return None
 
 
@@ -1452,7 +1458,59 @@ _LIB_TEXT = {
               "{ if |s| == 0 then [] else [s[|s| - 1]] + t_rev(s[..|s| - 1]) }"),
 }
 _LIB_ORDER = ["t_min", "t_rmin", "t_max", "t_rmax", "t_abs", "t_rabs", "t_sum", "t_rsum", "t_gcdn", "t_gcd", "t_pow",
-              "t_isqrt", "t_rev"]
+              "t_isqrt", "t_rev", "t_sort", "t_rsort"]
+
+
+def _sort_text(suffix: str, ty: str) -> str:
+    """SPEC.md "Sorting (v1)" (2026-10-06): Std.Collections.Seq.MergeSortBy and MergeSortedWith specialised to one
+    element type (fetched, receipt 8f5b4d0085b5), with the Std's own lemma and asserts, which Dafny proves as the
+    Std does (measured 2026-10-06: the function postconditions, the committed tasks and the ground certificates)."""
+    p = f"t_{suffix}"
+    # a `function ... : bool`, not a `predicate`: verifiers/dafny.py's shape rule admits only function, method and lemma
+    return f"""function {p}sorted(s: seq<{ty}>): bool {{ forall i, j :: 0 <= i < j < |s| ==> s[i] <= s[j] }}
+
+lemma {p}lemma_first(x: {ty}, s: seq<{ty}>)
+  requires {p}sorted(s)
+  requires |s| == 0 || x <= s[0]
+  ensures {p}sorted([x] + s)
+{{}}
+
+function {p}merge(left: seq<{ty}>, right: seq<{ty}>): (r: seq<{ty}>)
+  requires {p}sorted(left) && {p}sorted(right)
+  ensures multiset(left + right) == multiset(r)
+  ensures {p}sorted(r)
+  decreases |left| + |right|
+{{
+  if |left| == 0 then right
+  else if |right| == 0 then left
+  else if left[0] <= right[0] then
+    {p}lemma_first(left[0], {p}merge(left[1..], right));
+    assert left == [left[0]] + left[1..];
+    [left[0]] + {p}merge(left[1..], right)
+  else
+    {p}lemma_first(right[0], {p}merge(left, right[1..]));
+    assert right == [right[0]] + right[1..];
+    [right[0]] + {p}merge(left, right[1..])
+}}
+
+function {p}sort(s: seq<{ty}>): (r: seq<{ty}>)
+  ensures multiset(s) == multiset(r)
+  ensures {p}sorted(r)
+  ensures |r| == |s|
+  decreases |s|
+{{
+  if |s| <= 1 then s
+  else
+    var mid := |s| / 2;
+    var left := s[..mid];
+    var right := s[mid..];
+    assert s == left + right;
+    {p}merge({p}sort(left), {p}sort(right))
+}}"""
+
+
+_LIB_TEXT["t_sort"] = _sort_text("", "int")
+_LIB_TEXT["t_rsort"] = _sort_text("r", "real")
 
 
 def _lib_defs() -> list:
@@ -1486,6 +1544,8 @@ def _lib_value(op: str, vs: list):
         return interp.math.isqrt(vs[0])
     if op == "rev":
         return tuple(reversed(vs[0]))
+    if op == "sort":
+        return tuple(sorted(vs[0]))
     raise ValueError(op)
 
 

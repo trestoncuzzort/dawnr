@@ -140,7 +140,7 @@ more than one gate.
 | tuple | 3749 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a tuple of three or more elements, a nested tuple, a tuple with a string component (until strings-as-seq's seq-of-code-points model covers a pair component too), or a list of tuples (the separate gap `nested-seq-pair`, tagged where a list literal's own elements are inspected): SPEC.md's 'Pairs (v1)' covers only the two-element case, the burden tuple-pair |
 | nested-seq | 3625 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a seq of seq whose row type could not be read as string or tuple (an int/bool row, or a subscript of a subscript, or a grid a static read genuinely cannot classify): SPEC.md's 'Nested sequences (v1)' burden `seq<seq<int>>` and the unreadable fallback both land here |
 | real | 3445 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Exact rationals): a float literal, true division `/`, float(), or a decimal-valued io token -- t's `real` is the exact rational, so a problem whose answer depends on float rounding is still not posed (undercounted here) |
-| sort | 2908 | sorted() or .sort(); expressible in t but needs a spec, not a builtin |
+| sort | 2908 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Sorting): sorted() or .sort() is t's sort(s); before that day it was expressible in t but needed a spec, not a builtin |
 | seq-slice | 2474 | slicing s[a:b], s[a:], s[:b] with non-negative bounds and no step: t's v1 already has slice (SPEC.md 'Sequences: literals, concatenation, slices'); a negative bound or a step is measured separately as the gaps seq-slice-negative / seq-slice-step |
 | py2-unparseable | 2107 | the chosen Python solution does not parse under Python 3's ast (typically a Python 2 solution: print statement, raw_input, etc.); only its io-types are measured, its AST is not |
 | set | 1604 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): set literal, set(), frozenset(), a set/dict comprehension's set form |
@@ -153,7 +153,7 @@ more than one gate.
 
 ## Method
 
-Run time: 28.9s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
+Run time: 29.1s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
 unread. `mbpp_dfy.parse_assertion` is reused for every MBPP
 assertion (spec_experiment.py's `pool()` uses the same function to
 decide the same question, whether a problem's tests fit t's

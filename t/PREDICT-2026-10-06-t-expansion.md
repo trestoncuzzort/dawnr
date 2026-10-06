@@ -168,3 +168,14 @@ the census does not otherwise move. Kernels: Dafny and Verus verify the two comm
 or read a limit by name; F*, SPARK, Lean, Rocq and Frama-C abstain by name. T9 as before (the grammar is unchanged:
 a call). What would falsify the design: Dafny failing to prove its own insertion sort's postconditions (then the
 Std's merge sort shape is taken instead, and the result says so).
+
+### T3b-2 read (2026-10-06 16:30Z): `sort(s)` landed. Dafny carries it as Std.Collections.Seq's merge sort specialised
+to the element type, with the Std's own lemma and asserts (its first form, an insertion sort, did not prove its
+own postconditions; the Std's shape did, and `t_sorted` is a `function ... : bool`, since the adapter's shape rule
+admits no `predicate`); Verus as one wrapper over vstd's `sort_by` with one named comparison closure shared by the
+wrapper and the lemma (two closure literals are two functions to the solver) and the lemma stated beside every use,
+in the clause well-formedness lemmas and in a certificate that sorts. Both committed tasks (`sort_it`,
+`first_sorted`) verified with the twin refuted in both kernels; F*, SPARK, Lean, Rocq and Frama-C abstain by name.
+The `sort` burden is IN THE FRAGMENT (2,908 problems; the census count unchanged by construction, 1,642 in
+fragment). `sort_it` was given a local (`var u := sort(s); r := u`) so the ladder has a mutation to make: a body
+`r := sort(s)` alone has no twin, and a task without a twin cannot count.

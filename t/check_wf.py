@@ -158,7 +158,7 @@ RULES: dict[str, str] = {
     # 'set-types'" (3 of the published model's 100 greedy dev answers, each `x in s` with s a seq)
     "set-lit-types": "a set display's elements are all of one type (Finite sets; Compositional types)",
     "lib-types": "min/max take two ints or two reals, abs an int or a real, sum a seq of ints or of reals, gcd/pow/isqrt "
-                 "ints, rev a seq, `in` an element of the seq's own type (The library)",
+                 "ints, rev a seq, sort a seq of ints or of reals, `in` an element of the seq's own type (The library; Sorting)",
     "set-types": "in wants (T, set<T>) or (T, seq<T>), card wants a set, union/inter/setminus want two sets of one type; "
                  "membership in a seq is written with a quantifier (Finite sets; Compositional types)",
     "slice-types": "slice wants (a seq of any element type, int, int) (Sequences: "
@@ -279,14 +279,15 @@ STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
              "isupper", "islower", "startswith", "endswith"}
 SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite sets" (2026-09-27)
-LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})   # SPEC.md "The library (v1)" (2026-10-06)
+LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev",   # SPEC.md "The library (v1)" (2026-10-06)
+                     "sort"})                                                       # SPEC.md "Sorting (v1)" (2026-10-06)
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
          | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS | LIB_OPS)
 TERNARY = {"update", "slice", "replace"}
 VARIADIC = {"seq", "set", "tuple"}      # the displays: seq and set at any arity, zero included; tuple at three or more
 UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
          "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
-         "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev"}
+         "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev", "sort"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
@@ -659,6 +660,12 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
     if op == "rev":
         if not _is_seq(ts[0]):
             _e(errs, e, f"rev wants a seq, found {ts[0]!r}", "lib-types")
+            return "seq"
+        return ts[0]
+    if op == "sort":
+        # SPEC.md "Sorting (v1)" (2026-10-06): a seq of ints or of reals, the type's own order
+        if not (_is_seq(ts[0]) and _elem(ts[0]) in ("int", "real")):
+            _e(errs, e, f"sort wants a seq of ints or of reals, found {ts[0]!r}", "lib-types")
             return "seq"
         return ts[0]
     if op == "card":

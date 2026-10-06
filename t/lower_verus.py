@@ -2752,8 +2752,8 @@ def expr(e: dict, vty: str | None = None) -> str:
     if op == "in":
         # a Set's and a Seq's `contains` alike (SPEC.md "The library (v1)", 2026-10-06: membership in a seq)
         return f"{args[1]}.contains({args[0]})"
-    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev"):
-        # SPEC.md "The library (v1)" (2026-10-06): _VLIB's spec fns (vstd's min/max/abs shapes; the rest recursive)
+    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev", "sort"):
+        # SPEC.md "The library (v1)" and "Sorting (v1)" (2026-10-06): _VLIB's spec fns
         return f"t_{op}({', '.join(args)})"
     if op == "card":
         # `Set::len` is a nat; t's card is an int, so the cast is explicit.
@@ -4067,9 +4067,13 @@ class _V1:
         if context:
             req = ("    requires\n        "
                    + ",\n        ".join(expr(c) for c in context) + ",\n")
+        # SPEC.md "Sorting (v1)" (2026-10-06): a clause that indexes a sort owes `0 <= i < len(sort(s))`, which
+        # needs the sort's facts stated first (t_sort_spec), here as beside a statement
+        pre = "".join(f"    t_sort_spec({expr(a)});\n" for a in _sort_args([obligation] + list(context)))
         self.wf.append(
             f"proof fn {lname}({ps})\n{req}"
             "{\n"
+            f"{pre}"
             f"    assert({expr(obligation)});\n"
             "}\n")
 
@@ -4239,6 +4243,7 @@ class _V1:
                 name, e = s["assign"]
                 assert name in scope and scope[name][1], \
                     f"assign to {name}, not a mutable name in scope"
+                lines += _sort_lemma_lines(e, ind)
                 self._assert_defined(e, lines, ind)
                 self._assert_nested_eq(e, scope, lines, ind)
                 lines.append(f"{ind}{name} = {expr(e, scope[name][0])};")
@@ -4246,6 +4251,7 @@ class _V1:
                 rname, e = s["return"]
                 assert rname == self.task["returns"][0]["name"], \
                     f"return names {rname}, expected {self.task['returns'][0]['name']}"
+                lines += _sort_lemma_lines(e, ind)
                 self._assert_defined(e, lines, ind)
                 self._assert_nested_eq(e, scope, lines, ind)
                 rvty = _vty(self.task["returns"][0]["type"])
@@ -4256,6 +4262,7 @@ class _V1:
                     lines.append(f"{ind}return (true, {expr(e, rvty)}, {wrap});")
             elif "var" in s:
                 v = s["var"]
+                lines += _sort_lemma_lines(v["init"], ind)
                 self._assert_defined(v["init"], lines, ind)
                 self._assert_nested_eq(v["init"], scope, lines, ind)
                 vt = _vty(v["type"])
@@ -5029,6 +5036,12 @@ class _V1:
             lib_lines.append("    broadcast use t_isqrt_spec;")
         if "rev" in lib_used:
             lib_lines.append("    broadcast use t_rev_spec;")
+        param_names = {p["name"] for p in task["params"]}
+        for a in _sort_args(task.get("requires", [])) + _sort_args(task.get("ensures", [])):
+            if _free_vars(a) <= param_names:
+                line = f"    t_sort_spec({expr(a)});"
+                if line not in lib_lines:
+                    lib_lines.append(line)
         main_lines = lib_lines + main_lines
 
         # THE STRING LIBRARY (v1, 2026-09-11): the split-join law is not
@@ -5848,7 +5861,7 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
 # broadcast lemmas, brought in by `broadcast use` INSIDE the task's proof fn (a module-level `broadcast use` of a
 # recursive lemma is a cycle Verus refuses, measured 2026-10-06); recursive definitions get `reveal_with_fuel`
 # there too (a two-element display needs two unfoldings). Emitted per function, once per file, when used.
-VERUS_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in"})
+VERUS_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in", "sort"})
 _VLIB = {
     "min": "pub open spec fn t_min(a: int, b: int) -> int { if a < b { a } else { b } }\n",
     "max": "pub open spec fn t_max(a: int, b: int) -> int { if a < b { b } else { a } }\n",
@@ -5873,7 +5886,55 @@ _VLIB = {
             "    decreases s.len(),\n"
             "{ if s.len() > 0 { t_rev_spec(s.drop_last()); } }\n"),
 }
-_VLIB_ORDER = ["abs", "min", "max", "sum", "gcd", "pow", "isqrt", "rev"]
+_VLIB_ORDER = ["abs", "min", "max", "sum", "gcd", "pow", "isqrt", "rev", "sort"]
+# SPEC.md "Sorting (v1)" (2026-10-06): vstd's own sort_by behind one wrapper, with ONE named comparison closure shared
+# by the wrapper and the lemma call (two closure literals are two functions to the solver: measured, the facts did
+# not transfer); the lemma states what the tasks read (length, sortedness as the plain forall, the multiset).
+_VLIB["sort"] = (
+    "pub open spec fn t_leq() -> spec_fn(int, int) -> bool { |a: int, b: int| a <= b }\n"
+    "pub open spec fn t_sort(s: Seq<int>) -> Seq<int> { s.sort_by(t_leq()) }\n"
+    "pub proof fn t_sort_spec(s: Seq<int>)\n"
+    "    ensures t_sort(s).len() == s.len(),\n"
+    "        forall|i: int, j: int| 0 <= i < j < t_sort(s).len() ==> t_sort(s)[i] <= t_sort(s)[j],\n"
+    "        s.to_multiset() =~= t_sort(s).to_multiset(),\n"
+    "{\n"
+    "    s.lemma_sort_by_ensures(t_leq());\n"
+    "    s.to_multiset_ensures();\n"
+    "    t_sort(s).to_multiset_ensures();\n"
+    "    assert(vstd::relations::sorted_by(t_sort(s), t_leq()));\n"
+    "    assert forall|i: int, j: int| 0 <= i < j < t_sort(s).len() implies t_sort(s)[i] <= t_sort(s)[j] by {\n"
+    "        assert(t_leq()(t_sort(s)[i], t_sort(s)[j]));\n"
+    "    }\n"
+    "}\n")
+
+
+def _free_vars(e) -> set:
+    if isinstance(e, dict):
+        if "var" in e and len(e) == 1:
+            return {e["var"]}
+        return set().union(*(_free_vars(v) for v in e.values())) if e else set()
+    if isinstance(e, list):
+        return set().union(*(_free_vars(v) for v in e)) if e else set()
+    return set()
+
+
+def _sort_args(e) -> list:
+    """Every argument of a `sort` node in `e` (SPEC.md "Sorting (v1)"), outermost first."""
+    out = []
+    if isinstance(e, dict):
+        if e.get("op") == "sort" and e.get("args"):
+            out.append(e["args"][0])
+        for v in e.values():
+            out += _sort_args(v)
+    elif isinstance(e, list):
+        for v in e:
+            out += _sort_args(v)
+    return out
+
+
+def _sort_lemma_lines(e, ind: str) -> list:
+    """`t_sort_spec(arg);` for each sort in `e`: the facts the solver needs about that sort, stated beside the use."""
+    return [f"{ind}t_sort_spec({expr(a)});" for a in _sort_args(e)]
 
 
 def _lib_blocks(task: dict, body: list) -> list:
@@ -5899,7 +5960,9 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
         body = expr(formula)
     finally:
         _SUFFIX_INT = saved
-    if _uses_sets(formula):
+    if _uses_sets(formula) or _sort_args(formula):
+        # a formula that sorts (SPEC.md "Sorting (v1)"): sort_by is not computed, its lemma is stated first
+        pre = "".join(f"    t_sort_spec({expr(a)});\n" for a in _sort_args(formula))
         # SPEC.md "Finite sets" (2026-09-27): verus's interpreter does not
         # evaluate a set's cardinality (measured: `assert(set![1int, 2int,
         # 1int].len() == 2) by (compute_only)` fails with "failed to
@@ -5918,6 +5981,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             "// accepted, and a file carrying this name can never mint VERIFIED.\n"
             f"proof fn {CERT_NAME}()\n"
             "{\n"
+            f"{pre}"
             f"    assert({body});\n"
             "}\n\n"
             "} // verus!\n")

@@ -1610,7 +1610,7 @@ def _free_names(e) -> set:
     return set()
 
 
-LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})
+LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"})   # "sort": SPEC.md "Sorting (v1)"
 
 
 def _resolve_library(task: dict) -> None:
@@ -1732,7 +1732,7 @@ P_POSTFIX = 9
 
 _BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
 _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice": 3, "implies": 2,
-          "min": 2, "max": 2, "abs": 1, "sum": 1, "gcd": 2, "pow": 2, "isqrt": 1, "rev": 1,
+          "min": 2, "max": 2, "abs": 1, "sum": 1, "gcd": 2, "pow": 2, "isqrt": 1, "rev": 1, "sort": 1,
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2,
           "pair": 2, "fst": 1, "snd": 1,
@@ -2427,7 +2427,7 @@ def _rand_expr(rng, depth: int) -> dict:
         return {"op": rng.choice(["toreal", "floor", "ceil"]), "args": [_rand_expr(rng, d)]}
     if kind == "lib1":
         # SPEC.md "The library (v1)" (2026-10-06)
-        return {"op": rng.choice(["abs", "sum", "isqrt", "rev"]), "args": [_rand_expr(rng, d)]}
+        return {"op": rng.choice(["abs", "sum", "isqrt", "rev", "sort"]), "args": [_rand_expr(rng, d)]}
     if kind == "lib2":
         return {"op": rng.choice(["min", "max", "gcd", "pow"]), "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind == "tuple":

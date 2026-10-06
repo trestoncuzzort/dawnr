@@ -748,6 +748,8 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         return math.isqrt(a[0])
     if op == "rev":
         return tuple(reversed(a[0]))
+    if op == "sort":
+        return tuple(sorted(a[0]))   # SPEC.md "Sorting (v1)" (2026-10-06): Python's own, exact on ints and Fractions
     if op == "toreal":
         return Fraction(a[0])
     if op == "floor":
