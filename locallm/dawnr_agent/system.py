@@ -525,7 +525,8 @@ MANAGERS = _Managers
 GIT_READS = ("status", "diff", "log", "show", "blame", "grep", "ls-files", "ls-tree", "rev-parse", "rev-list", "describe",
              "shortlog", "reflog", "cat-file", "merge-base", "name-rev", "whatchanged", "count-objects", "help", "version")
 GIT_REMOTE = ("push", "pull", "fetch", "clone", "ls-remote")
-GIT_DISCARDS = re.compile(r"^(reset\b.*--hard|clean\b.*(-[a-zA-Z]*f|--force)|checkout\b.*(\s--(\s|$)|\s\.(\s|$))|restore\b(?!.*--staged)|"
+GIT_DISCARDS = re.compile(r"^(reset\b.*(--hard|\s(HEAD|@)(~\d*|\^+)(\s|$)|\s[0-9a-f]{7,40}(\s|$))|commit\b.*--amend|clean\b.*(-[a-zA-Z]*f|--force)|"
+                          r"checkout\b.*(\s--(\s|$)|\s\.(\s|$))|restore\b(?!.*--staged)|"
                           r"stash\s+(drop|clear)|branch\b.*\s-D\b|push\b.*(--force\b|\s-f\b|--force-with-lease)|filter-branch|"
                           r"reflog\s+expire|gc\b.*--prune|rebase\b|update-ref\b.*-d)")
 
