@@ -144,9 +144,12 @@ def test_twins_handback_and_kernel_text():
        "sort_by in Verus: the insertion sort's membership lemma: %s" % v)
     v = lowered("weighted_sum", "verus")
     ok("pub open spec fn t_fold1(" in v and "t_fold1(s, i, (0int), w)" in v, "fold in Verus, prefix form: %s" % v)
-    for kernel in ("spark", "framac", "lean", "rocq", "fstar"):
+    for kernel in ("spark", "framac", "rocq", "fstar"):
         out = lowered("longest_row", kernel)
         ok("max_by is not lowered yet" in out, "%s abstains by name: %s" % (kernel, out[:160]))
+    # Lean carries fold, max_by and min_by since PREDICT T9 (2026-10-06); sort_by stays refused by name there
+    out = lowered("longest_row", "lean")
+    ok("def t_maxbyi1" in out and "theorem t_maxby1_bound" in out, "max_by in Lean: %s" % out[:160])
 
 
 def test_certificates():

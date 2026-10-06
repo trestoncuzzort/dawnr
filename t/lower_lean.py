@@ -2577,6 +2577,15 @@ DIV_MOD = {"div": "/", "mod": "%"}
 # theorems emit_strlib_helpers() proves once, always offered to grind
 # alongside the sfun list (self.ga) whenever any member is used, exactly
 # the way seq_thms are named lemmas offered per-task above.
+# SPEC.md "The library (v1)" in Lean (2026-10-06, PREDICT T9; internal/RESEARCH-2026-10-06-landscape.md decision D1):
+# the library functions this column carries, as structurally recursive definitions in core Lean (no Mathlib), so the
+# kernel's own `decide` evaluates a ground value (measured on a hand probe: a well-founded `termination_by` definition,
+# core's `List.mergeSort` among them, does not reduce under `decide`, and `native_decide` is banned by the adapter).
+# `sort` is a stable insertion sort (an earlier element goes before the equal ones after it), the same list Python's
+# sorted gives; "maxs" is max/min of one argument (SPEC.md "Reductions (v1)"), "in" membership in a seq.
+LEAN_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort", "maxs", "in",
+                      "any", "all",   # any/all over a seq<bool>, or over a comprehension of a seq (a predicate)
+                      "fold", "max_by", "min_by"})   # SPEC.md "Higher-order calls (v1)"; sort_by refused by name
 STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
              "isupper", "islower", "startswith", "endswith"}
@@ -3002,6 +3011,32 @@ class Lower:
                        or self._has_any(body, STRLIB_OPS))
         sfun_ga_names = [f"{f}_s" for f in self.sfuns]
         ga_names = list(sfun_ga_names)
+        # SPEC.md "The library (v1)" in Lean (PREDICT T9): the library functions used, the lemmas grind is handed for
+        # them (only those, as for the string library: an unrelated pattern competes in E-matching), and the
+        # definitions a certificate unfolds
+        self.lib_used = _lib_used(task) | _lib_used(body)
+        lib_ga = [n for op in sorted(self.lib_used) for n in LEAN_LIB_GRIND.get(op, [])]
+        if "t_sum_append" in lib_ga and not (self._has_seq_plus(task, self.types)
+                                             or self._has_seq_plus(body, self.types)):
+            # measured (sum_one's twin): on a false goal with no concatenation in sight, the append lemma's pattern
+            # `t_sum (s ++ t)` sent grind's matcher unfolding `[x]` against `?s ++ ?t` until the heartbeat budget
+            # ran out, and the twin read TIMEOUT where its certificate holds; handed over only where `+` occurs
+            lib_ga.remove("t_sum_append")
+        ga_names += lib_ga
+        self.lib_fns = [n for op in sorted(self.lib_used) for n in LEAN_LIB_FNS.get(op, [])]
+        # SPEC.md "Higher-order calls (v1)" in Lean (PREDICT T9): each call shape, its index, the lemmas grind is
+        # handed and the definitions a certificate unfolds (the shape key is lower_verus's: parameters renamed)
+        self.hof: dict = {}
+        _hof_collect([task.get("requires", []), task.get("ensures", []), task.get("spec_funs", []), body or [],
+                      task.get("methods", [])], self.hof)
+        for _key, (k, node) in sorted(self.hof.items(), key=lambda kv: kv[1][0]):
+            if node["op"] == "fold":
+                ga_names += [f"t_fold{k}_zero", f"t_fold{k}_step"]
+                self.lib_fns += [f"t_fold{k}"]
+            elif node["op"] in ("max_by", "min_by"):
+                nm = "t_maxby" if node["op"] == "max_by" else "t_minby"
+                ga_names += [f"{nm}{k}_mem", f"{nm}{k}_bound"]
+                self.lib_fns += [f"{nm}i{k}", f"{nm}{k}"]
         if self.strlib:
             # Only the lemmas this task's own ops can need: an unrelated
             # lemma in grind's hint set is not just dead weight, it is
@@ -3306,6 +3341,19 @@ class Lower:
             return "seq"
         if op in ("count", "find"):
             return "int"
+        if op in ("min", "max", "abs", "sum", "gcd", "pow", "isqrt"):
+            return "int"     # SPEC.md "The library (v1)" (PREDICT T9); max/min of one seq argument an int too
+        if op in ("rev", "sort"):
+            return self.sort(e["args"][0], types)
+        if op in ("any", "all", "in"):
+            return "bool"
+        if op == "fold":
+            return self.sort(e["args"][1], types)          # SPEC.md "Higher-order calls (v1)": the accumulator's
+        if op == "sort_by":
+            return self.sort(e["args"][0], types)
+        if op in ("max_by", "min_by"):
+            s0 = self.sort(e["args"][0], types)
+            return "seq" if isinstance(s0, dict) and "seq" in s0 else "int"
         if op in ("isdigit", "isalpha", "isupper", "islower", "startswith",
                   "endswith"):
             return "bool"
@@ -3611,6 +3659,41 @@ class Lower:
             return f"(t_str_{op} {s} {t})"
         if op == "neg":
             return f"(-{self.term(e['args'][0], env, types, dep)})"
+        if op in ("fold", "max_by", "min_by", "sort_by"):
+            return self._hof_call(e, env, types, dep)
+        if op in ("any", "all"):
+            # SPEC.md "Reductions (v1)" in Lean (PREDICT T9): core's List.all/List.any over a predicate; a
+            # comprehension over a seq that is the argument is the predicate (its filter as an implication for all,
+            # a conjunction for any), a plain seq<bool> the identity
+            a = e["args"][0]
+            fn = "List.all" if op == "all" else "List.any"
+            if isinstance(a, dict) and "comp" in a:
+                c = a["comp"]
+                if "seq" not in c:
+                    raise NotImplementedError(f"lean: {op} over a range comprehension is not lowered yet")
+                src = self.term(c["seq"], env, types, dep)
+                v = self.fresh(c["var"])
+                ssrt = self.sort(c["seq"], types)
+                et = "seq" if isinstance(ssrt, dict) and "seq" in ssrt else "int"
+                env2, types2 = {**env, c["var"]: v}, {**types, c["var"]: et}
+                if self.dcond(c["body"], env2, types2) is not None or self.dcond(c["cond"], env2, types2) is not None:
+                    raise NotImplementedError(f"lean: {op} over a comprehension with a partial part is not lowered yet")
+                body = self.term(c["body"], env2, types2, dep)
+                if c["cond"] != {"bool": True}:
+                    cond = self.term(c["cond"], env2, types2, dep)
+                    body = f"(!{cond} || {body})" if op == "all" else f"({cond} && {body})"
+                return f"({fn} {src} (fun ({v} : {self.lean_type(et)}) => {body}))"
+            return f"({fn} {self.term(a, env, types, dep)} (fun (t_b : Bool) => t_b))"
+        if op in LEAN_LIB_TERM or op == "in":
+            # SPEC.md "The library (v1)" in Lean (PREDICT T9): the prelude's definitions, applied
+            args = [self.term(a, env, types, dep) for a in e.get("args", [])]
+            if op == "in":
+                if not self._is_seqsort(self.sort(e["args"][1], types)):
+                    raise NotImplementedError("lean: membership in a non-seq is not lowered here")
+                return f"(decide ({args[0]} ∈ {args[1]}))"
+            if op in ("min", "max") and len(args) == 1:
+                return f"(t_{op}s {args[0]})"
+            return f"({LEAN_LIB_TERM[op]} {' '.join(args)})"
         if op == "+" and self._is_seqsort(self.sort(e["args"][0], types)):
             # `+` on two seqs (flat or nested, SPEC.md "Nested sequences
             # (v1)"): concatenation, always defined, polymorphic by
@@ -3741,6 +3824,14 @@ class Lower:
             # code is needed here, only this one spec-position case.
             assert self.sort(e, types) == "bool", f"non-bool {op} as Prop"
             return f"({self.term(e, env, types)} = true)"
+        if op in ("any", "all"):
+            return f"({self.term(e, env, types)} = true)"   # PREDICT T9: the bridge lemmas carry it to the quantifier
+        if op == "in":
+            # SPEC.md "The library (v1)" in Lean (PREDICT T9): membership in a seq is List membership
+            if not self._is_seqsort(self.sort(e["args"][1], types)):
+                raise NotImplementedError("lean: membership in a non-seq is not lowered here")
+            x, sq = (self.term(a, env, types) for a in e["args"])
+            return f"({x} ∈ {sq})"
         if op in ("isdigit", "isalpha", "isupper", "islower", "startswith",
                   "endswith"):
             # SPEC.md "The string library (v1)": the four predicates and
@@ -3877,6 +3968,32 @@ class Lower:
             return self._conj([
                 self.dcond(x, env, types), self.dcond(y, env, types),
                 f"({yt} ≠ (0 : Int))"])
+        if op in ("fold", "max_by", "min_by", "sort_by"):
+            # SPEC.md "Higher-order calls (v1)": the sequence (and fold's initial value) defined, max_by's and
+            # min_by's sequence non-empty; a partial lambda body is refused where its definition is written
+            import lower_verus as _lv
+            _lam, sq, init = _lv._hof_parts(e)
+            parts = [self.dcond(sq, env, types)] + ([self.dcond(init, env, types)] if init is not None else [])
+            if op in ("max_by", "min_by"):
+                parts.append(f"((0 : Int) < ((({self.term(sq, env, types)}).length : Int)))")
+            return self._conj(parts)
+        if op in ("any", "all") and isinstance(e["args"][0], dict) and "comp" in e["args"][0]:
+            # SPEC.md "Reductions (v1)" (PREDICT T9): over a comprehension, defined iff its source is; a partial
+            # body or filter is refused where the predicate is written (term())
+            c = e["args"][0]["comp"]
+            if "seq" not in c:
+                raise NotImplementedError(f"lean: {op} over a range comprehension is not lowered yet")
+            return self.dcond(c["seq"], env, types)
+        if op in ("pow", "isqrt"):
+            # SPEC.md "The library (v1)": pow(a, n) DEFINED IFF n >= 0, isqrt(n) IFF n >= 0 (PREDICT T9)
+            k = self.term(e["args"][-1], env, types)
+            return self._conj([self.dcond(a, env, types) for a in e["args"]]
+                              + [f"({k} ≥ (0 : Int))"])
+        if op in ("min", "max") and len(e.get("args", [])) == 1:
+            # SPEC.md "Reductions (v1)": max(s)/min(s) DEFINED IFF len(s) > 0
+            sq = self.term(e["args"][0], env, types)
+            return self._conj([self.dcond(e["args"][0], env, types),
+                               f"((0 : Int) < ((({sq}).length : Int)))"])
         if op in ("and", "or"):
             def chain(args):
                 if not args:
@@ -6475,6 +6592,121 @@ class Lower:
 
     # ---------- the string library (v1) ----------
 
+    def _hof_call(self, e: dict, env: dict, types: dict, dep: bool) -> str:
+        """A higher-order call as its shape's definition applied (SPEC.md "Higher-order calls (v1)", PREDICT T9): the
+        base sequence and a count (a prefix `s[0..e]` is `(s, e.toNat)`, any other `s` is `(s, s.length)`), fold's
+        initial value, then the lambda's free names."""
+        import lower_verus as _lv
+        if e["op"] == "sort_by":
+            raise NotImplementedError("lean: sort_by is not lowered yet (SPEC.md 'Higher-order calls (v1)')")
+        hit = self.hof.get(_lv._hof_key(e))
+        if hit is None:
+            raise NotImplementedError(f"lean: a {e['op']} call whose shape was not registered")
+        k = hit[0]
+        _lam, sq, init = _lv._hof_parts(e)
+        if isinstance(sq, dict) and sq.get("op") == "slice" and sq["args"][1] == {"int": 0}:
+            base = self.term(sq["args"][0], env, types, dep)
+            count = f"({self.term(sq['args'][2], env, types, dep)}).toNat"
+        else:
+            base = self.term(sq, env, types, dep)
+            count = f"({base}).length"
+        args = [base] + ([self.term(init, env, types, dep)] if init is not None else [])
+        args += [self.term({"var": n}, env, types, dep) for n in _lv._hof_free(e)]
+        name = {"fold": "t_fold", "max_by": "t_maxby", "min_by": "t_minby"}[e["op"]]
+        return f"({name}{k} {' '.join(args)} {count})"
+
+    def emit_hof_helpers(self) -> tuple[str, list]:
+        """Each registered higher-order shape's definition, by structural recursion over Nat so the kernel's `decide`
+        evaluates a ground value, with the lemmas the proofs use: fold's zero and step equations at an Int index;
+        max_by's and min_by's chosen index (bounds and key order by induction), membership and the key bound over
+        the whole sequence. The hand probe (scratch probe5.lean, 2026-10-06): weighted_sum and longest_row verified,
+        every theorem free of sorryAx."""
+        import lower_verus as _lv
+        out, thms = [], []
+        for _key, (k, e) in sorted(self.hof.items(), key=lambda kv: kv[1][0]):
+            op = e["op"]
+            if op == "sort_by":
+                continue                       # refused by name where it is called
+            lam, sq, init = _lv._hof_parts(e)
+            names, lbody = lam["lam"]["vars"], lam["lam"]["body"]
+            fvs = _lv._hof_free(e)
+            base = sq["args"][0] if (isinstance(sq, dict) and sq.get("op") == "slice"
+                                     and sq["args"][1] == {"int": 0}) else sq
+            try:
+                src_sort = self.sort(base, self.types)
+                fv_sorts = {n: self.types[n] for n in fvs}
+            except KeyError as x:
+                raise NotImplementedError(f"lean: a {op} over a name whose type is not known here: {x}")
+            if not self._is_seqsort(src_sort):
+                raise NotImplementedError(f"lean: the sequence of {op} could not be typed here")
+            elem = "seq" if isinstance(src_sort, dict) and "seq" in src_sort else "int"
+            T, S = self.lean_type(elem), self.lean_type(src_sort)
+            fparams = "".join(f" ({n} : {self.lean_type(t)})" for n, t in fv_sorts.items())
+            fargs = "".join(f" {n}" for n in fvs)
+            fenv = {n: n for n in fvs}
+            if op == "fold":
+                acc = self.sort(init, self.types)
+                A = self.lean_type(acc)
+                a, x = self.fresh(names[0]), self.fresh(names[1])
+                benv, btypes = {**fenv, names[0]: a, names[1]: x}, {**self.types, names[0]: acc, names[1]: elem}
+                if self.dcond(lbody, benv, btypes) is not None:
+                    raise NotImplementedError("lean: a fold whose lambda body is partial is not lowered yet")
+                body = self.term(lbody, benv, btypes)
+                out.append(
+                    f"def t_fold{k} (t_s : {S}) (t_init : {A}){fparams} : Nat → {A}\n"
+                    f"  | 0 => t_init\n"
+                    f"  | t_n + 1 => let {a} := t_fold{k} t_s t_init{fargs} t_n; let {x} := t_s[t_n]!; {body}\n\n"
+                    f"theorem t_fold{k}_zero (t_s : {S}) (t_init : {A}){fparams} :\n"
+                    f"    t_fold{k} t_s t_init{fargs} ((0 : Int).toNat) = t_init := rfl\n"
+                    f"theorem t_fold{k}_step (t_s : {S}) (t_init : {A}){fparams} (t_i : Int) (h : 0 ≤ t_i) :\n"
+                    f"    t_fold{k} t_s t_init{fargs} (t_i + 1).toNat =\n"
+                    f"      (let {a} := t_fold{k} t_s t_init{fargs} t_i.toNat; let {x} := t_s[t_i.toNat]!; {body}) := by\n"
+                    f"  have : (t_i + 1).toNat = t_i.toNat + 1 := by omega\n"
+                    f"  rw [this]; rfl\n")
+                thms += [f"t_fold{k}_zero", f"t_fold{k}_step"]
+                continue
+            v = names[0]
+            ktypes = {**self.types, v: elem}
+
+            def key(at: str) -> str:
+                return self.term(lbody, {**fenv, v: at}, ktypes)
+            if self.dcond(lbody, {**fenv, v: "t_e"}, ktypes) is not None:
+                raise NotImplementedError(f"lean: a {op} whose key is partial is not lowered yet")
+            if self.sort(lbody, ktypes) != "int":
+                raise NotImplementedError(f"lean: a {op} key that is not an int is not lowered yet")
+            nm = "t_maxby" if op == "max_by" else "t_minby"
+            better, keep = (">", "≤") if op == "max_by" else ("<", "≥")
+            ki, kc = key("(t_s[t_n + 1]!)"), key("(t_s[t_m]!)")
+            kj, kx = key("(t_s[j]!)"), key(f"(t_s[{nm}i{k} t_s{fargs} t_n]!)")
+            out.append(
+                f"def {nm}i{k} (t_s : {S}){fparams} : Nat → Nat\n"
+                f"  | 0 => 0\n  | 1 => 0\n"
+                f"  | t_n + 2 =>\n    let t_m := {nm}i{k} t_s{fargs} (t_n + 1)\n"
+                f"    if {ki} {better} {kc} then t_n + 1 else t_m\n"
+                f"def {nm}{k} (t_s : {S}){fparams} (t_n : Nat) : {T} := t_s[{nm}i{k} t_s{fargs} t_n]!\n\n"
+                f"theorem {nm}i{k}_spec (t_s : {S}){fparams} (t_n : Nat) (h : 0 < t_n) :\n"
+                f"    {nm}i{k} t_s{fargs} t_n < t_n ∧ ∀ j, j < t_n → {kj} {keep} {kx} := by\n"
+                f"  induction t_n with\n  | zero => omega\n  | succ n ih =>\n    cases n with\n"
+                f"    | zero =>\n      simp only [{nm}i{k}]\n      refine ⟨by omega, ?_⟩\n      intro j hj\n"
+                f"      have : j = 0 := by omega\n      subst this; omega\n"
+                f"    | succ m =>\n      have ⟨h1, h2⟩ := ih (by omega)\n      simp only [{nm}i{k}]\n      split\n"
+                f"      · refine ⟨by omega, ?_⟩\n        intro j hj\n        rcases Nat.lt_or_ge j (m + 1) with hj' | hj'\n"
+                f"        · have := h2 j hj'; omega\n        · have : j = m + 1 := by omega\n          subst this; omega\n"
+                f"      · refine ⟨by omega, ?_⟩\n        intro j hj\n        rcases Nat.lt_or_ge j (m + 1) with hj' | hj'\n"
+                f"        · exact h2 j hj'\n        · have : j = m + 1 := by omega\n          subst this; omega\n\n"
+                f"theorem {nm}{k}_mem (t_s : {S}){fparams} (h : 0 < (t_s.length : Int)) :\n"
+                f"    {nm}{k} t_s{fargs} t_s.length ∈ t_s := by\n"
+                f"  have ⟨h1, _⟩ := {nm}i{k}_spec t_s{fargs} t_s.length (by omega)\n"
+                f"  unfold {nm}{k}\n"
+                f"  rw [List.getElem!_eq_getElem?_getD, List.getElem?_eq_getElem h1, Option.getD_some]\n"
+                f"  exact List.getElem_mem h1\n\n"
+                f"theorem {nm}{k}_bound (t_s : {S}){fparams} (t_i : Int) (h0 : 0 ≤ t_i) (h1 : t_i < (t_s.length : Int)) :\n"
+                f"    {key('(t_s[t_i.toNat]!)')} {keep} {key(f'({nm}{k} t_s{fargs} t_s.length)')} := by\n"
+                f"  have ⟨_, h2⟩ := {nm}i{k}_spec t_s{fargs} t_s.length (by omega)\n"
+                f"  exact h2 t_i.toNat (by omega)\n")
+            thms += [f"{nm}i{k}_spec", f"{nm}{k}_mem", f"{nm}{k}_bound"]
+        return ("\n".join(out), thms)
+
     def emit_strlib_helpers(self) -> str:
         """SPEC.md "The string library (v1)" (2026-09-11, dated note
         below carries the full measurement): the 17 members as this
@@ -6886,6 +7118,14 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         strlib_thms = []
         if self.strlib:
             strlib_thms = [(n, "string library lemma") for n in STRLIB_LEMMAS]
+        # SPEC.md "The library (v1)" in Lean (PREDICT T9)
+        lib_src, lib_names = _lib_prelude(self.lib_used)
+        hof_src, hof_names = self.emit_hof_helpers()       # SPEC.md "Higher-order calls (v1)" (PREDICT T9)
+        if hof_src:
+            lib_src = (lib_src + "\n" + hof_src) if lib_src else hof_src
+            lib_names = lib_names + hof_names
+        strlib_src = (strlib_src + "\n" + lib_src) if strlib_src.strip() and lib_src else (strlib_src or lib_src)
+        strlib_thms += [(n, "library lemma") for n in lib_names]
         sf_src, sf_thms = self.emit_sfuns()
         l_src, l_thms = self.emit_lemmas()
         m_src, m_thms = self.emit_methods(seq_src, strlib_src)
@@ -9577,7 +9817,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             return None      # nothing was undefined along this ground path
         self.cert_funs = interp.funs_of(self.task, self.body)
         fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
-        self.cert_fns = ", ".join(fns + self._method_fns)
+        self.cert_fns = ", ".join(fns + self._method_fns + self.lib_fns)
         venv = {p["name"]: self._unshow(w[p["name"]], p["type"])
                 for p in params}
         parts = [(self.prop(r, tenv, types),
@@ -9619,7 +9859,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             return None      # _expr has no definedness obligation of its own
         self.cert_funs = interp.funs_of(self.task, self.body)
         fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
-        self.cert_fns = ", ".join(fns + self._method_fns)
+        self.cert_fns = ", ".join(fns + self._method_fns + self.lib_fns)
         venv = {p["name"]: self._unshow(w[p["name"]], p["type"])
                 for p in params}
         parts = [(self.prop(r, tenv, types),
@@ -9684,7 +9924,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             return None
         self.cert_funs = interp.funs_of(self.task, body)
         fns = [f"{self.name}_t"] + [f"{f}_s" for f in self.sfuns]
-        self.cert_fns = ", ".join(fns + self._method_fns)
+        self.cert_fns = ", ".join(fns + self._method_fns + self.lib_fns)
         pvenv = {p["name"]: self._unshow(w[p["name"]], p["type"])
                 for p in params}
         ptenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
@@ -9796,7 +10036,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
             fns += list(self._nl_fn_names)
         elif any("while" in s for s in self.body):
             fns.append(f"{self.name}_t_loop")
-        self.cert_fns = ", ".join(fns + self._method_fns)
+        self.cert_fns = ", ".join(fns + self._method_fns + self.lib_fns)
         params = self.task["params"]
         types = dict(self.types)
         tenv = {p["name"]: self._gterm(w[p["name"]], p["type"])
@@ -10058,7 +10298,7 @@ theorem t_str_join_split_roundtrip (s : List Int) (c : Int) :
         self.cert_funs = interp.funs_of(self.task, body)
         fns = [f"{self.name}_t", f"{self.name}_t_loop"] \
             + [f"{f}_s" for f in self.sfuns]
-        self.cert_fns = ", ".join(fns + self._method_fns)
+        self.cert_fns = ", ".join(fns + self._method_fns + self.lib_fns)
         params = [p["name"] for p in self.task["params"]]
         names = params + state
         if any(n not in w for n in names):
@@ -10198,7 +10438,307 @@ def _strip_task(task: dict) -> dict:
 
 
 
-_SET_OPS_T = {"set", "in", "card", "union", "inter", "diff"}
+# SPEC.md "The library (v1)" in Lean (PREDICT T9): the term each library call lowers to, the lemmas grind is handed
+# when the call is used, and the definitions a certificate unfolds; the prelude text itself below, each piece measured
+# on the hand probe (scratch probe3.lean, 2026-10-06: every theorem free of sorryAx, every ground value by `decide`).
+LEAN_LIB_TERM = {"min": "t_min", "max": "t_max", "abs": "t_abs", "sum": "t_sum", "gcd": "t_gcd", "pow": "t_pow",
+                 "isqrt": "t_isqrt", "rev": "t_rev", "sort": "t_sort"}
+LEAN_LIB_GRIND = {"min": ["t_min"], "max": ["t_max"], "abs": ["t_abs"], "gcd": ["t_gcd"],
+                  "pow": ["t_pow", "t_pow_nat"], "isqrt": ["t_isqrt_spec"], "sum": ["t_sum_nil", "t_sum_cons", "t_sum_append"],
+                  "rev": ["t_rev"], "sort": ["t_sort_length", "t_sort_le", "t_sort_mem"],
+                  "maxs": ["t_maxs_mem", "t_maxs_ge", "t_mins_mem", "t_mins_le"],
+                  "any": ["t_any_iff"], "all": ["t_all_iff"]}
+LEAN_LIB_FNS = {"min": ["t_min"], "max": ["t_max"], "abs": ["t_abs"], "gcd": ["t_gcd"],
+                "pow": ["t_pow", "t_pow_nat"], "isqrt": ["t_isqrt", "t_isqrt_nat"], "sum": ["t_sum"],
+                "rev": ["t_rev"], "sort": ["t_sort", "t_ins"], "maxs": ["t_maxs", "t_mins"]}
+_LEAN_LIB_TEXT = {
+    "min": ("def t_min (a b : Int) : Int := if a < b then a else b\n", []),
+    "max": ("def t_max (a b : Int) : Int := if a < b then b else a\n", []),
+    "abs": ("def t_abs (a : Int) : Int := if a < 0 then -a else a\n", []),
+    "gcd": ("def t_gcd (a b : Int) : Int := ((Int.gcd a b : Nat) : Int)\n", []),
+    "pow": ("def t_pow_nat (a : Int) : Nat → Int\n  | 0 => 1\n  | k + 1 => a * t_pow_nat a k\n"
+            "def t_pow (a : Int) (n : Int) : Int := t_pow_nat a n.toNat\n", []),
+    "isqrt": ("""def t_isqrt_nat : Nat → Int
+  | 0 => 0
+  | k + 1 =>
+    let r := t_isqrt_nat k
+    if (r + 1) * (r + 1) ≤ ((k + 1 : Nat) : Int) then r + 1 else r
+def t_isqrt (n : Int) : Int := t_isqrt_nat n.toNat
+
+theorem t_isqrt_nat_spec (k : Nat) :
+    0 ≤ t_isqrt_nat k ∧ t_isqrt_nat k * t_isqrt_nat k ≤ (k : Int) ∧ (k : Int) < (t_isqrt_nat k + 1) * (t_isqrt_nat k + 1) := by
+  induction k with
+  | zero => simp [t_isqrt_nat]
+  | succ k ih =>
+    simp only [t_isqrt_nat]
+    have ⟨h1, h2, h3⟩ := ih
+    split
+    · refine ⟨by omega, by assumption, ?_⟩
+      grind
+    · refine ⟨h1, by grind, by grind⟩
+
+theorem t_isqrt_spec (n : Int) (h : 0 ≤ n) :
+    0 ≤ t_isqrt n ∧ t_isqrt n * t_isqrt n ≤ n ∧ n < (t_isqrt n + 1) * (t_isqrt n + 1) := by
+  have := t_isqrt_nat_spec n.toNat
+  unfold t_isqrt
+  have hn : ((n.toNat : Nat) : Int) = n := Int.toNat_of_nonneg h
+  rw [hn] at this
+  exact this
+
+-- measured: `grind [t_isqrt_spec]` does not instantiate the conjunction on its own (nor do three single-fact
+-- lemmas); a pattern on `t_isqrt n` does, so grind meets the bounds wherever `t_isqrt n` occurs
+grind_pattern t_isqrt_spec => t_isqrt n
+""", ["t_isqrt_nat_spec", "t_isqrt_spec"]),
+    "sum": ("""def t_sum : List Int → Int
+  | [] => 0
+  | x :: xs => x + t_sum xs
+
+theorem t_sum_append (s t : List Int) : t_sum (s ++ t) = t_sum s + t_sum t := by
+  induction s with
+  | nil => simp [t_sum]
+  | cons x xs ih => simp [t_sum, ih]; omega
+
+-- the two equations as lemmas: handing grind the recursive definition itself made it unfold through `s ++ [x]`
+-- by definitional equality until the heartbeat budget ran out (measured, sum_tail)
+theorem t_sum_nil : t_sum [] = 0 := rfl
+theorem t_sum_cons (x : Int) (xs : List Int) : t_sum (x :: xs) = x + t_sum xs := rfl
+""", ["t_sum_append", "t_sum_nil", "t_sum_cons"]),
+    "rev": ("def t_rev {α : Type} (s : List α) : List α := s.reverse\n", []),
+    "sort": ("""-- a stable insertion sort: an earlier element goes before the equal ones after it (Python's sorted)
+def t_ins (x : Int) : List Int → List Int
+  | [] => [x]
+  | y :: ys => if x ≤ y then x :: y :: ys else y :: t_ins x ys
+def t_sort : List Int → List Int
+  | [] => []
+  | x :: xs => t_ins x (t_sort xs)
+
+theorem t_ins_perm (x : Int) (l : List Int) : (t_ins x l).Perm (x :: l) := by
+  induction l with
+  | nil => simp [t_ins]
+  | cons y ys ih =>
+    simp only [t_ins]
+    split
+    · exact List.Perm.refl _
+    · exact (List.Perm.cons y ih).trans (List.Perm.swap x y ys)
+
+theorem t_sort_perm (l : List Int) : (t_sort l).Perm l := by
+  induction l with
+  | nil => simp [t_sort]
+  | cons x xs ih => exact (t_ins_perm x _).trans (List.Perm.cons x ih)
+
+theorem t_ins_sorted (x : Int) (l : List Int) (h : l.Pairwise (· ≤ ·)) : (t_ins x l).Pairwise (· ≤ ·) := by
+  induction l with
+  | nil => simp [t_ins]
+  | cons y ys ih =>
+    simp only [t_ins]
+    have ⟨hy, hys⟩ := List.pairwise_cons.mp h
+    split
+    · rename_i hxy
+      refine List.pairwise_cons.mpr ⟨?_, h⟩
+      intro z hz
+      simp at hz
+      rcases hz with hz | hz
+      · omega
+      · have := hy z hz; omega
+    · rename_i hxy
+      refine List.pairwise_cons.mpr ⟨?_, ih hys⟩
+      intro z hz
+      have hz' := (t_ins_perm x ys).mem_iff.mp hz
+      simp at hz'
+      rcases hz' with hz' | hz'
+      · omega
+      · exact hy z hz'
+
+theorem t_sort_sorted (l : List Int) : (t_sort l).Pairwise (· ≤ ·) := by
+  induction l with
+  | nil => simp [t_sort]
+  | cons x xs ih => exact t_ins_sorted x _ ih
+
+theorem t_sort_length (l : List Int) : (t_sort l).length = l.length := (t_sort_perm l).length_eq
+
+theorem t_sort_mem (l : List Int) (x : Int) : x ∈ t_sort l ↔ x ∈ l := (t_sort_perm l).mem_iff
+
+theorem t_sort_le (l : List Int) (i j : Int) (h0 : 0 ≤ i) (hij : i ≤ j) (hj : j < ((t_sort l).length : Int)) :
+    (t_sort l)[i.toNat]! ≤ (t_sort l)[j.toNat]! := by
+  have hi' : i.toNat < (t_sort l).length := by omega
+  have hj' : j.toNat < (t_sort l).length := by omega
+  rw [List.getElem!_eq_getElem?_getD, List.getElem!_eq_getElem?_getD, List.getElem?_eq_getElem hi',
+      List.getElem?_eq_getElem hj']
+  simp only [Option.getD_some]
+  rcases Int.lt_or_eq_of_le hij with hlt | heq
+  · exact List.pairwise_iff_getElem.mp (t_sort_sorted l) i.toNat j.toNat hi' hj' (by omega)
+  · subst heq; exact Int.le_refl _
+""", ["t_ins_perm", "t_sort_perm", "t_ins_sorted", "t_sort_sorted", "t_sort_length", "t_sort_mem", "t_sort_le"]),
+    "maxs": ("""-- max(s)/min(s) of one argument (SPEC.md "Reductions (v1)"): defined only on a non-empty seq
+def t_maxs : List Int → Int
+  | [] => 0
+  | [a] => a
+  | a :: b :: rest => let m := t_maxs (b :: rest); if a < m then m else a
+def t_mins : List Int → Int
+  | [] => 0
+  | [a] => a
+  | a :: b :: rest => let m := t_mins (b :: rest); if m < a then m else a
+
+theorem t_maxs_mem_l (s : List Int) (h : s ≠ []) : t_maxs s ∈ s := by
+  induction s with
+  | nil => contradiction
+  | cons a rest ih =>
+    cases rest with
+    | nil => simp [t_maxs]
+    | cons b rest' =>
+      simp only [t_maxs]
+      split
+      · have := ih (by simp); simp_all
+      · simp
+
+theorem t_maxs_ge_l (s : List Int) : ∀ x ∈ s, x ≤ t_maxs s := by
+  induction s with
+  | nil => simp
+  | cons a rest ih =>
+    cases rest with
+    | nil => simp [t_maxs]
+    | cons b rest' =>
+      intro x hx
+      simp only [t_maxs]
+      simp at hx
+      rcases hx with hx | hx
+      · split <;> omega
+      · have := ih x (by simp_all)
+        split <;> omega
+
+theorem t_mins_mem_l (s : List Int) (h : s ≠ []) : t_mins s ∈ s := by
+  induction s with
+  | nil => contradiction
+  | cons a rest ih =>
+    cases rest with
+    | nil => simp [t_mins]
+    | cons b rest' =>
+      simp only [t_mins]
+      split
+      · have := ih (by simp); simp_all
+      · simp
+
+theorem t_mins_le_l (s : List Int) : ∀ x ∈ s, t_mins s ≤ x := by
+  induction s with
+  | nil => simp
+  | cons a rest ih =>
+    cases rest with
+    | nil => simp [t_mins]
+    | cons b rest' =>
+      intro x hx
+      simp only [t_mins]
+      simp at hx
+      rcases hx with hx | hx
+      · split <;> omega
+      · have := ih x (by simp_all)
+        split <;> omega
+
+theorem t_maxs_mem (s : List Int) (h : 0 < (s.length : Int)) : t_maxs s ∈ s :=
+  t_maxs_mem_l s (by intro e; subst e; simp at h)
+
+theorem t_maxs_ge (s : List Int) (i : Int) (h0 : 0 ≤ i) (h1 : i < (s.length : Int)) : s[i.toNat]! ≤ t_maxs s := by
+  apply t_maxs_ge_l
+  simp [List.getElem!_eq_getElem?_getD, List.getElem?_eq_getElem (by omega : i.toNat < s.length)]
+
+theorem t_mins_mem (s : List Int) (h : 0 < (s.length : Int)) : t_mins s ∈ s :=
+  t_mins_mem_l s (by intro e; subst e; simp at h)
+
+theorem t_mins_le (s : List Int) (i : Int) (h0 : 0 ≤ i) (h1 : i < (s.length : Int)) : t_mins s ≤ s[i.toNat]! := by
+  apply t_mins_le_l
+  simp [List.getElem!_eq_getElem?_getD, List.getElem?_eq_getElem (by omega : i.toNat < s.length)]
+""", ["t_maxs_mem_l", "t_maxs_ge_l", "t_mins_mem_l", "t_mins_le_l", "t_maxs_mem", "t_maxs_ge", "t_mins_mem",
+      "t_mins_le"]),
+}
+_LEAN_LIB_TEXT["anyall"] = ("""-- any/all (SPEC.md "Reductions (v1)"): core's List.any/List.all, carried to the index quantifier
+theorem t_all_iff {α : Type} [Inhabited α] (s : List α) (p : α → Bool) :
+    s.all p = true ↔ ∀ (i : Int), 0 ≤ i → i < (s.length : Int) → p s[i.toNat]! = true := by
+  rw [List.all_eq_true]
+  constructor
+  · intro h i h0 h1
+    have hi : i.toNat < s.length := by omega
+    rw [List.getElem!_eq_getElem?_getD, List.getElem?_eq_getElem hi, Option.getD_some]
+    exact h _ (List.getElem_mem hi)
+  · intro h x hx
+    obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hx
+    have := h (k : Int) (by omega) (by omega)
+    rw [List.getElem!_eq_getElem?_getD, show ((k : Int)).toNat = k by omega, List.getElem?_eq_getElem hk,
+        Option.getD_some] at this
+    exact this
+
+theorem t_any_iff {α : Type} [Inhabited α] (s : List α) (p : α → Bool) :
+    s.any p = true ↔ ∃ (i : Int), 0 ≤ i ∧ i < (s.length : Int) ∧ p s[i.toNat]! = true := by
+  rw [List.any_eq_true]
+  constructor
+  · intro ⟨x, hx, hp⟩
+    obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hx
+    refine ⟨(k : Int), by omega, by omega, ?_⟩
+    rw [List.getElem!_eq_getElem?_getD, show ((k : Int)).toNat = k by omega, List.getElem?_eq_getElem hk,
+        Option.getD_some]
+    exact hp
+  · intro ⟨i, h0, h1, hp⟩
+    have hi : i.toNat < s.length := by omega
+    rw [List.getElem!_eq_getElem?_getD, List.getElem?_eq_getElem hi, Option.getD_some] at hp
+    exact ⟨_, List.getElem_mem hi, hp⟩
+""", ["t_all_iff", "t_any_iff"])
+_LEAN_LIB_ORDER = ["min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev", "sort", "maxs", "anyall"]
+
+
+def _hof_collect(parts, index: dict) -> None:
+    """Register every higher-order call shape in `parts` (SPEC.md "Higher-order calls (v1)"): lower_verus's key, the
+    lambda's parameters renamed, so an invariant's and an ensures' lambdas are one shape."""
+    import lower_verus as _lv
+
+    def walk(y):
+        if isinstance(y, dict):
+            if y.get("op") in ("fold", "max_by", "min_by", "sort_by"):
+                index.setdefault(_lv._hof_key(y), (len(index) + 1, y))
+            for v in y.values():
+                walk(v)
+        elif isinstance(y, list):
+            for v in y:
+                walk(v)
+    walk(parts)
+
+
+def _lib_used(x) -> set:
+    """The library functions a task part uses (SPEC.md "The library (v1)"), "maxs" for max/min of one argument."""
+    out: set = set()
+
+    def walk(y):
+        if isinstance(y, dict):
+            op = y.get("op")
+            if op in ("min", "max") and len(y.get("args", [])) == 1:
+                out.add("maxs")
+            elif op in LEAN_LIB_TERM:
+                out.add(op)
+            elif op == "in":
+                out.add("in")
+            elif op in ("any", "all"):
+                out.update({op, "anyall"})
+            for v in y.values():
+                walk(v)
+        elif isinstance(y, list):
+            for v in y:
+                walk(v)
+    walk(x)
+    return out
+
+
+def _lib_prelude(used: set) -> tuple[str, list]:
+    """The prelude text for the used library functions, in a fixed order, and the theorems it states (for the
+    audit's `#print axioms` lines)."""
+    text, thms = [], []
+    for op in _LEAN_LIB_ORDER:
+        if op in used:
+            t, names = _LEAN_LIB_TEXT[op]
+            text.append(t)
+            thms += names
+    return ("\n".join(text), thms)
+
+
+# `in` is not here since 2026-10-06 (SPEC.md "The library (v1)" in Lean): membership in a SEQ is the library's; a set
+# reaches a task only through a set-typed name or one of these operations, which still say so
+_SET_OPS_T = {"set", "card", "union", "inter", "diff"}
 
 
 def _uses_sets(obj) -> bool:
@@ -10216,7 +10756,8 @@ def _uses_sets(obj) -> bool:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "lean")
+    tshape.abstain_unless_carried(task, body, "lean", carried={"comp-reduction"},
+                                  lib=LEAN_LIB)   # PREDICT T9: the library; any/all over a comprehension
     if _uses_sets(task) or _uses_sets(body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): this column
         # is core Lean 4 with no Mathlib (measured: the toolchain here is

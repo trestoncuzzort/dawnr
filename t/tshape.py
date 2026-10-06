@@ -108,7 +108,7 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
     if "real" not in carried:
         abstain_on_reals(task, body, kernel)
     abstain_on_library(task, body, kernel, lib)
-    if "comp" not in carried and has_comprehension(task, body):
+    if "comp" not in carried and has_comprehension(task, body, under_reduction_ok="comp-reduction" in carried):
         raise NotImplementedError(f"{kernel}: comprehensions are not lowered yet (SPEC.md 'Comprehensions (v1)')")
     if "exit" not in carried:
         abstain_on_exits(task, body, kernel)
@@ -251,10 +251,17 @@ def abstain_on_exits(task: dict, body: list, kernel: str) -> None:
                                   f"(SPEC.md 'Early exits (v1)')")
 
 
-def has_comprehension(task: dict, body: list) -> bool:
-    """Whether the task or this body holds a `comp` node (SPEC.md "Comprehensions (v1)", 2026-10-06)."""
+def has_comprehension(task: dict, body: list, under_reduction_ok: bool = False) -> bool:
+    """Whether the task or this body holds a `comp` node (SPEC.md "Comprehensions (v1)", 2026-10-06). With
+    `under_reduction_ok`, a comprehension over a seq that is the one argument of any/all does not count (a kernel that
+    states any/all over a predicate carries it, SPEC.md "Reductions (v1)"); one inside its parts still does."""
     def walk(x) -> bool:
         if isinstance(x, dict):
+            a = x.get("args", [])
+            if (under_reduction_ok and x.get("op") in ("any", "all") and len(a) == 1 and isinstance(a[0], dict)
+                    and "comp" in a[0] and "seq" in a[0]["comp"]):
+                c = a[0]["comp"]
+                return walk(c["seq"]) or walk(c["cond"]) or walk(c["body"])
             return "comp" in x or any(walk(v) for v in x.values())
         return isinstance(x, list) and any(walk(v) for v in x)
     return walk(body or []) or walk(task.get("requires", [])) or walk(task.get("ensures", [])) \

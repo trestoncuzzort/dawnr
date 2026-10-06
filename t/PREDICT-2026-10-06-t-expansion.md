@@ -546,3 +546,47 @@ stable sort is unique. What would falsify the design: `grind` not closing the so
 `pairwise_mergeSort` without an explicit instance (then the lowering states the instance, and the read says so);
 a ground certificate over `mergeSort` not reducing by `decide` (then that certificate is refused by name and the
 twin reads UNPROVED, a cell the read counts against bar 1).
+
+### T9 read (2026-10-06 21:53Z): the library in Lean, 16 of the 18 tasks verified with the twin refuted.
+(1) Bar 1 held: Lean verifies the real and refutes the twin on 16 of the 18 tasks it refused for the library:
+`clamp`, `cube`, `distance`, `gcd_of`, `has_elem`, `largest`, `palindrome`, `root_floor`, `sum_one`,
+`sum_tail`, `first_sorted`, `sort_it`, `all_positive`, `has_negative`, `weighted_sum` (a fold in a loop
+invariant) and `longest_row` (`max_by`). Every theorem's audit is free of `sorryAx`. (2) Bar 2 held: the other
+two refuse by name, `members_upto` (`toset`: core Lean has no finite set) and `pad_right_len` (the string
+library's second wave); `sort_by` is refused by name too. (3) Bar 3 held: the whole Lean column was re-run over
+the 88 tasks. Only those 16 cells moved, from refusal to verified with the twin refuted; the two older non-agreeing
+cells (`count_vowels`, `grid_row_sums`) are unchanged. Lean goes from 40 to 56 and its refusals from 46 to 30.
+(4) The second registered falsifier fired on the hand probe, before the generator was written: a well-founded
+definition does not reduce under `decide`. That covers core's `List.mergeSort`, `isqrt` and `pow` by
+`termination_by`, and `native_decide` is banned. Every library function is therefore structurally recursive, and
+`sort` is our own stable insertion sort, the list Python's `sorted` gives, with its own permutation, order,
+length and membership lemmas. The first falsifier never came into play, since `mergeSort` was not used. Three more
+findings on the way. `grind` did not instantiate `isqrt`'s bound lemma, neither as a conjunction nor as three
+single facts; a `grind_pattern` on `t_isqrt n` did. Handing grind the append lemma for `sum` on a goal with no
+concatenation unfolded `[x]` against `?s ++ ?t` until the heartbeat budget ran out (`sum_one`'s twin read
+TIMEOUT), so the lemma is handed over only where a sequence `+` occurs. A primed lemma name (`t_maxs_mem'`)
+broke the adapter's audit pattern, which reads names between single quotes, and the real read UNPROVED.
+`any`/`all` over a comprehension are core's `List.all`/`List.any` over a predicate, carried to the index
+quantifier by two bridge lemmas; the shared comprehension rule now lets a kernel say it carries a comprehension
+directly under them (`tshape.has_comprehension(under_reduction_ok=)`).
+
+## T10 registered (2026-10-06 21:57Z, after one hand probe and before the generator): the library in Rocq
+
+D1's second landing (`internal/RESEARCH-2026-10-06-landscape.md`). Rocq refuses the same 18 tasks as Lean did for
+the library. Stated plainly: a hand probe ran before this registration (scratch `p1.v`, seven shapes: clamp,
+distance, gcd_of, cube, root_floor, has_elem, sum_tail, written over the file's own sequence encoding, a function
+`Z -> Z` with a length). All seven compiled closed under the global context, with ground values by
+`reflexivity`. The bars below are about the generated lowering, which has not run. Read first: the stdlib's
+`Z.sqrt_spec`, `Z.gcd_nonneg`, `Z.abs_nonneg`, `Z.pow_succ_r`, `Permutation` and `Sorted` (all present in
+the installed stdlib, checked with `Check`); `lia`'s preprocessing of `Z.min`/`Z.max`/`Z.abs`. Design: `min`,
+`max`, `abs`, `gcd`, `pow`, `isqrt` are the stdlib's own `Z` functions with their lemmas stated at the use.
+`sum`, membership, `max`/`min` of one argument, `any`/`all`, `fold`, `max_by`/`min_by` are fuel
+`Fixpoint`s over `Z.to_nat` of the length (the file's own idiom), recursing from the end, so a prefix's value is
+one unfolding from the next. `rev` is `fun k => f (n - 1 - k)` and `sort` a stable insertion sort over the
+listed elements. Bars: (1) Rocq verifies the real and refutes the twin on at least 12 of the 18; (2) the rest refuse
+by name, with `members_upto` (sets in this column are `MSetList`, not reached by `toset` yet) and
+`pad_right_len` (strings v2) expected among them; (3) no Rocq cell that agreed before changes (the whole column is
+re-run); (4) every theorem closed under the global context. What would falsify the design: the file's proof engine
+(`t_sweep`/`t_base`) not reaching a library lemma stated at the use (then a `pose proof` line names it, and the
+read says which); a ground certificate over a fuel `Fixpoint` not reducing by `reflexivity` (then that twin reads
+UNPROVED, counted against bar 1).

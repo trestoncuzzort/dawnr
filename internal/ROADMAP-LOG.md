@@ -3142,6 +3142,22 @@ is queued, and the ones running are read as they finish.
   (69.8%); `closure` 2,243 -> 707 (nested defs that mutate what they capture stay out, a stricter rule than
   registered: 21 problems). Time labels in this log and in the PREDICT file corrected from the session's log (they had
   run ahead by up to eleven hours).
-- **Next:** the zoom-out over the landscape (`internal/RESEARCH-2026-10-06-landscape.md`), then what it decides; the
-  language queue after it: G9 records and options (constructors with fields; the checker and the kernels' match
-  already carry binders), iteration over a map; Verus on early exits and SPARK's `sum` lemma as design items.
+- **The landscape (10-06 21:20Z):** `internal/RESEARCH-2026-10-06-landscape.md`. No published system checks one
+  spec in more than three verifiers or pairs proofs with refuted mutants. The language has outrun its kernels: 36 of
+  88 tasks are verified with the twin refuted in all seven. Decisions: D1, depth before more breadth (the five kernels
+  learn what the language has); D2, AlgoVeri in seven kernels; D3, twin refutation as a headline metric (done: the
+  matrix's 'Per kernel' section and the README, 100% in every kernel); D4, `t build` through Dafny's back ends; D5,
+  dawnr's agent benchmarks wait. AlgoVeri's 77 contracts were extracted (outside the repo). 19 use only what t
+  states today, 6 more need only ghost predicates, and 37 need datatypes with fields: G9 is the language item
+  AlgoVeri asks for.
+- **The matrix regenerated from a clean clone (10-06 21:17Z start, at 56f6e73e):** 88 tasks; the four higher-order
+  rows verified with the twin refuted in Dafny and Verus, the other five by name; no earlier cell changed.
+- **T9 landed (10-06 21:53Z), the library in Lean (D1's first landing):** 16 of the 18 tasks Lean refused for the
+  library are now verified with the twin refuted. Every function is structurally recursive (so `decide` evaluates
+  ground values; `mergeSort` and well-founded definitions do not reduce, and `native_decide` is banned). `sort` is a
+  stable insertion sort with its own lemmas; `any`/`all` are `List.any`/`List.all` with bridge lemmas; `fold`,
+  `max_by` and `min_by` are in prefix form over `Nat`. `members_upto` (sets) and `pad_right_len` (strings v2) refuse
+  by name. Lean: 40 -> 56 verified, 46 -> 30 refusals, no other cell moved.
+- **Next:** D1 continues: the library in Rocq and Frama-C (18 tasks each), compositional types in Lean, Rocq and
+  Frama-C (14 each), comprehensions in all five (7). D2's first step runs beside it: AlgoVeri's 25 stateable contracts
+  written in t. The language queue: G9 datatypes with fields (records, options, trees), then iteration over a map.
