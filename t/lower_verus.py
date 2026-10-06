@@ -2816,7 +2816,29 @@ def expr(e: dict, vty: str | None = None) -> str:
             return f"{args[1]}.dom().contains({args[0]})"   # SPEC.md "Maps (v1)": domain membership
         # a Set's and a Seq's `contains` alike (SPEC.md "The library (v1)", 2026-10-06: membership in a seq)
         return f"{args[1]}.contains({args[0]})"
-    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev", "sort"):
+    if op in ("any", "all") and len(e.get("args", [])) == 1 and isinstance(e["args"][0], dict) and "comp" in e["args"][0]:
+        # SPEC.md "Reductions (v1)" (2026-10-07): a comprehension under any/all is the quantifier itself (measured:
+        # through the comprehension's spec fn and t_all, Z3 had no term to instantiate the two quantifiers on and
+        # left `all_positive`'s ensures unproved); over the source's index, the bound variable the element
+        c = e["args"][0]["comp"]
+        qi = {"var": "t_qi"}
+        if "seq" in c:
+            el = {"op": "at", "args": [c["seq"], qi]}
+            rng = f"0 <= t_qi && t_qi < {expr(c['seq'])}.len()"
+        else:
+            el = qi
+            rng = f"{expr(c['lo'])} <= t_qi && t_qi < {expr(c['hi'])}"
+        cond = subst(c["cond"], {c["var"]: el})
+        body = subst(c["body"], {c["var"]: el})
+        guard = rng if c["cond"] == {"bool": True} else f"{rng} && {expr(cond)}"
+        if op == "all":
+            return f"(forall|t_qi: int| {guard} ==> {expr(body)})"
+        return f"(exists|t_qi: int| {guard} && {expr(body)})"
+    if op in ("min", "max") and len(args) == 1:
+        return f"{args[0]}.{op}()"   # SPEC.md "Reductions (v1)" (2026-10-07): vstd's own Seq<int>::max/min
+    if op == "toset":
+        return f"{args[0]}.to_set()"   # vstd's own, with its broadcast ensures
+    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev", "sort", "any", "all"):
         # SPEC.md "The library (v1)" and "Sorting (v1)" (2026-10-06): _VLIB's spec fns
         return f"t_{op}({', '.join(args)})"
     if op == "card":
@@ -3049,6 +3071,9 @@ def defined(e: dict, is_real=None) -> dict:
             {"op": "<=", "args": [a, b]},
             {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}
         return _conj([defined(s, is_real), defined(a, is_real), defined(b, is_real), bound])
+    if op in ("min", "max") and len(args) == 1:
+        # SPEC.md "Reductions (v1)" (2026-10-07): the extremum of a seq owes a non-empty seq
+        return _conj([defined(args[0], is_real), {"op": ">", "args": [{"op": "len", "args": [args[0]]}, {"int": 0}]}])
     if op in ("pow", "isqrt"):
         # SPEC.md "The library (v1)" (2026-10-06): pow(a, n) and isqrt(n) owe `n >= 0`
         n = args[1] if op == "pow" else args[0]
@@ -5148,10 +5173,21 @@ class _V1:
             lib_lines.append("    broadcast use t_sum_prefix;")
         if "rev" in lib_used:
             lib_lines.append("    broadcast use t_rev_spec;")
+        if tshape.uses_ops(body or [], task, {"toset"}):
+            # SPEC.md "Reductions (v1)" (2026-10-07)
+            lib_lines.append("    broadcast use t_toset_mem;")
+            lib_lines.append("    broadcast use t_toset_sub;")
         for key, (k, _node) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
             lib_lines.append(f"    reveal_with_fuel(t_comp{k}, 6);")
             lib_lines.append(f"    broadcast use t_comp{k}_spec;")
         param_names = {p["name"] for p in task["params"]}
+        # SPEC.md "Reductions (v1)" (2026-10-07): vstd's max_ensures/min_ensures are not broadcast; stated for every
+        # max(s)/min(s) over the parameters, in the spec and in the body
+        for a, which in _extrema_args([task.get("requires", []), task.get("ensures", []), body or []]):
+            if _free_vars(a) <= param_names:
+                line = f"    {expr(a)}.{which}_ensures();"
+                if line not in lib_lines:
+                    lib_lines.append(line)
         for a in _sort_args(task.get("requires", [])) + _sort_args(task.get("ensures", [])):
             if _free_vars(a) <= param_names:
                 line = f"    t_sort_spec({expr(a)});"
@@ -6006,7 +6042,8 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
 # broadcast lemmas, brought in by `broadcast use` INSIDE the task's proof fn (a module-level `broadcast use` of a
 # recursive lemma is a cycle Verus refuses, measured 2026-10-06); recursive definitions get `reveal_with_fuel`
 # there too (a two-element display needs two unfoldings). Emitted per function, once per file, when used.
-VERUS_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in", "sort"})
+VERUS_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in", "sort",
+                       "any", "all", "toset", "maxs"})   # SPEC.md "Reductions (v1)" (2026-10-07); "maxs": max/min of one arg
 _VLIB = {
     "min": "pub open spec fn t_min(a: int, b: int) -> int { if a < b { a } else { b } }\n",
     "max": "pub open spec fn t_max(a: int, b: int) -> int { if a < b { b } else { a } }\n",
@@ -6043,7 +6080,20 @@ _VLIB = {
             "    decreases s.len(),\n"
             "{ if s.len() > 0 { t_rev_spec(s.drop_last()); } }\n"),
 }
-_VLIB_ORDER = ["abs", "min", "max", "sum", "gcd", "pow", "isqrt", "rev", "sort"]
+_VLIB["toset"] = (
+    # SPEC.md "Reductions (v1)" (2026-10-07): vstd's to_set with its ensures stated as two broadcast lemmas whose
+    # triggers are the goals a task states (an element of the sequence, or of a slice of it, is in the set);
+    # measured: the bare `to_set()` left `members_upto`'s ensures unproved, the membership needing the witness index
+    # over Seq<int> (the adapter's vacuity probe cannot copy a generic lemma's parameter list: "no probe
+    # expressible", measured on the generic form, which read TOOL_ERROR for the whole task)
+    "pub broadcast proof fn t_toset_mem(s: Seq<int>, i: int)\n    requires 0 <= i < s.len(),\n"
+    "    ensures #[trigger] s.to_set().contains(s[i]),\n{ s.to_set_ensures(); }\n"
+    "pub broadcast proof fn t_toset_sub(s: Seq<int>, a: int, b: int, i: int)\n    requires 0 <= a <= i < b <= s.len(),\n"
+    "    ensures #[trigger] s.subrange(a, b).to_set().contains(s[i]),\n"
+    "{ assert(s.subrange(a, b)[i - a] == s[i]); s.subrange(a, b).to_set_ensures(); }\n")
+_VLIB["any"] = "pub open spec fn t_any(s: Seq<bool>) -> bool { exists|i: int| 0 <= i < s.len() && s[i] }\n"
+_VLIB["all"] = "pub open spec fn t_all(s: Seq<bool>) -> bool { forall|i: int| 0 <= i < s.len() ==> s[i] }\n"
+_VLIB_ORDER = ["abs", "min", "max", "sum", "gcd", "pow", "isqrt", "rev", "sort", "any", "all", "toset"]
 # SPEC.md "Sorting (v1)" (2026-10-06): vstd's own sort_by behind one wrapper, with ONE named comparison closure shared
 # by the wrapper and the lemma call (two closure literals are two functions to the solver: measured, the facts did
 # not transfer); the lemma states what the tasks read (length, sortedness as the plain forall, the multiset).
@@ -6185,6 +6235,21 @@ def _comp_blocks(task: dict, body: list) -> list:
     return out
 
 
+def _extrema_args(x) -> list:
+    """Every max(s)/min(s) of one argument under x, as (s, "max"|"min") pairs in reading order."""
+    out = []
+    if isinstance(x, dict):
+        args = x.get("args", [])
+        if x.get("op") in ("min", "max") and len(args) == 1:
+            out.append((args[0], x["op"]))
+        for v in x.values():
+            out += _extrema_args(v)
+    elif isinstance(x, list):
+        for v in x:
+            out += _extrema_args(v)
+    return out
+
+
 def _pow_literals(x) -> list:
     """Every pow(e, k) with a literal 2 <= k <= 8 under x, as (e, k) pairs in reading order."""
     out = []
@@ -6203,7 +6268,7 @@ def _pow_literals(x) -> list:
 
 def _mentions_comp_or_lib(e) -> bool:
     """Whether an expression holds a comprehension or a library/sort call (SPEC.md 2026-10-06 landings)."""
-    lib = {"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"}
+    lib = {"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort", "any", "all", "toset"}
     if isinstance(e, dict):
         if "comp" in e or e.get("op") in lib:
             return True

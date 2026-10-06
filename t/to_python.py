@@ -162,8 +162,10 @@ class _Writer:
         if op == "in":
             return f"({x[0]} in {x[1]})"
         # SPEC.md "The library (v1)" (2026-10-06): Python's own where it has one, a helper where it does not
-        if op in ("min", "max", "abs", "sum"):
-            return f"{op}({', '.join(x)})"
+        if op in ("min", "max", "abs", "sum", "any", "all"):
+            return f"{op}({', '.join(x)})"   # Python's own, at either arity of min/max (SPEC.md "Reductions (v1)")
+        if op == "toset":
+            return f"frozenset({x[0]})"
         if op == "gcd":
             return f"_t_gcd({x[0]}, {x[1]})"
         if op == "pow":

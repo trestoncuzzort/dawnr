@@ -101,6 +101,9 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "toreal" | "floor" | "ceil"       (* since 2026-10-06; written real(x), floor(x), ceil(x): int -> real,
                                                    real -> int, real -> int; SPEC.md "Exact rationals (v1)" *)
            | "min" | "max" | "abs" | "sum"     (* since 2026-10-06, SPEC.md "The library (v1)"; written as calls,
+           | "any" | "all" | "toset"             (* since 2026-10-07, SPEC.md "Reductions (v1)": any(s)/all(s) on a
+                                                   seq<bool>, toset(s) the set of a seq's elements; max(s)/min(s) of
+                                                   one argument the largest/smallest element of a non-empty seq *)
            | "gcd" | "pow" | "isqrt" | "rev"      min(a, b) ... rev(s), resolved by name after parsing: a declared
            | "sort"                               ("sort": SPEC.md "Sorting (v1)", the same day: the sorted permutation)
                                                    spec_fun/method/helper of the same name shadows the library;

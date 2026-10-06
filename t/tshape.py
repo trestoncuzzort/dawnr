@@ -114,7 +114,8 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
         abstain_on_exits(task, body, kernel)
 
 
-LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"})
+LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",
+                     "any", "all", "toset"})   # SPEC.md "Reductions (v1)" (2026-10-07)
 
 
 def _scope_of(task: dict, body: list) -> dict:
@@ -177,8 +178,23 @@ def abstain_on_library(task: dict, body: list, kernel: str, carried: frozenset =
     used = sorted(uses_ops(body or [], task, LIB_OPS - set(carried)))
     if used:
         raise NotImplementedError(f"{kernel}: {', '.join(used)} is not lowered yet (SPEC.md 'The library (v1)')")
+    if "maxs" not in carried and _extrema_of_one(task, body):
+        # SPEC.md "Reductions (v1)" (2026-10-07): max(s)/min(s) of one argument are their own library shape
+        raise NotImplementedError(f"{kernel}: max/min of one argument are not lowered yet (SPEC.md 'Reductions (v1)')")
     if "in" not in carried and seq_membership_used(task, body):
         raise NotImplementedError(f"{kernel}: membership in a seq is not lowered yet (SPEC.md 'The library (v1)')")
+
+
+def _extrema_of_one(task: dict, body: list) -> bool:
+    """Whether a max(s) or min(s) of one argument occurs in the body or the task's spec (SPEC.md "Reductions (v1)")."""
+    def walk(x) -> bool:
+        if isinstance(x, dict):
+            if x.get("op") in ("min", "max") and len(x.get("args", [])) == 1:
+                return True
+            return any(walk(v) for v in x.values())
+        return isinstance(x, list) and any(walk(v) for v in x)
+    return walk(body or []) or walk(task.get("requires", [])) or walk(task.get("ensures", [])) \
+        or walk(task.get("spec_funs", [])) or walk(task.get("methods", []))
 
 
 def has_exit(task: dict, body: list) -> bool:

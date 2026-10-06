@@ -1389,7 +1389,8 @@ def _dafny_rat(n: int, d: int) -> str:
 _HINTS: dict = {}
 _FUNS: dict = {}
 _LIB_USED: set = set()
-_LIB_INT = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"})
+_LIB_INT = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",
+                      "any", "all", "toset"})   # SPEC.md "Reductions (v1)" (2026-10-07)
 
 
 def _arg_type(e):
@@ -1406,6 +1407,19 @@ def _lib_lower(op: str, args: list, e: dict) -> str | None:
     """A library call as Dafny text, recording the definition it needs; None for any other op."""
     if op not in _LIB_INT:
         return None
+    if op in ("min", "max") and len(args) == 1:
+        # SPEC.md "Reductions (v1)" (2026-10-07): the Std's Max/Min shape, by element type
+        t0 = _arg_type(e["args"][0])
+        real = isinstance(t0, dict) and t0.get("seq") == "real"
+        name = ("t_r" if real else "t_") + op + "s"
+        _LIB_USED.update({name, ("t_r" if real else "t_") + op})
+        return f"{name}({args[0]})"
+    if op in ("any", "all"):
+        _LIB_USED.add("t_" + op)
+        return f"t_{op}({args[0]})"
+    if op == "toset":
+        _LIB_USED.add("t_toset")
+        return f"t_toset({args[0]})"
     if op in ("min", "max", "abs"):
         real = _arg_type(e["args"][0]) == "real"
         name = ("t_r" if real else "t_") + op
@@ -1464,8 +1478,9 @@ _LIB_TEXT = {
               "  ensures forall i :: 0 <= i < |s| ==> r[i] == s[|s| - 1 - i]\n  decreases |s|\n"
               "{ if |s| == 0 then [] else [s[|s| - 1]] + t_rev(s[..|s| - 1]) }"),
 }
-_LIB_ORDER = ["t_min", "t_rmin", "t_max", "t_rmax", "t_abs", "t_rabs", "t_sum", "t_rsum", "t_gcdn", "t_gcd", "t_pow",
-              "t_isqrt", "t_rev", "t_sort", "t_rsort"]
+_LIB_ORDER = ["t_min", "t_rmin", "t_max", "t_rmax", "t_mins", "t_rmins", "t_maxs", "t_rmaxs", "t_abs", "t_rabs",
+              "t_sum", "t_rsum", "t_gcdn", "t_gcd", "t_pow", "t_isqrt", "t_rev", "t_sort", "t_rsort",
+              "t_any", "t_all", "t_toset"]
 
 
 def _sort_text(suffix: str, ty: str) -> str:
@@ -1516,6 +1531,18 @@ function {p}sort(s: seq<{ty}>): (r: seq<{ty}>)
 }}"""
 
 
+# SPEC.md "Reductions (v1)" (2026-10-07): the Std's Max/Min (recursive, `requires 0 < |xs|`, in the sequence and
+# above/below every element; the Std's own `assert xs == [xs[0]] + xs[1..]` carries the membership), ToSet as the
+# set comprehension, any/all as the bounded quantifiers (receipt 4c05105b66f2)
+for _nm, _ty, _two, _cmp in (("t_maxs", "int", "t_max", "<="), ("t_rmaxs", "real", "t_rmax", "<="),
+                              ("t_mins", "int", "t_min", ">="), ("t_rmins", "real", "t_rmin", ">=")):
+    _LIB_TEXT[_nm] = (f"function {_nm}(s: seq<{_ty}>): {_ty}\n  requires |s| > 0\n"
+                      f"  ensures forall k :: 0 <= k < |s| ==> s[k] {_cmp} {_nm}(s)\n  ensures {_nm}(s) in s\n"
+                      f"  decreases |s|\n{{\n  assert s == [s[0]] + s[1..];\n"
+                      f"  if |s| == 1 then s[0] else {_two}(s[0], {_nm}(s[1..]))\n}}")
+_LIB_TEXT["t_any"] = "function t_any(s: seq<bool>): bool { exists i :: 0 <= i < |s| && s[i] }"
+_LIB_TEXT["t_all"] = "function t_all(s: seq<bool>): bool { forall i :: 0 <= i < |s| ==> s[i] }"
+_LIB_TEXT["t_toset"] = "function t_toset<T>(s: seq<T>): set<T> { set x: T | x in s }"
 _LIB_TEXT["t_sort"] = _sort_text("", "int")
 _LIB_TEXT["t_rsort"] = _sort_text("r", "real")
 
@@ -1751,7 +1778,16 @@ def _lib_value(op: str, vs: list):
     """The interpreter's own value of a library call (SPEC.md "The library (v1)"); the mirror for `_ev`/`_ev_undef`.
     Raises interp.Undef where the SPEC says UNDEFINED."""
     if op in ("min", "max"):
+        if len(vs) == 1:
+            # SPEC.md "Reductions (v1)" (2026-10-07)
+            if not vs[0]:
+                raise interp.Undef(f"{op} of an empty seq")
+            return (min if op == "min" else max)(vs[0])
         return (min if op == "min" else max)(vs[0], vs[1])
+    if op in ("any", "all"):
+        return (any if op == "any" else all)(vs[0])
+    if op == "toset":
+        return frozenset(vs[0])
     if op == "abs":
         return abs(vs[0])
     if op == "sum":

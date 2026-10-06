@@ -808,8 +808,17 @@ def ev(e: dict, env: dict, funs: dict, st: St):
             raise Undef("div by zero", expr=e)
         return Fraction(a[0]) / Fraction(a[1])
     if op in ("min", "max"):
-        # SPEC.md "The library (v1)" (2026-10-06): Python's own, exact on ints and Fractions alike
+        # SPEC.md "The library (v1)" (2026-10-06): Python's own, exact on ints and Fractions alike; SPEC.md
+        # "Reductions (v1)" (2026-10-07): of one argument, the extremum of a non-empty seq
+        if len(a) == 1:
+            if not a[0]:
+                raise Undef(f"{op} of an empty seq", expr=e)
+            return (min if op == "min" else max)(a[0])
         return (min if op == "min" else max)(a[0], a[1])
+    if op in ("any", "all"):
+        return (any if op == "any" else all)(a[0])   # SPEC.md "Reductions (v1)": Python's own
+    if op == "toset":
+        return frozenset(a[0])
     if op == "abs":
         return abs(a[0])
     if op == "sum":

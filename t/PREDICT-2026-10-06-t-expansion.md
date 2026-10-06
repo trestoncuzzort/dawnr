@@ -369,3 +369,56 @@ yet`). (4) The census: `map` (2,464 problems) IN THE FRAGMENT; iteration over a 
 (535; the sole blocker for 21; a bare `for k in d` is not recognised, undercounted); in the fragment 1,777 ->
 1,892 of 4,239 function-shaped (41.9% -> 44.6%). Not done, by name: iteration over a map, `values(m)`, a map
 comprehension, and the other five kernels.
+
+## T6 registered (2026-10-07 01:10Z, before any run): reductions over a sequence, SPEC "Reductions (v1)", and three
+census corrections measured first
+
+Measured on the corpus's first solutions before designing (01:00Z): of 1,047 solutions with a generator expression,
+the consumers are `sum` 405, `join` 293, `all` 114, `max` 65, `any` 65, `sorted` 55, `tuple` 53, `min` 50, `next`
+47, `set` 23, `reduce` 21, `list` 18; of 950 solutions with a class, 638 are a bare method wrapper (`class
+Solution` whose methods never read `self`), 66 methods calling each other through `self`, 173 stateful, 17
+records; the imports beyond math/sys/typing are `collections` 638, `itertools` 313, `re` 292, `bisect` 236, `heapq`
+160, `functools` 141, `numpy` 103, `fractions` 96. So the language takes the reductions the generators feed and the
+census stops counting what is already t: (1) library ops `any(s)` and `all(s)` on a `seq<bool>` (total; `any([])`
+is false, `all([])` true), `max(s)` and `min(s)` of one argument on a non-empty seq of ints or reals (DEFINED IFF
+`len(s) > 0`; the two-argument forms stay), `toset(s)` the set of a seq's elements (total); Dafny carries them as
+functions (the Std's `Max`/`Min` shape with their ensures, `ToSet` as the set comprehension), Verus as spec fns and
+vstd's own `max`/`min`/`to_set` with `max_ensures`/`min_ensures` stated at every use over the parameters; the
+other five abstain by name. Four committed tasks (`all_positive`, `has_negative`, `largest`, `members_upto`)
+`verified / refuted` in both. (2) The census: a generator expression consumed by sum, join, any, all, max, min,
+sorted, tuple, list, set, len or next is the burden `generator-consumed` (a comprehension under a library op), a
+`yield` or any other generator stays the gap; a class whose methods never read `self` beyond calling each other is
+the burden `class-wrapper` (its method is the function), a dataclass, NamedTuple or init-only class is the gap
+`record` by name, a stateful class stays `class`; an import of collections, bisect, fractions, copy, string, array,
+queue, decimal, or functools's lru_cache/cache alone is the burden `import-modelled` (maps, slices, reals, values,
+literals), any other module stays the gap `import`. Bars: `surface.py --check`, the lab's grammar check (no new
+rule: library names are identifiers), the in-fragment count and the gap table before and after, both printed in
+the read. What would falsify the design: Dafny not proving `t_maxs(s) in s` without the Std's opaque-plus-lemma
+shape, or Verus's `max_ensures` not reaching a `max(s)` inside a loop helper (then the read says which).
+
+### T6 read (2026-10-07 01:50Z): reductions landed; the census corrected.
+(1) `any(s)`, `all(s)`, `max(s)`, `min(s)` and `toset(s)` parse, type and round-trip (`surface.py --check`: 1,961 of
+1,961 well-formed corpus tasks; no grammar rule changed, a library name being an identifier, so the lab's check
+of 00:55Z stands); the checker refuses `any` of a seq of ints, `max` of a seq<bool> and `max` of one int by the
+`lib-types` rule. (2) The interpreter agrees with Python's own `any`, `all`, `max`, `min` and `frozenset`; `max([])`
+is undefined. (3) Dafny carries the five as functions in the Std's shapes (`t_maxs(s) in s` proved from the Std's
+own `assert s == [s[0]] + s[1..]`, no opaque-plus-lemma needed: the first registered falsifier did not fire).
+Verus: `largest` through vstd's `max()` and `max_ensures()` stated for the parameter; `all_positive` and
+`has_negative` through the comprehension's spec fn and `t_all`/`t_any` were UNPROVED (Z3 had no term to
+instantiate the two quantifiers on), repaired by writing a comprehension under `any`/`all` as the Verus quantifier
+itself over the source's index; `members_upto` through the bare `to_set()` was UNPROVED (the membership needed the
+witness index), repaired by two broadcast lemmas whose triggers are the goals a task states (`s.to_set().contains(
+s[i])` and the slice form), then read TOOL_ERROR because the adapter's vacuity probe cannot copy a GENERIC lemma's
+parameter list (the second falsifier's cousin, not foreseen), repaired by stating them over `Seq<int>`. All four
+tasks `verified / refuted` in both kernels (the twins: a flipped comparison in the comprehension twice, a wrong
+constant, an off-by-one slice bound); SPARK and F* abstain by name on the one-argument extrema and on any/all/toset.
+(4) The census, measured before and after: in the fragment 1,892 -> 2,745 of 4,239 function-shaped (44.6% ->
+64.8%); `generator-consumed` 1,444 (in), `class-wrapper` 719 (in), `import-modelled` 2,426 (in); the gaps left:
+`import` 2,446 (itertools, re, heapq, functools.reduce, numpy, random, ...; the sole blocker for 310), `closure`
+2,243 (201), `string-lib` 1,288 (203), `class` 902 stateful (27), `map-iteration` 535 (68), `exception` 502 (37),
+`generator` 460 (24), `record` 390 (3; a class with fields and no behaviour, many of them linked-list nodes),
+`none-type` 105 (61), `any-type` 142 (115). Of these the language items are the string library's missing members
+(`split(sep)` with a longer or variable separator, `strip(chars)`, `index`, `rfind`, `zfill`, `center`/`ljust`/
+`rjust`, `capitalize`, `swapcase`, `title`, `isspace`, `isalnum`, `splitlines`, `partition`; `format` and
+`translate` stay out), records and options (constructors with fields), map iteration and closures as nested
+helpers; the rest is the instrument's honesty about what no verifier should carry.

@@ -16,100 +16,103 @@ detectors at the end.
   - APPS: 10000
   - CodeContests: 13610
 - function-shaped: 4239; stdin-shaped: 20509
-- in t's fragment today: **1892** of 4239 function-shaped (44.6%)
-- stdin-shaped, in fragment once a signature is extracted (all-int sample io, solution tags no gap): **8687** of 20509 (42.4%)
-- function-shaped problems blocked by exactly one gap: 1604
+- in t's fragment today: **2745** of 4239 function-shaped (64.8%)
+- stdin-shaped, in fragment once a signature is extracted (all-int sample io, solution tags no gap): **9787** of 20509 (47.7%)
+- function-shaped problems blocked by exactly one gap: 1117
 - function-shaped, out of the fragment with no gap named: 6 (no gate opens them: an assertion form or io shape the reader refuses, or no reference solution; counted apart from the greedy order since 2026-10-06)
 
 ## Gaps, by problems that need them
 
 | gap | problems | sole blocker for (function-shaped) | meaning |
 |---|---|---|---|
-| import | 3932 | 332 | an import other than math, sys or typing: an unmodeled library the solution's meaning depends on |
-| closure | 2243 | 112 | a lambda, a nested def, or map/filter with a lambda |
-| generator | 1686 | 346 | a generator expression or a generator function (yield): t has no lazy or deferred evaluation |
-| class | 1641 | 425 | a class definition (t has no classes, no heap) |
-| string-lib | 1288 | 148 | a Python string-library use that SPEC.md's 'The string library (v1)' does NOT cover (split into this gap and the burden `string-lib-v1` on 2026-09-11, the day that section landed; read the dated docstring note above): an f-string or `.format()`, a based `int(x, base)` conversion, `strip`/`lstrip`/`rstrip` given a `chars` argument, `split` on a literal longer than one code point or on a non-literal separator, `sorted()` on a string, or a call to capitalize/title/zfill/center/ljust/rjust/partition/splitlines/encode/swapcase -- none of which SPEC.md's v1 names |
-| map-iteration | 535 | 21 | iteration over a dict (.items(), .values()): t has no order on a map and no loop over its keys; a loop over a sequence of candidate keys says it (a bare `for k in d` is not recognised here, undercounted) |
-| exception | 502 | 23 | try/except/raise |
+| import | 2446 | 310 | an import of an unmodelled library the solution's meaning depends on (itertools, re, heapq, functools.reduce, numpy, random, os, ...); the modelled ones are the burden import-modelled |
+| closure | 2243 | 201 | a lambda, a nested def, or map/filter with a lambda |
+| string-lib | 1288 | 203 | a Python string-library use that SPEC.md's 'The string library (v1)' does NOT cover (split into this gap and the burden `string-lib-v1` on 2026-09-11, the day that section landed; read the dated docstring note above): an f-string or `.format()`, a based `int(x, base)` conversion, `strip`/`lstrip`/`rstrip` given a `chars` argument, `split` on a literal longer than one code point or on a non-literal separator, `sorted()` on a string, or a call to capitalize/title/zfill/center/ljust/rjust/partition/splitlines/encode/swapcase -- none of which SPEC.md's v1 names |
+| class | 902 | 27 | a stateful class (attributes set in __init__ and read or written by methods): t has no classes, no heap; a bare method wrapper is the burden class-wrapper, a record the gap record |
+| map-iteration | 535 | 68 | iteration over a dict (.items(), .values()): t has no order on a map and no loop over its keys; a loop over a sequence of candidate keys says it (a bare `for k in d` is not recognised here, undercounted) |
+| exception | 502 | 37 | try/except/raise |
+| generator | 460 | 24 | a generator expression not consumed by a reduction, or a generator function (yield): t has no lazy or deferred evaluation |
+| record | 390 | 3 | a dataclass, NamedTuple or init-only class: a datatype with fields, not in t yet (SPEC.md Datatypes names enumerations only) |
 | global | 316 | 0 | global or nonlocal: mutable state outside the function, which t's pure functions have no notion of |
-| sqrt | 192 | 24 | math.sqrt: a real root is specified in t (`r * r == x`), not computed; `math.isqrt` is in t since 2026-10-06 (SPEC.md The library) and is tagged builtin-math, not here |
-| any-type | 142 | 107 | the interface's type could not be pinned to one of the other named types: a bare Any annotation, a call expression as a test argument, or an untyped io value |
-| seq-slice-step-other | 108 | 13 | a slice whose step is not a positive literal: a variable step (written as the comprehension by hand, not posed by the notation) or a negative step with a bound |
-| none-type | 105 | 45 | Optional[..] or an explicit None return/argument |
+| sqrt | 192 | 28 | math.sqrt: a real root is specified in t (`r * r == x`), not computed; `math.isqrt` is in t since 2026-10-06 (SPEC.md The library) and is tagged builtin-math, not here |
+| any-type | 142 | 115 | the interface's type could not be pinned to one of the other named types: a bare Any annotation, a call expression as a test argument, or an untyped io value |
+| seq-slice-step-other | 108 | 19 | a slice whose step is not a positive literal: a variable step (written as the comprehension by hand, not posed by the notation) or a negative step with a bound |
+| none-type | 105 | 61 | Optional[..] or an explicit None return/argument |
 | loop-else | 61 | 1 | a loop's else clause (for/while ... else, run when no break fired): t has no such clause; written by hand with a flag |
-| io | 30 | 7 | input()/print()/sys.stdin used INSIDE a function-shaped solution (for a stdin-shaped problem, I/O is the shape itself, not a separate gap) |
+| io | 30 | 20 | input()/print()/sys.stdin used INSIDE a function-shaped solution (for a stdin-shaped problem, I/O is the shape itself, not a separate gap) |
 
 ## Greedy gate order, whole corpus (function-shaped population)
 
 | step | gate | newly unlocked | cumulative in fragment | of function-shaped |
 |---|---|---|---|---|
-| 1 | class | 425 | 2317 | 54.7% |
-| 2 | generator | 369 | 2686 | 63.4% |
-| 3 | import | 451 | 3137 | 74.0% |
-| 4 | closure | 281 | 3418 | 80.6% |
-| 5 | string-lib | 293 | 3711 | 87.5% |
-| 6 | any-type | 136 | 3847 | 90.8% |
-| 7 | map-iteration | 119 | 3966 | 93.6% |
-| 8 | none-type | 87 | 4053 | 95.6% |
-| 9 | exception | 80 | 4133 | 97.5% |
-| 10 | sqrt | 34 | 4167 | 98.3% |
-| 11 | seq-slice-step-other | 34 | 4201 | 99.1% |
-| 12 | io | 30 | 4231 | 99.8% |
-| 13 | loop-else | 1 | 4232 | 99.8% |
-| 14 | global | 1 | 4233 | 99.9% |
+| 1 | import | 310 | 3055 | 72.1% |
+| 2 | closure | 251 | 3306 | 78.0% |
+| 3 | string-lib | 271 | 3577 | 84.4% |
+| 4 | any-type | 133 | 3710 | 87.5% |
+| 5 | map-iteration | 103 | 3813 | 90.0% |
+| 6 | generator | 92 | 3905 | 92.1% |
+| 7 | none-type | 86 | 3991 | 94.1% |
+| 8 | exception | 71 | 4062 | 95.8% |
+| 9 | class | 63 | 4125 | 97.3% |
+| 10 | sqrt | 34 | 4159 | 98.1% |
+| 11 | seq-slice-step-other | 34 | 4193 | 98.9% |
+| 12 | io | 30 | 4223 | 99.6% |
+| 13 | record | 8 | 4231 | 99.8% |
+| 14 | loop-else | 1 | 4232 | 99.8% |
+| 15 | global | 1 | 4233 | 99.9% |
 
 A step with 0 newly unlocked is a gate that unlocks nothing alone but
 is the most frequent remaining gap; the programs it belongs to need
 more than one gate.
 
-### MBPP greedy gate order (974 function-shaped, 675 in fragment today)
+### MBPP greedy gate order (974 function-shaped, 747 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | import | 119 | 794 | 81.5% |
-| 2 | generator | 57 | 851 | 87.4% |
-| 3 | closure | 49 | 900 | 92.4% |
-| 4 | map-iteration | 19 | 919 | 94.4% |
-| 5 | sqrt | 16 | 935 | 96.0% |
-| 6 | none-type | 12 | 947 | 97.2% |
-| 7 | string-lib | 10 | 957 | 98.3% |
+| 1 | import | 99 | 846 | 86.9% |
+| 2 | closure | 48 | 894 | 91.8% |
+| 3 | map-iteration | 19 | 913 | 93.7% |
+| 4 | sqrt | 16 | 929 | 95.4% |
+| 5 | none-type | 12 | 941 | 96.6% |
+| 6 | string-lib | 10 | 951 | 97.6% |
+| 7 | generator | 6 | 957 | 98.3% |
 | 8 | seq-slice-step-other | 5 | 962 | 98.8% |
 | 9 | any-type | 4 | 966 | 99.2% |
-| 10 | class | 4 | 970 | 99.6% |
-| 11 | exception | 2 | 972 | 99.8% |
+| 10 | record | 3 | 969 | 99.5% |
+| 11 | exception | 2 | 971 | 99.7% |
+| 12 | class | 1 | 972 | 99.8% |
 
-### HumanEval greedy gate order (164 function-shaped, 21 in fragment today)
-
-| step | gate | newly unlocked | cumulative | of function-shaped |
-|---|---|---|---|---|
-| 1 | any-type | 104 | 125 | 76.2% |
-| 2 | closure | 14 | 139 | 84.8% |
-| 3 | generator | 11 | 150 | 91.5% |
-| 4 | string-lib | 3 | 153 | 93.3% |
-| 5 | none-type | 3 | 156 | 95.1% |
-| 6 | import | 3 | 159 | 97.0% |
-| 7 | sqrt | 2 | 161 | 98.2% |
-| 8 | exception | 2 | 163 | 99.4% |
-| 9 | seq-slice-step-other | 1 | 164 | 100.0% |
-
-### APPS greedy gate order (3101 function-shaped, 1196 in fragment today)
+### HumanEval greedy gate order (164 function-shaped, 23 in fragment today)
 
 | step | gate | newly unlocked | cumulative | of function-shaped |
 |---|---|---|---|---|
-| 1 | class | 425 | 1621 | 52.3% |
-| 2 | generator | 314 | 1935 | 62.4% |
-| 3 | import | 327 | 2262 | 72.9% |
-| 4 | string-lib | 250 | 2512 | 81.0% |
-| 5 | closure | 261 | 2773 | 89.4% |
-| 6 | map-iteration | 100 | 2873 | 92.6% |
-| 7 | none-type | 72 | 2945 | 95.0% |
-| 8 | exception | 76 | 3021 | 97.4% |
-| 9 | io | 29 | 3050 | 98.4% |
-| 10 | seq-slice-step-other | 28 | 3078 | 99.3% |
-| 11 | sqrt | 17 | 3095 | 99.8% |
-| 12 | loop-else | 1 | 3096 | 99.8% |
-| 13 | global | 1 | 3097 | 99.9% |
+| 1 | any-type | 112 | 135 | 82.3% |
+| 2 | closure | 16 | 151 | 92.1% |
+| 3 | string-lib | 3 | 154 | 93.9% |
+| 4 | none-type | 3 | 157 | 95.7% |
+| 5 | sqrt | 2 | 159 | 97.0% |
+| 6 | exception | 2 | 161 | 98.2% |
+| 7 | import | 2 | 163 | 99.4% |
+| 8 | seq-slice-step-other | 1 | 164 | 100.0% |
+
+### APPS greedy gate order (3101 function-shaped, 1975 in fragment today)
+
+| step | gate | newly unlocked | cumulative | of function-shaped |
+|---|---|---|---|---|
+| 1 | import | 211 | 2186 | 70.5% |
+| 2 | string-lib | 232 | 2418 | 78.0% |
+| 3 | closure | 228 | 2646 | 85.3% |
+| 4 | map-iteration | 84 | 2730 | 88.0% |
+| 5 | generator | 86 | 2816 | 90.8% |
+| 6 | none-type | 71 | 2887 | 93.1% |
+| 7 | exception | 67 | 2954 | 95.3% |
+| 8 | class | 62 | 3016 | 97.3% |
+| 9 | io | 29 | 3045 | 98.2% |
+| 10 | seq-slice-step-other | 28 | 3073 | 99.1% |
+| 11 | sqrt | 17 | 3090 | 99.6% |
+| 12 | record | 5 | 3095 | 99.8% |
+| 13 | loop-else | 1 | 3096 | 99.8% |
+| 14 | global | 1 | 3097 | 99.9% |
 
 ### CodeContests: no function-shaped problems
 
@@ -117,10 +120,10 @@ more than one gate.
 
 | source | problems | function-shaped | stdin-shaped | in fragment | stdin in fragment once signature extracted |
 |---|---|---|---|---|---|
-| MBPP | 974 | 974 | 0 | 675 | 0 |
-| HumanEval | 164 | 164 | 0 | 21 | 0 |
-| APPS | 10000 | 3101 | 6899 | 1196 | 3745 |
-| CodeContests | 13610 | 0 | 13610 | 0 | 4942 |
+| MBPP | 974 | 974 | 0 | 747 | 0 |
+| HumanEval | 164 | 164 | 0 | 23 | 0 |
+| APPS | 10000 | 3101 | 6899 | 1975 | 4225 |
+| CodeContests | 13610 | 0 | 13610 | 0 | 5562 |
 
 ## Burdens (expressible in t at a translation cost)
 
@@ -141,9 +144,12 @@ more than one gate.
 | sort | 2908 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Sorting): sorted() or .sort() is t's sort(s); before that day it was expressible in t but needed a spec, not a builtin |
 | seq-slice | 2474 | slicing s[a:b], s[a:], s[:b] with non-negative bounds and no step: t's v1 already has slice (SPEC.md 'Sequences: literals, concatenation, slices'); a negative bound or a step is measured separately as seq-slice-negative / seq-slice-step (burdens since 2026-10-06) and the gap seq-slice-step-other |
 | map | 2464 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Maps): a dict literal, dict(), defaultdict, Counter, or a dict-typed io value is t's map<K, V> (display, lookup, update, membership, len, keys, remove); iterating one is the gap map-iteration |
+| import-modelled | 2426 | IN THE FRAGMENT since 2026-10-07: an import of collections, bisect, fractions, copy, string, array, queue, decimal, or functools's lru_cache/cache alone, whose meaning t's maps, slices, reals, values and literals carry |
 | py2-unparseable | 2107 | the chosen Python solution does not parse under Python 3's ast (typically a Python 2 solution: print statement, raw_input, etc.); only its io-types are measured, its AST is not |
 | set | 1604 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): set literal, set(), frozenset(), a set/dict comprehension's set form |
 | recursion | 1493 | the solution's function calls itself; t supports this through spec functions (self-calls and calls to earlier functions), so it is a burden, not a gap |
+| generator-consumed | 1444 | IN THE FRAGMENT since 2026-10-07 (SPEC.md Reductions): a generator expression under sum, join, any, all, max, min, sorted, tuple, list, set, len or next is a comprehension under a library op |
+| class-wrapper | 719 | IN THE FRAGMENT since 2026-10-07: a class whose methods never read self beyond calling each other (the `class Solution` wrapper): its method is the function |
 | seq-slice-reverse | 662 | IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): s[::-1] with no bounds, the reversal, the library's rev(s) |
 | nested-seq-pair | 566 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a seq of seq whose row reads as a tuple (a list of tuples, or a nested annotation through Tuple/tuple): SPEC.md v1 has no seq of pairs |
 | seq-slice-negative | 489 | IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): a slice bound that is a negative literal, s[-1:] or s[:-1], read as len(s) - k by the notation (a non-literal negative bound is still not posed, undercounted here) |
@@ -154,7 +160,7 @@ more than one gate.
 
 ## Method
 
-Run time: 30.2s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
+Run time: 30.9s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
 unread. `mbpp_dfy.parse_assertion` is reused for every MBPP
 assertion (spec_experiment.py's `pool()` uses the same function to
 decide the same question, whether a problem's tests fit t's
