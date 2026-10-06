@@ -3009,5 +3009,7 @@ is queued, and the ones running are read as they finish.
   credited no-gap problems to the first gate). CI had been red since 08:39Z on eight tests that checked
   pre-G1 messages, fixtures and shapes; all eight repaired here. The seven-kernel matrix is regenerating in the
   background (`tup-t-matrix-g2`).
-- **Next:** the matrix regenerated from a clean clone (the committed table is the 10:04Z run, before SPARK and F*
-  carried reals); then G3, builtins and notation.
+- **The matrix regenerated from a clean clone (10-06 12:48Z):** 49 tasks; every pre-10-06 row unchanged; the four
+  rationals rows read Dafny, SPARK and F* `verified / refuted` (`floor_ceil` abstains in SPARK and F* by name), the
+  other kernels abstain by name; the six compositional-type rows as on 10:04Z.
+- **Next:** G3, builtins and notation (research first: the provers' own libraries fetched on receipt 54355043298c).
