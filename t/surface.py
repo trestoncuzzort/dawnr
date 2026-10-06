@@ -306,7 +306,7 @@ KEYWORDS = {
 STR_METHODS = {"split", "join", "count", "find", "strip", "lstrip", "rstrip",
               "replace", "lower", "upper", "isdigit", "isalpha", "isupper",
               "islower", "startswith", "endswith",
-              # SPEC.md "The string library (v2)" (2026-10-07)
+              # SPEC.md "The string library (v2)" (2026-10-06)
               "index", "rfind", "zfill", "center", "ljust", "rjust", "capitalize", "swapcase", "title",
               "isspace", "isalnum", "splitlines", "partition"}
 
@@ -1009,11 +1009,48 @@ class Parser:
 
     # -- expressions -------------------------------------------------------
 
+    def _lambda_ahead(self) -> list | None:
+        """The parameter names if the tokens here begin a lambda (SPEC.md "Higher-order calls (v1)", 2026-10-06):
+        `x =>` or `(a, x) =>`; else None. A lambda's body runs to the right as far as it can, as a quantifier's."""
+        toks, i = self.toks, self.i
+        def at(k, kind, text=None):
+            return k < len(toks) and toks[k].kind == kind and (text is None or toks[k].text == text)
+        if at(i, "id") and at(i + 1, "sym", "=>"):
+            return [toks[i].text]
+        if at(i, "sym", "("):
+            names, k = [], i + 1
+            while at(k, "id"):
+                names.append(toks[k].text)
+                k += 1
+                if at(k, "sym", ","):
+                    k += 1
+                    continue
+                break
+            if names and at(k, "sym", ")") and at(k + 1, "sym", "=>"):
+                return names
+        return None
+
     def expr(self) -> dict:
         """The lowest level: quantifiers and ite, whose bodies run to the
         right as far as they can, then implies."""
         self.production = "Expr"
         start = self.tok
+        names = self._lambda_ahead()
+        if names is not None:
+            # SPEC.md "Higher-order calls (v1)" (2026-10-06): a lambda; check_wf places it (lambda-position)
+            if len(names) == 1:
+                self.name("Expr")
+            else:
+                self.eat("sym", "(")
+                for k, _n in enumerate(names):
+                    if k:
+                        self.eat("sym", ",")
+                    self.name("Expr")
+                self.eat("sym", ")")
+            self.eat("sym", "=>")
+            body = self.expr()
+            self.production = "Expr"
+            return self.mark(start, {"lam": {"vars": names, "body": body}})
         if self.at("kw", "forall") or self.at("kw", "exists"):
             kind = self.eat("kw").text
             v = self.name("Expr")
@@ -1468,7 +1505,7 @@ class Parser:
                         e = self.mark(start, {"op": name,
                                               "args": [e, margs[0]]})
                     elif name in ("strip", "lstrip", "rstrip"):
-                        # SPEC.md "The string library (v2)" (2026-10-07): whitespace, or a character set
+                        # SPEC.md "The string library (v2)" (2026-10-06): whitespace, or a character set
                         if len(margs) > 1:
                             self.err(ntok, ".%s takes zero or one argument, given %d" % (name, len(margs)), "Op")
                         e = self.mark(start, {"op": name, "args": [e] + margs})
@@ -1756,8 +1793,9 @@ def _free_names(e) -> set:
 
 LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort",   # "sort": SPEC.md "Sorting (v1)"
                        "keys", "remove",                                                    # SPEC.md "Maps (v1)" (2026-10-06)
-                       "any", "all", "toset",                                               # SPEC.md "Reductions (v1)" (2026-10-07)
-                       "isint", "toint"})                                                   # SPEC.md "The string library (v2)" (2026-10-07)
+                       "any", "all", "toset",                                               # SPEC.md "Reductions (v1)" (2026-10-06)
+                       "isint", "toint",                                                    # SPEC.md "The string library (v2)" (2026-10-06)
+                       "fold", "sort_by", "max_by", "min_by"})                              # SPEC.md "Higher-order calls (v1)"
 
 
 def _resolve_library(task: dict) -> None:
@@ -1932,7 +1970,7 @@ P_POSTFIX = 9
 _BINPREC = {"+": P_ADD, "-": P_ADD, "*": P_MUL, "div": P_MUL, "mod": P_MUL}
 _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice": 3, "implies": 2,
           "min": (1, 2), "max": (1, 2), "abs": 1, "sum": 1, "gcd": 2, "pow": 2, "isqrt": 1, "rev": 1, "sort": 1,
-          "any": 1, "all": 1, "toset": 1,   # SPEC.md "Reductions (v1)" (2026-10-07); min/max at two arities
+          "any": 1, "all": 1, "toset": 1,   # SPEC.md "Reductions (v1)" (2026-10-06); min/max at two arities
           "+": 2, "-": 2, "*": 2, "div": 2, "mod": 2,
           "==": 2, "!=": 2, "<": 2, "<=": 2, ">": 2, ">=": 2,
           "pair": 2, "fst": 1, "snd": 1,
@@ -1947,10 +1985,11 @@ _ARITY = {"neg": 1, "not": 1, "len": 1, "at": 2, "update": 3, "fill": 2, "slice"
           "lstrip": (1, 2), "rstrip": (1, 2), "replace": 3, "lower": 1, "upper": 1,
           "isdigit": 1, "isalpha": 1, "isupper": 1, "islower": 1,
           "startswith": 2, "endswith": 2,
-          # SPEC.md "The string library (v2)" (2026-10-07)
+          # SPEC.md "The string library (v2)" (2026-10-06)
           "index": 2, "rfind": 2, "zfill": 2, "center": (2, 3), "ljust": (2, 3), "rjust": (2, 3), "capitalize": 1,
           "swapcase": 1, "title": 1, "isspace": 1, "isalnum": 1, "splitlines": 1, "partition": 2,
-          "isint": 1, "toint": 1}
+          "isint": 1, "toint": 1,
+          "fold": 3, "sort_by": 2, "max_by": 2, "min_by": 2}   # SPEC.md "Higher-order calls (v1)" (2026-10-06)
 
 
 def _wrap(text: str, prec: int, floor: int) -> str:
@@ -1975,6 +2014,11 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # A negative literal binds like a unary minus for the reader; it is
         # one token for the parser.
         return _wrap(str(n), P_UNARY if n < 0 else P_POSTFIX, floor)
+    if kind == "lam":
+        # SPEC.md "Higher-order calls (v1)" (2026-10-06): `x => e`, `(a, x) => e`; only ever an argument, so no floor
+        lv = e["lam"]["vars"]
+        head = _ident(lv[0]) if len(lv) == 1 else "(%s)" % ", ".join(_ident(v) for v in lv)
+        return "%s => %s" % (head, pexpr(e["lam"]["body"]))
     if kind == "comp":
         # SPEC.md "Comprehensions (v1)" (2026-10-06): a display of its own, so no floor; `if true` is omitted
         c = e["comp"]
@@ -2120,7 +2164,7 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         return _wrap("%s.%s(%s)" % (pexpr(args[0], P_POSTFIX), op,
                                     pexpr(args[1])), P_POSTFIX, floor)
     if op in ("strip", "lstrip", "rstrip", "center", "ljust", "rjust"):
-        # SPEC.md "The string library (v2)" (2026-10-07): the receiver, then the optional arguments
+        # SPEC.md "The string library (v2)" (2026-10-06): the receiver, then the optional arguments
         return _wrap("%s.%s(%s)" % (pexpr(args[0], P_POSTFIX), op, ", ".join(pexpr(a) for a in args[1:])),
                      P_POSTFIX, floor)
     if op in ("lower", "upper", "isdigit", "isalpha", "isupper", "islower",
@@ -2389,7 +2433,7 @@ WRITTEN = [
     ("expr", "len(s)", {"op": "len", "args": [{"var": "s"}]}),
     # SPEC.md "Finite sets" (2026-09-27), SYNTAX.md's own written: line.
     ("expr", "{1, x}", {"op": "set", "args": [{"int": 1}, {"var": "x"}]}),
-    # SPEC.md "Reductions (v1)" (2026-10-07)
+    # SPEC.md "Reductions (v1)" (2026-10-06)
     ("expr", "max(s)", {"op": "max", "args": [{"var": "s"}]}),
     ("expr", "any([x > 0 for x in s])", {"op": "any", "args": [{"comp": {"var": "x", "seq": {"var": "s"}, "cond": {"bool": True},
                                                                   "body": {"op": ">", "args": [{"var": "x"}, {"int": 0}]}}}]}),
@@ -2475,11 +2519,16 @@ WRITTEN = [
               "init": {"op": "seq", "args": []}}}),
     # SPEC.md "The string library (v1)", added 2026-09-11.
     ("expr", "s.split()", {"op": "split", "args": [{"var": "s"}]}),
-    # SPEC.md "The string library (v2)" (2026-10-07)
+    # SPEC.md "The string library (v2)" (2026-10-06)
     ("expr", "s.strip(u)", {"op": "strip", "args": [{"var": "s"}, {"var": "u"}]}),
     ("expr", "s.center(w, c)", {"op": "center", "args": [{"var": "s"}, {"var": "w"}, {"var": "c"}]}),
     ("expr", "s.partition(u).0", {"op": "fst", "args": [{"op": "partition", "args": [{"var": "s"}, {"var": "u"}]}]}),
     ("expr", "toint(s)", {"op": "toint", "args": [{"var": "s"}]}),
+    # SPEC.md "Higher-order calls (v1)" (2026-10-06)
+    ("expr", "fold((a, x) => a + x, 0, s)", {"op": "fold", "args": [
+        {"lam": {"vars": ["a", "x"], "body": {"op": "+", "args": [{"var": "a"}, {"var": "x"}]}}}, {"int": 0}, {"var": "s"}]}),
+    ("expr", "max_by(s, w => len(w))", {"op": "max_by", "args": [
+        {"var": "s"}, {"lam": {"vars": ["w"], "body": {"op": "len", "args": [{"var": "w"}]}}}]}),
     ("expr", "s.split(c)",
      {"op": "split", "args": [{"var": "s"}, {"var": "c"}]}),
     ("expr", "sep.join(rows)",

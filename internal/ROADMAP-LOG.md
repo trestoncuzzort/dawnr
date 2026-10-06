@@ -2987,12 +2987,12 @@ is queued, and the ones running are read as they finish.
 - **F landed (10-06 09:03Z), one line:** the taught 4B did 421 of 530 taught-family fresh tasks (untaught 415, bar 458
   missed) and 107 of 130 held-out (untaught 84, bar 81 held); on the laptop's 179 hand-written tasks 151 against the
   untaught 158. Not pursued further.
-- **G1 landed (10-06 09:10Z):** compositional types in SPEC, the notation, the checker, the interpreter, the twins, Dafny
+- **G1 landed (10-06 09:06Z):** compositional types in SPEC, the notation, the checker, the interpreter, the twins, Dafny
   and Verus (six committed tasks verified with the twin refuted in both); SPARK, Frama-C, Lean, Rocq and F* abstain by
   name (tshape.py); the census moved 772 → 1,072 function-shaped problems in fragment (T1's bar missed: it was set from
   the greedy table's cumulative column; the sole-blocker column is the instrument from here on); the grammar and the
   parser agree again (sets and datatypes were missing from the grammar).
-- **G2 landed (10-06 10:50Z), exact rationals:** `real` is the type of exact rationals (never floating point), a
+- **G2 landed (10-06 10:07Z), exact rationals:** `real` is the type of exact rationals (never floating point), a
   finite-decimal literal reduced to lowest terms, `+ - * / < <= > >= == !=` polymorphic by operand type with no
   implicit conversion, `real(x)`, `floor(x)`, `ceil(x)`, `/` exact and undefined at `0.0`; the interpreter on
   `fractions.Fraction`, a real witness ladder, the twins reaching real literals (`off-by-one`, `wrong-constant` by
@@ -3009,10 +3009,10 @@ is queued, and the ones running are read as they finish.
   credited no-gap problems to the first gate). CI had been red since 08:39Z on eight tests that checked
   pre-G1 messages, fixtures and shapes; all eight repaired here. The seven-kernel matrix is regenerating in the
   background (`tup-t-matrix-g2`).
-- **The matrix regenerated from a clean clone (10-06 12:48Z):** 49 tasks; every pre-10-06 row unchanged; the four
+- **The matrix regenerated from a clean clone (10-06 10:48Z):** 49 tasks; every pre-10-06 row unchanged; the four
   rationals rows read Dafny, SPARK and F* `verified / refuted` (`floor_ceil` abstains in SPARK and F* by name), the
   other kernels abstain by name; the six compositional-type rows as on 10:04Z.
-- **G3a landed (10-06 14:00Z), the library:** `min`, `max`, `abs` (ints or reals), `sum` (seq or seq<real>), `gcd`
+- **G3a landed (10-06 11:19Z), the library:** `min`, `max`, `abs` (ints or reals), `sum` (seq or seq<real>), `gcd`
   (Euclid on absolute values, total), `pow` and `isqrt` (undefined below 0, an obligation like `/`'s), `x in s` on
   a seq, `rev`, and the from-the-end sugar `s[-k]` for a literal `k` (the raw literal is spelled `s[(-k)]`). No new
   keyword: a call by one of these names is the library unless the task declares the name (SPEC "The library (v1)";
@@ -3033,32 +3033,32 @@ is queued, and the ones running are read as they finish.
   no place to put). Lean, Rocq and Frama-C abstain by name. The census: 1,601 → 1,642
   function-shaped (T3a's bar 1,636 met), MBPP 618 → 625; `seq-slice-negative` and `builtin-math` are in the
   fragment; the `sqrt` sub-bar was missed by construction (the detector never counted `isqrt` there).
-- **The matrix regenerated from a clean clone (10-06 15:20Z):** 59 tasks; the library rows as measured above.
-- **G3b-1 landed (10-06 15:40Z), `for` as sugar:** `for i in [a, b)`, `for x in s`, `for i, x in s` are the
+- **The matrix regenerated from a clean clone (10-06 11:51Z):** 59 tasks; the library rows as measured above.
+- **G3b-1 landed (10-06 11:57Z), `for` as sugar:** `for i in [a, b)`, `for x in s`, `for i, x in s` are the
   notation's, expanded by the parser to the AST's `while` with the two bound invariants and the `decreases`
   supplied (Verus's reading of a for loop, receipt 8f5b4d0085b5); the index of `for x in s` is in scope as `i_x`;
   the parser refuses an assignment to the loop variable, a bound or sequence the body changes, and a name already
   declared. No kernel work. An `if` may now omit its `else` (an empty one). Three committed tasks
   (`count_pos_for`, `zeros_for`, `any_neg_for`), Dafny verified with the twin refuted; the matrix follows.
-- **G3b-2 landed (10-06 16:30Z), `sort(s)`:** the sorted permutation as one operator (SPEC "Sorting (v1)": length,
+- **G3b-2 landed (10-06 12:25Z), `sort(s)`:** the sorted permutation as one operator (SPEC "Sorting (v1)": length,
   the non-decreasing order, the same occurrence counts), written as a call like the library's. Dafny carries it as
   the Std's merge sort specialised to the element type (the Std's lemma and asserts; an insertion sort did not
   prove itself; `t_sorted` as a boolean function since the adapter admits no `predicate`); Verus as a wrapper over
   vstd's `sort_by` with one shared comparison closure and the lemma stated at every use, in the wf lemmas and in
   certificates. Two committed tasks verified with the twin refuted in both; the other five kernels abstain by name.
   The `sort` burden is in the fragment.
-- **The matrix regenerated from a clean clone (10-06 17:00Z):** 64 tasks; the for-loop rows verified/refuted in
+- **The matrix regenerated from a clean clone (10-06 12:46Z):** 64 tasks; the for-loop rows verified/refuted in
   all seven kernels, the sort rows in Dafny and Verus, the rest by name.
-- **G3b-3 landed (10-06 18:05Z), comprehensions:** `[body for x in s if cond]` and `[body for i in [a, b) if cond]`
+- **G3b-3 landed (10-06 12:56Z), comprehensions:** `[body for x in s if cond]` and `[body for i in [a, b) if cond]`
   as one expression form with a bound variable (SPEC "Comprehensions (v1)"); Dafny as one recursive function per
   comprehension carrying the filter/map ensures (proved by induction, the Std's shapes), ground ones unrolled into
   displays in certificates; Verus as a spec fn with a broadcast lemma revealed with fuel inside the proof fn (its
   nonlinear bridge steps aside for such a return). Three committed tasks verified with the twin refuted in both;
   the other five kernels abstain by name. The `comprehension` burden (5,920 problems) is in the fragment for list
   comprehensions; set and dict comprehensions are their own burden until maps.
-- **The matrix regenerated from a clean clone (10-06 18:50Z):** 67 tasks; the three comprehension rows verified with
+- **The matrix regenerated from a clean clone (10-06 13:19Z):** 67 tasks; the three comprehension rows verified with
   the twin refuted in Dafny and Verus, the other five columns by name.
-- **T3c landed (10-06 20:30Z), stepped slices and the comprehension precondition in Dafny:** `s[a..b..k]` (`k` a
+- **T3c landed (10-06 13:47Z), stepped slices and the comprehension precondition in Dafny:** `s[a..b..k]` (`k` a
   positive literal) as sugar for the range comprehension `[s[a..b][k * i] for i in [0, (len(s[a..b]) + k - 1) / k)]`
   (SPEC "Stepped slices (v1)"): Python's positive-step meaning with the two-bound slice's definedness, the bound
   variable fresh in the program, printed as the comprehension; a step of 0, a negative step (`rev(s)`) and a
@@ -3071,7 +3071,7 @@ is queued, and the ones running are read as they finish.
   every comprehension. Census: the positive literal step and the bare reversal in the fragment (1,642 -> 1,713
   function-shaped problems), other steps the gap `seq-slice-step-other` (108). The lab's grammar check agrees
   with the new rule.
-- **T3d landed (10-06 21:10Z), the library proofs the kernels did not reach alone:** Verus gains `t_sum_add` and
+- **T3d landed (10-06 14:05Z), the library proofs the kernels did not reach alone:** Verus gains `t_sum_add` and
   `t_sum_prefix` (broadcast lemmas by induction with one extensional step, vstd's `lemma_fold_left_split` shape),
   the isqrt lemma's nonlinear step stated to the nonlinear solver, and a bridge for `pow(e, k)` with a literal `k`
   (the fuel unfolding equals the flat product by `nonlinear_arith` alone): `cube`, `root_floor`, `sum_tail` now
@@ -3079,9 +3079,9 @@ is queued, and the ones running are read as they finish.
   `lemma_t_sum_create1` as SMT patterns (the append pattern alone did not fire on `t_sum (create 1 x)`; measured):
   `sum_tail` verified. SPARK not repaired, recorded in PREDICT T3d: the expression-function-only design has no place
   for a lemma call, and the sum-of-concatenation induction times out; its own design item.
-- **The matrix regenerated from a clean clone (10-06 22:00Z, at 7235a007):** 70 tasks; `cube`, `root_floor` and
+- **The matrix regenerated from a clean clone (10-06 14:26Z, at 7235a007):** 70 tasks; `cube`, `root_floor` and
   `sum_tail` verified with the twin refuted in Verus, `sum_tail` in F*; SPARK `sum_tail` stays timeout / refuted.
-- **G4 landed (10-06 22:40Z), early exits:** `break;`, `continue;` and `while true` (SPEC "Early exits (v1)"):
+- **G4 landed (10-06 14:34Z), early exits:** `break;`, `continue;` and `while true` (SPEC "Early exits (v1)"):
   the invariants need not hold at a break (the exit path keeps its state), hold at a continue, and a `while true`
   holds a break of its own or a return (checker rules `exit-outside-loop`, `exit-unreachable`, `loop-exit`); the
   `for` sugar's `continue` takes the step; DROP-EXIT joins the twin ladder; Dafny carries all three natively (its
@@ -3093,9 +3093,9 @@ is queued, and the ones running are read as they finish.
   earlier comprehension tasks unchanged in both kernels. Census: `unbounded-loop` (4,403 problems) in the
   fragment, the loop `else` clause the gap `loop-else` (61); 1,713 -> 1,777 function-shaped problems in the
   fragment (41.9%).
-- **The matrix regenerated from a clean clone (10-06 23:30Z, at d0e6fee8):** 73 tasks; the three early-exit rows
+- **The matrix regenerated from a clean clone (10-06 14:56Z, at d0e6fee8):** 73 tasks; the three early-exit rows
   verified with the twin refuted in Dafny, the other six columns by name; the library-proof rows as read.
-- **G5 landed (10-06 23:50Z), maps:** the type `map<K, V>`, the display `map[k := v, ...]` (`map[]` empty; the
+- **G5 landed (10-06 15:02Z), maps:** the type `map<K, V>`, the display `map[k := v, ...]` (`map[]` empty; the
   rightmost of two equal keys wins, written by every kernel as a chain of updates), `m[k]` (defined iff `k in m`),
   `m[k := v]`, `k in m`, `len(m)`, `keys(m)` (a set), `remove(m, k)` (SPEC "Maps (v1)"); `at`, `update`, `in` and
   `len` read by the operand's type, `keys` and `remove` as library names. The interpreter's map value is its own
@@ -3105,9 +3105,9 @@ is queued, and the ones running are read as they finish.
   Three committed tasks (`lookup_or`, `put_key`, `index_map`) verified with the twin refuted in both. Census: `map`
   (2,464 problems) in the fragment, iteration over a dict the gap `map-iteration` (535); 1,777 -> 1,892
   function-shaped problems in the fragment (44.6%).
-- **The matrix regenerated from a clean clone (10-07 01:20Z, at cbd72e43):** 76 tasks; the three map rows verified
+- **The matrix regenerated from a clean clone (10-06 15:26Z, at cbd72e43):** 76 tasks; the three map rows verified
   with the twin refuted in Dafny and Verus, the other five columns by name.
-- **T6 landed (10-07 01:50Z), reductions and three census corrections:** `any(s)`, `all(s)` on a `seq<bool>`,
+- **T6 landed (10-06 15:33Z), reductions and three census corrections:** `any(s)`, `all(s)` on a `seq<bool>`,
   `max(s)`/`min(s)` of one argument (defined iff the seq is non-empty), `toset(s)` (SPEC "Reductions (v1)");
   Dafny as functions in the Std's shapes, Verus as vstd's own `max`/`min`/`to_set` with their lemmas stated and a
   comprehension under `any`/`all` written as the quantifier itself; four committed tasks (`all_positive`,
@@ -3117,7 +3117,7 @@ is queued, and the ones running are read as they finish.
   method-only class and a modelled import as burdens: 1,892 -> 2,745 function-shaped problems in the fragment
   (64.8%). The remaining language items, by the gap table: the string library's missing members, records and
   options, map iteration, nested helpers.
-- **G7 landed (10-06 18:40Z), the string library's second wave:** fifteen members and `isint`/`toint` (SPEC "The
+- **G7 landed (10-06 18:42Z), the string library's second wave:** fifteen members and `isint`/`toint` (SPEC "The
   string library (v2)"), Python's semantics checked member by member; Dafny and Verus carry all of them, four
   committed tasks verified with the twin refuted in both. Repairs found on the way: the padding members now stop at
   MAX_SEQ (an uncapped width of 2**31 from the twin search twice OOM-killed the session); the grammar's simple
@@ -3127,6 +3127,21 @@ is queued, and the ones running are read as they finish.
 - **The lab, 10-06 evening:** another student cleared the shared workstation; ~/scratch was already gone; everything
   else lab-only went to the desktop's /data/lab-rescue; the lab now holds 13 GB of ours (prover toolchains and a
   shallow checkout) under the operator's 20 GB ceiling. Heavy commands now run in memory-capped user units.
-- **Next:** the matrix regenerated from a clean clone (84 tasks); then G8 records and options (constructors with
-  fields; the checker and the kernels' match already carry binders), iteration over a map; Verus on early exits and
-  SPARK's `sum` lemma as design items.
+- **The matrix regenerated from a clean clone (10-06 20:37Z, at eb0e8102):** 84 tasks; the eight G7 and T6 rows
+  verified with the twin refuted in Dafny and Verus, the other five columns by name; `zeros_for` drops its FLAKED mark;
+  six-of-seven tasks 3 -> 2 (both Frama-C alone).
+- **G8 landed (10-06 21:09Z), higher-order calls:** `x => e` and `(a, x) => e` only as the function argument of
+  `fold(f, init, s)`, `sort_by(s, key)` (stable), `max_by(s, key)` and `min_by(s, key)` (the first extreme; defined
+  iff the seq is non-empty) (SPEC "Higher-order calls (v1)"); the checker's `lambda-position` and `hof-types`; Python's
+  semantics checked on 300 random inputs per call. Dafny and Verus both carry all four as per-shape recursive
+  functions in prefix form (Verus's `sort_by` included, against the registration's expectation); `longest_row`,
+  `cheapest`, `by_second`, `weighted_sum` verified with the twin refuted in both. Found on the way: the lambda shape
+  key renames parameters (an invariant's and the ensures' lambdas were two functions), Dafny's certificate scans a
+  seq of seqs for `in`, Verus's certificate reads the length of a display of pairs (every Verus certificate over a
+  `seq<(int, int)>` parameter had been refused). Census: 2,959 of 4,239 function-shaped problems in the fragment
+  (69.8%); `closure` 2,243 -> 707 (nested defs that mutate what they capture stay out, a stricter rule than
+  registered: 21 problems). Time labels in this log and in the PREDICT file corrected from the session's log (they had
+  run ahead by up to eleven hours).
+- **Next:** the zoom-out over the landscape (`internal/RESEARCH-2026-10-06-landscape.md`), then what it decides; the
+  language queue after it: G9 records and options (constructors with fields; the checker and the kernels' match
+  already carry binders), iteration over a map; Verus on early exits and SPARK's `sum` lemma as design items.

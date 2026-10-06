@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""test_reductions.py: SPEC.md "Reductions (v1)" (2026-10-07): any, all, max(s), min(s) and toset in the notation, the
+"""test_reductions.py: SPEC.md "Reductions (v1)" (2026-10-06): any, all, max(s), min(s) and toset in the notation, the
 checker, the interpreter (against Python's own), the twin ladder, the hand-back, the Dafny and Verus text; and the
 census corrections of the same landing (a consumed generator, a class wrapper, a modelled import). Standard library
 only; no kernel runs."""

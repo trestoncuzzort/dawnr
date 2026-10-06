@@ -241,6 +241,8 @@ def _sub(e: dict, path: tuple):
         q = "forall" if "forall" in e else "exists"
         for k in ("lo", "hi", "body"):
             yield from _sub(e[q][k], path + (q, k))
+    elif "lam" in e:
+        yield from _sub(e["lam"]["body"], path + ("lam", "body"))   # SPEC.md "Higher-order calls (v1)"
     elif "comp" in e:
         # SPEC.md "Comprehensions (v1)" (2026-10-06): its source, bounds, condition and body; never the bound name
         for k in ("seq", "lo", "hi", "cond", "body"):
@@ -500,7 +502,8 @@ def _c_wrong_constant(body, scope):
 
 ARITH_ALT = {"+": ("-", "*"), "-": ("+", "*"), "*": ("+", "-"),
              "div": ("mod",), "mod": ("div",),
-             "min": ("max",), "max": ("min",)}   # SPEC.md "The library (v1)" (2026-10-06): the one new move
+             "min": ("max",), "max": ("min",),   # SPEC.md "The library (v1)" (2026-10-06): the one new move
+             "max_by": ("min_by",), "min_by": ("max_by",)}   # SPEC.md "Higher-order calls (v1)": the other extreme
 
 
 def _c_wrong_operator(body, scope):

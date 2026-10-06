@@ -63,7 +63,7 @@ exception 13, io 6. MBPP's own greedy order now opens with `real` at +362 (278 â
 `class`, `generator`, `import` and `closure` stay as they are: the first is out of scope by design, the other three
 are met in part by G3's builtins and comprehensions (the census will say how much, by the same column).
 
-## T2 read (2026-10-06 10:45Z, after G2 and two corrections to the instrument)
+## T2 read (2026-10-06 10:07Z, after G2 and two corrections to the instrument)
 
 | | after G1 (T1 read) | after G2 alone | after G2 and the reader correction | bar | |
 |---|---:|---:|---:|---:|---|
@@ -101,7 +101,7 @@ Sole blockers after G2 (the restated bars stand as written above): generator 295
 128, string-lib 125, closure 99, any-type 96, seq-slice-step 77, unbounded-loop 62, seq-slice-negative 41,
 none-type 35, sqrt 23, exception 20, io 7.
 
-## T3a registered (2026-10-06 13:05Z, before any run): the library, SPEC "The library (v1)"
+## T3a registered (2026-10-06 10:54Z, before any run): the library, SPEC "The library (v1)"
 
 G3 is split: G3a is the integer and sequence library (`min`, `max`, `abs`, `sum`, `gcd`, `pow`, `isqrt`, `x in s`
 on a seq, `rev`) and the negative-literal index/bound sugar; G3b is `for` as sugar over `while`, seq comprehensions,
@@ -121,7 +121,7 @@ committed task whose proof needs a lemma about the library (`isqrt`'s uniqueness
 kernel discharges without help: then the task is restated or the function abstains by name, and the result says
 which.
 
-### T3a read (2026-10-06 13:50Z, the library's core and Dafny landed; the census with the detectors moved)
+### T3a read (2026-10-06 11:13Z, the library's core and Dafny landed; the census with the detectors moved)
 
 | | before | after | bar | |
 |---|---:|---:|---:|---|
@@ -144,7 +144,7 @@ three unproved cells are measured kernel limits, kept in the matrix as they read
 first form asked `gcd(b, a) == gcd(a, b)`, a theorem about Euclid that no kernel proves from the definition, and
 a committed task is a use of the library, not a lemma about it.
 
-## T3b-1 registered (2026-10-06 15:00Z, before any run): `for` as sugar, SPEC "Loops as sugar (v1)"
+## T3b-1 registered (2026-10-06 11:48Z, before any run): `for` as sugar, SPEC "Loops as sugar (v1)"
 
 The three `for` forms expand to the `while` the AST has, with the bound invariants and the `decreases` supplied.
 Bars: the census does not move (a Python `for` was never a gap: `while` already carried it); the three committed
@@ -154,14 +154,14 @@ read the same limit by name); `surface.py --check` round-trips 1,939 of 1,939 an
 with the new `for` rule (T9). What would falsify the design: a kernel that counts `while` tasks and not these
 (then the expansion is wrong, not the kernel).
 
-### T3b-1 read (2026-10-06 15:40Z): the three `for` tasks parse to their `while`, round-trip through it, and Dafny
+### T3b-1 read (2026-10-06 11:57Z): the three `for` tasks parse to their `while`, round-trip through it, and Dafny
 verifies each with the twin refuted (`count_pos_for` compare-flip, `zeros_for` compare-flip, `any_neg_for`
 collapse-if); the other six columns are read from the clean-clone matrix that follows the commit. The census did
 not move, as registered. `surface.py --check` round-trips 1,943 of 1,943; the lab's grammar check agrees on every
 program with the `for` rule and the optional `else` (an `if` without `else` is the `if` with an empty `else`, a
 notation change made the same day because every `for` body in the committed tasks wanted one).
 
-## T3b-2 registered (2026-10-06 15:50Z, before any run): `sort(s)`, SPEC "Sorting (v1)"
+## T3b-2 registered (2026-10-06 11:58Z, before any run): `sort(s)`, SPEC "Sorting (v1)"
 
 Bars: the `sort` burden (2,908 problems) is re-tagged IN THE FRAGMENT (its count is the same by construction);
 the census does not otherwise move. Kernels: Dafny and Verus verify the two committed tasks with the twin refuted,
@@ -169,7 +169,7 @@ or read a limit by name; F*, SPARK, Lean, Rocq and Frama-C abstain by name. T9 a
 a call). What would falsify the design: Dafny failing to prove its own insertion sort's postconditions (then the
 Std's merge sort shape is taken instead, and the result says so).
 
-### T3b-2 read (2026-10-06 16:30Z): `sort(s)` landed. Dafny carries it as Std.Collections.Seq's merge sort specialised
+### T3b-2 read (2026-10-06 12:25Z): `sort(s)` landed. Dafny carries it as Std.Collections.Seq's merge sort specialised
 to the element type, with the Std's own lemma and asserts (its first form, an insertion sort, did not prove its
 own postconditions; the Std's shape did, and `t_sorted` is a `function ... : bool`, since the adapter's shape rule
 admits no `predicate`); Verus as one wrapper over vstd's `sort_by` with one named comparison closure shared by the
@@ -180,7 +180,7 @@ The `sort` burden is IN THE FRAGMENT (2,908 problems; the census count unchanged
 fragment). `sort_it` was given a local (`var u := sort(s); r := u`) so the ladder has a mutation to make: a body
 `r := sort(s)` alone has no twin, and a task without a twin cannot count.
 
-## T3b-3 registered (2026-10-06 16:50Z, before any run): comprehensions, SPEC "Comprehensions (v1)"
+## T3b-3 registered (2026-10-06 12:33Z, before any run): comprehensions, SPEC "Comprehensions (v1)"
 
 Bars: the `comprehension` burden (5,920 problems) is re-tagged IN THE FRAGMENT for list comprehensions whose
 source is a sequence or a range; set and dict comprehensions stay a burden by name (`set-comprehension`,
@@ -190,7 +190,7 @@ round trip over the new form (`surface.py --check`, which fuzzes it) and the lab
 rule. What would falsify the design: a filter or map ensures Dafny does not prove by induction from the
 recursive definition (then the Std's opaque-plus-lemma shape is taken and the result says so).
 
-### T3b-3 read (2026-10-06 18:05Z): comprehensions landed. The form `[body for x in s if cond]` (and over `[lo, hi)`)
+### T3b-3 read (2026-10-06 12:56Z): comprehensions landed. The form `[body for x in s if cond]` (and over `[lo, hi)`)
 parses, prints and fuzzes (`surface.py --check` 1,948 of 1,948; the lab's grammar check agrees with the new rule);
 the checker types the bound variable from the source, the interpreter evaluates it, the twins reach its bounds and
 condition. Dafny carries it as one recursive function per comprehension with the ensures its shape admits (filter:
@@ -205,7 +205,7 @@ Frama-C abstain by name. The census: `comprehension` (5,920 problems) is IN THE 
 set and dict comprehensions are the new burden `set-dict-comprehension`; the in-fragment count is unchanged by
 construction (1,642).
 
-## T3c registered (2026-10-06 19:20Z, before any run): stepped slices, SPEC "Stepped slices (v1)", and the
+## T3c registered (2026-10-06 13:26Z, before any run): stepped slices, SPEC "Stepped slices (v1)", and the
 definedness of a comprehension's body in Dafny
 
 Found while reading the comprehension landing's Dafny text for the next form: the recursive function it emits per
@@ -230,7 +230,7 @@ arithmetic over the bound index, no indexing term to match on) leaves the functi
 then the precondition is restated through a term Dafny can match (the Std's `f.requires(xs[i])` shape, or an
 identity function on the index) and the read says which.
 
-### T3c read (2026-10-06 20:30Z): stepped slices landed; the comprehension precondition in Dafny repaired.
+### T3c read (2026-10-06 13:47Z): stepped slices landed; the comprehension precondition in Dafny repaired.
 (1) Dafny: `_comp_defs` passes a range as the index sequence `t_range(a, b)` and gives every comprehension function
 the SPEC's definedness formula as a precondition over the element `t_s[t_di]` (the Std `Map`'s shape), the conjuncts
 without the element once under `|t_s| > 0`. The falsifier fired first: a precondition over a bare range index left
@@ -252,7 +252,7 @@ canonical, 7,150 as written, 450 refused). Unit tests: `t/test_slice_step.py` (7
 updated for the index sequence. Not touched: a variable step (written as the comprehension by hand), clamping
 (t's slice is undefined out of range, Python's clamps).
 
-## T3d registered and read in one sitting (2026-10-06 21:10Z): the three library proofs the kernels did not reach
+## T3d registered and read in one sitting (2026-10-06 14:05Z): the three library proofs the kernels did not reach
 alone (the roadmap's item after the stepped slices)
 
 Registered before the fix runs, from the kernels' own messages on the lowered files (`cube`, `root_floor`, `sum_tail`;
@@ -282,7 +282,7 @@ item (a ghost lemma per `sum(a + b)` shape stated as an extra `Post` conjunct of
 statement body with a lemma call), its own registration. Column counts after this item: Verus `sum`/`pow`/`isqrt`
 tasks 5 of 5; F* `sum_tail` joins; SPARK `sum_tail` stays `timeout / refuted`.
 
-## T4 registered (2026-10-06 21:50Z, before any run): early exits, SPEC "Early exits (v1)": `break`, `continue`,
+## T4 registered (2026-10-06 14:21Z, before any run): early exits, SPEC "Early exits (v1)": `break`, `continue`,
 `while true`
 
 The census: `unbounded-loop` is a gap on 4,403 problems (every `while True`, `break` and `continue`), the largest
@@ -304,7 +304,7 @@ slice axiom. What would falsify the design: Dafny not proving the prefix step of
 comprehension function's one unfolding (`s[0..i+1][..i] == s[0..i]`); then the task states its count by a spec
 function and the comprehension stays in the ensures, and the read says so.
 
-### T4 read (2026-10-06 22:40Z): early exits landed; the comprehension functions in Dafny now in prefix form.
+### T4 read (2026-10-06 14:34Z): early exits landed; the comprehension functions in Dafny now in prefix form.
 (1) `break;`, `continue;` and `while true` parse, print and round-trip (`surface.py --check`: 1,954 of 1,954
 well-formed corpus tasks); the lab's grammar check agrees with the parser on every program tested (the two new
 keywords, the two statement rules). The checker's three rules fire where registered (`exit-outside-loop`,
@@ -328,7 +328,7 @@ sole blocker for 1); in the fragment 1,713 -> 1,777 of 4,239 function-shaped (40
 name: Verus (a loop is a recursive proof fn there; `continue` is a recursive call and `break` an exit the
 function's contract does not describe), F*, SPARK, Lean, Rocq and Frama-C on bodies with an exit.
 
-## T5 registered (2026-10-06 23:20Z, before any run): maps, SPEC "Maps (v1)"
+## T5 registered (2026-10-06 14:52Z, before any run): maps, SPEC "Maps (v1)"
 
 The census: `map` is a gap on 2,464 problems (a dict literal, `dict()`, `Counter`, `defaultdict`, a dict-typed io
 value; the sole blocker for 129), the fourth-largest. Read first (receipt 85a79b86b0ce): Dafny's `map<T, U>` with
@@ -347,7 +347,7 @@ What would falsify the design: Verus's `==` on two maps needs the same `=~=` bri
 (then `_nested_eq_bridges` takes `Map<` too, and the read says so); Dafny not proving `|m[k := v]| <= |m| + 1` from
 its own map axioms (then the size ensures of `index_map` is dropped and the read says so).
 
-### T5 read (2026-10-07 00:20Z): maps landed.
+### T5 read (2026-10-06 15:04Z): maps landed.
 (1) `map<K, V>`, `map[k := v, ...]`, `m[k]`, `m[k := v]`, `k in m`, `len(m)`, `keys(m)` and `remove(m, k)` parse, print
 and round-trip (`surface.py --check`: 1,957 of 1,957 well-formed corpus tasks); the lab's grammar check agrees with
 the parser on every program tested (the `map` keyword, the type rule, the display rule); `map-types` and
@@ -370,7 +370,7 @@ yet`). (4) The census: `map` (2,464 problems) IN THE FRAGMENT; iteration over a 
 1,892 of 4,239 function-shaped (41.9% -> 44.6%). Not done, by name: iteration over a map, `values(m)`, a map
 comprehension, and the other five kernels.
 
-## T6 registered (2026-10-07 01:10Z, before any run): reductions over a sequence, SPEC "Reductions (v1)", and three
+## T6 registered (2026-10-06 15:24Z, before any run): reductions over a sequence, SPEC "Reductions (v1)", and three
 census corrections measured first
 
 Measured on the corpus's first solutions before designing (01:00Z): of 1,047 solutions with a generator expression,
@@ -396,7 +396,7 @@ rule: library names are identifiers), the in-fragment count and the gap table be
 the read. What would falsify the design: Dafny not proving `t_maxs(s) in s` without the Std's opaque-plus-lemma
 shape, or Verus's `max_ensures` not reaching a `max(s)` inside a loop helper (then the read says which).
 
-### T6 read (2026-10-07 01:50Z): reductions landed; the census corrected.
+### T6 read (2026-10-06 15:33Z): reductions landed; the census corrected.
 (1) `any(s)`, `all(s)`, `max(s)`, `min(s)` and `toset(s)` parse, type and round-trip (`surface.py --check`: 1,961 of
 1,961 well-formed corpus tasks; no grammar rule changed, a library name being an identifier, so the lab's check
 of 00:55Z stands); the checker refuses `any` of a seq of ints, `max` of a seq<bool> and `max` of one int by the
@@ -423,7 +423,7 @@ constant, an off-by-one slice bound); SPARK and F* abstain by name on the one-ar
 `translate` stay out), records and options (constructors with fields), map iteration and closures as nested
 helpers; the rest is the instrument's honesty about what no verifier should carry.
 
-## T7 registered (2026-10-07 02:40Z, before any run): the string library's second wave, SPEC "The string library
+## T7 registered (2026-10-06 15:47Z, before any run): the string library's second wave, SPEC "The string library
 (v2)"
 
 The census after T6: `string-lib` is a gap on 1,288 problems (the sole blocker for 203), the largest language item
@@ -447,7 +447,7 @@ members' share, printed in the read. What would falsify the design: a Dafny prel
 verify on their own (then that member is stated without ensures and the task that needed them says so); Verus
 needing an induction lemma for a bound the task states (then the lemma is added and the read says which).
 
-### T7 read (2026-10-06 18:40Z): the string library's second wave landed, with three repairs found on the way.
+### T7 read (2026-10-06 18:42Z): the string library's second wave landed, with three repairs found on the way.
 (1) Fifteen members and two library names (`split` on a sequence separator, `strip/lstrip/rstrip` with a set,
 `index`, `rfind`, `zfill`, `center/ljust/rjust` with an optional fill, `capitalize`, `swapcase`, `title`,
 `isspace`, `isalnum`, `splitlines`, `partition`, `isint`, `toint`): parity with Python's own methods on 2,000 random
@@ -469,3 +469,61 @@ MBPP 342 from the frozen wider panel (145 -> 144); the frozen pools keep the fir
 (4) Census: `string-lib` 1,288 -> 1,095 problems (sole blocker 203 -> 175); in the fragment 2,745 -> 2,773 of
 4,239 function-shaped (65.4%). The lift report's exact counts were re-measured once the lab-only corpus came home:
 all 77 programs lift and agree (was 76 of 77).
+
+## T8 registered (2026-10-06 20:28Z, before any run): higher-order calls with lambdas, SPEC "Higher-order calls (v1)"
+
+Measured first on the corpus's first solutions (21:00Z): of the uses behind the `closure` gap (2,243 problems), 419
+are lambdas bound to a name (mostly stdin helpers such as `I = lambda: map(int, input().split())`) and 347 nested
+defs of which 336 do not use `nonlocal`: local functions t already states as top-level helpers (a nested def
+lifted with its read-only captures as parameters). The higher-order uses are sort keys 185 (`sorted` 107, `.sort`
+78), `map` 68 and `filter` 26 (both already t's comprehensions), `max`/`min` keys 35 and `reduce` 24. Read first
+(receipt b27338128981): Python's `functools.reduce` (left to right, the initial value first), `sorted` (stable),
+`max`/`min` (the first maximal or minimal item). Bars: (1) a lambda `x => e` or `(a, x) => e`, allowed only as the
+function argument of four library calls: `fold(f, init, s)` (a left fold), `sort_by(s, key)` (stable, by an int or
+real key), `max_by(s, key)` and `min_by(s, key)` (the first extreme item; DEFINED IFF `len(s) > 0`); the notation
+round trip, the grammar check, the checker's `lambda-position` and `hof-types`; (2) the interpreter is Python's own
+on all four; the twins reach a lambda's body; (3) Dafny carries all four as per-instance recursive functions in
+prefix form (fold and the extrema with their ensures proved by induction; `sort_by` as a stable insertion sort
+with the length, the occurrence counts and the key order as ensures); Verus carries `fold`, `max_by` and
+`min_by` and abstains on `sort_by` by name unless its sortedness lemma closes; the other five abstain by name.
+Committed tasks: `longest_row` (max_by), `cheapest` (min_by over pairs), `by_second` (sort_by over pairs),
+`weighted_sum` (a loop whose invariant is the fold over the prefix). (4) The census: lambdas under sort keys,
+`max`/`min` keys, `map`, `filter` and `reduce`, a lambda bound to a name and a nested def without `nonlocal` are
+in the fragment; `nonlocal` and other lambda positions stay the gap. What would falsify the design: Dafny not
+proving the stable insertion sort's key order without an explicit lemma (then the lemma is written and the read
+says so), or Verus's spec closures not reaching the per-instance definitions (then Verus abstains on all four).
+
+### T8 read (2026-10-06 21:09Z): higher-order calls landed; Verus carries all four, `sort_by` included.
+(1) The notation: `x => e` and `(a, x) => e`, only as the function argument of `fold(f, init, s)`,
+`sort_by(s, key)`, `max_by(s, key)` and `min_by(s, key)`; the checker's `lambda-position` and `hof-types` (each with
+its malformed file in `t/malformed/`); the round trip 1,969 of 1,969; the desktop grammar check 25,894 of 25,894
+canonical forms and 22,569 of 22,569 raw replies accepted, 472 of 472 refusals agreed. (2) The interpreter is
+Python's own on all four (`test_hof.py`, 915 checks: 300 random inputs, stability and the first extreme included;
+`max_by`/`min_by` undefined on an empty sequence); the ladder reaches a lambda's body and swaps `max_by` and
+`min_by`. (3) Dafny: all four, `verified / refuted` on `longest_row`, `cheapest`, `by_second` and `weighted_sum`.
+The first registered falsifier fired, as the registration allowed for: the insertion sort's key order needed the two
+explicit lemmas (a bound on an insertion's keys, order preservation) called inside the sort function. Two repairs on
+the way. An invariant's `(a, y) => ...` and the ensures' `(a, x) => ...` were two functions, and `weighted_sum` read
+unproved until the shape key renamed the lambda's parameters. `longest_row`'s twin had no certificate because the
+ground evaluator read `r in rows` over a seq of seqs by hashing the rows; it now scans. Verus: the second falsifier
+did not fire. Verus carries all four; the registration expected `sort_by` to abstain unless its sortedness lemma
+closed, and it closed. A hand probe came first (14 verified, 0 errors), then the generator. `max_by`/`min_by` go
+through the index of the chosen element. `sort_by` is the same insertion sort with three lemmas and vstd's
+`to_multiset_ensures`, because vstd's own sort lemma requires an antisymmetric order, which a key comparison is
+not. One repair older than the landing: Verus's ground evaluator did not read the length of a display of compound
+elements, so every Verus certificate quantifying over a `seq<(int, int)>` parameter was refused. `cheapest`'s and
+`by_second`'s twins read UNPROVED until it did, and the matrix shows whether older pair tasks move. SPARK, Frama-C,
+Lean, Rocq and F* abstain by name. (4) Census: in the fragment 2,773 -> 2,959 of 4,239 function-shaped problems
+(69.8%); stdin-shaped 9,839 -> 10,618 of 20,509; the gap `closure` 2,243 -> 707 problems; `functools.reduce` a
+modelled import (the gap `import` 2,446 -> 2,372). The rule as run is stricter than registered. A nested def or a
+lambda that mutates a name it captured (an append, a subscript or attribute store) stays the gap, because t's values
+are immutable and lifting such a def does not keep its meaning. Measured by running the census without that clause:
+the registered rule would have read 2,980 and 10,677, so the clause keeps out 21 function-shaped and 59 stdin-shaped
+problems.
+
+Time labels corrected in this file and in `internal/ROADMAP-LOG.md` (2026-10-06 21:09Z). The labels written from T2's
+read onward were not read from a clock: they ran ahead of the real time by up to eleven hours, and four said 10-07.
+Each is now the time the entry was written, taken from the session's own log, and each matrix entry carries its
+table's own UTC stamp. Every "2026-10-07" in the repository (74 dating notes on Reductions and the string library's
+second wave) is now 2026-10-06. The order of every registration before its runs is unchanged. A clock is read from
+now on (`date -u`).

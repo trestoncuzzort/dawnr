@@ -163,6 +163,9 @@ RULES: dict[str, str] = {
     # 'set-types'" (3 of the published model's 100 greedy dev answers, each `x in s` with s a seq)
     "set-lit-types": "a set display's elements are all of one type (Finite sets; Compositional types)",
     "map-lit-types": "a map display's keys are of one type and its values of one type (Maps)",
+    "lambda-position": "a lambda is only the function argument of fold, sort_by, max_by or min_by (Higher-order calls)",
+    "hof-types": "fold wants ((A, T) => A, A, seq<T>); sort_by, max_by and min_by want (seq<T>, T => int or real) "
+                 "(Higher-order calls)",
     "map-types": "m[k] and k in m take a map and a key of its key type, m[k := v] a value of its value type, "
                  "keys and remove a map (Maps)",
     "lib-types": "min/max take two ints or two reals, abs an int or a real, sum a seq of ints or of reals, gcd/pow/isqrt "
@@ -284,7 +287,7 @@ V0_OPS = {"+", "-", "*", "neg", "==", "!=", "<", "<=", ">", ">=",
 # The string library is v1 (SPEC.md "The string library", 2026-09-11): 17
 # polymorphic seq members, split at two arities (one op).
 STRLIB2_OPS = {"index", "rfind", "zfill", "center", "ljust", "rjust", "capitalize", "swapcase", "title",
-               "isspace", "isalnum", "splitlines", "partition"}   # SPEC.md "The string library (v2)" (2026-10-07)
+               "isspace", "isalnum", "splitlines", "partition"}   # SPEC.md "The string library (v2)" (2026-10-06)
 STRLIB_OPS = STRLIB2_OPS | {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
              "isupper", "islower", "startswith", "endswith"}
@@ -292,8 +295,10 @@ SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite se
 MAP_OPS = {"mapdisp", "keys", "remove"}   # SPEC.md "Maps (v1)" (2026-10-06); at/update/in/len take a map by type
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev",   # SPEC.md "The library (v1)" (2026-10-06)
                      "sort",                                                        # SPEC.md "Sorting (v1)" (2026-10-06)
-                     "any", "all", "toset",                                         # SPEC.md "Reductions (v1)" (2026-10-07)
-                     "isint", "toint"})                                             # SPEC.md "The string library (v2)" (2026-10-07)
+                     "any", "all", "toset",                                         # SPEC.md "Reductions (v1)" (2026-10-06)
+                     "isint", "toint",                                              # SPEC.md "The string library (v2)" (2026-10-06)
+                     "fold", "sort_by", "max_by", "min_by"})                        # SPEC.md "Higher-order calls (v1)"
+HOF_OPS = frozenset({"fold", "sort_by", "max_by", "min_by"})
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
          | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS | LIB_OPS
          | MAP_OPS)
@@ -400,6 +405,53 @@ def _empty_display(a, t, want) -> bool:
     return ((t == "seq" and a.get("op") == "seq" and _is_seq(want))
             or (t == "set" and a.get("op") == "set" and _is_set(want))
             or (_is_map(t) and a.get("op") == "mapdisp" and _is_map(want)))
+
+
+def _ty_hof(e, op, args, env, funs, dtypes, ver, errs, bound):
+    """SPEC.md "Higher-order calls (v1)" (2026-10-06): fold(f, init, s), sort_by(s, key), max_by(s, key),
+    min_by(s, key), the lambda typed from its position (its parameters are bound names, as a quantifier's)."""
+    if op == "fold":
+        if len(args) != 3:
+            _e(errs, e, "fold takes (f, init, s)", "op-arity")
+            return None
+        lam, init, seq = args
+        nvars = 2
+    else:
+        if len(args) != 2:
+            _e(errs, e, f"{op} takes (s, key)", "op-arity")
+            return None
+        seq, lam = args
+        init = None
+        nvars = 1
+    ts = _ty(seq, env, funs, dtypes, ver, errs, bound)
+    if not _is_seq(ts):
+        _e(errs, e, f"{op} wants a seq, found {ts!r}", "hof-types")
+        return None
+    elem = _elem(ts)
+    if not (isinstance(lam, dict) and set(lam) == {"lam"} and len(lam["lam"].get("vars", [])) == nvars):
+        _e(errs, e, f"{op} wants a lambda of {nvars} parameter(s)", "hof-types")
+        return None
+    names = lam["lam"]["vars"]
+    for v in names:
+        if v in env or v in bound:
+            _e(errs, e, f"lambda parameter {v} shadows a name in scope", "quant-shadow")
+    if len(set(names)) != len(names):
+        _e(errs, e, "a lambda's parameters need distinct names", "quant-shadow")
+    sub = dict(env)
+    if op == "fold":
+        acc_t = _ty(init, env, funs, dtypes, ver, errs, bound)
+        if acc_t is None:
+            return None
+        sub[names[0]], sub[names[1]] = acc_t, elem
+        bt = _ty(lam["lam"]["body"], sub, funs, dtypes, ver, errs, bound | set(names), acc_t)
+        if bt != acc_t and not _empty_display(lam["lam"]["body"], bt, acc_t):
+            _e(errs, e, f"fold's lambda returns {bt!r}, its accumulator is {acc_t!r}", "hof-types")
+        return acc_t
+    sub[names[0]] = elem
+    bt = _ty(lam["lam"]["body"], sub, funs, dtypes, ver, errs, bound | set(names))
+    if bt not in ("int", "real"):
+        _e(errs, e, f"{op}'s key is an int or a real, found {bt!r}", "hof-types")
+    return ts if op == "sort_by" else elem
 
 
 def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
@@ -581,12 +633,17 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
             if _ty(a, env, funs, dtypes, ver, errs, bound, p["type"]) != p["type"]:
                 _e(errs, e, f"argument type mismatch calling {c['fun']}", "call-argtype")
         return f["result"]
+    if "lam" in e:
+        _e(errs, e, "a lambda outside the function argument of fold, sort_by, max_by or min_by", "lambda-position")
+        return None
     op = e["op"]
     ok = V0_OPS if ver == 0 else V1_OPS
     if op not in ok:
         _e(errs, e, f"operator {op!r} not in v{ver}", "op-unknown")
         return None
     args = e.get("args", [])
+    if op in HOF_OPS:
+        return _ty_hof(e, op, args, env, funs, dtypes, ver, errs, bound)
     if op in UNARY and len(args) != 1:
         _e(errs, e, f"{op} takes one argument", "op-arity")
     if op in TERNARY and len(args) != 3:
@@ -597,11 +654,11 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         if len(args) not in (1, 2):
             _e(errs, e, "split takes one or two arguments", "strlib-arity")
     elif op in ("min", "max"):
-        # SPEC.md "Reductions (v1)" (2026-10-07): two ints or reals, or one seq of them
+        # SPEC.md "Reductions (v1)" (2026-10-06): two ints or reals, or one seq of them
         if len(args) not in (1, 2):
             _e(errs, e, f"{op} takes one or two arguments", "op-arity")
     elif op in ("strip", "lstrip", "rstrip"):
-        # SPEC.md "The string library (v2)" (2026-10-07): whitespace, or a character set
+        # SPEC.md "The string library (v2)" (2026-10-06): whitespace, or a character set
         if len(args) not in (1, 2):
             _e(errs, e, f"{op} takes one or two arguments", "strlib-arity")
     elif op in ("center", "ljust", "rjust"):
@@ -746,13 +803,13 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
             _e(errs, e, "in wants (T, set<T>) or (T, seq<T>): an element of the collection's own type", "set-types")
         return "bool"
     if op in ("min", "max") and len(ts) == 1:
-        # SPEC.md "Reductions (v1)" (2026-10-07): the largest/smallest element of a seq of ints or of reals
+        # SPEC.md "Reductions (v1)" (2026-10-06): the largest/smallest element of a seq of ints or of reals
         if _is_seq(ts[0]) and _elem(ts[0]) in ("int", "real"):
             return _elem(ts[0])
         _e(errs, e, f"{op} of one argument wants a seq of ints or of reals, found {ts[0]!r}", "lib-types")
         return "int"
     if op in ("isint", "toint"):
-        # SPEC.md "The string library (v2)" (2026-10-07): library names over a seq of code points
+        # SPEC.md "The string library (v2)" (2026-10-06): library names over a seq of code points
         if ts[0] != "seq":
             _e(errs, e, f"{op} wants a seq, found {ts[0]!r}", "lib-types")
         return "bool" if op == "isint" else "int"
@@ -861,7 +918,7 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
                 "replace": (3,), "lower": (1,), "upper": (1,), "isdigit": (1,),
                 "isalpha": (1,), "isupper": (1,), "islower": (1,),
                 "startswith": (2,), "endswith": (2,),
-                # SPEC.md "The string library (v2)" (2026-10-07)
+                # SPEC.md "The string library (v2)" (2026-10-06)
                 "index": (2,), "rfind": (2,), "zfill": (2,), "center": (2, 3), "ljust": (2, 3), "rjust": (2, 3),
                 "capitalize": (1,), "swapcase": (1,), "title": (1,), "isspace": (1,), "isalnum": (1,),
                 "splitlines": (1,), "partition": (2,)}[op]
