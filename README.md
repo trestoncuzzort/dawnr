@@ -183,12 +183,13 @@ the program and refute a deliberately broken twin at a concrete input, or refuse
 proves 88, Verus 80, Lean 61, Rocq 57, F* 53, SPARK 50 and Frama-C 44. In every kernel, the twin of every proved
 program is refuted (100%). 43 tasks are proved, with the twin refuted, in all seven; the rest are named refusals,
 mostly of the constructs added on 2026-10-06, which the other kernels are being taught now
-([the matrix](t/AGREEMENT.md), regenerated from a clean clone of the engine's own repository). Rocq's own column,
-re-run after comprehensions landed in Rocq, reads 62; the next clean-clone matrix installs it. The engine (the
+([the matrix](t/AGREEMENT.md), regenerated from a clean clone of the engine's own repository). Rocq's and F*'s own
+columns, re-run after comprehensions landed in each, read 62 and 58; the next clean-clone matrix installs them. The engine (the
 language, its lowerings, the kernel adapters and the tasks) now has its own repository,
 [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine); `t/` here carries a pinned copy
-([t/ENGINE.md](t/ENGINE.md)). 21 of AlgoVeri's contracts are stated in t there too ([t/algoveri/](t/algoveri/)),
-their seven-kernel run registered before it runs.
+([t/ENGINE.md](t/ENGINE.md)). 21 of AlgoVeri's contracts are stated in t there too ([t/algoveri/](t/algoveri/)):
+Dafny verifies all 21 with the twin refuted, the other six kernels far fewer, and the 13 cells their lowerings could
+not yet express are each named, with the repairs underway ([t/ALGOVERI.md](t/ALGOVERI.md)).
 
 **What went wrong**, kept on the record: a file written into a folder the request did not name; two files
 "swapped" with a command that lost one; the smaller of two files removed when the larger was asked for; a

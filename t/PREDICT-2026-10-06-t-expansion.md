@@ -744,6 +744,55 @@ Dafny, and the comparison here is between kernels on one statement.
 - Dafny failing to re-verify a program it verified while it was written (a proof too close to its resource limit to
   be stable).
 
+### T13 read (2026-10-06 23:51Z): AlgoVeri in seven kernels. Dafny 21 of 21; the other kernels far below their ranges, and 13 unnamed failures.
+
+The table is `t/ALGOVERI.md`, from a clean clone at bc60bb4. A first run was stopped before it finished, because both
+polynomial tasks declared the name `poly_multiply`, which keys a table row and the lowered files. `cli.py verify` now
+refuses that before anything is lowered, and the tasks are `poly_multiply_naive` and `poly_multiply_karatsuba`.
+
+(1) **Bar 1 held:** Dafny verifies the real program and refutes the twin on all 21.
+
+(2) **Bar 2 missed in Verus.** `trial_division_naive` verifies with its twin UNPROVED. The twin's certificate did not
+close, so it is neither refuted nor decorative. Every other kernel refutes the twin of every real it verifies.
+
+(3) **Bar 3 missed: 13 cells are MALFORMED.** Each comes from a lowering defect that 88 small tasks never reached, and
+each is now named:
+
+- **Verus, 5 cells.** Four are "Could not automatically infer triggers", where a bound variable is read only inside a
+  nested quantifier: `kmp`, `matrix_multiply`, `merge_sort` and `quick_sort`. T15 is this repair; under it,
+  `quick_sort` verifies (37 verified, 0 errors at the adapter's budget). The fifth, `poly_multiply_naive`, is a shape
+  T15 does not cover: an index into an `update` expression at the top level.
+- **SPARK, 2 cells** (`solve_longest_common_subsequence`, `string_search_naive`). An operator on the functional
+  `Sequence` type is used without a `use type` clause: "operator for private type Sequence ... is not directly
+  visible".
+- **F*, 6 cells.** In three, a nested quantifier inside a spec function's body renders the inner variable out of scope
+  (Error 72, "Identifier not found"): `binary_search`, `linear_search`, `longest_palindromic_substring`. In the other
+  three, a `Tot bool` spec function calls a ghost quantifier helper (Error 34, "GTot is not compatible with Tot"):
+  `bubble_sort`, `insertion_sort`, `kmp`.
+
+(4) **The counts, against the predicted ranges**, as tasks verified with the twin refuted:
+
+| kernel | measured | predicted | |
+|---|---|---|---|
+| Verus | 5 (6 reals proved) | 10 to 18 | missed |
+| SPARK | 3 | 5 to 11 | missed |
+| F* | 3 | 5 to 11 | missed |
+| Lean | 0 | 3 to 7 | missed |
+| Rocq | 1 | 1 to 3 | held |
+| Frama-C | 2 | 1 to 2 | held |
+
+The rest of the carried cells read UNPROVED or TIMEOUT.
+
+(5) **Held:** all seven is 0. `integer_exponential` is verified with the twin refuted in six kernels, and Lean leaves
+its real UNPROVED.
+
+**What it bought.** The prediction was wrong because these are proofs written for Dafny: lemmas, loop splits and
+helper methods tuned to its resource limit, carried mechanically into six kernels that each need their own
+instantiation hints. The ranges assumed the 88 small tasks' rates would carry over, and they did not. The useful half
+is the defect list. AlgoVeri found 13 malformed cells in four lowerings, under six distinct causes, none of which the
+committed tasks reach. Each is now a named repair, the first of them (T15) already registered. The registered
+falsifier about Dafny's stability did not fire: all 21 re-verified from a clean clone.
+
 ## T14 registered (2026-10-06 23:19Z, after the generator and before any kernel run): comprehensions in Rocq
 
 D1's fifth landing. Seven committed tasks state a comprehension, and Rocq refuses all seven by name: `doubled`,
@@ -791,4 +840,100 @@ each twin's certificate evaluated the function at its witness.
 One operational finding, not a verdict: a Rocq-only column at three cells in flight runs about five `rocqworker`
 processes per cell at about 420 MB each. Its first launch under a 5 GB cap was OOM-killed in ten seconds, and the
 rerun under 8 GB peaked at 7.4 to 7.8 GB. A Rocq column runs at two cells per 5 GB, or at three under 8 GB.
+
+## T15 registered (2026-10-06 23:39Z, after hand probes and before the kernel run): Verus triggers for an index read only inside a nested quantifier
+
+**Found by T13's first, stopped run.** Verus read three AlgoVeri cells MALFORMED, all from one cause: "Could not
+automatically infer triggers". In each, a quantifier's bound variable is read only inside a nested quantifier:
+
+- `matrix_multiplication`: `A[i]` appears only in the inner bound `A[i].len()` and in `A[i][j]`.
+- `kmp`: `fail[q]` appears only in an inner lower bound.
+- `merge_sort`: the index is into an expression, `(m + seq![e])[i]`.
+
+Verus does not look inside a nested quantifier for the outer one's trigger. The existing nested-quantifier branch
+collects only indexes of a plain variable in the inner body, and only when no top-level root exists.
+
+**Design** (Verus guide, "forall and triggers", receipt ed77e77a7f2c). When the body has no indexable term outside
+nested quantifiers, the outer quantifier gets an explicit `#![trigger X[v]]` for each such index term found inside
+them. That covers terms in their bounds or their bodies, with any base `X` that mentions no inner bound variable.
+
+**Measured before this registration, stated plainly:**
+- The Verus lowerings of all 88 committed tasks are byte-identical.
+- Three minimal programs of the three shapes each verify in Verus (2 verified, 0 errors).
+- The three AlgoVeri files now compile. At rlimit 50, above the adapter's 10, Verus reads postconditions or
+  assertions not proved in all three.
+
+**Bars.**
+(1) None of the three AlgoVeri Verus cells is MALFORMED; each reads a named outcome.
+(2) No Verus cell over the 88 committed tasks changes; their lowerings are identical.
+(3) **Prediction:** 0 of the 3 verify at the adapter's budget. These are Dafny-tuned proofs, and the probes at a
+higher budget did not close.
+
+**What would falsify the design:** a trigger the guide's rules reject (Verus refuses it), or one of the three still
+MALFORMED for another reason.
+
+### T15 read (2026-10-06 23:53Z): Verus triggers for an index read only inside a nested quantifier. No MALFORMED left among them; `quick_sort` verifies.
+
+The Verus column was re-run over the 21 AlgoVeri tasks at ef68ff5. Against T13's table, exactly four cells moved:
+
+| task | T13 | T15 |
+|---|---|---|
+| `kmp` | malformed / malformed | unproved / refuted |
+| `merge_sort` | malformed / malformed | unproved / refuted |
+| `matrix_multiply` | malformed / malformed | unproved / unproved |
+| `quick_sort` | malformed / malformed | verified / refuted |
+
+(1) **Bar 1 held:** none of the three registered cells is MALFORMED, and each reads a named outcome.
+(2) **Bar 2 held:** the Verus lowerings of all 88 committed tasks are byte-identical.
+(3) **The prediction held:** 0 of the 3 registered cells verify. `quick_sort`, the fourth of the same class, not named
+in the registration because the first run was stopped before reaching it, verifies with its twin refuted.
+
+Verus on AlgoVeri goes from 5 to 6 verified with the twin refuted. `poly_multiply_naive` stays MALFORMED. It is the
+shape T15 does not cover, an index into an `update` expression at the top level, for which Verus also infers no
+trigger. That is the next Verus repair. `trial_division_naive`'s twin certificate remains unproved.
+
+## T16 registered (2026-10-06 23:46Z, after hand probes and before the column run): comprehensions in F*
+
+D1's sixth landing, the comprehension tasks' next kernel after Lean (T12) and Rocq (T14). F* refuses all seven by name.
+
+**Design** (receipt d2d097513c74, FStar.Seq.Base). Each map shape is one function `t_compK` in Dafny's prefix form:
+over a seq `(t_s, t_n)`, over a range `(t_a, t_n)`, then the body's free variables. It is built by `Seq.init`, with one
+call of `Seq.init_index`, which Base gives no SMT pattern, so the function's own postcondition carries the length and
+every element to each call site.
+
+The body's definedness is the function's precondition, split as Dafny's lowering splits it:
+- conjuncts that do not mention the element are stated once, as `t_n > 0 ==> ...`;
+- the rest form a quantifier triggered on the element, `Seq.index t_s t_di`, or over a range `t_ix t_di` through an
+  identity function, since F* runs Z3 without MBQI.
+
+A filter, and a comprehension inside a spec_fun, method or lemma, refuse by name, so `evens` and `count_evens_skip`
+(early exits) refuse.
+
+**Measured before this registration, stated plainly.** Hand probes under the adapter's own Z3 version, seed and
+budget: all five maps' real files verify (`doubled`, `squares`, `diffs`, `every_other`, `odd_positions`). The first
+probe of `odd_positions` failed. Its slice's bound mentions no element, so nothing triggered the quantifier before
+the slice was typed. That is Dafny's measured case, and the split above repaired it. The F* lowerings of the other
+81 committed tasks are byte-identical.
+
+**Bars.**
+(1) F* verifies the real program and refutes the twin on at least 4 of the 5 maps.
+(2) `evens` and `count_evens_skip` refuse by name.
+(3) No F* cell that agreed before changes; the whole F* column is re-run.
+(4) All seven stays 43: SPARK and Frama-C still refuse every comprehension task.
+
+**What would falsify the design:** a twin whose certificate does not reach the comprehension's value (then that twin
+reads UNPROVED, counted against bar 1), or a quantifier pattern that fires in the probe and not in the adapter's run.
+
+### T16 read (2026-10-06 23:52Z): comprehensions in F*, all 5 maps verified with the twin refuted.
+
+(1) **Bar 1 held, at 5 of 5:** F* verifies the real program and refutes its twin on `doubled`, `squares`, `diffs`,
+`every_other` and `odd_positions`.
+(2) **Bar 2 held:** `evens` refuses as a filter, and `count_evens_skip` for its early exit.
+(3) **Bar 3 held:** the whole F* column was re-run over the 88 tasks, and only those five cells moved. F* goes from 53
+to 58 verified with the twin refuted, and its refusals from 33 to 28.
+(4) **Bar 4 held as registered:** all seven stays 43. The five maps are now verified with the twin refuted in Dafny,
+Verus, Rocq and F*, and in Lean for four of them. SPARK and Frama-C are the two kernels between them and all seven.
+
+Neither falsifier fired. Each twin's certificate states the measured value of the twin's comprehension, and the
+quantifier patterns fired under the adapter's own run as they did in the probes.
 

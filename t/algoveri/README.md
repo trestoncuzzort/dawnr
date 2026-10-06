@@ -27,6 +27,7 @@ The other 55 need what t does not state today, and some need more than one of th
 
 `internal/RESEARCH-2026-10-06-landscape.md` gives the counts.
 
-The table of verdicts in all seven kernels is [../ALGOVERI.md](../ALGOVERI.md), produced by:
+The table of verdicts in all seven kernels is [../ALGOVERI.md](../ALGOVERI.md) (PREDICT T13's read gives what it
+shows and what went wrong), produced by:
 
     python3 t/cli.py verify t/algoveri --jobs 3 --table t/ALGOVERI.md

@@ -1590,6 +1590,50 @@ def _lib_defs() -> list:
     return [_LIB_TEXT[n] for n in _LIB_ORDER if n in _LIB_USED]
 
 
+# SPEC.md "Comprehensions (v1)" in F* (PREDICT T16, 2026-10-06): one function per comprehension SHAPE in the file
+# (lower_dafny._comp_key: the bound variable, the condition, the body, and whether the source is a seq or a range),
+# in Dafny's prefix form, over the source (or the range's start and count) and every free variable of the body. A map
+# needs no recursion here: `Seq.init` builds it, and one call of FStar.Seq.Base's `init_index` (which carries no SMT
+# pattern) gives the element facts, so the function's own postcondition carries the length and every element to each
+# call site. Definedness is the shared formula (lower_verus.defined) at every element, as the function's precondition;
+# over a range the index is written `t_a + t_ix t_i` through the identity `t_ix`, the term that precondition's
+# quantifier is triggered on (F* runs Z3 without MBQI; Dafny's t_ix, the same measured reason). A filter, and a
+# comprehension inside a spec_fun, method or lemma, refuse by name (`_comp_refusal`).
+_COMP_F: dict = {}          # shape key -> (k, F* text)
+_TIX_TEXT = "let t_ix (t_i:int) : int = t_i\n"
+
+
+def _comp_defs_f() -> list:
+    if not _COMP_F:
+        return []
+    texts = [t for _k, t in sorted(_COMP_F.values())]
+    return ([_TIX_TEXT] if any("t_ix" in t for t in texts) else []) + texts
+
+
+def _comp_refusal(task: dict, body: list) -> None:
+    """PREDICT T16: F* carries a comprehension that is a map (no filter) over a seq or an int range, in the task's
+    requires, ensures and body; a filter, or a comprehension inside a spec_fun, method or lemma, refuses by name."""
+    def walk(x, inside_task: bool) -> None:
+        if isinstance(x, dict):
+            if "comp" in x:
+                if not inside_task:
+                    raise NotImplementedError("fstar: a comprehension inside a spec_fun, method or lemma is not "
+                                              "lowered yet (SPEC.md 'Comprehensions (v1)')")
+                if x["comp"].get("cond") != {"bool": True}:
+                    raise NotImplementedError("fstar: a filtered comprehension is not lowered yet "
+                                              "(SPEC.md 'Comprehensions (v1)')")
+            for v in x.values():
+                walk(v, inside_task)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v, inside_task)
+    walk(task.get("requires", []), True)
+    walk(task.get("ensures", []), True)
+    walk(body or [], True)
+    for k in ("spec_funs", "methods", "lemmas"):
+        walk(task.get(k, []), False)
+
+
 def _real_lit(n: int, d: int) -> str:
     """A t real literal n/d as F* text: a finite decimal with the `R` suffix (`1.5R`; a negative one as
     `(0.0R -. 1.5R)`, since `-.` is binary), or `((of_int n) /. (of_int d))` for a certificate's quotient with no
@@ -2040,6 +2084,8 @@ class Ctx:
             return {"seq": "seq"}
         if "_set" in e:
             return "set"   # SPEC.md "Finite sets" (2026-09-27): a ground set witness
+        if "comp" in e:
+            return "seq"   # SPEC.md "Comprehensions (v1)", PREDICT T16: a map whose elements are ints (comp_call)
         if "var" in e:
             return local.get(e["var"]) or self.tys[e["var"]]
         if "forall" in e or "exists" in e:
@@ -2178,6 +2224,101 @@ class Ctx:
             return f"({a} {RARITH[op]} {b})"
         raise ValueError(f"t -> fstar: not a real expression: {op!r}")
 
+    def comp_call(self, e: dict, env: dict, local: dict) -> str:
+        """SPEC.md "Comprehensions (v1)" in F* (PREDICT T16): the call of this shape's function (registered, with its
+        text, on first sight) in prefix form: a source `s` is `(s, Seq.length s)`, a source `s[0..e]` is `(s, e)`, a
+        range `[a, b)` is `(a, b - a)`, then the free variables of the body by name."""
+        c = e["comp"]
+        v = c["var"]
+        key = lower_dafny._comp_key(e)
+        fvs = lower_dafny._comp_free(e)
+        ftys = {}
+        for n in fvs:
+            t = local.get(n) or self.tys.get(n)
+            if t not in ("int", "seq", "bool"):
+                raise NotImplementedError("fstar: a comprehension over a name of this type is not lowered yet "
+                                          "(SPEC.md 'Comprehensions (v1)')")
+            ftys[n] = t
+        is_seq = "seq" in c
+        if is_seq and self.ty(c["seq"], local) != "seq":
+            raise NotImplementedError("fstar: a comprehension over a nested sequence is not lowered yet "
+                                      "(SPEC.md 'Comprehensions (v1)')")
+        local2 = dict(ftys, **{v: "int"})
+        if self.ty(c["body"], local2) != "int":
+            raise NotImplementedError("fstar: a comprehension whose elements are not integers is not lowered yet "
+                                      "(SPEC.md 'Comprehensions (v1)')")
+        if key not in _COMP_F:
+            k = len(_COMP_F) + 1
+            _COMP_F[key] = (k, self._comp_text(k, c, fvs, ftys, local2))
+        k = _COMP_F[key][0]
+        if is_seq:
+            src = c["seq"]
+            if isinstance(src, dict) and src.get("op") == "slice" and src["args"][1] == {"int": 0}:
+                args = [self.sx(src["args"][0], env, local), self.zx(src["args"][2], env, local)]
+            else:
+                base = self.sx(src, env, local)
+                args = [base, f"(Seq.length {base})"]
+        else:
+            lo = self.zx(c["lo"], env, local)
+            args = [lo, f"({self.zx(c['hi'], env, local)} - {lo})"]
+        args += [self.sx({"var": n}, env, local) if ftys[n] == "seq" else
+                 (self.bx({"var": n}, env, local) if ftys[n] == "bool" else self.zx({"var": n}, env, local))
+                 for n in fvs]
+        return f"(t_comp{k} {' '.join(args)})"
+
+    def _comp_text(self, k: int, c: dict, fvs: list, ftys: dict, local2: dict) -> str:
+        v = c["var"]
+        is_seq = "seq" in c
+        el = (lambda i: f"(Seq.index t_s {i})") if is_seq else (lambda i: f"(t_a + t_ix {i})")
+        body_i = self.zx(c["body"], {v: el("t_i")}, local2)
+        # the element in the ensures is spelled as in the body (`t_a + t_ix t_i` over a range): a partial body's
+        # index there must be typed from the precondition, whose quantifier is triggered on `t_ix`
+        plain_i = body_i
+        lower_verus._SCOPE.clear()
+        lower_verus._SCOPE.update(local2)
+        lower_verus._SCOPE_FUNS.clear()
+        lower_verus._SCOPE_FUNS.update({f["name"]: f for f in self.task.get("spec_funs", [])})
+        d = lower_verus.defined(c["body"])
+
+        def flat(x):
+            if isinstance(x, dict) and x.get("op") == "and":
+                return [y for a in x["args"] for y in flat(a)]
+            return [x]
+        # Dafny's split (lower_dafny._comp_defs, measured there on odd_positions, and again here): a conjunct that does
+        # not mention the element is stated once, as `t_n > 0 ==> ...`, since no element term triggers the quantifier
+        # before the slice or index it guards is typed; the rest is the per-element quantifier
+        parts = [x for x in flat(d) if x != lower_verus.TRUE and not lower_dafny._ground_true(x)]
+        fixed = [x for x in parts if not lower_dafny._mentions_var(x, v)]
+        per_el = [x for x in parts if lower_dafny._mentions_var(x, v)]
+        fv_bind = " ".join(f"({n}:{_tystr(ftys[n])})" for n in fvs)
+        fv_bind = (" " + fv_bind) if fv_bind else ""
+        pat = "(Seq.index t_s t_di)" if is_seq else "(t_ix t_di)"
+        if is_seq:
+            head = f"let t_comp{k} (t_s:Seq.seq int) (t_n:nat){fv_bind}"
+            pre = ["(t_n <= Seq.length t_s)"]
+            size, size_def = "t_n", ""
+        else:
+            head = f"let t_comp{k} (t_a:int) (t_n:int){fv_bind}"
+            pre = []
+            size, size_def = "t_m", "  let t_m : nat = (if t_n < 0 then 0 else t_n) in\n"
+        if fixed:
+            pre.append(f"(t_n > 0 ==> {self.prop(lower_verus._conj(fixed), {}, local2)})")
+        if per_el:
+            pre.append(f"(forall (t_di:nat).{{:pattern {pat}}} t_di < t_n ==> "
+                       f"{self.prop(lower_verus._conj(per_el), {v: el('t_di')}, local2)})")
+        req = " /\\ ".join(pre) if pre else "True"
+        size_ens = "t_n" if is_seq else "(if t_n < 0 then 0 else t_n)"
+        return (f"{head}\n"
+                f"  : Pure (Seq.seq int)\n"
+                f"    (requires ({req}))\n"
+                f"    (ensures (fun t_r -> Seq.length t_r == {size_ens} /\\\n"
+                f"      (forall (t_i:nat).{{:pattern (Seq.index t_r t_i)}} (t_i < {size_ens} /\\ t_i < Seq.length t_r) ==> "
+                f"Seq.index t_r t_i == {plain_i})))\n"
+                f"= {size_def.strip() + chr(10) + '  ' if size_def else ''}"
+                f"let t_f = (fun (t_i:nat{{t_i < {size}}}) -> {body_i}) in\n"
+                f"  Seq.init_index {size} t_f;\n"
+                f"  Seq.init {size} t_f\n")
+
     def sx(self, e: dict, env: dict, local: dict) -> str:
         """Seq-valued term. Through 2026-09-08 a seq position could only be
         a variable or a ground `_seq` literal (the certificate's own
@@ -2198,6 +2339,8 @@ class Ctx:
         already require."""
         if "var" in e and (local.get(e["var"]) or self.tys.get(e["var"])) == "seq":
             return env.get(e["var"], e["var"])
+        if "comp" in e:
+            return self.comp_call(e, env, local)
         if "_seq" in e:
             # A GROUND seq value, which only the refutation certificate
             # below produces (a witness substituting a concrete sequence
@@ -5984,8 +6127,10 @@ def _method_src(task: dict, m: dict, used: set) -> tuple[Ctx, str]:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "fstar", carried=frozenset({"real"}), lib=FSTAR_LIB)
+    tshape.abstain_unless_carried(task, body, "fstar", carried=frozenset({"real", "comp"}), lib=FSTAR_LIB)
+    _comp_refusal(task, body)                              # PREDICT T16: maps carried, the rest refused by name
     _LIB_USED.clear()
+    _COMP_F.clear()
     if tshape.uses_ops(body, task, {"floor", "ceil"}):
         # SPEC.md "Exact rationals (v1)" (2026-10-06): FStar.Real has neither
         raise NotImplementedError(
@@ -6161,7 +6306,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     rc = names.rename_comment(renames)
     if rc:
         parts.append(f"// {rc}")
-    parts[lib_slot:lib_slot] = _lib_defs()
+    parts[lib_slot:lib_slot] = _lib_defs() + _comp_defs_f()
     return "\n".join(parts)
 
 
