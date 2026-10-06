@@ -84,7 +84,7 @@ start_one() {  # name gguf port [context] [seconds idle before the model is unlo
   # the two models were measured to fill 7.6 of 8 GB. DAWNR_DRAFT=0 turns it off.
   local draft=()
   if [ "$1" = base ] && [ "${DAWNR_DRAFT:-1}" != 0 ] && [ "${BASE_DRAFT:-}" = mtp ] && { ! on_card || [ "${4:-4096}" -gt 4096 ]; }; then
-    draft=(--spec-type draft-mtp --spec-draft-n-max 5 --spec-draft-p-min 0.6)   # 5: +30% tokens/s over 3 on six CPU cores (PREDICT S2)
+    draft=(--spec-type draft-mtp --spec-draft-n-max 6 --spec-draft-p-min 0.6)   # 6: 17.7 tokens/s against 15.8 at 5 and 12.0 at 3 on six CPU cores, 8 fell back to 16.1 (PREDICT S2, S2b)
   fi
   # DAWNR_GPU_LAYERS: how many layers llama.cpp puts on the GPU (unset: its own choice; 0: CPU only)
   LD_LIBRARY_PATH="$(dirname "$LLAMA_SERVER"):${LD_LIBRARY_PATH:-}" \
