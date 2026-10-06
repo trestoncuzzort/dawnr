@@ -146,6 +146,8 @@ Stmt     ::= {"assign": [Id, Expr]}
                                                    as sugar (v1)", 2026-10-06) *)
                         "body": [Stmt+]}}                                   (* v1 *)
            | {"lemma": {"name": Id, "args": [Expr*]}}  (* v1; written `L(a, b);`; a no-op at run time *)
+           | {"break": true}                       (* since 2026-10-06; written `break;`; leaves the innermost loop *)
+           | {"continue": true}                    (* since 2026-10-06; written `continue;`; back to the loop's head *)
 
 SpecFun  ::= {"name": Id,
               "params": [ {"name": Id, "type": Type}* ],       (* any type since 2026-10-06 *)
@@ -488,6 +490,9 @@ assignment to the loop variable or index in the body, a bound or sequence
 that mentions a variable the body assigns, and a loop variable already in
 scope. No JSON form: a `for` is the `while` it expands to.
 
+A `continue` at the `for` body's own level expands to `i := i + 1;
+continue;` (SPEC.md "Early exits (v1)", 2026-10-06), so the step is taken.
+
 ### Comprehensions (v1)
 
 ```json
@@ -607,6 +612,18 @@ no invariant is needed to say so. That sentence is normative in SPEC.md rather
 than a detail of one lowering: havocking every mutable name proves a different
 theorem, and a task whose `ensures` rests on a variable the loop never assigns
 is provable under one reading and not the other.
+
+Since 2026-10-06 (SPEC.md "Early exits (v1)"), a loop body may hold
+`break;` (leave the innermost loop; the invariants need not hold there, and
+what holds after the loop on that path is the state at the break) and
+`continue;` (end the iteration; the invariants and the decrease are checked
+as at the end of the body), and a loop may be `while true`, which must then
+hold a `break` of its own or a `return`. Neither statement may be followed
+by another in its block, and neither may stand outside a loop. Written:
+`while true invariant 0 <= i and i <= len(s) decreases len(s) - i { if i ==
+len(s) { break; } if s[i] == 0 { break; } i := i + 1; }`.
+`tasks/index_of.t`, `tasks/find_zero.t` and `tasks/count_evens_skip.t` are
+the committed examples.
 
 ### Spec functions and recursion (gate 3)
 

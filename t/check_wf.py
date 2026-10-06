@@ -153,6 +153,9 @@ RULES: dict[str, str] = {
     "requires-bool": "each requires clause must be bool",
     "return-name": "return must name the task's return variable (Early exit)",
     "return-unreachable": "no statement follows a return in its block (Early exit)",
+    "exit-outside-loop": "break and continue belong to a loop body (Early exits)",
+    "exit-unreachable": "no statement follows a break or continue in its block (Early exits)",
+    "loop-exit": "a while true loop holds a break of its own or a return, or it never ends (Early exits)",
     "return-v0": "return is a v1 construct (Early exit)",
     "seq-lit-mixed": "a seq literal's elements are all of one type (Nested sequences; Compositional types)",
     # 2026-10-05: both names were used by _ty since sets landed (2026-09-27) and never defined, so the first set
@@ -175,7 +178,7 @@ RULES: dict[str, str] = {
     "strlib-types": "each string-library member's argument types must "
                     "match its signature (The string library)",
     "unbound": "a name must be bound before use (v0 and Gate 1 scope rule)",
-    "unknown-stmt": "a Stmt is one of assign/var/if/while/return, or a "
+    "unknown-stmt": "a Stmt is one of assign/var/if/while/return/break/continue, or a "
                     "lemma call (v0 Stmt; Gate 2; Lemmas)",
     "update-types": "update wants (seq<T>, int, T) for the seq's own element type T "
                     "(Sequences as values; Compositional types)",
@@ -1254,8 +1257,32 @@ def _check_returns(body, rname, errs):
             _check_returns(s["while"]["body"], rname, errs)
 
 
+def _has_own_exit(body: list) -> bool:
+    """SPEC.md "Early exits (v1)": a `break` at this loop's level (under ifs, not inside a nested loop, whose break
+    is its own) or a `return` anywhere in the body."""
+    for s in body:
+        if "break" in s or "return" in s:
+            return True
+        if "if" in s and (_has_own_exit(s["if"]["then"]) or _has_own_exit(s["if"]["else"])):
+            return True
+        if "while" in s and _returns_somewhere(s["while"]["body"]):
+            return True
+    return False
+
+
+def _returns_somewhere(body: list) -> bool:
+    for s in body:
+        if "return" in s:
+            return True
+        if "if" in s and (_returns_somewhere(s["if"]["then"]) or _returns_somewhere(s["if"]["else"])):
+            return True
+        if "while" in s and _returns_somewhere(s["while"]["body"]):
+            return True
+    return False
+
+
 def _check_stmts(body, env, funs, dtypes, ver, errs, assignable, lemmas=None,
-                 in_lemma=False):
+                 in_lemma=False, loop_depth=0):
     lemmas = {} if lemmas is None else lemmas
     for s in body:
         if "assign" in s:
@@ -1283,9 +1310,9 @@ def _check_stmts(body, env, funs, dtypes, ver, errs, assignable, lemmas=None,
             if _ty(c["cond"], env, funs, dtypes, ver, errs, set()) != "bool":
                 _e(errs, s, "if condition is not bool", "bool-cond")
             _check_stmts(c["then"], dict(env), funs, dtypes, ver, errs, set(assignable),
-                         lemmas, in_lemma)
+                         lemmas, in_lemma, loop_depth)
             _check_stmts(c["else"], dict(env), funs, dtypes, ver, errs, set(assignable),
-                         lemmas, in_lemma)
+                         lemmas, in_lemma, loop_depth)
         elif "while" in s:
             if ver == 0:
                 _e(errs, s, "while in a v0 task", "while-v0")
@@ -1299,8 +1326,12 @@ def _check_stmts(body, env, funs, dtypes, ver, errs, assignable, lemmas=None,
             for inv in w.get("invariants", []):
                 if _ty(inv, env, funs, dtypes, ver, errs, set()) != "bool":
                     _e(errs, s, "loop invariant is not bool", "loop-invariant-bool")
+            if w["cond"] == {"bool": True} and not _has_own_exit(w["body"]):
+                # SPEC.md "Early exits (v1)" (2026-10-06)
+                _e(errs, s, "while true without a break of its own or a return never ends (SPEC.md Early exits)",
+                   "loop-exit")
             _check_stmts(w["body"], dict(env), funs, dtypes, ver, errs, set(assignable),
-                         lemmas)
+                         lemmas, in_lemma, loop_depth + 1)
         elif "return" in s:
             if ver == 0:
                 _e(errs, s, "return in a v0 task", "return-v0")
@@ -1313,6 +1344,15 @@ def _check_stmts(body, env, funs, dtypes, ver, errs, assignable, lemmas=None,
             if s is not body[-1]:
                 _e(errs, s, "statement after return is unreachable (SPEC.md Early exit)",
                    "return-unreachable")
+        elif "break" in s or "continue" in s:
+            # SPEC.md "Early exits (v1)" (2026-10-06): inside a loop, last in its block
+            kind = "break" if "break" in s else "continue"
+            if ver == 0:
+                _e(errs, s, f"{kind} in a v0 task", "v0-frozen")
+            if loop_depth == 0:
+                _e(errs, s, f"{kind} outside a loop", "exit-outside-loop")
+            if s is not body[-1]:
+                _e(errs, s, f"statement after {kind} is unreachable (SPEC.md Early exits)", "exit-unreachable")
         elif "lemma" in s:
             if ver == 0:
                 _e(errs, s, "lemma call in a v0 task", "v0-frozen")

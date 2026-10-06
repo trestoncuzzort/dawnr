@@ -198,10 +198,11 @@ DETECTORS: dict[str, tuple[str, str]] = {
     "class": ("gap", "a class definition (t has no classes, no heap)"),
     "closure": ("gap", "a lambda, a nested def, or map/filter with a lambda"),
     "exception": ("gap", "try/except/raise"),
-    "unbounded-loop": ("gap", "while True, or a break/continue (t has no "
-                        "while-true, no continue, and a break is only in "
-                        "the fragment as a tail-position return, decision "
-                        "23 -- not distinguished here, see Method)"),
+    "unbounded-loop": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Early exits): while True, break "
+                        "and continue are t's own statements now (a while true needs a break of its own or a "
+                        "return, which every terminating Python loop has)"),
+    "loop-else": ("gap", "a loop's else clause (for/while ... else, run when no break fired): t has no such "
+                  "clause; written by hand with a flag"),
     "seq-slice-negative": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): a slice bound "
                             "that is a negative literal, s[-1:] or s[:-1], read as len(s) - k by the notation "
                             "(a non-literal negative bound is still not posed, undercounted here)"),
@@ -601,6 +602,8 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             test = node.test
             if isinstance(test, ast.Constant) and test.value is True:
                 tags["unbounded-loop"] = True
+            if node.orelse:
+                tags["loop-else"] = True         # SPEC.md "Early exits (v1)": no else clause on a loop
         elif isinstance(node, (ast.Break, ast.Continue)):
             tags["unbounded-loop"] = True
         elif isinstance(node, ast.Attribute):
@@ -1451,7 +1454,8 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("  and reads as the plain (non-negative) burden, an undercount of")
     w("  the two gaps in the same direction every other syntactic detector")
     w("  here accepts;")
-    w("- `unbounded-loop` fires on EVERY `break` and `continue`, not only")
+    w("- `unbounded-loop` (a burden since 2026-10-06, SPEC.md Early exits)")
+    w("  fires on EVERY `break` and `continue`, not only")
     w("  the ones outside coverage_census.py's tail-position exception")
     w("  (LIFTER-DECISIONS.md row 23: a break whose loop is the tail of the")
     w("  function, with a straight-line continuation, lifts to a return);")

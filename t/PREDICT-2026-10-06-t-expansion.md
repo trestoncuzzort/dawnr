@@ -281,3 +281,49 @@ quantification over the sequence type); `T_Concat`'s `Post` gives the lengths an
 item (a ghost lemma per `sum(a + b)` shape stated as an extra `Post` conjunct of a helper the task calls, or a
 statement body with a lemma call), its own registration. Column counts after this item: Verus `sum`/`pow`/`isqrt`
 tasks 5 of 5; F* `sum_tail` joins; SPARK `sum_tail` stays `timeout / refuted`.
+
+## T4 registered (2026-10-06 21:50Z, before any run): early exits, SPEC "Early exits (v1)": `break`, `continue`,
+`while true`
+
+The census: `unbounded-loop` is a gap on 4,403 problems (every `while True`, `break` and `continue`), the largest
+single gap left; the greedy order unlocks 194 function-shaped problems with it. Read first (receipt d8d236f078af):
+Dafny reference 8.14 (break and continue, labelled and not), the Verus guide's loops page, Python's compound
+statements; and a Dafny probe (21:40Z): an invariant false at a `break` is accepted and the exit path keeps what
+held there (`i % 2 == 0` with `i := i + 1; break;` verified `r == 1`), the invariant is checked at `continue`, and
+`while true` verifies with its `decreases`. Bars: (1) the two statements and the `while true` guard parse, print,
+round-trip (`surface.py --check`) and the lab's grammar check agrees; the checker refuses an exit outside a loop,
+a statement after one, and a `while true` with no exit of its own; (2) the interpreter unwinds `break`/`continue`
+to the innermost loop and the `for` sugar's `continue` takes the step; (3) a new twin move DROP-EXIT; (4) Dafny
+carries all three natively; the other six abstain by name (`tshape.has_exit`); three committed tasks (`index_of`,
+`find_zero`, `count_evens_skip`) Dafny `verified / refuted`; (5) the census re-tags `unbounded-loop` IN THE
+FRAGMENT and names the loop `else` clause as its own gap. Also in this landing, found while writing
+`count_evens_skip`: a comprehension over a prefix `s[0..i]` (the invariant) and over `s` (the ensures) were two
+Dafny functions of one shape, which no kernel can equate; the comprehension key becomes the shape (bound variable,
+condition, body, source type), one function per shape, so `t_comp1(s[0..|s|])` and `t_comp1(s)` meet by the
+slice axiom. What would falsify the design: Dafny not proving the prefix step of the counting invariant through the
+comprehension function's one unfolding (`s[0..i+1][..i] == s[0..i]`); then the task states its count by a spec
+function and the comprehension stays in the ensures, and the read says so.
+
+### T4 read (2026-10-06 22:40Z): early exits landed; the comprehension functions in Dafny now in prefix form.
+(1) `break;`, `continue;` and `while true` parse, print and round-trip (`surface.py --check`: 1,954 of 1,954
+well-formed corpus tasks); the lab's grammar check agrees with the parser on every program tested (the two new
+keywords, the two statement rules). The checker's three rules fire where registered (`exit-outside-loop`,
+`exit-unreachable`, `loop-exit`; fixtures in t/malformed) and a `break` inside a nested loop does not count as the
+outer `while true`'s exit. (2) The interpreter unwinds both exits to the innermost loop; the `for` sugar's
+`continue` takes the step (`i := i + 1; continue;`), measured by `count_evens_skip` against Python's own count and
+by a nested while whose `continue` stays its own. (3) DROP-EXIT added to the ladder (the twin that found
+`index_of` was NEGATE-COND; `find_zero`'s and `count_evens_skip`'s too). (4) Dafny carries all three natively,
+its rule t's (the 21:40Z probe); the three tasks `verified / refuted`; the other six kernels abstain by name.
+The falsifier fired on `count_evens_skip`: its invariant `c == len([y for y in s[0..i] if y % 2 == 0])` was not
+maintained while the prefix and the whole were calls on two sequences (`s[0..i+1][..i]` and `s[0..i]`), which
+Dafny does not equate unprompted. Taken instead of a spec function: the comprehension functions in PREFIX form,
+`t_compK(t_s, t_n)` over the first `t_n` elements (a source `s[0..e]` is `t_compK(s, e)`, any other source
+`t_compK(s, |s|)`), and `t_compK(t_a, t_n)` for a range with its index written `t_a + t_ix(t_di)` through the
+identity function `t_ix` (the term Dafny matches the precondition on, replacing the index sequence `t_range` of
+T3c); `count_evens_skip` then verifies by one unfolding, and the six earlier comprehension tasks (`evens`,
+`doubled`, `squares`, `diffs`, `every_other`, `odd_positions`) stay `verified / refuted` in Dafny and in Verus
+(whose spec fns are unchanged). A ground-true conjunct of the precondition (`2 != 0`) is no longer stated. (5) The
+census: `unbounded-loop` (4,403 problems) IN THE FRAGMENT; the loop `else` clause is the gap `loop-else` (61; the
+sole blocker for 1); in the fragment 1,713 -> 1,777 of 4,239 function-shaped (40.4% -> 41.9%). Not done, by
+name: Verus (a loop is a recursive proof fn there; `continue` is a recursive call and `break` an exit the
+function's contract does not describe), F*, SPARK, Lean, Rocq and Frama-C on bodies with an exit.

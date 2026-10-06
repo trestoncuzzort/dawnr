@@ -108,6 +108,8 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
     abstain_on_library(task, body, kernel, lib)
     if "comp" not in carried and has_comprehension(task, body):
         raise NotImplementedError(f"{kernel}: comprehensions are not lowered yet (SPEC.md 'Comprehensions (v1)')")
+    if "exit" not in carried:
+        abstain_on_exits(task, body, kernel)
 
 
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"})
@@ -175,6 +177,26 @@ def abstain_on_library(task: dict, body: list, kernel: str, carried: frozenset =
         raise NotImplementedError(f"{kernel}: {', '.join(used)} is not lowered yet (SPEC.md 'The library (v1)')")
     if "in" not in carried and seq_membership_used(task, body):
         raise NotImplementedError(f"{kernel}: membership in a seq is not lowered yet (SPEC.md 'The library (v1)')")
+
+
+def has_exit(task: dict, body: list) -> bool:
+    """Whether this body or a method's holds a `break`, a `continue` or a `while true` (SPEC.md "Early exits (v1)",
+    2026-10-06)."""
+    def walk(x) -> bool:
+        if isinstance(x, dict):
+            if "break" in x or "continue" in x:
+                return True
+            if "while" in x and isinstance(x["while"], dict) and x["while"].get("cond") == {"bool": True}:
+                return True
+            return any(walk(v) for v in x.values())
+        return isinstance(x, list) and any(walk(v) for v in x)
+    return walk(body or []) or walk(task.get("methods", []))
+
+
+def abstain_on_exits(task: dict, body: list, kernel: str) -> None:
+    if has_exit(task, body):
+        raise NotImplementedError(f"{kernel}: break, continue and while-true loops are not lowered yet "
+                                  f"(SPEC.md 'Early exits (v1)')")
 
 
 def has_comprehension(task: dict, body: list) -> bool:

@@ -5987,8 +5987,14 @@ _COMP_INDEX: dict = {}
 
 
 def _comp_key(e: dict) -> str:
+    """The comprehension's SHAPE (SPEC.md "Comprehensions (v1)", the lowering paragraph; 2026-10-06, with the early
+    exits): the bound variable, the condition, the body and whether the source is a sequence or a range. Two
+    comprehensions of one shape over different sources (a prefix `s[0..i]` and the whole `s`) share one spec fn,
+    and the kernel equates the two calls by its own sequence axioms; two of one shape over sources of different
+    element types would collide here (not seen; the first registered source types the function)."""
     import json
-    return json.dumps(e["comp"], sort_keys=True)
+    c = e["comp"]
+    return json.dumps({"var": c["var"], "cond": c["cond"], "body": c["body"], "range": "lo" in c}, sort_keys=True)
 
 
 def _comp_free(node: dict) -> list:
@@ -6224,6 +6230,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # SPEC.md "Exact rationals (v1)" (2026-10-06): Verus has no reals; a task that names one abstains by name
     tshape.abstain_on_reals(task, body, "verus")
     tshape.abstain_on_library(task, body, "verus", carried=VERUS_LIB)   # SPEC.md "The library (v1)" (2026-10-06)
+    tshape.abstain_on_exits(task, body, "verus")   # SPEC.md "Early exits (v1)" (2026-10-06): a loop here is a recursive fn
     _comp_register(task, body)   # SPEC.md "Comprehensions (v1)" (2026-10-06)
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Verus/Rust reserved word, before either lowering

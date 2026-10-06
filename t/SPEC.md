@@ -1862,6 +1862,11 @@ already declared in scope. A `return` inside the body is the early exit
 c and c <= i`), `zeros_for` (`for i in [0, n)` building a seq by
 concatenation), `any_neg_for` (`for x in s`, an early `return`).
 
+Since the early exits landed later the same day (SPEC "Early exits (v1)"), a
+`continue` at the `for` body's own level (under its `if`s, not inside a nested
+loop) expands to `i := i + 1; continue;`, so the step the sugar puts at the
+end of the body is still taken; a `break` needs nothing.
+
 ### Sorting (v1)
 
 Stated 2026-10-06, after the loop sugar, with the library pages on receipt
@@ -1946,8 +1951,11 @@ COMPARE-FLIP and BOUNDARY-SWAP reach `cond`, WRONG-VAR a free variable in
 scope, as a quantifier's does not). The interpreter evaluates the form
 directly.
 
-**Each lowering** emits one recursive function per comprehension in the
-file (`t_comp1`, `t_comp2`, ...), over the sequence (or the two bounds)
+**Each lowering** emits one recursive function per comprehension SHAPE in the
+file (`t_comp1`, `t_comp2`, ...: the bound variable, `cond`, `body` and the
+source's type; since the early-exits landing the same day, so that the
+same comprehension over a prefix `s[0..i]` and over `s` is one function
+and the two meet by the slice axiom), over the sequence (or the two bounds)
 and every free variable of `cond` and `body` other than the bound one,
 recursing from the end as the Std's `Filter` does, and gives it the ensures
 the shape admits: for `[x for x in s if p]` (a filter) every element of the
@@ -1957,26 +1965,33 @@ for `[e for i in [a, b)]` the length is `b - a` when `a <= b` and the
 element at `k` is `e` at `a + k`; for a filter-and-map, the length bound
 only. Dafny and Verus carry it (Verus with the ensures as a broadcast
 lemma, as for `rev`); F*, SPARK, Lean, Rocq and Frama-C abstain by name
-until built and measured. Dafny, since the stepped-slice landing later the same day (T3c), passes a
-range as the index sequence `t_range(a, b)` (`[a, ..., b - 1]`, with its
-length and `t_a + t_i` as ensures) so that every comprehension function
-has the one sequence shape, and gives the function the precondition the
-definedness rule above states, over the element as the Std's `Map` requires
-`f.requires(xs[i])`: `requires forall t_di :: 0 <= t_di < |t_s| ==> D[x :=
-t_s[t_di]]`, `D` the definedness formula of `cond` and of `body` under
-`cond` (the same formula every kernel's obligations use); the conjuncts of
-`D` that do not mention the element are stated once, as `|t_s| > 0 ==>
-...`, because the ensures' own well-formedness needs them before any
-element is at hand (measured on `odd_positions`: its slice bound `1 <=
-len(s)` was out of reach through the quantifier), and nothing is stated
-when `D` is `true`. Measured first: without it, `[s[i + 1] - s[i] for i in [0, len(s)
-- 1)]` failed Dafny's own well-formedness check inside the function and
-read `unproved` for the real and the twin alike (Verus verified it with
-the twin refuted); stated over a bare index it had no term for Dafny to
-match on and failed the same way (`index out of range`, 2026-10-06
-19:40Z); over the element, five probe shapes (an indexed map over a range,
-the stepped slice, a gather `s2[x]` over a sequence, a total body, a
-divisor with no mention of the element) all verified. The writer's side: `to_python.py` hands back
+until built and measured. Dafny, since the stepped-slice landing later the same day (T3c) and the
+early-exits landing after it (T4), writes every comprehension function in
+PREFIX form: over a sequence, `t_compK(t_s, t_n)` is the comprehension of
+the first `t_n` elements of `t_s` (`requires 0 <= t_n <= |t_s|`), called
+as `t_compK(s, |s|)` for a source `s` and as `t_compK(s, e)` for a source
+`s[0..e]`, so the comprehension over a prefix in a loop invariant and the
+one over the whole in the ensures are one function and one unfolding apart
+(measured: `count_evens_skip`, whose invariant `c == len([y for y in
+s[0..i] if y % 2 == 0])` was not maintained while the two were calls on
+different sequences, `s[0..i+1][..i]` and `s[0..i]`, which Dafny does not
+equate unprompted); over a range `[a, b)`, `t_compK(t_a, t_n)` is the
+comprehension of `t_a, ..., t_a + t_n - 1` (`t_n = b - a`, empty when
+negative), its index written `t_a + t_ix(t_di)` through the identity
+function `t_ix`, which gives Dafny a term to match the precondition on (a
+precondition over a bare index had none: `index out of range` inside the
+function, 2026-10-06 19:40Z). The precondition is the definedness rule
+above stated over the element as the Std's `Map` requires
+`f.requires(xs[i])`: `requires forall t_di :: 0 <= t_di < t_n ==> D[x :=
+t_s[t_di]]` (or `t_a + t_ix(t_di)`), `D` the definedness formula of `cond`
+and of `body` under `cond` (the same formula every kernel's obligations
+use); the conjuncts of `D` that do not mention the element are stated
+once, as `t_n > 0 ==> ...`, because the ensures' own well-formedness needs
+them before any element is at hand (measured on `odd_positions`), and
+nothing is stated when `D` is `true`. Measured first: without any
+precondition, `[s[i + 1] - s[i] for i in [0, len(s) - 1)]` failed Dafny's
+own well-formedness check inside the function and read `unproved` for the
+real and the twin alike (Verus verified it with the twin refuted). The writer's side: `to_python.py` hands back
 the Python comprehension as a tuple.
 
 **The committed tasks:** `evens` (`[x for x in s if x % 2 == 0]`, every
@@ -2029,6 +2044,70 @@ other step (a variable, a negative one with a bound) as the gap
 `s[2 * k + 1]`); with them `diffs` (`[s[i + 1] - s[i] for i in [0, len(s)
 - 1)]`), the indexed-body comprehension whose Dafny proof this landing
 repaired (the comprehension section's lowering paragraph).
+
+### Early exits (v1)
+
+Stated 2026-10-06, the fourth landing's second form, with the pages on
+receipt d8d236f078af read first: Dafny's `break` and `continue`
+(reference 8.14) transfer control out of, or to the head of, the innermost
+loop, and a probe (2026-10-06 21:40Z) measured its rule: a loop invariant
+false at a `break` is accepted and the exit path keeps what held there; at
+a `continue` the invariant is checked; `while true` verifies with its
+`decreases`. Verus writes the same loops as its own `while` with
+invariants (the guide's "Loops and invariants"); Python's `while` and
+`for` carry `break` and `continue`, and `while True` is the idiom for a
+loop whose exit is in its body. The census: `unbounded-loop` is a gap on
+4,403 problems (every `while True`, `break` and `continue`), the largest
+single gap left.
+
+**Two statements and one guard.**
+
+```
+{"break": true}      // break;     leaves the innermost enclosing loop
+{"continue": true}   // continue;  ends this iteration; control returns to the loop's head
+```
+
+and `while true` is the loop whose guard is the literal `true`. Both
+statements belong to a loop body (checker rule `exit-outside-loop`); no
+statement follows either in its block (`exit-unreachable`, as for
+`return`); a `while true` holds a `break` at its own level (under `if`s,
+not inside a nested loop) or a `return` anywhere in its body
+(`loop-exit`), since otherwise it never ends. The semantics is the
+standard package with two more exits: at a `continue`, the invariants must
+hold and `decreases` must have strictly decreased since the head, exactly
+as at the end of the body; at a `break`, the invariants need NOT hold, and
+control continues after the loop with the state as it stands there. After
+the loop, a kernel therefore knows the invariants and the negated guard on
+a normal exit, and on a `break` what held at it (path by path, as Dafny
+reasons); for `while true` there is no normal exit, so everything known
+after the loop comes from its breaks (and a `return` ends the task as
+before). `decreases` stays required on every loop and must be `>= 0`
+whenever the body runs, which for `while true` is every arrival at the
+head. The frame rule is unchanged: `break` and `continue` assign nothing.
+Definedness: nothing new.
+
+**The `for` sugar.** A `continue` at a `for` body's own level becomes
+`i := i + 1; continue;` in the expansion (the sugar's step sits at the end
+of the body, which a `continue` would skip); a `break` needs nothing.
+
+**The twins.** One new move, DROP-EXIT: a `break` or `continue` deleted,
+the forgotten early exit. A twin whose `while true` thereby loses its only
+exit is ill-formed (`loop-exit`) and never proposed; one that runs forever
+at the witness is undefined there and is not a certificate.
+
+**The lowerings.** Dafny carries all three as its own `break;`,
+`continue;` and `while true` (the probe above and the committed tasks).
+Verus, which writes a loop as a recursive proof function, and F*, SPARK,
+Lean, Rocq and Frama-C abstain by name on a body with an early exit until
+built and measured (`tshape.has_exit`). The hand-back writes Python's
+`break` and `continue`.
+
+**The committed tasks:** `index_of` (`while i < len(s)` with a `break` at
+the first match: `r <= len(s)`, the element at `r` when `r < len(s)`, none
+before it), `find_zero` (`while true` with two breaks, at the end and at
+the first zero), `count_evens_skip` (`for i, x in s` with `continue` on
+the odd elements, counting the rest: `c == len([y for y in s if y % 2 ==
+0])`, the invariant the same count over `s[0..i]`).
 
 ## The twins
 

@@ -3079,6 +3079,19 @@ is queued, and the ones running are read as they finish.
   `lemma_t_sum_create1` as SMT patterns (the append pattern alone did not fire on `t_sum (create 1 x)`; measured):
   `sum_tail` verified. SPARK not repaired, recorded in PREDICT T3d: the expression-function-only design has no place
   for a lemma call, and the sum-of-concatenation induction times out; its own design item.
-- **Next:** the matrix regenerated from a clean clone (70 tasks, after T3c and T3d); then G4 (`break`, `continue`,
-  `while true`), G5 maps, G6 records and options, G7 the string library's missing members; SPARK's `sum` lemma as a
-  design item.
+- **The matrix regenerated from a clean clone (10-06 22:00Z, at 981e0783):** 70 tasks; `cube`, `root_floor` and
+  `sum_tail` verified with the twin refuted in Verus, `sum_tail` in F*; SPARK `sum_tail` stays timeout / refuted.
+- **G4 landed (10-06 22:40Z), early exits:** `break;`, `continue;` and `while true` (SPEC "Early exits (v1)"):
+  the invariants need not hold at a break (the exit path keeps its state), hold at a continue, and a `while true`
+  holds a break of its own or a return (checker rules `exit-outside-loop`, `exit-unreachable`, `loop-exit`); the
+  `for` sugar's `continue` takes the step; DROP-EXIT joins the twin ladder; Dafny carries all three natively (its
+  rule measured by a probe), the other six abstain by name. Three committed tasks (`index_of`, `find_zero`,
+  `count_evens_skip`) Dafny verified with the twin refuted. Found by `count_evens_skip` and repaired: Dafny's
+  comprehension functions are now in PREFIX form (`t_compK(s, e)` for a source `s[0..e]`, `t_compK(s, |s|)`
+  otherwise; a range as its lower bound and length with the index through the identity function `t_ix`), so a
+  comprehension over a prefix in an invariant and over the whole in the ensures are one unfolding apart; the six
+  earlier comprehension tasks unchanged in both kernels. Census: `unbounded-loop` (4,403 problems) in the
+  fragment, the loop `else` clause the gap `loop-else` (61); 1,713 -> 1,777 function-shaped problems in the
+  fragment (41.9%).
+- **Next:** the matrix regenerated from a clean clone (73 tasks); then G5 maps, G6 records and options, G7 the
+  string library's missing members; Verus on early exits and SPARK's `sum` lemma as design items.

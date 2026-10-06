@@ -441,6 +441,14 @@ def _c_drop_guard(body, scope):
                            else {"op": "and", "args": rest})
 
 
+def _c_drop_exit(body, scope):
+    """SPEC.md "Early exits (v1)" (2026-10-06): a `break` or `continue` deleted, the forgotten early exit. A twin
+    whose `while true` thereby loses its only exit is ill-formed (`loop-exit`) and `_ill_formed` drops it."""
+    for p, s, _ in _stmts(body, scope):
+        if "break" in s or "continue" in s:
+            yield _splice(body, p, [])
+
+
 _INT_ROOTED_OPS = ("neg", "len", "*", "-", "div", "mod",
                    # SPEC.md "The library (v1)" (2026-10-06); `_c_wrong_constant` reads the site's type first,
                    # so a real min/max/abs/sum never takes an int constant through this list
@@ -562,6 +570,7 @@ EXTENSIONAL = (("collapse-if", _c_collapse_if),
                ("wrong-var", _c_wrong_var),
                ("swap-ctor", _c_swap_ctor),
                ("drop-guard", _c_drop_guard),
+               ("drop-exit", _c_drop_exit),
                ("wrong-constant", _c_wrong_constant),
                ("wrong-operator", _c_wrong_operator))
 
