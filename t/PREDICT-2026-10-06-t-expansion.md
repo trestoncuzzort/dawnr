@@ -251,3 +251,33 @@ problems, in the fragment), `seq-slice-reverse` (`s[::-1]`, 662, in the fragment
 canonical, 7,150 as written, 450 refused). Unit tests: `t/test_slice_step.py` (7) and `test_comprehensions.py`
 updated for the index sequence. Not touched: a variable step (written as the comprehension by hand), clamping
 (t's slice is undefined out of range, Python's clamps).
+
+## T3d registered and read in one sitting (2026-10-06 21:10Z): the three library proofs the kernels did not reach
+alone (the roadmap's item after the stepped slices)
+
+Registered before the fix runs, from the kernels' own messages on the lowered files (`cube`, `root_floor`, `sum_tail`;
+receipt 458fc843896b): Verus `cube` — `r == t_pow(x, 3)` unproved, since fuel unfolds `t_pow(x, 3)` to `x * (x *
+(x * 1))` and the body's `x * x * x` is the same number only to the nonlinear solver; Verus `root_floor` — the
+library's own `t_isqrt_spec` lemma failed its postcondition `n < (t_isqrt(n) + 1) * (t_isqrt(n) + 1)`, the step
+`(r + 1)^2 < (r + 2)^2` being nonlinear; Verus and F* `sum_tail` — `sum(s + [x]) == sum(s) + x` needs an induction
+the definition does not give; SPARK `sum_tail` — timeout on the same induction. Bars: each kernel's `verified /
+refuted` on its task without a regression on the other tasks that use `sum`, `pow` or `isqrt` (`digit_sum`,
+`sum_one`).
+
+Read: **Verus** — `t_sum_add` (`t_sum(s + t) == t_sum(s) + t_sum(t)`, induction on `t` with one extensional step,
+vstd's `lemma_fold_left_split` shape) and `t_sum_prefix` (`t_sum(s.subrange(0, j))` one step) as broadcast lemmas
+brought in inside the proof fn; the isqrt lemma's nonlinear step stated to the nonlinear solver with `r >= 0` as
+its one fact; a bridge for every `pow(e, k)` with a literal `k` in the spec over the parameters: `t_pow(e, k) ==
+e * ... * e` by `reveal_with_fuel` plus the nested-to-flat identity by `nonlinear_arith` alone. `cube`,
+`root_floor`, `sum_tail` `verified / refuted`; `digit_sum`, `sum_one` unchanged (`verified / refuted`). **F*** —
+`lemma_t_sum_append` by induction with `Seq.lemma_eq_intro` and an SMT pattern; the pattern alone left `sum_tail`
+unproved while an explicit call proved it (a `t_sum (Seq.create 1 x)` that a lemma instance introduces is not
+unfolded by the encoding's fuel), so `lemma_t_sum_create1` with its own pattern states that one fact; `sum_tail`
+verified (`All verification conditions discharged`). **SPARK** — not fixed, recorded: the lowering emits a package
+spec of expression functions only (its own design note: "statement lists are compiled" into one expression), so no
+lemma procedure can be called from a task, and a congruence over two sequences cannot be stated as a `Post` (no
+quantification over the sequence type); `T_Concat`'s `Post` gives the lengths and the elements, and the step
+`T_Sum_To (S & [X], Len S) = T_Sum_To (S, Len S)` is an induction gnatprove times out on. The repair is a design
+item (a ghost lemma per `sum(a + b)` shape stated as an extra `Post` conjunct of a helper the task calls, or a
+statement body with a lemma call), its own registration. Column counts after this item: Verus `sum`/`pow`/`isqrt`
+tasks 5 of 5; F* `sum_tail` joins; SPARK `sum_tail` stays `timeout / refuted`.

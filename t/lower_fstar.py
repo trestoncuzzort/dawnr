@@ -1553,7 +1553,24 @@ _LIB_USED: set = set()
 FSTAR_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in"})
 _LIB_TEXT = {
     "t_sum": "let rec t_sum (s:Seq.seq int) : Tot int (decreases (Seq.length s))\n"
-             "= if Seq.length s = 0 then 0 else t_sum (Seq.slice s 0 (Seq.length s - 1)) + Seq.index s (Seq.length s - 1)\n",
+             "= if Seq.length s = 0 then 0 else t_sum (Seq.slice s 0 (Seq.length s - 1)) + Seq.index s (Seq.length s - 1)\n"
+             # the sum of a concatenation (2026-10-06, the library proofs item): induction on the right operand, one
+             # extensional step per case (Seq.lemma_eq_intro; FStar.Seq.Properties' lemma_split is the shape), as an
+             # SMT pattern so a `sum(s + t)` in a spec needs no call; no prefix lemma here, since a pattern on
+             # t_sum (Seq.slice s 0 j) would match the definition's own recursive call and loop
+             "let rec lemma_t_sum_append (s:Seq.seq int) (t:Seq.seq int)\n"
+             "  : Lemma (ensures t_sum (Seq.append s t) == t_sum s + t_sum t) (decreases (Seq.length t))\n"
+             "    [SMTPat (t_sum (Seq.append s t))]\n"
+             "= if Seq.length t = 0 then Seq.lemma_eq_intro (Seq.append s t) s\n"
+             "  else begin\n"
+             "    let n = Seq.length t in\n"
+             "    lemma_t_sum_append s (Seq.slice t 0 (n - 1));\n"
+             "    Seq.lemma_eq_intro (Seq.slice (Seq.append s t) 0 (Seq.length s + n - 1)) (Seq.append s (Seq.slice t 0 (n - 1)))\n"
+             "  end\n"
+             # the sum of a one-element literal, as a pattern: a `t_sum (Seq.create 1 x)` that a lemma instance
+             # introduces is not unfolded by the SMT encoding's fuel (measured: the append lemma alone left
+             # `sum(s + [x])` unproved while an explicit call proved it), so the fact is stated once more here
+             "let lemma_t_sum_create1 (x:int) : Lemma (ensures t_sum (Seq.create 1 x) == x) [SMTPat (t_sum (Seq.create 1 x))] = ()\n",
     "t_rsum": "let rec t_rsum (s:Seq.seq real) : GTot real (decreases (Seq.length s))\n"
               "= if Seq.length s = 0 then 0.0R else t_rsum (Seq.slice s 0 (Seq.length s - 1)) +. Seq.index s (Seq.length s - 1)\n",
     "t_gcd": "let rec t_gcdn (a:nat) (b:nat) : Tot nat (decreases b) = if b = 0 then a else t_gcdn b (a % b)\n"

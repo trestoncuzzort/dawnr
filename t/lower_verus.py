@@ -5072,6 +5072,9 @@ class _V1:
                 lib_lines.append(f"    reveal_with_fuel({fn}, 6);")
         if "isqrt" in lib_used:
             lib_lines.append("    broadcast use t_isqrt_spec;")
+        if "sum" in lib_used:
+            lib_lines.append("    broadcast use t_sum_add;")
+            lib_lines.append("    broadcast use t_sum_prefix;")
         if "rev" in lib_used:
             lib_lines.append("    broadcast use t_rev_spec;")
         for key, (k, _node) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
@@ -5081,6 +5084,23 @@ class _V1:
         for a in _sort_args(task.get("requires", [])) + _sort_args(task.get("ensures", [])):
             if _free_vars(a) <= param_names:
                 line = f"    t_sort_spec({expr(a)});"
+                if line not in lib_lines:
+                    lib_lines.append(line)
+        # pow(e, k) with a literal k in the spec (2026-10-06, the library proofs item): fuel unfolds t_pow(e, k) to
+        # the right-nested product e * (e * (... * 1)), and the left-associated product a body writes (e * e * e) is
+        # the same number only to the nonlinear solver; the identity is stated to it alone (it sees no outside
+        # fact, Verus guide nonlinear.html), and the plain solver joins the two by congruence
+        for a, k in _pow_literals(task.get("requires", []) + task.get("ensures", [])):
+            if _free_vars(a) <= param_names:
+                e = expr(a)
+                nest = "1"
+                for _ in range(k):
+                    nest = f"({e} * {nest})"
+                flat = e
+                for _ in range(k - 1):
+                    flat = f"({flat} * {e})"
+                line = (f"    assert(t_pow({e}, {k}) == {flat}) by {{ reveal_with_fuel(t_pow, {k + 1}); "
+                        f"assert({nest} == {flat}) by(nonlinear_arith); }}")
                 if line not in lib_lines:
                     lib_lines.append(line)
         main_lines = lib_lines + main_lines
@@ -5908,7 +5928,16 @@ _VLIB = {
     "max": "pub open spec fn t_max(a: int, b: int) -> int { if a < b { b } else { a } }\n",
     "abs": "pub open spec fn t_abs(a: int) -> int { if a < 0 { -a } else { a } }\n",
     "sum": ("pub open spec fn t_sum(s: Seq<int>) -> int\n    decreases s.len(),\n"
-            "{ if s.len() == 0 { 0 } else { t_sum(s.drop_last()) + s.last() } }\n"),
+            "{ if s.len() == 0 { 0 } else { t_sum(s.drop_last()) + s.last() } }\n"
+            # the sum of a concatenation and of a prefix (2026-10-06, the library proofs item): vstd's own
+            # lemma_fold_left_split is the shape, induction on the right operand with one extensional step
+            "pub broadcast proof fn t_sum_add(s: Seq<int>, t: Seq<int>)\n"
+            "    ensures #[trigger] t_sum(s + t) == t_sum(s) + t_sum(t),\n    decreases t.len(),\n"
+            "{ if t.len() == 0 { assert(s + t =~= s); } else { t_sum_add(s, t.drop_last()); "
+            "assert((s + t).drop_last() =~= s + t.drop_last()); } }\n"
+            "pub broadcast proof fn t_sum_prefix(s: Seq<int>, j: int)\n    requires 0 < j <= s.len(),\n"
+            "    ensures #[trigger] t_sum(s.subrange(0, j)) == t_sum(s.subrange(0, j - 1)) + s[j - 1],\n"
+            "{ assert(s.subrange(0, j).drop_last() =~= s.subrange(0, j - 1)); }\n"),
     "gcd": ("pub open spec fn t_gcdn(a: nat, b: nat) -> nat\n    decreases b,\n"
             "{ if b == 0 { a } else { t_gcdn(b, a % b) } }\n"
             "pub open spec fn t_gcd(a: int, b: int) -> int { t_gcdn(t_abs(a) as nat, t_abs(b) as nat) as int }\n"),
@@ -5919,7 +5948,10 @@ _VLIB = {
               "pub broadcast proof fn t_isqrt_spec(n: int)\n    requires n >= 0,\n"
               "    ensures 0 <= #[trigger] t_isqrt(n), t_isqrt(n) * t_isqrt(n) <= n, n < (t_isqrt(n) + 1) * (t_isqrt(n) + 1),\n"
               "    decreases n,\n"
-              "{ if n > 0 { t_isqrt_spec(n - 1); } }\n"),
+              # the step (r + 1)^2 < (r + 2)^2 is nonlinear: stated to Z3's nonlinear solver with r >= 0 as its
+              # one fact (Verus guide, nonlinear.html; 2026-10-06, the library proofs item)
+              "{ if n > 0 { t_isqrt_spec(n - 1); let r = t_isqrt(n - 1); "
+              "assert((r + 1) * (r + 1) < (r + 2) * (r + 2)) by(nonlinear_arith) requires r >= 0; } }\n"),
     "rev": ("pub open spec fn t_rev<A>(s: Seq<A>) -> Seq<A>\n    decreases s.len(),\n"
             "{ if s.len() == 0 { Seq::empty() } else { seq![s.last()] + t_rev(s.drop_last()) } }\n"
             "pub broadcast proof fn t_rev_spec<A>(s: Seq<A>)\n"
@@ -6060,6 +6092,22 @@ def _comp_blocks(task: dict, body: list) -> list:
             f"if {expr(c['cond'])} {{ t_p.push({expr(c['body'])}) }} else {{ t_p }} }} }}\n"
             f"pub broadcast proof fn t_comp{k}_spec({', '.join(params)})\n    ensures {', '.join(ens)},\n    decreases {size},\n"
             f"{{ if !({base}) {{ {rec_call}; }} }}\n")
+    return out
+
+
+def _pow_literals(x) -> list:
+    """Every pow(e, k) with a literal 2 <= k <= 8 under x, as (e, k) pairs in reading order."""
+    out = []
+    if isinstance(x, dict):
+        args = x.get("args", [])
+        if x.get("op") == "pow" and len(args) == 2 and isinstance(args[1], dict) and set(args[1]) == {"int"} \
+                and 2 <= args[1]["int"] <= 8:
+            out.append((args[0], args[1]["int"]))
+        for v in x.values():
+            out += _pow_literals(v)
+    elif isinstance(x, list):
+        for v in x:
+            out += _pow_literals(v)
     return out
 
 
