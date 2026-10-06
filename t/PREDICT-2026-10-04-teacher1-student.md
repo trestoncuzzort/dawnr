@@ -6,7 +6,7 @@
 > A second correction that day holds each specification to inputs larger than the examples as well; the rows are
 > restated again in [LARGER-INPUTS-2026-10-05.md](LARGER-INPUTS-2026-10-05.md).
 
-Registered 2026-10-04 01:26Z (commit 3da752b6), while the teacher round's documents are still being graded
+Registered 2026-10-04 01:26Z (commit d947a6dd), while the teacher round's documents are still being graded
 (`t/PREDICT-2026-10-03-teacher-round-bedrock.md`). RL left every unseen measurement where it was
 (`t/PREDICT-2026-10-01-rl-on-the-student.md`, outcome), and every measurement since 2026-09-30 says the student
 lacks documents that reach the top tier. This round adds the teacher's and changes nothing else.
@@ -80,7 +80,7 @@ specification, 42 answered, all 42 pass their tests; **21 proved by at least one
 six, 12 by all seven**. The shipped recipe's seed 3, the same seed on v3's rows alone: 17 and 8. S1 holds for seed 3;
 S2 and Section 1 wait for seeds 1 and 2.
 
-## A held-out leak in these rows, found 2026-10-04 07:26:45Z (commit 52523806; after training, before any seed's result is reported here)
+## A held-out leak in these rows, found 2026-10-04 07:26:45Z (commit a5f9ba2b; after training, before any seed's result is reported here)
 
 The leak check (build_v5's: the program or the specification, name normalised, against the 33 held-out
 specification-given questions) compares the printed task including its header's `gate` line. One appended

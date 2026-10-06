@@ -26,8 +26,8 @@ thing `AGENTS.md` rule 4 exists to prevent.
 `git merge-base --is-ancestor r12-blockers HEAD` failed in this worktree (it
 was on an unrelated branch), so `git reset --hard r12-blockers` was run per
 the task's instruction. The lab's `~/tup` was 21 commits behind
-(`0c65f0df` → `ef4c9a6b`, fast-forwarded with `git pull --ff-only origin
-r12-blockers`). Both machines are at **`ef4c9a6b`**, which matches
+(`df532651` → `4b79f3fc`, fast-forwarded with `git pull --ff-only origin
+r12-blockers`). Both machines are at **`4b79f3fc`**, which matches
 `origin/r12-blockers`.
 
 ## 1. Prompts staged
@@ -59,7 +59,7 @@ refusals match exactly; the specification-twin gate refused 138 here against
 read as describing a held-out or excluded problem is one fewer prompt, not a
 wrong one let through). `t/r12-dev-ids.json`, `t/decontamination-2026-09-21.json`
 and `t/decontamination-behavioural-2026-09-25.json` are byte-identical between
-`0c65f0df` and `ef4c9a6b` (`git log` on those three paths over that range is
+`df532651` and `4b79f3fc` (`git log` on those three paths over that range is
 empty), and none of the 24 files that did change touch `spec_check.py`,
 `surface.py` or the pool loader, so the five-prompt difference is not from
 anything that changed between the two commits; it was not chased further, since

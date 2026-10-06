@@ -107,11 +107,11 @@ capability has to come from the corpus.
   **Measured the same evening** (`t/PREDICT-2026-09-30-cached-decoding-pick.md`): the key-value
   cache alone, which the 2026-09-19 finding had left off on CUDA after a 128-token measurement,
   gives 7 times the throughput at the round's lengths with byte-equal replies. CUDA default flipped
-  (d01a7a4a); the round launcher takes `--use-cache` after this round. Batching stays queued
+  (11230998); the round launcher takes `--use-cache` after this round. Batching stays queued
   behind it.
 - **Activation checkpointing** is inherited from the init checkpoint by the continuation. A core
   trained on an 80 GB card with it off ran out of memory at batch 16 x 2048 on the 16 GB card
-  (2026-09-30 05:55Z). Fixed the same morning: `--gradient-checkpointing` (commit eee3c9c6, the
+  (2026-09-30 05:55Z). Fixed the same morning: `--gradient-checkpointing` (commit 5f80a7e1, the
   loss and every gradient tested equal).
 - **Launchers** under `~/scratch` marked a lane done after a failed stage; the r12 core launcher
   now stops on the first failure.

@@ -9,7 +9,7 @@ looking at hand trials and at the dev half; **no test task has been run**.
 ## What was measured on the dev half (not a prediction)
 
 The installed base model (Qwen3.5-4B at 4 bits, the 0.8B of its family drafting) on the desktop's CPU, 12 cores,
-no graphics card used, commit 3f4acd9c plus this file's task set: **19 of 20 done**, nothing touched that the
+no graphics card used, commit ddd3658f plus this file's task set: **19 of 20 done**, nothing touched that the
 task gave no reason to touch, 49 model calls, 78,924 tokens read of which 76,551 came from the server's cache,
 1,522 written at 23.5 a second, 87.6 seconds for the twenty. The one miss: asked which files would be left if the
 `.log` files were deleted (there were only `.log` files), it listed their names without the extension. It deleted
@@ -42,7 +42,7 @@ large file, a document that is not plain text, the network, or anything outside 
 setting, a program left running). One model on one machine. The checks are substring and exact-content checks
 written with the tasks; an answer can satisfy them and still say something else that is wrong.
 
-## Outcome, 2026-10-05 14:32Z (commit f6bdf872, the desktop's CPU, the graphics card not used)
+## Outcome, 2026-10-05 14:32Z (commit bde74e9d, the desktop's CPU, the graphics card not used)
 
 | | bar | test half (20 tasks) | dev half, for comparison |
 |---|---|---:|---:|
@@ -103,7 +103,7 @@ A5 fails: a change since the first run lost tasks; it is found by running the de
 out, and that change goes. A6 fails: as A2. A8 fails: the layer's gain did not carry to these tasks; said with
 the number.
 
-## Outcome of A5 to A8, 2026-10-05 15:29Z (commit ddd98f5c, the same CPU)
+## Outcome of A5 to A8, 2026-10-05 15:29Z (commit 68553959, the same CPU)
 
 | | bar | second reading | first reading |
 |---|---|---:|---:|
@@ -143,7 +143,7 @@ B1 fails: the misses are sorted into the model's and the interface's by reading 
 interface's are fixed first. B2 fails: as A2. B3 fails: the answer is checked against the journal before it is
 shown. B4 fails: said with the number.
 
-## Outcome of B1 to B4, 2026-10-05 15:47Z (commit d028a427, the desktop's CPU)
+## Outcome of B1 to B4, 2026-10-05 15:47Z (commit 82bc13c2, the desktop's CPU)
 
 | | bar | the harder test half (15 tasks) |
 |---|---|---:|
@@ -255,7 +255,7 @@ drivers apart, and is kept as it is. C2 fails: the task and the command are publ
 before anything else. C3 fails: as B3. C4 fails: what was changed for the third set cost the first two, and the
 change that did it is found by reading the missed tasks' steps. C5 fails: said with the number.
 
-## Outcome of C1 to C5, 2026-10-05 17:15Z (commit 4c55ec6c, the desktop's CPU)
+## Outcome of C1 to C5, 2026-10-05 17:15Z (commit c0d65e37, the desktop's CPU)
 
 | | bar | the three test halves (46 tasks) |
 |---|---|---:|
@@ -359,7 +359,7 @@ task. D3 fails: the line is published and the hole closed before anything else i
 said with the number. D6 or D7 fails: what was changed after C cost more than it bought, and the change that did
 it is found from the missed tasks' steps.
 
-## Outcome of D1 to D7, 2026-10-05 18:07Z (commit 52a0e94c, the desktop's CPU)
+## Outcome of D1 to D7, 2026-10-05 18:07Z (commit 05c429b2, the desktop's CPU)
 
 | | bar | read |
 |---|---|---:|
@@ -495,7 +495,7 @@ does not buy what the dev half suggested, and the size table above (four tasks i
 default stays the 4B either way, since nothing on the desktop can hold the 35B. E4 fails: each case is published.
 E5 fails: said with the numbers.
 
-## Outcome of E1 to E5, 2026-10-05 19:46Z (commit 44ccc59c, one 48 GB card)
+## Outcome of E1 to E5, 2026-10-05 19:46Z (commit 567f40be, one 48 GB card)
 
 | | bar | read |
 |---|---|---:|
@@ -573,7 +573,7 @@ way under WSL) or the arithmetic's (another card, another order of sums, another
 one is said per task. G3 fails: published with the case. G4 or G5 fails: said with the numbers, and the settings
 that cost the speed are looked for before anything else is built.
 
-## Outcome of G1 to G5, 2026-10-05 21:23Z (commit 693edaeb, the laptop's 8 GB card)
+## Outcome of G1 to G5, 2026-10-05 21:23Z (commit 39890bd7, the laptop's 8 GB card)
 
 | | bar | read |
 |---|---|---:|
@@ -781,7 +781,7 @@ H1 or H2 fails: each miss is read step by step; a line from the table that the m
 wording to fix, a line it took in another spelling is the judge's. H3 or H4 fails: published with the case. H5
 fails: the routing is fixed before anything else.
 
-## Outcome of H1 to H5, 2026-10-05 23:41Z (commit aae1b0e7; the laptop, the untaught 4B from the desktop's CPU)
+## Outcome of H1 to H5, 2026-10-05 23:41Z (commit ac9bf861; the laptop, the untaught 4B from the desktop's CPU)
 
 | | bar | read |
 |---|---|---:|
@@ -818,7 +818,7 @@ rule added for one reading (`type` as a file reader) can refuse the very line an
 **The untaught model's counts, final, 2026-10-06 01:52Z (the taught model at step 30 of 176).** Between the first
 reading of the 660 and the taught model's, the front door and the judge changed (the loop of moves called an order
 mistake; two recorded lines in a row taken as the one they make; a reset that moves the branch handed over), so the
-untaught 4B was read again at the commit both are compared at (a2ff575f): **taught families 415 of 530, held-out
+untaught 4B was read again at the commit both are compared at (d931c3b8): **taught families 415 of 530, held-out
 84 of 130, 33 tasks with a file touched or a line let through unasked, 6.33 model calls a task done, 355 tokens
 written a task** (the first reading: 413, 88, 40, 6.30, 354: the same reading within noise, nine tasks changed
 hands). The bars stand at: **F1 at least 458 of 530; F2 at least 81 of 130; F3 at most 33 tasks; F4 at most 6.33

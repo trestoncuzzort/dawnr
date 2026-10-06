@@ -75,14 +75,14 @@ each time in the specification stage, the second time near 122 GB: a written spe
 itself inside a specification function, doubling it at every step, and `join` and `replace` were the two sequence
 operations the interpreter let outgrow `MAX_SEQ` (the fault handler's traceback, `~/scratch/teacher3/pyfirst-1b.log`).
 Both now raise `Budget` past `MAX_SEQ`, as `fill` and seq `+` already did, and `t/spec_quality.py` gives one
-evaluation 60 s of wall clock (bfde8ba6). Seeds 2 and 3 finished the whole route in about 14 minutes, so neither bound
+evaluation 60 s of wall clock (0df40b53). Seeds 2 and 3 finished the whole route in about 14 minutes, so neither bound
 could have changed what they kept. Seed 1's route runs again with them, on the first of the lab's cards the teacher
 round 4 frees; same model, command and ids. Predictions stand.
 
 **Before seed 1 is measured, 01:13Z on 2026-10-05:** the second run (00:37Z) kept its memory at 2.6 GB, so the interpreter's
 caps held, but its specification stage went 25 minutes without an answer: one slow specification, evaluated on every
 test and every mutant at up to 60 s each. `t/spec_quality.py` now also bounds a whole specification's scoring (120 s,
-past which it is unscorable) and gives one evaluation 10 s (7174b736). Rescored under these clocks, every one of the 871
+past which it is unscorable) and gives one evaluation 10 s (af16aec6). Rescored under these clocks, every one of the 871
 specifications seeds 2 and 3 scored reads the same (the slowest took 0.08 s), so neither seed's measurement could have
 moved. Seed 1's route runs a third time with them. Predictions stand.
 

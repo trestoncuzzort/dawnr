@@ -21,7 +21,7 @@ counted by reason:
   - the same program, its own name aside, is a training document;
   - the same specification, its own name aside, is a training document.
 
-The first version of this file (8fd9f3ce) built rows from every document. All of the corpus's
+The first version of this file (a763b388) built rows from every document. All of the corpus's
 validation documents were therefore in the training rows, and nothing was held out. Measured on
 the r12 corpus at seed 1338: 55 documents held out by the hash; 14 share a problem with the
 English or debugging rows, 6 are a renamed copy of a training document's program and 2 of its

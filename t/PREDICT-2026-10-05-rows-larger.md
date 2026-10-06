@@ -20,7 +20,7 @@ seeds; they are a separate matter and stay in.)
 - **Rows:** the round-4 rows less those 384: 5,095 rows, sha256 `e1e13bd1923bad7b…`. Nothing is added. (The count
   happens to equal dawnr v5's; the sets are different.)
 - **Recipe, tree and instrument:** exactly the round-4 seeds' (`PREDICT-2026-10-05-teacher4-student.md`): Qwen3.5-4B,
-  `t/student_sft.py`, seed 1, tree `bf23d4ee`; the clean 182 by the scoreboard's route, the 73 specification
+  `t/student_sft.py`, seed 1, tree `5a5acc1f`; the clean 182 by the scoreboard's route, the 73 specification
   questions, the wider panel. Scored with the larger inputs (`t/score_levels.py --larger`), the reading of record
   since today; the reading without them is reported beside it.
 - **One seed**, on a lab card that also holds small measurement servers. A seed is a story, not yet a number; the
@@ -46,8 +46,8 @@ seeds; they are a separate matter and stay in.)
 
 ## A note on the tree (2026-10-05 10:55Z, before any result)
 
-This registration names tree `bf23d4ee`. The lab's checkout is fast-forwarded by the grading scripts, and it was at
-`8836cdec` when this run started (its own log says so). Between the two commits the files the recipe runs
+This registration names tree `5a5acc1f`. The lab's checkout is fast-forwarded by the grading scripts, and it was at
+`3ce62a51` when this run started (its own log says so). Between the two commits the files the recipe runs
 (`t/student_sft.py`, `t/spec_first.py`, `t/score_spec_given.py` and what they import) differ by two
-well-formedness rules for set literals (`979e62f3`) and one added function nothing in the recipe calls. The same
+well-formedness rules for set literals (`7838215f`) and one added function nothing in the recipe calls. The same
 holds for the later stages of the three round-4 seeds, which were generated after the checkout had moved.

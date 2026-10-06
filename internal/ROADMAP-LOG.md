@@ -230,7 +230,7 @@ now prescribes an overlay). x86_64 is GO and costed in
 `tup/X86-FEASIBILITY.md`: KVM guest recommended, blocked only on the
 account joining the `kvm` group; TCG works at a measured 14x per thread; a
 rootless chroot is impossible under this kernel's userns policy. The
-x86_64 leg is scripted and paused for KVM (5678f77, cbdb6d4, 2026-09-02).
+x86_64 leg is scripted and paused for KVM (e6b026e, dde3331, 2026-09-02).
 
 ## WS-9: going public: DONE 2026-08-31, private again by 2026-09-04
 
@@ -581,7 +581,7 @@ lowering or adapter change removes. Recorded, not repaired.
 ### 12.2 The F* naming defect: moved to 13.2
 
 F* abstained on `gt_width_loop` because the task's name collided with an
-F* keyword. fstar no longer refuses a name ending in `_loop` (69bfbe9,
+F* keyword. fstar no longer refuses a name ending in `_loop` (75e66e2,
 2026-09-04), but the real done-condition, one sanitising pass shared by
 every lowering with the rename recorded, is 13.2, where the lifter's
 inventory raised the stakes: 68 of the 77 in-fragment DafnyBench programs
@@ -590,7 +590,7 @@ would hit fstar's uppercase-initial refusal.
 ### 12.3 The twins that verified: PARTIAL 2026-09-05, the decision is 13.3
 
 `fuzz_lower` reports real-VERIFIED cells whose twin came back VERIFIED (88
-cells in aggregate, commit 05b67b7; the seven-way per-kernel breakdown of
+cells in aggregate, commit 6ce81c3; the seven-way per-kernel breakdown of
 16 lean, 16 rocq, 14 dafny, 14 spark, 13 verus, 9 fstar, 6 framac quoted
 here is unwitnessed, no committed table or run output states it
 separately from this prose), each either a witness that does not witness or a vacuity probe
@@ -601,7 +601,7 @@ refute a loose `ensures`; interp already recorded the stronger fact as
 `_ens` and `refuting_witness` existed for exactly this question, and the
 acceptance path used neither. It now prefers a candidate whose witness
 falsifies `ensures` and tags a merely-differing fallback `+nonrefuting`
-(05b67b7). Re-measured: 97 verified-twin cells over 17 tasks, against 88
+(6ce81c3). Re-measured: 97 verified-twin cells over 17 tasks, against 88
 before, because the fix makes the weakness visible rather than removing
 it: 3 tasks (10 cells) are deliberate vacuity probes that belong outside
 the statistic, and 14 tasks (87 cells) are generated families (`v0loose`,
@@ -2180,7 +2180,7 @@ UNBLOCKS: 16.2.
 #### 13.2 Names in all seven columns
 
 12.2's real done-condition. fstar no longer refuses a name ending in `_loop`
-(69bfbe9), but only fstar, rocq and spark carry a RESERVED set, fstar
+(75e66e2), but only fstar, rocq and spark carry a RESERVED set, fstar
 refuses an uppercase initial, and the lifter's corpus inventory (2026-09-05)
 found that 68 of the 77 in-fragment DafnyBench programs would hit that
 refusal. A lowering may refuse what it cannot express; it may not refuse a
@@ -2266,7 +2266,7 @@ the merge, and the quiet re-run of the suite is the wave's gate. Quiet re-run (1
 
 2026-09-28: the first run since datatypes v1, finite sets and seq-valued
 spec_funs landed (85 rows: 72 probes, 13 metamorphic) exposed two defects
-in the suite itself, both fixed the same evening (91aa7877): metamorphic.py
+in the suite itself, both fixed the same evening (8a5df5cf): metamorphic.py
 still called check_wf._ty with the pre-datatypes positional order, so 13 of
 the 20 transforms had become tripwire bugs (TypeError) instead of rows, now
 pinned by test_conformance (13 applicable, 7 not applicable, 0 bugs); and
@@ -2275,7 +2275,7 @@ Frama-C and Lean; datatypes in SPARK, Frama-C, Rocq and F*), so 43 cells
 read FAIL against `verified`, now N/A per construct (SV-COMP's rules score
 UNKNOWN 0 and let a tool opt out of a category; a kernel's timeout stays
 FAIL here, since this suite exists to show kernel gaps). One kernel gap
-found and closed (fbf9fe2f): fz_p_dt_eq unproved in Lean, grind not
+found and closed (5c0fe571): fz_p_dt_eq unproved in Lean, grind not
 splitting a datatype-typed parameter, a `cases p <;> grind [f]` alternative
 in the contract ladder. The committed table (t/CONFORMANCE.md, 23:44Z on
 the lab at 8 jobs): 595 cells, 548 PASS, 4 FAIL, 43 N/A, no cell of the
@@ -2712,7 +2712,7 @@ instruments: five hid answers that were right, and the sixth counted answers tha
 1. **The test harness refused the language's own nested type.** An answer that declared a
    parameter `seq<seq>` failed its tests with a type error; one that declared `seq` could not
    look inside a row. 39 answers in 19 answer sets; 26 pass their tests once read at the declared
-   type (cf84b8ea, after MultiPL-E, arXiv:2208.08227).
+   type (5261ae00, after MultiPL-E, arXiv:2208.08227).
 2. **The specification check asked the wrong function.** A list of strings went to the problem's
    solution as lists of integers, and one drawn input that made the solution return a float or
    None, or run long, ended the whole check. Repaired and registered first
@@ -3079,7 +3079,7 @@ is queued, and the ones running are read as they finish.
   `lemma_t_sum_create1` as SMT patterns (the append pattern alone did not fire on `t_sum (create 1 x)`; measured):
   `sum_tail` verified. SPARK not repaired, recorded in PREDICT T3d: the expression-function-only design has no place
   for a lemma call, and the sum-of-concatenation induction times out; its own design item.
-- **The matrix regenerated from a clean clone (10-06 22:00Z, at 981e0783):** 70 tasks; `cube`, `root_floor` and
+- **The matrix regenerated from a clean clone (10-06 22:00Z, at 7235a007):** 70 tasks; `cube`, `root_floor` and
   `sum_tail` verified with the twin refuted in Verus, `sum_tail` in F*; SPARK `sum_tail` stays timeout / refuted.
 - **G4 landed (10-06 22:40Z), early exits:** `break;`, `continue;` and `while true` (SPEC "Early exits (v1)"):
   the invariants need not hold at a break (the exit path keeps its state), hold at a continue, and a `while true`
@@ -3093,7 +3093,7 @@ is queued, and the ones running are read as they finish.
   earlier comprehension tasks unchanged in both kernels. Census: `unbounded-loop` (4,403 problems) in the
   fragment, the loop `else` clause the gap `loop-else` (61); 1,713 -> 1,777 function-shaped problems in the
   fragment (41.9%).
-- **The matrix regenerated from a clean clone (10-06 23:30Z, at b18ec9ba):** 73 tasks; the three early-exit rows
+- **The matrix regenerated from a clean clone (10-06 23:30Z, at d0e6fee8):** 73 tasks; the three early-exit rows
   verified with the twin refuted in Dafny, the other six columns by name; the library-proof rows as read.
 - **G5 landed (10-06 23:50Z), maps:** the type `map<K, V>`, the display `map[k := v, ...]` (`map[]` empty; the
   rightmost of two equal keys wins, written by every kernel as a chain of updates), `m[k]` (defined iff `k in m`),
@@ -3105,7 +3105,7 @@ is queued, and the ones running are read as they finish.
   Three committed tasks (`lookup_or`, `put_key`, `index_map`) verified with the twin refuted in both. Census: `map`
   (2,464 problems) in the fragment, iteration over a dict the gap `map-iteration` (535); 1,777 -> 1,892
   function-shaped problems in the fragment (44.6%).
-- **The matrix regenerated from a clean clone (10-07 01:20Z, at 3923342f):** 76 tasks; the three map rows verified
+- **The matrix regenerated from a clean clone (10-07 01:20Z, at cbd72e43):** 76 tasks; the three map rows verified
   with the twin refuted in Dafny and Verus, the other five columns by name.
 - **T6 landed (10-07 01:50Z), reductions and three census corrections:** `any(s)`, `all(s)` on a `seq<bool>`,
   `max(s)`/`min(s)` of one argument (defined iff the seq is non-empty), `toset(s)` (SPEC "Reductions (v1)");

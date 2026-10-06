@@ -33,7 +33,7 @@ tokens/s over the whole 54-second run, evaluations and startup included). At tha
 about 76 minutes, arm B's stage 2 about 3.1 hours, arm C about 4.4 hours, before evaluations.
 The first calibration on the 3.4 GB text died in data loading (the text corpus becomes a
 Python list of 1.17B ints on a 14 GB machine); the trainer now reads the uint16 shards
-section 7.3 wrote (`data.TokenShards`, 5a6ce99e). The written-time above says 10:00Z; the
+section 7.3 wrote (`data.TokenShards`, f0928a94). The written-time above says 10:00Z; the
 arms start after this line is committed.
 
 **Predictions.**
@@ -69,7 +69,7 @@ checkpoint with `--weight-decay 0.8` (the flag added for it) and `--eval-every 2
 cadence does not touch the training stream). The arms, the tokens, the judgement and the four
 predictions above are unchanged; no arm has been evaluated. Two trainer defects found on the way
 are fixed in the repository: a CUDA resume moved the generator state to the GPU and refused it
-(74fc41e6), and the decay above.
+(f5372ff5), and the decay above.
 
 ## Outcome (written 2026-09-29 21:30Z, after all three arms were judged)
 
@@ -108,4 +108,4 @@ tokens for this size) is where the question is answered. The held-out 232 were n
 
 **Costs.** Arm C on the rented H100: about 80 minutes including startup, under $6 of the
 month's free credit. The two trainer defects found on the way (the CUDA resume, the missing decay
-flag) are fixed in 74fc41e6 and b0ff259d.
+flag) are fixed in f5372ff5 and 6b1e06f3.

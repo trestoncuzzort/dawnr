@@ -50,7 +50,7 @@ next step if R2 holds.
 
 ## Outcome, 2026-10-05 13:06Z
 
-Run on the desktop from commit 538d6d62, Dafny 4.11 alone for R1 to R3 (`~/scratch/larger/repair_run.py`), then
+Run on the desktop from commit 81de8a65, Dafny 4.11 alone for R1 to R3 (`~/scratch/larger/repair_run.py`), then
 the product gate's own call, all seven provers with their sabotaged twins, on every repaired answer for R4.
 
 **755 answers** in the 24 rows' graded sets pass their problem's tests, have a loop and were verified by no

@@ -1,6 +1,6 @@
 {
  "experiment": "tool_conversations_mid_stage",
- "preregistration": "prereg_tool_conversations_2026-09-27.json (commit da5c5de3) and its addendum (commit bbf72da2)",
+ "preregistration": "prereg_tool_conversations_2026-09-27.json (commit 72f0c0d1) and its addendum (commit f7f2fc7d)",
  "produced_by": "python3 locallm/tool_eval.py --report <runs dir>: every number read from the runs' own tool-eval.json, tool-eval.rows.jsonl and chat-eval.json",
  "per_seed": {
   "A": {
@@ -412,7 +412,7 @@
   "P6_t_tasks": "pass all examples over 133: A 17.0 (about 17): held; B 14.7, 2.3 below A (4 below to 2 above): inside the range; dev well formed B 28.0 against A 18.7: outside 'within 5', in B's favour; dev tests passed 0 or 1 per seed: held"
  },
  "post_hoc_checks": {
-  "registered_in": "prereg_tool_conversations_2026-09-27_addendum.json (commit bbf72da2), before either check ran; both are post hoc (designed after reading seed 1337) and change no registered decision",
+  "registered_in": "prereg_tool_conversations_2026-09-27_addendum.json (commit f7f2fc7d), before either check ran; both are post hoc (designed after reading seed 1337) and change no registered decision",
   "ran_on": "the lab's card 2 (RTX 6000 Ada, torch 2.13.0), one job at a time: the desktop's GPU lock was held by another agent's job with a queue behind it, the coordinator's stated fallback",
   "X1_evaluation_across_machines": {
    "comparisons": {
@@ -569,7 +569,7 @@
   }
  },
  "reruns": {
-  "C-s1339 mid": "the first attempt ran out of GPU memory on the lab's shared card 2 (11.5 GB free when checked; another user's new process took 2.6 GiB while this one reached its 8.4 GiB peak); rerun at the same seed with --gradient-checkpointing (commit f193b046: the same batch, loss and gradients, dropout masks replayed; peak 3.25 GiB). Both attempts are in the stage's log"
+  "C-s1339 mid": "the first attempt ran out of GPU memory on the lab's shared card 2 (11.5 GB free when checked; another user's new process took 2.6 GiB while this one reached its 8.4 GiB peak); rerun at the same seed with --gradient-checkpointing (commit c612feb8: the same batch, loss and gradients, dropout masks replayed; peak 3.25 GiB). Both attempts are in the stage's log"
  },
  "P2_note": "P2's second half is scored above on answers ended by <|assistant_end|> inside a call; the field tool_eval.py registered, answers_with_an_unclosed_call, also counts answers cut off by the token budget inside a call, and under it P2 is missed: B 239 of 627, C 217 of 598 (A 234 of 357)"
 }

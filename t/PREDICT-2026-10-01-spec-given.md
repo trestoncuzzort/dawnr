@@ -19,7 +19,7 @@ language none of these models had seen before tonight. Those are reasons to expe
 
 ## The held-out questions
 
-`t/student_rows.py` (8f66e69b) on the r12 corpus, the project's own document split (hash,
+`t/student_rows.py` (cc971242) on the r12 corpus, the project's own document split (hash,
 `--split-seed 1338`, the seed the round registered): 476 documents train, 55 held out. Removed
 from the 55: 14 whose problem has an answer in the English or debugging rows, 6 that are a
 training document's program under another name, 2 that share a training document's
@@ -34,7 +34,7 @@ MBPP dev problems.
 
 ## The measurement
 
-- **Student.** Qwen3.5-2B fine-tuned by `t/student_sft.py` (925c7734: the corrected loss) on
+- **Student.** Qwen3.5-2B fine-tuned by `t/student_sft.py` (488eeb8c: the corrected loss) on
   `sft-student-v4.jsonl`, 1,791 rows: the 527 English rows with the task named as the prompt asks,
   476 specification-given rows from the train side, 788 debugging rows. Five epochs, rank 64,
   constant 2e-4, seed 1.
@@ -46,7 +46,7 @@ MBPP dev problems.
 - **Asking.** Each of the 33 questions once, greedy, one at a time (no batching, so padding
   cannot move a near-tie token), 1,024 new tokens.
 - **Scoring.** `t/spec_given.kept`: the answer must carry the question's name, parameters,
-  results, requires, every given ensures and every given spec fun unchanged (cc0f3f64; an answer
+  results, requires, every given ensures and every given spec fun unchanged (16745360; an answer
   that redefines a given spec fun is refused). Kept answers that are well formed go to all seven
   kernels on the lab. Proved at level k: at least k kernels read `verified / refuted` and none
   refutes the program.

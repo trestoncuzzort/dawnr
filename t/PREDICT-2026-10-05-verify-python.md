@@ -58,7 +58,7 @@ docstring) is reported with its output, as an anecdote.
 ## Outcome, 2026-10-05 (V1 to V3)
 
 **V1: holds on the count, fails on the comparison.** `verify` (three specifications, three bodies a supported
-one, the published model at Q8_0 on a lab card, Dafny alone, the gate with the larger-input rule; commit 35c2b88e)
+one, the published model at Q8_0 on a lab card, Dafny alone, the gate with the larger-input rule; commit 9278405e)
 found a proved twin for **9 of the 111** (the bar was 5). `ask` in W4 showed an answer for 12, so "at least as
 many as `ask`" fails. The first batch found no sandbox in its fresh checkout and refused all 111 without asking
 the model anything; it is discarded and the run of record is the second, which was the same script with the lab's
@@ -131,7 +131,7 @@ What each outcome changes:
 - V5 fails: read the questions `ask` answers and the first route does not, by hand, before changing anything.
 - V6 fails: the specification route is removed (it costs up to twelve model calls a function).
 
-## Outcome of V4 to V6, 2026-10-05 (one run, one lab card, Dafny alone, commit f4d6cef7)
+## Outcome of V4 to V6, 2026-10-05 (one run, one lab card, Dafny alone, commit 2a617c12)
 
 `verify` found a proved twin for **9 of the 111** functions: 8 by asking for whole answers first, 1 (problem 206)
 by the specification route. `ask`, in the same run on the same questions, showed an answer for **7**, all 7 right

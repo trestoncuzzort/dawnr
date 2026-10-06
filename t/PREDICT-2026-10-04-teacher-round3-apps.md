@@ -47,5 +47,5 @@ The seven-kernel assembly of the 245 top-tier answers (three cells at a time on 
 
 The assembly graded every answer and wrote its table and the admitted records, then raised writing the empty
 specification pool's `documents.txt` (this round has no specification prompts, and the folder is created only for a
-non-empty shortlist); the report was written from the table it left, and the code fixed (de6550a2). By the rule
+non-empty shortlist); the report was written from the table it left, and the code fixed (089e6550). By the rule
 above, the 129 documents join the pool for the next registered student round.

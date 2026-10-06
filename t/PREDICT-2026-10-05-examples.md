@@ -92,7 +92,7 @@ write tests, with these counts and the note that the measurement gave the functi
 fails: the failures are read by hand before anything else changes. E5 or E6 fails: said with the counts; the
 dialogue stays, and the README leads with `--test`.
 
-## Outcome of E1 to E3, the first form on all 111 (2026-10-05, commit 5772ca72, a lab card)
+## Outcome of E1 to E3, the first form on all 111 (2026-10-05, commit 7a534128, a lab card)
 
 - **E1 fails.** 22 of the 111 questions ended with two or more approved examples (20%; the bar was 70%), and 44
   with none. The causes are the five listed above, found on the first 31.
@@ -107,7 +107,7 @@ is E4 to E6 above, running on the 80 questions that had not been read.
 
 ## Outcome of E4 to E6, 2026-10-05 (the 80 unread questions, a lab card, Dafny alone)
 
-The run was made from commit 36c676fc, not the registration's 92560972: the lab checked out the head of main
+The run was made from commit 05fbf32b, not the registration's b048a17f: the lab checked out the head of main
 when its card came free, an hour later. The examples flow differs between the two by one thing, a draft's
 annotations no longer being evaluated when it is loaded (before Python 3.14 a draft that wrote `List[int]`
 without importing it answered nothing).

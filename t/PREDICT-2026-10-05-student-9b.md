@@ -18,7 +18,7 @@ between 14 and 18. The 9B has only been prompted.
 - **Rows:** the round-4 rows exactly, `sft-student-teacher4.jsonl` (5,479 rows, sha256 `ccd49a66059662f4…`), built
   through `t/heldout_audit.py --panels --refuse-gpl` and `t/spec_panel.py` (`PREDICT-2026-10-05-teacher4-student.md`).
 - **Recipe:** `t/student_sft.py` as the 4B seeds ran it (QLoRA rank 64, five epochs, rows up to 2,845 tokens),
-  seed 1, from the same tree the three 4B seeds run from (`bf23d4ee`), so the only thing that differs is the base.
+  seed 1, from the same tree the three 4B seeds run from (`5a5acc1f`), so the only thing that differs is the base.
   A four-step probe runs first to read the step time and the card's memory; it changes nothing.
 - **Instrument:** the scoreboard's, as for the 4B seeds: `t/spec_first.py --python 3` on the clean 182, graded by
   all seven provers, levels with the reference-checked specification at completeness 0.6; then the 73
@@ -45,8 +45,8 @@ between 14 and 18. The 9B has only been prompted.
 
 ## A note on the tree (2026-10-05 10:55Z, before any result)
 
-This registration names tree `bf23d4ee`. The lab's checkout is fast-forwarded by the grading scripts, and it was at
-`8836cdec` when this run started (its own log says so). Between the two commits the files the recipe runs
+This registration names tree `5a5acc1f`. The lab's checkout is fast-forwarded by the grading scripts, and it was at
+`3ce62a51` when this run started (its own log says so). Between the two commits the files the recipe runs
 (`t/student_sft.py`, `t/spec_first.py`, `t/score_spec_given.py` and what they import) differ by two
-well-formedness rules for set literals (`979e62f3`) and one added function nothing in the recipe calls. The same
+well-formedness rules for set literals (`7838215f`) and one added function nothing in the recipe calls. The same
 holds for the later stages of the three round-4 seeds, which were generated after the checkout had moved.

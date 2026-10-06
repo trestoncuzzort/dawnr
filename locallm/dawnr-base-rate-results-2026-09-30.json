@@ -1,5 +1,5 @@
 {
- "registered": "t/PREDICT-2026-09-30-dawnr-base-rate.md (commit c2aa2e34, 09:29Z, before any draw)",
+ "registered": "t/PREDICT-2026-09-30-dawnr-base-rate.md (commit 00184f2f, 09:29Z, before any draw)",
  "model": "the pipeline's mid-trained checkpoint on r12's core (ckpt.pt sha256 d74ee05a7f9d9790...)",
  "settings": {
   "decoding": "sampled",

@@ -126,7 +126,7 @@ on both sides of the loop half.
 
 ## Merged, and the last two sets regraded, 2026-10-04 (recorded 17:01Z)
 
-Merged as 91f6e629 once teacher2's seed 2 and release v4's lab gradings were done. The same targeted regrade on the
+Merged as 09fc7630 once teacher2's seed 2 and release v4's lab gradings were done. The same targeted regrade on the
 sets graded just before the merge: teacher2's seed 2 (6 eligible tasks) and the release-v4 candidate (3), lean, rocq
 and fstar on the lab. Rocq timed out or read unproved on every one, so neither gains a problem by all seven:
 

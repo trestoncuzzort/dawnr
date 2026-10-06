@@ -211,7 +211,7 @@ UNPROVED (unwitnessed per-column verdict). framac is the known gap and verified 
 logic is total, an out-of-range `s[i]` denotes an unconstrained value, and
 an undefined requires quietly becomes a constraint on that value.
 lower_framac.py discharges definedness for executable positions and for
-`ensures` clauses (the ensures side landed 2026-09-01, commit cb70ac47); its `requires`
+`ensures` clauses (the ensures side landed 2026-09-01, commit dc995d52); its `requires`
 side, and the same total-logic softness in invariant and spec_fun-body
 positions, is recorded future work in that file's own docstring, not
 silently claimed here.

@@ -290,4 +290,4 @@ tokens, 60 of 100 replies hitting the cap) on an RTX 5050, cached against uncach
 replies byte-equal; 304.6 s against 2,144.5 s (0.14); per reply, 7.3 to 8.2 times on capped replies
 and 1.4 to 2.0 times on 50-token ones. The 2026-09-19 table above measured 128 new tokens, where
 the quadratic term of uncached decoding is still small; at the round's lengths it dominates.
-`cache_by_default` therefore answers on for CUDA (prompt shorter than the window) since d01a7a4a.
+`cache_by_default` therefore answers on for CUDA (prompt shorter than the window) since 11230998.
