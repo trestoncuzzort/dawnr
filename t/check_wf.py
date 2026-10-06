@@ -157,7 +157,9 @@ RULES: dict[str, str] = {
     # type error raised KeyError inside the checker and the answer's reason read "check_wf raised KeyError:
     # 'set-types'" (3 of the published model's 100 greedy dev answers, each `x in s` with s a seq)
     "set-lit-types": "a set display's elements are all of one type (Finite sets; Compositional types)",
-    "set-types": "in wants (T, set<T>), card wants a set, union/inter/setminus want two sets of one type; "
+    "lib-types": "min/max take two ints or two reals, abs an int or a real, sum a seq of ints or of reals, gcd/pow/isqrt "
+                 "ints, rev a seq, `in` an element of the seq's own type (The library)",
+    "set-types": "in wants (T, set<T>) or (T, seq<T>), card wants a set, union/inter/setminus want two sets of one type; "
                  "membership in a seq is written with a quantifier (Finite sets; Compositional types)",
     "slice-types": "slice wants (a seq of any element type, int, int) (Sequences: "
                    "literals, concatenation, slices; Compositional types)",
@@ -277,13 +279,14 @@ STRLIB_OPS = {"split", "join", "tostr", "count", "find", "strip", "lstrip",
              "rstrip", "replace", "lower", "upper", "isdigit", "isalpha",
              "isupper", "islower", "startswith", "endswith"}
 SET_OPS = {"set", "in", "card", "union", "inter", "diff"}   # SPEC.md "Finite sets" (2026-09-27)
+LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})   # SPEC.md "The library (v1)" (2026-10-06)
 V1_OPS = (V0_OPS | {"len", "at", "div", "mod", "update", "fill", "seq", "slice"}
-         | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS)
+         | {"pair", "fst", "snd", "tuple", "proj"} | {"toreal", "floor", "ceil"} | STRLIB_OPS | SET_OPS | LIB_OPS)
 TERNARY = {"update", "slice", "replace"}
 VARIADIC = {"seq", "set", "tuple"}      # the displays: seq and set at any arity, zero included; tuple at three or more
 UNARY = {"neg", "not", "len", "fst", "snd", "tostr", "strip", "lstrip",
          "rstrip", "lower", "upper", "isdigit", "isalpha", "isupper",
-         "islower", "card", "toreal", "floor", "ceil"}
+         "islower", "card", "toreal", "floor", "ceil", "abs", "sum", "isqrt", "rev"}
 NARY = {"and", "or"}
 BOOLR = {"==", "!=", "<", "<=", ">", ">=", "and", "or", "not", "implies"}
 INTR = {"+", "-", "*", "neg", "len"}
@@ -620,10 +623,44 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
             return _set_of(ts[0])
         _e(errs, e, "set display elements must all be of one type", "set-lit-types")
         return _set_of(ts[0])
+    if op == "in" and _is_seq(ts[1]):
+        # SPEC.md "The library (v1)" (2026-10-06): membership in a seq, by the right operand's type
+        if ts[0] != _elem(ts[1]) and not _empty_display(args[0], ts[0], _elem(ts[1])):
+            _e(errs, e, "in wants (T, seq<T>): an element of the seq's own type", "lib-types")
+        return "bool"
     if op == "in":
         if not _is_set(ts[1]) or (ts[0] != _set_elem(ts[1]) and not _empty_display(args[0], ts[0], _set_elem(ts[1]))):
-            _e(errs, e, "in wants (T, set<T>): an element of the set's own type", "set-types")
+            _e(errs, e, "in wants (T, set<T>) or (T, seq<T>): an element of the collection's own type", "set-types")
         return "bool"
+    if op in ("min", "max"):
+        # SPEC.md "The library (v1)" (2026-10-06): two ints or two reals, never mixed
+        if not (ts[0] == ts[1] and ts[0] in ("int", "real")):
+            _e(errs, e, f"{op} wants two ints or two reals, found {ts!r}", "lib-types")
+            return ts[0] if ts[0] in ("int", "real") else "int"
+        return ts[0]
+    if op == "abs":
+        if ts[0] not in ("int", "real"):
+            _e(errs, e, f"abs wants an int or a real, found {ts[0]!r}", "lib-types")
+            return "int"
+        return ts[0]
+    if op == "sum":
+        if _is_seq(ts[0]) and _elem(ts[0]) in ("int", "real"):
+            return _elem(ts[0])
+        _e(errs, e, f"sum wants a seq of ints or of reals, found {ts[0]!r}", "lib-types")
+        return "int"
+    if op in ("gcd", "pow"):
+        if list(ts) != ["int", "int"]:
+            _e(errs, e, f"{op} wants two ints, found {ts!r}", "lib-types")
+        return "int"
+    if op == "isqrt":
+        if ts[0] != "int":
+            _e(errs, e, f"isqrt wants an int, found {ts[0]!r}", "lib-types")
+        return "int"
+    if op == "rev":
+        if not _is_seq(ts[0]):
+            _e(errs, e, f"rev wants a seq, found {ts[0]!r}", "lib-types")
+            return "seq"
+        return ts[0]
     if op == "card":
         if not _is_set(ts[0]):
             _e(errs, e, "card of a non-set", "set-types")

@@ -213,9 +213,12 @@ def test_every_rule_the_checker_cites_is_defined():
     assert sorted(c for c in cited if c not in check_wf.RULES) == []
 
 
-def test_membership_in_a_seq_is_refused_in_words_not_with_a_crash():
+def test_membership_in_a_seq_is_typed_by_the_element():
+    # SPEC.md "The library (v1)" (2026-10-06): `x in s` on a seq is membership in the seq (it was refused in
+    # words before that day); an element of another type is refused in words, never with a crash
     import surface
     task = surface.parse("t 1\ngate quantifiers\ntask has(s: seq, x: int) returns (r: bool)\n  ensures r == (x in s)\n{\n  r := x in s;\n}\n")
-    errs = check_wf.check_wf(task)
-    # "in wants (T, set<T>)" since SPEC.md "Compositional types (v1)" (2026-10-06); "(int, set)" before
-    assert errs and all("in wants (T, set<T>)" in e and "Finite sets" in e for e in errs)
+    assert check_wf.check_wf(task) == []
+    bad = surface.parse("t 1\ngate quantifiers\ntask has(s: seq, x: bool) returns (r: bool)\n  ensures r == (x in s)\n{\n  r := x in s;\n}\n")
+    errs = check_wf.check_wf(bad)
+    assert errs and all("in wants (T, seq<T>)" in e and "The library" in e for e in errs), errs

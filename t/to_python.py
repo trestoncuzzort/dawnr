@@ -147,6 +147,17 @@ class _Writer:
             return "frozenset((" + "".join(v + ", " for v in x) + "))"
         if op == "in":
             return f"({x[0]} in {x[1]})"
+        # SPEC.md "The library (v1)" (2026-10-06): Python's own where it has one, a helper where it does not
+        if op in ("min", "max", "abs", "sum"):
+            return f"{op}({', '.join(x)})"
+        if op == "gcd":
+            return f"_t_gcd({x[0]}, {x[1]})"
+        if op == "pow":
+            return f"({x[0]} ** {x[1]})"
+        if op == "isqrt":
+            return f"_t_isqrt({x[0]})"
+        if op == "rev":
+            return f"{x[0]}[::-1]"
         if op == "card":
             return f"len({x[0]})"
         if op == "union":
@@ -379,6 +390,10 @@ def translate(task: dict, tests: list[str] | None = None, fn_name: str | None = 
     support: list[str] = []
     if any("_t_update(" in l for l in lines):
         support += ["def _t_update(s, i, v):", f"{INDENT}return s[:i] + (v,) + s[i + 1:]", ""]
+    if any("_t_gcd(" in l for l in lines):
+        support += ["def _t_gcd(a, b):", f"{INDENT}import math", f"{INDENT}return math.gcd(a, b)", ""]
+    if any("_t_isqrt(" in l for l in lines):
+        support += ["def _t_isqrt(n):", f"{INDENT}import math", f"{INDENT}return math.isqrt(n)", ""]
     if any("_t_tuple(" in l for l in lines):
         support += ["def _t_tuple(v):", f"{INDENT}return tuple(_t_tuple(x) for x in v) if isinstance(v, (list, tuple)) else v", ""]
     if any("_t_ints(" in l for l in lines):

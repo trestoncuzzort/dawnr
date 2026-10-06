@@ -85,7 +85,8 @@ def uses_ops(body: list, task: dict, ops: set) -> set:
     return found
 
 
-def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = frozenset()) -> None:
+def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = frozenset(),
+                           lib: frozenset = frozenset()) -> None:
     """Raise NotImplementedError naming the first declared shape beyond the pre-2026-10-06 list that `kernel`
     does not carry (`carried`: shape strings this lowering handles, as `shape()` writes them, or the wildcard
     "*" when it handles every shape), or the first tuple/proj operator when the kernel carries no tuples."""
@@ -104,6 +105,74 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
             raise NotImplementedError(f"{kernel}: {', '.join(sorted(used))} is not lowered yet (SPEC.md 'Compositional types (v1)')")
     if "real" not in carried:
         abstain_on_reals(task, body, kernel)
+    abstain_on_library(task, body, kernel, lib)
+
+
+LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})
+
+
+def _scope_of(task: dict, body: list) -> dict:
+    """name -> declared type over params, the return, locals anywhere and spec_fun params (shadowing ignored)."""
+    out = {p["name"]: p["type"] for p in task.get("params", [])}
+    for r in task.get("returns", []):
+        out[r["name"]] = r["type"]
+    for f in task.get("spec_funs", []):
+        for p in f.get("params", []):
+            out.setdefault(p["name"], p["type"])
+
+    def walk(stmts):
+        for st in stmts or []:
+            if "var" in st:
+                out[st["var"]["name"]] = st["var"]["type"]
+            elif "if" in st:
+                walk(st["if"]["then"])
+                walk(st["if"]["else"])
+            elif "while" in st:
+                walk(st["while"]["body"])
+    walk(body)
+    for m in task.get("methods", []):
+        walk(m.get("body", []))
+    return out
+
+
+def seq_membership_used(task: dict, body: list) -> bool:
+    """Whether an `in` node's right operand is a seq (SPEC.md "The library (v1)": membership in a seq), typed
+    with check_wf under the task's declared names; an operand that cannot be typed reads as not a seq."""
+    import check_wf
+    scope = _scope_of(task, body)
+    funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    found = []
+
+    def walk(e):
+        if isinstance(e, dict):
+            if e.get("op") == "in" and len(e.get("args", [])) == 2:
+                try:
+                    t, errs = check_wf.expression_type(e["args"][1], dict(scope), functions=funs)
+                except Exception:                           # noqa: BLE001
+                    t = None
+                if t == "seq" or (isinstance(t, dict) and "seq" in t):
+                    found.append(e)
+            for v in e.values():
+                walk(v)
+        elif isinstance(e, list):
+            for v in e:
+                walk(v)
+    walk(task.get("requires", []))
+    walk(task.get("ensures", []))
+    walk([f.get("body") for f in task.get("spec_funs", [])])
+    walk(body or [])
+    return bool(found)
+
+
+def abstain_on_library(task: dict, body: list, kernel: str, carried: frozenset = frozenset()) -> None:
+    """Raise NotImplementedError naming the first library function (SPEC.md "The library (v1)", 2026-10-06) the
+    task uses that `kernel` does not carry (`carried`: the op names its lowering emits definitions for, and
+    "in" when it carries membership in a seq)."""
+    used = sorted(uses_ops(body or [], task, LIB_OPS - set(carried)))
+    if used:
+        raise NotImplementedError(f"{kernel}: {', '.join(used)} is not lowered yet (SPEC.md 'The library (v1)')")
+    if "in" not in carried and seq_membership_used(task, body):
+        raise NotImplementedError(f"{kernel}: membership in a seq is not lowered yet (SPEC.md 'The library (v1)')")
 
 
 def mentions_real(t) -> bool:

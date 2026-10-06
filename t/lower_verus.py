@@ -2750,7 +2750,11 @@ def expr(e: dict, vty: str | None = None) -> str:
             return "Set::<int>::empty()"
         return "set![" + ", ".join(args) + "]"
     if op == "in":
+        # a Set's and a Seq's `contains` alike (SPEC.md "The library (v1)", 2026-10-06: membership in a seq)
         return f"{args[1]}.contains({args[0]})"
+    if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum", "rev"):
+        # SPEC.md "The library (v1)" (2026-10-06): _VLIB's spec fns (vstd's min/max/abs shapes; the rest recursive)
+        return f"t_{op}({', '.join(args)})"
     if op == "card":
         # `Set::len` is a nat; t's card is an int, so the cast is explicit.
         return f"({args[0]}.len() as int)"
@@ -2957,6 +2961,11 @@ def defined(e: dict, is_real=None) -> dict:
             {"op": "<=", "args": [a, b]},
             {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}
         return _conj([defined(s, is_real), defined(a, is_real), defined(b, is_real), bound])
+    if op in ("pow", "isqrt"):
+        # SPEC.md "The library (v1)" (2026-10-06): pow(a, n) and isqrt(n) owe `n >= 0`
+        n = args[1] if op == "pow" else args[0]
+        nonneg = {"op": ">=", "args": [n, {"int": 0}]}
+        return _conj([defined(a, is_real) for a in args] + [nonneg])
     if op in ("div", "mod"):
         x, y = args
         # SPEC.md "Exact rationals (v1)" (2026-10-06): a real divisor owes `y != 0.0` (`is_real`, the caller's
@@ -4800,6 +4809,7 @@ class _V1:
         main = self._main_fn(body)
 
         strlib_blocks = [STRLIB_PRELUDE] if _uses_strlib(task) else []
+        lib_blocks = _lib_blocks(task, body)   # SPEC.md "The library (v1)" (2026-10-06)
         rotate_blocks = ([ROTATE_PRELUDE]
                          if _rotate_witnesses(task)
                          or any(_rotate_witnesses(p) for p in pseudos)
@@ -4821,7 +4831,7 @@ class _V1:
             datatype_blocks.append(
                 f"#[derive(PartialEq, Eq)]\nenum {d['name']} {{ {ctors} }}\n"
                 f"use {d['name']}::*;\n")
-        blocks = (datatype_blocks + strlib_blocks + rotate_blocks
+        blocks = (datatype_blocks + strlib_blocks + lib_blocks + rotate_blocks
                   + spec_blocks + lemma_blocks
                   + method_blocks + self.wf + self.helpers + [main])
         uses_sets = _uses_sets(task)
@@ -5005,6 +5015,21 @@ class _V1:
         scope = {n: (t, False) for n, t in params}
         scope[rname] = (rtype, True)
         main_lines = self.stmts(body, scope, "    ")
+        # SPEC.md "The library (v1)" (2026-10-06): a recursive definition is unfolded only with fuel (a display
+        # of two elements needs two unfoldings), and a broadcast lemma about one is brought in here, inside the
+        # proof fn, since a module-level `broadcast use` of a recursive lemma is a cycle Verus refuses (measured)
+        import tshape
+        lib_used = tshape.uses_ops(body or [], task, {"sum", "gcd", "pow", "isqrt", "rev"})
+        lib_lines = []
+        for op_name in ("sum", "gcd", "pow", "isqrt", "rev"):
+            if op_name in lib_used:
+                fn = "t_gcdn" if op_name == "gcd" else f"t_{op_name}"
+                lib_lines.append(f"    reveal_with_fuel({fn}, 6);")
+        if "isqrt" in lib_used:
+            lib_lines.append("    broadcast use t_isqrt_spec;")
+        if "rev" in lib_used:
+            lib_lines.append("    broadcast use t_rev_spec;")
+        main_lines = lib_lines + main_lines
 
         # THE STRING LIBRARY (v1, 2026-09-11): the split-join law is not
         # free (`STRLIB_PRELUDE`'s own dated note), so a task whose
@@ -5817,6 +5842,49 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
         return None
 
 
+# SPEC.md "The library (v1)" (2026-10-06). vstd/math.rs's min/max/abs shapes (fetched, receipt 54355043298c); the
+# recursive ones with `decreases`, totalised below 0 where the SPEC says UNDEFINED (`defined()` owes `n >= 0` at
+# the use, so the totalised value is never what a well-defined program means); t_isqrt's and t_rev's facts as
+# broadcast lemmas, brought in by `broadcast use` INSIDE the task's proof fn (a module-level `broadcast use` of a
+# recursive lemma is a cycle Verus refuses, measured 2026-10-06); recursive definitions get `reveal_with_fuel`
+# there too (a two-element display needs two unfoldings). Emitted per function, once per file, when used.
+VERUS_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in"})
+_VLIB = {
+    "min": "pub open spec fn t_min(a: int, b: int) -> int { if a < b { a } else { b } }\n",
+    "max": "pub open spec fn t_max(a: int, b: int) -> int { if a < b { b } else { a } }\n",
+    "abs": "pub open spec fn t_abs(a: int) -> int { if a < 0 { -a } else { a } }\n",
+    "sum": ("pub open spec fn t_sum(s: Seq<int>) -> int\n    decreases s.len(),\n"
+            "{ if s.len() == 0 { 0 } else { t_sum(s.drop_last()) + s.last() } }\n"),
+    "gcd": ("pub open spec fn t_gcdn(a: nat, b: nat) -> nat\n    decreases b,\n"
+            "{ if b == 0 { a } else { t_gcdn(b, a % b) } }\n"
+            "pub open spec fn t_gcd(a: int, b: int) -> int { t_gcdn(t_abs(a) as nat, t_abs(b) as nat) as int }\n"),
+    "pow": ("pub open spec fn t_pow(a: int, n: int) -> int\n    decreases n,\n"
+            "{ if n <= 0 { 1 } else { a * t_pow(a, n - 1) } }\n"),
+    "isqrt": ("pub open spec fn t_isqrt(n: int) -> int\n    decreases n,\n"
+              "{ if n <= 0 { 0 } else { let r = t_isqrt(n - 1); if (r + 1) * (r + 1) <= n { r + 1 } else { r } } }\n"
+              "pub broadcast proof fn t_isqrt_spec(n: int)\n    requires n >= 0,\n"
+              "    ensures 0 <= #[trigger] t_isqrt(n), t_isqrt(n) * t_isqrt(n) <= n, n < (t_isqrt(n) + 1) * (t_isqrt(n) + 1),\n"
+              "    decreases n,\n"
+              "{ if n > 0 { t_isqrt_spec(n - 1); } }\n"),
+    "rev": ("pub open spec fn t_rev<A>(s: Seq<A>) -> Seq<A>\n    decreases s.len(),\n"
+            "{ if s.len() == 0 { Seq::empty() } else { seq![s.last()] + t_rev(s.drop_last()) } }\n"
+            "pub broadcast proof fn t_rev_spec<A>(s: Seq<A>)\n"
+            "    ensures (#[trigger] t_rev(s)).len() == s.len(), forall|i: int| 0 <= i < s.len() ==> t_rev(s)[i] == s[s.len() - 1 - i],\n"
+            "    decreases s.len(),\n"
+            "{ if s.len() > 0 { t_rev_spec(s.drop_last()); } }\n"),
+}
+_VLIB_ORDER = ["abs", "min", "max", "sum", "gcd", "pow", "isqrt", "rev"]
+
+
+def _lib_blocks(task: dict, body: list) -> list:
+    """The library definitions this task uses, `abs` first (t_gcd calls it)."""
+    import tshape
+    used = set(tshape.uses_ops(body or [], task, set(_VLIB)))
+    if "gcd" in used:
+        used.add("abs")
+    return [_VLIB[n] for n in _VLIB_ORDER if n in used]
+
+
 def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate block for a measured twin
     witness, or None when the witness is not expressible as a ground
@@ -5876,6 +5944,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     _EMPTIES.update(tshape.empty_display_types(task, body))
     # SPEC.md "Exact rationals (v1)" (2026-10-06): Verus has no reals; a task that names one abstains by name
     tshape.abstain_on_reals(task, body, "verus")
+    tshape.abstain_on_library(task, body, "verus", carried=VERUS_LIB)   # SPEC.md "The library (v1)" (2026-10-06)
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Verus/Rust reserved word, before either lowering
     # path renders anything -- see names.py's module docstring. `task` is

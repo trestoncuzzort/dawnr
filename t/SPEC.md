@@ -1693,6 +1693,113 @@ real(r.1)`, `real(r.1) - real(r.0) <= 1.0`), `safe_ratio` (`a / b` under
 collapse-if twin computes `a / b` unguarded, so the definedness obligation
 at `b == 0.0` is what refutes it).
 
+### The library (v1)
+
+Stated 2026-10-06, the third landing of the expansion. Measured first:
+after the two landings above, the burdens `builtin-math` (`min`, `max`,
+`sum`, `abs`: 6,624 problems) and `sort` (2,908) and `comprehension`
+(5,920) are what the writer stumbles on, and the gaps `seq-slice-negative`
+(489 problems, 41 blocked by it alone), `seq-slice-step` (852, 77 alone)
+and `sqrt` (192, 23 alone) are what still keeps function-shaped problems
+out (`t/COVERAGE-nl.md`). This section is the integer and sequence
+library and the notation for it; `for` as sugar over `while`, seq
+comprehensions, `sorted` and the slice step follow it as their own
+landing. The provers' own libraries were fetched first (receipt
+54355043298c): Dafny's `Std.Math` (`Min`, `Max`, `Abs`) and
+`Std.Collections.Seq` (`Reverse` with its two ensures), Why3's `int.mlw`
+(`Abs`, `MinMax`, `Power` with `power x 0 = 1` and `power x (n+1) = x *
+power x n`, `Sum` by recursion over a range), Verus's `vstd` (`min`,
+`max`, `abs`, `Seq::contains`, `sort_by` with its multiset lemma), F*'s
+`FStar.Math.Lib` (`abs`, `max`, `min`, `powx`), Ada 2022 A.5.6
+(`Min`, `Max`, `abs`, `**`, `Greatest_Common_Divisor` with `L /= 0 and R
+/= 0` as its precondition), Rocq's `BinInt` (`Z.min`, `Z.max`, `Z.abs`,
+`Z.pow` with `n^m = 0` for `m < 0`, `Z.sqrt` with `s*s <= n < (s+1)*(s+1)`,
+`Z.gcd`) and Lean's `Nat.gcd` (`if m = 0 then n else gcd (n % m) m`).
+
+**Names, not keywords.** A call `f(a, ...)` whose name is none of the
+task's own name, its spec_funs, its methods or its inline helpers is a
+library function; a declared one of the same name shadows it, as in
+Python, and a variable may carry any of these names (`abs`, `gcd`, `max`
+and `rev` are committed task names already). The notation needs no new
+keyword and the grammar no new rule: the parser reads the call, and the
+resolution to the operator below is part of parsing, so the printed form
+`min(a, b)` reads back as the same AST.
+
+**The functions.** Each is an operator in the AST (`{"op": NAME, "args":
+[...]}`), written as a call:
+
+```
+min(a, b), max(a, b)   int x int -> int, real x real -> real (never mixed); total
+abs(x)                 int -> int, real -> real; total
+sum(s)                 seq -> int, seq<real> -> real: sum([]) == 0, sum(s) == sum(s[0..len(s) - 1]) + s[len(s) - 1]; total
+gcd(a, b)              int x int -> int, Euclid on absolute values: gcd(a, 0) == abs(a), gcd(a, b) == gcd(b, a % b) for b != 0
+                       (the Euclidean `%` of "Division and modulo"); total, gcd(0, 0) == 0, the result is never negative
+pow(a, n)              int x int -> int: pow(a, 0) == 1, pow(a, n) == a * pow(a, n - 1) for n > 0; UNDEFINED for n < 0
+isqrt(n)               int -> int: the r >= 0 with r * r <= n < (r + 1) * (r + 1); UNDEFINED for n < 0. In a kernel with no
+                       square root it is defined by recursion: isqrt(0) == 0, isqrt(n) == (let r == isqrt(n - 1) in
+                       if (r + 1) * (r + 1) <= n then r + 1 else r)
+x in s                 T x seq<T> -> bool: exists i. 0 <= i < len(s) and s[i] == x; total (the set form stays as it was;
+                       the type of the right operand decides)
+rev(s)                 seq<T> -> seq<T>: len(rev(s)) == len(s) and rev(s)[i] == s[len(s) - 1 - i]; total
+```
+
+Rocq's convention `n^m = 0` for a negative exponent is not adopted: t
+states undefinedness (an obligation `n >= 0`, through the rules of
+"Definedness" exactly as `div` owes `y != 0`) rather than a value. Ada's
+`Greatest_Common_Divisor` refuses a zero argument; t's `gcd` is total and
+that lowering guards the call. `sum` over an empty seq is `0` (or `0.0`).
+
+**The notation's sugar.** A negative literal index or slice bound written
+directly as `-k` counts from the end: `s[-k]` is `s[len(s) - k]`,
+`s[a..-k]` is `s[a..len(s) - k]` and `s[-k..b]` is `s[len(s) - k..b]`.
+The expansion happens at parse time, the AST holds the expanded form and
+the printer writes it expanded, so no kernel sees a negative index; a
+variable index is never wrapped (`at` is defined on `0 <= i < len(s)` and
+nowhere else), which is where Python's and t's readings part. The raw
+literal `-k` as an index, an access undefined on every seq (the fuzz probe
+`fz_p_at_neg` carries one), is spelled `s[(-k)]`: the parentheses keep it
+out of the sugar, and that is how the printer writes such an AST, so the
+round trip holds for both.
+
+**The twins.** WRONG-OPERATOR gains one move: `min` and `max` swap. Every
+other rung applies with no new move (OFF-BY-ONE and WRONG-CONSTANT reach a
+literal argument, WRONG-VAR an argument of the same type, COLLAPSE-IF a
+guard around a partial call). The interpreter evaluates every function
+above exactly (Python's own `min`, `max`, `abs`, `sum`, `math.gcd`, `**`,
+`math.isqrt`, `in`, reversal), raising `Undef` where this section says
+UNDEFINED.
+
+**Each lowering** emits a definition for each function the task uses,
+named `t_` plus the function, once per file, and uses the kernel's own
+where it has one: Dafny (`t_min`/`t_max`/`t_abs` as `Std.Math` writes
+them, over `real` too; `t_sum`, `t_pow`, `t_isqrt`, `t_gcd` recursive with
+`decreases`, `t_isqrt` carrying its ensures; `in` is Dafny's own seq
+membership; `t_rev` as `Std.Collections.Seq.Reverse` with its two
+ensures), Verus (`spec fn`s of the same shapes, `s.contains(x)`,
+`reveal_with_fuel` and the `isqrt`/`rev` facts as broadcast lemmas brought
+in inside the task's proof fn, since a module-level `broadcast use` of a
+recursive lemma is a cycle Verus refuses, measured 2026-10-06; its
+nonlinear arithmetic is off unhinted, so `cube` and `root_floor` read
+unproved there), SPARK (`Min`,
+`Max`, `abs` of `Big_Integers` directly; `Greatest_Common_Divisor` under a
+zero guard; `T_Pow`, `T_Isqrt`, `T_Sum`, `T_Rev`, `T_Contains` as
+recursive expression functions with `Subprogram_Variant`), F*
+(`FStar.Math.Lib`'s `abs`, `max`, `min`, `powx`; `t_gcd`, `t_isqrt`,
+`t_sum`, `t_rev` as `let rec`; `Seq.mem`). Lean, Rocq and Frama-C abstain
+by name until their encodings are built and measured. The writer's side:
+`to_python.py` hands back `min`, `max`, `abs`, `sum`, `math.gcd`, `a **
+n`, `math.isqrt`, `x in s` and `s[::-1]`.
+
+**The committed tasks:** `clamp` (`max(lo, min(hi, x))`), `distance`
+(`abs(a - b)`), `sum_tail` (`r == sum(s + [x])` from `sum(s) + x`: one
+unfolding of the definition, which Dafny's default fuel reaches where the
+two of `sum([a, b])` were not, measured 2026-10-06; the adapter bans fuel
+attributes), `gcd_of` (`r == gcd(a, b)`, a use of the library, not a
+theorem about it: its first form asked `gcd(b, a) == gcd(a, b)`), `cube`
+(`r == pow(x, 3)`), `root_floor` (`isqrt` under `requires n >= 0`),
+`has_elem` (`x in s` on a seq), `palindrome` (`s == rev(s)`), `last`
+(`s[-1]`, the sugar).
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

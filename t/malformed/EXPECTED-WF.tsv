@@ -25,6 +25,7 @@ wf-lemma-decreases.t	2	1	lemma-decreases
 wf-lemma-name.t	2	1	lemma-name
 wf-lemma-order.t	2	1	lemma-order
 wf-len-nonseq.t	3	8	len-nonseq
+wf-lib-types.t	3	8	lib-types
 wf-local-shadow.t	3	7	local-shadow
 wf-local-v0.t	3	7	local-v0
 wf-loop-decreases.t	4	3	loop-decreases

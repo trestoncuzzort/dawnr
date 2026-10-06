@@ -1660,6 +1660,8 @@ def _ce_bound(e: dict, env: dict):
         raise _NoCe(f"{op!r}: no machine mirror for T_Div/T_Mod")
     if op in ("toreal", "floor", "ceil"):
         raise _NoCe(f"{op!r}: reals have no machine mirror here")
+    if op in ("min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"):
+        raise _NoCe(f"{op!r}: the library has no machine mirror here (SPEC.md 'The library (v1)')")
     bs = [_ce_bound(a, env) for a in e.get("args", [])]
     if op in ("not", "and", "or", "implies") or op in CMP:
         return None
@@ -1944,6 +1946,70 @@ RANGE_PREAMBLE = """\
 # introduced, so the identity is linear arithmetic over `/`'s and `rem`'s own
 # defining law, which the prover discharges directly (MEASURED, probe
 # p_law3.ads: the identity and both Euclidean bounds verify).
+# SPEC.md "The library (v1)" (2026-10-06): recursive expression functions with a Subprogram_Variant, each the
+# SPEC's own definition (receipt 54355043298c: Why3's Power/Sum shapes, Lean's Nat.gcd by Euclid, Rocq's sqrt_spec
+# as T_Isqrt's Post, Dafny Std's Reverse ensures as T_Rev_To's Post). Min, Max and abs are Big_Integers' own.
+LIB_PREAMBLE = {
+    "T_Pow": """\
+   function T_Pow (A, N : Big_Integer) return Big_Integer is
+     (if N = Big_Integer'(0) then Big_Integer'(1)
+      else A * T_Pow (A, N - Big_Integer'(1)))
+   with Pre => N >= Big_Integer'(0),
+        Subprogram_Variant => (Decreases => N);
+""",
+    "T_Isqrt": """\
+   function T_Isqrt (N : Big_Integer) return Big_Integer is
+     (if N = Big_Integer'(0) then Big_Integer'(0)
+      else (declare
+              R : constant Big_Integer := T_Isqrt (N - Big_Integer'(1));
+            begin
+              (if (R + Big_Integer'(1)) * (R + Big_Integer'(1)) <= N
+               then R + Big_Integer'(1) else R)))
+   with Pre  => N >= Big_Integer'(0),
+        Post => T_Isqrt'Result >= Big_Integer'(0)
+                and then T_Isqrt'Result * T_Isqrt'Result <= N
+                and then N < (T_Isqrt'Result + Big_Integer'(1)) * (T_Isqrt'Result + Big_Integer'(1)),
+        Subprogram_Variant => (Decreases => N);
+""",
+    "T_Gcd": """\
+   function T_Gcd_N (A, B : Big_Integer) return Big_Integer is
+     (if B = Big_Integer'(0) then A else T_Gcd_N (B, T_Mod (A, B)))
+   with Pre  => A >= Big_Integer'(0) and then B >= Big_Integer'(0),
+        Post => T_Gcd_N'Result >= Big_Integer'(0),
+        Subprogram_Variant => (Decreases => B);
+
+   function T_Gcd (A, B : Big_Integer) return Big_Integer is
+     (T_Gcd_N (abs (A), abs (B)));
+""",
+    "T_Sum": """\
+   function T_Sum_To (S : Seq; N : Big_Integer) return Big_Integer is
+     (if N = Big_Integer'(0) then Big_Integer'(0)
+      else T_Sum_To (S, N - Big_Integer'(1)) + Elem (S, N - Big_Integer'(1)))
+   with Pre => N >= Big_Integer'(0) and then N <= Len (S),
+        Subprogram_Variant => (Decreases => N);
+
+   function T_Sum (S : Seq) return Big_Integer is (T_Sum_To (S, Len (S)));
+""",
+    "T_Rev": """\
+   function T_Rev_To (S : Seq; N : Big_Integer) return Seq is
+     (if N = Big_Integer'(0) then Seqs.Empty_Sequence
+      else Seqs.Add (T_Rev_To (S, N - Big_Integer'(1)), Elem (S, Len (S) - N)))
+   with Pre  => N >= Big_Integer'(0) and then N <= Len (S),
+        Post => Len (T_Rev_To'Result) = N
+                and then (for all I in T_Range'(Big_Integer'(0), N) =>
+                            Elem (T_Rev_To'Result, I) = Elem (S, Len (S) - Big_Integer'(1) - I)),
+        Subprogram_Variant => (Decreases => N);
+
+   function T_Rev (S : Seq) return Seq is (T_Rev_To (S, Len (S)));
+""",
+    "T_Contains": """\
+   function T_Contains (S : Seq; X : Big_Integer) return Boolean is
+     (for some I in T_Range'(Big_Integer'(0), Len (S)) => Elem (S, I) = X);
+""",
+}
+LIB_ORDER = ["T_Pow", "T_Isqrt", "T_Gcd", "T_Sum", "T_Rev", "T_Contains"]
+SPARK_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in"})
+
 DIVMOD_PREAMBLE = """\
    function T_Mod (X, Y : Big_Integer) return Big_Integer is
      (if (X rem Y) >= Big_Integer'(0)
@@ -3865,6 +3931,7 @@ class Lower:
         self.needs_divmod = False      # set by the first lowered div/mod
         self.needs_reals = False       # set by the first lowered real literal, real(x) or real `/`; lower()
                                        # also reads the declared types (SPEC.md "Exact rationals (v1)")
+        self.needs_lib: set = set()    # SPEC.md "The library (v1)" (2026-10-06): the LIB_PREAMBLE blocks used
         self.needs_fill = False        # set by the first lowered fill()
         self.needs_update = False      # set by the first lowered update
         self.needs_slice = False       # set by the first lowered slice()
@@ -4064,6 +4131,15 @@ class Lower:
             return "real"   # SPEC.md "Exact rationals (v1)": real(x)
         if op in ("floor", "ceil"):
             return "int"
+        if op in ("min", "max", "abs", "rev"):
+            return self._ty(e["args"][0], types)   # SPEC.md "The library (v1)" (2026-10-06): the operand's type
+        if op == "sum":
+            t0 = self._ty(e["args"][0], types)
+            return "real" if isinstance(t0, dict) and t0.get("seq") == "real" else "int"
+        if op in ("gcd", "pow", "isqrt"):
+            return "int"
+        if op == "in":
+            return "bool"
         if op in ("neg", "-", "*", "div"):
             # int or real, by the operand (SPEC.md "Exact rationals (v1)": never mixed)
             return self._ty(e["args"][0], types)
@@ -4381,6 +4457,38 @@ class Lower:
                 self.needs_range = True
             eq = f"{_pair_ada_name(pty)}_Eq ({args[0]}, {args[1]})"
             return eq if op == "==" else f"(not {eq})"
+        if op in ("min", "max"):
+            # SPEC.md "The library (v1)" (2026-10-06): Big_Integers' and Big_Reals' own Min/Max (A.5.6, A.5.7)
+            return f"{op.capitalize()} ({args[0]}, {args[1]})"
+        if op == "abs":
+            return f"abs ({args[0]})"
+        if op == "sum":
+            if self._ty(e["args"][0], types) != "seq":
+                raise NotImplementedError(
+                    "spark: sum over a seq<real>: this column's Seq holds Big_Integer only (SPEC.md 'The library (v1)')")
+            self.needs_lib.add("T_Sum")
+            return f"T_Sum ({args[0]})"
+        if op == "gcd":
+            self.needs_lib.add("T_Gcd")
+            self.needs_divmod = True
+            return f"T_Gcd ({args[0]}, {args[1]})"
+        if op == "pow":
+            self.needs_lib.add("T_Pow")
+            return f"T_Pow ({args[0]}, {args[1]})"
+        if op == "isqrt":
+            self.needs_lib.add("T_Isqrt")
+            return f"T_Isqrt ({args[0]})"
+        if op == "rev":
+            if self._ty(e["args"][0], types) != "seq":
+                raise NotImplementedError(
+                    "spark: rev over a seq whose elements are not ints (SPEC.md 'The library (v1)')")
+            self.needs_lib.add("T_Rev")
+            self.needs_range = True
+            return f"T_Rev ({args[0]})"
+        if op == "in" and self._ty(e["args"][1], types) == "seq":
+            self.needs_lib.add("T_Contains")
+            self.needs_range = True
+            return f"T_Contains ({args[1]}, {args[0]})"
         if op == "toreal":
             # SPEC.md "Exact rationals (v1)": real(x) is Big_Reals' own conversion from a Big_Integer
             self.needs_reals = True
@@ -5366,6 +5474,11 @@ def defined(e: dict, is_real=None) -> dict:
                 {"op": "<=", "args": [a, b]},
                 {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}]}
         return _t_conj([defined(s, is_real), defined(a, is_real), defined(b, is_real), bound])
+    if op in ("pow", "isqrt"):
+        # SPEC.md "The library (v1)" (2026-10-06): pow(a, n) and isqrt(n) owe `n >= 0`
+        n = args[1] if op == "pow" else args[0]
+        nonneg = {"op": ">=", "args": [n, {"int": 0}]}
+        return _t_conj([defined(a, is_real) for a in args] + [nonneg])
     if op in ("div", "mod"):
         x, y = args
         # SPEC.md "Exact rationals (v1)" (2026-10-06): a real divisor owes `y != 0.0`; `is_real` (the caller's
@@ -6140,6 +6253,22 @@ def _lower_lemma(task: dict, l: dict, L: "Lower") -> str:
 _SET_OPS_T = {"set", "in", "card", "union", "inter", "diff"}
 
 
+def _only_seq_membership(task: dict, body: list) -> bool:
+    """SPEC.md "The library (v1)" (2026-10-06): `x in s` on a seq is not a set operation; True when every set-shaped
+    thing `_uses_sets` saw is an `in` whose right operand is a seq (no set type, no other set op)."""
+    import tshape
+
+    def other(obj) -> bool:
+        if isinstance(obj, dict):
+            if obj.get("type") == "set" or (obj.get("op") in _SET_OPS_T and obj.get("op") != "in"):
+                return True
+            return any(other(v) for v in obj.values())
+        if isinstance(obj, list):
+            return any(other(v) for v in obj)
+        return obj == "set"
+    return not other(task) and not other(body) and tshape.seq_membership_used(task, body)
+
+
 def _uses_sets(obj) -> bool:
     """True iff `obj` mentions t's set type or one of its six operations
     anywhere (SPEC.md "Finite sets", 2026-09-27), by the same generic walk
@@ -6155,7 +6284,7 @@ def _uses_sets(obj) -> bool:
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real"}))
+    tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real"}), lib=SPARK_LIB)
     if tshape.uses_ops(body, task, {"floor", "ceil"}):
         # SPEC.md "Exact rationals (v1)" (2026-10-06): Big_Reals (Ada 2022 A.5.7) has no floor or ceiling
         raise NotImplementedError(
@@ -6177,7 +6306,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
             "spark lowering: datatypes (SPEC.md 'Datatypes (v1)'): the Ada "
             "enumeration-type encoding is not built yet (case exhaustiveness "
             "and equality under gnatprove unmeasured)")
-    if _uses_sets(task) or _uses_sets(body):
+    if (_uses_sets(task) or _uses_sets(body)) and not _only_seq_membership(task, body):
         # FINITE SETS (2026-09-27, SPEC.md "Finite sets (v1)"): the SPARK
         # library ships SPARK.Containers.Functional.Sets (`Contains`,
         # `Length`, `Add`, `Remove`, `Union`, `Intersection`, with
@@ -6651,6 +6780,9 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
         parts += [SPLIT_CONCAT_LEMMA_PREAMBLE]
     if L.needs_divmod:
         parts += [DIVMOD_PREAMBLE]
+    for lib_name in LIB_ORDER:
+        if lib_name in L.needs_lib:
+            parts += [LIB_PREAMBLE[lib_name]]   # SPEC.md "The library (v1)" (2026-10-06), after T_Mod (T_Gcd calls it)
     # ROTATE_LEMMA_PREAMBLE calls T_Mod (DIVMOD_PREAMBLE, above) as well
     # as T_Concat/T_Slice/T_Range (above those): must be emitted after
     # all three. A task whose shape needs it already sets needs_divmod/

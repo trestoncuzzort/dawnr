@@ -163,8 +163,8 @@ DETECTORS: dict[str, tuple[str, str]] = {
     "real": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Exact rationals): " "a float literal, true "
              "division `/`, float(), or a decimal-valued io token -- t's `real` is the exact rational, so a "
              "problem whose answer depends on float rounding is still not posed (undercounted here)"),
-    "sqrt": ("gap", "math.sqrt: a real root is specified in t (`r * r == x`), not computed; `isqrt` is the next "
-             "landing's library (SPEC.md Exact rationals)"),
+    "sqrt": ("gap", "math.sqrt: a real root is specified in t (`r * r == x`), not computed; `math.isqrt` is in t "
+             "since 2026-10-06 (SPEC.md The library) and is tagged builtin-math, not here"),
     "nested-seq": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "a seq of seq whose row type could not be read "
                    "as string or tuple (an int/bool row, or a subscript of "
                    "a subscript, or a grid a static read genuinely cannot "
@@ -202,11 +202,9 @@ DETECTORS: dict[str, tuple[str, str]] = {
                         "while-true, no continue, and a break is only in "
                         "the fragment as a tail-position return, decision "
                         "23 -- not distinguished here, see Method)"),
-    "seq-slice-negative": ("gap", "a slice bound that is a negative "
-                            "literal, s[-1:] or s[:-1]: t's slice is "
-                            "defined only for 0 <= a <= b <= len(s), so a "
-                            "negative index is measured apart from the "
-                            "burden seq-slice"),
+    "seq-slice-negative": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): a slice bound "
+                            "that is a negative literal, s[-1:] or s[:-1], read as len(s) - k by the notation "
+                            "(a non-literal negative bound is still not posed, undercounted here)"),
     "seq-slice-step": ("gap", "a slice with a step, s[a:b:c]: t's slice "
                         "form takes two bounds only, no step"),
     "generator": ("gap", "a generator expression or a generator function "
@@ -267,7 +265,8 @@ DETECTORS: dict[str, tuple[str, str]] = {
                        "t writes this as an explicit loop or a quantifier"),
     "sort": ("burden", "sorted() or .sort(); expressible in t but needs a "
              "spec, not a builtin"),
-    "builtin-math": ("burden", "min, max, sum or abs; t can express each "
+    "builtin-math": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): min, max, sum, abs, "
+                     "math.gcd, math.isqrt, ** -- library functions of t; before that day t could express each "
                       "but has no builtin for any of them"),
     "stdin-to-signature": ("burden", "a stdin-shaped problem carries no "
                             "function signature; one has to be extracted "
@@ -594,6 +593,8 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
                 tags["sort"] = True
             if node.attr == "sqrt":
                 tags["sqrt"] = True
+            if node.attr in ("isqrt", "gcd"):
+                tags["builtin-math"] = True   # SPEC.md "The library (v1)" (2026-10-06): isqrt and gcd are in t
         elif isinstance(node, ast.Call):
             name = _call_name(node)
             if name in MAP_CALLS:

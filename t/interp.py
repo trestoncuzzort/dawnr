@@ -728,6 +728,26 @@ def ev(e: dict, env: dict, funs: dict, st: St):
         if a[1] == 0:
             raise Undef("div by zero", expr=e)
         return Fraction(a[0]) / Fraction(a[1])
+    if op in ("min", "max"):
+        # SPEC.md "The library (v1)" (2026-10-06): Python's own, exact on ints and Fractions alike
+        return (min if op == "min" else max)(a[0], a[1])
+    if op == "abs":
+        return abs(a[0])
+    if op == "sum":
+        xs = a[0]
+        return sum(xs, Fraction(0)) if any(isinstance(x, Fraction) for x in xs) else sum(xs)
+    if op == "gcd":
+        return math.gcd(a[0], a[1])       # Euclid on absolute values; gcd(0, 0) == 0, never negative
+    if op == "pow":
+        if a[1] < 0:
+            raise Undef("pow with a negative exponent", expr=e)
+        return a[0] ** a[1]
+    if op == "isqrt":
+        if a[0] < 0:
+            raise Undef("isqrt of a negative", expr=e)
+        return math.isqrt(a[0])
+    if op == "rev":
+        return tuple(reversed(a[0]))
     if op == "toreal":
         return Fraction(a[0])
     if op == "floor":

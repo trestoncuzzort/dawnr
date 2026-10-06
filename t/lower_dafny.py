@@ -1325,6 +1325,9 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return "(" + ", ".join(args) + ")"
     if op == "proj":
         return f"{args[0]}.{e['args'][1]['int']}"
+    ll = _lib_lower(op, args, e)
+    if ll is not None:
+        return ll
     rl = _real_lower(op, args)
     if rl is not None:
         return rl
@@ -1371,6 +1374,119 @@ def _dafny_rat(n: int, d: int) -> str:
         return f"({text})" if n < 0 else text
     except surface.SurfaceError:
         return f"((({n}) as real) / (({d}) as real))"
+
+
+# SPEC.md "The library (v1)" (2026-10-06). `_HINTS` (name -> declared t type) and `_FUNS` (the task's spec_funs) are
+# set by lower() so `_arg_type` can read an operand's static type where the Dafny definition is monomorphic (min on
+# ints or on reals); `_LIB_USED` collects which definitions the file needs, emitted once each by `_lib_defs`.
+_HINTS: dict = {}
+_FUNS: dict = {}
+_LIB_USED: set = set()
+_LIB_INT = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})
+
+
+def _arg_type(e):
+    """The static t type of `e` under the task's declared names, or None when it cannot be told here."""
+    try:
+        import check_wf
+        t, errs = check_wf.expression_type(e, dict(_HINTS), functions=_FUNS)
+        return None if errs else t
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+def _lib_lower(op: str, args: list, e: dict) -> str | None:
+    """A library call as Dafny text, recording the definition it needs; None for any other op."""
+    if op not in _LIB_INT:
+        return None
+    if op in ("min", "max", "abs"):
+        real = _arg_type(e["args"][0]) == "real"
+        name = ("t_r" if real else "t_") + op
+        _LIB_USED.add(name)
+        return f"{name}({', '.join(args)})"
+    if op == "sum":
+        t0 = _arg_type(e["args"][0])
+        real = isinstance(t0, dict) and t0.get("seq") == "real"
+        name = "t_rsum" if real else "t_sum"
+        _LIB_USED.add(name)
+        return f"{name}({args[0]})"
+    if op == "gcd":
+        _LIB_USED.update({"t_gcd", "t_gcdn", "t_abs"})
+        return f"t_gcd({args[0]}, {args[1]})"
+    if op == "pow":
+        _LIB_USED.add("t_pow")
+        return f"t_pow({args[0]}, {args[1]})"
+    if op == "isqrt":
+        _LIB_USED.add("t_isqrt")
+        return f"t_isqrt({args[0]})"
+    if op == "rev":
+        _LIB_USED.add("t_rev")
+        return f"t_rev({args[0]})"
+    return None
+
+
+_LIB_TEXT = {
+    # Std.Math's own shapes (fetched 2026-10-06, receipt 54355043298c), over real too
+    "t_min": "function t_min(a: int, b: int): int { if a < b then a else b }",
+    "t_rmin": "function t_rmin(a: real, b: real): real { if a < b then a else b }",
+    "t_max": "function t_max(a: int, b: int): int { if a < b then b else a }",
+    "t_rmax": "function t_rmax(a: real, b: real): real { if a < b then b else a }",
+    "t_abs": "function t_abs(a: int): int { if a < 0 then -a else a }",
+    "t_rabs": "function t_rabs(a: real): real { if a < 0.0 then -a else a }",
+    # SPEC.md "The library (v1)": sum([]) == 0, sum(s) == sum(s[0..len(s) - 1]) + s[len(s) - 1]
+    # No fuel attribute: verifiers/dafny.py bans every {:...} attribute (an audit rule, since {:axiom} hides in the same
+    # braces). Measured 2026-10-06: a two-element display `sum([a, b])` is not unfolded at the default fuel, `sum(s + [x])`
+    # is (one unfolding), so the committed task is `sum_tail`.
+    "t_sum": "function t_sum(s: seq<int>): int decreases |s| { if |s| == 0 then 0 else t_sum(s[..|s| - 1]) + s[|s| - 1] }",
+    "t_rsum": "function t_rsum(s: seq<real>): real decreases |s| { if |s| == 0 then 0.0 else t_rsum(s[..|s| - 1]) + s[|s| - 1] }",
+    # Euclid on the absolute values (Lean's Nat.gcd shape); gcd(0, 0) == 0
+    "t_gcdn": "function t_gcdn(a: nat, b: nat): nat decreases b { if b == 0 then a else t_gcdn(b, a % b) }",
+    "t_gcd": "function t_gcd(a: int, b: int): int { t_gcdn(t_abs(a), t_abs(b)) }",
+    # the requires is the definedness obligation (SPEC.md: pow and isqrt are undefined below 0)
+    "t_pow": "function t_pow(a: int, n: int): int requires n >= 0 decreases n { if n == 0 then 1 else a * t_pow(a, n - 1) }",
+    "t_isqrt": ("function t_isqrt(n: int): (r: int)\n  requires n >= 0\n  ensures 0 <= r && r * r <= n && n < (r + 1) * (r + 1)\n"
+                "  decreases n\n{ if n == 0 then 0 else (var r := t_isqrt(n - 1); if (r + 1) * (r + 1) <= n then r + 1 else r) }"),
+    # Std.Collections.Seq.Reverse's two ensures
+    "t_rev": ("function t_rev<T>(s: seq<T>): (r: seq<T>)\n  ensures |r| == |s|\n"
+              "  ensures forall i :: 0 <= i < |s| ==> r[i] == s[|s| - 1 - i]\n  decreases |s|\n"
+              "{ if |s| == 0 then [] else [s[|s| - 1]] + t_rev(s[..|s| - 1]) }"),
+}
+_LIB_ORDER = ["t_min", "t_rmin", "t_max", "t_rmax", "t_abs", "t_rabs", "t_sum", "t_rsum", "t_gcdn", "t_gcd", "t_pow",
+              "t_isqrt", "t_rev"]
+
+
+def _lib_defs() -> list:
+    """The definitions this file uses, in a fixed order (a dependency before its user), each followed by a blank."""
+    out = []
+    for name in _LIB_ORDER:
+        if name in _LIB_USED:
+            out += [_LIB_TEXT[name], ""]
+    return out
+
+
+def _lib_value(op: str, vs: list):
+    """The interpreter's own value of a library call (SPEC.md "The library (v1)"); the mirror for `_ev`/`_ev_undef`.
+    Raises interp.Undef where the SPEC says UNDEFINED."""
+    if op in ("min", "max"):
+        return (min if op == "min" else max)(vs[0], vs[1])
+    if op == "abs":
+        return abs(vs[0])
+    if op == "sum":
+        xs = vs[0]
+        return sum(xs, interp.Fraction(0)) if any(isinstance(x, interp.Fraction) for x in xs) else sum(xs)
+    if op == "gcd":
+        return interp.math.gcd(vs[0], vs[1])
+    if op == "pow":
+        if vs[1] < 0:
+            raise interp.Undef("pow with a negative exponent")
+        return vs[0] ** vs[1]
+    if op == "isqrt":
+        if vs[0] < 0:
+            raise interp.Undef("isqrt of a negative")
+        return interp.math.isqrt(vs[0])
+    if op == "rev":
+        return tuple(reversed(vs[0]))
+    raise ValueError(op)
 
 
 def _real_lower(op: str, args: list) -> str | None:
@@ -1524,6 +1640,9 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
             return "(" + ", ".join(args) + ")"
         if op == "proj":
             return f"{args[0]}.{e['args'][1]['int']}"
+        ll = _lib_lower(op, args, e)
+        if ll is not None:
+            return ll
         rl = _real_lower(op, args)
         if rl is not None:
             return rl
@@ -1790,6 +1909,8 @@ def _tlit(v, ty=None):
         return {"rat": [int(n), int(d)]}
     if isinstance(v, bool):
         return {"bool": v}
+    if ty == "real" and isinstance(v, int) and not isinstance(v, bool):
+        return {"rat": [v, 1]}   # an int-valued real (sum of an empty seq<real> is 0) in a real-typed slot
     if isinstance(v, int):
         return {"int": v} if v >= 0 else {"op": "neg", "args": [{"int": -v}]}
     if isinstance(v, list) and all(
@@ -2076,6 +2197,8 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
             return out, interp.Fraction(x) / interp.Fraction(y)
         r = x % abs(y)
         return out, (r if op == "mod" else (x - r) // y)
+    if op in _LIB_INT:
+        return out, _lib_value(op, vs)   # SPEC.md "The library (v1)" (2026-10-06)
     if op == "toreal":
         return out, interp.Fraction(vs[0])
     if op == "floor":
@@ -2531,6 +2654,13 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
             return interp.Fraction(x) / interp.Fraction(y)
         r = x % abs(y)
         return r if op == "mod" else (x - r) // y
+    if op in _LIB_INT:
+        # SPEC.md "The library (v1)" (2026-10-06): pow and isqrt owe `n >= 0`, the rest are total
+        if op == "pow" and a[1] < 0:
+            raise _DefViol({"op": ">=", "args": [_tlit(a[1]), {"int": 0}]})
+        if op == "isqrt" and a[0] < 0:
+            raise _DefViol({"op": ">=", "args": [_tlit(a[0]), {"int": 0}]})
+        return _lib_value(op, a)
     if op == "toreal":
         return interp.Fraction(a[0])
     if op == "floor":
@@ -2980,6 +3110,11 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
     _EMPTIES.clear()
     _EMPTIES.update(tshape.empty_display_types(task, body))
+    _HINTS.clear()
+    _HINTS.update(tshape._scope_of(task, body))
+    _FUNS.clear()
+    _FUNS.update({f["name"]: f for f in task.get("spec_funs", [])})
+    _LIB_USED.clear()
     lines = []
     # SPEC.md "The string library (v1)" (2026-09-11): "each kernel lowers a
     # member to a definition in its prelude", but gate (c)'s byte-identical
@@ -3022,6 +3157,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
 
     # SPEC.md "Lemmas (v1)": each lemma is a Dafny lemma, proved in this
     # file; a call statement gives the caller its ensures.
+    lib_slot = len(lines)   # SPEC.md "The library (v1)": the definitions the body turns out to use go here
     for l in task.get("lemmas", []):
         if l["name"] == method:
             raise NotImplementedError(
@@ -3057,6 +3193,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     lines.append("{")
     lines.append(stmts(body, "  ", ctx))
     lines.append("}")
+    lines[lib_slot:lib_slot] = _lib_defs()
     src = "\n".join(lines) + "\n"
     if witness is not None:
         cert = _certificate(task, body, witness)
