@@ -3178,9 +3178,20 @@ is queued, and the ones running are read as they finish.
 - **The matrix regenerated from a clean clone (10-06 22:32Z start, at 3c9d721b):** all seven 36 -> 43, as T11 predicted;
   exactly the 22 cells T10 and T11 named moved (Rocq 43 -> 57, Frama-C 36 -> 44), no other cell. Frama-C alone keeps
   double_all, palindrome and swap_rows out of all seven.
-- **Next:** the engine moves to its own repository (github.com/trestoncuzzort/t-proof-engine) with its history; dawnr
-  keeps a pinned copy until its pipeline leaves `t/`. The clean-clone matrix at T12 runs from that repository, which
-  also proves it stands alone. Then D2, AlgoVeri's 22 contracts in seven kernels (`t/algoveri/`, `t/ALGOVERI.md`),
-  and the next depth items: comprehensions in Rocq, F*, SPARK and Frama-C (7 tasks each), the higher-order calls in
+- **The engine split out (10-06 23:05Z):** github.com/trestoncuzzort/t-proof-engine, with the history of every engine
+  file (310 commits filtered from this repository), its own README, AGENTS.md, LICENSE, NOTICE and CI (green on its
+  first run). dawnr carries a pinned copy in `t/` (`t/ENGINE.md`); `t/sync_engine.sh` moves the pin. Engine changes
+  land there first.
+- **The matrix regenerated from a clean clone of t-proof-engine (10-06 23:08Z start, at 1dfc4f9f):** exactly the six
+  Lean cells T12 named moved; Lean 61, all seven 43.
+- **T13 registered (10-06 23:12Z), AlgoVeri in seven kernels:** 21 of AlgoVeri's 22 statable contracts written in t
+  (`t/algoveri/`, MAPPING.md clause by clause), each verified in Dafny with its twin refuted while written; a
+  lowering-only pass found F*'s spec functions over a seq<seq> raising TypeError, fixed (refusal or lowering, never a
+  crash). The seven-kernel run follows.
+- **T14 landed (10-06 23:30Z), comprehensions in Rocq:** a map is its own (function, length) pair in Rocq's encoding;
+  all 5 maps verified with the twin refuted (odd_positions too, which Lean leaves UNPROVED); evens (a filter) and
+  count_evens_skip (early exits) refuse by name. Rocq 57 -> 62, no other cell moved.
+- **Next:** T13's seven-kernel AlgoVeri run and its read (`t/ALGOVERI.md`), then the next depth items:
+  comprehensions in F*, SPARK and Frama-C (7 tasks each) and a filter in Rocq, the higher-order calls in
   Rocq, compositional types in Lean, Rocq and Frama-C. The language queue: G9 datatypes with fields (records,
   options, trees, which 37 of AlgoVeri's contracts need), then iteration over a map.

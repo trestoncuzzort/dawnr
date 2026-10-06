@@ -312,5 +312,32 @@ class CommittedTasksUnaffectedTest(unittest.TestCase):
             self.assertNotIn("t_forall_at", out)
 
 
+class NestedSeqSpecFunParamTest(unittest.TestCase):
+    """A spec_fun with a `seq<seq>` parameter (AlgoVeri's matrix_multiplication states `dot_product(row, B, c, k)`
+    over the matrix B) raised TypeError out of `emit_spec_fun`, which typed its binders through the flat TY table
+    (no entry for the `{"seq": "seq"}` dict) while every other binder in the file goes through `_tystr`. It must
+    now lower, or refuse with NotImplementedError; never any other exception (2026-10-06)."""
+
+    SRC = """t 1
+task row_count(m: seq<seq>) returns (r: int)
+  ensures r == rows(m)
+spec fun rows(q: seq<seq>): int
+  decreases 0
+= len(q)
+{
+  r := len(m);
+}
+"""
+
+    def test_lowers_or_refuses_by_name(self):
+        import surface
+        task = surface.parse(self.SRC)
+        try:
+            out = lf.lower(task, task["body"])
+        except NotImplementedError:
+            return
+        self.assertIn("Seq.seq (Seq.seq int)", out)
+
+
 if __name__ == "__main__":
     unittest.main()
