@@ -2976,7 +2976,12 @@ is queued, and the ones running are read as they finish.
   (`locallm/judge_twins.py`): 37 of 557 wrong twins accepted: two weak tests, thirteen misreported figures in prose,
   the rest equivalent. The operator's list of twenty, where applicable: PRIVACY.md, TERMS.md, `dawnr forget`, the
   page at WCAG 2.2 AA (contrast, keyboard tabs, live results), the sentence under Run.
-- **Next:** the taught model merged on the lab's CPU, converted, quantised, read on the farm (660) and the laptop
-  (161); then, the freeze lifted: `Planner.messages` without rewrites of earlier turns and the warm-up inside
-  `run_task`; the two weak fixtures and the figure note; the Windows policy that fails closed; the sixth set's two
-  misses; the F2 data choices (loss-ranked rows, a general share); scanned pages (OCR) still not built.
+- **The direction changed (10-06 08:10Z).** The operator: t is the ceiling; everything stops until the language
+  has everything it needs and more; no training, speed or assistant work meanwhile. The plan of record is
+  `internal/RESEARCH-2026-10-06-t-expansion.md` (seven landings: compositional types, exact rationals, builtins and
+  notation, break/continue, maps, records and options, the string library's missing members), registered with
+  census bars in `t/PREDICT-2026-10-06-t-expansion.md`. The F reading that was running finishes by itself and is
+  recorded in one line. Paused, not closed: `Planner.messages` without rewrites and the warm-up inside `run_task`;
+  the two weak fixtures and the figure note; the Windows policy that fails closed; the sixth set's two misses; the
+  F2 data choices; the shared-prefix trainer's card bars (X2, X3); scanned pages (OCR).
+- **Next:** G1, compositional types, SPEC first.
