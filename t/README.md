@@ -24,7 +24,7 @@ provers) and Viper (one intermediate verification language, many frontends).
 If t ever grows its own checker, that checker gets verified inside Rocq or Lean
 (the CakeML path) before anything trusts it: a homemade language certifying a
 homemade system is two unaudited instruments signing each other's receipts, and
-that is refused here in advance ([`../ROADMAP.md`](../ROADMAP.md), "The far
+that is refused here in advance ([dawnr's `ROADMAP.md`](https://github.com/trestoncuzzort/dawnr/blob/main/ROADMAP.md), "The far
 field").
 
 ## What t covers
@@ -49,7 +49,7 @@ REFUTED means the kernel accepted a certificate lemma restating a measured
 witness, not a bare failing exit code. That distinction was learned: until
 2026-09-02, Dafny's exit 4 (could-not-prove) was read as refuted. It is not a
 countermodel and is no longer read as one
-([`WITNESS-2026-09-02-dafny-door.md`](WITNESS-2026-09-02-dafny-door.md)).
+([`WITNESS-2026-09-02-dafny-door.md`](https://github.com/trestoncuzzort/dawnr/blob/main/t/WITNESS-2026-09-02-dafny-door.md)).
 
 [`twins/`](twins/) ships 426 pairs as a standalone artifact: 213 verified
 programs answering 90 problems, each paired with a near-miss one deliberate
@@ -73,13 +73,13 @@ written only when both halves are on the record.
   the lexer's keyword set. [`grammar_check.py`](grammar_check.py) proves it
   accepts all 4,208 programs the parser accepts and refuses 590 of 590 replies
   the parser refuses.
-- **Specifications are checked against the problems.** [`spec_check.py`](spec_check.py)
+- **Specifications are checked against the problems.** [dawnr's `spec_check.py`](https://github.com/trestoncuzzort/dawnr/blob/main/t/spec_check.py)
   evaluates an accepted specification at the problem's own solution and at the
   problem's own assertions. Across 36 graded answer sets and 650 clean answers,
   13 disagree: tests passed, seven proofs held, twin refuted, and the
   specification still does not say what the problem asked
-  ([`SPEC-CHECK-2026-09-18.md`](SPEC-CHECK-2026-09-18.md)).
-- **Preflight.** [`preflight.py`](preflight.py) refuses to let a round start on
+  ([`SPEC-CHECK-2026-09-18.md`](https://github.com/trestoncuzzort/dawnr/blob/main/t/SPEC-CHECK-2026-09-18.md)).
+- **Preflight.** [dawnr's `preflight.py`](https://github.com/trestoncuzzort/dawnr/blob/main/t/preflight.py) refuses to let a round start on
   a checker whose version cannot be read, a held-out problem in a training set,
   a clean answer resting on a flake or a timeout, or a specification that
   disagrees with its problem.
@@ -120,4 +120,4 @@ here; `editors/WALKTHROUGH.md` measures everything reachable without one.
 | `out/` | lowered sources and verdicts, regenerated; witnesses are committed |
 
 Results and caveats for the whole project are in
-[`../SCOREBOARD.md`](../SCOREBOARD.md) and [`../LIMITS.md`](../LIMITS.md).
+[dawnr's `SCOREBOARD.md`](https://github.com/trestoncuzzort/dawnr/blob/main/SCOREBOARD.md) and [`LIMITS.md`](https://github.com/trestoncuzzort/dawnr/blob/main/LIMITS.md).

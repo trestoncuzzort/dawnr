@@ -8,7 +8,7 @@ removed. Three rows below cite `forge/dafny_verify.py` as the witness for Dafny'
 exit-code taxonomy. Those witnesses were real when inspected and the file is recoverable
 at commit `a736d82`; `t/verifiers/dafny.py` restates the same mapping in the live tree.
 The rows are left as written because a ledger that edits its own evidence after the fact
-is not a ledger. See [`../internal/FORGE-RETIRED-2026-09-20.md`](../internal/FORGE-RETIRED-2026-09-20.md).
+is not a ledger. See [dawnr's `internal/FORGE-RETIRED-2026-09-20.md`](https://github.com/trestoncuzzort/dawnr/blob/main/internal/FORGE-RETIRED-2026-09-20.md).
 
 Read the ledger by status first if you want the action list: the "The action list, as worked" section right below collects every claim that was STALE or UNWITNESSED, now shown with the action taken, grouped by file, since those are the ones that need either a fresh run or a correction to the prose. The per-file sections after that hold everything, including the WITNESSED and REPRODUCED rows, as the full record.
 
