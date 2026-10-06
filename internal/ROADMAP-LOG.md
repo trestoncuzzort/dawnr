@@ -3171,7 +3171,11 @@ is queued, and the ones running are read as they finish.
   verified with the twin refuted (clamp, cube, distance, gcd_of, has_elem, largest, root_floor, sum_one); Frama-C
   36 -> 44, refusals 51 -> 43, no other cell moved. All seven should go 36 -> 43. Certificate repairs: the replay
   evaluates the library, and min/max/abs replay branch-free.
-- **Next:** the clean-clone matrix at T11. Then D2, AlgoVeri's 22 contracts in seven kernels (`t/algoveri/`,
+- **T12 landed (10-06 22:48Z), comprehensions in Lean:** each shape one function in prefix form by structural
+  recursion over Nat, with its length, element and filter lemmas proved by induction; doubled, squares, evens, diffs,
+  every_other verified with the twin refuted; odd_positions UNPROVED (an index sum under toNat in the other order);
+  count_evens_skip refused (early exits). Lean 56 -> 61.
+- **Next (before T12):** the clean-clone matrix at T11. Then D2, AlgoVeri's 22 contracts in seven kernels (`t/algoveri/`,
   `t/ALGOVERI.md`), and the next depth items: comprehensions in Lean, Rocq, F*, SPARK and Frama-C (7 tasks each),
   the higher-order calls in Rocq, compositional types in Lean, Rocq and Frama-C. The language queue: G9 datatypes with
   fields (records, options, trees, which 37 of AlgoVeri's contracts need), then iteration over a map.

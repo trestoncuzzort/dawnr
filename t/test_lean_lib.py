@@ -101,6 +101,24 @@ def test_shared_rules():
        "a comprehension anywhere else is still seen")
 
 
+def test_comprehensions():
+    # SPEC.md "Comprehensions (v1)" in Lean (PREDICT T12)
+    src = lean("doubled")
+    ok("def t_comp1 (t_s : List Int) : Nat → List Int" in src and "theorem t_comp1_get" in src
+       and "(t_comp1 s (s).length)" in src, "a map over a seq: prefix form, the whole seq by its length")
+    src = lean("squares")
+    ok("def t_compr1 (t_a : Int) : Nat → List Int" in src and "theorem t_compr1_get0" in src,
+       "a range: its own function and the zero-offset element corollary")
+    src = lean("evens")
+    ok("theorem t_comp1_all" in src and "theorem t_comp1_length" in src, "a filter: its length bound and its property")
+    src = lean("diffs")
+    ok("∀ (t_dk" in src or "(∀ (t_dk" in src, "a partial body owes its definedness at every index of the range")
+    prelude = src[:src.find("def diffs_t")]
+    ok("termination_by" not in prelude, "the comprehension's function is structurally recursive")
+    ok("break" in refusal("count_evens_skip") or "while-true" in refusal("count_evens_skip"),
+       "a comprehension task with an early exit still refuses by name: %r" % refusal("count_evens_skip"))
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

@@ -641,3 +641,37 @@ now has its own. Two certificate repairs belong to this landing. The replay's gr
 operators; it had refused every twin that called one. min, max and abs are replayed as their `ite`, resolved
 branch-free: a live `?:` arm at ground values is dead code to the smoke tests, which read `clamp`'s and `distance`'s
 twins UNPROVED. Membership in a seq left Frama-C's set detector, as in Lean and Rocq.
+
+## T12 registered (2026-10-06 22:32Z, before any run): comprehensions in Lean
+
+D1's fourth landing. Seven committed tasks state a comprehension (`doubled`, `squares`, `evens`, `diffs`,
+`every_other`, `odd_positions`, `count_evens_skip`) and all five of SPARK, Frama-C, Lean, Rocq and F* refuse
+them by name. Lean first, because its higher-order calls (T9) already have the shape a comprehension needs. Design:
+each comprehension shape (variable, filter, body, and whether the source is a seq or an int range) becomes one
+function in prefix form by structural recursion over `Nat`, appending the element's image when the filter holds,
+so a prefix's value is one unfolding from the next and ground values evaluate under `decide`. A seq source `s`
+is `(s, s.length)`, a prefix `s[0..e]` is `(s, e.toNat)`, a range `[lo, hi)` is `(lo, (hi - lo).toNat)`. The
+lemmas each shape needs are generated with it and proved by induction: a map's length and element, a filter's length
+bound and that every element satisfies the filter, all stated at an int index, the form the ensures use. A partial
+body (`diffs`'s `s[i + 1] - s[i]`) is lowered only when its definedness holds at every index of the source, as
+Dafny's comprehension precondition does. Bars: (1) Lean verifies the real and refutes the twin on at least 5 of the
+7, with `count_evens_skip` expected among the refusals (it needs early exits, which Lean refuses by name);
+(2) the rest refuse by name; (3) no Lean cell that agreed before changes, measured by re-running the whole column.
+What would falsify the design: grind not reaching the element lemma through an append at an int index (then the
+lemma is stated at the exact index shape the ensures use, and the read says so); a filter's element property not
+following by induction without a permutation fact (then `evens` refuses by name).
+
+### T12 read (2026-10-06 22:48Z): comprehensions in Lean, 5 of the 7 tasks verified with the twin refuted.
+(1) Bar 1 held: Lean verifies the real and refutes the twin on `doubled`, `squares`, `evens`, `diffs` and
+`every_other`. (2) Bar 2 is partly missed. `count_evens_skip` refuses by name (early exits), as registered, but
+`odd_positions` does not refuse: it reads UNPROVED with its twin refuted. Its ensures read `s[(2 * k + 1).toNat]!`,
+the slice lemma gives `s[(1 + 2 * k).toNat]!`, and a commuted form of the lemma did not close it either. It is an
+honest UNPROVED, not a false verdict, and it is left open. (3) The whole Lean column was re-run over the 88 tasks:
+the five cells above moved from refusal to verified with the twin refuted, and `odd_positions` from refusal to
+UNPROVED. One more cell moved, `sum_tail`, from verified/refuted to verified/timeout: the run shared the machine
+with a clean-clone matrix. Its twin takes 5 min 22 s alone and does refute, and its lowering is now byte-identical
+to the committed one, because the commuted slice lemma is emitted only beside a comprehension. Lean: 56 -> 61
+verified with the twin refuted, 30 -> 24 refusals. (4) The second registered falsifier did not fire: the filter's
+property follows by induction. The first did, in a different place than predicted. grind reached the element lemma
+through the append, but not through `0 + i` under `toNat`, so a range from 0 gets its own corollary with
+`0 + i` simplified, which closed `diffs`.
