@@ -5556,6 +5556,8 @@ class Ctx:
             return self.ty(e["ite"]["then"], local)
         if "call" in e:
             return self.sfres[e["call"]["fun"]]
+        if "comp" in e:
+            return "seq"   # SPEC.md "Comprehensions (v1)", PREDICT T14: a map whose elements are ints (comp_fn)
         op = e["op"]
         if op == "+":
             # SPEC.md "Sequences: literals, concatenation, slices (v1)":
@@ -5676,6 +5678,8 @@ class Ctx:
         both the SAME opaque-Definition-plus-reading-tactic shape as
         t_upd/t_fill (PRELUDE)."""
         local = local or {}
+        if "comp" in e:
+            return self.comp_fn(e["comp"], env, local)
         if e.get("op") in ("rev", "sort"):
             # SPEC.md "The library (v1)"/"Sorting (v1)" in Rocq (PREDICT T10): the same length, read from the other
             # end, or the stable insertion sort read back as a function
@@ -5925,6 +5929,32 @@ class Ctx:
             f"`fill` is the sole refusal left here, unexercised by this "
             f"family; see Nested sequences (v1)'s dated note near "
             f"t_nupd)")
+
+    def comp_fn(self, c: dict, env: dict, local: dict) -> tuple[str, str]:
+        """SPEC.md "Comprehensions (v1)" in Rocq (PREDICT T14): a map is its own (function, length) pair in this
+        file's encoding and needs no construction. Over a seq `s` it is `(fun k => body[x := s k], len s)`; over a
+        range `[lo, hi)` it is `(fun k => body[i := lo + k], Z.max 0 (hi - lo))`, the index written `k` alone when
+        `lo` is the literal 0. A filter, and a comprehension in a spec_fun, method or lemma, refuse by name before
+        this runs (`_comp_refusal`); a source of rows, or elements that are not ints, refuse here."""
+        v = c["var"]
+        self._ck = getattr(self, "_ck", 0) + 1
+        k = f"t_ck{self._ck}"
+        local2 = dict(local, **{v: "int"})
+        if "seq" in c:
+            if self.ty(c["seq"], local) != "seq":
+                raise NotImplementedError("rocq: a comprehension over a nested sequence is not lowered yet "
+                                          "(SPEC.md 'Comprehensions (v1)')")
+            fn_s, ln = self.seq_fn(c["seq"], env, local)
+            env2 = dict(env, **{v: f"({fn_s} {k})"})
+        else:
+            lo = self.zx(c["lo"], env, local)
+            hi = self.zx(c["hi"], env, local)
+            env2 = dict(env, **{v: k if c["lo"] == {"int": 0} else f"({lo} + {k})"})
+            ln = f"(Z.max 0 ({hi} - {lo}))"
+        if self.ty(c["body"], local2) != "int":
+            raise NotImplementedError("rocq: a comprehension whose elements are not integers is not lowered yet "
+                                      "(SPEC.md 'Comprehensions (v1)')")
+        return f"(fun {k} : Z => {self.zx(c['body'], env2, local2)})", ln
 
     def outer_fn(self, e: dict, env: dict, local: dict | None = None
                  ) -> tuple[str, str]:
@@ -6455,6 +6485,27 @@ class Ctx:
             cp = self.prop(c["cond"], env, local)
             self.defs(c["then"], ctx + [cp], binders, acc, env, local)
             self.defs(c["else"], ctx + [f"(~ {cp})"], binders, acc, env, local)
+            return
+        if "comp" in e:
+            # SPEC.md "Comprehensions (v1)" (PREDICT T14, a map, so `cond` is the literal true): the source defined,
+            # then the body at every element, the element bound the way comp_fn binds it
+            c = e["comp"]
+            v = c["var"]
+            local2 = dict(local, **{v: "int"})
+            if "seq" in c:
+                self.defs(c["seq"], ctx, binders, acc, env, local)
+                fn_s, ln_s = self.seq_fn(c["seq"], env, local)
+                self._ck = getattr(self, "_ck", 0) + 1
+                k = f"t_ck{self._ck}"
+                env2 = dict(env, **{v: f"({fn_s} {k})"})
+                rng = f"(0 <= {k} < {ln_s})"
+            else:
+                self.defs(c["lo"], ctx, binders, acc, env, local)
+                self.defs(c["hi"], ctx, binders, acc, env, local)
+                k = v
+                env2 = {n: t for n, t in env.items() if n != v}
+                rng = f"({self.zx(c['lo'], env, local)} <= {v} < {self.zx(c['hi'], env, local)})"
+            self.defs(c["body"], ctx + [rng], binders + [f"({k} : Z)"], acc, env2, local2)
             return
         if "call" in e:
             for a in e["call"]["args"]:
@@ -12502,14 +12553,43 @@ def _v0_cert(task: dict, body: list, witness: dict):
         return None
 
 
+def _comp_refusal(task: dict, body: list) -> None:
+    """PREDICT T14: Rocq carries a comprehension that is a map (no filter) over a seq or an int range, in the task's
+    requires, ensures and body. A filter, or a comprehension inside a spec_fun, method or lemma, refuses by name.
+    any/all over a comprehension keeps its own route (SPEC.md "Reductions (v1)", PREDICT T10)."""
+    def walk(x, inside_task: bool) -> None:
+        if isinstance(x, dict):
+            a = x.get("args", [])
+            if x.get("op") in ("any", "all") and len(a) == 1 and isinstance(a[0], dict) and "comp" in a[0]:
+                return
+            if "comp" in x:
+                if not inside_task:
+                    raise NotImplementedError("rocq: a comprehension inside a spec_fun, method or lemma is not "
+                                              "lowered yet (SPEC.md 'Comprehensions (v1)')")
+                if x["comp"].get("cond") != {"bool": True}:
+                    raise NotImplementedError("rocq: a filtered comprehension is not lowered yet "
+                                              "(SPEC.md 'Comprehensions (v1)')")
+            for v in x.values():
+                walk(v, inside_task)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v, inside_task)
+    walk(task.get("requires", []), True)
+    walk(task.get("ensures", []), True)
+    walk(body or [], True)
+    for k in ("spec_funs", "methods", "lemmas"):
+        walk(task.get(k, []), False)
+
+
 # `witness` is the twin's measured witness (harness.twin_cached). Twin call
 # sites pass it; when a certificate can ground it, the twin file carries
 # t_refutation_certificate instead of an unprovable spec theorem.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
     import rocq_lib
-    tshape.abstain_unless_carried(task, body, "rocq", carried={"comp-reduction"},
+    tshape.abstain_unless_carried(task, body, "rocq", carried={"comp-reduction", "comp"},
                                   lib=rocq_lib.ROCQ_LIB)   # PREDICT T10: the library in Rocq
+    _comp_refusal(task, body)                              # PREDICT T14: maps carried, the rest refused by name
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): Rocq's own
         # `Inductive` is the exact source for a field-less v1 enum

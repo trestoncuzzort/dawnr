@@ -3840,7 +3840,11 @@ def emit_spec_fun(cx: Ctx, sf: dict) -> str:
     local = {p["name"]: p["type"] for p in sf["params"]}
     for n in local:
         _ck(n)
-    binders = " ".join(f"({p['name']}:{TY[p['type']]})" for p in sf["params"])
+    # A nested-seq or pair parameter is spelled by `_tystr`, as a task's own parameters are (`Seq.seq (Seq.seq int)`,
+    # FStar.Seq.Base's `seq` being polymorphic in its element type); the flat TY table has no entry for those dicts.
+    binders = " ".join(f"({p['name']}:{_tystr(p['type'])})" for p in sf["params"])
+    if isinstance(sf["result"], dict):
+        raise NotImplementedError("fstar lowering: a spec_fun whose result is a pair or a nested seq is not lowered yet")
     # SPEC.md "Seq-valued spec_funs (v1)" (2026-09-27): a spec_fun whose
     # result is a seq is the same `let rec ... : Tot (Seq.seq int)
     # (decreases m)` an int one is, its body rendered by `sx` (F* tutorial,
