@@ -179,15 +179,28 @@ PowerShell recipe non-interactive with a timeout, an interop check that says how
 - Any KTO/ORPO result on tool use under 8B; a clean "shortest trajectory" ablation at small scale; an epoch rule
   for ~2k tool-call rows with a shared long prefix.
 
-## 7. What runs now, and what comes after
+## 7. What was measured the same morning, and what it changed
 
-Running (registered in `locallm/PREDICT-2026-10-05-assistant.md`, section S): four lab CPU servers, six cores each,
-the same eight tasks one after another: the product's flags; plus checkpoints inside the prefix; plus n-max 5;
-no drafting. Read: first-call prompt tokens of tasks 2–8 (S1), tokens per second written (S2, S3), tasks done
-unchanged (S4). If S1 holds, `bin/dawnr` gets the two flags (a receipt first); if S2 holds, n-max moves to 5; if
-S3 fails on the CPU, drafting becomes a GPU-only default.
+Registered as S in `locallm/PREDICT-2026-10-05-assistant.md`; four lab CPU servers of six cores, the same eight tasks:
 
-After F is read (the laptop's taught adapter, ~08:00Z): the queue above in order, each item its own
+| | result |
+|---|---|
+| S1 checkpoint flags (`--ctx-checkpoints 64 --checkpoint-min-step 256`) | **nothing changed**: first calls identical to the token. The server makes a checkpoint only at the end of a prompt it processes, so after a task's first call none lies at the shared 2,220-token prefix. |
+| the fix | the prefix processed alone leaves a checkpoint at exactly its end: the next conversation's first call then costs 25–144 tokens instead of ~2,350 (0.2–1 s instead of 19 s on six cores). Built as `locallm/dawnr_warm.py`, called by the launcher before each conversation. A slot saved there is 125 MB and restores in 36 ms (kept in reserve). |
+| S2 draft length | n-max 5 writes **+30%** tokens per second over n-max 3 on either core group (15.6–15.9 against 11.9–12.0, acceptance 0.90); the launcher moved to 5; 6 and 8 under test (S2b). |
+| S3 drafting at all | on this CPU, n-max 3 is only **1.12×** no drafting (11.3 tok/s); n-max 5 is 1.37×. The GPU figures of the sources (1.4–2.2×) do not carry to a 4B on six CPU cores. |
+| S4 same tasks done | 5, 5, 6, 4 of 8: the flags change the tokens at temperature 0 (different float paths); eight tasks cannot separate that from the known flip rate. |
+| the warm-up on the eight tasks | first calls 99–144 tokens; the warm-up cost 0.2–0.7 s when the checkpoint survived (four of eight) and 18–20 s when a conversation had just reprocessed itself in the middle (the client rewrote an earlier turn: 2,325, 1,458, 1,967 tokens in three tasks), which erases every checkpoint. |
+
+Two items this adds to the queue, both in the frozen client, for after F is read: `Planner.messages` must stop
+rewriting earlier turns in place (each rewrite costs a full pass and the checkpoints), and the warm-up belongs
+inside `run_task` so the REPL's later tasks get it too.
+
+Judge twins (T, `locallm/judge_twins.py`, 557 twins): 37 accepted, of which two are weak tests (a boundary no test
+touches in `complete_class` and `fix_planted_bug`), thirteen are figures misreported in the prose while the work is
+right, and the rest are the same work in another order. The fixtures and a figure note are owed after F.
+
+After F is read (the laptop's taught adapter, ~08:00Z): the queue in section 2 in order, each item its own
 registration, the freeze lifted.
 
 ## Appendix: every finding as the scouts returned it (checked numbers corrected in the body above)

@@ -2966,6 +2966,16 @@ is queued, and the ones running are read as they finish.
   step 5), 176 steps, 3.8 min a step, done about 11:00Z 10-06. The untaught 4B on 660 fresh tasks: 413 of 530
   taught, 88 of 130 held out, 40 with harm. Bars: F1 at least 456, F2 at least 85, F3 at most 40, F4 at most 6.30
   calls a task done, F5 at least 138 and 21 on the laptop, F6 at least 57 tok/s.
+- **Speed, and what to take from the open work (10-06 morning):** a sweep of seven Sonnet scouts and a checker
+  (`internal/RESEARCH-2026-10-06-speed-and-steal.md`). Where the time goes, from the farm's own logs: generation
+  67%, the shared prefix processed again for every new task 16%. The server's checkpoint flags did nothing (S1);
+  the prefix warmed alone before each conversation cuts a task's first call from ~2,350 tokens to ~130
+  (`locallm/dawnr_warm.py`, called by the launcher); draft length 5 writes 30% more tokens a second than 3 on six
+  CPU cores (S2; 6 and 8 under test); drafting at 3 is only 1.12x over none on a CPU (S3). Judge twins
+  (`locallm/judge_twins.py`): 37 of 557 wrong twins accepted: two weak tests, thirteen misreported figures in prose,
+  the rest equivalent. The operator's list of twenty, where applicable: PRIVACY.md, TERMS.md, `dawnr forget`, the
+  page at WCAG 2.2 AA (contrast, keyboard tabs, live results), the sentence under Run.
 - **Next:** the taught model merged on the lab's CPU, converted, quantised, read on the farm (660) and the laptop
-  (161); the sixth set's two misses; a round of the 35B-class teacher on the families the student fails most;
-  scanned pages (OCR) and `web_fetch` passage selection still not built.
+  (161); then, the freeze lifted: `Planner.messages` without rewrites of earlier turns and the warm-up inside
+  `run_task`; the two weak fixtures and the figure note; the Windows policy that fails closed; the sixth set's two
+  misses; the F2 data choices (loss-ranked rows, a general share); scanned pages (OCR) still not built.

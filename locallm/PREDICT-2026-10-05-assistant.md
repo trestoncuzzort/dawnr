@@ -896,3 +896,32 @@ rows are not touched by any of the 37: the accepted twins are either equivalent 
   figures in the sources (1.4–2.2×) do not carry to a 4B on six CPU cores. n-max 5 reached 1.37×.
 - **S4 fails as written.** Done 5, 5, 6, 4 of 8: drafting on or off changes the tokens at temperature 0 (float paths
   differ), and eight tasks cannot separate that from the known flip rate; the 161 and the 660 stay the measure.
+
+### The warm-up on the eight tasks (lab server 8775, six cores, 06:30–06:42Z)
+
+`dawnr_warm.warm` before each task, then the task through the same front door (`warm_bench.py`): the first call of a
+task processed 144, 141, 133, 130, 130, 136 and 99 tokens where the A–D servers processed 2,350–2,497; the warm-up
+itself cost 0.2–0.7 s when the checkpoint was still there (four of eight tasks) and 18–20 s when it was gone. It was
+gone each time a conversation had just reprocessed itself in the middle (2,325, 1,458 and 1,967 tokens in three of the
+eight tasks: the client rewrote an earlier message, which the server cannot take up from a checkpoint, and a forced
+full pass erases every checkpoint), and after the described-machine task, whose system text is another prefix. Two
+things follow for after the freeze: `Planner.messages` must stop rewriting earlier turns in place (append instead),
+and the warm-up belongs inside `run_task` so the REPL's later tasks get it too. Six of eight done (the two held-out
+families the untaught model fails, as in A–D).
+
+### S2 read with the cores swapped (speed2, 06:25–06:46Z)
+
+| server | calls | prompt s | tokens written | gen s | tok/s | acceptance | mean draft | done |
+|---|---|---|---|---|---|---|---|---|
+| n-max 5, cores 48–53 | 49 | 266 | 6,380 | 409 | 15.6 | 0.90 | 4.71 | 6 |
+| n-max 3, cores 54–59 | 51 | 450 | 9,885 | 824 | 12.0 | 0.95 | 3.53 | 5 |
+| n-max 3, cores 60–65 | 51 | 441 | 9,950 | 833 | 11.9 | 0.95 | 3.52 | 5 |
+| n-max 5, cores 66–71 | 45 | 261 | 6,166 | 388 | 15.9 | 0.90 | 4.65 | 6 |
+
+**S2 holds**: +30% tokens per second at n-max 5 on either core group, acceptance 0.90; the earlier A/B slowness was
+the draft length, not the cores. The launcher's draft length moves to 5 (the farm's `lab_cpu_4b.sh` stays at 3 until F
+is read, so the taught model's 660 are read under the untaught model's flags).
+
+**S2b (registered 06:48Z, before the run)**: n-max 6 and n-max 8 on the same eight tasks and cores 48–59. Bar: n-max 6
+writes at least 5% more tokens per second than n-max 5 (15.6–15.9) with acceptance at or above 0.80; otherwise 5 is
+final for the CPU.
