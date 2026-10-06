@@ -57,7 +57,8 @@ disj ::= conj (sp "or" sp conj)*
 conj ::= neg (sp "and" sp neg)*
 neg ::= "not" sp neg | cmp
 # comparisons do not chain: at most one, and never a second beside it
-cmp ::= sum (ws cmpop ws sum)?
+# `x in s` sits at the comparison level and does not chain (SPEC.md "Finite sets", 2026-09-27)
+cmp ::= sum (ws cmpop ws sum)? | sum sp "in" sp sum
 cmpop ::= "==" | "!=" | "<=" | ">=" | "<" | ">"
 sum ::= prod (ws sumop ws prod)*
 sumop ::= "+" | "-"
@@ -85,6 +86,9 @@ atom ::= nat
        | "len" ws "(" ws expr ws ")"
        | "seq" ws "(" ws expr ws "," ws expr ws ")"
        | "tostr" ws "(" ws expr ws ")"
+       | "card" ws "(" ws expr ws ")"
+       | ("union" | "inter" | "setminus") ws "(" ws expr ws "," ws expr ws ")"
+       | "{" ws args ws "}"
        | "(" ws expr (ws "," ws expr)+ ws ")"
        | "(" ws expr ws ")"
        | "[" ws args ws "]"

@@ -10196,6 +10196,8 @@ def _uses_sets(obj) -> bool:
 
 def lower(task: dict, body: list, witness: dict | None = None,
           _unit: dict | None = None) -> str:
+    import tshape
+    tshape.abstain_unless_carried(task, body, "framac")
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
         # names "Frama-C ... through records with discriminants" as the

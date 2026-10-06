@@ -6074,6 +6074,8 @@ def _uses_sets(obj) -> bool:
 
 
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
+    import tshape
+    tshape.abstain_unless_carried(task, body, "spark")
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
         # names "Frama-C and SPARK through records with discriminants" as
