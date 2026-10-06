@@ -255,6 +255,7 @@ class SurfaceError(Exception):
 KEYWORDS = {
     "t", "gate", "task", "returns", "requires", "ensures", "decreases",
     "spec", "fun", "return", "var", "while", "invariant", "if", "then", "else",
+    "for",         # SPEC.md "Loops as sugar (v1)" (2026-10-06): the three for forms, expanded to while
     "forall", "exists", "in", "len", "true", "false", "and", "or", "not",
     "int", "bool", "seq",
     "real", "floor", "ceil",   # SPEC.md "Exact rationals (v1)" (2026-10-06): the type, and two
@@ -692,6 +693,7 @@ class Parser:
         self.production = "Task"           # block()/stmt() left it on "Stmt"
         self.eat("eof")
         self.mark(start, task)
+        self._expand_for(task)   # SPEC.md "Loops as sugar (v1)" (2026-10-06)
         if helpers:
             import expand_helpers
             try:
@@ -921,8 +923,9 @@ class Parser:
             self.production = "Stmt"
             then = self.block()
             self.production = "Stmt"       # block() left it on "Stmt" already
-            self.eat("kw", "else")
-            els = self.block()
+            # the else may be omitted (2026-10-06, with SPEC.md "Loops as sugar (v1)"): an empty else, the AST's
+            # `"else": []`, which the printer writes back without the clause
+            els = self.block() if self.opt("kw", "else") else []
             return self.mark(t, {"if": {"cond": cond, "then": then,
                                         "else": els}})
         if self.opt("kw", "while"):
@@ -938,6 +941,48 @@ class Parser:
             body = self.block()
             return self.mark(t, {"while": {"cond": cond, "invariants": invs,
                                            "decreases": dec, "body": body}})
+        if self.opt("kw", "for"):
+            # SPEC.md "Loops as sugar (v1)" (2026-10-06): `for i in [a, b)`, `for x in s`, `for i, x in s`;
+            # an interim node, expanded to the AST's `while` by `_expand_for` once the whole task is read
+            # (the element type comes from the checker's typing of `s` under the names in scope)
+            n1 = self.name("Stmt")
+            n2 = None
+            if self.opt("sym", ","):
+                n2 = self.name("Stmt")
+            self.eat("kw", "in")
+            rng = None
+            seq = None
+            if n2 is None and self.at("sym", "["):
+                # `[a, b)` is the range; `[...]` closed by `]` is a seq display (any arity)
+                lb = self.tok
+                self.eat("sym", "[")
+                elems = []
+                if not self.at("sym", "]"):
+                    while True:
+                        elems.append(self.expr())
+                        self.production = "Stmt"
+                        if self.opt("sym", ","):
+                            if len(elems) == 2 and self.at("sym", ")"):
+                                break
+                            continue
+                        break
+                if self.opt("sym", ")"):
+                    if len(elems) != 2:
+                        self.err(lb, "a for range is [a, b): two bounds", "Stmt")
+                    rng = elems
+                else:
+                    self.eat("sym", "]")
+                    seq = self.mark(lb, {"op": "seq", "args": elems})
+            else:
+                seq = self.expr()
+                self.production = "Stmt"
+            invs = []
+            while self.opt("kw", "invariant"):
+                invs.append(self.expr())
+                self.production = "Stmt"
+            body = self.block()
+            return self.mark(t, {"for": {"names": [n1] + ([n2] if n2 else []), "range": rng, "seq": seq,
+                                         "invariants": invs, "body": body}})
         self.err(t, "%r does not start a statement" % (t.text or "end of input"))
 
     # -- expressions -------------------------------------------------------
@@ -1095,6 +1140,118 @@ class Parser:
                 return self.mark(start, {"rat": [-n, d]})
             return self.mark(start, {"op": "neg", "args": [self.p_unary()]})
         return self.p_postfix()
+
+    # -- for loops as sugar (SPEC.md "Loops as sugar (v1)", 2026-10-06) ----
+
+    def _at(self, node, msg: str) -> None:
+        line, col = (self.positions or {}).get(id(node), (None, None)) if self.positions is not None else (None, None)
+        raise SurfaceError(msg, file=self.file, line=line, col=col, production="Stmt")
+
+    def _mk(self, pos, node):
+        if self.positions is not None and pos is not None:
+            self.positions[id(node)] = pos
+        return node
+
+    def _expand_for(self, task: dict) -> None:
+        """Replace every interim `for` node by the `var` + `while` it stands for (SPEC.md "Loops as sugar (v1)"),
+        in the task's body and in every method's, with the checker typing the sequence for the element's type."""
+        import check_wf
+        funs = {f["name"]: f for f in task.get("spec_funs", [])}
+        dtypes = {d["name"]: d for d in task.get("datatypes", [])}
+
+        def walk(stmts: list, scope: dict) -> list:
+            out = []
+            for st in stmts:
+                if "for" in st:
+                    pos = (self.positions or {}).get(id(st)) if self.positions is not None else None
+                    var_node, while_node, index = self._one_for(st, scope, funs, dtypes, walk, pos)
+                    scope[index] = "int"
+                    out += [var_node, while_node]
+                elif "var" in st:
+                    scope[st["var"]["name"]] = st["var"]["type"]
+                    out.append(st)
+                elif "if" in st:
+                    st["if"]["then"] = walk(st["if"]["then"], dict(scope))
+                    st["if"]["else"] = walk(st["if"].get("else") or [], dict(scope))
+                    out.append(st)
+                elif "while" in st:
+                    st["while"]["body"] = walk(st["while"]["body"], dict(scope))
+                    out.append(st)
+                else:
+                    out.append(st)
+            return out
+
+        base = {p["name"]: p["type"] for p in task.get("params", [])}
+        for r in task.get("returns", []):
+            base[r["name"]] = r["type"]
+        task["body"] = walk(task["body"], dict(base))
+        for m in task.get("methods", []):
+            sc = {p["name"]: p["type"] for p in m.get("params", [])}
+            for r in m.get("returns", []):
+                sc[r["name"]] = r["type"]
+            m["body"] = walk(m["body"], sc)
+
+    def _one_for(self, st: dict, scope: dict, funs: dict, dtypes: dict, walk, pos):
+        import copy
+        import check_wf
+        f = st["for"]
+        names = f["names"]
+        if f["range"] is not None:
+            index, elem = names[0], None
+        elif len(names) == 2:
+            index, elem = names[0], names[1]
+        else:
+            index, elem = "i_" + names[0], names[0]
+        for n in (index, elem):
+            if n is not None and n in scope:
+                self._at(st, f"for: {n!r} is already declared; the loop declares its own variable")
+        if elem is not None and elem == index:
+            self._at(st, "for: the index and the element need two names")
+        assigned = _assigned_names(f["body"])
+        declared = _declared_names(f["body"])
+        for n in (index, elem):
+            if n is not None and (n in assigned or n in declared):
+                self._at(st, f"for: the body may not assign or redeclare the loop's {n!r}; the step is the loop's")
+        fixed = f["range"][1] if f["range"] is not None else f["seq"]
+        clash = sorted(_free_names(fixed) & assigned)
+        if clash:
+            self._at(st, f"for: the bound or sequence mentions {clash[0]!r}, which the body assigns; it must be fixed")
+        inner = dict(scope)
+        inner[index] = "int"
+        if f["range"] is not None:
+            a, b = f["range"]
+            body = walk(f["body"], inner)
+            var_node = self._mk(pos, {"var": {"name": index, "type": "int", "init": a}})
+            iv = lambda: {"var": index}   # noqa: E731
+            while_node = self._mk(pos, {"while": {
+                "cond": self._mk(pos, {"op": "<", "args": [iv(), copy.deepcopy(b)]}),
+                "invariants": [self._mk(pos, {"op": "<=", "args": [copy.deepcopy(a), iv()]}),
+                               self._mk(pos, {"op": "<=", "args": [iv(), copy.deepcopy(b)]})] + f["invariants"],
+                "decreases": self._mk(pos, {"op": "-", "args": [copy.deepcopy(b), iv()]}),
+                "body": body + [self._mk(pos, {"assign": [index, {"op": "+", "args": [iv(), {"int": 1}]}]})]}})
+            return var_node, while_node, index
+        seq = f["seq"]
+        try:
+            ty, errs = check_wf.expression_type(seq, dict(scope), functions=funs, datatypes=dtypes)
+        except Exception:                                   # noqa: BLE001
+            ty, errs = None, ["untypeable"]
+        if errs or not (ty == "seq" or (isinstance(ty, dict) and "seq" in ty)):
+            self._at(st, "for over something that is not a seq (or that cannot be typed here): write a seq-typed expression")
+        elem_ty = "int" if ty == "seq" else ty["seq"]
+        inner[elem] = elem_ty
+        body = walk(f["body"], inner)
+        iv = lambda: {"var": index}       # noqa: E731
+        ln = lambda: {"op": "len", "args": [copy.deepcopy(seq)]}   # noqa: E731
+        var_node = self._mk(pos, {"var": {"name": index, "type": "int", "init": {"int": 0}}})
+        elem_node = self._mk(pos, {"var": {"name": elem, "type": elem_ty,
+                                           "init": {"op": "at", "args": [copy.deepcopy(seq), iv()]}}})
+        while_node = self._mk(pos, {"while": {
+            "cond": self._mk(pos, {"op": "<", "args": [iv(), ln()]}),
+            "invariants": [self._mk(pos, {"op": "<=", "args": [{"int": 0}, iv()]}),
+                           self._mk(pos, {"op": "<=", "args": [iv(), ln()]})] + f["invariants"],
+            "decreases": self._mk(pos, {"op": "-", "args": [ln(), iv()]}),
+            "body": [elem_node] + body + [self._mk(pos, {"assign": [index, {"op": "+", "args": [iv(), {"int": 1}]}]})]}})
+        return var_node, while_node, index
 
     def _sugar_ahead(self) -> bool:
         """Whether the tokens here are `-` NAT followed by `]` or `..`: the from-the-end sugar's exact spelling.
@@ -1411,6 +1568,46 @@ class Parser:
             return self.mark(t, {"var": ident})
         self.err(t, "%r does not start an expression"
                  % (t.text or "end of input"))
+
+
+def _assigned_names(stmts: list) -> set:
+    """Every `assign` target in a statement list, at any depth (an interim `for` body included)."""
+    out = set()
+    for st in stmts or []:
+        if "assign" in st:
+            out.add(st["assign"][0])
+        elif "if" in st:
+            out |= _assigned_names(st["if"]["then"]) | _assigned_names(st["if"].get("else") or [])
+        elif "while" in st:
+            out |= _assigned_names(st["while"]["body"])
+        elif "for" in st:
+            out |= _assigned_names(st["for"]["body"])
+    return out
+
+
+def _declared_names(stmts: list) -> set:
+    out = set()
+    for st in stmts or []:
+        if "var" in st:
+            out.add(st["var"]["name"])
+        elif "if" in st:
+            out |= _declared_names(st["if"]["then"]) | _declared_names(st["if"].get("else") or [])
+        elif "while" in st:
+            out |= _declared_names(st["while"]["body"])
+        elif "for" in st:
+            out |= set(st["for"]["names"]) | _declared_names(st["for"]["body"])
+    return out
+
+
+def _free_names(e) -> set:
+    """Every `var` name an expression mentions."""
+    if isinstance(e, dict):
+        if "var" in e and len(e) == 1:
+            return {e["var"]}
+        return set().union(*(_free_names(v) for v in e.values())) if e else set()
+    if isinstance(e, list):
+        return set().union(*(_free_names(v) for v in e)) if e else set()
+    return set()
 
 
 LIB_NAMES = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev"})
@@ -1840,8 +2037,9 @@ def pstmts(body: list, ind: str) -> list:
             f = s["if"]
             out.append("%sif %s {" % (ind, pexpr(f["cond"], P_IMPLIES)))
             out += pstmts(f["then"], ind + "  ")
-            out.append("%s} else {" % ind)
-            out += pstmts(f["else"], ind + "  ")
+            if f["else"]:
+                out.append("%s} else {" % ind)
+                out += pstmts(f["else"], ind + "  ")
             out.append("%s}" % ind)
         elif kind == "while":
             w = s["while"]

@@ -75,7 +75,7 @@
         },
         {
           "name": "keyword.control.loop.t",
-          "match": "\\b(while|invariant|decreases)\\b"
+          "match": "\\b(while|for|invariant|decreases)\\b"
         },
         {
           "name": "keyword.control.flow.t",
