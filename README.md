@@ -210,6 +210,16 @@ calls. The installer gives the base model file back the prediction layer its
 drafts with it: that is the 29, where it wrote 17 without; 72 on a laptop's
 8 GB card and 273 on a 48 GB workstation card, the same tasks done on each.
 
+The first call of every task used to cost the 2,220-token prefix again (the
+system text and the eight tools: 19 seconds on six CPU cores), because the
+server can take a conversation up only from a checkpoint, and it makes one
+only at the end of a prompt it has processed. Since 2026-10-06 the launcher
+processes the prefix alone before each conversation, which leaves a checkpoint
+where the next task needs it: the first call then costs the task's own 100 to
+150 tokens (`locallm/dawnr_warm.py`, measured on the lab's CPUs). The same
+morning the draft length moved from 3 to 5: 30% more tokens a second on six
+CPU cores, the same tasks ([PREDICT, S](locallm/PREDICT-2026-10-05-assistant.md)).
+
 The assistant drives whatever model the server holds, and four sizes of the
 same family were read on the same tasks and the same card. On the first four
 sets nothing separates them: 129, 132, 132 and 133 of 135 for 4, 9, 27 and 35
