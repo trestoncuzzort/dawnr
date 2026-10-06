@@ -40,7 +40,7 @@ The reading of the 660 fresh tasks ran on eight CPU-only servers, six cores each
 |---|---|---|---|
 | 1 | Checkpoints inside the prefix so a new conversation restores it (`-cms 256 -ctxcp 64`) | Particula write-up; llama.cpp issue 22384 | **running now (S1)** |
 | 2 | MTP n-max sweep: 5 against 3 against none, same tasks, same cores | llama.cpp PR 22673; Unsloth's MTP page | **running now (S2, S3)** |
-| 3 | Shared-prefix training: run the prefix once per step, the suffixes as a microbatch | arXiv:2606.01143 (RL, 2.9–4.4×); arXiv:2511.00413 (SFT, up to 6.2×) | the big lever for training; no public code; our own build after F is read |
+| 3 | Shared-prefix training: run the prefix once per step, the suffixes as a microbatch | arXiv:2606.01143 (RL, 2.9–4.4×); arXiv:2511.00413 (SFT, up to 6.2×) | **built** (`t/prefix_sft.py`, `student_sft.py --shared-prefix`): exact to 2e-10 in 64-bit on a tiny model (X1); the card's step time (X2) and ten steps' loss (X3) read after F |
 | 4 | Pad or bucket row lengths so fla's Triton kernels do not recompile | fla issue 758 | fla 0.5.2 still carries the unused `NB` constexpr in both l2norm kernels (read 10/6); at our lengths NB takes a few dozen values, so the cost is a few dozen compiles per run; bucket rows to multiples of 256 in F2 and time the first 20 steps |
 | 5 | Cap kept conversations per task at 3; keep only judged passes | SWE-smith (arXiv:2504.21798) | already our rule (per-family cap, passes only); keep |
 | 6 | Mix ~20% general conversations into agent SFT | AgentTuning (arXiv:2310.12823) | for F2, only from Apache/MIT-model output; needs a general pool we do not have yet |
