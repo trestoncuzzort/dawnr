@@ -925,3 +925,15 @@ is read, so the taught model's 660 are read under the untaught model's flags).
 **S2b (registered 06:48Z, before the run)**: n-max 6 and n-max 8 on the same eight tasks and cores 48–59. Bar: n-max 6
 writes at least 5% more tokens per second than n-max 5 (15.6–15.9) with acceptance at or above 0.80; otherwise 5 is
 final for the CPU.
+
+### S2b read 07:04Z
+
+| server | calls | prompt s | tokens written | gen s | tok/s | acceptance | mean draft | done |
+|---|---|---|---|---|---|---|---|---|
+| n-max 6, cores 48–53 | 44 | 257 | 7,086 | 401 | 17.7 | 0.92 | 5.24 | 6 |
+| n-max 8, cores 54–59 | 54 | 298 | 8,487 | 527 | 16.1 | 0.89 | 6.08 | 6 |
+
+**S2b holds**: n-max 6 writes 12–13% more tokens per second than 5 (17.7 against 15.6–15.9), acceptance 0.92; 8 falls
+back to 16.1 (the longer drafts are accepted less and cost more to check). On six CPU cores the ladder is 11.3 (none),
+12.0 (3), 15.8 (5), 17.7 (6), 16.1 (8): the launcher's draft length is 6. The card's optimum is read when the laptop
+is free (its 161 are read at 3 for both the untaught and the taught model, so F stays comparable).

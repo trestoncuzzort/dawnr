@@ -217,8 +217,10 @@ only at the end of a prompt it has processed. Since 2026-10-06 the launcher
 processes the prefix alone before each conversation, which leaves a checkpoint
 where the next task needs it: the first call then costs the task's own 100 to
 150 tokens (`locallm/dawnr_warm.py`, measured on the lab's CPUs). The same
-morning the draft length moved from 3 to 5: 30% more tokens a second on six
-CPU cores, the same tasks ([PREDICT, S](locallm/PREDICT-2026-10-05-assistant.md)).
+morning the draft length moved from 3 to 6: on six CPU cores, the same eight
+tasks, the model wrote 12.0 tokens a second at 3, 15.8 at 5, 17.7 at 6 and
+16.1 at 8, and 11.3 with no drafting at all
+([PREDICT, S](locallm/PREDICT-2026-10-05-assistant.md)).
 
 The assistant drives whatever model the server holds, and four sizes of the
 same family were read on the same tasks and the same card. On the first four
