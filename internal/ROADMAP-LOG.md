@@ -3071,7 +3071,14 @@ is queued, and the ones running are read as they finish.
   every comprehension. Census: the positive literal step and the bare reversal in the fragment (1,642 -> 1,713
   function-shaped problems), other steps the gap `seq-slice-step-other` (108). The lab's grammar check agrees
   with the new rule.
-- **Next:** the matrix regenerated from a clean clone (70 tasks); then the three library proofs the kernels do not
-  reach alone (a `sum` slice lemma for SPARK, F* and Verus; a nonlinear hint for Verus) as their own measured item;
-  then G4 (`break`, `continue`, `while true`), G5 maps, G6 records and options, G7 the string library's missing
-  members.
+- **T3d landed (10-06 21:10Z), the library proofs the kernels did not reach alone:** Verus gains `t_sum_add` and
+  `t_sum_prefix` (broadcast lemmas by induction with one extensional step, vstd's `lemma_fold_left_split` shape),
+  the isqrt lemma's nonlinear step stated to the nonlinear solver, and a bridge for `pow(e, k)` with a literal `k`
+  (the fuel unfolding equals the flat product by `nonlinear_arith` alone): `cube`, `root_floor`, `sum_tail` now
+  verified with the twin refuted, `digit_sum` and `sum_one` unchanged. F* gains `lemma_t_sum_append` and
+  `lemma_t_sum_create1` as SMT patterns (the append pattern alone did not fire on `t_sum (create 1 x)`; measured):
+  `sum_tail` verified. SPARK not repaired, recorded in PREDICT T3d: the expression-function-only design has no place
+  for a lemma call, and the sum-of-concatenation induction times out; its own design item.
+- **Next:** the matrix regenerated from a clean clone (70 tasks, after T3c and T3d); then G4 (`break`, `continue`,
+  `while true`), G5 maps, G6 records and options, G7 the string library's missing members; SPARK's `sum` lemma as a
+  design item.
