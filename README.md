@@ -488,6 +488,8 @@ times over. The student model is published under Apache-2.0 as the
 | see where dawnr is going | [AMBITION.md](AMBITION.md) |
 | understand `t` and the seven provers | [t/README.md](t/README.md) |
 | let dawnr act on your machine, and see its threat model | [DAWNR-AGENT.md](DAWNR-AGENT.md) |
+| know what dawnr keeps on your machine, what leaves it (nothing by default) and how to erase it | [PRIVACY.md](PRIVACY.md) |
+| read the terms of use: licence, no fees, no warranty, claims, accessibility | [TERMS.md](TERMS.md) |
 
 ## License
 
