@@ -703,6 +703,7 @@ class Parser:
                 raise SurfaceError(str(exc), file=self.file, line=line, col=col,
                                    production="InlineFun") from exc
         _resolve_library(task)   # SPEC.md "The library (v1)" (2026-10-06): calls by a library name become operators
+        _name_sugar_vars(task)   # SPEC.md "Stepped slices (v1)" (2026-10-06): the sugar's bound variables get names
         return task
 
     def at_inline_fun(self) -> bool:
@@ -1253,6 +1254,44 @@ class Parser:
             "body": [elem_node] + body + [self._mk(pos, {"assign": [index, {"op": "+", "args": [iv(), {"int": 1}]}]})]}})
         return var_node, while_node, index
 
+    def _stepped_slice(self, seq: dict, lo: dict, hi: dict, start) -> dict:
+        """`s[a..b..k]` (SPEC.md "Stepped slices (v1)", 2026-10-06): the elements of `s[a..b]` at offsets 0, k, 2k, ...,
+        Python's slice with a positive step over the two-bound slice's definedness. Sugar the parser expands to the
+        range comprehension `[s[a..b][k * i] for i in [0, (len(s[a..b]) + k - 1) / k)]` (`k * i` and `+ k - 1` folded
+        away at k == 1); the AST carries only the comprehension and the printer writes it back. `k` is a positive
+        literal: a step of 0 is no step, a negative step (Python's reversal) is `rev(s)`, and a variable step is
+        written as the comprehension by hand. The bound variable is a placeholder no identifier can spell, named by
+        `_name_sugar_vars` at the end of the parse (the first of i, j, k, i2, ... that occurs nowhere in the
+        program), since check_wf admits no bound name already in scope."""
+        import copy
+        tok = self.tok
+        if tok.kind != "nat":
+            if self.at("sym", "-"):
+                self.err(tok, "the step of a slice is a positive literal; a reversal is rev(s)")
+            self.err(tok, "the step of a slice is a positive literal; a variable step is written as the "
+                          "comprehension [s[a..b][k * i] for i in [0, (len(s[a..b]) + k - 1) / k)]")
+        k = int(tok.text)
+        if k == 0:
+            self.err(tok, "the step of a slice is a positive literal; 0 is no step")
+        self.i += 1
+        self.production = "Expr"
+        self.eat("sym", "]")
+        self._holes = getattr(self, "_holes", 0) + 1
+        v = "$step%d" % self._holes
+
+        def sl():
+            return self.mark(start, {"op": "slice", "args": [copy.deepcopy(seq), copy.deepcopy(lo), copy.deepcopy(hi)]})
+        n = self.mark(start, {"op": "len", "args": [sl()]})
+        if k == 1:
+            index, bound = {"var": v}, n
+        else:
+            index = self.mark(start, {"op": "*", "args": [{"int": k}, {"var": v}]})
+            bound = self.mark(start, {"op": "div", "args": [
+                self.mark(start, {"op": "+", "args": [n, {"int": k - 1}]}), {"int": k}]})
+        body = self.mark(start, {"op": "at", "args": [sl(), index]})
+        return self.mark(start, {"comp": {"var": v, "lo": {"int": 0}, "hi": bound, "cond": {"bool": True},
+                                          "body": body}})
+
     def _sugar_ahead(self) -> bool:
         """Whether the tokens here are `-` NAT followed by `]` or `..`: the from-the-end sugar's exact spelling.
         A parenthesised negative literal, `s[(-1)]`, is not it: that is the raw index -1 (undefined on every seq),
@@ -1311,6 +1350,10 @@ class Parser:
                     sugar = self._sugar_ahead()
                     hi = self._from_end(e, self.expr(), start, sugar)
                     self.production = "Expr"
+                    if self.opt("sym", ".."):
+                        # s[a..b..k] (SPEC.md "Stepped slices (v1)", 2026-10-06): sugar for a range comprehension
+                        e = self._stepped_slice(e, idx, hi, start)
+                        continue
                     self.eat("sym", "]")
                     e = self.mark(start, {"op": "slice", "args": [e, idx, hi]})
                     continue
@@ -1678,6 +1721,57 @@ def _resolve_library(task: dict) -> None:
     walk(task)
 
 
+def _name_sugar_vars(root) -> None:
+    """SPEC.md "Stepped slices (v1)" (2026-10-06): the parser binds a stepped slice's comprehension variable to a
+    placeholder no identifier can spell (`$step1`, `$step2`, ...); this names each, in reading order, by the first of
+    i, j, k, i2, j2, k2, i3, ... that occurs nowhere in the program as any string at all (a name, a type, a word), so it
+    shadows nothing (check_wf's quant-shadow rule) and the printed comprehension reparses to itself. Nothing to do
+    on a program without the sugar."""
+    holes: list = []
+    used: set = set()
+
+    def walk(x):
+        if isinstance(x, dict):
+            c = x.get("comp")
+            if isinstance(c, dict) and isinstance(c.get("var"), str) and c["var"].startswith("$"):
+                holes.append(c)
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+        elif isinstance(x, str):
+            used.add(x)
+    walk(root)
+    if not holes:
+        return
+
+    def rename(x, old, new):
+        if isinstance(x, dict):
+            if x.get("var") == old and len(x) == 1:
+                x["var"] = new
+            for v in x.values():
+                rename(v, old, new)
+        elif isinstance(x, list):
+            for v in x:
+                rename(v, old, new)
+
+    def fresh() -> str:
+        n = 1
+        while True:
+            for base in ("i", "j", "k"):
+                cand = base + ("" if n == 1 else str(n))
+                if cand not in used and cand not in KEYWORDS:
+                    return cand
+            n += 1
+    for c in holes:
+        old, new = c["var"], fresh()
+        used.add(new)
+        c["var"] = new
+        rename(c["cond"], old, new)
+        rename(c["body"], old, new)
+
+
 def parse(src: str, positions=None) -> dict:
     """Text to canonical JSON. `positions`, if given a dict, is filled with
     id(node) -> (line, col) for every AST dict this parse builds (the task
@@ -1740,6 +1834,7 @@ def parse_expr(src: str, datatypes: dict | None = None) -> dict:
     e = p.expr()
     p.eat("eof")
     _resolve_library({"expr": e})   # SPEC.md "The library (v1)": no task declares a name here, so every library call resolves
+    _name_sugar_vars({"expr": e})   # SPEC.md "Stepped slices (v1)": a stepped slice's variable is named here too
     return e
 
 
@@ -2321,6 +2416,19 @@ LITERALS = [
          {"op": "seq", "args": [{"int": 97}, {"int": 98}]},
          {"op": "seq", "args": [{"int": 99}]}]}),
     ('""', {"op": "seq", "args": []}),
+    # the stepped slice (SPEC.md "Stepped slices (v1)", 2026-10-06): sugar for a range comprehension whose bound
+    # variable is the first of i, j, k, ... that occurs nowhere in the expression; printed as the comprehension
+    ("s[0..n..2]",
+     {"comp": {"var": "i", "lo": {"int": 0},
+               "hi": {"op": "div", "args": [{"op": "+", "args": [{"op": "len", "args": [{"op": "slice", "args": [{"var": "s"}, {"int": 0}, {"var": "n"}]}]}, {"int": 1}]},
+                                            {"int": 2}]},
+               "cond": {"bool": True},
+               "body": {"op": "at", "args": [{"op": "slice", "args": [{"var": "s"}, {"int": 0}, {"var": "n"}]}, {"op": "*", "args": [{"int": 2}, {"var": "i"}]}]}}}),
+    ("s[1..len(s)..1]",
+     {"comp": {"var": "i", "lo": {"int": 0},
+               "hi": {"op": "len", "args": [{"op": "slice", "args": [{"var": "s"}, {"int": 1}, {"op": "len", "args": [{"var": "s"}]}]}]},
+               "cond": {"bool": True},
+               "body": {"op": "at", "args": [{"op": "slice", "args": [{"var": "s"}, {"int": 1}, {"op": "len", "args": [{"var": "s"}]}]}, {"var": "i"}]}}}),
 ]
 
 
@@ -2392,6 +2500,12 @@ REFUSALS = [
                [{"name": "r", "type": "real"}], "requires": [], "ensures":
                [{"bool": True}], "body": [{"assign": ["r", {"rat": [1, 3]}]}]},
      "a rational with no finite decimal has no literal (1/3 is 1.0 / 3.0)"),
+    ("parse", "t 1\ntask z(s: seq, n: int, k: int) returns (r: seq)\n  ensures true\n{\n  r := s[0..n..0];\n}\n",
+     "a stepped slice's step is a positive literal: 0 is no step (SPEC.md 'Stepped slices (v1)')"),
+    ("parse", "t 1\ntask z(s: seq, n: int, k: int) returns (r: seq)\n  ensures true\n{\n  r := s[0..n..-1];\n}\n",
+     "a negative step is Python's reversal, which is rev(s) in t"),
+    ("parse", "t 1\ntask z(s: seq, n: int, k: int) returns (r: seq)\n  ensures true\n{\n  r := s[0..n..k];\n}\n",
+     "a variable step is written as the comprehension it abbreviates"),
 ]
 
 

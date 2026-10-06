@@ -113,7 +113,9 @@ def test_kernel_text():
     d = lowered("doubled", "dafny")
     ok("ensures |t_r| == |t_s|" in d and "t_r[t_i] == (2 * t_s[t_i])" in d, "doubled in Dafny: the map ensures")
     d = lowered("squares", "dafny")
-    ok("t_comp1(t_a: int, t_b: int)" in d and "(if t_a <= t_b then t_b - t_a else 0)" in d, "squares in Dafny: the range form")
+    ok("function t_range(t_a: int, t_b: int): (t_r: seq<int>)" in d and "(if t_a <= t_b then t_b - t_a else 0)" in d
+       and "t_comp1(t_range(0, n))" in d and "function t_comp1(t_s: seq<int>): (t_r: seq<int>)" in d,
+       "squares in Dafny: a range is the index sequence t_range (SPEC.md Comprehensions, the Dafny paragraph, 2026-10-06)")
     v = lowered("evens", "verus")
     ok("pub open spec fn t_comp1(t_s: Seq<int>) -> Seq<int>" in v and "pub broadcast proof fn t_comp1_spec" in v
        and "reveal_with_fuel(t_comp1, 6);" in v and "broadcast use t_comp1_spec;" in v, "evens in Verus: the spec fn, its lemma, fuel and use")

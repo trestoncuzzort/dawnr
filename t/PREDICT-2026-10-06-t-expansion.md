@@ -204,3 +204,50 @@ tasks (`evens`, `doubled`, `squares`) verified with the twin refuted in both ker
 Frama-C abstain by name. The census: `comprehension` (5,920 problems) is IN THE FRAGMENT for list comprehensions;
 set and dict comprehensions are the new burden `set-dict-comprehension`; the in-fragment count is unchanged by
 construction (1,642).
+
+## T3c registered (2026-10-06 19:20Z, before any run): stepped slices, SPEC "Stepped slices (v1)", and the
+definedness of a comprehension's body in Dafny
+
+Found while reading the comprehension landing's Dafny text for the next form: the recursive function it emits per
+comprehension has no `requires`, so a body with a partial operator over a free variable (`[s[i + 1] - s[i] for i in
+[0, len(s) - 1)]`, the differences, a shape MBPP writes constantly) fails Dafny's own well-formedness check inside
+the function and the task reads `unproved` for the real and the twin alike (measured on a scratch task `diffs`
+before this registration: Verus `verified / refuted`, Dafny `unproved / unproved`, the FINDING line of the matrix).
+Bars: (1) `_comp_defs` gives the function the precondition the SPEC's definedness rule states, over the index as the
+Std's `Map` does (`requires forall i :: 0 <= i < |xs| ==> f.requires(xs[i])`), emitted only when the formula is not
+`true`, so the three committed comprehension tasks' Dafny text is unchanged; `diffs` committed and Dafny `verified /
+refuted`. (2) `s[a..b..k]`, the stepped slice, as SUGAR the parser expands to the range comprehension `[s[a..b][k * i]
+for i in [0, (len(s[a..b]) + k - 1) / k)]` (the bound variable fresh in the task, never printed as sugar): Python's
+meaning on positive steps with the two-bound slice's definedness, `k` a positive literal (a step of 0 or a negative
+step is refused by name; a reversal is `rev(s)`; a variable step is written as the comprehension). Two committed
+tasks, `every_other` (`s[0..len(s)..2]`) and `odd_positions` (`s[1..len(s)..2]`), Dafny and Verus `verified /
+refuted` through the range-map ensures; the other five abstain by name as for every comprehension. (3) The census:
+`seq-slice-step` (852 problems) splits: a positive literal step is IN THE FRAGMENT; `s[::-1]` with no bounds is the
+library's `rev` and in the fragment; any other step (a variable, a negative one with bounds) stays a gap by name.
+(4) `surface.py --check` round-trips every corpus file and the lab's grammar check agrees with the new `post` rule.
+What would falsify the design: Dafny's trigger selection on a range comprehension's precondition (its body is
+arithmetic over the bound index, no indexing term to match on) leaves the function's own well-formedness unproved;
+then the precondition is restated through a term Dafny can match (the Std's `f.requires(xs[i])` shape, or an
+identity function on the index) and the read says which.
+
+### T3c read (2026-10-06 20:30Z): stepped slices landed; the comprehension precondition in Dafny repaired.
+(1) Dafny: `_comp_defs` passes a range as the index sequence `t_range(a, b)` and gives every comprehension function
+the SPEC's definedness formula as a precondition over the element `t_s[t_di]` (the Std `Map`'s shape), the conjuncts
+without the element once under `|t_s| > 0`. The falsifier fired first: a precondition over a bare range index left
+the function's own well-formedness unproved (`index out of range` inside the function, 19:40Z), as registered; the
+element form proved all five probe shapes (an indexed map over a range, the stepped slice, a gather `s2[x]` over a
+sequence, a total body, a divisor with no mention of the element), and then `odd_positions` failed its ensures'
+well-formedness (`lower bound out of range`: `1 <= |s|` reachable only through the element's instance) until the
+element-free conjuncts were stated once. `diffs` committed: Dafny `verified / refuted` (was `unproved / unproved`).
+The three earlier comprehension tasks unchanged in outcome (`evens`, `doubled`, `squares`: `verified / refuted` in
+both kernels; their Dafny text now has the one sequence shape). (2) `s[a..b..k]` parses to the registered
+comprehension, prints as it and round-trips (`surface.py --check`: 1,951 of 1,951 well-formed corpus tasks, 5
+literal probes, 14 refusals); the bound variable is the first of i, j, k, i2, ... absent from the program;
+`every_other` and `odd_positions` committed, Dafny and Verus `verified / refuted` (the twin: off-by-one on the
+slice's lower bound). (3) The census: `seq-slice-step` split into `seq-slice-step` (a positive literal step, 99
+problems, in the fragment), `seq-slice-reverse` (`s[::-1]`, 662, in the fragment as `rev`) and the gap
+`seq-slice-step-other` (108; the sole blocker for 11); in the fragment 1,642 -> 1,713 of 4,239 function-shaped
+(38.7% -> 40.4%). (4) The lab's grammar check: the grammar and the parser agree on every program tested (8,996
+canonical, 7,150 as written, 450 refused). Unit tests: `t/test_slice_step.py` (7) and `test_comprehensions.py`
+updated for the index sequence. Not touched: a variable step (written as the comprehension by hand), clamping
+(t's slice is undefined out of range, Python's clamps).
