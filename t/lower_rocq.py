@@ -4903,7 +4903,9 @@ def _uses_strlib(obj) -> bool:
         return any(_uses_strlib(v) for v in obj)
     return False
 
-_SET_OPS_R = {"set", "in", "card", "union", "inter", "diff"}
+# `in` left this list on 2026-10-06 (PREDICT T10): membership in a SEQ is the library's; a set reaches a task only
+# through a set-typed name or one of these operations
+_SET_OPS_R = {"set", "card", "union", "inter", "diff"}
 
 
 def _uses_sets(obj) -> bool:
@@ -5115,6 +5117,10 @@ def header(task: dict | None = None, body: list | None = None) -> str:
         parts.append(_STRLIB_DEFS)
     if sets:
         parts.append(_SET_DEFS)
+    import rocq_lib      # SPEC.md "The library (v1)" in Rocq (PREDICT T10)
+    lib = (rocq_lib.used(task) if task is not None else set()) | (rocq_lib.used(body) if body is not None else set())
+    if lib:
+        parts.append(rocq_lib.prelude(lib) + "\n")
     parts.append(PRELUDE_CORE_2)
     if strlib:
         parts.append(_STRLIB_GOAL_ARMS)
@@ -5580,6 +5586,10 @@ class Ctx:
             # library's own two int-returning members (SPEC.md), joined
             # to the existing int group.
             return "int"
+        if op in ("min", "max", "abs", "gcd", "pow", "isqrt", "sum"):
+            return "int"                      # SPEC.md "The library (v1)" (PREDICT T10)
+        if op in ("rev", "sort"):
+            return self.ty(e["args"][0], local)
         if op == "split":
             # THE STRING LIBRARY (v1): `split(s)`/`split(s, c)`, two
             # arities of one op (SPEC.md), both return a LIST OF ROWS,
@@ -5666,6 +5676,11 @@ class Ctx:
         both the SAME opaque-Definition-plus-reading-tactic shape as
         t_upd/t_fill (PRELUDE)."""
         local = local or {}
+        if e.get("op") in ("rev", "sort"):
+            # SPEC.md "The library (v1)"/"Sorting (v1)" in Rocq (PREDICT T10): the same length, read from the other
+            # end, or the stable insertion sort read back as a function
+            fn, ln = self.seq_fn(e["args"][0], env, local)
+            return (f"(t_rev {fn} {ln})" if e["op"] == "rev" else f"(t_sortf {fn} {ln})"), ln
         if "var" in e:
             v = e["var"]
             assert (local.get(v) or self.tys.get(v)) == "seq", f"{v} is not a seq"
@@ -6089,9 +6104,62 @@ class Ctx:
             fn_t, ln_t = self.seq_fn(t, env, local)
             cfn = "t_count_list" if op == "count" else "t_find_list"
             return f"({cfn} (t_list {fn_s} {ln_s}) (t_list {fn_t} {ln_t}))"
+        # SPEC.md "The library (v1)" in Rocq (PREDICT T10): the stdlib's own Z functions, and the prelude's
+        # fuel Fixpoints over a seq's function and length
+        if op in ("min", "max") and len(e["args"]) == 1:
+            fn, ln = self.seq_fn(e["args"][0], env, local)
+            return f"(t_{op}s {fn} {ln})"
+        if op in ("min", "max", "gcd", "pow"):
+            a, b = (self.zx(x, env, local) for x in e["args"])
+            return f"(Z.{op} {a} {b})"
+        if op in ("abs", "isqrt"):
+            return f"(Z.{'abs' if op == 'abs' else 'sqrt'} {self.zx(e['args'][0], env, local)})"
+        if op == "sum":
+            fn, ln = self.seq_fn(e["args"][0], env, local)
+            return f"(t_sum {fn} {ln})"
         raise ValueError(f"t v1 -> rocq: not an int expression: {op!r}")
 
+    def anyall_parts(self, e: dict, env: dict, local: dict) -> tuple[str, str]:
+        """(length, predicate) of any/all over a comprehension of a seq (PREDICT T10): the predicate at each index of
+        the source, its filter an implication for all and a conjunction for any."""
+        c = e["args"][0]["comp"]
+        fn, ln = self.seq_fn(c["seq"], env, local)
+        k = "t_qk"
+        env2 = {**env, c["var"]: f"({fn} {k})"}
+        local2 = dict(local, **{c["var"]: "int", k: "int"})
+        body = self.bx(c["body"], env2, local2)
+        if c["cond"] != {"bool": True}:
+            cond = self.bx(c["cond"], env2, local2)
+            body = f"((negb {cond}) || {body})%bool" if e["op"] == "all" else f"({cond} && {body})%bool"
+        return ln, f"(fun {k} : Z => {body})"
+
+    def anyall_prop(self, e: dict, env: dict, local: dict) -> str:
+        """The Prop each index of any/all over a comprehension asserts (PREDICT T10): the body's prop at the
+        element, under the filter (an implication for all, a conjunction for any)."""
+        c = e["args"][0]["comp"]
+        fn, _ln = self.seq_fn(c["seq"], env, local)
+        env2 = {**env, c["var"]: f"({fn} t_qk)"}
+        local2 = dict(local, **{c["var"]: "int", "t_qk": "int"})
+        body = self.prop(c["body"], env2, local2)
+        if c["cond"] == {"bool": True}:
+            return body
+        cond = self.prop(c["cond"], env2, local2)
+        return f"({cond} -> {body})" if e["op"] == "all" else f"({cond} /\\ {body})"
+
     def bx(self, e: dict, env: dict, local: dict) -> str:
+        if e.get("op") == "in" and self.ty(e["args"][1], local) == "seq":
+            # SPEC.md "The library (v1)" in Rocq (PREDICT T10): membership in a seq
+            fn, ln = self.seq_fn(e["args"][1], env, local)
+            return f"(t_memb {fn} {ln} {self.zx(e['args'][0], env, local)})"
+        if e.get("op") in ("any", "all"):
+            # SPEC.md "Reductions (v1)" in Rocq (PREDICT T10): over a comprehension of a seq, the predicate at
+            # each index of the source (its filter an implication for all, a conjunction for any)
+            a = e["args"][0]
+            if not (isinstance(a, dict) and "comp" in a and "seq" in a["comp"]):
+                raise NotImplementedError(f"rocq: {e['op']} over anything but a comprehension of a seq is not "
+                                          "lowered yet (SPEC.md 'Reductions (v1)')")
+            ln, pred = self.anyall_parts(e, env, local)
+            return f"(t_{e['op']} {ln} {pred})"
         if e.get("op") == "in":
             # SPEC.md "Finite sets" (2026-09-27): `S.mem`, a bool.
             x, st = e["args"]
@@ -6219,6 +6287,12 @@ class Ctx:
 
     def prop(self, e: dict, env: dict, local: dict | None = None) -> str:
         local = local or {}
+        if e.get("op") == "in" and self.ty(e["args"][1], local or {}) == "seq":
+            # SPEC.md "The library (v1)" in Rocq (PREDICT T10): membership in a seq is some index holding it, the
+            # meaning the other kernels state; t_memb_spec (rocq_lib) bridges the computed bool to it
+            fn, ln = self.seq_fn(e["args"][1], env, local or {})
+            x = self.zx(e["args"][0], env, local or {})
+            return f"(exists t_k : Z, 0 <= t_k < {ln} /\\ {fn} t_k = {x})"
         if e.get("op") == "in":
             # SPEC.md "Finite sets" (2026-09-27): membership as `S.In`.
             x, st = e["args"]
@@ -6399,6 +6473,24 @@ class Ctx:
                     acc.append((list(binders), list(ctx), req))
             return
         op = e["op"]
+        if op in ("pow", "isqrt"):
+            # SPEC.md "The library (v1)": pow(a, n) and isqrt(n) DEFINED IFF n >= 0 (PREDICT T10)
+            for a in e["args"]:
+                self.defs(a, ctx, binders, acc, env, local)
+            acc.append((list(binders), list(ctx), f"(0 <= {self.zx(e['args'][-1], env, local)})"))
+            return
+        if op in ("min", "max") and len(e["args"]) == 1:
+            # SPEC.md "Reductions (v1)": max(s)/min(s) DEFINED IFF len(s) > 0
+            self.defs(e["args"][0], ctx, binders, acc, env, local)
+            _, ln = self.seq_fn(e["args"][0], env, local)
+            acc.append((list(binders), list(ctx), f"(0 < {ln})"))
+            return
+        if op in ("any", "all") and isinstance(e["args"][0], dict) and "comp" in e["args"][0]:
+            # over a comprehension: its source defined; a partial body or filter is refused (bx's predicate)
+            c = e["args"][0]["comp"]
+            if "seq" in c:
+                self.defs(c["seq"], ctx, binders, acc, env, local)
+            return
         if op == "at":
             self.defs(e["args"][0], ctx, binders, acc, env, local)
             self.defs(e["args"][1], ctx, binders, acc, env, local)
@@ -8390,7 +8482,7 @@ def _lemma_args(cx: Ctx, l: dict, args: list, env: dict, local: dict) -> str:
 
 
 def _arith_cond(cx: Ctx, e: dict) -> bool:
-    """True iff `e` is a Prop lia can decide (`P \/ ~ P`): comparisons of
+    """True iff `e` is a Prop lia can decide (`P \\/ ~ P`): comparisons of
     ints (a spec_fun application is an opaque atom, fine) under and/or/not/
     implies. A bool variable, a bool spec_fun or a quantifier is not."""
     if "bool" in e:
@@ -8519,6 +8611,84 @@ def emit_lemmas(cx: Ctx) -> str:
         finally:
             cx.tys = saved
     return "\n".join(out)
+
+
+def _lib_fact_lines(cx: Ctx, task: dict, body: list) -> str:
+    """SPEC.md "The library (v1)" in Rocq (PREDICT T10): one `pose proof` line per distinct library call over the
+    parameters, naming the fact the engine needs about it (gcd's sign, isqrt's bounds, the extremum's membership and
+    bound, membership's bridge to the existential, the sort's order, a sum over a concatenation, any/all's bridge to
+    the quantifier). Stated before `t_dis`, as the lemma sites are; an argument that names anything but a parameter
+    (a local, the result) is skipped, its facts reached through the parameter-level call it unfolds to."""
+    params = {p["name"] for p in task["params"]}
+
+    def free(x) -> set:
+        if isinstance(x, dict):
+            if "var" in x and len(x) == 1:
+                return {x["var"]}
+            if "comp" in x:
+                c = x["comp"]
+                inner = (free(c["cond"]) | free(c["body"])) - {c["var"]}
+                return inner | free(c.get("seq", {})) | free(c.get("lo", {})) | free(c.get("hi", {}))
+            return set().union(*(free(v) for v in x.values())) if x else set()
+        if isinstance(x, list):
+            return set().union(*(free(v) for v in x)) if x else set()
+        return set()
+    lines, seen = [], set()
+
+    def walk(x):
+        if isinstance(x, dict):
+            op, a = x.get("op"), x.get("args", [])
+            if op is not None and free(x) <= params:
+                fact, after, extra = None, None, []
+                try:
+                    if op == "gcd":
+                        fact = f"(Z.gcd_nonneg {cx.zx(a[0], {}, {})} {cx.zx(a[1], {}, {})})"
+                    elif op == "isqrt":
+                        fact = f"(Z.sqrt_spec {cx.zx(a[0], {}, {})} ltac:(lia))"
+                    elif op in ("min", "max") and len(a) == 1:
+                        fn, ln = cx.seq_fn(a[0], {}, {})
+                        fact = f"(t_{op}s_fact {fn} {ln} ltac:(lia))"
+                    elif op == "in" and cx.ty(a[1], {}) == "seq":
+                        fn, ln = cx.seq_fn(a[1], {}, {})
+                        xm = cx.zx(a[0], {}, {})
+                        fact = f"(t_memb_spec {fn} {ln} {xm} ltac:(lia))"
+                        # the goal's existential becomes the computed bool, which is then split (measured: the engine
+                        # case-splits Z comparisons, not an arbitrary bool-valued call)
+                        after = ("rewrite <- {h} in *; clear {h}; destruct (t_memb " + f"{fn} {ln} {xm}); "
+                                 "[t_dis | idtac]")   # the true branch here, the false one by the script's own t_dis
+                    elif op == "sort":
+                        fn, ln = cx.seq_fn(a[0], {}, {})
+                        fact = f"(t_sortf_le {fn} {ln})"
+                    elif op == "sum" and isinstance(a[0], dict) and a[0].get("op") == "+":
+                        fa, la = cx.seq_fn(a[0]["args"][0], {}, {})
+                        fb, lb = cx.seq_fn(a[0]["args"][1], {}, {})
+                        fact = f"(t_sum_app {fa} {fb} {la} {lb} ltac:(lia) ltac:(lia))"
+                        if lb.strip() == "1":
+                            extra.append(f"(t_sum_one {fb})")
+                    elif op in ("any", "all") and isinstance(a[0], dict) and "comp" in a[0]:
+                        ln, pred = cx.anyall_parts(x, {}, {})
+                        fact = f"(t_{op}_spec {ln} {pred} ltac:(lia))"
+                        pb = cx.anyall_prop(x, {}, {})
+                        after = (f"assert ({{h}}b : forall t_qk : Z, {pred} t_qk = true <-> {pb}) "
+                                 f"by (intros t_qk; cbn beta; t_dis); setoid_rewrite {{h}}b in {{h}}; "
+                                 f"rewrite <- {{h}} in *")
+                except (KeyError, ValueError, AssertionError, NotImplementedError):
+                    fact = None
+                for f2 in ([fact] if fact is not None else []) + extra:
+                    if f2 in seen:
+                        continue
+                    seen.add(f2)
+                    k = len(lines) + 1
+                    lines.append(f"  pose proof {f2} as t_LF{k}; try (cbn zeta in t_LF{k}).\n")
+                    if after is not None and f2 == fact:
+                        lines.append(f"  try ({after.format(h=f't_LF{k}')}).\n")
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    walk([task.get("requires", []), task.get("ensures", []), body or []])
+    return "".join(lines)
 
 
 def _lemma_site_lines(cx: Ctx, sites: list, k: list) -> str:
@@ -8666,7 +8836,7 @@ def gen_plain(cx: Ctx, body: list, counter: list) -> str:
     cx.lemma_sites = None
     # SPEC.md "Lemmas (v1)": each lemma call's instance, posed before the
     # closing t_dis (the LEMMAS section); empty text without a call.
-    site_txt = _lemma_site_lines(cx, sites, [0])
+    site_txt = _lemma_site_lines(cx, sites, [0]) + _lib_fact_lines(cx, task, body)   # PREDICT T10
     def_txt = emit_def_lemmas(cx, name, obls, counter=counter)
 
     if isinstance(ret_t, dict) and "seq" in ret_t:
@@ -10543,7 +10713,10 @@ def _witness_env(task: dict, witness: dict):
         wv = witness[v]
         if p["type"] == "seq":
             vals = list(wv)
-            env_py[v] = vals
+            # the interpreter's runtime seq is a tuple; a list made `s + [x]` raise inside _falsified_conjunct,
+            # which skipped the conjunct and refused every certificate over a concatenation (measured 2026-10-06,
+            # PREDICT T10: sum_tail's twin)
+            env_py[v] = tuple(vals)
             et, defline, ptwl, setl, sargs = _seq_witness_pieces(v, vals)
             env_txt.update(et)
             seq_defs.append(defline)
@@ -10558,7 +10731,7 @@ def _witness_env(task: dict, witness: dict):
             # shape); `_nested_witness_pieces` is `_seq_witness_pieces`'s
             # own two-level analogue.
             rows = [list(r) for r in wv]
-            env_py[v] = rows
+            env_py[v] = tuple(tuple(r) for r in rows)   # the interpreter's runtime nested seq (PREDICT T10)
             et, defline, ptwl, setl, sargs = _nested_witness_pieces(v, rows)
             env_txt.update(et)
             seq_defs.append(defline)
@@ -11567,7 +11740,7 @@ def _loop_cert(cx, task, prefix, w, suffix, witness):
             return None            # a state var shadowing a param
         if stys[v] == "seq":
             vals = list(witness[v])
-            env_py[v] = vals
+            env_py[v] = tuple(vals)     # the interpreter's runtime seq (see the parameter case above)
             et, defline, ptwl, setl, sargs = _seq_witness_pieces(v, vals)
             env_g.update(et)
             seq_defs.append(defline)
@@ -12334,7 +12507,9 @@ def _v0_cert(task: dict, body: list, witness: dict):
 # t_refutation_certificate instead of an unprovable spec theorem.
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "rocq")
+    import rocq_lib
+    tshape.abstain_unless_carried(task, body, "rocq", carried={"comp-reduction"},
+                                  lib=rocq_lib.ROCQ_LIB)   # PREDICT T10: the library in Rocq
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): Rocq's own
         # `Inductive` is the exact source for a field-less v1 enum

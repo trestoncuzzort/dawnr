@@ -1869,8 +1869,17 @@ as `List.reverse`, membership as `List` membership, and `sort` as a stable
 insertion sort (the list Python's `sorted` gives) with its permutation,
 order and length lemmas; `isqrt`'s bounds reach `grind` through a
 `grind_pattern` (measured: handed the lemma alone, grind did not
-instantiate it). Rocq and Frama-C abstain by name until their encodings
-are built and measured. The writer's side:
+instantiate it). Rocq since 2026-10-06 (PREDICT T10), over its own
+sequence encoding, a function `Z -> Z` with a length (`t/rocq_lib.py`):
+`Z.min`, `Z.max`, `Z.abs`, `Z.gcd`, `Z.pow`, `Z.sqrt` from the stdlib,
+with gcd's sign and isqrt's bounds (`Z.sqrt_spec`) posed as facts before
+the proof engine runs; `sum`, membership and the extrema as fuel
+`Fixpoint`s over `Z.to_nat` of the length, recursing from the end;
+membership in a seq stated as the existential over indices, its decided
+bool bridged by `t_memb_spec`; `rev` as `fun k => f (n - 1 - k)`; `sort`
+as a stable insertion sort over the listed elements, read back as a
+function, with its order lemma. Frama-C abstains by name until its
+encoding is built and measured. The writer's side:
 `to_python.py` hands back `min`, `max`, `abs`, `sum`, `math.gcd`, `a **
 n`, `math.isqrt`, `x in s` and `s[::-1]`.
 
@@ -2299,8 +2308,11 @@ structurally recursive `t_maxs`/`t_mins` with membership and bound lemmas,
 `any`/`all` as core's `List.any`/`List.all` over a predicate (a
 comprehension of a seq under them is the predicate), carried to the index
 quantifier by two bridge lemmas; `toset` stays refused (core Lean has no
-finite set). F*, SPARK, Rocq and Frama-C abstain by name. The hand-back
-writes Python's own built-ins.
+finite set). Rocq (since 2026-10-06, PREDICT T10): `t_maxs`/`t_mins` and
+`t_all`/`t_any` as fuel `Fixpoint`s with their facts, an `any`'s bool
+predicate carried to the spec's Prop under the binder by a pointwise bridge
+(`setoid_rewrite`); `toset` refused. F*, SPARK and Frama-C abstain by name.
+The hand-back writes Python's own built-ins.
 
 **The twins.** No new move: WRONG-CONSTANT and OFF-BY-ONE reach the ints
 inside the comprehension a reduction consumes, COMPARE-FLIP its condition.
