@@ -1321,15 +1321,21 @@ class Parser:
             return self.mark(t, {"op": "seq", "args": args})
         if t.kind == "id":
             ident = self.name()
-            if ident in self.datatypes and self.opt("sym", "."):
+            if (self.at("sym", ".") and self.i + 1 < len(self.toks)
+                    and self.toks[self.i + 1].kind == "id"
+                    and self.toks[self.i + 1].text not in STR_METHODS):
                 # SPEC.md "Datatypes (v1)" (2026-09-27): `D.C`, a
                 # constructor value, qualified the way Dafny's own
                 # datatype values are (reference manual 5.14) since a
                 # constructor name alone would be ambiguous against a
-                # spec_fun or a var of the same name in scope.
+                # spec_fun or a var of the same name in scope. Since
+                # 2026-10-06 the SYNTAX is read for any `Name.Name` (the
+                # grammar t.gbnf cannot know the declarations), and an
+                # undeclared datatype is check_wf's refusal, by name.
+                self.eat("sym", ".")
                 ctok = self.tok
                 cname = self.name("Expr")
-                if cname not in self.datatypes[ident]:
+                if ident in self.datatypes and cname not in self.datatypes[ident]:
                     self.err(ctok, "%s has no constructor %s" % (ident, cname), "Expr")
                 cargs = []
                 if self.opt("sym", "("):

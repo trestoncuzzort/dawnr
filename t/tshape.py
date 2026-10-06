@@ -99,3 +99,84 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
         used = uses_ops(body, task, {"tuple", "proj"})
         if used:
             raise NotImplementedError(f"{kernel}: {', '.join(sorted(used))} is not lowered yet (SPEC.md 'Compositional types (v1)')")
+
+
+def empty_display_types(task: dict, body: list) -> dict:
+    """id(node) -> the t type of every empty `[]`/`{}` display a declared type reaches (SPEC.md "Compositional
+    types (v1)": the display takes the expected type): a local's or the return's declared type, a param's or a
+    local's type on the other side of `==`/`!=`/union/inter/setminus or as the set of an `in`, through pair,
+    tuple and seq displays and `ite` branches. A lowering uses it to type an empty display in a kernel whose
+    inference will not (Dafny's `{}` under `|..|`, Verus's `Seq::empty()`/`Set::empty()`)."""
+    scope = {p["name"]: p["type"] for p in task["params"]}
+    scope[task["returns"][0]["name"]] = task["returns"][0]["type"]
+    out: dict = {}
+
+    def is_set(t):
+        return t == "set" or (isinstance(t, dict) and set(t) == {"set"})
+
+    def is_seq(t):
+        return t == "seq" or (isinstance(t, dict) and set(t) == {"seq"})
+
+    def note(e, ty):
+        if not isinstance(e, dict) or ty is None:
+            return
+        if e.get("op") in ("set", "seq") and not e.get("args") and (is_set(ty) if e["op"] == "set" else is_seq(ty)):
+            out[id(e)] = ty
+        elif e.get("op") in ("pair", "tuple") and isinstance(ty, dict) and (set(ty) == {"pair"} or set(ty) == {"tuple"}):
+            for a, t in zip(e["args"], list(ty.values())[0]):
+                note(a, t)
+        elif e.get("op") == "seq" and is_seq(ty):
+            for a in e["args"]:
+                note(a, "int" if ty == "seq" else ty["seq"])
+        elif "ite" in e:
+            note(e["ite"]["then"], ty)
+            note(e["ite"]["else"], ty)
+
+    def walk_expr(e, sc):
+        # a `==`/`!=`/`in`/union-style use beside a typed name types the other side
+        if not isinstance(e, dict):
+            return
+        if e.get("op") in ("==", "!=", "union", "inter", "diff") and len(e.get("args", [])) == 2:
+            a, b = e["args"]
+            for x, y in ((a, b), (b, a)):
+                if isinstance(x, dict) and "var" in x and x["var"] in sc:
+                    note(y, sc[x["var"]])
+        if e.get("op") == "in" and len(e.get("args", [])) == 2 and isinstance(e["args"][1], dict) \
+                and "var" in e["args"][1] and e["args"][1]["var"] in sc:
+            st = sc[e["args"][1]["var"]]
+            if is_set(st):
+                note(e["args"][0], "int" if st == "set" else st["set"])
+        for k in ("args",):
+            for a in e.get(k, []) or []:
+                walk_expr(a, sc)
+        for k in ("ite", "forall", "exists"):
+            if k in e:
+                for v in e[k].values():
+                    walk_expr(v, sc)
+
+    def walk(stmts, sc):
+        sc = dict(sc)
+        for st in stmts:
+            if "var" in st:
+                note(st["var"]["init"], st["var"]["type"])
+                walk_expr(st["var"]["init"], sc)
+                sc[st["var"]["name"]] = st["var"]["type"]
+            elif "assign" in st:
+                note(st["assign"][1], sc.get(st["assign"][0]))
+                walk_expr(st["assign"][1], sc)
+            elif "return" in st:
+                note(st["return"][1], sc.get(st["return"][0]))
+                walk_expr(st["return"][1], sc)
+            elif "if" in st:
+                walk_expr(st["if"]["cond"], sc)
+                walk(st["if"]["then"], sc)
+                walk(st["if"]["else"], sc)
+            elif "while" in st:
+                walk_expr(st["while"]["cond"], sc)
+                for inv in st["while"].get("invariants", []):
+                    walk_expr(inv, sc)
+                walk(st["while"]["body"], sc)
+    for e in task.get("requires", []) + task.get("ensures", []):
+        walk_expr(e, scope)
+    walk(body, scope)
+    return out
