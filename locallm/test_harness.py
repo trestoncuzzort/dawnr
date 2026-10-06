@@ -969,6 +969,29 @@ class WebTests(unittest.TestCase):
         self.assertNotIn(INSTRUCTION, r.untrusted_notes[0])     # ... and never quoted it at all
         self.assertNotIn("IGNORE", r.untrusted_notes[0])
 
+    def test_web_fetch_with_about_returns_the_paragraphs_that_matter_within_a_budget(self):
+        """A page is its navigation first; what answers the question is often past the cut. With `about`, the
+        paragraphs that say most about it come back in the page's order, each with its place (BM25 over the page's
+        own paragraphs), and a line says how much was left out. Without `about`, the head as before."""
+        boiler = "\n\n".join(f"Menu item {i}: products, pricing, careers, contact, legal." for i in range(80))
+        page = boiler + "\n\nShipping policy. Orders over 50 euros ship free; returns are accepted within 30 days of delivery.\n\n" \
+               + "\n\n".join(f"Footer note {i}: all rights reserved." for i in range(40))
+        picked, total, given = web.passages(page, "returns within how many days", 600)
+        self.assertEqual((total, given), (121, 1))
+        self.assertIn("[paragraph 81 of 121]", picked)
+        self.assertIn("within 30 days", picked)
+        self.assertNotIn("Menu item", picked)
+        # the budget holds and the order is the page's
+        many, _total, got = web.passages(page, "menu products pricing", 400)
+        self.assertLessEqual(len(many), 400 + 200)
+        self.assertGreaterEqual(got, 1)
+        import re
+        places = [int(m) for m in re.findall(r"\[paragraph (\d+) of", many)]
+        self.assertEqual(places, sorted(places))
+        # nothing matching: said, and the head given
+        nothing, _t, none = web.passages(page, "quantum chromodynamics", 500)
+        self.assertEqual((nothing, none), ("", 0))
+
     def test_search_backends(self):
         cfg = web.WebConfig(timeout=5)
         tools = {t.name: t for t in web.web_tools(cfg, {"backend": "searxng", "url": self.base})}

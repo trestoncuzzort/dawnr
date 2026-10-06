@@ -402,6 +402,56 @@ def make_backend(spec: dict | None, cfg: WebConfig):
     return BACKENDS[name](spec, cfg)
 
 
+# ------------------------------------------------------------- passages --
+# A page handed to the model whole is its navigation first and the answer, if there, past the cut. With `about`
+# (what the model is looking for) the page's paragraphs are scored with BM25 (Robertson and Sparck Jones; k1 1.5,
+# b 0.75, IDF over the page's own paragraphs; receipt 59c31f457c42) and the best are returned in page order
+# within the budget, each with its place, and a line says how much was left out.
+PASSAGE_CHARS = 6000           # the budget for passages, unless the call asks for less or more (up to max_chars)
+_WORD = re.compile(r"[^\W_]+", re.U)
+
+
+def passages(text: str, about: str, limit: int) -> tuple[str, int, int]:
+    """(the chosen paragraphs with their places, how many paragraphs there were, how many were given)."""
+    import math
+    paras = [p.strip() for p in re.split(r"\n\s*\n|\n(?=\s*[-*\u2022#])", text) if p.strip()]
+    if not paras:
+        return "", 0, 0
+    terms = [w.lower() for w in _WORD.findall(about)]
+    terms = [w for w in terms if len(w) > 1] or terms
+    if not terms:
+        return "", len(paras), 0
+    docs = [[w.lower() for w in _WORD.findall(p)] for p in paras]
+    avg = sum(len(d) for d in docs) / len(docs) or 1.0
+    n = {t: sum(1 for d in docs if t in d) for t in set(terms)}
+    k1, b = 1.5, 0.75
+    scores = []
+    for i, d in enumerate(docs):
+        score, counts = 0.0, {}
+        for w in d:
+            counts[w] = counts.get(w, 0) + 1
+        for t in set(terms):
+            tf = counts.get(t, 0)
+            if tf:
+                idf = math.log((len(docs) - n[t] + 0.5) / (n[t] + 0.5) + 1)
+                score += idf * tf * (k1 + 1) / (tf + k1 * (1 - b + b * len(d) / avg))
+        scores.append((score, i))
+    chosen, size = [], 0
+    for score, i in sorted(scores, key=lambda x: (-x[0], x[1])):
+        if score <= 0:
+            break
+        piece = paras[i][:limit]
+        if size + len(piece) > limit and chosen:
+            continue
+        chosen.append(i)
+        size += len(piece)
+        if size >= limit * 0.9:
+            break
+    chosen.sort()
+    out = "\n\n".join(f"[paragraph {i + 1} of {len(paras)}]\n{paras[i][:limit]}" for i in chosen)
+    return out, len(paras), len(chosen)
+
+
 # ----------------------------------------------------------------- tools --
 
 def web_tools(cfg: WebConfig | None = None, search_spec: dict | None = None, backend=None) -> list[Tool]:
@@ -413,12 +463,24 @@ def web_tools(cfg: WebConfig | None = None, search_spec: dict | None = None, bac
             page = fetch(args["url"], cfg)
         except FetchRefused as e:
             return ToolResult(str(e), is_error=True)
-        limit = min(args.get("max_chars", cfg.max_chars), cfg.max_chars)
         text = page["text"]
-        cut = len(text) > limit
+        about = (args.get("about") or "").strip()
+        limit = min(args.get("max_chars", PASSAGE_CHARS if about else cfg.max_chars), cfg.max_chars)
         head = (f"fetched {page['url']} ({page['status']}, {page['content_type']}, {page['bytes']} bytes"
-                + (", truncated" if page["truncated"] or cut else "") + ")")
-        body = text[:limit] + (f"\n[truncated at {limit} characters]" if cut else "")
+                + (", truncated" if page["truncated"] else "") + ")")
+        if about and len(text) > limit:
+            body, total, given = passages(text, about, limit)
+            if given:
+                body = (f"{given} of the page's {total} paragraphs, the ones that say most about {about!r}, in the page's order; "
+                        f"the rest ({len(text):,} characters in all) is not shown. Fetch again with another `about`, or with "
+                        f"max_chars, for more.\n{body}")
+            else:
+                body = (f"nothing on the page matches {about!r}; its first {limit} characters follow (of {len(text):,}).\n"
+                        + text[:limit])
+        else:
+            cut = len(text) > limit
+            body = text[:limit] + (f"\n[truncated at {limit} characters of {len(text):,}; fetch again with `about` for the "
+                                   f"passages that matter]" if cut else "")
         return ToolResult(f"{head}\n{body}", is_error=not (200 <= int(page["status"] or 0) < 400),
                           trust="untrusted", data={"url": page["url"], "status": page["status"]})
 
@@ -441,13 +503,16 @@ def web_tools(cfg: WebConfig | None = None, search_spec: dict | None = None, bac
 
     fetch_schema = {"type": "object",
                     "properties": {"url": {"type": "string", "maxLength": 2048},
+                                   "about": {"type": "string", "maxLength": 300,
+                                             "description": "what you are looking for on the page: only the paragraphs about it come back"},
                                    "max_chars": {"type": "integer", "minimum": 1, "maximum": cfg.max_chars}},
                     "required": ["url"], "additionalProperties": False}
     search_schema = {"type": "object",
                      "properties": {"query": {"type": "string", "minLength": 1, "maxLength": 500},
                                     "n": {"type": "integer", "minimum": 1, "maximum": 10}},
                      "required": ["query"], "additionalProperties": False}
-    return [Tool("web_fetch", "Fetch a web page (http or https) and return its text.", fetch_schema, run_fetch,
+    return [Tool("web_fetch", "Fetch a web page (http or https) and return its text; with `about`, only the paragraphs about that.",
+                 fetch_schema, run_fetch,
                  permission="ask", trust="untrusted", network=True, consequential=True),
             Tool("web_search", "Search the web; answers titles, URLs and snippets.", search_schema, run_search,
                  permission="ask", trust="untrusted", network=True, consequential=True)]
