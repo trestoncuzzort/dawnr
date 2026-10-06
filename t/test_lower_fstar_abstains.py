@@ -370,7 +370,12 @@ class CommittedTasksUnaffectedTest(unittest.TestCase):
                 with self.assertRaises(NotImplementedError):
                     lf.lower(task, task["body"])
                 continue
-            out = lf.lower(task, task["body"])
+            try:
+                out = lf.lower(task, task["body"])
+            except NotImplementedError:
+                # a task the fstar column abstains on by name (tshape: a type shape or reals it does not
+                # carry yet, SPEC.md "Compositional types (v1)", "Exact rationals (v1)", 2026-10-06)
+                continue
             self.assertNotIn("t_exists_at", out)
             self.assertNotIn("t_forall_at", out)
             self.assertNotIn("_loop1", out,

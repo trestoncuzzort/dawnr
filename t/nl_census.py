@@ -160,8 +160,11 @@ DETECTORS: dict[str, tuple[str, str]] = {
                    "capitalize/title/zfill/center/ljust/rjust/partition/"
                    "splitlines/encode/swapcase -- none of which SPEC.md's "
                    "v1 names"),
-    "real": ("gap", "real numbers: a float literal, true division `/`, "
-             "math.sqrt, float(), or a decimal-valued io token"),
+    "real": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Exact rationals): " "a float literal, true "
+             "division `/`, float(), or a decimal-valued io token -- t's `real` is the exact rational, so a "
+             "problem whose answer depends on float rounding is still not posed (undercounted here)"),
+    "sqrt": ("gap", "math.sqrt: a real root is specified in t (`r * r == x`), not computed; `isqrt` is the next "
+             "landing's library (SPEC.md Exact rationals)"),
     "nested-seq": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): " "a seq of seq whose row type could not be read "
                    "as string or tuple (an int/bool row, or a subscript of "
                    "a subscript, or a grid a static read genuinely cannot "
@@ -590,7 +593,7 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             if node.attr == "sort":
                 tags["sort"] = True
             if node.attr == "sqrt":
-                tags["real"] = True
+                tags["sqrt"] = True
         elif isinstance(node, ast.Call):
             name = _call_name(node)
             if name in MAP_CALLS:
@@ -696,6 +699,26 @@ def _mbpp_arg_kind_gap(why: str) -> str | None:
     return "any-type"
 
 
+def _mbpp_assert_fn(a: str) -> str | None:
+    """The callee of one MBPP assert line (`assert f(...) == v`, `assert f(...)`, `assert not f(...)`), read
+    here with `ast` when mbpp_dfy.parse_assertion refused the line for an argument shape (its refusal dict
+    carries no name), so the census keeps one function name across every assertion of a problem. None when the
+    line has no such shape."""
+    try:
+        tree = ast.parse(a.strip())
+    except SyntaxError:
+        return None
+    if len(tree.body) != 1 or not isinstance(tree.body[0], ast.Assert):
+        return None
+    test = tree.body[0].test
+    if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+        test = test.operand
+    call = test.left if isinstance(test, ast.Compare) else test
+    if not isinstance(call, ast.Call):
+        return None
+    return getattr(call.func, "id", None) or getattr(call.func, "attr", None)
+
+
 def _mbpp_assert_tuple_kind(a: str, prefix: str) -> str:
     """Re-reads one MBPP assert line to classify a 'tuple' refusal by
     arity and component shape. `mbpp_dfy._Unsupported` carries no arity,
@@ -740,24 +763,29 @@ def mbpp_io_tags(test_list: list[str]) -> tuple[set[str], set[str], set[str], li
     fns: set[str] = set()
     all_ok = bool(test_list)
     for a in test_list:
-        parsed = mbpp_dfy.parse_assertion(a)
+        # the wider reader (2026-10-05: strings, string rows, tuples, nested ints) is the fragment since
+        # SPEC.md "Compositional types (v1)" (2026-10-06); before that day the census read the pool's v1
+        # reader and counted every string, tuple or nested argument as a refusal
+        parsed = mbpp_dfy.parse_assertion(a, strings=True, nested_strings=True, tuples=True, nested_ints=True)
         if parsed["ok"]:
             fns.add(parsed["fn"])
             for kind, _ in parsed["args"]:
                 io_types.add(kind if kind != "seq" else "seq<int>")
             ek, _ = parsed["expected"]
             io_types.add(ek if ek != "seq" else "seq<int>")
-            if ek not in ("int", "bool"):
-                all_ok = False
         else:
-            all_ok = False
             refusals.append(parsed["why"])
+            fn_here = _mbpp_assert_fn(a)
+            if fn_here:
+                fns.add(fn_here)
             g = _mbpp_arg_kind_gap(parsed["why"])
             if g == "tuple":
                 prefix = parsed["why"].split(":", 1)[0]
                 g = _mbpp_assert_tuple_kind(a, prefix)
             if g:
                 (burdens if g in BURDENS else gaps).add(g)
+            else:
+                all_ok = False   # a structural refusal: not a function io sample at all
     single_fn = len(fns) == 1
     fn_name = next(iter(fns)) if single_fn else None
     if not single_fn:
@@ -1132,7 +1160,7 @@ def process_apps(limit: int | None = None) -> list[dict]:
                 sol_gaps = {k for k in sol_tags if k in GAPS}
                 burdens |= {k for k in sol_tags if k in BURDENS}
                 gaps = io_gaps | sol_gaps
-                io_sample_ok = "real" not in io_gaps
+                io_sample_ok = True   # a decimal-valued token needs `real`, in the fragment since 2026-10-06
                 parsed_ok = first_sol is not None and "py2-unparseable" not in sol_tags
                 would_be_in_fragment = io_sample_ok and not sol_gaps and parsed_ok
                 out.append(make_record(
@@ -1173,7 +1201,7 @@ def process_codecontests(limit: int | None = None) -> list[dict]:
             sol_gaps = {k for k in sol_tags if k in GAPS}
             burdens |= {k for k in sol_tags if k in BURDENS}
             gaps = io_gaps | sol_gaps
-            io_sample_ok = "real" not in io_gaps
+            io_sample_ok = True   # a decimal-valued token needs `real`, in the fragment since 2026-10-06
             parsed_ok = first_sol is not None and "py2-unparseable" not in sol_tags
             would_be_in_fragment = io_sample_ok and not sol_gaps and parsed_ok
             out.append(make_record(
@@ -1184,6 +1212,11 @@ def process_codecontests(limit: int | None = None) -> list[dict]:
 
 
 # --------------------------------------------------------------- greedy
+def stuck_out_of_fragment(programs: list[dict]) -> int:
+    """Function-shaped problems out of the fragment with no gap named: no gate opens them (see greedy)."""
+    return sum(1 for p in programs if p["shape"] == "function" and not p["in_fragment"] and not p["gaps"])
+
+
 def greedy(programs: list[dict]) -> list[tuple[str, int, int]]:
     """Open gates one at a time, each time the one that unlocks the most
     still-blocked FUNCTION-shaped programs; returns (gate, newly unlocked,
@@ -1195,7 +1228,11 @@ def greedy(programs: list[dict]) -> list[tuple[str, int, int]]:
     open_gates: set[str] = set()
     covered = sum(1 for p in func if p["in_fragment"])
     steps = []
-    remaining = [p for p in func if not p["in_fragment"]]
+    # Only a problem some gate blocks can be unlocked by opening gates. One out of the fragment with NO gap
+    # named (a structural assertion shape the io reader refuses, no reference solution) was credited to
+    # whichever gate opened first until 2026-10-06, which is how `real` read +362 on MBPP before this landing
+    # and +41 after it (t/PREDICT-2026-10-06-t-expansion.md, T2). `stuck_out_of_fragment` counts them apart.
+    remaining = [p for p in func if not p["in_fragment"] and p["gaps"]]
     while remaining:
         best, best_n = None, 0
         for g in GAPS:
@@ -1259,6 +1296,7 @@ def render(programs: list[dict], elapsed_s: float) -> str:
       f"sample io, solution tags no gap): **{len(would_be)}** of "
       f"{len(stdin_p)} ({100 * len(would_be) / max(1, len(stdin_p)):.1f}%)")
     w(f"- function-shaped problems blocked by exactly one gap: {sum(one_gap.values())}")
+    w(f"- function-shaped, out of the fragment with no gap named: {stuck_out_of_fragment(programs)} (no gate opens them: an assertion form or io shape the reader refuses, or no reference solution; counted apart from the greedy order since 2026-10-06)")
     w("")
     w("## Gaps, by problems that need them")
     w("")
@@ -1343,7 +1381,8 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("io-types come from a lexical scan of up to 3 sample `input`/`output`")
     w("blocks (`public_tests` for CodeContests), token by token on")
     w("whitespace -- every token that parses as `int` needs nothing, a")
-    w("token that parses as `float` but not `int` needs `real`, anything")
+    w("token that parses as `float` but not `int` needs `real` (a burden")
+    w("since 2026-10-06: exact rationals are in the fragment), anything")
     w("else needs the burden `string-as-seq`. A lexical scan cannot show a")
     w("map, a set, a tuple or a nested sequence, so those four gaps are")
     w("never attempted for a stdin-shaped problem's io-types; only its")
@@ -1354,14 +1393,13 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("problem can be posed to t at all, which is the `stdin-to-signature`")
     w("burden every stdin-shaped problem carries. `would_be_in_fragment_"
       "with_signature` in the JSON (and the by-source table above) marks")
-    w("the ones whose sample io has no decimal-valued (`real`) token and")
-    w("whose solution tags no gap -- everything BUT the missing signature")
+    w("the ones whose solution tags no gap -- everything BUT the missing signature")
     w("already fits; a string token in the sample is no longer")
     w("disqualifying on its own, since `string-as-seq` is a burden, not a")
-    w("gap. A problem with no Python solution, or whose chosen solution is")
-    w("`py2-unparseable`, is never marked this way even when its sample io")
-    w("has no `real` token: the solution side is unmeasured, not measured")
-    w("clean.")
+    w("gap, and since 2026-10-06 neither is a decimal-valued token (`real`).")
+    w("A problem with no Python solution, or whose chosen solution is")
+    w("`py2-unparseable`, is never marked this way: the solution side is")
+    w("unmeasured, not measured clean.")
     w("")
     w("Solution-construct detection walks the parsed `ast` once per")
     w("solution; each DETECTORS entry below is either a node-type check")

@@ -71,8 +71,12 @@ Type     ::= "int" | "bool" | "seq"             (* seq: v1; a return and local t
                                                    {"set": "int"} is not a spelling: that type is "set" *)
            | {"datatype": Id}                   (* v1, since 2026-09-27; Id names one of the task's own
                                                    "datatypes" declarations; SPEC.md "Datatypes (v1)" *)
+           | "real"                             (* an exact rational, never floating point; since 2026-10-06;
+                                                   SPEC.md "Exact rationals (v1)" *)
 
 Expr     ::= {"int": integer}                   (* mathematical integer *)
+           | {"rat": [integer, integer]}        (* the rational n / d in lowest terms, d >= 1 and of the form 2^a 5^b;
+                                                   written as a finite decimal, 1.5, 0.125, 3.0, -2.5; since 2026-10-06 *)
            | {"bool": true|false}                                        (* v1 *)
            | {"var": Id}
            | {"op": Op, "args": [Expr+]}
@@ -86,7 +90,10 @@ Expr     ::= {"int": integer}                   (* mathematical integer *)
                          "arms": [ {"ctor": Id, "binders": [Id*], "body": Expr}+ ]}}  (*   case e {C1=>e1, ...} *)
 
 Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
-           | "div" | "mod"                     (* v1; written / and %; Euclidean *)
+           | "div" | "mod"                     (* v1; written / and %; Euclidean on ints; "div" on two reals is exact
+                                                   division, undefined at 0.0 (since 2026-10-06); "mod" is int-only *)
+           | "toreal" | "floor" | "ceil"       (* since 2026-10-06; written real(x), floor(x), ceil(x): int -> real,
+                                                   real -> int, real -> int; SPEC.md "Exact rationals (v1)" *)
            | "==" | "!=" | "<" | "<=" | ">" | ">="
            | "and" | "or" | "not" | "implies"   (* and/or n-ary, short-circuit *)
            | "len" | "at"                       (* v1, seq only *)
@@ -365,6 +372,41 @@ and `==` is structural at every depth. `[]` and `{}` take the declared type
 where one reaches them. A spec_fun's parameters and result are any type.
 What does not exist is listed at the end of this page.
 
+### Exact rationals (v1)
+
+```json
+{"var": {"name": "h", "type": "real",
+         "init": {"op": "div", "args": [{"op": "+", "args": [{"var": "a"}, {"var": "b"}]}, {"rat": [2, 1]}]}}}
+{"op": "div", "args": [{"op": "toreal", "args": [{"var": "n"}]}, {"rat": [3, 2]}]}
+{"op": "+", "args": [{"op": "floor", "args": [{"var": "x"}]}, {"op": "ceil", "args": [{"var": "x"}]}]}
+{"op": "<=", "args": [{"rat": [-1, 4]}, {"var": "x"}]}
+```
+written: `var h: real := (a + b) / 2.0;` · `real(n) / 1.5` · `floor(x) + ceil(x)` · `-0.25 <= x`
+
+Since 2026-10-06 (SPEC.md "Exact rationals (v1)"), `real` is the type of
+exact rationals: not floating point, no rounding anywhere, `0.1 + 0.2 ==
+0.3` holds. A literal is a finite decimal with a digit on each side of the
+point (`3.0`, never `3.` or `.5`); the parser reduces it to lowest terms
+and the printer writes the shortest decimal back (`{"rat": [3, 2]}` is
+`1.5`). A rational with no finite decimal has no literal: `1.0 / 3.0` is
+an expression, and `check_wf` refuses a `rat` whose denominator is not
+`2^a 5^b`. `-1.5` is the negative literal, `-(1.5)` is `neg` of the
+positive one, and a decimal is never read right after a dot (`p.0.1` is
+two projections). No new symbol: `+ - * neg / < <= > >= == !=` are
+polymorphic by the static type of their operands, as for seqs, and an int
+and a real never meet without the conversion written: `n + 1.0`, `x == 1`
+and `x < 1` are ill-typed for `x: real`, `real(n) + 1.0` is not. `/` on
+two reals is exact division and undefined at `0.0` (the AST op stays
+`"div"`; the type decides), `%` on reals is ill-typed. `real(x)` converts
+an int, `floor(x)` and `ceil(x)` convert back (the greatest int at most
+`x`, the least int at least `x`); there is no `round`. A `real` goes
+wherever `int` goes: a parameter, return, local, component or element
+(`seq<real>`, `(real, int)`), a spec_fun's parameter or result. The twins
+reach a real literal as they reach an int one (`off-by-one` on `0.5` gives
+`1.5` and `-0.5`; `wrong-constant` on a real site adds `1.0`), and a
+witness value is shown as `n/d`. The committed tasks are `average`,
+`half_way`, `floor_ceil` and `safe_ratio`.
+
 ### Nested sequences (v1)
 
 ```json
@@ -623,7 +665,9 @@ No unbounded quantifiers. No
 mutation of sequences in place (a seq is a value, updated functionally), no
 arrays, no heap, no aliasing. No mutual recursion, no higher-order
 functions. A character and a string are sugar over `int` and `seq`, not
-their own types. Since 2026-10-06 a pair, a tuple, a seq and a set hold
+their own types. No floating point: `real` is the exact rational, with no
+rounding, no `round`, no `sqrt` (a root is specified as `r * r == x`), and a
+problem whose answer depends on IEEE rounding is not posed in t. Since 2026-10-06 a pair, a tuple, a seq and a set hold
 any types at any depth ("Compositional types"); what a type still cannot
 be is a function, a reference or a map (maps are the next landing,
 SPEC.md). One return value (a tuple return carries several).

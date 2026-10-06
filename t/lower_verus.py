@@ -2875,22 +2875,33 @@ def _guard(p: dict, q: dict) -> dict:
     return {"op": "implies", "args": [p, q]}
 
 
-def defined(e: dict) -> dict:
-    if "int" in e or "var" in e or "bool" in e:
+def _real_under(env_py: dict, funs: dict, st) -> "callable":
+    """`is_real` for `defined()`: whether a divisor evaluates to a Fraction under the replay's environment
+    (SPEC.md "Exact rationals (v1)", 2026-10-06); an undefined or unbound divisor reads as not real."""
+    def isr(y) -> bool:
+        try:
+            return isinstance(interp.ev(y, env_py, funs, st), interp.Fraction)
+        except Exception:                                   # noqa: BLE001
+            return False
+    return isr
+
+
+def defined(e: dict, is_real=None) -> dict:
+    if "int" in e or "var" in e or "bool" in e or "rat" in e:
         return TRUE
     if "ite" in e:
         c = e["ite"]
-        dt, de = defined(c["then"]), defined(c["else"])
+        dt, de = defined(c["then"], is_real), defined(c["else"], is_real)
         branch = (TRUE if dt == TRUE and de == TRUE
                   else {"ite": {"cond": c["cond"], "then": dt, "else": de}})
-        return _conj([defined(c["cond"]), branch])
+        return _conj([defined(c["cond"], is_real), branch])
     if "call" in e:
-        return _conj([defined(a) for a in e["call"]["args"]])
+        return _conj([defined(a, is_real) for a in e["call"]["args"]])
     if "ctor" in e:
         # SPEC.md "Datatypes (v1)" (2026-09-27): defined iff every field
         # argument is (v1's constructors are nullary, so this is TRUE for
         # every ctor this landing; kept general for the record case ahead).
-        return _conj([defined(a) for a in e["ctor"].get("args", [])])
+        return _conj([defined(a, is_real) for a in e["ctor"].get("args", [])])
     if "match" in e:
         # A match's result is defined iff the scrutinee is AND the body of
         # the arm ACTUALLY TAKEN is -- reusing "match" itself as the
@@ -2899,34 +2910,34 @@ def defined(e: dict) -> dict:
         # move "ite"'s own two-branch case above makes with its `branch`.
         m = e["match"]
         arm_obs = [{"ctor": a["ctor"], "binders": a.get("binders", []),
-                   "body": defined(a["body"])} for a in m["arms"]]
+                   "body": defined(a["body"], is_real)} for a in m["arms"]]
         branch = (TRUE if all(a["body"] == TRUE for a in arm_obs)
                   else {"match": {"scrutinee": m["scrutinee"], "arms": arm_obs}})
-        return _conj([defined(m["scrutinee"]), branch])
+        return _conj([defined(m["scrutinee"], is_real), branch])
     if "forall" in e or "exists" in e:
         q = e.get("forall") or e.get("exists")
-        db = defined(q["body"])
+        db = defined(q["body"], is_real)
         body_ob = (TRUE if db == TRUE else
                    {"forall": {"var": q["var"], "lo": q["lo"], "hi": q["hi"],
                                "body": db}})
-        return _conj([defined(q["lo"]), defined(q["hi"]), body_ob])
+        return _conj([defined(q["lo"], is_real), defined(q["hi"], is_real), body_ob])
     op, args = e["op"], e.get("args", [])
     if op == "at":
         s, i = args
         bound = {"op": "and", "args": [
             {"op": "<=", "args": [{"int": 0}, i]},
             {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
-        return _conj([defined(s), defined(i), bound])
+        return _conj([defined(s, is_real), defined(i, is_real), bound])
     if op == "update":
         s, i, v = args
         bound = {"op": "and", "args": [
             {"op": "<=", "args": [{"int": 0}, i]},
             {"op": "<", "args": [i, {"op": "len", "args": [s]}]}]}
-        return _conj([defined(s), defined(i), defined(v), bound])
+        return _conj([defined(s, is_real), defined(i, is_real), defined(v, is_real), bound])
     if op == "fill":
         n, v = args
         nonneg = {"op": ">=", "args": [n, {"int": 0}]}
-        return _conj([defined(n), defined(v), nonneg])
+        return _conj([defined(n, is_real), defined(v, is_real), nonneg])
     if op == "slice":
         # s[a..b]: DEFINED IFF 0 <= a <= b <= len(s) (SPEC.md "Sequences:
         # literals, concatenation, slices", 2026-09-09), a definedness
@@ -2945,32 +2956,35 @@ def defined(e: dict) -> dict:
             {"op": "<=", "args": [{"int": 0}, a]},
             {"op": "<=", "args": [a, b]},
             {"op": "<=", "args": [b, {"op": "len", "args": [s]}]}]}
-        return _conj([defined(s), defined(a), defined(b), bound])
+        return _conj([defined(s, is_real), defined(a, is_real), defined(b, is_real), bound])
     if op in ("div", "mod"):
         x, y = args
-        nonzero = {"op": "!=", "args": [y, {"int": 0}]}
-        return _conj([defined(x), defined(y), nonzero])
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): a real divisor owes `y != 0.0` (`is_real`, the caller's
+        # reading of the divisor under the witness's values), an int one `y != 0`; `real != int` is ill-typed
+        zero = {"rat": [0, 1]} if (is_real is not None and op == "div" and is_real(y)) else {"int": 0}
+        nonzero = {"op": "!=", "args": [y, zero]}
+        return _conj([defined(x, is_real), defined(y, is_real), nonzero])
     if op == "and":
         res = TRUE
         for a in reversed(args):
-            res = _conj([defined(a), _guard(a, res)])
+            res = _conj([defined(a, is_real), _guard(a, res)])
         return res
     if op == "or":
         res = TRUE
         for a in reversed(args):
-            res = _conj([defined(a), _guard({"op": "not", "args": [a]}, res)])
+            res = _conj([defined(a, is_real), _guard({"op": "not", "args": [a]}, res)])
         return res
     if op == "implies":
         p, q = args
-        return _conj([defined(p), _guard(p, defined(q))])
+        return _conj([defined(p, is_real), _guard(p, defined(q, is_real))])
     # total operators: not neg len + - * == != < <= > >=, and (SPEC.md
     # "Pairs", 2026-09-10) pair, fst, snd: "pair" is defined iff both
     # components are, exactly the formula below; "fst"/"snd" are "always
     # defined on a pair", which given a well-typed operand (check_wf's job,
-    # not this function's) is exactly defined(operand) alone, what the same
+    # not this function's) is exactly defined(operand, is_real) alone, what the same
     # formula computes for a single-argument op. Neither needed its own
     # case.
-    return _conj([defined(a) for a in args])
+    return _conj([defined(a, is_real) for a in args])
 
 
 def _nested_seq_operand_ty(e: dict, scope: dict) -> str | None:
@@ -3154,6 +3168,8 @@ def _spec_fn_domain_context(f: dict) -> list[dict]:
 def subst(e: dict, m: dict) -> dict:
     """Capture-avoiding substitution over a t expression: each mapped name
     is replaced by a new name (str) or a whole t expression (dict)."""
+    if "rat" in e:
+        return e                                            # a real literal (SPEC.md "Exact rationals", 2026-10-06)
     if "var" in e:
         v = m.get(e["var"])
         if v is None:
@@ -5152,6 +5168,9 @@ CERT_NAME = "t_refutation_certificate"
 _UNROLL_CAP = 64
 
 
+_RAT_TEXT = __import__("re").compile(r"^-?\d+/\d+$")   # interp._j's rendering of a real (SPEC.md "Exact rationals")
+
+
 def _tlit(v, ty=None):
     """A measured witness value as a t literal expression.
 
@@ -5187,6 +5206,12 @@ def _tlit(v, ty=None):
     off its own shape, and the inner empty row is the flat-seq empty case,
     already handled below with no `ty` needed since a row's own type
     ("seq", never a dict) never reaches this ambiguity."""
+    if isinstance(v, interp.Fraction):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): a real from interp.exit_env or the undefined replay
+        return {"rat": [v.numerator, v.denominator]}
+    if isinstance(v, str) and _RAT_TEXT.match(v) and (ty == "real" or ty is None):
+        n, d = v.split("/")
+        return {"rat": [int(n), int(d)]}
     if isinstance(v, interp.Ctor):
         # SPEC.md "Datatypes (v1)" (2026-09-27): a raw interp.Ctor is
         # unmistakable by its Python type, exactly as interp.Pair is
@@ -5460,6 +5485,9 @@ def _to_py(v, ty=None):
         return frozenset(_to_py(x, ty["set"]) for x in v)
     if ty == "set" and isinstance(v, list):
         return frozenset(v)   # SPEC.md "Finite sets" (2026-09-27): interp's own value
+    if isinstance(v, str) and _RAT_TEXT.match(v) and (ty == "real" or ty is None):
+        n, d = v.split("/")
+        return interp.Fraction(int(n), int(d))   # SPEC.md "Exact rationals (v1)" (2026-10-06)
     if isinstance(v, list):
         return tuple(v)
     return v
@@ -5557,7 +5585,7 @@ def _ensures_undef_obligation(task: dict, m: dict, names: dict,
         pass
     except (interp.Budget, RecursionError):
         return None
-    ob = defined(ens_conj)
+    ob = defined(ens_conj, _real_under(env_py, funs, st))
     if ob == TRUE:
         return None                 # defined() found nothing to blame
     try:
@@ -5645,7 +5673,7 @@ def _undef_obligation(task: dict, twin_body: list, m: dict, names: dict,
     st = interp.St()
 
     def check(e: dict) -> dict | None:
-        ob = defined(e)
+        ob = defined(e, _real_under(env_py, funs, st))
         if ob != TRUE and not interp.ev(ob, env_py, funs, st):
             return {"op": "not", "args": [subst(ob, m)]}
         return None
@@ -5723,7 +5751,9 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
             if w.get("_ens") is not True:
                 return None      # a drift a sound kernel may still accept
             tw = w.get("_twin")
-            if not isinstance(tw, (bool, int, list)):
+            if isinstance(tw, str) and ret_type == "real" and _RAT_TEXT.match(tw):
+                pass   # SPEC.md "Exact rationals (v1)": a real return's value, interp._j's "n/d" text
+            elif not isinstance(tw, (bool, int, list)):
                 return None
             m2 = dict(m)
             m2[task["returns"][0]["name"]] = _tlit(tw, ret_type)
@@ -5769,7 +5799,8 @@ def _cert_formula(task: dict, twin_body: list, w: dict) -> dict | None:
                 # postcondition's own definedness obligation fails at the
                 # witness, so the certificate is its negation, ground; the
                 # body is not replayed (nothing in it is undefined).
-                ob = defined(w["_expr"])
+                env_py = {n: _to_py(v, tmap.get(n)) for n, v in names.items()}
+                ob = defined(w["_expr"], _real_under(env_py, interp.funs_of(task, twin_body), interp.St()))
                 if ob == TRUE:
                     return None
                 parts.append({"op": "not", "args": [subst(ob, m)]})
@@ -5843,6 +5874,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
     _EMPTIES.clear()
     _EMPTIES.update(tshape.empty_display_types(task, body))
+    # SPEC.md "Exact rationals (v1)" (2026-10-06): Verus has no reals; a task that names one abstains by name
+    tshape.abstain_on_reals(task, body, "verus")
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Verus/Rust reserved word, before either lowering
     # path renders anything -- see names.py's module docstring. `task` is

@@ -1573,6 +1573,126 @@ to the type of the same shape; `nl_census.py`'s `tuple`, `nested-seq*`,
 `multi-return` and `set` detectors stop reporting what is now in the
 fragment, which is how the landing is measured.
 
+### Exact rationals (v1)
+
+Stated 2026-10-06, the second landing of the expansion. Measured first: after
+the compositional types, `real` is the gap with the most function-shaped
+problems blocked by it alone (297 of the 4,239 in `t/COVERAGE-nl.md`; a float
+literal, true division, `math.sqrt`, `float()`, or a decimal-valued test
+value), and MBPP's own greedy order opens with it: 278 → 640 of 974 problems
+in fragment, 65.7%. Of the seven kernels, six carry exact rationals and
+proved a `1/2 + 1/2 == 1` lemma on this desktop on 2026-10-06 (Dafny `real`,
+SPARK `Ada.Numerics.Big_Numbers.Big_Reals`, Frama-C's ACSL `real`, Lean's
+`Rat`, Rocq's `QArith`, F*'s `FStar.Real`); Verus has no reals. The three
+interface pages fetched (F*'s `FStar.Real.fsti`, Ada 2022 A.5.7, Dafny's
+types chapter) are in the receipt.
+
+**The number.** `real` is the type of exact rationals, not of floating
+point: a number a program in t writes is a finite decimal or a quotient of
+integers, every operation below is exact, and `==` is equality of rationals.
+That is what the kernels' reals are (Z3's theory of reals, Big_Real's
+numerator and denominator in lowest terms), what a specification means by
+`r == x / 2.0`, and what a float would silently break (`0.1 + 0.2 == 0.3`
+holds here). What this type is NOT for is stated once: IEEE floating point
+with its rounding is a different gate, and a problem whose answer depends
+on rounding is not posed in t. `math.sqrt` is not in this landing: a root
+is stated in a specification (`r * r == x and r >= 0.0`) and computed on
+integers as `isqrt` (the next landing's library).
+
+**The type and the literal.** A new base type `"real"`, written `real`,
+usable wherever `int` is (a param, return, local, component, element,
+spec_fun parameter or result). A new literal:
+
+```
+{"rat": [n, d]}     // the rational n / d, with gcd(|n|, d) == 1 and d >= 1; written as a finite decimal: 1.5, 0.125, 3.0, -2.5
+```
+
+The notation writes a real literal with a decimal point and at least one
+digit on each side (`3.0`, never `3.` or `.5`); the parser reduces it to
+lowest terms, and the printer writes the shortest finite decimal expansion
+back (`{"rat": [3, 2]}` is `1.5`, `{"rat": [-5, 2]}` is `-2.5`). A `rat`
+whose denominator is not of the form 2^a 5^b has no finite decimal and is
+refused by `check_wf` as non-canonical (such a value arises only as an
+expression, `1.0 / 3.0`, never as a literal). As with ints, `-1.5` is the
+negative literal and `-(1.5)` is `neg` of the positive one. A real literal
+after a dot is never read: `p.0.1` is two projections, since a projection's
+receiver is never a bare number (the lexer reads `d+.d+` as one token only
+when no `.` precedes it).
+
+**Operators.** No new symbol in the notation; the existing ones are
+polymorphic by the static type of their operands, as `+` and `==` already
+were, and an int and a real never meet without the conversion being written:
+
+```
++ - * neg          real × real → real, as int × int → int; int × real is ill-typed
+/                  real × real → real, EXACT division, UNDEFINED at a zero divisor (the AST op stays "div": the type decides;
+                   on ints it is Euclidean, as before); % on reals is ill-typed
+< <= > >= == !=    real × real → bool
+{"op": "toreal", "args": [IntExpr]}    // real(x); total; written real(x)
+{"op": "floor",  "args": [RealExpr]}   // the greatest int <= x; total; written floor(x)
+{"op": "ceil",   "args": [RealExpr]}   // the least int >= x; total; written ceil(x)
+```
+
+`floor` and `ceil` are the two conversions back; `round` is not a form
+(Python's rounds half to even, Dafny has none: a task writes `floor(x +
+0.5)`). `abs`, `min`, `max` are the next landing's library and come for
+both types at once. Definedness: `/` owes `y != 0.0`, through the rules of
+"Definedness" exactly as `div` does; everything else here is total. A real
+is a value with no order among reals and ints: `1 == 1.0` is ill-typed,
+`real(1) == 1.0` is true.
+
+**The twins.** `off-by-one` reaches a real literal as it reaches an int one
+(`n / d` becomes `(n + d) / d`, the literal plus one, and minus one), and
+`compare-flip`, `boundary-swap`, `wrong-var`, `wrong-constant` and
+`wrong-operator` apply with no new move. The interpreter's values are
+Python's `fractions.Fraction` (exact); the witness ladder for a `real`
+parameter is the int ladder's values taken as reals together with the
+halves, thirds and quarters between them and each literal's neighbours at a
+half (`_real_ladder`), near first, so a witness is a short decimal when one
+exists. A witness value is shown as `n/d` in lowest terms.
+
+**Each lowering.** Dafny: `real`, the literal as a Dafny real literal
+(`1.5`, or `(n as real) / (d as real)` for a quotient with no finite
+decimal in a certificate), `/`, `x as real`, `.Floor`, and `ceil` as
+`if x.Floor as real == x then x.Floor else x.Floor + 1` (the same
+function as `-((-x).Floor)`, which Dafny's solver could not settle beside
+a second `.Floor` within 60 s on `floor_ceil`, measured 2026-10-06; the
+conditional form proves it in under a second). F*: `FStar.Real` (`+.`, `-.`, `*.`, `/.` whose divisor is
+refined non-zero, which is exactly the definedness obligation, `<.` and
+the rest, `of_int` for `real(x)`), a literal as its decimal with the `R`
+suffix (`1.5R`; a negative one as `0.0R -. 1.5R`, since `-.` is binary; a
+certificate's quotient with no finite decimal as `of_int n /. of_int d`).
+`real` is erasable and its comparisons are props, so a task that uses it
+is lowered in the Ghost effect (as a set task is) and a comparison or
+equality in a computational position is its ghost decision
+(`strong_excluded_middle`); a real certificate is discharged by the SMT
+theory of reals, not by `assert_norm`. Measured 2026-10-06 (F*
+2026.08.30): the four committed shapes verify and the unguarded `a /. b`
+fails the divisor's refinement. `floor` and `ceil` are not in
+`FStar.Real`, so a task using them abstains by name. SPARK:
+`Ada.Numerics.Big_Numbers.Big_Reals` (`Big_Real`; `"/"` with its own `Den /=
+0`, which gnatprove reads as "divide by zero might fail" on an unguarded
+division, exactly the definedness obligation; `To_Big_Real` for `real(x)`;
+a literal `n/d` as the quotient `To_Big_Real (Big_Integer'(n)) /
+To_Big_Real (Big_Integer'(d))`, which gnatprove reads as the rational it
+is, measured 2026-10-06: `1/10 + 2/10 = 3/10` proved), `floor`/`ceil`
+abstain by name (A.5.7 has neither). Verus (no reals), Lean (core only: `Rat` exists but no
+decision procedure for it is wired here yet), Rocq (`QArith` is the
+encoding to write next) and Frama-C (no executable rationals: the ACSL
+`real` is logic-only) ABSTAIN with `real` named. The lifter's mapping:
+Dafny's `real` and its literals to `real` and `rat`; Python's `float` and
+`/` in the census to this type, so `real` stops being a gap where the
+program uses no rounding (the census detectors say which).
+
+**The committed tasks:** `average` (the mean of a non-empty seq of ints as a
+real: `ensures r * real(len(s)) == real(total(s, len(s)))`), `half_way`
+(the midpoint of two reals, `ensures r - a == b - r`), `floor_ceil`
+(`floor` and `ceil` of a real as a pair, `ensures real(r.0) <= x`, `x <=
+real(r.1)`, `real(r.1) - real(r.0) <= 1.0`), `safe_ratio` (`a / b` under
+`if b != 0.0`, else `0.0`, with `ensures b != 0.0 ==> r * b == a`; the
+collapse-if twin computes `a / b` unguarded, so the definedness obligation
+at `b == 0.0` is what refutes it).
+
 ## The twins
 
 A ladder of mutation operators. None is optional or configurable; the choice

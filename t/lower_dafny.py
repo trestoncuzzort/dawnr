@@ -954,6 +954,8 @@ function EndsWith(s: seq<int>, t: seq<int>): bool
 
 NARY_OPS = {"and": "&&", "or": "||"}
 TYPES = {"int": "int", "bool": "bool", "seq": "seq<int>",
+         "real": "real",           # SPEC.md "Exact rationals (v1)" (2026-10-06): Dafny's own real
+
          # SPEC.md "Finite sets" (2026-09-27): Dafny's own finite set of
          # ints; display `{..}`, `in`, `|s|`, `+` (union), `*` (intersection),
          # `-` (difference) are all native and total, exactly t's six.
@@ -1204,6 +1206,8 @@ def expr(e: dict, self_name: str | None = None) -> str:
     spec never mentioning the task's own (mutable) name."""
     if "int" in e:
         return str(e["int"])
+    if "rat" in e:
+        return _dafny_rat(*e["rat"])
     if "bool" in e:
         return "true" if e["bool"] else "false"
     if "var" in e:
@@ -1321,6 +1325,9 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return "(" + ", ".join(args) + ")"
     if op == "proj":
         return f"{args[0]}.{e['args'][1]['int']}"
+    rl = _real_lower(op, args)
+    if rl is not None:
+        return rl
     sl = _set_lower(op, args, e)
     if sl is not None:
         return sl
@@ -1352,6 +1359,34 @@ def expr(e: dict, self_name: str | None = None) -> str:
 # membership alone.
 _SET_BIN = {"union": "+", "inter": "*", "diff": "-"}
 _EMPTY_SET = "(var t_emptyset: set<int> := {}; t_emptyset)"
+
+
+def _dafny_rat(n: int, d: int) -> str:
+    """SPEC.md "Exact rationals (v1)" (2026-10-06): a t real literal as Dafny's. A finite decimal is Dafny's own
+    real literal (`1.5`, negatives in parentheses); a quotient with no finite decimal (a certificate's witness
+    value, never a literal the notation wrote) is `((n as real) / (d as real))`."""
+    import surface
+    try:
+        text = surface._decimal_of(n, d)
+        return f"({text})" if n < 0 else text
+    except surface.SurfaceError:
+        return f"((({n}) as real) / (({d}) as real))"
+
+
+def _real_lower(op: str, args: list) -> str | None:
+    """SPEC.md "Exact rationals (v1)": real(x) is `x as real`, floor is Dafny's `.Floor`, ceil is floor(x) or floor(x) + 1
+    by whether x is integral (see below)."""
+    if op == "toreal":
+        return f"(({args[0]}) as real)"
+    if op == "floor":
+        return f"(({args[0]}).Floor)"
+    if op == "ceil":
+        # Dafny has no Ceil. `-((-x).Floor)` is the textbook form, and Z3 times out on it beside a second
+        # `.Floor` (floor_ceil, measured 2026-10-06: 60 s, no verdict); the conditional form, floor(x) when x is
+        # integral and floor(x) + 1 otherwise, proves the same task in under a second and is the same function.
+        x = args[0]
+        return f"(if (({x}).Floor as real) == ({x}) then ({x}).Floor else ({x}).Floor + 1)"
+    return None
 
 # SPEC.md "Compositional types (v1)" (2026-10-06): an empty set display of a non-int element type needs its
 # type in the let expression above. `lower()` fills this map (id(node) -> t type, tshape.empty_display_types)
@@ -1489,6 +1524,9 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
             return "(" + ", ".join(args) + ")"
         if op == "proj":
             return f"{args[0]}.{e['args'][1]['int']}"
+        rl = _real_lower(op, args)
+        if rl is not None:
+            return rl
         sl = _set_lower(op, args, e)
         if sl is not None:
             return sl
@@ -1678,6 +1716,9 @@ def _not(e: dict) -> dict:
     return {"op": "not", "args": [e]}
 
 
+_RAT_TEXT = __import__("re").compile(r"^-?\d+/\d+$")   # interp._j's rendering of a Fraction
+
+
 def _tlit(v, ty=None):
     """A measured witness value as a t literal expression. Negative ints
     become neg nodes so they emit parenthesized, `(-1)`, and never fuse
@@ -1739,6 +1780,14 @@ def _tlit(v, ty=None):
         # from `ty` as a pair is; tagged `_set` so `_name_seqs`/`_certificate`
         # bind it `set<int>` and never as a seq.
         return {"_set": tuple(sorted(v))}
+    if isinstance(v, interp.Fraction):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): a rational witness as the literal, its sign carried
+        return {"rat": [v.numerator, v.denominator]}
+    if isinstance(v, str) and _RAT_TEXT.match(v):
+        # interp._j's rendering of a real ("n/d"): no other witness value is a string of this shape (a datatype
+        # value renders as "Name.Name"), so the type need not be known here
+        n, d = v.split("/")
+        return {"rat": [int(n), int(d)]}
     if isinstance(v, bool):
         return {"bool": v}
     if isinstance(v, int):
@@ -1755,6 +1804,8 @@ def subst(e: dict, m: dict) -> dict:
     imported from lower_verus.py, like lower_spark.py and lower_lean.py
     carry their own, so a verus-side change to literal typing can never
     silently change what this column certifies."""
+    if "rat" in e:
+        return e                                            # a real literal (SPEC.md "Exact rationals", 2026-10-06)
     if "var" in e:
         v = m.get(e["var"])
         return e if v is None else v
@@ -1873,6 +1924,8 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
     st.tick()
     if "int" in e:
         return e, e["int"]
+    if "rat" in e:
+        return e, interp.Fraction(e["rat"][0], e["rat"][1])
     if "bool" in e:
         return e, e["bool"]
     if "_seq" in e:
@@ -2015,11 +2068,20 @@ def _ev(e: dict, env: dict, funs: dict, st, facts: dict, hoist):
         # Same Euclidean law as interp.ev and SPEC.md "Division and modulo":
         # q = x div y, r = x mod y are the unique pair with x == q*y + r and
         # 0 <= r < |y|; y == 0 is undefined, exactly like `at` out of range.
+        # On two reals (SPEC.md "Exact rationals") `div` is exact division.
         x, y = vs
         if y == 0:
             raise interp.Undef(f"{op} by zero")
+        if isinstance(x, interp.Fraction) or isinstance(y, interp.Fraction):
+            return out, interp.Fraction(x) / interp.Fraction(y)
         r = x % abs(y)
         return out, (r if op == "mod" else (x - r) // y)
+    if op == "toreal":
+        return out, interp.Fraction(vs[0])
+    if op == "floor":
+        return out, interp.math.floor(vs[0])
+    if op == "ceil":
+        return out, interp.math.ceil(vs[0])
     if op in _ARITH:
         return out, _ARITH[op](vs[0], vs[1])
     if op == "seq":
@@ -2362,6 +2424,8 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
     st.tick()
     if "int" in e:
         return e["int"]
+    if "rat" in e:
+        return interp.Fraction(e["rat"][0], e["rat"][1])
     if "bool" in e:
         return e["bool"]
     if "var" in e:
@@ -2461,9 +2525,18 @@ def _ev_undef(e: dict, env: dict, funs: dict, st):
     if op in ("div", "mod"):
         x, y = a
         if y == 0:
-            raise _DefViol({"op": "!=", "args": [_tlit(y), {"int": 0}]})
+            zero = {"rat": [0, 1]} if isinstance(y, interp.Fraction) else {"int": 0}
+            raise _DefViol({"op": "!=", "args": [_tlit(y), zero]})
+        if isinstance(x, interp.Fraction) or isinstance(y, interp.Fraction):
+            return interp.Fraction(x) / interp.Fraction(y)
         r = x % abs(y)
         return r if op == "mod" else (x - r) // y
+    if op == "toreal":
+        return interp.Fraction(a[0])
+    if op == "floor":
+        return interp.math.floor(a[0])
+    if op == "ceil":
+        return interp.math.ceil(a[0])
     if op in ("set", "in", "card", "union", "inter", "diff"):
         return _set_ev(op, a)   # SPEC.md "Finite sets": all six total
     if op == "==":
@@ -2553,6 +2626,20 @@ def _scope_types(task: dict) -> dict:
     return out
 
 
+def _witness_env(names: dict) -> dict:
+    """A witness dict's values as the mirror evaluates them. interp._j renders a real as "n/d" text (SPEC.md
+    "Exact rationals", 2026-10-06), which `_ev_undef`'s arithmetic cannot take; every other value keeps the shape
+    the mirror already reads (ints, bools, lists for seqs and pairs)."""
+    def conv(v):
+        if isinstance(v, str) and _RAT_TEXT.match(v):
+            n, d = v.split("/")
+            return interp.Fraction(int(n), int(d))
+        if isinstance(v, list):
+            return [conv(x) for x in v]
+        return v
+    return {k: conv(v) for k, v in names.items()}
+
+
 def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
     """The appended t_refutation_certificate lemma for a measured twin
     witness, or None when the witness is not expressible as a ground
@@ -2589,7 +2676,11 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             if w.get("_ens") is not True:
                 return None      # a drift a sound kernel may still accept
             tw = w.get("_twin")
-            if isinstance(tw, str) or not isinstance(tw, (bool, int, list)):
+            # SPEC.md "Exact rationals (v1)" (2026-10-06): a real return's value arrives as interp._j's "n/d"
+            # text, the one string that is a ground literal here; any other string (a datatype rendering) is not.
+            if isinstance(tw, str) and not (ret_type == "real" and _RAT_TEXT.match(tw)):
+                return None
+            if not isinstance(tw, (bool, int, list, str)):
                 return None
             ret_name = task["returns"][0]["name"]
             m2 = dict(m)
@@ -2636,7 +2727,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             # `_expr` shape `_ev_undef` still abstains on) refuses the
             # certificate rather than guessing, same as the body-level
             # path.
-            env = dict(names)
+            env = _witness_env(names)
             st2 = interp.St()
             try:
                 _ev_undef(w["_expr"], env, funs, st2)
@@ -2654,7 +2745,7 @@ def _certificate(task: dict, twin_body: list, w: dict) -> str | None:
             # a loop that exceeds interp.MAX_LOOP, or a quantifier/call the
             # mirror still abstains on) refuses the certificate rather than
             # guessing.
-            env = dict(names)
+            env = _witness_env(names)
             st2 = interp.St()
             try:
                 _exec_undef(twin_body, env, funs, st2)

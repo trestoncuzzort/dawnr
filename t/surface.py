@@ -257,6 +257,8 @@ KEYWORDS = {
     "spec", "fun", "return", "var", "while", "invariant", "if", "then", "else",
     "forall", "exists", "in", "len", "true", "false", "and", "or", "not",
     "int", "bool", "seq",
+    "real", "floor", "ceil",   # SPEC.md "Exact rationals (v1)" (2026-10-06): the type, and two
+                                # functions like len(x); real(x) is the conversion, by the type's name
     "tostr",       # SPEC.md "The string library" (2026-09-11): tostr(n) is
                    # a function like len(n), reserved the same way.
     "datatype", "case",
@@ -309,6 +311,7 @@ SYMBOLS = ["==>", "==", "=>", "!=", "<=", ">=", ":=", "=", "<", ">", "+", "-",
 
 _ID = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 _NAT = re.compile(r"[0-9]+")
+_REAL = re.compile(r"[0-9]+\.[0-9]+")   # SPEC.md "Exact rationals (v1)": a finite decimal, digits on both sides
 
 # Escapes shared by char and string literals (SPEC.md "Strings as sequences
 # of code points (v1)"): the four the spec names, plus \r and \0 since a
@@ -441,6 +444,12 @@ def lex(src: str, file: str = "<string>") -> list:
             toks.append(Tok("kw" if w in KEYWORDS else "id", w, i, line, col))
             i = m.end()
             continue
+        m = _REAL.match(src, i)
+        if m and not (toks and toks[-1].kind == "sym" and toks[-1].text == "."):
+            # a real literal; never right after a dot, where `p.0.1` is two projections
+            toks.append(Tok("real", m.group(0), i, line, col))
+            i = m.end()
+            continue
         m = _NAT.match(src, i)
         if m:
             toks.append(Tok("nat", m.group(0), i, line, col))
@@ -469,7 +478,7 @@ CMP_OPS = {"==", "!=", "<", "<=", ">", ">="}
 # and the AST op names are the words, as SPEC.md writes them.
 _MUL_OPS = {"*": "*", "/": "div", "%": "mod"}
 _OP_TEXT = {"div": "/", "mod": "%"}
-VAL_TYPES = ("int", "bool", "seq", "set")   # "set": SPEC.md "Finite sets" (2026-09-27)
+VAL_TYPES = ("int", "bool", "seq", "set", "real")   # "set": SPEC.md "Finite sets" (2026-09-27); "real": "Exact rationals" (2026-10-06)
 
 
 # 2026-09-11 (ROADMAP 14.2): the production every raise site below names.
@@ -1080,6 +1089,9 @@ class Parser:
             # docstring: both nodes are live in the corpus.
             if self.tok.kind == "nat":
                 return self.mark(start, {"int": -int(self.eat("nat").text)})
+            if self.tok.kind == "real":
+                n, d = _rat_of(self.eat("real").text)
+                return self.mark(start, {"rat": [-n, d]})
             return self.mark(start, {"op": "neg", "args": [self.p_unary()]})
         return self.p_postfix()
 
@@ -1209,6 +1221,17 @@ class Parser:
         t = self.tok
         if t.kind == "nat":
             return self.mark(t, {"int": int(self.eat("nat").text)})
+        if t.kind == "real":
+            # SPEC.md "Exact rationals (v1)" (2026-10-06): a finite decimal, reduced to lowest terms
+            return self.mark(t, {"rat": list(_rat_of(self.eat("real").text))})
+        if self.at("kw", "real") or self.at("kw", "floor") or self.at("kw", "ceil"):
+            # real(x), floor(x), ceil(x): functions like len(x)
+            kw = self.eat("kw").text
+            self.eat("sym", "(")
+            inner = self.expr()
+            self.production = "Expr"
+            self.eat("sym", ")")
+            return self.mark(t, {"op": "toreal" if kw == "real" else kw, "args": [inner]})
         if t.kind == "char":
             # 'a': sugar for its code point (SPEC.md "Strings as sequences
             # of code points (v1)"). The printer never emits this form.
@@ -1491,6 +1514,11 @@ def pexpr(e, floor: int = P_QUANT) -> str:
         # A negative literal binds like a unary minus for the reader; it is
         # one token for the parser.
         return _wrap(str(n), P_UNARY if n < 0 else P_POSTFIX, floor)
+    if kind == "rat":
+        # SPEC.md "Exact rationals (v1)": the shortest finite decimal (the denominator is 2^a 5^b, or check_wf
+        # refused the literal); a negative one is the literal with its sign, binding like a unary minus.
+        n, d = e["rat"]
+        return _wrap(_decimal_of(n, d), P_UNARY if n < 0 else P_POSTFIX, floor)
     if kind == "bool":
         if e["bool"] not in (True, False):
             raise SurfaceError("bool literal is not a boolean: %r" % (e,))
@@ -1609,6 +1637,9 @@ def pexpr(e, floor: int = P_QUANT) -> str:
                                       pexpr(args[0])), P_POSTFIX, floor)
     if op == "tostr":
         return "tostr(%s)" % pexpr(args[0])
+    if op in ("toreal", "floor", "ceil"):
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): real(x), floor(x), ceil(x)
+        return "%s(%s)" % ("real" if op == "toreal" else op, pexpr(args[0]))
     if op in ("count", "find", "startswith", "endswith"):
         return _wrap("%s.%s(%s)" % (pexpr(args[0], P_POSTFIX), op,
                                     pexpr(args[1])), P_POSTFIX, floor)
@@ -1659,6 +1690,33 @@ def _ident(name) -> str:
         raise SurfaceError("%r is a keyword of the surface syntax and has no "
                            "notation as a name" % name)
     return name
+
+
+def _rat_of(text: str) -> tuple:
+    """A decimal literal's text as (n, d) in lowest terms, d >= 1."""
+    from fractions import Fraction
+    f = Fraction(text)
+    return f.numerator, f.denominator
+
+
+def _decimal_of(n: int, d: int) -> str:
+    """The shortest finite decimal for n / d (d of the form 2^a 5^b), with a digit on each side of the point."""
+    twos, dd = 0, d
+    while dd % 2 == 0:
+        dd //= 2
+        twos += 1
+    fives = 0
+    while dd % 5 == 0:
+        dd //= 5
+        fives += 1
+    if dd != 1:
+        raise SurfaceError("not a finite decimal: %d/%d" % (n, d))
+    places = max(twos, fives)
+    scaled = abs(n) * (10 ** places) // d
+    digits = str(scaled).rjust(places + 1, "0")
+    whole, frac = digits[:len(digits) - places], digits[len(digits) - places:]
+    frac = (frac.rstrip("0") or "0") if places else "0"
+    return ("-" if n < 0 else "") + (whole or "0") + "." + frac
 
 
 def _print_type(t) -> str:
@@ -1862,6 +1920,13 @@ WRITTEN = [
      {"op": "pair", "args": [{"var": "a"}, {"var": "b"}]}),
     ("expr", "p.0", {"op": "fst", "args": [{"var": "p"}]}),
     ("expr", "p.1", {"op": "snd", "args": [{"var": "p"}]}),
+    # SPEC.md "Exact rationals (v1)" (2026-10-06)
+    ("expr", "1.5", {"rat": [3, 2]}),
+    ("expr", "-0.25", {"rat": [-1, 4]}),
+    ("expr", "real(n) / 2.0", {"op": "div", "args": [{"op": "toreal", "args": [{"var": "n"}]}, {"rat": [2, 1]}]}),
+    ("expr", "floor(x) + ceil(x)", {"op": "+", "args": [{"op": "floor", "args": [{"var": "x"}]}, {"op": "ceil", "args": [{"var": "x"}]}]}),
+    ("stmt", "var h: real := (a + b) / 2.0;",
+     {"var": {"name": "h", "type": "real", "init": {"op": "div", "args": [{"op": "+", "args": [{"var": "a"}, {"var": "b"}]}, {"rat": [2, 1]}]}}}),
     # SPEC.md "Compositional types (v1)" (2026-10-06)
     ("expr", "(a, b, c)", {"op": "tuple", "args": [{"var": "a"}, {"var": "b"}, {"var": "c"}]}),
     ("expr", "u.2", {"op": "proj", "args": [{"var": "u"}, {"int": 2}]}),
@@ -1994,8 +2059,16 @@ REFUSALS = [
                [{"name": "r", "type": "seq"}], "requires": [], "ensures":
                [{"bool": True}], "body": [{"assign": ["r", {"var": "tostr"}]}]},
      "tostr is a keyword (SPEC.md \"The string library\") and cannot be a name"),
-    ("parse", "t 1 task f(s: seq) returns (r: seq) ensures true { r := s.upcase(); }",
-     "a dot is followed by .0, .1, or a string-library member; upcase is none"),
+    ("parse", "t 1 task f(s: seq) returns (r: seq) ensures true { r := s.(); }",
+     "a dot is followed by .0, .1, .k, a string-library member or a constructor name; a parenthesis is none"),
+    ("parse", "t 1 task f(x: real) returns (r: real) ensures true { r := 3.; }",
+     "a real literal has a digit on each side of the point (SPEC.md Exact rationals)"),
+    ("parse", "t 1 task f(x: real) returns (r: real) ensures true { r := .5; }",
+     "a real literal has a digit on each side of the point (SPEC.md Exact rationals)"),
+    ("print", {"t": 1, "name": "rl", "params": [], "returns":
+               [{"name": "r", "type": "real"}], "requires": [], "ensures":
+               [{"bool": True}], "body": [{"assign": ["r", {"rat": [1, 3]}]}]},
+     "a rational with no finite decimal has no literal (1/3 is 1.0 / 3.0)"),
 ]
 
 
@@ -2027,7 +2100,7 @@ def _rand_expr(rng, depth: int) -> dict:
         "int", "bool", "var", "bin", "cmp", "neg", "not", "andor", "implies",
         "len", "at", "update", "fill", "seq", "slice", "ite", "quant", "call",
         "pair", "fst", "snd", "strlib", "setlit", "in", "card", "setbin",
-        "tuple", "proj",
+        "tuple", "proj", "rat", "realfn",
     ])
     if kind == "int":
         return {"int": rng.randint(-10 ** 9, 10 ** 9)}
@@ -2070,6 +2143,13 @@ def _rand_expr(rng, depth: int) -> dict:
         return {"op": "pair", "args": [_rand_expr(rng, d), _rand_expr(rng, d)]}
     if kind in ("fst", "snd"):
         return {"op": kind, "args": [_rand_expr(rng, d)]}
+    if kind == "rat":
+        # SPEC.md "Exact rationals (v1)" (2026-10-06): a finite decimal literal in lowest terms, either sign.
+        from fractions import Fraction
+        f = Fraction(rng.randint(-999, 999), rng.choice([1, 2, 4, 5, 8, 10, 16, 20, 25, 100]))
+        return {"rat": [f.numerator, f.denominator]}
+    if kind == "realfn":
+        return {"op": rng.choice(["toreal", "floor", "ceil"]), "args": [_rand_expr(rng, d)]}
     if kind == "tuple":
         # SPEC.md "Compositional types (v1)" (2026-10-06): three or more components.
         return {"op": "tuple", "args": [_rand_expr(rng, d) for _ in range(rng.randint(3, 4))]}
@@ -2149,7 +2229,7 @@ def _rand_type(rng):
         return {"set": inner}
     if r < 0.56:
         return {"pair": [_rand_type(rng), _rand_type(rng)]}
-    return rng.choice(["int", "bool", "seq", "set"])   # "set": SPEC.md "Finite sets"
+    return rng.choice(["int", "bool", "seq", "set", "real"])   # "set": SPEC.md "Finite sets"; "real": "Exact rationals"
 
 
 def _rand_stmts(rng, depth: int, k: int) -> list:

@@ -976,3 +976,7 @@ linear-attention cache layer assigns instead of copying in place.
   as one batch.
 - X3: ten steps from the same checkpoint and data order give a logged loss within 2% of the plain trainer's at each
   step (bf16 noise; the schedule is exact in 64-bit).
+
+### F read 2026-10-06 09:03Z (one line, as the operator directed on 08:10Z; no further work on it)
+
+The taught 4B (adapter f1, QLoRA r16 on 1,990 rows) on the 660 fresh tasks: 421 of 530 taught-family tasks kept (untaught 415; bar F1 ≥ 458: **missed**), 107 of 130 held-out (untaught 84; bar F2 ≥ 81: **held**, +23); on the laptop's 179 (161 + the Windows set): taught 151 done, 10 harm, 21 false claims against the untaught 158, 12 harm, 15 false claims at the same commit (F5 relative: **missed**). The held-out families are where it gained; the hand-written tasks are where it lost. Not pursued: the direction since 08:10Z is the language.

@@ -49,7 +49,7 @@
       "patterns": [
         {
           "name": "constant.numeric.t",
-          "match": "\\b[0-9]+\\b"
+          "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
         }
       ]
     },
@@ -62,7 +62,7 @@
         },
         {
           "name": "storage.type.t",
-          "match": "\\b(int|bool|seq|set)\\b"
+          "match": "\\b(int|bool|seq|set|real)\\b"
         }
       ]
     },
@@ -95,7 +95,7 @@
         },
         {
           "name": "keyword.other.builtin.t",
-          "match": "\\b(len|tostr|card|union|inter|setminus)\\b"
+          "match": "\\b(len|floor|ceil|tostr|card|union|inter|setminus)\\b"
         },
         {
           "name": "constant.language.boolean.t",

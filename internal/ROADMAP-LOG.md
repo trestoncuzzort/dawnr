@@ -2984,4 +2984,30 @@ is queued, and the ones running are read as they finish.
   recorded in one line. Paused, not closed: `Planner.messages` without rewrites and the warm-up inside `run_task`;
   the two weak fixtures and the figure note; the Windows policy that fails closed; the sixth set's two misses; the
   F2 data choices; the shared-prefix trainer's card bars (X2, X3); scanned pages (OCR).
-- **Next:** G1, compositional types, SPEC first.
+- **F landed (10-06 09:03Z), one line:** the taught 4B did 421 of 530 taught-family fresh tasks (untaught 415, bar 458
+  missed) and 107 of 130 held-out (untaught 84, bar 81 held); on the laptop's 179 hand-written tasks 151 against the
+  untaught 158. Not pursued further.
+- **G1 landed (10-06 09:10Z):** compositional types in SPEC, the notation, the checker, the interpreter, the twins, Dafny
+  and Verus (six committed tasks verified with the twin refuted in both); SPARK, Frama-C, Lean, Rocq and F* abstain by
+  name (tshape.py); the census moved 772 → 1,072 function-shaped problems in fragment (T1's bar missed: it was set from
+  the greedy table's cumulative column; the sole-blocker column is the instrument from here on); the grammar and the
+  parser agree again (sets and datatypes were missing from the grammar).
+- **G2 landed (10-06 10:50Z), exact rationals:** `real` is the type of exact rationals (never floating point), a
+  finite-decimal literal reduced to lowest terms, `+ - * / < <= > >= == !=` polymorphic by operand type with no
+  implicit conversion, `real(x)`, `floor(x)`, `ceil(x)`, `/` exact and undefined at `0.0`; the interpreter on
+  `fractions.Fraction`, a real witness ladder, the twins reaching real literals (`off-by-one`, `wrong-constant` by
+  `1.0`); Dafny carries all of it (`ceil` as the conditional form: Z3 could not settle `-((-x).Floor)` beside a
+  second `.Floor` in 60 s) and verifies the four committed tasks with the twin refuted (`average`, `half_way`,
+  `floor_ceil`, `safe_ratio`); SPARK carries them through `Big_Reals` and F* through `FStar.Real` in the Ghost
+  effect (each: three of the four verified with the twin refuted, `safe_ratio`'s through the definedness
+  obligation; `floor_ceil` abstains by name in both, neither library has a floor); Verus, Frama-C, Lean and Rocq
+  abstain by name. The twin ladder now
+  refuses a candidate check_wf refuses for a typing reason (a `+ 1` on a real site evaluates in Python and is a
+  type error in every kernel) and sees the task's spec_funs when typing a site. The census: function-shaped
+  1,072 → 1,302 by the landing, and 1,601 (MBPP 618) once two faults in the instrument were fixed, both written
+  in `t/PREDICT-2026-10-06-t-expansion.md` (the MBPP io reader was the pool's v1 reader; the greedy table
+  credited no-gap problems to the first gate). CI had been red since 08:39Z on eight tests that checked
+  pre-G1 messages, fixtures and shapes; all eight repaired here. The seven-kernel matrix is regenerating in the
+  background (`tup-t-matrix-g2`).
+- **Next:** the matrix regenerated from a clean clone (the committed table is the 10:04Z run, before SPARK and F*
+  carried reals); then G3, builtins and notation.

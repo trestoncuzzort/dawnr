@@ -298,6 +298,11 @@ def _c_off_by_one(body, scope):
             if "int" in node:
                 for d in (1, -1):
                     yield _replace(body, sp, {"int": node["int"] + d})
+            elif "rat" in node:
+                # SPEC.md "Exact rationals (v1)" (2026-10-06): the literal plus and minus one, in lowest terms still
+                n, d = node["rat"]
+                for k in (1, -1):
+                    yield _replace(body, sp, {"rat": [n + k * d, d]})
             elif node.get("op") in ("at", "update"):
                 # The index of a read or of a functional update (SPEC.md
                 # "Sequences as values"): s[i +- 1 := v] writes the wrong slot.
@@ -380,12 +385,23 @@ def _c_wrong_var(body, scope):
                         yield _replace(body, sp, _projection(node["args"][0], m))
 
 
+_CTX: dict = {"functions": {}, "datatypes": {}}
+"""The task's spec_funs and datatypes by name, set by `_set_ctx` at the start of every ladder run so the rungs'
+`_etype` can type a call or a constructor (2026-10-06; before, a spec_fun call typed as unknown and `average`'s
+real site took an int twin)."""
+
+
+def _set_ctx(task: dict) -> None:
+    _CTX["functions"] = {f["name"]: f for f in task.get("spec_funs", [])}
+    _CTX["datatypes"] = {d["name"]: d for d in task.get("datatypes", [])}
+
+
 def _etype(expr, scope):
-    """The static type of `expr` under `scope`'s (name, type) pairs, or None when it cannot be told here (an
-    unbound name, a spec_fun call: this generator sees no functions)."""
+    """The static type of `expr` under `scope`'s (name, type) pairs and the current task's functions and datatypes
+    (`_CTX`), or None when it cannot be told (an unbound name)."""
     try:
         import check_wf
-        t, errs = check_wf.expression_type(expr, dict(scope))
+        t, errs = check_wf.expression_type(expr, dict(scope), functions=_CTX["functions"], datatypes=_CTX["datatypes"])
         return None if errs else t
     except Exception:                                       # noqa: BLE001  (an untypeable node is "unknown", not a crash)
         return None
@@ -453,7 +469,14 @@ def _c_wrong_constant(body, scope):
     for path, e, sc, kind in _exprs(body, scope):
         if kind not in ("rhs", "init"):
             continue
-        if not _int_rooted(e, dict(sc)):
+        ty = _etype(e, sc)
+        if ty == "real":
+            # SPEC.md "Exact rationals (v1)" (2026-10-06): a real site moves by 1.0, so the twin stays a program
+            # of the language (int + real is ill-typed, and a kernel reports a type error, not a refutation)
+            for d in (1, -1):
+                yield _replace(body, path, {"op": "+", "args": [e, {"rat": [d, 1]}]})
+            continue
+        if ty not in ("int", None) or not _int_rooted(e, dict(sc)):
             continue
         for d in (1, -1):
             yield _replace(body, path, {"op": "+", "args": [e, {"int": d}]})
@@ -551,6 +574,29 @@ def _invariant_candidates(task: dict):
                    s["while"], kept, sc + [(ret["name"], ret["type"])])
 
 
+# check_wf rules a mutation may trip without making the twin unjudgeable: a collapse-if that removes the
+# recursive call under a declared `decreases`, or leaves a statement after a `return`, is still a wrong program
+# every kernel reads and refutes (factorial, fib, gcd, is_prime, first_even have carried such twins REFUTED in
+# all seven columns since September); a twin that mistypes is not a program any kernel judges. 2026-10-06.
+TWIN_HYGIENE_EXEMPT = frozenset({"decreases-selfcall", "return-unreachable"})
+
+
+def _ill_formed(task: dict, twin_body: list) -> bool:
+    """Whether check_wf refuses the task with `twin_body` in place of its body for a reason other than the
+    structural hygiene in TWIN_HYGIENE_EXEMPT (the rule is read back from the "[SPEC: ...]" tail of each error)."""
+    import check_wf
+    text_to_rule = {v: k for k, v in check_wf.RULES.items()}
+    try:
+        errs = check_wf.check_wf(dict(task, body=twin_body))
+    except Exception:                                       # noqa: BLE001  (a checker crash is a refusal too)
+        return True
+    for e in errs:
+        tail = e.rsplit("[SPEC: ", 1)[-1].rstrip("]") if "[SPEC: " in e else ""
+        if text_to_rule.get(tail) not in TWIN_HYGIENE_EXEMPT:
+            return True
+    return False
+
+
 def _tag(op: str, k: int) -> str:
     return op if k == 0 else f"{op}#{k}"
 
@@ -574,6 +620,7 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
     wrong VALUE should be caught by a value witness before the ladder
     ever reaches for that reading."""
     n = 0
+    _set_ctx(task)
     ref = interp.Reference(task)
     # A witness that merely shows real and twin compute DIFFERENT values is
     # not grounds for expecting a refutation: a loose `ensures` can be
@@ -589,12 +636,20 @@ def twin_for(task: dict) -> tuple[list | None, str | None, dict | None]:
     # none, so the weakness is recorded in the tag instead of being silently
     # counted as a flip that failed.
     fallback = None
+    # The well-formedness filter below applies only to a task check_wf accepts as written; a probe outside the
+    # checker's acceptance (a v0 fixture with `ensures true`) keeps the ladder it had.
+    base_ok = not _ill_formed(task, task["body"])
     if ref.points:
         for op, gen in EXTENSIONAL:
             for k, twin in enumerate(gen(task["body"], _scope(task))):
                 n += 1
                 if n > MAX_CANDIDATES:
                     break
+                if base_ok and _ill_formed(task, twin):
+                    # 2026-10-06 (SPEC.md "The twins": a twin is a program in t): a candidate check_wf refuses is
+                    # not a twin, whatever the interpreter makes of it (Fraction + int evaluates; real + int is
+                    # ill-typed, and every kernel would report a type error, not a refutation).
+                    continue
                 try:
                     w = ref.witness(twin)
                 except TypeError:
@@ -660,6 +715,7 @@ def ladder_rungs(task: dict) -> list[tuple[str, list, dict | None]]:
     adds no new mutation logic."""
     rungs: list[tuple[str, list, dict | None]] = []
     n = 0
+    _set_ctx(task)
     ref = interp.Reference(task)
     if ref.points:
         for op, gen in EXTENSIONAL:
@@ -781,6 +837,7 @@ def real_witness(task: dict) -> dict | None:
     interp.Undef and read the sub-expression it names (interp.Undef.expr,
     set at every raise site in ev() to the node being evaluated) rather
     than collapsing both cases into one "value" witness."""
+    _set_ctx(task)
     ref = interp.Reference(task)
     for env0, got in ref.points:
         env = dict(env0)

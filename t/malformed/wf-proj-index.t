@@ -1,4 +1,5 @@
 t 1 task f(x: int) returns (r: int) ensures true
 {
-  r := card({1, true})
+  var u: (int, int, int) := (x, x, x);
+  r := u.5
 }

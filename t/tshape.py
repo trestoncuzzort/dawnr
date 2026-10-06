@@ -89,7 +89,10 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
     """Raise NotImplementedError naming the first declared shape beyond the pre-2026-10-06 list that `kernel`
     does not carry (`carried`: shape strings this lowering handles, as `shape()` writes them, or the wildcard
     "*" when it handles every shape), or the first tuple/proj operator when the kernel carries no tuples."""
+    body = body or []   # a lowering is called with body=None for a task whose ladder found no twin (lean's methods probe)
     if "*" in carried:
+        if "real" not in carried:
+            abstain_on_reals(task, body, kernel)
         return
     for t in declared_types(task, body):
         s = beyond_v1(t)
@@ -99,7 +102,36 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
         used = uses_ops(body, task, {"tuple", "proj"})
         if used:
             raise NotImplementedError(f"{kernel}: {', '.join(sorted(used))} is not lowered yet (SPEC.md 'Compositional types (v1)')")
+    if "real" not in carried:
+        abstain_on_reals(task, body, kernel)
 
+
+def mentions_real(t) -> bool:
+    """Whether a type is `real` or has a `real` component or element anywhere."""
+    if t == "real":
+        return True
+    if isinstance(t, dict):
+        return any(mentions_real(c) for v in t.values() for c in (v if isinstance(v, list) else [v]))
+    return False
+
+
+def abstain_on_reals(task: dict, body: list, kernel: str) -> None:
+    """Raise NotImplementedError naming reals when the task declares a real anywhere, uses real(x)/floor/ceil, or
+    writes a real literal (SPEC.md "Exact rationals (v1)", 2026-10-06): a kernel with no exact rationals, or one
+    whose lowering is not written yet, abstains by name rather than emit a source that typechecks as something
+    else."""
+    body = body or []
+    if any(mentions_real(t) for t in declared_types(task, body)):
+        raise NotImplementedError(f"{kernel}: real numbers are not lowered yet (SPEC.md 'Exact rationals (v1)')")
+    used = uses_ops(body, task, {"toreal", "floor", "ceil"})
+
+    def has_rat(x):
+        if isinstance(x, dict):
+            return "rat" in x or any(has_rat(v) for v in x.values())
+        return isinstance(x, list) and any(has_rat(v) for v in x)
+    if used or has_rat(body) or has_rat(task.get("ensures", [])) or has_rat(task.get("requires", [])) \
+            or has_rat(task.get("spec_funs", [])):
+        raise NotImplementedError(f"{kernel}: real numbers are not lowered yet (SPEC.md 'Exact rationals (v1)')")
 
 def empty_display_types(task: dict, body: list) -> dict:
     """id(node) -> the t type of every empty `[]`/`{}` display a declared type reaches (SPEC.md "Compositional
@@ -107,6 +139,7 @@ def empty_display_types(task: dict, body: list) -> dict:
     local's type on the other side of `==`/`!=`/union/inter/setminus or as the set of an `in`, through pair,
     tuple and seq displays and `ite` branches. A lowering uses it to type an empty display in a kernel whose
     inference will not (Dafny's `{}` under `|..|`, Verus's `Seq::empty()`/`Set::empty()`)."""
+    body = body or []
     scope = {p["name"]: p["type"] for p in task["params"]}
     scope[task["returns"][0]["name"]] = task["returns"][0]["type"]
     out: dict = {}
