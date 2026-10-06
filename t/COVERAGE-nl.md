@@ -136,7 +136,7 @@ more than one gate.
 | tuple-pair | 7738 | a tuple of exactly two values, each an int, bool or seq of ints, built, returned, passed, compared, or unpacked from such a pair: t's v1 already has {"pair": [T1, T2]} (SPEC.md 'Pairs (v1)'), landed 2026-09-10 |
 | builtin-math | 6686 | IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): min, max, sum, abs, math.gcd, math.isqrt, ** -- library functions of t; before that day t could express each but has no builtin for any of them |
 | seq-append | 6030 | sequence concatenation `+` or .append()/.extend()/.insert(): t's v1 already has + on seqs (SPEC.md 'Sequences: literals, concatenation, slices'), landed as r + [x] or r + s |
-| comprehension | 5920 | a list/set/dict comprehension over ints; t writes this as an explicit loop or a quantifier |
+| comprehension | 5920 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Comprehensions): a list comprehension over a seq or a range is t's [body for x in s if cond]; before that day t writes this as an explicit loop or a quantifier |
 | tuple | 3749 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a tuple of three or more elements, a nested tuple, a tuple with a string component (until strings-as-seq's seq-of-code-points model covers a pair component too), or a list of tuples (the separate gap `nested-seq-pair`, tagged where a list literal's own elements are inspected): SPEC.md's 'Pairs (v1)' covers only the two-element case, the burden tuple-pair |
 | nested-seq | 3625 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Compositional types): a seq of seq whose row type could not be read as string or tuple (an int/bool row, or a subscript of a subscript, or a grid a static read genuinely cannot classify): SPEC.md's 'Nested sequences (v1)' burden `seq<seq<int>>` and the unreadable fallback both land here |
 | real | 3445 | IN THE FRAGMENT since 2026-10-06 (SPEC.md Exact rationals): a float literal, true division `/`, float(), or a decimal-valued io token -- t's `real` is the exact rational, so a problem whose answer depends on float rounding is still not posed (undercounted here) |
@@ -153,7 +153,7 @@ more than one gate.
 
 ## Method
 
-Run time: 29.1s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
+Run time: 29.0s. Every source's first Python solution only; APPS and CodeContests carry many, all but the first are
 unread. `mbpp_dfy.parse_assertion` is reused for every MBPP
 assertion (spec_experiment.py's `pool()` uses the same function to
 decide the same question, whether a problem's tests fit t's

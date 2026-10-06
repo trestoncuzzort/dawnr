@@ -241,6 +241,11 @@ def _sub(e: dict, path: tuple):
         q = "forall" if "forall" in e else "exists"
         for k in ("lo", "hi", "body"):
             yield from _sub(e[q][k], path + (q, k))
+    elif "comp" in e:
+        # SPEC.md "Comprehensions (v1)" (2026-10-06): its source, bounds, condition and body; never the bound name
+        for k in ("seq", "lo", "hi", "cond", "body"):
+            if k in e["comp"]:
+                yield from _sub(e["comp"][k], path + ("comp", k))
     elif "call" in e:
         for i, a in enumerate(e["call"]["args"]):
             yield from _sub(a, path + ("call", "args", i))

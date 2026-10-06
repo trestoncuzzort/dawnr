@@ -97,6 +97,13 @@ class _Writer:
             return f"({self.expr(c['then'])} if {self.expr(c['cond'])} else {self.expr(c['else'])})"
         if "ctor" in e or "match" in e:
             raise Unsupported("datatypes")
+        if "comp" in e:
+            # SPEC.md "Comprehensions (v1)" (2026-10-06): Python's own, as a tuple
+            c = e["comp"]
+            v = _ident(c["var"])
+            src = (f"range({self.expr(c['lo'])}, {self.expr(c['hi'])})" if "lo" in c else self.expr(c["seq"]))
+            cond = "" if c["cond"] == {"bool": True} else f" if {self.expr(c['cond'])}"
+            return f"tuple({self.expr(c['body'])} for {v} in {src}{cond})"
         if "forall" in e or "exists" in e:
             kind = "forall" if "forall" in e else "exists"
             q = e[kind]

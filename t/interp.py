@@ -510,6 +510,23 @@ def ev(e: dict, env: dict, funs: dict, st: St):
                 return ev(arm["body"], sub, funs, st)
         raise ValueError(f"match: no arm for constructor {v.ctor!r} "
                          f"(check_wf should have refused this)")
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)" (2026-10-06): the elements (or ints) in order where cond holds, through body
+        c = e["comp"]
+        if "seq" in c:
+            src = ev(c["seq"], env, funs, st)
+        else:
+            lo, hi = ev(c["lo"], env, funs, st), ev(c["hi"], env, funs, st)
+            if hi - lo > MAX_RANGE:
+                raise Budget("comprehension range")
+            src = tuple(range(lo, hi))
+        out = []
+        for x in src:
+            sub = dict(env)
+            sub[c["var"]] = x
+            if ev(c["cond"], sub, funs, st) is True:
+                out.append(ev(c["body"], sub, funs, st))
+        return tuple(out)
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]

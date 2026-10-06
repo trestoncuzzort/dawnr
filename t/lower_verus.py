@@ -2534,6 +2534,12 @@ def expr(e: dict, vty: str | None = None) -> str:
     if "call" in e:
         c = e["call"]
         return f"{c['fun']}(" + ", ".join(expr(a) for a in c["args"]) + ")"
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)" (2026-10-06): the registered spec fn
+        k, _ = _COMP_INDEX[_comp_key(e)]
+        c = e["comp"]
+        src = [expr(c["seq"])] if "seq" in c else [expr(c["lo"]), expr(c["hi"])]
+        return f"t_comp{k}({', '.join(src + _comp_free(e))})"
     if "forall" in e or "exists" in e:
         kind = "forall" if "forall" in e else "exists"
         q = e[kind]
@@ -2925,6 +2931,24 @@ def defined(e: dict, is_real=None) -> dict:
                    {"forall": {"var": q["var"], "lo": q["lo"], "hi": q["hi"],
                                "body": db}})
         return _conj([defined(q["lo"], is_real), defined(q["hi"], is_real), body_ob])
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)": the source defined; at every element, cond defined and body defined
+        # where cond holds -- stated over an index into the source (or the range) as the quantifier rule is
+        c = e["comp"]
+        idx = {"var": "t_di"}
+        if "seq" in c:
+            at = {"op": "at", "args": [c["seq"], idx]}
+            lo, hi = {"int": 0}, {"op": "len", "args": [c["seq"]]}
+            src_ob = defined(c["seq"], is_real)
+        else:
+            at = idx
+            lo, hi = c["lo"], c["hi"]
+            src_ob = _conj([defined(c["lo"], is_real), defined(c["hi"], is_real)])
+        dc = defined(subst(c["cond"], {c["var"]: at}), is_real)
+        dbody = defined(subst(c["body"], {c["var"]: at}), is_real)
+        inner = _conj([dc, _t_guard(subst(c["cond"], {c["var"]: at}), dbody)]) if hasattr(sys.modules[__name__], "_t_guard") else _conj([dc, {"op": "implies", "args": [subst(c["cond"], {c["var"]: at}), dbody]}])
+        body_ob = TRUE if inner == TRUE else {"forall": {"var": "t_di", "lo": lo, "hi": hi, "body": inner}}
+        return _conj([src_ob, body_ob])
     op, args = e["op"], e.get("args", [])
     if op == "at":
         s, i = args
@@ -3202,6 +3226,15 @@ def subst(e: dict, m: dict) -> dict:
         return {kind: {"var": q["var"], "lo": subst(q["lo"], m),
                        "hi": subst(q["hi"], m),
                        "body": subst(q["body"], inner)}}
+    if "comp" in e:
+        c = e["comp"]   # SPEC.md "Comprehensions (v1)": the bound variable scopes over cond and body
+        inner = {k: v for k, v in m.items() if k != c["var"]}
+        out = {"var": c["var"], "cond": subst(c["cond"], inner), "body": subst(c["body"], inner)}
+        if "seq" in c:
+            out["seq"] = subst(c["seq"], m)
+        else:
+            out["lo"], out["hi"] = subst(c["lo"], m), subst(c["hi"], m)
+        return {"comp": out}
     if "ctor" in e:
         c = e["ctor"]
         return {"ctor": {"dtype": c["dtype"], "name": c["name"],
@@ -4151,6 +4184,11 @@ class _V1:
         div/mod-shaped identity and reserves this one for a PURE
         multiplication ensures like hoareTripleReqEns's, which has no
         div/mod anywhere in its body."""
+        # SPEC.md "Comprehensions (v1)", "Sorting (v1)", "The library (v1)" (2026-10-06): a `by (nonlinear_arith)` block
+        # sees no outside fact, so a return built from a comprehension, a sort or a library function (whose facts the
+        # proof fn states as lemmas) must not be bridged here; its ensures is checked at the return with all facts
+        if _mentions_comp_or_lib(ret_val):
+            return []
         if _div_mod_pairs(ret_val):
             return []
         lines = []
@@ -4816,7 +4854,7 @@ class _V1:
         main = self._main_fn(body)
 
         strlib_blocks = [STRLIB_PRELUDE] if _uses_strlib(task) else []
-        lib_blocks = _lib_blocks(task, body)   # SPEC.md "The library (v1)" (2026-10-06)
+        lib_blocks = _lib_blocks(task, body) + _comp_blocks(task, body)   # SPEC.md "The library (v1)", "Comprehensions (v1)"
         rotate_blocks = ([ROTATE_PRELUDE]
                          if _rotate_witnesses(task)
                          or any(_rotate_witnesses(p) for p in pseudos)
@@ -5036,6 +5074,9 @@ class _V1:
             lib_lines.append("    broadcast use t_isqrt_spec;")
         if "rev" in lib_used:
             lib_lines.append("    broadcast use t_rev_spec;")
+        for key, (k, _node) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
+            lib_lines.append(f"    reveal_with_fuel(t_comp{k}, 6);")
+            lib_lines.append(f"    broadcast use t_comp{k}_spec;")
         param_names = {p["name"] for p in task["params"]}
         for a in _sort_args(task.get("requires", [])) + _sort_args(task.get("ensures", [])):
             if _free_vars(a) <= param_names:
@@ -5908,6 +5949,132 @@ _VLIB["sort"] = (
     "}\n")
 
 
+# SPEC.md "Comprehensions (v1)" (2026-10-06): one `spec fn` per comprehension, recursing from the end, with a broadcast
+# lemma carrying the ensures its shape admits (as t_rev_spec does), revealed with fuel inside the proof fn.
+_COMP_INDEX: dict = {}
+
+
+def _comp_key(e: dict) -> str:
+    import json
+    return json.dumps(e["comp"], sort_keys=True)
+
+
+def _comp_free(node: dict) -> list:
+    def walk(x, bound: frozenset) -> set:
+        if isinstance(x, dict):
+            if "var" in x and len(x) == 1:
+                return set() if x["var"] in bound else {x["var"]}
+            if "comp" in x:
+                c = x["comp"]
+                inner = bound | {c["var"]}
+                out = set()
+                for k in ("seq", "lo", "hi"):
+                    if k in c:
+                        out |= walk(c[k], bound)
+                return out | walk(c["cond"], inner) | walk(c["body"], inner)
+            if "forall" in x or "exists" in x:
+                q = x.get("forall") or x.get("exists")
+                return walk(q["lo"], bound) | walk(q["hi"], bound) | walk(q["body"], bound | {q["var"]})
+            if "call" in x:
+                return set().union(*(walk(a, bound) for a in x["call"]["args"])) if x["call"]["args"] else set()
+            return set().union(*(walk(v, bound) for v in x.values())) if x else set()
+        if isinstance(x, list):
+            return set().union(*(walk(v, bound) for v in x)) if x else set()
+        return set()
+    c = node["comp"]
+    return sorted(walk(c["cond"], frozenset({c["var"]})) | walk(c["body"], frozenset({c["var"]})))
+
+
+def _comp_register(task: dict, body: list) -> None:
+    _COMP_INDEX.clear()
+
+    def walk(x):
+        if isinstance(x, dict):
+            if "comp" in x:
+                _COMP_INDEX.setdefault(_comp_key(x), (len(_COMP_INDEX) + 1, x))
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    walk(task.get("requires", []))
+    walk(task.get("ensures", []))
+    walk(task.get("spec_funs", []))
+    walk(body or [])
+    walk(task.get("methods", []))
+
+
+def _comp_blocks(task: dict, body: list) -> list:
+    """The Verus text of every registered comprehension: its spec fn and its broadcast lemma."""
+    import check_wf
+    import tshape
+    hints = tshape._scope_of(task, body)
+    funs = {f["name"]: f for f in task.get("spec_funs", [])}
+    out = []
+    for key, (k, e) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
+        c = e["comp"]
+        v = c["var"]
+        fvs = [n for n in _comp_free(e) if n in hints]
+        if "seq" in c:
+            try:
+                src_t, errs = check_wf.expression_type(c["seq"], dict(hints), functions=funs)
+            except Exception:                               # noqa: BLE001
+                src_t, errs = None, ["untypeable"]
+            if errs or not (src_t == "seq" or (isinstance(src_t, dict) and "seq" in src_t)):
+                raise NotImplementedError("verus: a comprehension's source could not be typed here")
+            elem_t = "int" if src_t == "seq" else src_t["seq"]
+        else:
+            src_t, elem_t = None, "int"
+        h2 = dict(hints)
+        h2[v] = elem_t
+        try:
+            body_t, errs = check_wf.expression_type(c["body"], h2, functions=funs)
+        except Exception:                                   # noqa: BLE001
+            body_t, errs = None, ["untypeable"]
+        if errs or body_t is None:
+            raise NotImplementedError("verus: a comprehension's body could not be typed here")
+        params = ([f"t_s: {_vty(src_t)}"] if "seq" in c else ["t_a: int", "t_b: int"]) + [f"{n}: {_vty(hints[n])}" for n in fvs]
+        args = ", ".join((["t_s"] if "seq" in c else ["t_a", "t_b"]) + fvs)
+        rec_args = ", ".join((["t_s.drop_last()"] if "seq" in c else ["t_a", "t_b - 1"]) + fvs)
+        is_filter = c["body"] == {"var": v}
+        is_map = c["cond"] == {"bool": True}
+        size = "t_s.len()" if "seq" in c else "(if t_a <= t_b { t_b - t_a } else { 0 })"
+        base = "t_s.len() == 0" if "seq" in c else "t_b <= t_a"
+        last = "t_s.last()" if "seq" in c else "t_b - 1"
+        call = f"t_comp{k}({args})"
+        ens = [f"(#[trigger] {call}).len() {'==' if is_map else '<='} {size}"]
+        idx = {"var": "t_i"}
+        if is_map:
+            elem_at = {"op": "at", "args": [{"var": "t_s"}, idx]} if "seq" in c else {"op": "+", "args": [{"var": "t_a"}, idx]}
+            img = subst(c["body"], {v: elem_at})
+            ens.append(f"forall|t_i: int| 0 <= t_i < {call}.len() ==> {call}[t_i] == {expr(img)}")
+        if is_filter:
+            # the element is `t_comp{k}(...)[t_i]`: a placeholder name is rendered, then replaced by the call's text
+            # (a `let` block inside a quantifier does not parse in a Verus ensures)
+            holds = subst(c["cond"], {v: {"op": "at", "args": [{"var": "t_cr"}, idx]}})
+            ens.append(f"forall|t_i: int| 0 <= t_i < {call}.len() ==> {expr(holds).replace('t_cr', call)}")
+        rec_call = f"t_comp{k}_spec({rec_args})"
+        out.append(
+            f"pub open spec fn t_comp{k}({', '.join(params)}) -> Seq<{_vty(body_t)}>\n    decreases {size},\n"
+            f"{{ if {base} {{ Seq::empty() }} else {{ let t_p = t_comp{k}({rec_args}); let {v} = {last}; "
+            f"if {expr(c['cond'])} {{ t_p.push({expr(c['body'])}) }} else {{ t_p }} }} }}\n"
+            f"pub broadcast proof fn t_comp{k}_spec({', '.join(params)})\n    ensures {', '.join(ens)},\n    decreases {size},\n"
+            f"{{ if !({base}) {{ {rec_call}; }} }}\n")
+    return out
+
+
+def _mentions_comp_or_lib(e) -> bool:
+    """Whether an expression holds a comprehension or a library/sort call (SPEC.md 2026-10-06 landings)."""
+    lib = {"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"}
+    if isinstance(e, dict):
+        if "comp" in e or e.get("op") in lib:
+            return True
+        return any(_mentions_comp_or_lib(v) for v in e.values())
+    if isinstance(e, list):
+        return any(_mentions_comp_or_lib(v) for v in e)
+    return False
+
+
 def _free_vars(e) -> set:
     if isinstance(e, dict):
         if "var" in e and len(e) == 1:
@@ -6009,6 +6176,7 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     # SPEC.md "Exact rationals (v1)" (2026-10-06): Verus has no reals; a task that names one abstains by name
     tshape.abstain_on_reals(task, body, "verus")
     tshape.abstain_on_library(task, body, "verus", carried=VERUS_LIB)   # SPEC.md "The library (v1)" (2026-10-06)
+    _comp_register(task, body)   # SPEC.md "Comprehensions (v1)" (2026-10-06)
     # NAMES (2026-09-11, ROADMAP 13.2): sanitize away any identifier that
     # collides with a Verus/Rust reserved word, before either lowering
     # path renders anything -- see names.py's module docstring. `task` is

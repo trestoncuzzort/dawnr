@@ -32,7 +32,7 @@ class Judge(unittest.TestCase):
     def test_a_reply_without_a_task_and_one_that_does_not_parse_are_named(self):
         q = ssg.question_task(ROW)
         self.assertEqual(ssg.judge(q, "I cannot.")[0], "no-block")
-        self.assertEqual(ssg.judge(q, "```t\nt 1\ntask abs(x: int) returns (y: int)\n{ y := [a for a in x]; }\n```")[0], "parse")
+        self.assertEqual(ssg.judge(q, "```t\nt 1\ntask abs(x: int) returns (y: int)\n{ y := (a for a in x); }\n```")[0], "parse")
 
     def test_a_redefined_spec_fun_stops_before_the_kernels(self):
         cheat = ROW["chosen"].replace("= if x_v > 0 then x_v else -x_v", "= 0")

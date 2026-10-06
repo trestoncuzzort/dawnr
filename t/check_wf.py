@@ -79,6 +79,8 @@ RULES: dict[str, str] = {
     "call-arity": "a call's arity must match the callee's params (Gate 3)",
     "call-unknown": "call names a declared spec_fun or the task's own name (Gate 3)",
     "cmp-int": "< <= > >= compare two ints or two reals (Gate 1; Exact rationals)",
+    "comp-seq": "a comprehension ranges over a seq or an int range [lo, hi) (Comprehensions)",
+    "comp-cond": "a comprehension's condition is bool (Comprehensions)",
     "rat-literal": "a real literal is n/d in lowest terms with a finite decimal expansion (Exact rationals)",
     "real-conv": "real(x) wants an int; floor(x) and ceil(x) want a real (Exact rationals)",
     "decreases-selfcall": "a task decreases requires a self-recursive body, and vice versa (Gate 3)",
@@ -507,6 +509,30 @@ def _ty(e, env, funs, dtypes, ver, errs, bound, expect=None):
         if a != b:
             _e(errs, e, f"ite branches differ: {a} vs {b}", "ite-branches")
         return a
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)" (2026-10-06): a bound variable over a seq's elements or an int range
+        c = e["comp"]
+        v = c["var"]
+        if v in env or v in bound:
+            _e(errs, e, f"bound var {v} shadows a name in scope", "quant-shadow")
+        if "seq" in c:
+            ts = _ty(c["seq"], env, funs, dtypes, ver, errs, bound)
+            if not _is_seq(ts):
+                _e(errs, e, f"a comprehension ranges over a seq or an int range, found {ts!r}", "comp-seq")
+                elem_t = "int"
+            else:
+                elem_t = _elem(ts)
+        else:
+            for side in ("lo", "hi"):
+                if _ty(c[side], env, funs, dtypes, ver, errs, bound) != "int":
+                    _e(errs, e, f"comprehension {side} is not int", "quant-bounds")
+            elem_t = "int"
+        sub = dict(env)
+        sub[v] = elem_t
+        if _ty(c["cond"], sub, funs, dtypes, ver, errs, bound | {v}) != "bool":
+            _e(errs, e, "a comprehension's condition is not bool", "comp-cond")
+        body_t = _ty(c["body"], sub, funs, dtypes, ver, errs, bound | {v})
+        return _seq_of(body_t) if body_t is not None else "seq"
     if "forall" in e or "exists" in e:
         q = e["forall"] if "forall" in e else e["exists"]
         v = q["var"]

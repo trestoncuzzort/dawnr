@@ -106,6 +106,8 @@ def abstain_unless_carried(task: dict, body: list, kernel: str, carried: set = f
     if "real" not in carried:
         abstain_on_reals(task, body, kernel)
     abstain_on_library(task, body, kernel, lib)
+    if "comp" not in carried and has_comprehension(task, body):
+        raise NotImplementedError(f"{kernel}: comprehensions are not lowered yet (SPEC.md 'Comprehensions (v1)')")
 
 
 LIB_OPS = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "sort"})
@@ -173,6 +175,16 @@ def abstain_on_library(task: dict, body: list, kernel: str, carried: frozenset =
         raise NotImplementedError(f"{kernel}: {', '.join(used)} is not lowered yet (SPEC.md 'The library (v1)')")
     if "in" not in carried and seq_membership_used(task, body):
         raise NotImplementedError(f"{kernel}: membership in a seq is not lowered yet (SPEC.md 'The library (v1)')")
+
+
+def has_comprehension(task: dict, body: list) -> bool:
+    """Whether the task or this body holds a `comp` node (SPEC.md "Comprehensions (v1)", 2026-10-06)."""
+    def walk(x) -> bool:
+        if isinstance(x, dict):
+            return "comp" in x or any(walk(v) for v in x.values())
+        return isinstance(x, list) and any(walk(v) for v in x)
+    return walk(body or []) or walk(task.get("requires", [])) or walk(task.get("ensures", [])) \
+        or walk(task.get("spec_funs", [])) or walk(task.get("methods", []))
 
 
 def mentions_real(t) -> bool:

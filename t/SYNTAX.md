@@ -88,6 +88,11 @@ Expr     ::= {"int": integer}                   (* mathematical integer *)
                                                                            "args" always [] this landing *)
            | {"match":  {"scrutinee": Expr,                              (* v1, since 2026-09-27; written
                          "arms": [ {"ctor": Id, "binders": [Id*], "body": Expr}+ ]}}  (*   case e {C1=>e1, ...} *)
+           | {"comp":   {"var": Id, "seq": Expr, "cond": Expr, "body": Expr}}        (* since 2026-10-06, SPEC.md
+           | {"comp":   {"var": Id, "lo": Expr, "hi": Expr, "cond": Expr, "body": Expr}}  "Comprehensions (v1)";
+                                                                           written [body for var in seq if cond] and
+                                                                           [body for var in [lo, hi) if cond]; `if cond`
+                                                                           omitted is "cond": {"bool": true} *)
 
 Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "div" | "mod"                     (* v1; written / and %; Euclidean on ints; "div" on two reals is exact
@@ -469,6 +474,25 @@ the printer writes the expansion. The parser refuses, by name, an
 assignment to the loop variable or index in the body, a bound or sequence
 that mentions a variable the body assigns, and a loop variable already in
 scope. No JSON form: a `for` is the `while` it expands to.
+
+### Comprehensions (v1)
+
+```json
+{"comp": {"var": "x", "seq": {"var": "s"}, "cond": {"op": "==", "args": [{"op": "mod", "args": [{"var": "x"}, {"int": 2}]}, {"int": 0}]}, "body": {"var": "x"}}}
+{"comp": {"var": "x", "seq": {"var": "s"}, "cond": {"bool": true}, "body": {"op": "*", "args": [{"int": 2}, {"var": "x"}]}}}
+{"comp": {"var": "i", "lo": {"int": 0}, "hi": {"var": "n"}, "cond": {"bool": true}, "body": {"op": "*", "args": [{"var": "i"}, {"var": "i"}]}}}
+```
+written: `[x for x in s if x % 2 == 0]` · `[2 * x for x in s]` · `[i * i for i in [0, n)]`
+
+Since 2026-10-06 (SPEC.md "Comprehensions (v1)"), a seq comprehension is
+an expression with a bound variable, as a quantifier is: the elements of
+`s` (or the ints of `[lo, hi)`) in order, those for which `cond` holds,
+each mapped through `body`. The bound variable has the seq's element type
+(an int over a range), scopes over `cond` and `body` only, and may not
+shadow a name in scope; the result is `seq<U>` for `U` the body's type
+(`seq` for an int). Definedness as a quantifier's: the seq (the bounds)
+defined, `cond` at every element, `body` wherever `cond` holds. The
+printer omits `if true`. No set or map comprehension.
 
 ### Nested sequences (v1)
 
