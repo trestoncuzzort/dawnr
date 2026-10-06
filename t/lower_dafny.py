@@ -1102,15 +1102,18 @@ def dafny_type(t) -> str:
     elementary "seq" (no three levels, SPEC.md), so neither branch ever
     recurses past one level."""
     if isinstance(t, dict):
-        if "pair" in t:
-            t1, t2 = t["pair"]
-            return f"({TYPES[t1]}, {TYPES[t2]})"
+        if "pair" in t or "tuple" in t:
+            # SPEC.md "Compositional types (v1)" (2026-10-06): Dafny's own tuple type of any arity, each
+            # component printed by this same function, so a pair of pairs and a tuple of seqs print themselves.
+            return "(%s)" % ", ".join(dafny_type(c) for c in list(t.values())[0])
         if "datatype" in t:
             # SPEC.md "Datatypes (v1)" (2026-09-27): t's datatype IS
             # Dafny's own `datatype` (reference manual 5.14) -- the
             # declared name prints as itself, no wrapping.
             return t["datatype"]
-        return f"seq<{TYPES[t['seq']]}>"
+        if "set" in t:
+            return f"set<{dafny_type(t['set'])}>"
+        return f"seq<{dafny_type(t['seq'])}>"
     return TYPES[t]
 
 
@@ -1313,7 +1316,12 @@ def expr(e: dict, self_name: str | None = None) -> str:
         return f"{args[0]}.0"
     if op == "snd":
         return f"{args[0]}.1"
-    sl = _set_lower(op, args)
+    if op == "tuple":
+        # SPEC.md "Compositional types (v1)" (2026-10-06): Dafny's own tuple display of any arity.
+        return "(" + ", ".join(args) + ")"
+    if op == "proj":
+        return f"{args[0]}.{e['args'][1]['int']}"
+    sl = _set_lower(op, args, e)
     if sl is not None:
         return sl
     if op in NARY_OPS:
@@ -1345,10 +1353,97 @@ def expr(e: dict, self_name: str | None = None) -> str:
 _SET_BIN = {"union": "+", "inter": "*", "diff": "-"}
 _EMPTY_SET = "(var t_emptyset: set<int> := {}; t_emptyset)"
 
+# SPEC.md "Compositional types (v1)" (2026-10-06): an empty set display of a non-int element type needs its
+# type in the let expression above. `lower()` fills this map (id(node) -> t type) from the declared types the
+# display sits under (a local's, the return's, a param's on the other side of an `==`), for the body it lowers;
+# a display no declared type reaches keeps the set-of-ints form, which is every display there was before.
+_EMPTIES: dict = {}
 
-def _set_lower(op: str, args: list) -> str | None:
+
+def _empty_types(task: dict, body: list) -> dict:
+    scope = {p["name"]: p["type"] for p in task["params"]}
+    scope[task["returns"][0]["name"]] = task["returns"][0]["type"]
+    out: dict = {}
+
+    def is_set(t):
+        return t == "set" or (isinstance(t, dict) and set(t) == {"set"})
+
+    def is_seq(t):
+        return t == "seq" or (isinstance(t, dict) and set(t) == {"seq"})
+
+    def note(e, ty):
+        if not isinstance(e, dict) or ty is None:
+            return
+        if e.get("op") == "set" and not e.get("args") and is_set(ty):
+            out[id(e)] = ty
+        elif e.get("op") in ("pair", "tuple") and isinstance(ty, dict) and (set(ty) == {"pair"} or set(ty) == {"tuple"}):
+            for a, t in zip(e["args"], list(ty.values())[0]):
+                note(a, t)
+        elif e.get("op") == "seq" and is_seq(ty):
+            for a in e["args"]:
+                note(a, "int" if ty == "seq" else ty["seq"])
+        elif "ite" in e:
+            note(e["ite"]["then"], ty)
+            note(e["ite"]["else"], ty)
+
+    def walk_expr(e, sc):
+        # a `==`/`!=`/`in`/union-style use beside a typed name types the other side
+        if not isinstance(e, dict):
+            return
+        if e.get("op") in ("==", "!=", "union", "inter", "diff") and len(e.get("args", [])) == 2:
+            a, b = e["args"]
+            for x, y in ((a, b), (b, a)):
+                if isinstance(x, dict) and "var" in x and x["var"] in sc:
+                    note(y, sc[x["var"]])
+        if e.get("op") == "in" and len(e.get("args", [])) == 2 and isinstance(e["args"][1], dict) \
+                and "var" in e["args"][1] and e["args"][1]["var"] in sc:
+            st = sc[e["args"][1]["var"]]
+            if is_set(st):
+                note(e["args"][0], "int" if st == "set" else st["set"])
+        for k in ("args",):
+            for a in e.get(k, []) or []:
+                walk_expr(a, sc)
+        for k in ("ite", "forall", "exists"):
+            if k in e:
+                for v in e[k].values():
+                    walk_expr(v, sc)
+
+    def walk(stmts, sc):
+        sc = dict(sc)
+        for st in stmts:
+            if "var" in st:
+                note(st["var"]["init"], st["var"]["type"])
+                walk_expr(st["var"]["init"], sc)
+                sc[st["var"]["name"]] = st["var"]["type"]
+            elif "assign" in st:
+                note(st["assign"][1], sc.get(st["assign"][0]))
+                walk_expr(st["assign"][1], sc)
+            elif "return" in st:
+                note(st["return"][1], sc.get(st["return"][0]))
+                walk_expr(st["return"][1], sc)
+            elif "if" in st:
+                walk_expr(st["if"]["cond"], sc)
+                walk(st["if"]["then"], sc)
+                walk(st["if"]["else"], sc)
+            elif "while" in st:
+                walk_expr(st["while"]["cond"], sc)
+                for inv in st["while"].get("invariants", []):
+                    walk_expr(inv, sc)
+                walk(st["while"]["body"], sc)
+    for e in task.get("requires", []) + task.get("ensures", []):
+        walk_expr(e, scope)
+    walk(body, scope)
+    return out
+
+
+def _set_lower(op: str, args: list, node: dict | None = None) -> str | None:
     if op == "set":
-        return ("{" + ", ".join(args) + "}") if args else _EMPTY_SET
+        if args:
+            return "{" + ", ".join(args) + "}"
+        ty = _EMPTIES.get(id(node)) if node is not None else None
+        if ty is None or ty == "set":
+            return _EMPTY_SET
+        return f"(var t_emptyset: {dafny_type(ty)} := {{}}; t_emptyset)"
     if op == "in":
         return f"({args[0]} in {args[1]})"
     if op == "card":
@@ -1466,7 +1561,11 @@ def body_expr(e: dict, ctx: _Ctx, pre: list[str], lazy: bool = False) -> str:
             return f"{args[0]}[{args[1]}..{args[2]}]"
         if op == "pair":
             return f"({args[0]}, {args[1]})"
-        sl = _set_lower(op, args)
+        if op == "tuple":
+            return "(" + ", ".join(args) + ")"
+        if op == "proj":
+            return f"{args[0]}.{e['args'][1]['int']}"
+        sl = _set_lower(op, args, e)
         if sl is not None:
             return sl
         if op == "fst":
@@ -1687,6 +1786,16 @@ def _tlit(v, ty=None):
         if "pair" in ty:
             t1, t2 = ty["pair"]
             return {"op": "pair", "args": [_tlit(v[0], t1), _tlit(v[1], t2)]}
+        if "tuple" in ty:
+            # SPEC.md "Compositional types (v1)" (2026-10-06): a tuple's witness arrives as the list of its
+            # components (interp._j), each rebuilt from its own component type.
+            return {"op": "tuple", "args": [_tlit(c, t) for c, t in zip(v, ty["tuple"])]}
+        if "set" in ty:
+            # a set of a compound type: its sorted list of elements, each rebuilt from the element type
+            return {"op": "set", "args": [_tlit(x, ty["set"]) for x in v]}
+        if "seq" in ty and ty != {"seq": "seq"}:
+            # a seq of any element type but the two the shape-guessing below already tells apart
+            return {"op": "seq", "args": [_tlit(x, ty["seq"]) for x in v]}
         if "datatype" in ty:
             # SPEC.md "Datatypes (v1)" (2026-09-27): interp._j renders a
             # Ctor value as "Dtype.Ctor" (v1's nullary constructors carry
@@ -2848,6 +2957,8 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     self_name = task["name"]
     method = self_name.capitalize()
     ctx = _Ctx(task, method)
+    _EMPTIES.clear()
+    _EMPTIES.update(_empty_types(task, body))
     lines = []
     # SPEC.md "The string library (v1)" (2026-09-11): "each kernel lowers a
     # member to a definition in its prelude", but gate (c)'s byte-identical
