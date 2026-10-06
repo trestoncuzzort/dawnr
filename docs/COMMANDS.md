@@ -1,7 +1,7 @@
 # The commands, in depth
 
 What each `dawnr` command does, how it decides what to show, and what it was measured on. The short list is in
-the [README](../README.md); the install and the page are in [USER-GUIDE.md](../USER-GUIDE.md). This page holds the
+the [README](../README.md); the install and the page are in [USER-GUIDE.md](USER-GUIDE.md). This page holds the
 long account that the README carried until 2026-10-06, moved here as it was.
 
 ## The assistant: `dawnr` and `dawnr do`
