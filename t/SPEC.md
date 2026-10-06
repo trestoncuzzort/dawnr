@@ -1957,12 +1957,78 @@ for `[e for i in [a, b)]` the length is `b - a` when `a <= b` and the
 element at `k` is `e` at `a + k`; for a filter-and-map, the length bound
 only. Dafny and Verus carry it (Verus with the ensures as a broadcast
 lemma, as for `rev`); F*, SPARK, Lean, Rocq and Frama-C abstain by name
-until built and measured. The writer's side: `to_python.py` hands back
+until built and measured. Dafny, since the stepped-slice landing later the same day (T3c), passes a
+range as the index sequence `t_range(a, b)` (`[a, ..., b - 1]`, with its
+length and `t_a + t_i` as ensures) so that every comprehension function
+has the one sequence shape, and gives the function the precondition the
+definedness rule above states, over the element as the Std's `Map` requires
+`f.requires(xs[i])`: `requires forall t_di :: 0 <= t_di < |t_s| ==> D[x :=
+t_s[t_di]]`, `D` the definedness formula of `cond` and of `body` under
+`cond` (the same formula every kernel's obligations use); the conjuncts of
+`D` that do not mention the element are stated once, as `|t_s| > 0 ==>
+...`, because the ensures' own well-formedness needs them before any
+element is at hand (measured on `odd_positions`: its slice bound `1 <=
+len(s)` was out of reach through the quantifier), and nothing is stated
+when `D` is `true`. Measured first: without it, `[s[i + 1] - s[i] for i in [0, len(s)
+- 1)]` failed Dafny's own well-formedness check inside the function and
+read `unproved` for the real and the twin alike (Verus verified it with
+the twin refuted); stated over a bare index it had no term for Dafny to
+match on and failed the same way (`index out of range`, 2026-10-06
+19:40Z); over the element, five probe shapes (an indexed map over a range,
+the stepped slice, a gather `s2[x]` over a sequence, a total body, a
+divisor with no mention of the element) all verified. The writer's side: `to_python.py` hands back
 the Python comprehension as a tuple.
 
 **The committed tasks:** `evens` (`[x for x in s if x % 2 == 0]`, every
 element even), `doubled` (`[2 * x for x in s]`, the length and each
 element), `squares` (`[i * i for i in [0, n)]`, the length).
+
+### Stepped slices (v1)
+
+Stated 2026-10-06, the fourth landing's first form, with the pages on
+receipt 1aed78ce1ef5 read first: Python's `s[i:j:k]` is "the sequence of
+items with index `x = i + n*k` such that `0 <= n < (j-i)/k`", `k` never
+zero, a negative `k` running backwards; Dafny's `s[i:j:k]` is a different
+thing (a sequence of consecutive subsequences of lengths `i`, `j`, `k`),
+its `s[lo..hi]` the two-bound slice t already has; Verus's
+`Seq::subrange` likewise has no step. The census: `seq-slice-step` is a
+gap on 852 problems, nearly all of them `s[::2]`, `s[1::2]` and the
+reversal `s[::-1]`.
+
+**Sugar, not a form.** `s[a..b..k]`, for `k` a positive literal, is the
+elements of `s[a..b]` at offsets `0, k, 2k, ...`: the parser expands it to
+the range comprehension
+
+```
+[s[a..b][k * i] for i in [0, (len(s[a..b]) + k - 1) / k)]
+```
+
+(`k * i` and `+ k - 1` folded away when `k` is 1), the AST carries only
+the comprehension, and the printer writes the comprehension back. So its
+meaning and definedness are the slice's and the comprehension's: defined
+iff `0 <= a <= b <= len(s)` (the slice is evaluated in the bound), of
+length `ceil((b - a) / k)`, with element `j` equal to `s[a + k * j]`; a
+kernel proves exactly that through the range comprehension's ensures. The
+bound variable is the first of `i`, `j`, `k`, `i2`, `j2`, `k2`, ... that
+occurs nowhere in the program, so it shadows nothing. A step of `0` is
+refused by name (no step); a negative step is Python's reversal, which is
+`rev(s)` in t (`rev(s[a..b])` for a bounded one); a variable step is
+written as the comprehension by hand, since the division it needs is the
+author's to state. Both bounds are written: `s[a..b..k]` only.
+
+**The twins and the kernels.** Nothing new: the twins reach the slice's
+bounds and the step's literal through the comprehension, and every kernel
+carries or abstains on the comprehension as before. The census counts a
+positive literal step IN THE FRAGMENT, the bare reversal as `rev`, and any
+other step (a variable, a negative one with a bound) as the gap
+`seq-slice-step-other`.
+
+**The committed tasks:** `every_other` (`s[0..len(s)..2]`: length
+`(len(s) + 1) / 2`, element `k` is `s[2 * k]`) and `odd_positions`
+(`s[1..len(s)..2]` on a non-empty `s`: length `len(s) / 2`, element `k` is
+`s[2 * k + 1]`); with them `diffs` (`[s[i + 1] - s[i] for i in [0, len(s)
+- 1)]`), the indexed-body comprehension whose Dafny proof this landing
+repaired (the comprehension section's lowering paragraph).
 
 ## The twins
 

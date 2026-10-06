@@ -205,8 +205,14 @@ DETECTORS: dict[str, tuple[str, str]] = {
     "seq-slice-negative": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): a slice bound "
                             "that is a negative literal, s[-1:] or s[:-1], read as len(s) - k by the notation "
                             "(a non-literal negative bound is still not posed, undercounted here)"),
-    "seq-slice-step": ("gap", "a slice with a step, s[a:b:c]: t's slice "
-                        "form takes two bounds only, no step"),
+    "seq-slice-step": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md Stepped slices): a slice whose step "
+                        "is a positive literal, s[a:b:k], the notation's s[a..b..k] (sugar for a range "
+                        "comprehension)"),
+    "seq-slice-reverse": ("burden", "IN THE FRAGMENT since 2026-10-06 (SPEC.md The library): s[::-1] with no "
+                           "bounds, the reversal, the library's rev(s)"),
+    "seq-slice-step-other": ("gap", "a slice whose step is not a positive literal: a variable step (written as "
+                              "the comprehension by hand, not posed by the notation) or a negative step with a "
+                              "bound"),
     "generator": ("gap", "a generator expression or a generator function "
                   "(yield): t has no lazy or deferred evaluation"),
     "global": ("gap", "global or nonlocal: mutable state outside the "
@@ -229,8 +235,9 @@ DETECTORS: dict[str, tuple[str, str]] = {
                   "non-negative bounds and no step: t's v1 already has "
                   "slice (SPEC.md 'Sequences: literals, concatenation, "
                   "slices'); a negative bound or a step is measured "
-                  "separately as the gaps seq-slice-negative / "
-                  "seq-slice-step"),
+                  "separately as seq-slice-negative / seq-slice-step "
+                  "(burdens since 2026-10-06) and the gap "
+                  "seq-slice-step-other"),
     "tuple-pair": ("burden", "a tuple of exactly two values, each an int, "
                    "bool or seq of ints, built, returned, passed, "
                    "compared, or unpacked from such a pair: t's v1 "
@@ -533,7 +540,16 @@ def solution_tags(src: str, fn_name: str | None, function_shaped: bool) -> dict:
             if isinstance(node.slice, ast.Slice):
                 sl = node.slice
                 if sl.step is not None:
-                    tags["seq-slice-step"] = True
+                    st = sl.step
+                    if (isinstance(st, ast.Constant) and isinstance(st.value, int)
+                            and not isinstance(st.value, bool) and st.value > 0):
+                        tags["seq-slice-step"] = True          # s[a:b:k], the notation's s[a..b..k]
+                    elif (isinstance(st, ast.UnaryOp) and isinstance(st.op, ast.USub)
+                          and isinstance(st.operand, ast.Constant) and st.operand.value == 1
+                          and sl.lower is None and sl.upper is None):
+                        tags["seq-slice-reverse"] = True       # s[::-1], the library's rev(s)
+                    else:
+                        tags["seq-slice-step-other"] = True
                 elif _is_negative_slice_bound(sl.lower) or _is_negative_slice_bound(sl.upper):
                     tags["seq-slice-negative"] = True
                 else:
@@ -1425,8 +1441,10 @@ def render(programs: list[dict], elapsed_s: float) -> str:
     w("  sequences;")
     w("- `seq-slice` (a burden, same landing) fires on `s[a:b]`, `s[a:]`,")
     w("  `s[:b]` read off the AST `Slice` node's own shape, not a")
-    w("  computed value: a step present on the slice tags `seq-slice-step`")
-    w("  instead, and a bound written as a negative literal (`s[:-1]`,")
+    w("  computed value: a positive literal step tags `seq-slice-step`, a bare")
+    w("  `s[::-1]` tags `seq-slice-reverse`, any other step tags")
+    w("  `seq-slice-step-other` (since 2026-10-06), and a bound written as a")
+    w("  negative literal (`s[:-1]`,")
     w("  `ast`'s own `UnaryOp(USub, ..)` shape for a negative number) tags")
     w("  `seq-slice-negative` instead; a negative bound reached through a")
     w("  variable or an expression (`s[:n-1]`) is not recognized this way")

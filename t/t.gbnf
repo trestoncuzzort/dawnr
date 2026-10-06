@@ -72,6 +72,7 @@ unary ::= "-" ws unary | postfix
 postfix ::= atom posts
 posts ::= (ws post)*
 post ::= "[" ws ".." ws expr ws "]"
+       | "[" ws expr ws ".." ws expr ws ".." ws natpos ws "]"
        | "[" ws expr ws ".." ws expr ws "]"
        | "[" ws expr ws ".." ws "]"
        | "[" ws expr ws ":=" ws expr ws "]"
@@ -107,6 +108,8 @@ args ::= "" | expr (ws "," ws expr)*
 arm ::= id ws "=>" ws expr
 
 nat ::= [0-9]+
+# a stepped slice's step (SPEC.md "Stepped slices (v1)", 2026-10-06): a positive literal
+natpos ::= [1-9] [0-9]*
 # SPEC.md "Exact rationals (v1)" (2026-10-06): a finite decimal with a digit on each side of the point
 reallit ::= [0-9]+ "." [0-9]+
 

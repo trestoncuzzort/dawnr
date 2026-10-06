@@ -1577,14 +1577,53 @@ def _comp_register(task: dict, body: list) -> None:
 def _comp_call(e: dict, render) -> str:
     k, _ = _COMP_INDEX[_comp_key(e)]
     c = e["comp"]
-    src = [render(c["seq"])] if "seq" in c else [render(c["lo"]), render(c["hi"])]
+    # a range is the index sequence t_range(lo, hi) (SPEC.md "Comprehensions (v1)", the Dafny paragraph): every
+    # comprehension function has the one sequence shape, and its precondition a term to match on (see _comp_defs)
+    src = [render(c["seq"])] if "seq" in c else [f"t_range({render(c['lo'])}, {render(c['hi'])})"]
     return f"t_comp{k}({', '.join(src + _comp_free(e))})"
 
 
+_RANGE_TEXT = """function t_range(t_a: int, t_b: int): (t_r: seq<int>)
+  ensures |t_r| == (if t_a <= t_b then t_b - t_a else 0)
+  ensures forall t_i :: 0 <= t_i < |t_r| ==> t_r[t_i] == t_a + t_i
+  decreases (if t_a <= t_b then t_b - t_a else 0)
+{
+  if t_b <= t_a then [] else t_range(t_a, t_b - 1) + [t_b - 1]
+}"""
+
+
+def _mentions_var(e, name: str) -> bool:
+    if isinstance(e, dict):
+        if e.get("var") == name and len(e) == 1:
+            return True
+        return any(_mentions_var(v, name) for v in e.values())
+    if isinstance(e, list):
+        return any(_mentions_var(v, name) for v in e)
+    return False
+
+
 def _comp_defs(self_name) -> list:
-    """The Dafny text of every registered comprehension function, in index order."""
+    """The Dafny text of every registered comprehension function, in index order, after `t_range` when a range
+    comprehension is among them (SPEC.md "Comprehensions (v1)", 2026-10-06; the precondition and the index sequence
+    since the stepped-slice landing the same day, T3c).
+
+    One shape for every comprehension: a recursive function over a sequence `t_s` of the elements (a range `[a, b)`
+    is passed as the index sequence `t_range(a, b)`, whose ensures give its length and `t_a + t_i`), recursing from
+    the end as the Std's `Filter` and `Map` do, with the ensures the shape admits (filter: every element satisfies the
+    condition, the length does not grow; map: the length and the image at every index). Its precondition is the
+    SPEC's definedness rule for the form -- the condition defined at every element and the body defined where the
+    condition holds -- stated over the element `t_s[t_di]` exactly as the Std's `Map` requires `f.requires(xs[i])`,
+    which gives Dafny the term to match on: a precondition over a bare range index had none and the function's own
+    well-formedness check failed (`index out of range`, measured 2026-10-06 19:40Z on `[s[i + 1] - s[i] for i in
+    [0, len(s) - 1)]`), and with no precondition at all the same check failed the same way (the `diffs` finding of
+    T3c). The conjuncts of the formula that do not mention the element are stated once, as `|t_s| > 0 ==> ...`
+    (vacuous on an empty source, as the SPEC's quantifier is), because the ensures' own well-formedness needs them
+    before any element is at hand (measured on `odd_positions`); a formula that is `true` is not stated, so a total
+    body costs nothing."""
     import check_wf
+    import lower_verus as _lv   # the definedness formula is one rule set for every kernel; reused, not restated
     out = []
+    need_range = False
     for key, (k, e) in sorted(_COMP_INDEX.items(), key=lambda kv: kv[1][0]):
         c = e["comp"]
         v = c["var"]
@@ -1599,7 +1638,8 @@ def _comp_defs(self_name) -> list:
                 raise NotImplementedError("dafny: a comprehension's source could not be typed here")
             elem_t = "int" if src_t == "seq" else src_t["seq"]
         else:
-            elem_t = "int"
+            src_t, elem_t = "seq", "int"
+            need_range = True
         hints = dict(_HINTS)
         hints[v] = elem_t
         try:
@@ -1608,36 +1648,59 @@ def _comp_defs(self_name) -> list:
             body_t, errs = None, ["untypeable"]
         if errs or body_t is None:
             raise NotImplementedError("dafny: a comprehension's body could not be typed here")
-        params = ([f"t_s: {dafny_type(src_t)}"] if "seq" in c else ["t_a: int", "t_b: int"]) + [f"{n}: {dafny_type(_HINTS[n])}" for n in fvs]
-        rec_args = ", ".join((["t_s[..|t_s| - 1]"] if "seq" in c else ["t_a", "t_b - 1"]) + fvs)
+        params = [f"t_s: {dafny_type(src_t)}"] + [f"{n}: {dafny_type(_HINTS[n])}" for n in fvs]
+        rec_args = ", ".join(["t_s[..|t_s| - 1]"] + fvs)
         is_filter = c["body"] == {"var": v}
         is_map = c["cond"] == {"bool": True}
         ri = {"var": "t_r"}
         idx = {"var": "t_i"}
-        ens = []
-        if "seq" in c:
-            size = "|t_s|"
-            elem_at = {"op": "at", "args": [{"var": "t_s"}, idx]}
-        else:
-            size = "(if t_a <= t_b then t_b - t_a else 0)"
-            elem_at = {"op": "+", "args": [{"var": "t_a"}, idx]}
-        ens.append(f"  ensures |t_r| {'==' if is_map else '<='} {size}")
+        elem_at = {"op": "at", "args": [{"var": "t_s"}, idx]}
+        ens = [f"  ensures |t_r| {'==' if is_map else '<='} |t_s|"]
         if is_map:
             img = subst(c["body"], {v: elem_at})
             ens.append(f"  ensures forall t_i :: 0 <= t_i < |t_r| ==> t_r[t_i] == {expr(img, self_name)}")
         if is_filter:
             holds = subst(c["cond"], {v: {"op": "at", "args": [ri, idx]}})
             ens.append(f"  ensures forall t_i :: 0 <= t_i < |t_r| ==> {expr(holds, self_name)}")
-        base = "|t_s| == 0" if "seq" in c else "t_b <= t_a"
-        last = "t_s[|t_s| - 1]" if "seq" in c else "t_b - 1"
+
+        def is_real(y, _h=hints):
+            try:
+                ty, errs2 = check_wf.expression_type(y, dict(_h), functions=_FUNS)
+            except Exception:                               # noqa: BLE001
+                return False
+            return not errs2 and ty == "real"
+        d_cond = _lv.defined(c["cond"], is_real)
+        d_body = _lv.defined(c["body"], is_real)
+        guard = d_body if (d_body == _lv.TRUE or is_map) else {"op": "implies", "args": [c["cond"], d_body]}
+        pre = _lv._conj([d_cond, guard])
+        req = []
+
+        def flat(x):
+            if isinstance(x, dict) and x.get("op") == "and":
+                return [y for a in x["args"] for y in flat(a)]
+            return [x]
+        parts = [x for x in flat(pre) if x != _lv.TRUE]
+        fixed = [x for x in parts if not _mentions_var(x, v)]
+        per_el = [x for x in parts if _mentions_var(x, v)]
+        if fixed:
+            # the conjuncts that do not mention the element, once, under a non-empty source: the ensures' own
+            # well-formedness needs them before any element is at hand (measured on `odd_positions`: its slice
+            # bound `1 <= |s|` was out of reach through the quantifier, "lower bound out of range" in the ensures)
+            req.append(f"  requires |t_s| > 0 ==> {expr(_lv._conj(fixed), self_name)}")
+        if per_el:
+            at_el = {"op": "at", "args": [{"var": "t_s"}, {"var": "t_di"}]}
+            req.append(f"  requires forall t_di :: 0 <= t_di < |t_s| ==> "
+                       f"{expr(subst(_lv._conj(per_el), {v: at_el}), self_name)}")
         p_txt = expr(c["cond"], self_name)
         e_txt = expr(c["body"], self_name)
-        body_txt = (f"  if {base} then [] else\n"
+        body_txt = (f"  if |t_s| == 0 then [] else\n"
                     f"    var t_p := t_comp{k}({rec_args});\n"
-                    f"    var {v} := {last};\n"
+                    f"    var {v} := t_s[|t_s| - 1];\n"
                     f"    if {p_txt} then t_p + [{e_txt}] else t_p")
-        out += [f"function t_comp{k}({', '.join(params)}): (t_r: seq<{dafny_type(body_t)}>)"] + ens + [
-            f"  decreases {size}", "{", body_txt, "}", ""]
+        out += [f"function t_comp{k}({', '.join(params)}): (t_r: seq<{dafny_type(body_t)}>)"] + req + ens + [
+            "  decreases |t_s|", "{", body_txt, "}", ""]
+    if need_range:
+        out = [_RANGE_TEXT, ""] + out
     return out
 
 

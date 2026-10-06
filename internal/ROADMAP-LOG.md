@@ -3056,7 +3056,22 @@ is queued, and the ones running are read as they finish.
   nonlinear bridge steps aside for such a return). Three committed tasks verified with the twin refuted in both;
   the other five kernels abstain by name. The `comprehension` burden (5,920 problems) is in the fragment for list
   comprehensions; set and dict comprehensions are their own burden until maps.
-- **Next:** the matrix regenerated from a clean clone (67 tasks); then the slice step and the three library proofs the
-  kernels do not reach alone (a `sum` slice lemma for SPARK, F* and Verus; a nonlinear hint for Verus) as their own
-  measured item; then G4 (`break`, `continue`, `while true`), G5 maps, G6 records and options, G7 the string
-  library's missing members.
+- **The matrix regenerated from a clean clone (10-06 18:50Z):** 67 tasks; the three comprehension rows verified with
+  the twin refuted in Dafny and Verus, the other five columns by name.
+- **T3c landed (10-06 20:30Z), stepped slices and the comprehension precondition in Dafny:** `s[a..b..k]` (`k` a
+  positive literal) as sugar for the range comprehension `[s[a..b][k * i] for i in [0, (len(s[a..b]) + k - 1) / k)]`
+  (SPEC "Stepped slices (v1)"): Python's positive-step meaning with the two-bound slice's definedness, the bound
+  variable fresh in the program, printed as the comprehension; a step of 0, a negative step (`rev(s)`) and a
+  variable step refused by name. Found on the way and repaired: Dafny's comprehension function had no
+  precondition, so a body with a partial operator (`[s[i + 1] - s[i] for i in [0, len(s) - 1)]`) read unproved for
+  the real and the twin alike; it now carries the SPEC's definedness formula over the element as the Std's `Map`
+  requires `f.requires(xs[i])`, a range passed as the index sequence `t_range(a, b)` (a precondition over a bare
+  index gave Dafny no term to match on; measured, PREDICT T3c). Three committed tasks (`every_other`,
+  `odd_positions`, `diffs`), Dafny and Verus verified with the twin refuted; the other five abstain by name as for
+  every comprehension. Census: the positive literal step and the bare reversal in the fragment (1,642 -> 1,713
+  function-shaped problems), other steps the gap `seq-slice-step-other` (108). The lab's grammar check agrees
+  with the new rule.
+- **Next:** the matrix regenerated from a clean clone (70 tasks); then the three library proofs the kernels do not
+  reach alone (a `sum` slice lemma for SPARK, F* and Verus; a nonlinear hint for Verus) as their own measured item;
+  then G4 (`break`, `continue`, `while true`), G5 maps, G6 records and options, G7 the string library's missing
+  members.

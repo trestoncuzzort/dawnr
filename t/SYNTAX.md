@@ -109,7 +109,8 @@ Op       ::= "+" | "-" | "*" | "neg"            (* neg unary *)
            | "len" | "at"                       (* v1, seq only *)
            | "update" | "fill"                  (* v1; written s[i := v] and seq(n, v) *)
            | "seq" | "slice"                    (* v1; written [a, b] (any arity, [] empty) and s[a..b];
-                                                   "+" on two seqs is concatenation *)
+                                                   "+" on two seqs is concatenation; s[a..b..k] is sugar for a
+                                                   comprehension, since 2026-10-06 *)
            | "pair" | "fst" | "snd"             (* v1, since 2026-09-10; written (e1, e2), p.0, p.1; .0 and .1 on a
                                                    tuple too, since 2026-10-06 *)
            | "tuple" | "proj"                   (* since 2026-10-06; written (e1, ..., en) at n >= 3, and e.k for k >= 2
@@ -252,6 +253,18 @@ is ill-formed. `s[a..b]` is the slice with elements `a` to `b - 1`,
 three-argument form back. `tasks/tail.json` (`r := s[1..];`) and
 `tasks/filter_pos.json` (`r := r + [s[i]];` inside a loop) are the
 committed examples.
+
+Since 2026-10-06 (SPEC.md "Stepped slices (v1)"), `s[a..b..k]` with `k` a
+positive literal is the stepped slice: every `k`-th element of `s[a..b]`
+from its first, Python's `s[a:b:k]`. It is sugar for the range
+comprehension `[s[a..b][k * i] for i in [0, (len(s[a..b]) + k - 1) / k)]`
+(`i` the first of `i`, `j`, `k`, `i2`, ... that occurs nowhere in the
+program), the AST carries only the comprehension, and the printer writes
+the comprehension back. Both bounds are written. A step of 0, a negative
+step (Python's reversal, `rev(s)` in t) and a variable step are refused by
+name. `tasks/every_other.t` (`r := s[0..len(s)..2];`) and
+`tasks/odd_positions.t` (`r := s[1..len(s)..2];`) are the committed
+examples.
 
 Since 2026-09-09 (SPEC.md "Strings as sequences of code points (v1)"), two
 more literal forms are sugar the parser expands and the printer never
