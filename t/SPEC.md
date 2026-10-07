@@ -2087,8 +2087,19 @@ map shape is one function `t_compK` in the prefix form above, built by
 length and every element; the definedness is its precondition, the conjuncts
 that do not mention the element stated once (`t_n > 0 ==> ...`) and the rest
 as a quantifier triggered on the element (`t_ix` over a range, as in Dafny); a
-filter refuses by name. SPARK and Frama-C abstain by name until built and
-measured. Dafny, since
+filter refuses by name. SPARK since 2026-10-07 (PREDICT T18): each map shape is
+one recursive expression function `T_CompK` in T_Slice's shape (a Pre with the
+definedness, a Post with the length and every element over T_Range, a
+Subprogram_Variant on a nonnegative count clamped at the call site), its
+recursion guarded by `R_Has (T_Range'(0, T_N), T_N - 1)`, the Has_Element term
+through which a T_Range quantifier is instantiated, and its index over a range
+written through the identity `T_Ix`. Frama-C since the same day (PREDICT T19):
+a map that is the whole right-hand side of an assignment to a seq is one write
+loop over the buffer, the slice copy loop with the body's value, each step
+asserting the body's definedness, the count asserted as an ACSL term, and
+`s[a..b][i]` in the body read as `s[a + i]` with the slice's definedness; a
+map anywhere else refuses by name. So every kernel now carries a map; a filter
+is carried by Dafny, Verus and Lean, and refused by name elsewhere. Dafny, since
 the stepped-slice landing later the same day (T3c) and the
 early-exits landing after it (T4), writes every comprehension function in
 PREFIX form: over a sequence, `t_compK(t_s, t_n)` is the comprehension of

@@ -987,3 +987,150 @@ at 6 after T15. MALFORMED cells across AlgoVeri go from T13's 13 to 2: Verus's `
 update expression, and F*'s `longest_palindromic_substring`, an index that is a function of a computational
 quantifier's own bound variable. Both are named and queued.
 
+## T18 registered (2026-10-07 00:41Z, after hand probes and before the column run): comprehensions in SPARK
+
+D1's seventh landing. After T16, only SPARK and Frama-C stand between the five map tasks and all seven.
+
+**Design** (receipt a749e5e14241). Each map shape is one recursive expression function `T_CompK`, in the shape of
+the file's own `T_Slice`:
+- the Pre states the source's bound, a nonnegative count, and the body's definedness, split as in Dafny and F*;
+- the Post states the length and every element over `T_Range`;
+- a `Subprogram_Variant` on the count;
+- the body is `Seqs.Add` of the last element onto the function at `T_N - 1`.
+
+Two measured adaptations, both from the hand probes:
+- Over a range, the count is clamped at the call site, because the variant on a possibly negative count failed its
+  range check (`squares`). The index is written through an identity `T_Ix`.
+- The recursion is guarded by `R_Has (T_Range'(0, T_N), T_N - 1)` instead of `T_N = 0`. A quantifier over T_Range
+  is instantiated through its Has_Element term, and without that guard `diffs`' Pre was out of reach at `T_N - 1`
+  even at five times the step budget.
+
+A filter, and a comprehension inside a spec_fun, method or lemma, refuse by name.
+
+**Measured before this registration.** All five maps' real files verify under the adapter's own `verify`. The SPARK
+lowerings of the other 81 committed tasks are byte-identical, and the whole suite passes (691).
+
+**Bars.**
+(1) SPARK verifies the real program and refutes the twin on at least 4 of the 5 maps.
+(2) `evens` and `count_evens_skip` refuse by name.
+(3) No SPARK cell that agreed before changes; the whole SPARK column is re-run.
+(4) All seven stays 43, because Frama-C still refuses every comprehension task.
+
+**What would falsify the design:** a twin certificate that does not reach the comprehension's value (counted
+against bar 1), or a verdict that depends on the step budget (a TIMEOUT where the probe verified).
+
+### T18 read (2026-10-07 00:52Z): comprehensions in SPARK. 3 of 5 at the registered commit, 5 of 5 after a certificate repair.
+
+(1) **Bar 1 missed at 48c59e3.** The whole SPARK column was re-run over the 88 tasks. SPARK verifies all five maps'
+real programs, but refutes the twin on only three (`doubled`, `every_other`, `odd_positions`). The twins of `squares`
+and `diffs` read TIMEOUT, because their files carried no refutation certificate.
+
+The witness is undefined at the ensures: the twin's result is shorter, so `r[k]` falls past it. The certificate
+builder's ensures-level branch could not render an obligation that names the return value, and it failed closed, as
+its own note says it would. The repair binds the return to `F (inputs)`, as the "value" kind already does, when the
+witness values every parameter. That `F` is an expression function whose value comes through the helper's proved
+Post. Measured after the repair: both cells read verified with the twin refuted, from single-file runs. Only those
+two tasks' SPARK files change; the other 86 are byte-identical.
+
+(2) **Bar 2 held:** `evens` refuses as a filter, and `count_evens_skip` for its early exit.
+(3) **Bar 3 held:** in the column, only the five comprehension cells moved. SPARK goes from 50 to 55 verified with the
+twin refuted, counting the repaired two.
+(4) **Bar 4 held:** all seven stays 43 for now. Frama-C is the last kernel that refuses the maps (T19, next).
+
+## T19 registered (2026-10-07 00:52Z, after hand probes and before the column run): comprehensions in Frama-C
+
+D1's eighth landing, and the last kernel between the four map tasks Lean verifies (`doubled`, `squares`, `diffs`,
+`every_other`) and all seven.
+
+**Design.** A map that is the whole right-hand side of an assignment to a seq is one write loop over the buffer, the
+copy loop a slice already uses with the body's value in place of the source's element:
+- the count is asserted equal to the buffer's length, as an ACSL term;
+- each step asserts the body's definedness at its element;
+- the invariant states every element written so far;
+- the return's length is the map's closed form (the source's length, or `hi - lo`), so the buffer is EXACT;
+- in the body, `s[a..b][i]` is read as `s[a + i]`, with the slice's definedness asserted, since Frama-C indexes only a
+  buffer by name.
+
+A filter, and a comprehension anywhere but an assignment's right-hand side, refuse by name.
+
+**Measured before this registration.** All five maps' real files verify under the adapter's own `verify`. The first
+probe found the count rendered by `cexpr`, whose branch-free division Frama-C rejects inside an annotation. It is
+now an ACSL term. The Frama-C lowerings of the other 81 committed tasks are byte-identical, and the whole suite
+passes (695).
+
+**Bars.**
+(1) Frama-C verifies the real program and refutes the twin on at least 4 of the 5 maps.
+(2) `evens` and `count_evens_skip` refuse by name.
+(3) No Frama-C cell that agreed before changes; the whole Frama-C column is re-run.
+(4) **The headline:** all seven goes from 43 to 47 (`doubled`, `squares`, `diffs`, `every_other`), with
+`odd_positions` held out by Lean's UNPROVED. The installed table moves only with a clean-clone matrix, which follows.
+
+**What would falsify the design:** a twin whose certificate does not reach the buffer's written value (counted
+against bar 1), or a verdict that differs between the probe and the adapter's run.
+
+### T19 read (2026-10-07 01:16Z): comprehensions in Frama-C, 5 of 5. All seven goes from 43 to 47, measured from a clean clone.
+
+(1) **Bar 1 held, at 5 of 5:** Frama-C verifies the real program and refutes its twin on all five maps.
+(2) **Bar 2 held:** `evens` refuses as a filter, and `count_evens_skip` for its early exit.
+(3) **Bar 3 held:** in the whole Frama-C column, only those five cells moved. Frama-C goes from 44 to 49.
+(4) **Bar 4 held:** the matrix was regenerated from a clean clone of t-proof-engine at 1da32b3 (`t/AGREEMENT.md`).
+All seven goes from 43 to 47: `doubled`, `squares`, `diffs` and `every_other` are verified with the twin refuted in
+every kernel. `odd_positions` is held out by Lean's UNPROVED, as registered.
+
+Against the previous installed table, exactly 20 cells moved: the five maps in Rocq (T14), F* (T16), SPARK (T18) and
+Frama-C (T19). No other cell moved, and every kernel still refutes the twin of every real it verifies (100%).
+
+| kernel | verified with the twin refuted |
+|---|---|
+| Dafny | 88 |
+| Verus | 80 |
+| Rocq | 62 |
+| Lean | 61 |
+| F* | 58 |
+| SPARK | 55 |
+| Frama-C | 49 |
+
+**Next by all-seven gain.** Four tasks are one kernel short of all seven:
+- `palindrome` (Frama-C: `rev` in a seq local needs a buffer);
+- `swap_rows` (Frama-C: a nested-seq return);
+- `double_all` (Frama-C: a timeout);
+- `odd_positions` (Lean: UNPROVED).
+
+Three tasks are two kernels short: `largest` (SPARK, F*: max of one argument, T21 next), `sum_tail` and
+`grid_row_sums`.
+
+## T21 registered (2026-10-07 01:20Z, after hand probes and before the clean-clone matrix): max/min of one argument in SPARK and F*
+
+`largest` is two kernels short of all seven: SPARK and F* refuse `max(s)` by name.
+
+**Design** (receipt dfe96e13d0c5). Both kernels take the prefix form the comprehensions use: the extremum of the
+first n elements, recursive on n, with the two facts SPEC.md states (a member of the seq, and a bound on every
+element).
+- **SPARK:** the facts are T_Maxs's Post, the existential written the way T_Contains writes membership, and the
+  recursion is guarded by R_Has.
+- **F*:** one SMT-patterned induction lemma states them, the existential over an index, which FStar.Seq.Properties'
+  patterned `seq_mem_k` carries to `Seq.mem`.
+
+The call's precondition is the definedness obligation.
+
+**Measured before this registration.**
+- `largest` COUNTS in F*: verified, wrong-constant twin refuted.
+- In SPARK the twin `max(s) + 1` first did not compile. `_ty` had read `max(s)` as a seq, making the `+` a
+  concatenation. Read as an element, `largest` COUNTS in SPARK too.
+- Of the 88 committed tasks, only `largest`'s SPARK and F* files change, and the whole suite passes (697).
+
+**Bars.**
+(1) The clean-clone matrix that follows reads `largest` verified with the twin refuted in SPARK and F*.
+(2) No other cell moves.
+(3) All seven goes from 47 to 48.
+
+### T21 read (2026-10-07 01:38Z): max/min of one argument in SPARK and F*. All seven goes from 47 to 48.
+
+The matrix was regenerated from a clean clone of t-proof-engine at 25e3491 (`t/AGREEMENT.md`).
+(1) **Bar 1 held:** `largest` reads verified with the twin refuted in SPARK and in F*.
+(2) **Bar 2 held:** no other cell moved; exactly these two moved against the installed table.
+(3) **Bar 3 held:** all seven goes from 47 to 48.
+
+Per kernel: Dafny 88, Verus 80, Rocq 62, Lean 61, F* 59, SPARK 56, Frama-C 49. Every kernel still refutes the twin
+of every real it verifies (100%).
+

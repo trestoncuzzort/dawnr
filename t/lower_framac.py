@@ -5651,6 +5651,13 @@ def _expr_seq_len(e: dict, lens: dict) -> dict | None:
     which costs nothing extra to support correctly."""
     if "var" in e:
         return lens.get(e["var"])
+    if "comp" in e and e["comp"].get("cond") == {"bool": True}:
+        # SPEC.md "Comprehensions (v1)" (PREDICT T19): a map has its source's length, over a range `[lo, hi)` the
+        # count `hi - lo` (the write loop asserts it equal to the buffer's length; a negative one cannot be)
+        c = e["comp"]
+        if "seq" in c:
+            return lens.get(c["seq"]["var"]) if "var" in c["seq"] else None
+        return {"op": "-", "args": [c["hi"], c["lo"]]}
     if "op" not in e:
         return None
     op = e["op"]
@@ -6079,6 +6086,85 @@ def _exact_concat_lines(target: str, e: dict, ctx: Ctx, indent: str,
     return out
 
 
+def _flatten_slice_at(e, obls: list):
+    """`s[a..b][i]` as `s[a + i]` (SPEC.md: the element of the slice at i is the element of s at a + i), collecting the
+    slice's definedness, `0 <= a <= b <= len(s)` and `0 <= i < b - a`, into `obls`: Frama-C indexes only a buffer by
+    name ("seq position holds non-variable"), and a stepped slice reaches a comprehension in exactly this form
+    (`every_other`, `odd_positions`; PREDICT T19)."""
+    if isinstance(e, list):
+        return [_flatten_slice_at(x, obls) for x in e]
+    if not isinstance(e, dict):
+        return e
+    if e.get("op") == "at" and len(e.get("args", [])) == 2:
+        s_e, i_e = e["args"]
+        i_e = _flatten_slice_at(i_e, obls)
+        if isinstance(s_e, dict) and s_e.get("op") == "slice" and "var" in s_e["args"][0]:
+            base, a_e, b_e = s_e["args"]
+            le = lambda x, y: {"op": "<=", "args": [x, y]}
+            obls += [le({"int": 0}, a_e), le(a_e, b_e), le(b_e, {"op": "len", "args": [base]}), le({"int": 0}, i_e),
+                     {"op": "<", "args": [i_e, {"op": "-", "args": [b_e, a_e]}]}]
+            return {"op": "at", "args": [base, {"op": "+", "args": [a_e, i_e]}]}
+        return {"op": "at", "args": [_flatten_slice_at(s_e, obls), i_e]}
+    return {k: _flatten_slice_at(v, obls) for k, v in e.items()}
+
+
+def _comp_map_lines(target: str, xn: str, e: dict, ctx, indent: str, funs: dict, task_name: str) -> list:
+    """SPEC.md "Comprehensions (v1)" in Frama-C (PREDICT T19): `target := [body for x in s]` (or over `[lo, hi)`) as
+    one write loop of `xn` steps, the count asserted equal to `xn` first (EXACT mode pins `xn` from the ensures, as a
+    slice's copy does), each step asserting the body's definedness at that element and writing its value, with the
+    loop invariant stating every element written so far. A filter refuses by name (`_comp_refusal`)."""
+    import lower_verus
+    c = e["comp"]
+    v = c["var"]
+    out = []
+    if "seq" in c:
+        src_e = c["seq"]
+        if "var" not in src_e:
+            raise NotImplementedError("framac: a comprehension over a sequence that is not a variable is not lowered "
+                                      "yet (SPEC.md 'Comprehensions (v1)')")
+        src = seq_var(src_e, ctx.env)
+        n_c = ctx.seq_len.get(src, f"{src}_n")
+        el = lambda k: {"op": "at", "args": [src_e, {"var": k}]}
+    else:
+        out += at_asserts(c["lo"], ctx, indent, funs, task_name)
+        out += at_asserts(c["hi"], ctx, indent, funs, task_name)
+        # the count appears only in an annotation, so it is an ACSL term (`term`, t's div as t_div), never
+        # `cexpr`'s branch-free C, whose boolean arithmetic Frama-C rejects inside an annotation (cexpr's own note;
+        # measured again on every_other: MALFORMED)
+        n_c = f"(({term(c['hi'], ctx)}) - ({term(c['lo'], ctx)}))"
+        el = lambda k: {"op": "+", "args": [c["lo"], {"var": k}]}
+    out.append(f"{indent}/*@ assert {n_c} == {xn}; */")
+    obls_k: list = []
+    body_k = _flatten_slice_at(lower_verus.subst(c["body"], {v: el("__k")}), obls_k)
+    body_t = _flatten_slice_at(lower_verus.subst(c["body"], {v: el("__t")}), [])
+    saved = {n: ctx.env.get(n) for n in ("__k", "__t")}
+    ctx.env["__k"] = "int"
+    ctx.env["__t"] = "int"
+    try:
+        inv = term(body_t, ctx)
+        steps = [f"{indent}  /*@ assert {pred(o, ctx)}; */" for o in obls_k]
+        steps += at_asserts(body_k, ctx, indent + "  ", funs, task_name)
+        val = cexpr(body_k, ctx.env, funs, task_name)
+    finally:
+        for n, t in saved.items():
+            if t is None:
+                ctx.env.pop(n, None)
+            else:
+                ctx.env[n] = t
+    return out + [
+        f"{indent}/*@",
+        f"{indent}  loop invariant 0 <= __k <= {xn};",
+        f"{indent}  loop invariant \\forall integer __t; 0 <= __t < __k ==> {target}[__t] == {inv};",
+        f"{indent}  loop assigns __k, {target}[0 .. {xn} - 1];",
+        f"{indent}  loop variant {xn} - __k;",
+        f"{indent}*/",
+        f"{indent}for (int __k = 0; __k < {xn}; __k++) {{",
+        *steps,
+        f"{indent}  {target}[__k] = {val};",
+        f"{indent}}}",
+    ]
+
+
 def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
                      funs: dict, task_name: str) -> list:
     """C statements implementing `target := e`, `target` a seq-typed name,
@@ -6134,6 +6220,14 @@ def seq_assign_lines(target: str, e: dict, ctx: Ctx, indent: str,
             f"{indent}for (int __k = 0; __k < {n}; __k++) "
             f"{target}[__k] = {src}[{idx_k}];",
         ]
+
+    if "comp" in e:
+        # SPEC.md "Comprehensions (v1)" in Frama-C (PREDICT T19): a map is a write loop, the copy loop above with
+        # the body's value in place of the source's element
+        if cap is not None:
+            raise NotImplementedError("framac: a comprehension appended to a capacity-tracked buffer is not lowered "
+                                      "yet (SPEC.md 'Comprehensions (v1)')")
+        return out + _comp_map_lines(target, xn, e, ctx, indent, funs, task_name)
 
     if "var" in e:
         # CAPACITY-MODE BARE-SEQ ASSIGN BUG (2026-09-12, ROADMAP 16.2,
@@ -10310,12 +10404,60 @@ def _uses_sets(obj) -> bool:
     return obj == "set"
 
 
+def _comp_refusal(task: dict, body: list) -> None:
+    """PREDICT T19: Frama-C carries a comprehension that is a map (no filter) and is the whole right-hand side of an
+    assignment or a declaration of a seq-typed name, the one place a buffer exists to write it into. Anywhere else,
+    including a requires, ensures, invariant, condition, spec_fun, method or lemma, it refuses by name."""
+    def refuse(where: str):
+        raise NotImplementedError(f"framac: a comprehension {where} is not lowered yet (SPEC.md 'Comprehensions (v1)')")
+
+    def has(x) -> bool:
+        if isinstance(x, dict):
+            return "comp" in x or any(has(v) for v in x.values())
+        return isinstance(x, list) and any(has(v) for v in x)
+
+    def check_rhs(rhs):
+        if isinstance(rhs, dict) and "comp" in rhs:
+            if rhs["comp"].get("cond") != {"bool": True}:
+                raise NotImplementedError("framac: a filtered comprehension is not lowered yet "
+                                          "(SPEC.md 'Comprehensions (v1)')")
+            c = rhs["comp"]
+            if any(has(c.get(k)) for k in ("seq", "lo", "hi", "body")):
+                refuse("nested in another")
+        elif has(rhs):
+            refuse("inside an expression")
+
+    def stmts(ss):
+        for st in ss or []:
+            if "assign" in st:
+                check_rhs(st["assign"][1])
+            elif "var" in st and isinstance(st["var"], dict):
+                if "init" in st["var"]:
+                    check_rhs(st["var"]["init"])
+            else:
+                for k, val in st.items():
+                    if isinstance(val, dict):
+                        for kk, vv in val.items():
+                            if isinstance(vv, list) and vv and isinstance(vv[0], dict) and any(
+                                    key in vv[0] for key in ("assign", "var", "if", "while", "return", "for")):
+                                stmts(vv)
+                            elif has(vv):
+                                refuse("in a condition, invariant or loop bound")
+                    elif has(val):
+                        refuse("in a statement other than an assignment")
+    for k in ("requires", "ensures", "spec_funs", "methods", "lemmas"):
+        if has(task.get(k, [])):
+            refuse("in a spec position, spec_fun, method or lemma")
+    stmts(body)
+
+
 def lower(task: dict, body: list, witness: dict | None = None,
           _unit: dict | None = None) -> str:
     import tshape
     import framac_lib
-    tshape.abstain_unless_carried(task, body, "framac",
+    tshape.abstain_unless_carried(task, body, "framac", carried={"comp"},
                                   lib=framac_lib.FRAMAC_LIB)   # PREDICT T11: the library in Frama-C
+    _comp_refusal(task, body)                              # PREDICT T19: maps assigned to a buffer, the rest by name
     if task.get("datatypes"):
         # DATATYPES (2026-09-27, SPEC.md "Datatypes (v1)"): FEATURES-TRACK.md
         # names "Frama-C ... through records with discriminants" as the

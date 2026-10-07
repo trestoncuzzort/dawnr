@@ -1550,7 +1550,7 @@ _SEM = "FStar.IndefiniteDescription.strong_excluded_middle"
 # `n:nat` and t_isqrt's `n:nat` are the definedness obligations (SPEC: undefined below 0), checked at the call as
 # Seq.index's refinement is. The real variants decide `<.` ghostly (the file is in the Ghost effect for a real task).
 _LIB_USED: set = set()
-FSTAR_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in"})
+FSTAR_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in", "maxs"})
 _LIB_TEXT = {
     "t_sum": "let rec t_sum (s:Seq.seq int) : Tot int (decreases (Seq.length s))\n"
              "= if Seq.length s = 0 then 0 else t_sum (Seq.slice s 0 (Seq.length s - 1)) + Seq.index s (Seq.length s - 1)\n"
@@ -1577,13 +1577,27 @@ _LIB_TEXT = {
              "let t_gcd (a:int) (b:int) : Tot int = t_gcdn (FStar.Math.Lib.abs a) (FStar.Math.Lib.abs b)\n",
     "t_isqrt": "let rec t_isqrt (n:nat) : Tot (r:nat{r * r <= n /\\ n < (r + 1) * (r + 1)}) (decreases n)\n"
                "= if n = 0 then 0 else (let r = t_isqrt (n - 1) in if (r + 1) * (r + 1) <= n then r + 1 else r)\n",
+    # SPEC.md "Reductions (v1)" (PREDICT T21, 2026-10-07): the extremum of the first n elements, in prefix form, with
+    # one SMT-patterned lemma per function stating the two facts the SPEC states: a member (as an index existential,
+    # which FStar.Seq.Properties' seq_mem_k, itself SMTPat'd, carries to `Seq.mem`) and a bound on every element
+    "t_maxs": "".join(
+        f"let rec t_{nm} (s:Seq.seq int) (n:nat{{0 < n /\\ n <= Seq.length s}}) : Tot int (decreases n)\n"
+        f"= if n = 1 then Seq.index s 0\n"
+        f"  else (let m = t_{nm} s (n - 1) in let x = Seq.index s (n - 1) in if {cmp} then x else m)\n"
+        f"let rec lemma_t_{nm} (s:Seq.seq int) (n:nat{{0 < n /\\ n <= Seq.length s}})\n"
+        f"  : Lemma (ensures ((exists (k:nat). k < n /\\ Seq.index s k == t_{nm} s n) /\\\n"
+        f"                    (forall (k:nat). k < n ==> {bound})))\n"
+        f"    (decreases n) [SMTPat (t_{nm} s n)]\n"
+        f"= if n = 1 then () else lemma_t_{nm} s (n - 1)\n"
+        for nm, cmp, bound in (("maxs", "m < x", f"Seq.index s k <= t_maxs s n"),
+                               ("mins", "x < m", f"t_mins s n <= Seq.index s k"))),
     "t_rev": "let rec t_rev (#a:Type) (s:Seq.seq a) : Tot (Seq.seq a) (decreases (Seq.length s))\n"
              "= if Seq.length s = 0 then Seq.empty else Seq.append (Seq.create 1 (Seq.index s (Seq.length s - 1))) (t_rev (Seq.slice s 0 (Seq.length s - 1)))\n",
     "t_rmin": f"let t_rmin (a:real) (b:real) : GTot real = if {_SEM} (a <. b) then a else b\n",
     "t_rmax": f"let t_rmax (a:real) (b:real) : GTot real = if {_SEM} (a <. b) then b else a\n",
     "t_rabs": f"let t_rabs (a:real) : GTot real = if {_SEM} (a <. 0.0R) then 0.0R -. a else a\n",
 }
-_LIB_ORDER = ["t_sum", "t_rsum", "t_gcd", "t_isqrt", "t_rev", "t_rmin", "t_rmax", "t_rabs"]
+_LIB_ORDER = ["t_sum", "t_rsum", "t_gcd", "t_isqrt", "t_maxs", "t_rev", "t_rmin", "t_rmax", "t_rabs"]
 
 
 def _lib_defs() -> list:
@@ -2783,6 +2797,12 @@ class Ctx:
         if op in ("floor", "ceil"):
             raise NotImplementedError(
                 f"fstar lowering: {op}: FStar.Real has no floor or ceiling (SPEC.md 'Exact rationals (v1)')")
+        if op in ("min", "max") and len(e["args"]) == 1:
+            # SPEC.md "Reductions (v1)" in F* (PREDICT T21): max(s)/min(s) of one argument, the prefix-form t_maxs/
+            # t_mins over the whole seq; its refinement `0 < n` is the definedness obligation at this call
+            _LIB_USED.add("t_maxs")
+            sq = self.sx(e["args"][0], env, local)
+            return f"(t_{'maxs' if op == 'max' else 'mins'} {sq} (Seq.length {sq}))"
         if op in ("min", "max", "abs"):
             # SPEC.md "The library (v1)" (2026-10-06): FStar.Math.Lib's own, with their refined results
             return f"(FStar.Math.Lib.{op} {' '.join(self.zx(x, env, local) for x in e['args'])})"
