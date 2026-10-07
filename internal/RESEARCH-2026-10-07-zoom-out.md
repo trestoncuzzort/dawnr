@@ -36,8 +36,12 @@ and it found six defect classes that none of the 88 tasks reach.
 3. **The seven kernels are not seven independent solvers.** Dafny (through Boogie) and Verus both default to Z3.
    SPARK runs on Why3 with CVC5 and Z3, and Frama-C's WP on Alt-Ergo and others. Lean and Rocq are
    kernel-checked, and Lean documents independent re-checkers (comparator with nanoda, lean4checker). "Seven
-   independent kernels" overstates it; "seven independent front ends, five distinct proof engines, two of them
-   small trusted kernels" is accurate.
+   independent kernels" overstates it. The accurate wording is "seven independent front ends over four proof
+   engines", counted against this engine's own adapters (corrected 01:45Z from "five"):
+   - Z3 behind Dafny, Verus, F*, and SPARK as pinned here (`--prover=z3`);
+   - Alt-Ergo behind Frama-C;
+   - the Lean kernel;
+   - the Rocq kernel, re-checked by `coqchk` in the adapter already.
 4. **Lean is no longer the weak leg for agents.** CLEVER went from 1/161 to 98.1%, and Aristotle resolves 96.8% of
    VERINA. It is still the weak leg for one-shot writing and on AlgoVeri (7.8% direct). In t, Lean carries 10 of
    the 21 AlgoVeri contracts and verifies none, and it co-blocks 20 of them.
@@ -64,10 +68,11 @@ is corrected by item 3.
 
 Each is its own registration, measured before it is claimed.
 
-1. **D6, a common-mode audit (low effort).** Re-run the SMT-backed legs under a second solver: Dafny through
-   Boogie's CVC5, and SPARK and Frama-C with their own alternate provers. Replay the Lean cells through an
-   independent checker. The table this produces is agreement under solver change, which answers item 3 with a
-   measurement instead of wording. Verus has no second solver and is reported as such.
+1. **D6, a common-mode audit (low effort).** Re-run the SMT-backed legs under a second solver: SPARK under its
+   bundled CVC5 and Alt-Ergo (the adapter pins Z3), Dafny through Boogie's CVC5, and Frama-C's WP under Z3 or
+   CVC5 through Why3. Replay the Lean cells through an independent checker. Rocq's cells are already re-checked
+   by `coqchk`. The table this produces is agreement under solver change, which answers item 3 with a measurement
+   instead of wording. Verus and F* run on Z3 alone and are reported as such.
 2. **D7, Lean loops through `mvcgen` (a one-task probe first).** Lean co-blocks 20 of 21 AlgoVeri contracts, and
    `t/lower_lean.py` drives every loop proof through `grind` alone. Lean's own tutorial pairs `mvcgen` (loop
    invariants supplied, which t's loops always carry) with `grind` for the rest. Bar for the probe:
