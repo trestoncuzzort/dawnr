@@ -178,9 +178,9 @@ ones; the training adds 8 problems. These counts were corrected three times on t
 (contaminated problems removed, inputs made larger, proofs sorted by what they prove); the corrections and
 their reasons are in [CORRECTIONS.md](CORRECTIONS.md). A much larger model still does better.
 
-**The seven kernels.** Every committed `t` task is lowered into seven proof systems (independent front ends over
-five distinct proof engines: Dafny and Verus both default to Z3, SPARK and Frama-C discharge through Why3-family
-provers, Lean and Rocq are small trusted kernels). Each must prove the program and refute a deliberately broken
+**The seven kernels.** Every committed `t` task is lowered into seven proof systems: independent front ends over
+four distinct proof engines. Z3 sits behind Dafny, Verus, F* and SPARK as run here, Alt-Ergo behind Frama-C, and
+Lean and Rocq are small trusted kernels, Rocq's re-checked by `coqchk`. Each must prove the program and refute a deliberately broken
 twin at a concrete input, or refuse by name. Of the 88 tasks, Dafny proves 88, Verus 80, Rocq 62, Lean 61, F* 59,
 SPARK 56 and Frama-C 49. In every kernel, the twin of every proved program is refuted (100%). 48 tasks are proved,
 with the twin refuted, in all seven; the rest are named refusals,
