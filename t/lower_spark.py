@@ -2006,9 +2006,36 @@ LIB_PREAMBLE = {
    function T_Contains (S : Seq; X : Big_Integer) return Boolean is
      (for some I in T_Range'(Big_Integer'(0), Len (S)) => Elem (S, I) = X);
 """,
+    # SPEC.md "Reductions (v1)" (PREDICT T21, 2026-10-07): the extremum of the first N elements, in prefix form as
+    # the comprehensions are, its Post the two facts the SPEC states (a member, and bounding every element), the
+    # existential written as T_Contains writes membership; the recursion guarded by R_Has, the Has_Element term a
+    # T_Range quantifier is instantiated through (PREDICT T18)
+    "T_Maxs": """\
+   function T_Maxs (S : Seq; N : Big_Integer) return Big_Integer
+   with
+     Pre  => N > Big_Integer'(0) and then N <= Len (S),
+     Post => (for some I in T_Range'(Big_Integer'(0), N) => Elem (S, I) = T_Maxs'Result)
+       and then (for all I in T_Range'(Big_Integer'(0), N) => Elem (S, I) <= T_Maxs'Result),
+     Subprogram_Variant => (Decreases => N);
+
+   function T_Maxs (S : Seq; N : Big_Integer) return Big_Integer is
+     (if not R_Has (T_Range'(Big_Integer'(1), N), N - Big_Integer'(1)) then Elem (S, Big_Integer'(0))
+      else Max (T_Maxs (S, N - Big_Integer'(1)), Elem (S, N - Big_Integer'(1))));
+
+   function T_Mins (S : Seq; N : Big_Integer) return Big_Integer
+   with
+     Pre  => N > Big_Integer'(0) and then N <= Len (S),
+     Post => (for some I in T_Range'(Big_Integer'(0), N) => Elem (S, I) = T_Mins'Result)
+       and then (for all I in T_Range'(Big_Integer'(0), N) => T_Mins'Result <= Elem (S, I)),
+     Subprogram_Variant => (Decreases => N);
+
+   function T_Mins (S : Seq; N : Big_Integer) return Big_Integer is
+     (if not R_Has (T_Range'(Big_Integer'(1), N), N - Big_Integer'(1)) then Elem (S, Big_Integer'(0))
+      else Min (T_Mins (S, N - Big_Integer'(1)), Elem (S, N - Big_Integer'(1))));
+""",
 }
-LIB_ORDER = ["T_Pow", "T_Isqrt", "T_Gcd", "T_Sum", "T_Rev", "T_Contains"]
-SPARK_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in"})
+LIB_ORDER = ["T_Pow", "T_Isqrt", "T_Gcd", "T_Sum", "T_Rev", "T_Contains", "T_Maxs"]
+SPARK_LIB = frozenset({"min", "max", "abs", "sum", "gcd", "pow", "isqrt", "rev", "in", "maxs"})
 
 DIVMOD_PREAMBLE = """\
    function T_Mod (X, Y : Big_Integer) return Big_Integer is
@@ -3926,6 +3953,7 @@ class Lower:
     def __init__(self, task: dict, ce: bool = False):
         self.task = task
         self.helpers: list[str] = []   # emitted W_k record types + functions
+        self.comps: dict = {}          # SPEC.md "Comprehensions (v1)", PREDICT T18: shape key -> (k, Ada text)
         self.wcount = 0
         self.needs_range = False       # set by the first lowered quantifier
         self.needs_divmod = False      # set by the first lowered div/mod
@@ -4031,6 +4059,111 @@ class Lower:
 
     # --- expressions -------------------------------------------------------
 
+    def _comp_call(self, e: dict, sub: dict, types: dict) -> str:
+        """SPEC.md "Comprehensions (v1)" in SPARK (PREDICT T18): the call of this shape's function (registered, with
+        its text, on first sight) in Dafny's prefix form: a source `s` is `(S, Len (S))`, a source `s[0..e]` is
+        `(S, E)`, a range `[a, b)` is `(A, B - A)`, then the free variables of the body by name."""
+        import lower_dafny
+        c = e["comp"]
+        v = c["var"]
+        key = lower_dafny._comp_key(e)
+        fvs = lower_dafny._comp_free(e)
+        ftys = {}
+        for n in fvs:
+            t = types.get(n)
+            if t not in ("int", "seq", "bool"):
+                raise NotImplementedError("spark: a comprehension over a name of this type is not lowered yet "
+                                          "(SPEC.md 'Comprehensions (v1)')")
+            ftys[n] = t
+        is_seq = "seq" in c
+        if is_seq and self._ty(c["seq"], types) != "seq":
+            raise NotImplementedError("spark: a comprehension over a nested sequence is not lowered yet "
+                                      "(SPEC.md 'Comprehensions (v1)')")
+        types2 = dict(ftys, **{v: "int"})
+        if self._ty(c["body"], types2) != "int":
+            raise NotImplementedError("spark: a comprehension whose elements are not integers is not lowered yet "
+                                      "(SPEC.md 'Comprehensions (v1)')")
+        self.needs_range = True
+        if key not in self.comps:
+            k = len(self.comps) + 1
+            self.comps[key] = (k, self._comp_text(k, c, fvs, ftys, types2))
+        k = self.comps[key][0]
+        if is_seq:
+            src = c["seq"]
+            if isinstance(src, dict) and src.get("op") == "slice" and src["args"][1] == {"int": 0}:
+                args = [self.expr(src["args"][0], sub, types), self.expr(src["args"][2], sub, types)]
+            else:
+                base = self.expr(src, sub, types)
+                args = [base, f"Len ({base})"]
+        else:
+            lo = self.expr(c["lo"], sub, types)
+            n = f"({self.expr(c['hi'], sub, types)} - {lo})"
+            args = [lo, f"(if {n} < Big_Integer'(0) then Big_Integer'(0) else {n})"]
+        args += [self.expr({"var": n}, sub, types) for n in fvs]
+        return f"T_Comp{k} ({', '.join(args)})"
+
+    def _comp_text(self, k: int, c: dict, fvs: list, ftys: dict, types2: dict) -> str:
+        """One map shape as a recursive expression function, T_Slice's own shape (SLICE_PREAMBLE): a Pre (the
+        source's bound and the body's definedness), a Post stating the length and every element over T_Range, a
+        Subprogram_Variant, and `Seqs.Add` of the last element onto the function at `N - 1`. The definedness is the
+        shared formula (lower_verus.defined), split as Dafny's lowering splits it: the conjuncts that do not mention
+        the element once, under `N > 0`, the rest for every K in T_Range'(0, N)."""
+        import lower_dafny
+        import lower_verus
+        v = c["var"]
+        is_seq = "seq" in c
+        z = "Big_Integer'(0)"
+        one = "Big_Integer'(1)"
+        fv_sub = {n: cap(n) for n in fvs}
+        # over a range the index is written through the identity T_Ix, the term the Pre's quantifier is instantiated
+        # on (measured: without it, diffs' recursive body could not use the Pre at T_N - 1; Dafny's t_ix, F*'s t_ix)
+        el = (lambda i: f"Elem (T_S, {i})") if is_seq else (lambda i: f"(T_A + T_Ix ({i}))")
+        body = lambda i: self.expr(c["body"], dict(fv_sub, **{v: el(i)}), types2)
+        lower_verus._SCOPE.clear()
+        lower_verus._SCOPE.update(types2)
+        lower_verus._SCOPE_FUNS.clear()
+        lower_verus._SCOPE_FUNS.update({f["name"]: f for f in self.task.get("spec_funs", [])})
+        d = lower_verus.defined(c["body"])
+
+        def flat(x):
+            if isinstance(x, dict) and x.get("op") == "and":
+                return [y for a in x["args"] for y in flat(a)]
+            return [x]
+        parts = [x for x in flat(d) if x != lower_verus.TRUE and not lower_dafny._ground_true(x)]
+        fixed = [x for x in parts if not lower_dafny._mentions_var(x, v)]
+        per_el = [x for x in parts if lower_dafny._mentions_var(x, v)]
+        fv_params = "".join(f"; {cap(n)} : {ada_type(ftys[n])}" for n in fvs)
+        fv_args = "".join(f", {cap(n)}" for n in fvs)
+        head_params = (f"T_S : Seq; T_N : Big_Integer{fv_params}" if is_seq
+                       else f"T_A : Big_Integer; T_N : Big_Integer{fv_params}")
+        # the count is clamped at the call site, so T_N >= 0 always and the Subprogram_Variant on it is a natural
+        # (measured: squares' variant failed its range check with a Pre of True)
+        pre = [f"T_N >= {z} and then T_N <= Len (T_S)"] if is_seq else [f"T_N >= {z}"]
+        if fixed:
+            pre.append(f"(if T_N > {z} then {self.expr(lower_verus._conj(fixed), fv_sub, types2)})")
+        if per_el:
+            pre.append(f"(for all T_K in T_Range'({z}, T_N) => "
+                       f"{self.expr(lower_verus._conj(per_el), dict(fv_sub, **{v: el('T_K')}), types2)})")
+        pre_txt = "\n       and then ".join(pre) if pre else "True"
+        size = "T_N"
+        src_args = "T_S" if is_seq else "T_A"
+        # the recursion is guarded by R_Has (T_Range'(0, T_N), T_N - 1), which is `T_N > 0` given the Pre: a
+        # quantifier over T_Range is instantiated through its Has_Element term, so the guard is what puts the
+        # Pre's instance at T_N - 1 in reach of the recursive body (measured on diffs: with `T_N = 0` as the test,
+        # "cannot prove I < Len (S)" at five times the step budget)
+        stop = f"not R_Has (T_Range'({z}, T_N), T_N - {one})"
+        return (f"   function T_Comp{k} ({head_params}) return Seq\n"
+                f"   with\n"
+                f"     Pre  => {pre_txt},\n"
+                f"     Post => Len (T_Comp{k}'Result) = {size}\n"
+                f"       and then (for all T_K in T_Range'({z}, T_N) =>\n"
+                f"                   Elem (T_Comp{k}'Result, T_K) = {body('T_K')}),\n"
+                f"     Subprogram_Variant => (Decreases => T_N);\n\n"
+                f"   function T_Comp{k} ({head_params}) return Seq is\n"
+                f"     (if {stop} then Seqs.Empty_Sequence\n"
+                f"      else Seqs.Add (T_Comp{k} ({src_args}, T_N - {one}{fv_args}),\n"
+                f"                     {body(f'(T_N - {one})')}));\n")
+
     def _ty(self, e: dict, types: dict):
         """A static reading of `e`'s t type ("int"/"bool"/"seq", or a pair
         type {"pair": [T1, T2]}, SPEC.md "Pairs", 2026-09-10), needed only
@@ -4067,6 +4200,8 @@ class Lower:
             return types[v]
         if "ite" in e:
             return self._ty(e["ite"]["then"], types)
+        if "comp" in e:
+            return "seq"   # SPEC.md "Comprehensions (v1)", PREDICT T18: a map whose elements are ints (_comp_call)
         if "call" in e:
             fun = e["call"]["fun"]
             if fun == self.task["name"]:
@@ -4131,6 +4266,11 @@ class Lower:
             return "real"   # SPEC.md "Exact rationals (v1)": real(x)
         if op in ("floor", "ceil"):
             return "int"
+        if op in ("min", "max") and len(e["args"]) == 1:
+            # SPEC.md "Reductions (v1)" (PREDICT T21): max(s)/min(s) is an element, never the seq; read as the seq's
+            # type it made `max(s) + 1` (largest's twin) a concatenation, a file gnatprove refused
+            t0 = self._ty(e["args"][0], types)
+            return "real" if isinstance(t0, dict) and t0.get("seq") == "real" else "int"
         if op in ("min", "max", "abs", "rev"):
             return self._ty(e["args"][0], types)   # SPEC.md "The library (v1)" (2026-10-06): the operand's type
         if op == "sum":
@@ -4204,6 +4344,8 @@ class Lower:
             if sub[v] is None:
                 raise ValueError(f"read of unassigned {v!r}")
             return sub[v]
+        if "comp" in e:
+            return self._comp_call(e, sub, types)
         if "forall" in e or "exists" in e:
             self.needs_range = True
             q = e["forall"] if "forall" in e else e["exists"]
@@ -4457,6 +4599,12 @@ class Lower:
                 self.needs_range = True
             eq = f"{_pair_ada_name(pty)}_Eq ({args[0]}, {args[1]})"
             return eq if op == "==" else f"(not {eq})"
+        if op in ("min", "max") and len(e["args"]) == 1:
+            # SPEC.md "Reductions (v1)" in SPARK (PREDICT T21): max(s)/min(s) of one argument, the prefix-form
+            # T_Maxs/T_Mins (LIB_PREAMBLE), whose Pre `Len (S) > 0` is the definedness obligation at this call
+            self.needs_lib.add("T_Maxs")
+            self.needs_range = True
+            return f"T_{'Maxs' if op == 'max' else 'Mins'} ({args[0]}, Len ({args[0]}))"
         if op in ("min", "max"):
             # SPEC.md "The library (v1)" (2026-10-06): Big_Integers' and Big_Reals' own Min/Max (A.5.6, A.5.7)
             return f"{op.capitalize()} ({args[0]}, {args[1]})"
@@ -6037,7 +6185,15 @@ def certificate(task: dict, body: list, w: dict | None, L: Lower,
             ob_t = defined(expr_node, lambda x: L._ty(x, types) == "real")
             if ob_t == TRUE:
                 return ""
-            parts.append(f"(not {L.expr(ob_t, sub, types)})")
+            # The obligation usually names the return (`r[k]` with k past the twin's shorter result), unbound at an
+            # ensures-level witness: bind it to F at the witness's inputs, exactly as the "value" kind does, when the
+            # witness values every parameter (PREDICT T18: squares' and diffs' twins built no certificate and read
+            # TIMEOUT; their F is an expression function whose value comes through the helper's own proved Post)
+            sub_e = dict(sub)
+            if set(vals) == {p["name"] for p in task["params"]}:
+                args = ", ".join(sub[p["name"]] for p in task["params"])
+                sub_e[ret] = f"F ({args})" if args else "F"
+            parts.append(f"(not {L.expr(ob_t, sub_e, types)})")
         elif kind == "undefined":
             ob = _undef_obligation(task, body, sub, vals, L)
             if ob is None:
@@ -6292,9 +6448,34 @@ def _uses_sets(obj) -> bool:
     return obj == "set"
 
 
+def _comp_refusal(task: dict, body: list) -> None:
+    """PREDICT T18: SPARK carries a comprehension that is a map (no filter) over a seq or an int range, in the task's
+    requires, ensures and body; a filter, or a comprehension inside a spec_fun, method or lemma, refuses by name."""
+    def walk(x, inside_task: bool) -> None:
+        if isinstance(x, dict):
+            if "comp" in x:
+                if not inside_task:
+                    raise NotImplementedError("spark: a comprehension inside a spec_fun, method or lemma is not "
+                                              "lowered yet (SPEC.md 'Comprehensions (v1)')")
+                if x["comp"].get("cond") != {"bool": True}:
+                    raise NotImplementedError("spark: a filtered comprehension is not lowered yet "
+                                              "(SPEC.md 'Comprehensions (v1)')")
+            for v in x.values():
+                walk(v, inside_task)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v, inside_task)
+    walk(task.get("requires", []), True)
+    walk(task.get("ensures", []), True)
+    walk(body or [], True)
+    for k in ("spec_funs", "methods", "lemmas"):
+        walk(task.get(k, []), False)
+
+
 def lower(task: dict, body: list, witness: dict | None = None) -> str:
     import tshape
-    tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real"}), lib=SPARK_LIB)
+    tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real", "comp"}), lib=SPARK_LIB)
+    _comp_refusal(task, body)                              # PREDICT T18: maps carried, the rest refused by name
     if tshape.uses_ops(body, task, {"floor", "ceil"}):
         # SPEC.md "Exact rationals (v1)" (2026-10-06): Big_Reals (Ada 2022 A.5.7) has no floor or ceiling
         raise NotImplementedError(
@@ -6848,6 +7029,10 @@ def lower(task: dict, body: list, witness: dict | None = None) -> str:
     parts += method_parts
     for h in L.helpers:
         parts += [h]
+    if any("T_Ix (" in txt for _k, txt in L.comps.values()):
+        parts += ["   function T_Ix (K : Big_Integer) return Big_Integer is (K);\n"]
+    for _k, txt in sorted(L.comps.values()):
+        parts += [txt]   # SPEC.md "Comprehensions (v1)", PREDICT T18: after every preamble each one calls
     parts += [
         f"   {fsig}",
         "   with\n     " + ",\n     ".join(aspects) + ";",

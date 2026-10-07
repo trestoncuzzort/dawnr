@@ -178,13 +178,14 @@ ones; the training adds 8 problems. These counts were corrected three times on t
 (contaminated problems removed, inputs made larger, proofs sorted by what they prove); the corrections and
 their reasons are in [CORRECTIONS.md](CORRECTIONS.md). A much larger model still does better.
 
-**The seven kernels.** Every committed `t` task is lowered into seven independent proof systems. Each must prove
-the program and refute a deliberately broken twin at a concrete input, or refuse by name. Of the 88 tasks, Dafny
-proves 88, Verus 80, Lean 61, Rocq 57, F* 53, SPARK 50 and Frama-C 44. In every kernel, the twin of every proved
-program is refuted (100%). 43 tasks are proved, with the twin refuted, in all seven; the rest are named refusals,
+**The seven kernels.** Every committed `t` task is lowered into seven proof systems (independent front ends over
+five distinct proof engines: Dafny and Verus both default to Z3, SPARK and Frama-C discharge through Why3-family
+provers, Lean and Rocq are small trusted kernels). Each must prove the program and refute a deliberately broken
+twin at a concrete input, or refuse by name. Of the 88 tasks, Dafny proves 88, Verus 80, Rocq 62, Lean 61, F* 59,
+SPARK 56 and Frama-C 49. In every kernel, the twin of every proved program is refuted (100%). 48 tasks are proved,
+with the twin refuted, in all seven; the rest are named refusals,
 mostly of the constructs added on 2026-10-06, which the other kernels are being taught now
-([the matrix](t/AGREEMENT.md), regenerated from a clean clone of the engine's own repository). Rocq's and F*'s own
-columns, re-run after comprehensions landed in each, read 62 and 58; the next clean-clone matrix installs them. The engine (the
+([the matrix](t/AGREEMENT.md), regenerated from a clean clone of the engine's own repository). The engine (the
 language, its lowerings, the kernel adapters and the tasks) now has its own repository,
 [t-proof-engine](https://github.com/trestoncuzzort/t-proof-engine); `t/` here carries a pinned copy
 ([t/ENGINE.md](t/ENGINE.md)). 21 of AlgoVeri's contracts are stated in t there too ([t/algoveri/](t/algoveri/)):

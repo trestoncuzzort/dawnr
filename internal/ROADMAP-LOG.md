@@ -3200,8 +3200,19 @@ is queued, and the ones running are read as they finish.
   quick_sort verified; Verus on AlgoVeri 5 -> 6; poly_multiply_naive (an index into an update) still MALFORMED.
 - **T16 landed (10-06 23:52Z), comprehensions in F*:** Seq.init per map shape; all 5 maps verified with the twin
   refuted, F* 53 -> 58, no other cell moved. The maps now wait on SPARK and Frama-C for all seven.
-- **Next:** the named AlgoVeri repairs (SPARK `use type`, F* nested-quantifier scope and Tot/GTot, the Verus update
-  index), comprehensions in SPARK and Frama-C (the last two kernels between the five maps and all seven) and a filter
-  in Rocq and F*, the higher-order calls in
-  Rocq, compositional types in Lean, Rocq and Frama-C. The language queue: G9 datatypes with fields (records,
-  options, trees, which 37 of AlgoVeri's contracts need), then iteration over a map.
+- **T17 landed (10-07 00:24Z), T13's SPARK and F* repairs:** 7 of 8 malformed cells to named outcomes; F* on AlgoVeri
+  3 -> 5. MALFORMED across AlgoVeri 13 -> 2, both named.
+- **T18 (10-07 00:52Z), comprehensions in SPARK:** a recursive expression function per map shape, guarded by
+  R_Has (the Has_Element term a T_Range quantifier is instantiated through); 5 of 5 after an ensures-level
+  certificate repair. SPARK 50 -> 55.
+- **T19 (10-07 01:16Z), comprehensions in Frama-C:** a write loop per map; 5 of 5. Frama-C 44 -> 49. **All seven 43 ->
+  47** (clean-clone matrix at 1da32b3).
+- **T21 (10-07 01:38Z), max/min of one argument in SPARK and F*:** largest into all seven. **All seven 47 -> 48**
+  (clean-clone matrix at 25e3491).
+- **Zoom-out (10-07 01:32Z), `internal/RESEARCH-2026-10-07-zoom-out.md`:** a fresh landscape survey corrects four
+  claims of the 10-06 note. SWE-Proof also pairs specs with refuted twins. VerifyThisBench spans seven tools, though
+  not aligned. Agents now saturate Lean benchmarks. The seven kernels are five proof engines, not seven solvers.
+  Decisions in order: D6 common-mode audit under a second solver, D7 Lean mvcgen probe, the 88-task near misses, G9
+  datatypes with fields, D8 kernel-checked twin audit of public benchmark specs, D9 DafnyComp.
+- **Next (10-07):** D6 (SPARK per prover, Frama-C through Why3's Z3/CVC5, Rocq's rocqchk replay), D7 (Lean
+  mvcgen on AlgoVeri loops), the near misses (palindrome, odd_positions, swap_rows, double_all), then G9.

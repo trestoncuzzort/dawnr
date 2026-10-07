@@ -4,7 +4,7 @@ Text-level checks only, no kernel runs. Each map shape is one function `t_compK`
 `Seq.init` with one call of `Seq.init_index`, its postcondition stating the length and every element. The body's
 definedness is its precondition: element-free conjuncts once, as `t_n > 0 ==> ...`, the rest as a quantifier
 triggered on the element (`Seq.index t_s t_di`, or `t_ix t_di` over a range). A filter, and a comprehension inside a
-spec_fun, method or lemma, refuse by name; SPARK and Frama-C still refuse every comprehension by name."""
+spec_fun, method or lemma, refuse by name."""
 from __future__ import annotations
 
 import sys
@@ -15,7 +15,6 @@ sys.path.insert(0, str(HERE))
 
 import lower_framac  # noqa: E402
 import lower_fstar  # noqa: E402
-import lower_spark  # noqa: E402
 import surface  # noqa: E402
 import tasks_io  # noqa: E402
 
@@ -77,9 +76,9 @@ spec fun dbl(q: seq): int
     assert "comprehension inside a spec_fun, method or lemma" in refusal(task)
 
 
-def test_spark_and_framac_still_refuse_by_name():
-    for mod in (lower_spark, lower_framac):
-        assert "comprehensions are not lowered yet" in refusal(load("doubled"), mod), mod.__name__
+def test_framac_refuses_a_filter_by_name():
+    # SPARK and Frama-C carry maps since PREDICT T18, T19 (test_spark_comp.py, test_framac_comp.py)
+    assert "filtered comprehension is not lowered yet" in refusal(load("evens"), lower_framac)
 
 
 if __name__ == "__main__":
