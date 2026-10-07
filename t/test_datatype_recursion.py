@@ -109,7 +109,7 @@ def test_dafny():
     ok(re.search(r"match tr \{\n\s+case Leaf =>\n\s+s := 0;\n\s+case Node\(v, l, r\) =>\n\s+var t0 := Tree_sum\(l\);",
                  src), "a self-call in a case arm is hoisted inside a match statement")
     src = text(lower_dafny, "tree_insert")
-    ok(re.search(r"if \(x < v\) \{\n\s+var t\d+ := Tree_insert\(l, x\);", src),
+    ok(re.search(r"if \(x < v\) \{\n\s+var t\d+ := Tree_insert\(l, x, lo, v\);", src),   # PREDICT T60: the bounded form
        "a self-call in an if branch is hoisted inside an if statement")
     src = text(lower_dafny, "tree_mirror")
     ok("function mirror(q: Tree): Tree" in src, "a datatype spec_fun result is spelled by name")

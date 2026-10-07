@@ -3,9 +3,9 @@
 Every one-edit mutant of each body, classed by the interpreter over the task's bounded domain (t/audit.py): **killed** (the spec rejects its result somewhere), **same** (computes the same everywhere), **diverges** (runs out of steps where the real body ends), **survivor** (computes something different, and the spec accepts it everywhere).
 
 - tasks: 114; audited: 114; not audited: none
-- behaviour-changing mutants the specs kill: 1568 of 1570 (99.9%)
-- tasks whose spec admits a survivor: 1 of 114
-- dafny: real body verified in 111 of 114; of those, a survivor proved too (a wrong program with a proof) in 1
+- behaviour-changing mutants the specs kill: 1578 of 1578 (100.0%)
+- tasks whose spec admits a survivor: 0 of 114
+- dafny: real body verified in 111 of 114; of those, a survivor proved too (a wrong program with a proof) in 0
 
 | task | mutants | killed | same | diverges | survivors | proved by the kernel | a survivor: change at input |
 |---|---|---|---|---|---|---|---|
@@ -115,7 +115,7 @@ Every one-edit mutant of each body, classed by the interpreter over the task's b
 | tail | 6 | 6 | 0 | 0 | 0 | 0 |  |
 | tree_count | 8 | 8 | 0 | 0 | 0 | 0 |  |
 | tree_height | 9 | 9 | 0 | 0 | 0 | 0 |  |
-| tree_insert | 6 | 4 | 0 | 0 | 2 | 1 | compare-flip: `m := case tr { Leaf => Tree.Node(x, Tree.Leaf, Tree.Leaf), Node(v, l, r) => if x < v then Tree.Node(v, tree_insert(l, x), r) else Tree.Node(v, l, tree_insert(r, x)) };` -> `m := case tr { Leaf => Tree.Node(x, Tree.Leaf, Tree.Leaf), Node(v, l, r) => if x <= v then Tree.Node(v, tree_insert(l, x), r) else Tree.Node(v, l, tree_insert(r, x)) };` at tr=Tree.Node(0, Tree.Leaf, Tree.Leaf), x=0 -> real Tree.Node(0, Tree.Leaf, Tree.Node(0, Tree.Leaf, Tree.Leaf)), twin Tree.Node(0, Tree.Node(0, Tree.Leaf, Tree.Leaf), Tree.Leaf) |
+| tree_insert | 18 | 14 | 4 | 0 | 0 | 0 |  |
 | tree_mirror | 2 | 2 | 0 | 0 | 0 | 0 |  |
 | tree_sum | 4 | 4 | 0 | 0 | 0 | 0 |  |
 | weighted_sum | 30 | 26 | 0 | 4 | 0 | 0 |  |
