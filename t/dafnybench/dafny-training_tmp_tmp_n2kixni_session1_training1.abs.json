@@ -1,0 +1,64 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "y",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "neg"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "bool": true
+    }
+  ],
+  "name": "dafny_training_tmp_tmp_n2kixni_session1_training1__abs",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

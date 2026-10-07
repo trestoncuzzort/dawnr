@@ -1,0 +1,185 @@
+{
+  "body": [
+    {
+      "assign": [
+        "k_out",
+        {
+          "var": "k"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "j",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "j",
+              {
+                "args": [
+                  {
+                    "var": "j"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "k_out",
+              {
+                "args": [
+                  {
+                    "var": "k_out"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "j"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "j"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "j"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "j"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "j"
+                  },
+                  {
+                    "var": "k_out"
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "k_out"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_verify_tmp_tmphq7j0row_dataset_c_convert_examples_15__main_v",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "k"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "k_out",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

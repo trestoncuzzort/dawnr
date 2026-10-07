@@ -1,0 +1,123 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "y",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "neg"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "<"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "clover_abs__abs",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

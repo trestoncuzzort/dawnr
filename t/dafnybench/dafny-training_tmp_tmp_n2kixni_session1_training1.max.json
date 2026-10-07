@@ -1,0 +1,84 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "r",
+        "type": "int"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "assign": [
+              "r",
+              {
+                "int": 1
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "m",
+        {
+          "var": "r"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "bool": true
+    }
+  ],
+  "name": "dafny_training_tmp_tmp_n2kixni_session1_training1__max",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "bool": true
+    }
+  ],
+  "returns": [
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

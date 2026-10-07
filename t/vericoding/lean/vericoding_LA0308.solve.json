@@ -1,0 +1,132 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "maxSum"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "maxSum"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0308__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "var": "n_v"
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": ">="
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v2"
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "*"
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": "div"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "maxSum",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

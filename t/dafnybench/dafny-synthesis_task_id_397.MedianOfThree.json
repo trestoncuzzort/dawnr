@@ -1,0 +1,392 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "b"
+                    }
+                  ],
+                  "op": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "b"
+                    },
+                    {
+                      "var": "c"
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "c"
+                    },
+                    {
+                      "var": "b"
+                    }
+                  ],
+                  "op": "<="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "b"
+                    },
+                    {
+                      "var": "a"
+                    }
+                  ],
+                  "op": "<="
+                }
+              ],
+              "op": "and"
+            }
+          ],
+          "op": "or"
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "b"
+                          },
+                          {
+                            "var": "a"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "c"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "c"
+                          },
+                          {
+                            "var": "a"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "b"
+                          }
+                        ],
+                        "op": "<="
+                      }
+                    ],
+                    "op": "and"
+                  }
+                ],
+                "op": "or"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "median",
+                    {
+                      "var": "c"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "median",
+                    {
+                      "var": "a"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "median",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "median"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "median"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "median"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "a"
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "a"
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "c"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "c"
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "c"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "c"
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "var": "median"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "name": "dafny_synthesis_task_id_397__medianOfThree",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    },
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "median",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

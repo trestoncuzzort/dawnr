@@ -1,0 +1,268 @@
+{
+  "body": [
+    {
+      "assign": [
+        "a_out",
+        {
+          "var": "a"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "k",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "a_out",
+              {
+                "args": [
+                  {
+                    "var": "a_out"
+                  },
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "update"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "k",
+              {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "k"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a_out"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "k"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_out"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "i_v"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "k"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i_v"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    },
+                    {
+                      "var": "j"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "<="
+            },
+            "hi": {
+              "var": "n"
+            },
+            "lo": {
+              "var": "i"
+            },
+            "var": "j"
+          }
+        },
+        "hi": {
+          "var": "n"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "cs245_verification_tmp_tmp0h_nxhqp_sortingissues_firstattempt__sort",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "a_out",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

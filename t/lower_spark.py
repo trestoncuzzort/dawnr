@@ -6819,7 +6819,7 @@ def _lower(task: dict, body: list, witness: dict | None = None) -> str:
     task, body = tshape.desugar_seq_quants(task, body)   # SPEC.md "Quantifiers over a collection": seq ranges as indices
     task, body = tshape.desugar_par(task, body)          # PREDICT T47: a parallel loop as its sequential `for`
     task, body = tshape.desugar_exits(task, body)        # PREDICT T44: break/continue rewritten; `while true` stays
-    tshape.abstain_on_heap(task, "spark")                   # SPEC.md "Heap (v1)" (PREDICT T46): Dafny first
+    task, body, witness = tshape.desugar_heap(task, body, witness)   # PREDICT T53: copy-in/copy-out
     tshape.abstain_unless_carried(task, body, "spark", carried=frozenset({"real", "comp", "exit", "float"}), lib=SPARK_LIB)
     _comp_refusal(task, body)                              # PREDICT T18: maps carried, the rest refused by name
     if tshape.uses_ops(body, task, {"floor", "ceil"}):

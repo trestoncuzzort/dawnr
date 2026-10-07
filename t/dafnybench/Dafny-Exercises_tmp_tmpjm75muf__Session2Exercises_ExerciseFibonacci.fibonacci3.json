@@ -1,0 +1,438 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "a",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "f",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "var": "f"
+              },
+              "name": "tmp0",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "f"
+                  }
+                ],
+                "op": "+"
+              },
+              "name": "tmp1",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "a",
+              {
+                "var": "tmp0"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "f",
+              {
+                "var": "tmp1"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "i"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "fib"
+                        }
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "f"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "fun": "fib"
+                        }
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              },
+              "then": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "i"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "fun": "fib"
+                        }
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "f"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "fun": "fib"
+                        }
+                      }
+                    ],
+                    "op": "=="
+                  }
+                ],
+                "op": "and"
+              }
+            }
+          },
+          {
+            "args": [
+              {
+                "var": "f"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "f"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "f"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "fib"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisefibonacci__fibonacci3",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "f",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "fib"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n_v"
+                                },
+                                {
+                                  "int": 2
+                                }
+                              ],
+                              "op": "-"
+                            }
+                          ],
+                          "fun": "fib"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "then": {
+                    "int": 1
+                  }
+                }
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "fib",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

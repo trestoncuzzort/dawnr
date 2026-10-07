@@ -1,0 +1,339 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "arr"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        },
+        "name": "max_1",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "i_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "arr"
+                      },
+                      {
+                        "var": "i_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "max_1"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "max_1",
+                    {
+                      "args": [
+                        {
+                          "var": "arr"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v",
+              {
+                "args": [
+                  {
+                    "var": "i_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v"
+            },
+            {
+              "args": [
+                {
+                  "var": "arr"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "arr"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "i_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "i_v"
+              },
+              {
+                "args": [
+                  {
+                    "var": "arr"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "exists": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "arr"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "max_1"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "i_v"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "arr"
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "max_1"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "var": "i_v"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k_v"
+            }
+          },
+          {
+            "args": [
+              {
+                "var": "i_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "max",
+        {
+          "var": "max_1"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "arr"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "max"
+            }
+          ],
+          "op": "<="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "arr"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    },
+    {
+      "exists": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "arr"
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "max"
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "arr"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "x"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_vd0483__maxArrayReverse",
+  "params": [
+    {
+      "name": "arr",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "arr"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "max",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

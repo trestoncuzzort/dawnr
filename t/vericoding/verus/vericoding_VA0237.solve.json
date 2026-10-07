@@ -1,0 +1,274 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "r",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "r"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0237__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "lights",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "lights"
+          }
+        ],
+        "fun": "valid_input"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "args": [
+              {
+                "int": 2
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n_v"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "fun": "power2"
+                }
+              }
+            ],
+            "op": "*"
+          },
+          "then": {
+            "int": 1
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "power2",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "n_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v2"
+                  },
+                  {
+                    "int": 10
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "lights_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v2"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "fun": "power2"
+                    }
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lights_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "lights_v"
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "int": 100
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "lights_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_input",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        },
+        {
+          "name": "lights_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

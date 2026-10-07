@@ -1,0 +1,132 @@
+{
+  "body": [
+    {
+      "assign": [
+        "t_v",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "t_v"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_80__tetrahedralNumber",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "t_v",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

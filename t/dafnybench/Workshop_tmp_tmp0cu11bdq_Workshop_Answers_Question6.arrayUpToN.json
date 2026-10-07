@@ -1,0 +1,395 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "a",
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "fill"
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "a",
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "update"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "var": "i"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k_v"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "k_v2"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "k_v2"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "var": "i"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k_v2"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "j_v2"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "k_v3"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "hi": {
+                    "var": "i"
+                  },
+                  "lo": {
+                    "var": "j_v2"
+                  },
+                  "var": "k_v3"
+                }
+              },
+              "hi": {
+                "var": "i"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v2"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        "hi": {
+          "var": "n"
+        },
+        "lo": {
+          "args": [
+            {
+              "int": 0
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        },
+        "var": "j"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "j_v"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "<="
+            },
+            "hi": {
+              "var": "n"
+            },
+            "lo": {
+              "var": "j_v"
+            },
+            "var": "k"
+          }
+        },
+        "hi": {
+          "var": "n"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "j_v"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "workshop_tmp_tmp0cu11bdq_workshop_answers_question6__arrayUpToN",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

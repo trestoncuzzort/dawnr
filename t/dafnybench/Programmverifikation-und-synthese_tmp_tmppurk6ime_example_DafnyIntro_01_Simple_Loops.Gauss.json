@@ -1,0 +1,194 @@
+{
+  "body": [
+    {
+      "assign": [
+        "sum",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "sum",
+              {
+                "args": [
+                  {
+                    "var": "sum"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "var": "sum"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "i"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "i"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "i"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "op": "<="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "sum"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "programmverifikation_und_synthese_tmp_tmppurk6ime_example_dafnyintro_01_simple_loops__gauss",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "sum",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

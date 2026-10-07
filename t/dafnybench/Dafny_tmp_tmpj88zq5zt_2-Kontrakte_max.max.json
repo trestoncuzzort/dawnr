@@ -1,0 +1,257 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "assign": [
+              "m",
+              {
+                "args": [
+                  {
+                    "var": "b"
+                  },
+                  {
+                    "var": "j"
+                  }
+                ],
+                "op": "at"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "m",
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "at"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": ">"
+        },
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "j"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "dafny_tmp_tmpj88zq5zt_2_kontrakte_max__max",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "b",
+      "type": "seq"
+    },
+    {
+      "name": "i",
+      "type": "int"
+    },
+    {
+      "name": "j",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "i"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "i"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "j"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "j"
+        },
+        {
+          "args": [
+            {
+              "var": "b"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

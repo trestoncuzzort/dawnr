@@ -1,0 +1,235 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "s",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "m",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "s",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [
+                {
+                  "assign": [
+                    "m",
+                    {
+                      "var": "x"
+                    }
+                  ]
+                }
+              ],
+              "then": [
+                {
+                  "assign": [
+                    "m",
+                    {
+                      "var": "y"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "m",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "var": "m"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "name": "dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_maxsum__maxSum",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

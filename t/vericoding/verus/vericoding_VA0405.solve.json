@@ -1,0 +1,198 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 0
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0405__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    },
+    {
+      "name": "emotes",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          },
+          {
+            "var": "m"
+          },
+          {
+            "var": "k"
+          },
+          {
+            "args": [
+              {
+                "args": [],
+                "op": "seq"
+              },
+              {
+                "var": "emotes"
+              }
+            ],
+            "op": "+"
+          }
+        ],
+        "fun": "valid_input"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "emotes_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "emotes_v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "emotes_v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "i"
+            }
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_input",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        },
+        {
+          "name": "m_v",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        },
+        {
+          "name": "emotes_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

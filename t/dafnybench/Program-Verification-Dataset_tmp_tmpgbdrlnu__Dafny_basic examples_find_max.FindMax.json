@@ -1,0 +1,332 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "max",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "max"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "max",
+                    {
+                      "var": "i"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "var": "i"
+              },
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "max"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "max"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "max"
+                      }
+                    ],
+                    "op": "<"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "max"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "<"
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "or"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "max"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": ">="
+              },
+              "hi": {
+                "var": "i"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "max"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "max"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "max"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "x"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": ">="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "x"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_basic_examples_find_max__findMax",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "max",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

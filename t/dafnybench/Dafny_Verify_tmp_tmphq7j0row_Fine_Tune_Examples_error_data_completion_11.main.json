@@ -1,0 +1,221 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "j",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "i",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "assign": [
+        "j",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "j",
+              {
+                "args": [
+                  {
+                    "var": "j"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "j"
+              },
+              {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "j"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "int": 2
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_verify_tmp_tmphq7j0row_fine_tune_examples_error_data_completion_11__main_v",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

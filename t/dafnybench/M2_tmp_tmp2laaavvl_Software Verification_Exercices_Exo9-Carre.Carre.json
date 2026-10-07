@@ -1,0 +1,216 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "c",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "c",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "c"
+                      },
+                      {
+                        "args": [
+                          {
+                            "int": 2
+                          },
+                          {
+                            "var": "i"
+                          }
+                        ],
+                        "op": "*"
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "!="
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "i"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "m2_tmp_tmp2laaavvl_software_verification_exercices_exo9_carre__carre",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

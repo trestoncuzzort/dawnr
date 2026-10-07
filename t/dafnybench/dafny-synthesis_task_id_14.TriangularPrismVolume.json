@@ -1,0 +1,130 @@
+{
+  "body": [
+    {
+      "assign": [
+        "volume",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "base"
+                    },
+                    {
+                      "var": "height"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "length"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "volume"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "base"
+                    },
+                    {
+                      "var": "height"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "var": "length"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_14__triangularPrismVolume",
+  "params": [
+    {
+      "name": "base",
+      "type": "int"
+    },
+    {
+      "name": "height",
+      "type": "int"
+    },
+    {
+      "name": "length",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "base"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "height"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "length"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "volume",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

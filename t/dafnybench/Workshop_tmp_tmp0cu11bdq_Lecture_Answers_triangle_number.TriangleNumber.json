@@ -1,0 +1,210 @@
+{
+  "body": [
+    {
+      "assign": [
+        "t_v",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "n_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "n_v",
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "t_v",
+              {
+                "args": [
+                  {
+                    "var": "t_v"
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "n_v"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "n_v"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "t_v"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "t_v"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "workshop_tmp_tmp0cu11bdq_lecture_answers_triangle_number__triangleNumber",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "t_v",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

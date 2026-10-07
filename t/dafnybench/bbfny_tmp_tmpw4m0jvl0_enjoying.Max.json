@@ -1,0 +1,109 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "a"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "var": "c"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "b"
+        },
+        {
+          "var": "c"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "b"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "name": "bbfny_tmp_tmpw4m0jvl0_enjoying__max",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

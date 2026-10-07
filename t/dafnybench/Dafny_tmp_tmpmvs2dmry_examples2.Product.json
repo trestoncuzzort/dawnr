@@ -1,0 +1,365 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "m"
+        },
+        "name": "m1",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "res",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "var": "n"
+              },
+              "name": "n1",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "res",
+                    {
+                      "args": [
+                        {
+                          "var": "res"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "n1",
+                    {
+                      "args": [
+                        {
+                          "var": "n1"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "n1"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "!="
+              },
+              "decreases": {
+                "var": "n1"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 0
+                        },
+                        {
+                          "var": "n1"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "n1"
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "res"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    {
+                                      "var": "m"
+                                    },
+                                    {
+                                      "var": "m1"
+                                    }
+                                  ],
+                                  "op": "-"
+                                },
+                                {
+                                  "var": "n"
+                                }
+                              ],
+                              "op": "*"
+                            },
+                            {
+                              "var": "n"
+                            }
+                          ],
+                          "op": "+"
+                        },
+                        {
+                          "var": "n1"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "res"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n1"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "m1",
+              {
+                "args": [
+                  {
+                    "var": "m1"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "m1"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "!="
+        },
+        "decreases": {
+          "var": "m1"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "m1"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "m1"
+                  },
+                  {
+                    "var": "m"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "res"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "m"
+                      },
+                      {
+                        "var": "m1"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "res"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "m1"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "res"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "res"
+        },
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_tmp_tmpmvs2dmry_examples2__product",
+  "params": [
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "res",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

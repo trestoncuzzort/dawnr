@@ -9,8 +9,8 @@ task sat_scale(x: float, k: float, lim: float) returns (r: float)
   if v > lim {
     r := lim;
   } else {
-    if v < float(0) - lim {
-      r := float(0) - lim;
+    if v < -lim {
+      r := -lim;
     } else {
       r := v;
     }

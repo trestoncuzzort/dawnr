@@ -1,0 +1,483 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 10001
+        },
+        "name": "min_price",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "max_profit",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v2",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "prices"
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "at"
+              },
+              "name": "price",
+              "type": "int"
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "price"
+                  },
+                  {
+                    "var": "min_price"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "min_price",
+                    {
+                      "var": "price"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "price"
+                      },
+                      {
+                        "var": "min_price"
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "var": "max_profit"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "max_profit",
+                    {
+                      "args": [
+                        {
+                          "var": "price"
+                        },
+                        {
+                          "var": "min_price"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v2",
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v2"
+            },
+            {
+              "args": [
+                {
+                  "var": "prices"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "prices"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "i_v2"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "prices"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "var": "min_price"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "prices"
+                      },
+                      {
+                        "var": "j_v"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "var": "i_v2"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v"
+            }
+          },
+          {
+            "forall": {
+              "body": {
+                "forall": {
+                  "body": {
+                    "args": [
+                      {
+                        "var": "max_profit"
+                      },
+                      {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "prices"
+                              },
+                              {
+                                "var": "k"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "prices"
+                              },
+                              {
+                                "var": "j_v2"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "-"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "hi": {
+                    "var": "i_v2"
+                  },
+                  "lo": {
+                    "args": [
+                      {
+                        "var": "j_v2"
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  "var": "k"
+                }
+              },
+              "hi": {
+                "var": "i_v2"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j_v2"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "forall": {
+        "body": {
+          "forall": {
+            "body": {
+              "args": [
+                {
+                  "var": "max_profit"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "prices"
+                        },
+                        {
+                          "var": "j"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "prices"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": ">="
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "prices"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "args": [
+                {
+                  "var": "i_v"
+                },
+                {
+                  "int": 1
+                }
+              ],
+              "op": "+"
+            },
+            "var": "j"
+          }
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "prices"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i_v"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "software_verification_tmp_tmpv4ueky2d_best_time_to_buy_and_sell_stock_best_time_to_buy_and_sell_stock__best_time_to_buy_and_sell_stock",
+  "params": [
+    {
+      "name": "prices",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "args": [
+            {
+              "var": "prices"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "prices"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 100000
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 0
+                },
+                {
+                  "args": [
+                    {
+                      "var": "prices"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "<="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "prices"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 10000
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "prices"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "max_profit",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,109 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "<="
+        },
+        "else": [
+          {
+            "assign": [
+              "minValue",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "minValue",
+              {
+                "var": "a"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "minValue"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "minValue"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "var": "minValue"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "minValue"
+        },
+        {
+          "var": "b"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_404__min",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "minValue",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

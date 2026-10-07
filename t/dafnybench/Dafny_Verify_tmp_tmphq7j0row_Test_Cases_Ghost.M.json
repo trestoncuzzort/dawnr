@@ -1,0 +1,35 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "int": 29
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "int": 29
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_ghost__m",
+  "params": [],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

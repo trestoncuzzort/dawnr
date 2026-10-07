@@ -1,0 +1,114 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "a"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "b"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": ">="
+        },
+        {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "dafny_programs_tmp_tmpcwodh6qh_src_max__max",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

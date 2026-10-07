@@ -1,0 +1,259 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "v",
+        "type": "seq"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "v",
+              {
+                "args": [
+                  {
+                    "var": "v"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "v"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "num"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "num"
+            },
+            {
+              "args": [
+                {
+                  "var": "v"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "var": "num"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "v"
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "v"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "v"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "var": "num"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "result"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "hi": {
+          "var": "num"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "vericoding_vt0025__logspace",
+  "params": [
+    {
+      "name": "start",
+      "type": "int"
+    },
+    {
+      "name": "stop",
+      "type": "int"
+    },
+    {
+      "name": "endpoint",
+      "type": "bool"
+    },
+    {
+      "name": "base",
+      "type": "int"
+    },
+    {
+      "name": "num",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "num"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "base"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "base"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": "!="
+    },
+    {
+      "args": [
+        {
+          "var": "num"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

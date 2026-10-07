@@ -1,0 +1,278 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "z",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "bool": false
+        },
+        "name": "err",
+        "type": "bool"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 42
+            }
+          ],
+          "op": "!="
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "z",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "args": [
+                      {
+                        "int": 42
+                      },
+                      {
+                        "var": "y"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "div"
+              }
+            ]
+          },
+          {
+            "return": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "bool": false
+                  }
+                ],
+                "op": "pair"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "tmp0",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "bool": true
+        },
+        "name": "tmp1",
+        "type": "bool"
+      }
+    },
+    {
+      "assign": [
+        "z",
+        {
+          "var": "tmp0"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "err",
+        {
+          "var": "tmp1"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "z"
+            },
+            {
+              "var": "err"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 42
+            }
+          ],
+          "op": "!="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "fst"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "args": [
+                        {
+                          "int": 42
+                        },
+                        {
+                          "var": "y"
+                        }
+                      ],
+                      "op": "-"
+                    }
+                  ],
+                  "op": "div"
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "snd"
+                },
+                {
+                  "bool": false
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 42
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "fst"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "op": "snd"
+                },
+                {
+                  "bool": true
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "and"
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "formal_verication_dafny_tmp_tmpwgl2qz28_challenges_ex2__allow42",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "bool"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

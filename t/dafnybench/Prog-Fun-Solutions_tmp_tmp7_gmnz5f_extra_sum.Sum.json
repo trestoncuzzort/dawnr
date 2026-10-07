@@ -1,0 +1,316 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "x",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "y",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "n"
+        },
+        "name": "k",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "x",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "k",
+              {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "var": "k"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "fun": "sum_v"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "y"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "k"
+                            }
+                          ],
+                          "fun": "sum_v"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "k"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "s",
+        {
+          "var": "x"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "s"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "sum_v"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "prog_fun_solutions_tmp_tmp7_gmnz5f_extra_sum__sum",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "s",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "sum_v"
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "int": 0
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "sum_v",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

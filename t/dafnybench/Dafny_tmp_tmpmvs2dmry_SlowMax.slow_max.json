@@ -1,0 +1,421 @@
+{
+  "body": [
+    {
+      "assign": [
+        "z",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "var": "a"
+        },
+        "name": "x_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "b"
+        },
+        "name": "y_v",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "z",
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "x_v",
+              {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "y_v",
+              {
+                "args": [
+                  {
+                    "var": "y_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "z"
+                },
+                {
+                  "var": "x_v"
+                }
+              ],
+              "op": "<"
+            },
+            {
+              "args": [
+                {
+                  "var": "z"
+                },
+                {
+                  "var": "y_v"
+                }
+              ],
+              "op": "<"
+            }
+          ],
+          "op": "and"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "x_v"
+            },
+            {
+              "var": "y_v"
+            }
+          ],
+          "op": "+"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "y_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "x_v"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "b"
+                      },
+                      {
+                        "var": "y_v"
+                      }
+                    ],
+                    "op": "-"
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "x_v"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "args": [
+                  {
+                    "var": "b"
+                  },
+                  {
+                    "var": "y_v"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "z"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x_v"
+            },
+            {
+              "var": "y_v"
+            }
+          ],
+          "op": "<="
+        },
+        "else": [
+          {
+            "assign": [
+              "z",
+              {
+                "var": "a"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "z",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "z"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "z"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "max"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_tmp_tmpmvs2dmry_slowmax__slow_max",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "b"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "<"
+              },
+              "else": {
+                "var": "x"
+              },
+              "then": {
+                "var": "y"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "x"
+          },
+          {
+            "var": "y"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "max",
+      "params": [
+        {
+          "name": "x",
+          "type": "int"
+        },
+        {
+          "name": "y",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

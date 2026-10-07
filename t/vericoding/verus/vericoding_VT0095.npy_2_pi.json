@@ -1,0 +1,57 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 636619772
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 636619772
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 636000000
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 637000000
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "name": "vericoding_vt0095__npy_2_pi",
+  "params": [],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

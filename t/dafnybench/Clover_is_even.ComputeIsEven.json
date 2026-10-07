@@ -1,0 +1,90 @@
+{
+  "body": [
+    {
+      "assign": [
+        "is_even",
+        {
+          "bool": false
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "is_even",
+              {
+                "bool": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "var": "is_even"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "clover_is_even__computeIsEven",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "is_even",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

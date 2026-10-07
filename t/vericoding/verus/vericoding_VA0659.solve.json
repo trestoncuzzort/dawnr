@@ -1,0 +1,340 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "m"
+        },
+        "name": "curr",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "result_1",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "result_1",
+              {
+                "args": [
+                  {
+                    "var": "result_1"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "curr",
+              {
+                "args": [
+                  {
+                    "var": "curr"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "curr"
+            },
+            {
+              "int": 48
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "int": 48
+            },
+            {
+              "var": "curr"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "m"
+                }
+              ],
+              "fun": "valid_input"
+            }
+          },
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "curr"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "curr"
+              },
+              {
+                "int": 48
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "result_1"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "result_1"
+              },
+              {
+                "int": 47
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "result_1"
+              },
+              {
+                "args": [
+                  {
+                    "var": "curr"
+                  },
+                  {
+                    "var": "m"
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "result_1"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "m"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "valid_output"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0659__solve",
+  "params": [
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "m"
+          }
+        ],
+        "fun": "valid_input"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "m_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 23
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_input",
+      "params": [
+        {
+          "name": "m_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "int": 48
+          },
+          {
+            "var": "m_v2"
+          }
+        ],
+        "op": "-"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "hours_until_new_year",
+      "params": [
+        {
+          "name": "m_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "result_v"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "m_v3"
+                    }
+                  ],
+                  "fun": "hours_until_new_year"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 25
+                  },
+                  {
+                    "var": "result_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "result_v"
+                  },
+                  {
+                    "int": 47
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_output",
+      "params": [
+        {
+          "name": "m_v3",
+          "type": "int"
+        },
+        {
+          "name": "result_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

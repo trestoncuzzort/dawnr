@@ -1,0 +1,199 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "l"
+            },
+            {
+              "int": 0
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "slice"
+        },
+        "name": "firstPart",
+        "type": "seq"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "l"
+            },
+            {
+              "var": "n"
+            },
+            {
+              "args": [
+                {
+                  "var": "l"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "slice"
+        },
+        "name": "secondPart",
+        "type": "seq"
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "secondPart"
+            },
+            {
+              "var": "firstPart"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "l"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "args": [
+                {
+                  "var": "l"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "i"
+                        },
+                        {
+                          "var": "n"
+                        }
+                      ],
+                      "op": "+"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "l"
+                        }
+                      ],
+                      "op": "len"
+                    }
+                  ],
+                  "op": "mod"
+                }
+              ],
+              "op": "at"
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "l"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "name": "dafny_synthesis_task_id_586__splitAndAppend",
+  "params": [
+    {
+      "name": "l",
+      "type": "seq"
+    },
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "args": [
+            {
+              "var": "l"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

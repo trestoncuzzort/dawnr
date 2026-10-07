@@ -124,14 +124,48 @@ def test_dafny():
     ok("lemma t_refutation_certificate()" in cert, "the twin's certificate")
 
 
-def test_others_refuse_by_name():
-    for k in ("verus", "lean", "rocq", "fstar", "spark", "framac"):
-        try:
-            tlib.lower(load("swap_at"), k)
-            ok(False, f"{k} refuses")
-        except NotImplementedError as e:
-            ok("arrays by reference are not lowered yet" in str(e), f"{k} refuses by name: {e}")
+def test_framac():
+    # PREDICT T50: C pointers natively; old(a)[i] read at Pre through a \let-bound index; a whole old array refused
+    src = tlib.lower(load("swap_at"), "framac")
+    ok("int swap_at_t(int *a, int a_n, int i, int j)" in src and "requires \\valid(a + (0 .. a_n - 1));" in src
+       and "assigns a[0 .. a_n - 1];" in src, "a written pointer: valid, assigns its elements")
+    ok("a[i] = a[j];" in src and "\\at(a[t_old" in src and ", Pre))" in src, "a write; old(a)[j] at Pre")
+    src = tlib.lower(load("offset_all"), "framac")
+    ok("requires \\valid_read(b + (0 .. b_n - 1));" in src and "loop assigns a[0 .. a_n - 1], i;" in src,
+       "a read-only array stays valid_read; the loop frames the written one")
+    cert = tlib.lower(load("scale_all"), "framac", twin_body=True)
+    ok("t_entry: ;" in cert and "\\at(a[t_old" in cert and "t_entry))" in cert, "the certificate's old reads its entry")
+    try:
+        tlib.lower(load("reverse_in_place"), "framac")
+        ok(False, "a whole old array refuses")
+    except NotImplementedError as e:
+        ok("a whole array in old(...)" in str(e), f"refused by name: {e}")
 
+
+def test_copy_in_copy_out():
+    # PREDICT T53: the value kernels take the heap through tshape.desugar_heap; the rewrite computes what the in-place
+    # program computes (result and final array) on every domain point
+    import tshape
+    for n in TASKS + ("scale_all", "offset_all", "relu_all"):
+        t = load(n)
+        t1, b1 = tshape.desugar_par(t, t["body"])
+        nt, nb, _ = tshape.desugar_heap(t1, b1)
+        ok(check_wf.check_wf({**nt, "body": nb}) == [], f"{n}: the rewrite is well-formed")
+        ok(nt["returns"][0]["type"] == {"pair": [t["returns"][0]["type"], "seq"]}, f"{n}: returns (result, array)")
+        ref, ref2 = interp.Reference(t), interp.Reference({**nt, "body": nb})
+        m = t["modifies"][0]
+        ok([(v, h[m]) for (_e, v), h in zip(ref.points, ref.heaps)] == [(v.a, v.b) for _e, v in ref2.points],
+           f"{n}: the same result and final array everywhere")
+    for k in ("verus", "lean", "rocq", "fstar", "spark"):
+        src = tlib.lower(load("swap_at"), k)
+        ok("t_out" in src or "F'Result.P_B" in src, f"{k} lowers the heap by the rewrite")
+    two = surface.parse("t 1\ntask f(a: array, b: array) returns (r: int)\n  modifies a, b\n  ensures true\n"
+                        "{\n  r := 0;\n}\n")
+    try:
+        tlib.lower(two, "lean")
+        ok(False, "two written arrays refuse")
+    except NotImplementedError as e:
+        ok("two arrays" in str(e), f"two written arrays refuse by name: {e}")
 
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):

@@ -1,0 +1,140 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "int": 3
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "r"
+              },
+              {
+                "args": [
+                  {
+                    "int": 3
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "*"
+              }
+            ],
+            "fun": "average"
+          }
+        },
+        {
+          "args": [
+            {
+              "int": 3
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "args": [
+            {
+              "int": 3
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_function__triple_p",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "op": "+"
+          },
+          {
+            "int": 2
+          }
+        ],
+        "op": "div"
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "average",
+      "params": [
+        {
+          "name": "a",
+          "type": "int"
+        },
+        {
+          "name": "b",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

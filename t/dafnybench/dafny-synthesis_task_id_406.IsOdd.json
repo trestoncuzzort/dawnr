@@ -1,0 +1,72 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "=="
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_406__isOdd",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

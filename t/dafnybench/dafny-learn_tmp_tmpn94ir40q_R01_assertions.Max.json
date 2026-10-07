@@ -1,0 +1,81 @@
+{
+  "body": [
+    {
+      "assign": [
+        "c",
+        {
+          "var": "a"
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "b"
+            },
+            {
+              "var": "c"
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "var": "b"
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "name": "dafny_learn_tmp_tmpn94ir40q_r01_assertions__max",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

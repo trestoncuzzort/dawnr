@@ -1,0 +1,103 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "assign": [
+              "z",
+              {
+                "bool": false
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "z",
+              {
+                "bool": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "z"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "y"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "y"
+                    }
+                  ],
+                  "op": "=="
+                }
+              ],
+              "op": "and"
+            },
+            {
+              "var": "z"
+            }
+          ],
+          "op": "implies"
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "name": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__m4",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "z",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

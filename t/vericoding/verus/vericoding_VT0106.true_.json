@@ -1,0 +1,51 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "bool": true
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "bool": true
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "bool": false
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "not"
+    }
+  ],
+  "name": "vericoding_vt0106__true_",
+  "params": [],
+  "requires": [],
+  "returns": [
+    {
+      "name": "result",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

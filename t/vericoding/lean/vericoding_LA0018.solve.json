@@ -1,0 +1,455 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "m"
+              },
+              {
+                "var": "d"
+              }
+            ],
+            "fun": "columnsNeeded"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "m"
+              },
+              {
+                "var": "d"
+              }
+            ],
+            "fun": "columnsNeeded"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 4
+            },
+            {
+              "var": "result"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 6
+            }
+          ],
+          "op": "<="
+        }
+      ],
+      "op": "and"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0018__solve",
+  "params": [
+    {
+      "name": "m",
+      "type": "int"
+    },
+    {
+      "name": "d",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "m"
+          },
+          {
+            "var": "d"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "m_v"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": "=="
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "m_v"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "m_v"
+                      },
+                      {
+                        "int": 3
+                      }
+                    ],
+                    "op": "=="
+                  },
+                  "else": {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "var": "m_v"
+                          },
+                          {
+                            "int": 4
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "else": {
+                        "ite": {
+                          "cond": {
+                            "args": [
+                              {
+                                "var": "m_v"
+                              },
+                              {
+                                "int": 5
+                              }
+                            ],
+                            "op": "=="
+                          },
+                          "else": {
+                            "ite": {
+                              "cond": {
+                                "args": [
+                                  {
+                                    "var": "m_v"
+                                  },
+                                  {
+                                    "int": 6
+                                  }
+                                ],
+                                "op": "=="
+                              },
+                              "else": {
+                                "ite": {
+                                  "cond": {
+                                    "args": [
+                                      {
+                                        "var": "m_v"
+                                      },
+                                      {
+                                        "int": 7
+                                      }
+                                    ],
+                                    "op": "=="
+                                  },
+                                  "else": {
+                                    "ite": {
+                                      "cond": {
+                                        "args": [
+                                          {
+                                            "var": "m_v"
+                                          },
+                                          {
+                                            "int": 8
+                                          }
+                                        ],
+                                        "op": "=="
+                                      },
+                                      "else": {
+                                        "ite": {
+                                          "cond": {
+                                            "args": [
+                                              {
+                                                "var": "m_v"
+                                              },
+                                              {
+                                                "int": 9
+                                              }
+                                            ],
+                                            "op": "=="
+                                          },
+                                          "else": {
+                                            "ite": {
+                                              "cond": {
+                                                "args": [
+                                                  {
+                                                    "var": "m_v"
+                                                  },
+                                                  {
+                                                    "int": 10
+                                                  }
+                                                ],
+                                                "op": "=="
+                                              },
+                                              "else": {
+                                                "ite": {
+                                                  "cond": {
+                                                    "args": [
+                                                      {
+                                                        "var": "m_v"
+                                                      },
+                                                      {
+                                                        "int": 11
+                                                      }
+                                                    ],
+                                                    "op": "=="
+                                                  },
+                                                  "else": {
+                                                    "int": 31
+                                                  },
+                                                  "then": {
+                                                    "int": 30
+                                                  }
+                                                }
+                                              },
+                                              "then": {
+                                                "int": 31
+                                              }
+                                            }
+                                          },
+                                          "then": {
+                                            "int": 30
+                                          }
+                                        }
+                                      },
+                                      "then": {
+                                        "int": 31
+                                      }
+                                    }
+                                  },
+                                  "then": {
+                                    "int": 31
+                                  }
+                                }
+                              },
+                              "then": {
+                                "int": 30
+                              }
+                            }
+                          },
+                          "then": {
+                            "int": 31
+                          }
+                        }
+                      },
+                      "then": {
+                        "int": 30
+                      }
+                    }
+                  },
+                  "then": {
+                    "int": 31
+                  }
+                }
+              },
+              "then": {
+                "int": 28
+              }
+            }
+          },
+          "then": {
+            "int": 31
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "daysInMonth",
+      "params": [
+        {
+          "name": "m_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "int": 1
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "d_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "-"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "m_v2"
+                            }
+                          ],
+                          "fun": "daysInMonth"
+                        }
+                      }
+                    ],
+                    "op": "+"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 7
+              }
+            ],
+            "op": "div"
+          }
+        ],
+        "op": "+"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "columnsNeeded",
+      "params": [
+        {
+          "name": "m_v2",
+          "type": "int"
+        },
+        {
+          "name": "d_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "m_v3"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "m_v3"
+              },
+              {
+                "int": 12
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "int": 1
+              },
+              {
+                "var": "d_v2"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "d_v2"
+              },
+              {
+                "int": 7
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "m_v3",
+          "type": "int"
+        },
+        {
+          "name": "d_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

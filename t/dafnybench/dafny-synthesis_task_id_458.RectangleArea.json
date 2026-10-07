@@ -1,0 +1,83 @@
+{
+  "body": [
+    {
+      "assign": [
+        "area",
+        {
+          "args": [
+            {
+              "var": "length"
+            },
+            {
+              "var": "width"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "area"
+        },
+        {
+          "args": [
+            {
+              "var": "length"
+            },
+            {
+              "var": "width"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_458__rectangleArea",
+  "params": [
+    {
+      "name": "length",
+      "type": "int"
+    },
+    {
+      "name": "width",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "length"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    },
+    {
+      "args": [
+        {
+          "var": "width"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "area",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

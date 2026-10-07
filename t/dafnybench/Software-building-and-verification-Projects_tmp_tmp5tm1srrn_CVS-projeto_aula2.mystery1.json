@@ -1,0 +1,152 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "var": "m"
+                    }
+                  ],
+                  "fun": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__mystery1"
+                }
+              },
+              "name": "aux",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "res",
+              {
+                "args": [
+                  {
+                    "int": 1
+                  },
+                  {
+                    "var": "aux"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "res",
+              {
+                "var": "m"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "decreases": {
+    "var": "n"
+  },
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "res"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "m"
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "var": "res"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "software_building_and_verification_projects_tmp_tmp5tm1srrn_cvs_projeto_aula2__mystery1",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "m"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "res",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,109 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "a"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "var": "b"
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "var": "a"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "c"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    }
+  ],
+  "name": "dafny_workout_tmp_tmp0abkw6f8_starter_ex01__max",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

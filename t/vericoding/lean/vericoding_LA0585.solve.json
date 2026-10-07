@@ -1,0 +1,210 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "remainingFarmArea"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              }
+            ],
+            "fun": "remainingFarmArea"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0585__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "validFarmDimensions"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "a_v"
+              },
+              {
+                "int": 100
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 100
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validFarmDimensions",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      },
+                      {
+                        "var": "b_v2"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "var": "a_v2"
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "var": "b_v2"
+              }
+            ],
+            "op": "-"
+          },
+          {
+            "int": 1
+          }
+        ],
+        "op": "+"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "remainingFarmArea",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

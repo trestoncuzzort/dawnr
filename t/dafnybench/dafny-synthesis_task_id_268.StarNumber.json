@@ -1,0 +1,116 @@
+{
+  "body": [
+    {
+      "assign": [
+        "star",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 6
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "star"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "int": 6
+                    },
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "op": "*"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "-"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_268__starNumber",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "star",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

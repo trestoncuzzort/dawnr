@@ -1,0 +1,82 @@
+{
+  "body": [
+    {
+      "assign": [
+        "val2",
+        {
+          "args": [
+            {
+              "int": 2
+            },
+            {
+              "var": "val"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "val2"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "val"
+              }
+            ],
+            "fun": "double"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_learn_tmp_tmpn94ir40q_r01_functions__testDouble",
+  "params": [
+    {
+      "name": "val",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "val2",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "int": 2
+          },
+          {
+            "var": "val_v"
+          }
+        ],
+        "op": "*"
+      },
+      "decreases": {
+        "var": "val_v"
+      },
+      "name": "double",
+      "params": [
+        {
+          "name": "val_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,315 @@
+{
+  "body": [
+    {
+      "assign": [
+        "nmax",
+        {
+          "args": [
+            {
+              "var": "b"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "nmax"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "b"
+          },
+          {
+            "var": "nmax"
+          }
+        ],
+        "fun": "nitness"
+      }
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "b"
+          },
+          {
+            "var": "nmax"
+          }
+        ],
+        "fun": "is_max_nit"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "nitwit_tmp_tmplm098gxz_nit__max_nit",
+  "params": [
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "b"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "call": {
+        "args": [
+          {
+            "var": "b"
+          }
+        ],
+        "fun": "valid_base"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "nmax",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "var": "b_v"
+              },
+              {
+                "int": 2
+              }
+            ],
+            "op": ">="
+          }
+        }
+      },
+      "decreases": {
+        "var": "b_v"
+      },
+      "name": "valid_base",
+      "params": [
+        {
+          "name": "b_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "b_v2"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "b_v2"
+                    }
+                  ],
+                  "fun": "valid_base"
+                }
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "var": "b_v2"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "b_v2"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "nitness",
+      "params": [
+        {
+          "name": "b_v2",
+          "type": "int"
+        },
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "b_v3"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "q"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "bool": false
+          },
+          "then": {
+            "args": [
+              {
+                "var": "q"
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v3"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ],
+            "op": "=="
+          }
+        }
+      },
+      "decreases": {
+        "args": [
+          {
+            "var": "b_v3"
+          },
+          {
+            "var": "q"
+          }
+        ],
+        "op": "+"
+      },
+      "name": "is_max_nit",
+      "params": [
+        {
+          "name": "b_v3",
+          "type": "int"
+        },
+        {
+          "name": "q",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

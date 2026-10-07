@@ -1,0 +1,68 @@
+{
+  "body": [
+    {
+      "assign": [
+        "dogYears_v",
+        {
+          "args": [
+            {
+              "int": 7
+            },
+            {
+              "var": "humanYears"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "dogYears_v"
+        },
+        {
+          "args": [
+            {
+              "int": 7
+            },
+            {
+              "var": "humanYears"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_264__dogYears",
+  "params": [
+    {
+      "name": "humanYears",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "humanYears"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "dogYears_v",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

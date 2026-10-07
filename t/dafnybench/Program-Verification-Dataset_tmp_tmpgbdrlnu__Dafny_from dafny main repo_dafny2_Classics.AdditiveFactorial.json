@@ -1,0 +1,411 @@
+{
+  "body": [
+    {
+      "assign": [
+        "u",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "r",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "var": {
+              "init": {
+                "var": "u"
+              },
+              "name": "v",
+              "type": "int"
+            }
+          },
+          {
+            "var": {
+              "init": {
+                "int": 1
+              },
+              "name": "s",
+              "type": "int"
+            }
+          },
+          {
+            "while": {
+              "body": [
+                {
+                  "assign": [
+                    "u",
+                    {
+                      "args": [
+                        {
+                          "var": "u"
+                        },
+                        {
+                          "var": "v"
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "s",
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "+"
+                    }
+                  ]
+                }
+              ],
+              "cond": {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "var": "r"
+                  }
+                ],
+                "op": "<="
+              },
+              "decreases": {
+                "args": [
+                  {
+                    "var": "r"
+                  },
+                  {
+                    "var": "s"
+                  }
+                ],
+                "op": "-"
+              },
+              "invariants": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "int": 1
+                        },
+                        {
+                          "var": "s"
+                        }
+                      ],
+                      "op": "<="
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "r"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "+"
+                        }
+                      ],
+                      "op": "<="
+                    }
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "u"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "s"
+                        },
+                        {
+                          "call": {
+                            "args": [
+                              {
+                                "var": "r"
+                              }
+                            ],
+                            "fun": "factorial"
+                          }
+                        }
+                      ],
+                      "op": "*"
+                    }
+                  ],
+                  "op": "=="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "u"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "r"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "var": "r"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "r"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "u"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "r"
+                    }
+                  ],
+                  "fun": "factorial"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "u"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "u"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "u"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "factorial"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "program_verification_dataset_tmp_tmpgbdrlnu__dafny_from_dafny_main_repo_dafny2_classics__additiveFactorial",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "u",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "factorial"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "factorial",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

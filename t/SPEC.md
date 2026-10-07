@@ -2875,7 +2875,21 @@ so a certificate can ground `a` and `old(a)`.
   stated) and `a[i] := e;`. An element and the length are read on the array itself, `a[i]` and `a.Length`, the terms
   Dafny's array axioms trigger on (measured: reverse_in_place timed out reading `a[..][k]`). A whole read is `a[..]`,
   and the entry state is `old(a[..])`.
-- **The others** refuse by name (`tshape.has_heap`) until each is built and measured.
+- **Frama-C (PREDICT T50):** natively, as C pointers. The array is `int *a, int a_n`, `\valid` when written and
+  `\valid_read` otherwise, with `assigns a[0 .. a_n - 1]` and the arrays in a loop's frame. A write is `a[i] = e;`
+  after an assert of the index's range. `old(a)[i]` is `\let t = i; \at(a[t], Pre)`, the index bound in the current
+  state, and `len(old(a))` is `a_n`. A certificate replays the writes on its ground arrays and reads old(...) at its
+  own entry label. A whole array in old(...) (`a == rev(old(a))`) refuses by name.
+- **Verus, Lean, Rocq, F\* and SPARK (PREDICT T53):** by copy-in/copy-out (`tshape.desugar_heap`), which is the
+  same program because nothing is aliased and nothing escapes.
+  - The task becomes a value task: the array parameter is a seq, the body works on a local copy, and
+    `m[i] := e` becomes `copy := update(copy, i, e)`.
+  - The result is the pair (the old result, the copy's final contents). An ensures reads `r` as `t_out.0`, the array
+    as `t_out.1`, and `old(e)` as e over the parameters, which hold the entry contents.
+  - A value witness's twin value becomes the same pair. A parallel loop is first made sequential
+    (`desugar_par`).
+  - `test_heap.py` checks the rewrite against the interpreter on every domain point of every heap task.
+  - A task writing two arrays, or whose result type has no default value, refuses by name.
 - **The hand-back:** writes a Python list mutated in place.
 
 ### Concurrency (v1): parallel loops
@@ -2906,7 +2920,7 @@ invariants (`tshape.desugar_par`), which owes `lo <= hi` as the `for` sugar does
 reverse order, a second schedule, so a gap in the rule would show as a disagreement with the kernels.
 
 **The lowerings:** every kernel through the sequential rewrite. A loop writes an array, so this needs "Heap (v1)"
-(Dafny today); the hand-back submits the iterations to a thread pool, which the rule makes safe.
+(natively in Dafny and Frama-C, by copy-in/copy-out in the other five since PREDICT T53); the hand-back submits the iterations to a thread pool, which the rule makes safe.
 
 ### Floats (v1): IEEE-754 binary64
 
@@ -2941,8 +2955,13 @@ a value that rounds, the largest finite doubles (an overflow twin's witness) and
   being the definedness obligation. A literal is written as the exact decimal value of its double, so no rounding
   is left to the compiler. `Long_Float'Min`/`'Max` are used. `sqrt`, `real(f)` and a run-time `float(n)` refuse by
   name until built.
-- **Refused by name:** the other six. Dafny has no IEEE type; Verus, Lean, Rocq and F* have no float theory
-  installed here; Frama-C's `double` is the next landing.
+- **Frama-C (PREDICT T51):** C's `double`. ACSL computes on reals (its manual's "Floating-point" section), so
+  every t float operation in a specification is written with its rounding made explicit, `((double)(a op b))`.
+  In code the operation is C's own, preceded by `\is_finite` of that rounded value (and a nonzero divisor). Each
+  float parameter is `requires \is_finite(p)`. A literal is the exact decimal value of its double (WP did not read a
+  hexadecimal one, measured), and a certificate declares a float witness the same way.
+- **Refused by name:** the other five. Dafny has no IEEE type; Verus, Lean, Rocq and F* have no float theory
+  installed here.
 
 ## The twins
 

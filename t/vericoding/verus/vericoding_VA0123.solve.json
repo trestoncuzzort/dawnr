@@ -1,0 +1,462 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "ite": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": ">="
+                    },
+                    "else": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n"
+                                }
+                              ],
+                              "op": "neg"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "mod"
+                        }
+                      ],
+                      "op": "neg"
+                    },
+                    "then": {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "mod"
+                    }
+                  }
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            "else": {
+              "args": [
+                {
+                  "ite": {
+                    "cond": {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 0
+                        }
+                      ],
+                      "op": ">="
+                    },
+                    "else": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "var": "n"
+                                }
+                              ],
+                              "op": "neg"
+                            },
+                            {
+                              "int": 2
+                            }
+                          ],
+                          "op": "div"
+                        }
+                      ],
+                      "op": "neg"
+                    },
+                    "then": {
+                      "args": [
+                        {
+                          "var": "n"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  }
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "-"
+            },
+            "then": {
+              "ite": {
+                "cond": {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 0
+                    }
+                  ],
+                  "op": ">="
+                },
+                "else": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n"
+                            }
+                          ],
+                          "op": "neg"
+                        },
+                        {
+                          "int": 2
+                        }
+                      ],
+                      "op": "div"
+                    }
+                  ],
+                  "op": "neg"
+                },
+                "then": {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "div"
+                }
+              }
+            }
+          }
+        },
+        "name": "result_1",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "result_1"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "call": {
+                "args": [
+                  {
+                    "var": "n"
+                  }
+                ],
+                "fun": "alternating_sum"
+              }
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "mod"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "result"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "div"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        }
+      ],
+      "op": "and"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "!="
+        },
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 2
+                    }
+                  ],
+                  "op": "div"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "-"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0123__solve",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "n"
+          }
+        ],
+        "fun": "valid_input"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "alternating_sum"
+                    }
+                  },
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "n_v"
+                              },
+                              {
+                                "int": 2
+                              }
+                            ],
+                            "op": "mod"
+                          },
+                          {
+                            "int": 0
+                          }
+                        ],
+                        "op": "=="
+                      },
+                      "else": {
+                        "args": [
+                          {
+                            "var": "n_v"
+                          }
+                        ],
+                        "op": "neg"
+                      },
+                      "then": {
+                        "var": "n_v"
+                      }
+                    }
+                  }
+                ],
+                "op": "+"
+              },
+              "then": {
+                "args": [
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "neg"
+              }
+            }
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "alternating_sum",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "var": "n_v2"
+          },
+          {
+            "int": 0
+          }
+        ],
+        "op": ">"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_input",
+      "params": [
+        {
+          "name": "n_v2",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

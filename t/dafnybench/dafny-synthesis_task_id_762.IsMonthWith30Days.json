@@ -1,0 +1,155 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 4
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 6
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 9
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 11
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "or"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 4
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 6
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 9
+                }
+              ],
+              "op": "=="
+            },
+            {
+              "args": [
+                {
+                  "var": "month"
+                },
+                {
+                  "int": 11
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "or"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_762__isMonthWith30Days",
+  "params": [
+    {
+      "name": "month",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 1
+        },
+        {
+          "var": "month"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "var": "month"
+        },
+        {
+          "int": 12
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

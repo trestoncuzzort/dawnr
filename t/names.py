@@ -181,6 +181,10 @@ KEYWORDS: dict[str, frozenset[str]] = {
         "match", "with", "end", "fix", "Prop", "Set", "Type", "as", "cofix",
         "for", "return", "struct", "wf", "measure", "Fixpoint", "Definition",
         "Lemma", "Theorem", "Proof", "Qed", "Inductive", "Record", "mod",
+        # the Rocq reference manual's full lists (receipt a991b51f25db, 2026-10-07): the main grammar's keywords and
+        # the prelude's (`by` made the autonomy suite's aabb_overlap MALFORMED)
+        "is", "of", "where", "SProp", "Axiom", "CoFixpoint", "Hypothesis", "Parameter", "Variable",
+        "by", "exists2", "using",
     }),
     # lower_fstar.RESERVED verbatim (F* syntax keywords, plus the two
     # bare built-in type names `int`/`bool` -- see that set's own dated

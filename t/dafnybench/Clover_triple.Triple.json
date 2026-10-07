@@ -1,0 +1,56 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "args": [
+            {
+              "int": 3
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "clover_triple__triple",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

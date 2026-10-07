@@ -1,0 +1,173 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "s",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "m",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "s",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": ">="
+        },
+        "else": [
+          {
+            "assign": [
+              "m",
+              {
+                "var": "y"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "m",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "var": "m"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "x"
+                },
+                {
+                  "var": "y"
+                }
+              ],
+              "op": ">="
+            },
+            "else": {
+              "var": "y"
+            },
+            "then": {
+              "var": "x"
+            }
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_index__maxSum",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

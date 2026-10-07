@@ -1,0 +1,147 @@
+{
+  "body": [
+    {
+      "assign": [
+        "index",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "index"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "key"
+                  }
+                ],
+                "op": "=="
+              },
+              "else": [],
+              "then": [
+                {
+                  "return": [
+                    "index",
+                    {
+                      "int": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "index",
+              {
+                "args": [
+                  {
+                    "var": "index"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "index"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "index"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "bool": true
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "index",
+        {
+          "args": [
+            {
+              "int": 10
+            }
+          ],
+          "op": "neg"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "bool": true
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_training_tmp_tmp_n2kixni_session1_training1__find",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    },
+    {
+      "name": "key",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "bool": true
+    }
+  ],
+  "returns": [
+    {
+      "name": "index",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

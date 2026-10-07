@@ -1,0 +1,259 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "var": "y0"
+        },
+        "name": "y",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "z",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "z",
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "*"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "var": "y"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "y0"
+                            },
+                            {
+                              "var": "y"
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "power"
+                    }
+                  }
+                ],
+                "op": "=="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "z"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y0"
+              }
+            ],
+            "fun": "power"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "cs245_verification_tmp_tmp0h_nxhqp_a8_q1__a8Q1",
+  "params": [
+    {
+      "name": "y0",
+      "type": "int"
+    },
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "y0"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "z",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "op": "<="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "n"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "power"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n"
+      },
+      "name": "power",
+      "params": [
+        {
+          "name": "a",
+          "type": "int"
+        },
+        {
+          "name": "n",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

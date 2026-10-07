@@ -1,0 +1,121 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "y",
+              {
+                "var": "x"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "y",
+              {
+                "args": [
+                  {
+                    "var": "x"
+                  }
+                ],
+                "op": "neg"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              }
+            ],
+            "fun": "abs_v"
+          }
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_learn_tmp_tmpn94ir40q_r01_functions__abs",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "x_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "var": "x_v"
+          },
+          "then": {
+            "args": [
+              {
+                "var": "x_v"
+              }
+            ],
+            "op": "neg"
+          }
+        }
+      },
+      "decreases": {
+        "var": "x_v"
+      },
+      "name": "abs_v",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

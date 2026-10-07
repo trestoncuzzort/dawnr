@@ -110,12 +110,11 @@ def test_kernels():
     d = tlib.lower(load("offset_all"), "dafny")
     ok("while (i < a.Length)" in d and "a[i] := (a[i] - b[i]);" in d and "requires a != b" in d,
        "Dafny verifies the sequential loop")
-    for k in ("verus", "lean", "rocq", "fstar", "spark", "framac"):
-        try:
-            tlib.lower(load("scale_all"), k)
-            ok(False, f"{k} refuses")
-        except NotImplementedError as e:
-            ok("arrays by reference" in str(e), f"{k} refuses by name (the array): {e}")
+    ok("int scale_all_t(int *a, int a_n, int k)" in tlib.lower(load("scale_all"), "framac"),
+       "Frama-C carries it with the heap (PREDICT T50)")
+    for k in ("verus", "lean", "rocq", "fstar", "spark"):
+        src = tlib.lower(load("scale_all"), k)
+        ok("t_out" in src or "F'Result.P_B" in src, f"{k} lowers it through the heap rewrite (PREDICT T53)")
 
 
 if __name__ == "__main__":

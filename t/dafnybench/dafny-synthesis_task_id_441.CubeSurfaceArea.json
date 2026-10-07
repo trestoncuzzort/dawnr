@@ -1,0 +1,84 @@
+{
+  "body": [
+    {
+      "assign": [
+        "area",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 6
+                },
+                {
+                  "var": "size"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "size"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "area"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "int": 6
+                },
+                {
+                  "var": "size"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "size"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_441__cubeSurfaceArea",
+  "params": [
+    {
+      "name": "size",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "size"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "area",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

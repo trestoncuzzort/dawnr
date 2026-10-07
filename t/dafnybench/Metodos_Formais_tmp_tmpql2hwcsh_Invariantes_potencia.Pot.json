@@ -1,0 +1,330 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "var": "x"
+        },
+        "name": "b",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "y"
+        },
+        "name": "e",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  },
+                  {
+                    "var": "b"
+                  }
+                ],
+                "op": "*"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "e",
+              {
+                "args": [
+                  {
+                    "var": "e"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "e"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "e"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "b"
+                        },
+                        {
+                          "var": "e"
+                        }
+                      ],
+                      "fun": "potencia"
+                    }
+                  },
+                  {
+                    "var": "r"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "x"
+                    },
+                    {
+                      "var": "y"
+                    }
+                  ],
+                  "fun": "potencia"
+                }
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "r"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          {
+            "args": [
+              {
+                "var": "e"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "x"
+              },
+              {
+                "var": "y"
+              }
+            ],
+            "fun": "potencia"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "metodos_formais_tmp_tmpql2hwcsh_invariantes_potencia__pot",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              },
+              {
+                "args": [
+                  {
+                    "var": "y_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">="
+              }
+            ],
+            "op": "and"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "y_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "var": "x_v"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "x_v"
+                        },
+                        {
+                          "args": [
+                            {
+                              "var": "y_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "potencia"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "y_v"
+      },
+      "name": "potencia",
+      "params": [
+        {
+          "name": "x_v",
+          "type": "int"
+        },
+        {
+          "name": "y_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

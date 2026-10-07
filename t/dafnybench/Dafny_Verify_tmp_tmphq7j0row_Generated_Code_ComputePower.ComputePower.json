@@ -1,0 +1,306 @@
+{
+  "body": [
+    {
+      "assign": [
+        "p",
+        {
+          "int": 1
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "p",
+              {
+                "args": [
+                  {
+                    "var": "p"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "*"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "!="
+        },
+        "decreases": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "i"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "<="
+            },
+            "else": {
+              "args": [
+                {
+                  "var": "i"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "-"
+            },
+            "then": {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "-"
+            }
+          }
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "i"
+                      },
+                      {
+                        "var": "n"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "p"
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "fun": "power"
+                    }
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "p"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "p"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "p"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "power"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_verify_tmp_tmphq7j0row_generated_code_computepower__computePower",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "p",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">="
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "=="
+              },
+              "else": {
+                "args": [
+                  {
+                    "int": 2
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            },
+                            {
+                              "int": 1
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "power"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              "then": {
+                "int": 1
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "power",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

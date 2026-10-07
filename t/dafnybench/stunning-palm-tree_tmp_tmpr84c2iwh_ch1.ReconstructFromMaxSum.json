@@ -1,0 +1,206 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "x",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "y",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "x",
+        {
+          "var": "m"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "y",
+        {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "var": "m"
+            }
+          ],
+          "op": "-"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "pair"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "s"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            }
+          ],
+          "op": "+"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "snd"
+            }
+          ],
+          "op": "=="
+        },
+        {
+          "args": [
+            {
+              "var": "m"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "fst"
+            }
+          ],
+          "op": "=="
+        }
+      ],
+      "op": "or"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "fst"
+        },
+        {
+          "var": "m"
+        }
+      ],
+      "op": "<="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "r"
+            }
+          ],
+          "op": "snd"
+        },
+        {
+          "var": "m"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "name": "stunning_palm_tree_tmp_tmpr84c2iwh_ch1__reconstructFromMaxSum",
+  "params": [
+    {
+      "name": "s",
+      "type": "int"
+    },
+    {
+      "name": "m",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "s"
+            },
+            {
+              "var": "m"
+            }
+          ],
+          "op": "-"
+        },
+        {
+          "var": "m"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": {
+        "pair": [
+          "int",
+          "int"
+        ]
+      }
+    }
+  ],
+  "t": 1
+}

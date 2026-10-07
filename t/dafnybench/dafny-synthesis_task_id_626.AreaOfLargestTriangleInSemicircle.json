@@ -1,0 +1,68 @@
+{
+  "body": [
+    {
+      "assign": [
+        "area",
+        {
+          "args": [
+            {
+              "var": "radius"
+            },
+            {
+              "var": "radius"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "area"
+        },
+        {
+          "args": [
+            {
+              "var": "radius"
+            },
+            {
+              "var": "radius"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_626__areaOfLargestTriangleInSemicircle",
+  "params": [
+    {
+      "name": "radius",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "radius"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "area",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

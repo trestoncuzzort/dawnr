@@ -58,7 +58,9 @@ def test_a_slice_index_in_the_body_reads_the_base_buffer():
 
 
 def test_refusals_by_name():
-    assert "filtered comprehension is not lowered yet" in refusal(load("evens"))
+  # PREDICT T55: evens' spec now states the comprehension too, so the refusal can name it in a spec position
+    e = refusal(load("evens"))
+    assert "comprehension" in e and "not lowered yet" in e, e
     task = surface.parse("""t 1
 task same_len(s: seq) returns (r: int)
   ensures r == len([2 * x for x in s])

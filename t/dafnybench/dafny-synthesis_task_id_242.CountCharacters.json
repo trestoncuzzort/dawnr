@@ -1,0 +1,121 @@
+{
+  "body": [
+    {
+      "assign": [
+        "count",
+        {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "count"
+        },
+        {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_synthesis_task_id_242__countCharacters",
+  "params": [
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "count",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

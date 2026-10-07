@@ -1,0 +1,93 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        },
+        "name": "y",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "r",
+        {
+          "args": [
+            {
+              "int": 6
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "*"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "args": [
+            {
+              "int": 3
+            },
+            {
+              "var": "x"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_triple__tripleConditions",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "mod"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

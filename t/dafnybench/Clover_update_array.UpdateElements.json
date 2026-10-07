@@ -1,0 +1,250 @@
+{
+  "body": [
+    {
+      "assign": [
+        "a_out",
+        {
+          "var": "a"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 4
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    },
+                    {
+                      "int": 4
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 3
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    },
+    {
+      "assign": [
+        "a_out",
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 7
+            },
+            {
+              "int": 516
+            }
+          ],
+          "op": "update"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "int": 4
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "int": 3
+            }
+          ],
+          "op": "+"
+        },
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 4
+            }
+          ],
+          "op": "at"
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a_out"
+            },
+            {
+              "int": 7
+            }
+          ],
+          "op": "at"
+        },
+        {
+          "int": 516
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "i"
+                    },
+                    {
+                      "int": 7
+                    }
+                  ],
+                  "op": "!="
+                },
+                {
+                  "args": [
+                    {
+                      "var": "i"
+                    },
+                    {
+                      "int": 4
+                    }
+                  ],
+                  "op": "!="
+                }
+              ],
+              "op": "and"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a_out"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "at"
+                }
+              ],
+              "op": "=="
+            }
+          ],
+          "op": "implies"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "a_out"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "name": "clover_update_array__updateElements",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 8
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "a_out",
+      "type": "seq"
+    }
+  ],
+  "t": 1
+}

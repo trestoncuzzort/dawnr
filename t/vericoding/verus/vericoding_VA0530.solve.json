@@ -1,0 +1,451 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "b"
+                },
+                {
+                  "var": "d"
+                }
+              ],
+              "op": "<"
+            },
+            "else": {
+              "var": "d"
+            },
+            "then": {
+              "var": "b"
+            }
+          }
+        },
+        "name": "m1_i8",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "c"
+                }
+              ],
+              "op": ">"
+            },
+            "else": {
+              "var": "c"
+            },
+            "then": {
+              "var": "a"
+            }
+          }
+        },
+        "name": "m1_i8_v",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "var": "m1_i8"
+            },
+            {
+              "var": "m1_i8_v"
+            }
+          ],
+          "op": "-"
+        },
+        "name": "overlap_i8",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "overlap_i8"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">"
+            },
+            "else": {
+              "int": 0
+            },
+            "then": {
+              "var": "overlap_i8"
+            }
+          }
+        },
+        "name": "res_i8",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "res_i8"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "b"
+              },
+              {
+                "var": "c"
+              },
+              {
+                "var": "d"
+              }
+            ],
+            "fun": "interval_overlap_length"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 100
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0530__solve",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    },
+    {
+      "name": "c",
+      "type": "int"
+    },
+    {
+      "name": "d",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "a"
+          },
+          {
+            "var": "b"
+          },
+          {
+            "var": "c"
+          },
+          {
+            "var": "d"
+          }
+        ],
+        "fun": "valid_input"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "a_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "a_v"
+                  },
+                  {
+                    "var": "b_v"
+                  }
+                ],
+                "op": "<"
+              },
+              {
+                "args": [
+                  {
+                    "var": "b_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "c_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "c_v"
+                  },
+                  {
+                    "var": "d_v"
+                  }
+                ],
+                "op": "<"
+              },
+              {
+                "args": [
+                  {
+                    "var": "d_v"
+                  },
+                  {
+                    "int": 100
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_input",
+      "params": [
+        {
+          "name": "a_v",
+          "type": "int"
+        },
+        {
+          "name": "b_v",
+          "type": "int"
+        },
+        {
+          "name": "c_v",
+          "type": "int"
+        },
+        {
+          "name": "d_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "var": "b_v2"
+                          },
+                          {
+                            "var": "d_v2"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      "else": {
+                        "var": "d_v2"
+                      },
+                      "then": {
+                        "var": "b_v2"
+                      }
+                    }
+                  },
+                  {
+                    "ite": {
+                      "cond": {
+                        "args": [
+                          {
+                            "var": "a_v2"
+                          },
+                          {
+                            "var": "c_v2"
+                          }
+                        ],
+                        "op": ">="
+                      },
+                      "else": {
+                        "var": "c_v2"
+                      },
+                      "then": {
+                        "var": "a_v2"
+                      }
+                    }
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "b_v2"
+                      },
+                      {
+                        "var": "d_v2"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  "else": {
+                    "var": "d_v2"
+                  },
+                  "then": {
+                    "var": "b_v2"
+                  }
+                }
+              },
+              {
+                "ite": {
+                  "cond": {
+                    "args": [
+                      {
+                        "var": "a_v2"
+                      },
+                      {
+                        "var": "c_v2"
+                      }
+                    ],
+                    "op": ">="
+                  },
+                  "else": {
+                    "var": "c_v2"
+                  },
+                  "then": {
+                    "var": "a_v2"
+                  }
+                }
+              }
+            ],
+            "op": "-"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "interval_overlap_length",
+      "params": [
+        {
+          "name": "a_v2",
+          "type": "int"
+        },
+        {
+          "name": "b_v2",
+          "type": "int"
+        },
+        {
+          "name": "c_v2",
+          "type": "int"
+        },
+        {
+          "name": "d_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

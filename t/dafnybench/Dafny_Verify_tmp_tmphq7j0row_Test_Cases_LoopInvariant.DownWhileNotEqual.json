@@ -1,0 +1,118 @@
+{
+  "body": [
+    {
+      "assign": [
+        "i",
+        {
+          "var": "n"
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "i",
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "!="
+        },
+        "decreases": {
+          "var": "i"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "i"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_verify_tmp_tmphq7j0row_test_cases_loopinvariant__downWhileNotEqual",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "n"
+        }
+      ],
+      "op": "<="
+    }
+  ],
+  "returns": [
+    {
+      "name": "i",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

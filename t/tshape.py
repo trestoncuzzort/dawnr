@@ -482,6 +482,144 @@ def abstain_on_floats(task: dict, body: list, kernel: str) -> None:
         raise NotImplementedError(f"{kernel}: floats are not lowered yet (SPEC.md 'Floats (v1)')")
 
 
+# PREDICT T53: Heap (v1) by copy-in/copy-out, for a kernel that writes a task as a function of values. With no aliasing
+# and nothing escaping (SPEC.md "Heap (v1)", Ada RM 6.2), a task writing array m in place is the same program as a value
+# task returning the pair (its result, m's final contents): the body works on a local copy, `m[i] := e` is
+# `copy := update(copy, i, e)`, the ensures reads `r` as `t_out.0` and m as `t_out.1`, and `old(e)` is e over the
+# parameters, which now hold the entry contents. A task that writes two arrays, or whose result has no default value,
+# refuses by name.
+_HEAP_DEFAULT = {"int": {"int": 0}, "bool": {"bool": False}, "seq": {"op": "seq", "args": []},
+                 "float": {"op": "float", "args": [{"int": 0}]}}
+
+
+def desugar_heap(task: dict, body: list, witness: dict | None = None) -> tuple:
+    """(task, body, witness) with every array parameter a seq (PREDICT T53, the comment above); unchanged when the task
+    has no array. The real body stays the same object as task["body"]."""
+    arrays = [p["name"] for p in task.get("params", []) if p.get("type") == "array"]
+    if not arrays:
+        return task, body, witness
+    mods = list(task.get("modifies", []))
+    if len(mods) > 1:
+        raise NotImplementedError("a task writing two arrays is not lowered yet by copy-in/copy-out "
+                                  "(SPEC.md 'Heap (v1)', PREDICT T53)")
+    params = [{**p, "type": "seq"} if p["type"] == "array" else p for p in task["params"]]
+
+    def unold(x):
+        """old(e) is e: the parameters now hold the entry contents."""
+        if isinstance(x, list):
+            return [unold(v) for v in x]
+        if not isinstance(x, dict):
+            return x
+        if "old" in x:
+            return unold(x["old"])
+        return {k: unold(v) for k, v in x.items()}
+    if not mods:
+        new = {k: v for k, v in task.items() if k != "modifies"}
+        new["params"] = params
+        new["ensures"] = unold(task["ensures"])
+        nb = unold(body)
+        new["body"] = nb if body is task.get("body") else unold(task.get("body"))
+        return new, nb, witness
+    m = mods[0]
+    ret = task["returns"][0]
+    r, rt = ret["name"], ret["type"]
+    if not isinstance(rt, str) or rt not in _HEAP_DEFAULT:
+        raise NotImplementedError(f"a heap task whose result is a {rt!r} has no default value for copy-in/copy-out "
+                                  f"(SPEC.md 'Heap (v1)', PREDICT T53)")
+    names = set(json_names(task))
+    cur, out = _fresh("t_cur_" + m, names), _fresh("t_out", names)
+
+    def code(x, in_old=False):
+        """A body or invariant expression/statement: m is the working copy, old(e) reads the parameters."""
+        if isinstance(x, list):
+            return [code(v, in_old) for v in x]
+        if not isinstance(x, dict):
+            return x
+        if "old" in x:
+            return code(x["old"], True)
+        if x.get("var") == m and set(x) == {"var"}:
+            return x if in_old else {"var": cur}
+        return {k: code(v, in_old) for k, v in x.items()}
+
+    def stmts(ss):
+        o = []
+        for st in ss:
+            if "aset" in st:
+                _, i, e = st["aset"]
+                o.append({"assign": [cur, {"op": "update", "args": [{"var": cur}, code(i), code(e)]}]})
+            elif "return" in st:
+                o.append({"return": [out, {"op": "pair", "args": [code(st["return"][1]), {"var": cur}]}]})
+            elif "if" in st:
+                f = st["if"]
+                o.append({"if": {"cond": code(f["cond"]), "then": stmts(f["then"]), "else": stmts(f.get("else", []))}})
+            elif "while" in st:
+                w = st["while"]
+                o.append({"while": {**{k: code(v) for k, v in w.items() if k != "body"}, "body": stmts(w["body"])}})
+            elif "par" in st:
+                w = st["par"]
+                o.append({"par": {**{k: code(v) for k, v in w.items() if k != "body"}, "body": stmts(w["body"])}})
+            else:
+                o.append(code(st))
+        return o
+
+    def whole(b):
+        nb = [{"var": {"name": cur, "type": "seq", "init": {"var": m}}},
+              {"var": {"name": r, "type": rt, "init": _HEAP_DEFAULT[rt]}}] + stmts(b)
+        if not _ends(nb):
+            nb.append({"assign": [out, {"op": "pair", "args": [{"var": r}, {"var": cur}]}]})
+        return nb
+
+    def post(x):
+        """An ensures: r is t_out.0, m is t_out.1, old(e) reads the parameters."""
+        if isinstance(x, list):
+            return [post(v) for v in x]
+        if not isinstance(x, dict):
+            return x
+        if "old" in x:
+            return unold(x["old"])
+        if x.get("var") == r and set(x) == {"var"}:
+            return {"op": "fst", "args": [{"var": out}]}
+        if x.get("var") == m and set(x) == {"var"}:
+            return {"op": "snd", "args": [{"var": out}]}
+        return {k: post(v) for k, v in x.items()}
+    new = {k: v for k, v in task.items() if k != "modifies"}
+    new["params"] = params
+    new["returns"] = [{"name": out, "type": {"pair": [rt, "seq"]}}]
+    new["ensures"] = post(task["ensures"])
+    nb = whole(body)
+    new["body"] = nb if body is task.get("body") else whole(task.get("body"))
+    w2 = witness
+    if witness is not None and witness.get("_kind") == "value":
+        w2 = dict(witness)
+        for side in ("_real", "_twin"):
+            heap = witness.get(f"{side}_heap") or {}
+            if m in heap:
+                w2[side] = [witness[side], heap[m]]
+    return new, nb, w2
+
+
+def json_names(x) -> list:
+    out = []
+    if isinstance(x, dict):
+        for k, v in x.items():
+            if k in ("var", "name") and isinstance(v, str):
+                out.append(v)
+            out += json_names(v)
+    elif isinstance(x, list):
+        for v in x:
+            out += json_names(v)
+    return out
+
+
+def _fresh(base: str, taken: set) -> str:
+    n, k = base, 0
+    while n in taken:
+        k += 1
+        n = f"{base}{k}"
+    taken.add(n)
+    return n
+
+
 def has_heap(task: dict) -> bool:
     """Whether the task has an array parameter (SPEC.md "Heap (v1)", PREDICT T46)."""
     return any(p.get("type") == "array" for p in task.get("params", []))

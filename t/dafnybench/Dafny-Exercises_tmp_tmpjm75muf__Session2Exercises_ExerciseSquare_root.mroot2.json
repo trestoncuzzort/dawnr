@@ -1,0 +1,284 @@
+{
+  "body": [
+    {
+      "assign": [
+        "r",
+        {
+          "var": "n"
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "args": [
+                {
+                  "var": "r"
+                },
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "var": "r"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 0
+                      },
+                      {
+                        "var": "r"
+                      }
+                    ],
+                    "op": "<="
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "r"
+                      },
+                      {
+                        "var": "n"
+                      }
+                    ],
+                    "op": "<="
+                  }
+                ],
+                "op": "and"
+              },
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "r"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "r"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "r"
+                      },
+                      {
+                        "var": "r"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n"
+                  },
+                  {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "r"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "r"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "*"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "implies"
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "r"
+                },
+                {
+                  "var": "r"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "<="
+        },
+        {
+          "args": [
+            {
+              "var": "n"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "r"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "<"
+        }
+      ],
+      "op": "and"
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_exercises_tmp_tmpjm75muf__session2exercises_exercisesquare_root__mroot2",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

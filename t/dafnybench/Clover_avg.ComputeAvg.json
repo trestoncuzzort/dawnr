@@ -1,0 +1,76 @@
+{
+  "body": [
+    {
+      "assign": [
+        "avg",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "avg"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "clover_avg__computeAvg",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "avg",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

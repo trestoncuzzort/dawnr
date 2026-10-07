@@ -1,0 +1,489 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "args": [],
+          "op": "seq"
+        },
+        "name": "r",
+        "type": "seq"
+      }
+    },
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "s"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">"
+        },
+        "else": [],
+        "then": [
+          {
+            "var": {
+              "init": {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": "at"
+              },
+              "name": "c_v",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "r"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "c_v"
+                      }
+                    ],
+                    "op": "seq"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "result",
+        {
+          "var": "r"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "s"
+          },
+          {
+            "var": "result"
+          }
+        ],
+        "fun": "valid_output"
+      }
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_va0079__solve",
+  "params": [
+    {
+      "name": "s",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 0
+                }
+              ],
+              "op": ">="
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "s"
+                    },
+                    {
+                      "var": "k"
+                    }
+                  ],
+                  "op": "at"
+                },
+                {
+                  "int": 1114111
+                }
+              ],
+              "op": "<="
+            }
+          ],
+          "op": "and"
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "s"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "seq"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "int": 97
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "int": 101
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "int": 105
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "int": 111
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "int": 117
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "var": "c"
+              },
+              {
+                "int": 121
+              }
+            ],
+            "op": "=="
+          }
+        ],
+        "op": "or"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "is_vowel",
+      "params": [
+        {
+          "name": "c",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "forall": {
+          "body": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "var": "i"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "is_vowel"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "s_v"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "var": "i"
+                                },
+                                {
+                                  "int": 1
+                                }
+                              ],
+                              "op": "+"
+                            }
+                          ],
+                          "op": "at"
+                        }
+                      ],
+                      "fun": "is_vowel"
+                    }
+                  }
+                ],
+                "op": "and"
+              }
+            ],
+            "op": "not"
+          },
+          "hi": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "s_v"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": "-"
+          },
+          "lo": {
+            "int": 0
+          },
+          "var": "i"
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "no_consecutive_vowels",
+      "params": [
+        {
+          "name": "s_v",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "output"
+                  }
+                ],
+                "op": "len"
+              },
+              {
+                "args": [
+                  {
+                    "var": "input"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "call": {
+              "args": [
+                {
+                  "var": "output"
+                }
+              ],
+              "fun": "no_consecutive_vowels"
+            }
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "input"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "output"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "input"
+                      }
+                    ],
+                    "op": "len"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "output"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "input"
+                      },
+                      {
+                        "int": 0
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": "=="
+              }
+            ],
+            "op": "implies"
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "valid_output",
+      "params": [
+        {
+          "name": "input",
+          "type": "seq"
+        },
+        {
+          "name": "output",
+          "type": "seq"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

@@ -1,0 +1,82 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "<"
+        },
+        "else": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "a"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "c",
+              {
+                "var": "b"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "c"
+        },
+        {
+          "var": "b"
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "name": "dafny_programs_tmp_tmp99966ew4_mymax__max",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "c",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

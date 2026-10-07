@@ -1,0 +1,60 @@
+{
+  "body": [
+    {
+      "assign": [
+        "x",
+        {
+          "args": [
+            {
+              "var": "y"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "+"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 7
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "cs245_verification_tmp_tmp0h_nxhqp_assignments_simple__simple",
+  "params": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 6
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "returns": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

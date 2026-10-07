@@ -1,0 +1,305 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 1
+        },
+        "name": "a",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "b",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "var": "n"
+        },
+        "name": "k",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "b",
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "k"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "var": "b"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "a",
+              {
+                "args": [
+                  {
+                    "int": 3
+                  },
+                  {
+                    "var": "a"
+                  }
+                ],
+                "op": "*"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "k",
+              {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "int": 5
+                  }
+                ],
+                "op": "-"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "k"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": ">="
+        },
+        "decreases": {
+          "var": "k"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "n"
+                    }
+                  ],
+                  "fun": "f"
+                }
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "k"
+                            }
+                          ],
+                          "fun": "f"
+                        }
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "var": "b"
+                  }
+                ],
+                "op": "+"
+              }
+            ],
+            "op": "=="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "int": 5
+                      }
+                    ],
+                    "op": "neg"
+                  },
+                  {
+                    "var": "k"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "k"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "x",
+        {
+          "var": "b"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "n"
+              }
+            ],
+            "fun": "f"
+          }
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "prog_fun_solutions_tmp_tmp7_gmnz5f_mockexam2_p5__problem5",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "n_v"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 3
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "args": [
+                            {
+                              "var": "n_v"
+                            },
+                            {
+                              "int": 5
+                            }
+                          ],
+                          "op": "-"
+                        }
+                      ],
+                      "fun": "f"
+                    }
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "n_v"
+              }
+            ],
+            "op": "+"
+          },
+          "then": {
+            "int": 0
+          }
+        }
+      },
+      "decreases": {
+        "var": "n_v"
+      },
+      "name": "f",
+      "params": [
+        {
+          "name": "n_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    }
+  ],
+  "t": 1
+}

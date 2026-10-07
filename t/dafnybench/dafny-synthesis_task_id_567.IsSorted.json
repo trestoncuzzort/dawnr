@@ -1,0 +1,531 @@
+{
+  "body": [
+    {
+      "assign": [
+        "sorted",
+        {
+          "bool": true
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "int": 1
+            }
+          ],
+          "op": "-"
+        },
+        "name": "h",
+        "type": "int"
+      }
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "i_v2",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "var": "i_v2"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "i_v2"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "at"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "sorted",
+                    {
+                      "bool": false
+                    }
+                  ]
+                },
+                {
+                  "assign": [
+                    "sorted",
+                    {
+                      "var": "sorted"
+                    }
+                  ]
+                },
+                {
+                  "return": [
+                    "sorted",
+                    {
+                      "var": "sorted"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "i_v2",
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "i_v2"
+            },
+            {
+              "var": "h"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "var": "h"
+            },
+            {
+              "var": "i_v2"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "int": 0
+              },
+              {
+                "var": "i_v2"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "i_v2"
+              },
+              {
+                "var": "h"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "i_v2"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "i_v2"
+                  },
+                  {
+                    "args": [
+                      {
+                        "var": "a"
+                      }
+                    ],
+                    "op": "len"
+                  }
+                ],
+                "op": "<"
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "forall": {
+                  "body": {
+                    "forall": {
+                      "body": {
+                        "args": [
+                          {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "k"
+                              }
+                            ],
+                            "op": "at"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "a"
+                              },
+                              {
+                                "var": "l"
+                              }
+                            ],
+                            "op": "at"
+                          }
+                        ],
+                        "op": "<="
+                      },
+                      "hi": {
+                        "var": "i_v2"
+                      },
+                      "lo": {
+                        "args": [
+                          {
+                            "var": "k"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      },
+                      "var": "l"
+                    }
+                  },
+                  "hi": {
+                    "var": "i_v2"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k"
+                }
+              },
+              {
+                "var": "sorted"
+              }
+            ],
+            "op": "implies"
+          },
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "sorted"
+                  }
+                ],
+                "op": "not"
+              },
+              {
+                "exists": {
+                  "body": {
+                    "args": [
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "var": "k_v"
+                          }
+                        ],
+                        "op": "at"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "a"
+                          },
+                          {
+                            "args": [
+                              {
+                                "var": "k_v"
+                              },
+                              {
+                                "int": 1
+                              }
+                            ],
+                            "op": "+"
+                          }
+                        ],
+                        "op": "at"
+                      }
+                    ],
+                    "op": ">"
+                  },
+                  "hi": {
+                    "var": "i_v2"
+                  },
+                  "lo": {
+                    "int": 0
+                  },
+                  "var": "k_v"
+                }
+              }
+            ],
+            "op": "implies"
+          }
+        ]
+      }
+    },
+    {
+      "assign": [
+        "sorted",
+        {
+          "var": "sorted"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "forall": {
+            "body": {
+              "forall": {
+                "body": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "var": "i"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "var": "j"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": "<="
+                },
+                "hi": {
+                  "args": [
+                    {
+                      "var": "a"
+                    }
+                  ],
+                  "op": "len"
+                },
+                "lo": {
+                  "args": [
+                    {
+                      "var": "i"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                },
+                "var": "j"
+              }
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "i"
+          }
+        },
+        {
+          "var": "sorted"
+        }
+      ],
+      "op": "implies"
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "sorted"
+            }
+          ],
+          "op": "not"
+        },
+        {
+          "exists": {
+            "body": {
+              "exists": {
+                "body": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "var": "i_v"
+                        }
+                      ],
+                      "op": "at"
+                    },
+                    {
+                      "args": [
+                        {
+                          "var": "a"
+                        },
+                        {
+                          "var": "j_v"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ],
+                  "op": ">"
+                },
+                "hi": {
+                  "args": [
+                    {
+                      "var": "a"
+                    }
+                  ],
+                  "op": "len"
+                },
+                "lo": {
+                  "args": [
+                    {
+                      "var": "i_v"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                },
+                "var": "j_v"
+              }
+            },
+            "hi": {
+              "args": [
+                {
+                  "var": "a"
+                }
+              ],
+              "op": "len"
+            },
+            "lo": {
+              "int": 0
+            },
+            "var": "i_v"
+          }
+        }
+      ],
+      "op": "implies"
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_synthesis_task_id_567__isSorted",
+  "params": [
+    {
+      "name": "a",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "a"
+            }
+          ],
+          "op": "len"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">"
+    }
+  ],
+  "returns": [
+    {
+      "name": "sorted",
+      "type": "bool"
+    }
+  ],
+  "t": 1
+}

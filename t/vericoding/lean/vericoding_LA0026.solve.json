@@ -1,0 +1,600 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "call": {
+            "args": [
+              {
+                "var": "l1"
+              },
+              {
+                "var": "r1"
+              },
+              {
+                "var": "l2"
+              },
+              {
+                "var": "r2"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "expectedResult"
+          }
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "call": {
+            "args": [
+              {
+                "var": "l1"
+              },
+              {
+                "var": "r1"
+              },
+              {
+                "var": "l2"
+              },
+              {
+                "var": "r2"
+              },
+              {
+                "var": "k"
+              }
+            ],
+            "fun": "expectedResult"
+          }
+        }
+      ],
+      "op": "=="
+    },
+    {
+      "args": [
+        {
+          "var": "result"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "gate": "recursion",
+  "name": "vericoding_la0026__solve",
+  "params": [
+    {
+      "name": "l1",
+      "type": "int"
+    },
+    {
+      "name": "r1",
+      "type": "int"
+    },
+    {
+      "name": "l2",
+      "type": "int"
+    },
+    {
+      "name": "r2",
+      "type": "int"
+    },
+    {
+      "name": "k",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "call": {
+        "args": [
+          {
+            "var": "l1"
+          },
+          {
+            "var": "r1"
+          },
+          {
+            "var": "l2"
+          },
+          {
+            "var": "r2"
+          },
+          {
+            "var": "k"
+          }
+        ],
+        "fun": "validInput"
+      }
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "spec_funs": [
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "l1_v"
+              },
+              {
+                "var": "l2_v"
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "var": "l2_v"
+          },
+          "then": {
+            "var": "l1_v"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "intersectionLeft",
+      "params": [
+        {
+          "name": "l1_v",
+          "type": "int"
+        },
+        {
+          "name": "l2_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "var": "r1_v"
+              },
+              {
+                "var": "r2_v"
+              }
+            ],
+            "op": "<"
+          },
+          "else": {
+            "var": "r2_v"
+          },
+          "then": {
+            "var": "r1_v"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "intersectionRight",
+      "params": [
+        {
+          "name": "r1_v",
+          "type": "int"
+        },
+        {
+          "name": "r2_v",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "l1_v2"
+                    },
+                    {
+                      "var": "l2_v2"
+                    }
+                  ],
+                  "fun": "intersectionLeft"
+                }
+              },
+              {
+                "var": "k_v"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "k_v"
+              },
+              {
+                "call": {
+                  "args": [
+                    {
+                      "var": "r1_v2"
+                    },
+                    {
+                      "var": "r2_v2"
+                    }
+                  ],
+                  "fun": "intersectionRight"
+                }
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "kInIntersection",
+      "params": [
+        {
+          "name": "l1_v2",
+          "type": "int"
+        },
+        {
+          "name": "r1_v2",
+          "type": "int"
+        },
+        {
+          "name": "l2_v2",
+          "type": "int"
+        },
+        {
+          "name": "r2_v2",
+          "type": "int"
+        },
+        {
+          "name": "k_v",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "r1_v3"
+                            },
+                            {
+                              "var": "r2_v3"
+                            }
+                          ],
+                          "fun": "intersectionRight"
+                        }
+                      },
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "l1_v3"
+                            },
+                            {
+                              "var": "l2_v3"
+                            }
+                          ],
+                          "fun": "intersectionLeft"
+                        }
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              },
+              {
+                "int": 0
+              }
+            ],
+            "op": ">"
+          },
+          "else": {
+            "int": 0
+          },
+          "then": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "r1_v3"
+                        },
+                        {
+                          "var": "r2_v3"
+                        }
+                      ],
+                      "fun": "intersectionRight"
+                    }
+                  },
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "l1_v3"
+                        },
+                        {
+                          "var": "l2_v3"
+                        }
+                      ],
+                      "fun": "intersectionLeft"
+                    }
+                  }
+                ],
+                "op": "-"
+              },
+              {
+                "int": 1
+              }
+            ],
+            "op": "+"
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "intersectionSize",
+      "params": [
+        {
+          "name": "l1_v3",
+          "type": "int"
+        },
+        {
+          "name": "r1_v3",
+          "type": "int"
+        },
+        {
+          "name": "l2_v3",
+          "type": "int"
+        },
+        {
+          "name": "r2_v3",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "ite": {
+          "cond": {
+            "call": {
+              "args": [
+                {
+                  "var": "l1_v4"
+                },
+                {
+                  "var": "r1_v4"
+                },
+                {
+                  "var": "l2_v4"
+                },
+                {
+                  "var": "r2_v4"
+                },
+                {
+                  "var": "k_v2"
+                }
+              ],
+              "fun": "kInIntersection"
+            }
+          },
+          "else": {
+            "call": {
+              "args": [
+                {
+                  "var": "l1_v4"
+                },
+                {
+                  "var": "r1_v4"
+                },
+                {
+                  "var": "l2_v4"
+                },
+                {
+                  "var": "r2_v4"
+                }
+              ],
+              "fun": "intersectionSize"
+            }
+          },
+          "then": {
+            "ite": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "call": {
+                          "args": [
+                            {
+                              "var": "l1_v4"
+                            },
+                            {
+                              "var": "r1_v4"
+                            },
+                            {
+                              "var": "l2_v4"
+                            },
+                            {
+                              "var": "r2_v4"
+                            }
+                          ],
+                          "fun": "intersectionSize"
+                        }
+                      },
+                      {
+                        "int": 1
+                      }
+                    ],
+                    "op": "-"
+                  },
+                  {
+                    "int": 0
+                  }
+                ],
+                "op": ">"
+              },
+              "else": {
+                "int": 0
+              },
+              "then": {
+                "args": [
+                  {
+                    "call": {
+                      "args": [
+                        {
+                          "var": "l1_v4"
+                        },
+                        {
+                          "var": "r1_v4"
+                        },
+                        {
+                          "var": "l2_v4"
+                        },
+                        {
+                          "var": "r2_v4"
+                        }
+                      ],
+                      "fun": "intersectionSize"
+                    }
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "-"
+              }
+            }
+          }
+        }
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "expectedResult",
+      "params": [
+        {
+          "name": "l1_v4",
+          "type": "int"
+        },
+        {
+          "name": "r1_v4",
+          "type": "int"
+        },
+        {
+          "name": "l2_v4",
+          "type": "int"
+        },
+        {
+          "name": "r2_v4",
+          "type": "int"
+        },
+        {
+          "name": "k_v2",
+          "type": "int"
+        }
+      ],
+      "result": "int"
+    },
+    {
+      "body": {
+        "args": [
+          {
+            "args": [
+              {
+                "var": "l1_v5"
+              },
+              {
+                "var": "r1_v5"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "args": [
+              {
+                "var": "l2_v5"
+              },
+              {
+                "var": "r2_v5"
+              }
+            ],
+            "op": "<="
+          }
+        ],
+        "op": "and"
+      },
+      "decreases": {
+        "int": 0
+      },
+      "name": "validInput",
+      "params": [
+        {
+          "name": "l1_v5",
+          "type": "int"
+        },
+        {
+          "name": "r1_v5",
+          "type": "int"
+        },
+        {
+          "name": "l2_v5",
+          "type": "int"
+        },
+        {
+          "name": "r2_v5",
+          "type": "int"
+        },
+        {
+          "name": "k_v3",
+          "type": "int"
+        }
+      ],
+      "result": "bool"
+    }
+  ],
+  "t": 1
+}

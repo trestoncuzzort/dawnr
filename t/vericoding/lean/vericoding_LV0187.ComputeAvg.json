@@ -1,0 +1,104 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "int": 2
+            },
+            {
+              "var": "result"
+            }
+          ],
+          "op": "*"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "b"
+                    }
+                  ],
+                  "op": "+"
+                },
+                {
+                  "int": 2
+                }
+              ],
+              "op": "mod"
+            }
+          ],
+          "op": "-"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_lv0187__computeAvg",
+  "params": [
+    {
+      "name": "a",
+      "type": "int"
+    },
+    {
+      "name": "b",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "bool": true
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

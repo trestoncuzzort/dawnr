@@ -1,0 +1,40 @@
+{
+  "body": [
+    {
+      "assign": [
+        "seven",
+        {
+          "int": 7
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "seven"
+        },
+        {
+          "int": 7
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "clover_return_seven__m",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [],
+  "returns": [
+    {
+      "name": "seven",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

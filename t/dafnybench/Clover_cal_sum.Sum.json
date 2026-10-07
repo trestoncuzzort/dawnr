@@ -1,0 +1,236 @@
+{
+  "body": [
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "n_v",
+        "type": "int"
+      }
+    },
+    {
+      "assign": [
+        "s",
+        {
+          "int": 0
+        }
+      ]
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "assign": [
+              "n_v",
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          },
+          {
+            "assign": [
+              "s",
+              {
+                "args": [
+                  {
+                    "var": "s"
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "n_v"
+            },
+            {
+              "var": "n"
+            }
+          ],
+          "op": "!="
+        },
+        "decreases": {
+          "ite": {
+            "cond": {
+              "args": [
+                {
+                  "var": "n_v"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "<="
+            },
+            "else": {
+              "args": [
+                {
+                  "var": "n_v"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "-"
+            },
+            "then": {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "var": "n_v"
+                }
+              ],
+              "op": "-"
+            }
+          }
+        },
+        "invariants": [
+          {
+            "args": [
+              {
+                "args": [
+                  {
+                    "int": 0
+                  },
+                  {
+                    "var": "n_v"
+                  }
+                ],
+                "op": "<="
+              },
+              {
+                "args": [
+                  {
+                    "var": "n_v"
+                  },
+                  {
+                    "var": "n"
+                  }
+                ],
+                "op": "<="
+              }
+            ],
+            "op": "and"
+          },
+          {
+            "args": [
+              {
+                "var": "s"
+              },
+              {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "n_v"
+                      },
+                      {
+                        "args": [
+                          {
+                            "var": "n_v"
+                          },
+                          {
+                            "int": 1
+                          }
+                        ],
+                        "op": "+"
+                      }
+                    ],
+                    "op": "*"
+                  },
+                  {
+                    "int": 2
+                  }
+                ],
+                "op": "div"
+              }
+            ],
+            "op": "=="
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "s"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "n"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "n"
+                    },
+                    {
+                      "int": 1
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "div"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "loops",
+  "name": "clover_cal_sum__sum",
+  "params": [
+    {
+      "name": "n",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "n"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "s",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

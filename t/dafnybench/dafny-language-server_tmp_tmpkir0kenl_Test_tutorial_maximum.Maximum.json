@@ -1,0 +1,309 @@
+{
+  "body": [
+    {
+      "assign": [
+        "max",
+        {
+          "args": [
+            {
+              "var": "values"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "at"
+        }
+      ]
+    },
+    {
+      "var": {
+        "init": {
+          "int": 0
+        },
+        "name": "idx",
+        "type": "int"
+      }
+    },
+    {
+      "while": {
+        "body": [
+          {
+            "if": {
+              "cond": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "values"
+                      },
+                      {
+                        "var": "idx"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "max"
+                  }
+                ],
+                "op": ">"
+              },
+              "else": [],
+              "then": [
+                {
+                  "assign": [
+                    "max",
+                    {
+                      "args": [
+                        {
+                          "var": "values"
+                        },
+                        {
+                          "var": "idx"
+                        }
+                      ],
+                      "op": "at"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "assign": [
+              "idx",
+              {
+                "args": [
+                  {
+                    "var": "idx"
+                  },
+                  {
+                    "int": 1
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "cond": {
+          "args": [
+            {
+              "var": "idx"
+            },
+            {
+              "args": [
+                {
+                  "var": "values"
+                }
+              ],
+              "op": "len"
+            }
+          ],
+          "op": "<"
+        },
+        "decreases": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "values"
+                }
+              ],
+              "op": "len"
+            },
+            {
+              "var": "idx"
+            }
+          ],
+          "op": "-"
+        },
+        "invariants": [
+          {
+            "exists": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "values"
+                      },
+                      {
+                        "var": "k_v"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "max"
+                  }
+                ],
+                "op": "=="
+              },
+              "hi": {
+                "args": [
+                  {
+                    "var": "values"
+                  }
+                ],
+                "op": "len"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "k_v"
+            }
+          },
+          {
+            "args": [
+              {
+                "var": "idx"
+              },
+              {
+                "args": [
+                  {
+                    "var": "values"
+                  }
+                ],
+                "op": "len"
+              }
+            ],
+            "op": "<="
+          },
+          {
+            "forall": {
+              "body": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "values"
+                      },
+                      {
+                        "var": "j"
+                      }
+                    ],
+                    "op": "at"
+                  },
+                  {
+                    "var": "max"
+                  }
+                ],
+                "op": "<="
+              },
+              "hi": {
+                "var": "idx"
+              },
+              "lo": {
+                "int": 0
+              },
+              "var": "j"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "ensures": [
+    {
+      "exists": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "values"
+                },
+                {
+                  "var": "k"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "max"
+            }
+          ],
+          "op": "=="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "values"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "k"
+      }
+    },
+    {
+      "forall": {
+        "body": {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "values"
+                },
+                {
+                  "var": "i"
+                }
+              ],
+              "op": "at"
+            },
+            {
+              "var": "max"
+            }
+          ],
+          "op": "<="
+        },
+        "hi": {
+          "args": [
+            {
+              "var": "values"
+            }
+          ],
+          "op": "len"
+        },
+        "lo": {
+          "int": 0
+        },
+        "var": "i"
+      }
+    }
+  ],
+  "gate": "loops",
+  "name": "dafny_language_server_tmp_tmpkir0kenl_test_tutorial_maximum__maximum",
+  "params": [
+    {
+      "name": "values",
+      "type": "seq"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "values"
+        },
+        {
+          "args": [],
+          "op": "seq"
+        }
+      ],
+      "op": "!="
+    }
+  ],
+  "returns": [
+    {
+      "name": "max",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

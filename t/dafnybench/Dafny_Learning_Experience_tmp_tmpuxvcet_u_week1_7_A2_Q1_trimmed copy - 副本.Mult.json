@@ -1,0 +1,141 @@
+{
+  "body": [
+    {
+      "if": {
+        "cond": {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "int": 0
+            }
+          ],
+          "op": "=="
+        },
+        "else": [
+          {
+            "var": {
+              "init": {
+                "call": {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "x"
+                        },
+                        {
+                          "int": 1
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "var": "y"
+                    }
+                  ],
+                  "fun": "dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_a2_q1_trimmed_copy_______mult"
+                }
+              },
+              "name": "z",
+              "type": "int"
+            }
+          },
+          {
+            "assign": [
+              "r",
+              {
+                "args": [
+                  {
+                    "var": "z"
+                  },
+                  {
+                    "var": "y"
+                  }
+                ],
+                "op": "+"
+              }
+            ]
+          }
+        ],
+        "then": [
+          {
+            "assign": [
+              "r",
+              {
+                "int": 0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "decreases": {
+    "var": "x"
+  },
+  "ensures": [
+    {
+      "args": [
+        {
+          "var": "r"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            },
+            {
+              "var": "y"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "gate": "recursion",
+  "name": "dafny_learning_experience_tmp_tmpuxvcet_u_week1_7_a2_q1_trimmed_copy_______mult",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    },
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    },
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": ">="
+    }
+  ],
+  "returns": [
+    {
+      "name": "r",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

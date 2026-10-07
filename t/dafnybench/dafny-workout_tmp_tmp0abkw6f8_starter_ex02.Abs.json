@@ -1,0 +1,73 @@
+{
+  "body": [
+    {
+      "assign": [
+        "y",
+        {
+          "args": [
+            {
+              "var": "x"
+            }
+          ],
+          "op": "neg"
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "int": 0
+        },
+        {
+          "var": "y"
+        }
+      ],
+      "op": "<"
+    },
+    {
+      "args": [
+        {
+          "var": "y"
+        },
+        {
+          "args": [
+            {
+              "var": "x"
+            }
+          ],
+          "op": "neg"
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "dafny_workout_tmp_tmp0abkw6f8_starter_ex02__abs",
+  "params": [
+    {
+      "name": "x",
+      "type": "int"
+    }
+  ],
+  "requires": [
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "int": 0
+        }
+      ],
+      "op": "<"
+    }
+  ],
+  "returns": [
+    {
+      "name": "y",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}

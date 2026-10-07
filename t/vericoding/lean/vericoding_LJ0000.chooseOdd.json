@@ -1,0 +1,47 @@
+{
+  "body": [
+    {
+      "assign": [
+        "result",
+        {
+          "int": 1
+        }
+      ]
+    }
+  ],
+  "ensures": [
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "result"
+            },
+            {
+              "int": 2
+            }
+          ],
+          "op": "mod"
+        },
+        {
+          "int": 1
+        }
+      ],
+      "op": "=="
+    }
+  ],
+  "name": "vericoding_lj0000__chooseOdd",
+  "params": [],
+  "requires": [
+    {
+      "bool": true
+    }
+  ],
+  "returns": [
+    {
+      "name": "result",
+      "type": "int"
+    }
+  ],
+  "t": 1
+}
