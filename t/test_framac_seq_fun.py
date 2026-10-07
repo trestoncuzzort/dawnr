@@ -85,8 +85,9 @@ def test_double_all_states_the_list_route() -> None:
     assert ("logic \\list<integer> dbl{L}(int *s, integer s_n, integer n) ="
             in real), real
     assert "\\Nil" in real and "\\Cons(" in real and "\\concat(" in real
-    assert ("\\length(dbl{Here}(s, s_n, i))" in real
-            and "\\nth(dbl{Here}(s, s_n, i), __k)" in real), real
+    # PREDICT T65: `s` is a read-only input, so the function is read at the entry state
+    assert ("\\length(dbl{Pre}(s, s_n, i))" in real
+            and "\\nth(dbl{Pre}(s, s_n, i), __k)" in real), real
     assert "lemma t_list_append_length{L}:" in real
     assert "lemma t_list_append_nth{L}:" in real
     assert "lemma t_list_append_last{L}:" in real

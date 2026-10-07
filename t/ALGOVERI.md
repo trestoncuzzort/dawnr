@@ -1,4 +1,4 @@
-# t cross-kernel agreement, 2026-10-07 13:27Z
+# t cross-kernel agreement, 2026-10-07 21:03Z
 
 Cell = real outcome / twin outcome. Agreement means `verified / refuted` in every present column. A real-VERIFIED, twin-VERIFIED cell reads `verified / decorative` (the spec cannot tell real and twin apart) or `verified / unsound` (the twin's own measured witness says a sound kernel must refute it, and this one did not); neither counts as agreement.
 
@@ -7,8 +7,8 @@ Cell = real outcome / twin outcome. Agreement means `verified / refuted` in ever
 | ac_automata_search | verified / refuted | unproved / unproved | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
 | binary_search | verified / refuted | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | verified / refuted |
 | bracket_match | verified / refuted | verified / refuted | timeout / refuted | abstain / abstain | abstain / abstain | abstain / abstain | unproved / refuted |
-| insert | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
-| search | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain | abstain / abstain |
+| insert | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | unproved / refuted | abstain / abstain | abstain / abstain |
+| search | verified / refuted | verified / refuted | abstain / abstain | abstain / abstain | unproved / refuted | abstain / abstain | abstain / abstain |
 | zig | verified / refuted | unproved / unproved | abstain / abstain | abstain / abstain | unproved / refuted | abstain / abstain | abstain / abstain |
 | zig_zag | verified / refuted | unproved / unproved | abstain / abstain | abstain / abstain | unproved / refuted | abstain / abstain | abstain / abstain |
 | zig_zig | verified / refuted | unproved / unproved | abstain / abstain | abstain / abstain | unproved / refuted | abstain / abstain | abstain / abstain |
@@ -70,7 +70,7 @@ Of the 0 tasks in six, none are blocked alone.
 | verus | 30 | 10 | 9 of 10 (90%) | 0 |
 | spark | 15 | 4 | 4 of 4 (100%) | 15 |
 | framac | 2 | 2 | 2 of 2 (100%) | 28 |
-| lean | 17 | 2 | 1 of 2 (50%) | 13 |
+| lean | 19 | 2 | 1 of 2 (50%) | 11 |
 | rocq | 4 | 1 | 1 of 1 (100%) | 26 |
 | fstar | 18 | 5 | 5 of 5 (100%) | 12 |
 

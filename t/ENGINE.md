@@ -5,7 +5,7 @@ split out of this one on 2026-10-06 with its history. That covers the parser and
 the kernel adapters, the twin harness, the matrix runner, the tasks, the twins and the documents. This directory
 carries a copy of that engine beside dawnr's own pipeline scripts, which still live here.
 
-Pinned commit: `fc2f91f660dc0f441d11dd93a77ad82257162c95` (t-proof-engine, 2026-10-07)
+Pinned commit: `b8504244878e9e3ce5687bee0cfbfbc794da72b3` (t-proof-engine, 2026-10-07)
 
 - **Engine changes land in t-proof-engine first.** Then `bash t/sync_engine.sh` brings them here and moves the
   pin above. It overwrites every file the engine tracks under `t/` and deletes the ones it dropped.
