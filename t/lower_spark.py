@@ -5089,7 +5089,17 @@ class Lower:
             ids = set(_ADA_IDENT.findall(env[v]))
             if ids & mut_names:
                 continue
-            carried_pre.append(f"{cap(v)} = ({env[v]})")
+            # a seq-typed local is compared by the qualified function, `Seqs."="` (or `Rows."="` one level up):
+            # the infix "=" of the instantiated private type is not directly visible without a use clause, and
+            # gnatprove refused the whole file (AlgoVeri's string_search_naive and solve_longest_common_subsequence,
+            # PREDICT T13's read). The qualified spelling is the same function, already used for the Rows instance.
+            vt = types.get(v)
+            if vt == "seq":
+                carried_pre.append(f'Seqs."=" ({cap(v)}, ({env[v]}))')
+            elif isinstance(vt, dict) and "seq" in vt:
+                carried_pre.append(f'Rows."=" ({cap(v)}, ({env[v]}))')
+            else:
+                carried_pre.append(f"{cap(v)} = ({env[v]})")
         pre_parts = carried_pre + [self.expr(i, entry, types) for i in invs]
         pre = "\n       and then ".join(pre_parts)
         post_parts = [self.expr(i, result, types) for i in invs]

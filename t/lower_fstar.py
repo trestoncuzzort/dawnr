@@ -1634,6 +1634,26 @@ def _comp_refusal(task: dict, body: list) -> None:
         walk(task.get(k, []), False)
 
 
+def _all_names(e) -> set:
+    """Every variable name and bound-variable name in a t AST."""
+    out: set = set()
+
+    def walk(x):
+        if isinstance(x, dict):
+            if "var" in x and isinstance(x["var"], str):
+                out.add(x["var"])
+            for k in ("forall", "exists", "comp"):
+                if k in x and isinstance(x[k], dict) and "var" in x[k]:
+                    out.add(x[k]["var"])
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    walk(e)
+    return out
+
+
 def _real_lit(n: int, d: int) -> str:
     """A t real literal n/d as F* text: a finite decimal with the `R` suffix (`1.5R`; a negative one as
     `(0.0R -. 1.5R)`, since `-.` is binary), or `((of_int n) /. (of_int d))` for a certificate's quotient with no
@@ -3042,9 +3062,18 @@ class Ctx:
         out: list[str] = []
         seen: set[tuple] = set()
 
-        def walk(n):
+        def walk(n, inner=frozenset()):
+            # a nested quantifier's own bound variable is not in scope at this helper's level: an `at` that mentions
+            # it is the nested quantifier's own helper's obligation, never this one's (AlgoVeri's binary_search,
+            # `forall i . forall j . q[i] <= q[j]`, emitted `0 <= j` here with `j` unbound: Error 72, PREDICT T13)
+            if isinstance(n, dict) and ("forall" in n or "exists" in n):
+                q = n.get("forall") or n.get("exists")
+                walk(q["lo"], inner)
+                walk(q["hi"], inner)
+                walk(q["body"], inner | {q["var"]})
+                return
             if isinstance(n, dict):
-                if n.get("op") == "at":
+                if n.get("op") == "at" and not (_expr_free_vars(n, frozenset()) & inner):
                     seq_e, idx_e = n["args"]
                     seq_r = self.sx(seq_e, {}, local)
                     if idx_e == {"var": bound_var}:
@@ -3060,10 +3089,10 @@ class Ctx:
                             out.append(f"((0 <= {idx_r}) /\\ "
                                        f"({idx_r} < (Seq.length {seq_r})))")
                 for v in n.values():
-                    walk(v)
+                    walk(v, inner)
             elif isinstance(n, list):
                 for v in n:
-                    walk(v)
+                    walk(v, inner)
 
         walk(e)
         return out
@@ -3128,18 +3157,21 @@ class Ctx:
         local2 = dict(ftys)
         local2[var] = "int"
         pred_bx = self.bx(q["body"], {var: kvar}, local2)
-        logical_body = self.prop(q["body"], {var: "j"}, local2)
+        # the logical binder is `j` unless the body already uses that name (a nested `forall j`, or a free `j`), in
+        # which case a fresh one: `j` captured the inner binder in binary_search's `forall i . forall j . ...`
+        jn = "j" if "j" not in _all_names(q["body"]) else self.fresh_named("qj")
+        logical_body = self.prop(q["body"], {var: jn}, local2)
         obligations = self._quant_at_obligations(q["body"], var, local2, hivar)
         req = _conj([f"(0 <= {kvar})"] + obligations)
         if kind == "exists":
-            ens_formula = (f"(r <==> (exists (j:int). "
-                           f"(({kvar} <= j) /\\ (j < {hivar})) /\\ "
+            ens_formula = (f"(r <==> (exists ({jn}:int). "
+                           f"(({kvar} <= {jn}) /\\ ({jn} < {hivar})) /\\ "
                            f"{logical_body}))")
             base = "false"
             step = f"(if {pred_bx} then true else {hname}{fargs} {hivar} ({kvar} + 1))"
         else:
-            ens_formula = (f"(r <==> (forall (j:int). "
-                           f"(({kvar} <= j) /\\ (j < {hivar})) ==> "
+            ens_formula = (f"(r <==> (forall ({jn}:int). "
+                           f"(({kvar} <= {jn}) /\\ ({jn} < {hivar})) ==> "
                            f"{logical_body}))")
             base = "true"
             step = f"(if {pred_bx} then {hname}{fargs} {hivar} ({kvar} + 1) else false)"
@@ -4100,6 +4132,11 @@ def _lemma_src(cx: "Ctx", l: dict, ptys: dict) -> str:
     terms, seen = [], set()
     for e in l["ensures"]:
         for c in _call_terms(e, []):
+            if not _free_vars(c, set()) <= set(local):
+                # a call under the ensures' own quantifier mentions its bound variable, which is not in scope in an
+                # SMTPat (Error 72 on AlgoVeri's bubble_sort and insertion_sort, `occn(s[i := e], w[k], n)` under
+                # `forall k`, PREDICT T13's read): only calls over the lemma's own parameters can be patterns
+                continue
             txt = _render(cx, c, _fun_result(cx, c), {}, local)
             if txt not in seen:
                 seen.add(txt)
@@ -5705,7 +5742,11 @@ _STR_OPS = frozenset({
 })
 
 
-_SET_OPS_F = {"set", "in", "card", "union", "inter", "diff"}
+# `in` is not here: membership in a seq is the library's (FSTAR_LIB), and a set's membership is reached through the
+# set type or a set operation, as in Lean, Rocq and Frama-C since PREDICT T9-T11. Counting it put a task with seq
+# membership into the Ghost effect, where its Tot spec functions could not call their helpers (Error 34 on AlgoVeri's
+# bubble_sort, insertion_sort and kmp, PREDICT T13's read).
+_SET_OPS_F = {"set", "card", "union", "inter", "diff"}
 
 
 def _uses_reals(task: dict, body: list) -> bool:
